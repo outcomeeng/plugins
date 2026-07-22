@@ -31,6 +31,8 @@ from outcomeeng.distribution.build import (
     RequireSkillDirective,
     SourceFormatError,
     build,
+    EmissionAction,
+    PlannedEmission,
     emit_skill,
     expand_include,
     expand_require_skill,
@@ -724,11 +726,16 @@ def _require_emits_identically(case: SourceScenario) -> bool:
             / caller_skill
             / SKILL_FILENAME
         )
+        relative_path = source.relative_to(builder.src_root / PLUGINS_DIR_NAME)
         emitted = {}
         for target in Target:
             emit_skill(
-                source,
-                target=target,
+                PlannedEmission(
+                    source=source,
+                    target=target,
+                    relative_path=relative_path,
+                    action=EmissionAction.RENDER,
+                ),
                 dist_root=root / "dist",
                 shared_root=builder.shared_root,
             )

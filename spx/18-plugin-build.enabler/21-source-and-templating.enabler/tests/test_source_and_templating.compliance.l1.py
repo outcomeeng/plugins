@@ -1,5 +1,16 @@
 """Compliance evidence for source-tree and template contracts."""
 
+import re
+from collections import Counter
+
+from outcomeeng.distribution.build import (
+    EmissionAction,
+    plan_emissions,
+    plugin_names,
+    template_source_files,
+)
+from outcomeeng.distribution.contracts import Target
+from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
 from outcomeeng_testing.harnesses.source_and_templating import (
     bare_conditional_renders_per_target,
     implementation_is_ready,
@@ -82,3 +93,62 @@ def test_require_skill_expands_identically_across_targets() -> None:
 
 def test_include_directive_uses_fragment_file_contract() -> None:
     assert include_uses_fragment_file_contract()
+
+
+def test_per_plugin_template_renders_once_into_every_plugin() -> None:
+    plugins = plugin_names(CANONICAL_SOURCE_ROOT)
+    templates = template_source_files(CANONICAL_SOURCE_ROOT)
+    assert plugins
+    assert templates
+
+    # Drive the real planner rather than re-deriving the path from the same
+    # helper under test, so this fails if template fan-out stops happening.
+    plan = plan_emissions(CANONICAL_SOURCE_ROOT)
+    for target in Target:
+        for source in templates:
+            rendered = [
+                emission
+                for emission in plan.for_target(target)
+                if emission.source == source
+                and emission.action in {EmissionAction.RENDER, EmissionAction.COPY}
+            ]
+            reached = {emission.relative_path.parts[0] for emission in rendered}
+            assert reached == set(plugins), (
+                f"{source} reaches {sorted(reached)} on {target.value}, "
+                f"not every plugin {sorted(plugins)}"
+            )
+            per_plugin = Counter(
+                emission.relative_path.parts[0] for emission in rendered
+            )
+            duplicated = {
+                plugin: count for plugin, count in per_plugin.items() if count != 1
+            }
+            assert not duplicated, (
+                f"{source} emits more than once per plugin on {target.value}: "
+                f"{duplicated}"
+            )
+
+
+def test_per_plugin_template_body_names_no_single_plugin() -> None:
+    plugins = plugin_names(CANONICAL_SOURCE_ROOT)
+    for source in template_source_files(CANONICAL_SOURCE_ROOT):
+        body = source.read_text(encoding="utf-8")
+        # Match only identity-bearing positions. A plugin slug can also be an
+        # ordinary English word ("work") or a substring of an unrelated token
+        # ("python" inside "python3"), so matching prose yields false positives;
+        # what actually breaks a render is a slug in a path or skill-identity
+        # position, where it names one plugin inside every other's output.
+        named = [
+            plugin
+            for plugin in plugins
+            if re.search(
+                rf"(?:src/plugins/|dist/[a-z]+/|/){re.escape(plugin)}(?:[/_-]|\b)"
+                rf"|\b{re.escape(plugin)}-plugin\b"
+                rf"|\b{re.escape(plugin)}_",
+                body,
+            )
+        ]
+        assert not named, (
+            f"{source} hardcodes plugin name(s) {named}; a template body must "
+            "reach every plugin through the plugin-name build variable"
+        )

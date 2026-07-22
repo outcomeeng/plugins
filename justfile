@@ -86,13 +86,40 @@ check-manifests:
 
 # Check skill Markdown formatting and SKILL.md frontmatter
 check-skills:
-    dprint check --config dprint.jsonc "src/plugins/**/skills/**/*.md" "dist/claude/**/skills/**/*.md" "dist/codex/**/skills/**/*.md"
+    dprint check --config dprint.jsonc "src/plugins/**/skills/**/*.md" "src/templates/**/*.md" "dist/claude/**/skills/**/*.md" "dist/codex/**/skills/**/*.md"
+    # src/templates is formatted but not frontmatter-validated: an unrendered
+    # template carries build tokens in place of values, so only its per-plugin
+    # renders under dist/ are real skill frontmatter.
     find src/plugins dist/claude dist/codex -name "SKILL.md" -exec uv run python -m outcomeeng.validation.skill_frontmatter {} +
 
 # Regenerate committed runtime plugin trees
 build-skills:
     # --no-cache: build the wheel from this worktree's own source, not a stale cross-worktree cached wheel.
     uv run --no-cache python -m outcomeeng.distribution.build src dist
+
+# Place every plugin's agent definitions into this checkout, through the same
+# shipped lifecycle-skill script a consumer runs, so the repo dogfoods its own
+# distribution rather than writing the directory by a private path.
+place-agents:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for skill in dist/codex/*/skills/*-plugin; do
+        python3 "${skill}/scripts/place_agents.py" --checkout .
+    done
+
+# Fail when the committed checkout agent directory differs from what the
+# shipped lifecycle skills would place.
+place-agents-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    status=0
+    for skill in dist/codex/*/skills/*-plugin; do
+        python3 "${skill}/scripts/place_agents.py" --checkout . --check || status=1
+    done
+    if [ "${status}" -ne 0 ]; then
+        echo "error: .codex/agents differs from the shipped definitions; run 'just place-agents'" >&2
+        exit 1
+    fi
 
 # Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree instruction blocks from rendered harness templates
 build-instructions:

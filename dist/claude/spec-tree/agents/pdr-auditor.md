@@ -29,9 +29,7 @@ Run the `spec-tree:audit-pdr` methodology in this already-dispatched, isolated v
 <workflow>
 
 1. Read the caller's PDR path and governing node.
-
 2. Follow the preloaded `spec-tree:audit-pdr` methodology with those values.
-
 3. Relay the returned JSON verdict verbatim.
 
 </workflow>

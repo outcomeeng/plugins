@@ -55,6 +55,8 @@ MYPY_ARGV: Final = ("uv", "run", "mypy", "--strict", *PYTHON_SOURCE_PATHS)
 PYRIGHT_ARGV: Final = ("uv", "run", "pyright", *PYTHON_SOURCE_PATHS)
 SPX_MARKDOWN_ARGV: Final = ("uv", "run", "spx", "validation", "markdown")
 DIST_DIFF_STEP_LABEL: Final = "dist-diff"
+PLACE_AGENTS_STEP_LABEL: Final = "place-agents-check"
+PLACE_AGENTS_ARGV: Final = ("just", PLACE_AGENTS_STEP_LABEL)
 SPX_VERSION_FLOOR_ARGV: Final = (
     "uv",
     "run",
@@ -140,10 +142,15 @@ def _reference_files() -> tuple[str, ...]:
 
 
 def runtime_token_files() -> tuple[str, ...]:
-    # Authored source the build renders or inlines: plugin content and the
-    # shared fragments plugin files include. A raw runtime token in either ships
-    # into a generated target, so both are enforced.
-    roots = (_REPO_ROOT / "src" / "plugins", _REPO_ROOT / "src" / "_shared")
+    # Authored source the build renders or inlines: plugin content, the shared
+    # fragments plugin files include, and the per-plugin templates that fan out
+    # into every plugin's generated tree. A raw runtime token in any of them
+    # ships into a generated target, so all three are enforced.
+    roots = (
+        _REPO_ROOT / "src" / "plugins",
+        _REPO_ROOT / "src" / "_shared",
+        _REPO_ROOT / "src" / "templates",
+    )
     return tuple(
         sorted(
             str(path)
@@ -162,6 +169,7 @@ PREFLIGHT_STEPS: Final = (
 VALIDATION_STEPS: Final = (
     Step(label="build-skills", argv=BUILD_COMMAND_ARGV),
     Step(label=DIST_DIFF_STEP_LABEL, argv=DIST_DIFF_ARGV),
+    Step(label=PLACE_AGENTS_STEP_LABEL, argv=PLACE_AGENTS_ARGV),
     Step(label="instructions-diff", argv=INSTRUCTION_BLOCK_ARGV),
     Step(label="build-orchestration", argv=ORCHESTRATION_VALIDATION_ARGV),
     Step(label="fmt-check", argv=FMT_CHECK_ARGV),

@@ -4,10 +4,15 @@ from __future__ import annotations
 
 from contextlib import redirect_stdout
 from io import StringIO
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from outcomeeng.distribution.build import SHARED_DIR_NAME, SHARED_FRAGMENT_FILENAME
+from outcomeeng.distribution.build import (
+    SHARED_DIR_NAME,
+    SHARED_FRAGMENT_FILENAME,
+    TEMPLATES_DIR_NAME,
+)
 from outcomeeng.distribution.contracts import (
     PLUGINS_DIR_NAME,
     SKILL_FILENAME,
@@ -18,6 +23,7 @@ from outcomeeng.distribution.contracts import (
 from outcomeeng.validation._steps import runtime_token_files
 from outcomeeng.validation.runtime_tokens import (
     RUNTIME_TOKEN_IGNORE,
+    Violation,
     forbidden_names,
     is_ignored,
     main,
@@ -171,12 +177,30 @@ def review_only_names_are_excluded() -> bool:
     return bool(review_only) and all(case.name not in forbidden for case in review_only)
 
 
-def authored_tree_default_enforcement_matches_contract() -> bool:
-    """Compare the gate selector with an independent authored-tree inventory."""
-    source_root = Path.cwd().resolve() / SOURCE_ROOT_NAME
+@dataclass(frozen=True)
+class AuthoredTreeEnforcement:
+    """The gate's selected files beside an independently derived inventory.
+
+    Returns both sets and the per-file ignore observations rather than their
+    agreement, so the linked test owns every comparison the assertion claims.
+    """
+
+    enforced_roots: tuple[Path, ...]
+    expected_files: frozenset[Path]
+    gate_files: frozenset[Path]
+    raw_token_violations: tuple[Violation, ...]
+    ignored_files: frozenset[Path]
+    ignore_listed_files: frozenset[Path]
+
+
+def authored_tree_enforcement() -> AuthoredTreeEnforcement:
+    """Return the authored-tree enforcement observations, undecided."""
+    repo_root = Path.cwd().resolve()
+    source_root = repo_root / SOURCE_ROOT_NAME
     roots = (
         source_root / PLUGINS_DIR_NAME,
         source_root / SHARED_DIR_NAME,
+        source_root / TEMPLATES_DIR_NAME,
     )
     expected_files = {
         path.resolve()
@@ -186,15 +210,17 @@ def authored_tree_default_enforcement_matches_contract() -> bool:
         if path.is_file() and path.suffix in TEXT_FILE_SUFFIXES
     }
     gate_files = {Path(raw_path).resolve() for raw_path in runtime_token_files()}
-    if not gate_files or gate_files != expected_files or scan_paths(gate_files):
-        return False
-    return all(
-        is_ignored(Path(raw_path))
-        == (
-            Path(raw_path).resolve().relative_to(Path.cwd().resolve()).as_posix()
-            in RUNTIME_TOKEN_IGNORE
-        )
-        for raw_path in gate_files
+    return AuthoredTreeEnforcement(
+        enforced_roots=roots,
+        expected_files=frozenset(expected_files),
+        gate_files=frozenset(gate_files),
+        raw_token_violations=tuple(scan_paths(gate_files)),
+        ignored_files=frozenset(path for path in gate_files if is_ignored(path)),
+        ignore_listed_files=frozenset(
+            path
+            for path in gate_files
+            if path.relative_to(repo_root).as_posix() in RUNTIME_TOKEN_IGNORE
+        ),
     )
 
 

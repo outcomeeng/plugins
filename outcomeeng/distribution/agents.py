@@ -1,11 +1,14 @@
-"""Convert rendered plugin agent definitions into local Codex custom agents."""
+"""Convert rendered plugin agent definitions into a target's native artifact.
+
+The build owns conversion: it renders each authored agent, converts it here, and
+writes the artifact into the plugin's generated tree. Placement into a checkout
+belongs to the plugin's shipped lifecycle script, so this module exposes
+conversion and placement helpers but no command-line entry point."""
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
-import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,9 +30,10 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
         "disallowedTools",
     }
 )
-GENERATED_MANIFEST_FILENAME: Final = ".outcomeeng-generated-agents.json"
-DEFAULT_SOURCE_ROOT: Final = Path("dist") / "codex"
-DEFAULT_TARGET_ROOT: Final = Path.home() / ".codex" / "agents"
+# Authored agent sources. The build converts each agent as it renders it, so a
+# tree-wide conversion reads the authored source rather than a generated tree —
+# no generated tree carries agent markdown once conversion moved into the build.
+DEFAULT_SOURCE_ROOT: Final = Path("src") / "plugins"
 AGENT_SOURCE_DIRECTORY_NAME: Final = "agents"
 CODEX_STRONG_MODEL: Final = "gpt-5.5"
 CODEX_STANDARD_MODEL: Final = "gpt-5.4"
@@ -152,17 +156,35 @@ def iter_agent_files(source_root: Path) -> tuple[Path, ...]:
 
 
 def parse_agent_markdown(path: Path) -> SourceAgent:
-    """Parse one rendered plugin agent markdown file."""
-    frontmatter, body = _split_frontmatter(path.read_text(encoding="utf-8"))
+    """Parse one rendered plugin agent markdown file.
+
+    Reads the file and delegates to the text parser, so the frontmatter-to-
+    SourceAgent mapping has one implementation. The agent's own name defaults to
+    the filename stem when the frontmatter declares none.
+    """
+    text = path.read_text(encoding="utf-8")
+    frontmatter, _body = _split_frontmatter(text)
     name = _optional_string(frontmatter, "name") or path.stem
+    return parse_agent_text(text, source_path=path, name=name)
+
+
+def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
+    """Parse rendered plugin agent markdown already held as text.
+
+    The build renders an agent's source before converting it, so conversion
+    reads the rendered text rather than re-reading the authored file. ``name``
+    is the converted agent's identity, which the caller derives from the target
+    namespace — a flat namespace carries the plugin slug as a prefix.
+    """
+    frontmatter, body = _split_frontmatter(text)
     description = _optional_string(frontmatter, "description") or (
-        f"Converted source agent from {path.name}."
+        f"Converted source agent from {source_path.name}."
     )
     unsupported_fields = tuple(
         sorted(key for key in frontmatter if key not in SUPPORTED_FRONTMATTER_FIELDS)
     )
     return SourceAgent(
-        source_path=path,
+        source_path=source_path,
         name=name,
         description=description,
         body=body,
@@ -178,6 +200,13 @@ def parse_agent_markdown(path: Path) -> SourceAgent:
         tools_declared="tools" in frontmatter,
         disallowed_tools=_string_tuple(frontmatter, "disallowedTools"),
         unsupported_fields=unsupported_fields,
+    )
+
+
+def convert_agent_markdown(text: str, *, source_path: Path, name: str) -> str:
+    """Return the target-native agent artifact for rendered agent markdown."""
+    return render_agent_toml(
+        convert_agent(parse_agent_text(text, source_path=source_path, name=name))
     )
 
 
@@ -367,99 +396,6 @@ def convert_agents(source_root: Path = DEFAULT_SOURCE_ROOT) -> tuple[CodexAgent,
         seen.add(converted_agent.filename)
         converted.append(converted_agent)
     return tuple(converted)
-
-
-def install_agents(
-    source_root: Path = DEFAULT_SOURCE_ROOT,
-    target_root: Path = DEFAULT_TARGET_ROOT,
-    *,
-    manifest_name: str = GENERATED_MANIFEST_FILENAME,
-) -> tuple[Path, ...]:
-    """Install converted agents and remove stale generated files."""
-    converted = convert_agents(source_root)
-    target_root.mkdir(parents=True, exist_ok=True)
-    manifest_path = target_root / manifest_name
-    previous = _read_generated_manifest(manifest_path)
-    current_files = frozenset(agent.filename for agent in converted)
-
-    for filename in sorted(previous - current_files):
-        stale_path = target_root / filename
-        if stale_path.exists():
-            stale_path.unlink()
-
-    written: list[Path] = []
-    generated_owned = set(previous)
-    for agent in converted:
-        target_path = target_root / agent.filename
-        rendered = render_agent_toml(agent)
-        if target_path.exists() and agent.filename not in generated_owned:
-            raise AgentConversionError(
-                f"refusing to overwrite user-owned Codex agent: {target_path}"
-            )
-        target_path.write_text(rendered, encoding="utf-8")
-        written.append(target_path)
-
-    manifest_path.write_text(
-        json.dumps({"generated": sorted(current_files)}, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return tuple(written)
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    """CLI entrypoint."""
-    parser = _build_parser()
-    args = parser.parse_args(argv)
-    try:
-        if args.command == "install":
-            installed = install_agents(
-                args.source_root,
-                args.target_root,
-                manifest_name=args.manifest_name,
-            )
-            print(f"installed {len(installed)} Codex agent(s) into {args.target_root}")
-            return 0
-        converted = convert_agents(args.source_root)
-        for agent in converted:
-            sys.stdout.write(f"# {agent.filename}\n")
-            sys.stdout.write(render_agent_toml(agent))
-        return 0
-    except AgentConversionError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
-
-
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="outcomeeng.distribution.agents",
-        description="Convert rendered plugin agents into Codex custom-agent TOML.",
-    )
-    subparsers = parser.add_subparsers(dest="command")
-    install = subparsers.add_parser("install")
-    install.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT)
-    install.add_argument("--target-root", type=Path, default=DEFAULT_TARGET_ROOT)
-    install.add_argument(
-        "--manifest-name",
-        default=GENERATED_MANIFEST_FILENAME,
-        help="Generated-file manifest stored under the target root.",
-    )
-    parser.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT)
-    return parser
-
-
-def _read_generated_manifest(path: Path) -> frozenset[str]:
-    if not path.is_file():
-        return frozenset()
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise AgentConversionError(f"invalid generated-agent manifest: {path}") from exc
-    generated = data.get("generated", [])
-    if not isinstance(generated, list) or not all(
-        isinstance(item, str) for item in generated
-    ):
-        raise AgentConversionError(f"invalid generated-agent manifest: {path}")
-    return frozenset(generated)
 
 
 def _split_frontmatter(text: str) -> tuple[dict[str, object], str]:
@@ -973,9 +909,7 @@ __all__ = [
     "CODEX_AGENT_ENV_VAR",
     "CODEX_AGENT_ENV_SEPARATOR",
     "DEFAULT_SOURCE_ROOT",
-    "DEFAULT_TARGET_ROOT",
     "EFFORT_MAPPINGS",
-    "GENERATED_MANIFEST_FILENAME",
     "INHERIT_MODEL_VALUE",
     "MODEL_MAPPINGS",
     "MODEL_PREFIX_EXAMPLE_SUFFIX",
@@ -995,9 +929,7 @@ __all__ = [
     "convert_agents",
     "generated_agent_type",
     "infer_sandbox_mode",
-    "install_agents",
     "iter_agent_files",
-    "main",
     "map_effort",
     "map_model",
     "map_permission_mode",
@@ -1005,7 +937,3 @@ __all__ = [
     "parse_agent_markdown",
     "render_agent_toml",
 ]
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

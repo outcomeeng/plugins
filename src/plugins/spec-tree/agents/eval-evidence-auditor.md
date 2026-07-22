@@ -33,12 +33,8 @@ Run the `spec-tree:audit-eval-evidence` methodology in this already-dispatched, 
 <workflow>
 
 1. Read the caller's spec node path and governing node.
-   {!% if target == 'codex' %!}
-2. Load `spec-tree:audit-eval-evidence` and follow its methodology with those values.
-   {!% else %!}
-3. Follow the preloaded `spec-tree:audit-eval-evidence` methodology with those values.
-   {!% endif %!}
-4. Relay the returned JSON verdict verbatim.
+2. {!% if target == 'codex' %!}Load `spec-tree:audit-eval-evidence` and follow its methodology with those values.{!% else %!}Follow the preloaded `spec-tree:audit-eval-evidence` methodology with those values.{!% endif %!}
+3. Relay the returned JSON verdict verbatim.
 
 </workflow>
 

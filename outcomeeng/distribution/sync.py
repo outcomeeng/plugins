@@ -111,17 +111,6 @@ STEPS: tuple[SyncStep, ...] = (
         ),
     ),
     SyncStep(
-        name="codex_agent_install",
-        argv=(
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "outcomeeng.distribution.agents",
-            "install",
-        ),
-    ),
-    SyncStep(
         name="install_validate",
         argv=("uv", "run", "python", "-m", "outcomeeng.validation.install"),
     ),

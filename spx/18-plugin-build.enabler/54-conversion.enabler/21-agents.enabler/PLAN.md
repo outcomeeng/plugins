@@ -59,13 +59,28 @@ a materialization step without agents as well.
 - Revise both governing decisions to capability-keyed principles. *(applied)*
 - Align this node and `spx/18-plugin-build.enabler/54-conversion.enabler/conversion.md`. *(applied)*
 - Align `spx/13-infrastructure.enabler/32-installation.enabler` for coherence over the committed set.
+- Align `spx/18-plugin-build.enabler/43-target-emission.enabler`, whose two `[test]`-backed
+  compliance assertions the planned emission falsifies: one authored lifecycle-skill source fans out
+  to many outputs per target rather than exactly one, and the flat-namespace agent artifact is
+  placed by the build rather than mirroring its source subtree. Re-declare both to admit
+  source-to-many fan-out and build-directed placement, and carry
+  `tests/test_target_emission.compliance.l1.py` with them. This node is a lower-index sibling of
+  conversion, so it constrains this work directly.
 - ADR 12's per-agent config-path enumeration stays as authored; it is tracked in `spx/ISSUES.md` as
   the `coding-agents` decomposition, routed through `/decompose`.
 
 ### Phase 2 — Capability registry
 
-- Add native agent format, filename shape, and flat-versus-namespaced agent namespace to the
-  source-owned per-target registry, and align the runtime-parameterization node that owns it.
+- Add native agent format, filename shape, and flat-versus-namespaced agent namespace to a
+  source-owned per-target agent-capability registry, declared in
+  `spx/18-plugin-build.enabler/43-target-emission.enabler` together with the assertion realignment
+  above. That node owns per-target output emission; the registry parameterizes emission and belongs
+  with it.
+- Not `spx/18-plugin-build.enabler/21-source-and-templating.enabler/21-runtime-parameterization.enabler`,
+  whose registry and every assertion govern rendering a divergent **name** into authored text through
+  a template token. An emission parameter is not a name substituted into content, and its values are
+  not tokens the source-layer guard could forbid in prose, so it does not belong to that node's
+  registry or its kind-keyed structure.
 
 ### Phase 3 — Lifecycle skill and build emission
 
@@ -77,11 +92,22 @@ a materialization step without agents as well.
   omitting any artifact a target cannot read.
 - Reuse the existing conversion functions rather than duplicating mapping logic; update every reader
   the markdown-consumer sweep identifies.
+- Add the repair routing rule to the instruction-block template in
+  `src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md`, so it
+  renders into this product's root guides and ships to every consumer that updates its block. The
+  rule is failure-triggered and capability-keyed: when a plugin's agents are missing, run that
+  plugin's `/{plugin}-plugin init`. It never fires in a healthy session, so it adds no per-session
+  check and no per-session output. Writing the rule into a root guide directly reaches no consumer
+  and is overwritten by the next render.
 
 ### Phase 4 — Placement and the committed agent directory
 
 - The lifecycle skill's script places and prunes the checkout's agent directory within its plugin's
   namespace. Stdlib-only, invoked through the skill-directory variable, no dependency installation.
+- Keep that script at or under fifty raw lines. `spx/12-shipped-scripting.adr.md` declares a longer
+  shipped script to be debt awaiting extraction into the SPX CLI, so scope it to placement and
+  namespace-bounded pruning with the mapping already resolved at build time, and keep verb behavior
+  that needs no code as skill instruction. Exceeding the cap is an explicit extraction decision.
 - Un-gitignore the checkout agent directory and commit the placed definitions.
 - Add the drift check that fails a commit when the committed directory diverges from what the
   lifecycle skill would place.
@@ -94,8 +120,12 @@ a materialization step without agents as well.
 
 ### Phase 6 — Surfaces, overlays, and versions
 
-- Correct `spx/local/merging.md` lines 89-92, which describe the superseded gitignored agent install.
-- Update `CLAUDE.md` and `AGENTS.md` where they describe agent installation or sync steps.
+- Correct `spx/local/merging.md` where it describes the superseded gitignored agent install.
+- Re-render the root guides with `just build-instructions` after the template gains the repair
+  routing rule, then verify with `just instructions-check`. The managed blocks are generated; never
+  hand-edit them.
+- Update `CLAUDE.md` and `AGENTS.md` product-owned content, outside the managed block, where it
+  describes agent installation or sync steps.
 - Advance plugin manifest versions in lockstep per the bump investigation's finding.
 
 ### Phase 7 — Evidence

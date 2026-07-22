@@ -70,6 +70,7 @@ INSTRUCTION_BLOCK_SOURCE_PATH: Final = "src/plugins/spec-tree/skills/update-inst
 SKILL_STEP_LABELS: Final = (
     "build-skills",
     "dist-diff",
+    "place-agents-check",
     "manifests",
     "skills",
     "skill-injection",
@@ -97,6 +98,7 @@ PYTHON_FORMAT_LINT_PATTERNS: Final = (
     "outcomeeng_testing/**",
     "outcomeeng_evals/**",
     "src/plugins/**/*.py",
+    "src/templates/**/*.py",
     "spx/**/tests/test_*.py",
 )
 PYTHON_TYPECHECK_PATTERNS: Final = (
@@ -120,8 +122,10 @@ WORKFLOW_PATTERNS: Final = (
 SKILL_PATTERNS: Final = (
     "src/plugins/**",
     "src/_shared/**",
+    "src/templates/**",
     "dist/claude/**",
     "dist/codex/**",
+    ".codex/agents/**",
     ".claude-plugin/**",
     ".agents/plugins/**",
 )

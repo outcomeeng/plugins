@@ -12,12 +12,13 @@ directly instead of keeping test-owned duplicates.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import shutil
 import subprocess
 import sys
 from ast import literal_eval
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -34,10 +35,13 @@ from jinja2.runtime import Context
 
 from outcomeeng.distribution.agents import (
     CODEX_FAST_MODEL,
+    convert_agent_markdown,
     CODEX_STANDARD_MODEL,
     CODEX_STRONG_MODEL,
 )
 from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
+    MARKDOWN_FILE_SUFFIX,
     BUILD_BLOCK_DELIMITER_END,
     BUILD_BLOCK_DELIMITER_START,
     BUILD_COMMENT_DELIMITER_END,
@@ -106,6 +110,17 @@ IMPLEMENTED: Final = True
 # ---------------------------------------------------------------------------
 
 SHARED_DIR_NAME: Final = "_shared"
+# Per-plugin skill templates. One authored body under `src/templates/<template>/`
+# renders once per plugin with that plugin's slug bound, emitting the skill
+# directory `<plugin>-<template>` into every plugin's generated tree. Distinct
+# from `_shared`, whose fragments are included INTO a skill rather than being a
+# whole skill generated from one source.
+TEMPLATES_DIR_NAME: Final = "templates"
+# The template whose generated skill carries each plugin's own lifecycle surface,
+# including the agent definitions a target reads from the checkout rather than
+# from a plugin manifest.
+LIFECYCLE_TEMPLATE_NAME: Final = "plugin"
+PLACEMENT_MANIFEST_FILENAME: Final = "placement.json"
 SHARED_FRAGMENT_FILENAME: Final = "fragment.md"
 
 
@@ -166,6 +181,8 @@ class EmissionAction(StrEnum):
     RENDER = "render"
     COPY = "copy"
     FAN_OUT = "fan-out"
+    CONVERT_AGENT = "convert-agent"
+    PLACEMENT_MANIFEST = "placement-manifest"
 
 
 @dataclass(frozen=True)
@@ -908,29 +925,24 @@ def frontmatter_field_names(text: str) -> frozenset[str]:
 
 
 def emit_skill(
-    src_path: Path,
+    emission: PlannedEmission,
     *,
-    target: _Target,
     dist_root: Path,
     shared_root: Path,
 ) -> None:
-    """Emit one skill's outputs for one target.
+    """Emit one skill's output for one target.
 
-    Reads src_path (a SKILL.md), renders directives via shared_root, applies
-    target-specific translation, and writes the result to the corresponding
-    location under dist_root.
+    Reads the emission's SKILL.md source, renders directives via shared_root,
+    applies target-specific translation, and writes the result to the
+    destination the build plan assigned — which is the source's mirrored path
+    for an authored plugin skill and the per-plugin path for a template.
     """
     src_root = shared_root.parent
-    src_relative = plugin_relative_path(src_path, src_root=src_root)
-    destination = dist_root / target.value / src_relative
-    rendered = render_source_text(
-        src_path,
-        target=target,
-        src_root=src_root,
-    )
-    translated = _translate_rendered_text(rendered, target=target)
+    destination = dist_root / emission.target.value / emission.relative_path
+    rendered = render_planned_emission_text(emission, src_root=src_root)
+    translated = _translate_rendered_text(rendered, target=emission.target)
     _write_text(destination, translated)
-    shutil.copymode(src_path, destination)
+    shutil.copymode(emission.source, destination)
 
 
 def build(
@@ -967,6 +979,12 @@ def build(
         target_root.mkdir(parents=True, exist_ok=True)
 
     for emission in plan.emissions:
+        if emission.action is EmissionAction.CONVERT_AGENT:
+            _emit_converted_agent(emission, dist_root=dist_root, src_root=src_root)
+            continue
+        if emission.action is EmissionAction.PLACEMENT_MANIFEST:
+            _emit_placement_manifest(emission, dist_root=dist_root)
+            continue
         if emission.action is EmissionAction.FAN_OUT:
             _emit_planned_fan_out(
                 emission,
@@ -980,22 +998,19 @@ def build(
                 and emission.source.name == SKILL_FILENAME
             ):
                 emit_skill(
-                    emission.source,
-                    target=emission.target,
+                    emission,
                     dist_root=dist_root,
                     shared_root=shared_root,
                 )
                 continue
             _emit_rendered_file(
-                emission.source,
-                target=emission.target,
+                emission,
                 dist_root=dist_root,
                 src_root=src_root,
             )
             continue
         _copy_unrendered_file(
-            emission.source,
-            target=emission.target,
+            emission,
             dist_root=dist_root,
             src_root=src_root,
         )
@@ -1204,50 +1219,68 @@ def _is_rendered_text(path: Path) -> bool:
 
 
 def _emit_rendered_file(
-    source_file: Path,
+    emission: PlannedEmission,
     *,
-    target: _Target,
     dist_root: Path,
     src_root: Path,
 ) -> None:
-    destination = (
-        dist_root / target.value / plugin_relative_path(source_file, src_root=src_root)
-    )
-    rendered = render_source_text(
-        source_file,
-        target=target,
-        src_root=src_root,
-    )
-    translated = _translate_rendered_text(rendered, target=target)
+    destination = dist_root / emission.target.value / emission.relative_path
+    rendered = render_planned_emission_text(emission, src_root=src_root)
+    translated = _translate_rendered_text(rendered, target=emission.target)
     _write_text(destination, translated)
-    shutil.copymode(source_file, destination)
+    shutil.copymode(emission.source, destination)
+
+
+def _emit_converted_agent(
+    emission: PlannedEmission, *, dist_root: Path, src_root: Path
+) -> None:
+    """Convert one agent into its target's native artifact and place it.
+
+    The conversion runs once here rather than once per consumer, so every
+    consumer receives byte-identical definitions and the placement a consumer
+    performs stays a file copy. The placement manifest beside the artifacts
+    tells the plugin's lifecycle skill where the target reads them from and
+    which namespace this plugin owns there.
+
+    Target translation runs before conversion so the artifact carries the
+    target's own runtime tokens; converting first would freeze the authoring
+    target's tokens into every generated definition.
+    """
+    destination = dist_root / emission.target.value / emission.relative_path
+    rendered = render_planned_emission_text(emission, src_root=src_root)
+    translated = _translate_rendered_text(rendered, target=emission.target)
+    converted = convert_agent_markdown(
+        translated,
+        source_path=emission.source,
+        name=destination.stem,
+    )
+    _write_text(destination, converted)
+
+
+def _emit_placement_manifest(emission: PlannedEmission, *, dist_root: Path) -> None:
+    """Write the placement manifest a plugin's lifecycle skill reads."""
+    capability = agent_capability(emission.target)
+    if capability.checkout_directory is None:
+        return
+    plugin = emission.relative_path.parts[0]
+    destination = dist_root / emission.target.value / emission.relative_path
+    _write_text(
+        destination,
+        json.dumps(
+            {"directory": capability.checkout_directory, "prefix": f"{plugin}_"},
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+    )
 
 
 def _copy_unrendered_file(
-    source_file: Path, *, target: _Target, dist_root: Path, src_root: Path
+    emission: PlannedEmission, *, dist_root: Path, src_root: Path
 ) -> None:
-    destination = (
-        dist_root / target.value / plugin_relative_path(source_file, src_root=src_root)
-    )
+    destination = dist_root / emission.target.value / emission.relative_path
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source_file, destination)
-
-
-def render_source_text(
-    source_file: Path,
-    *,
-    target: _Target,
-    src_root: Path,
-) -> str:
-    """Render one authored text file before target-specific translation."""
-    return render_text(
-        source_file.read_text(encoding="utf-8"),
-        shared_root=src_root / SHARED_DIR_NAME,
-        variables=_render_variables(
-            target,
-            plugin_name=source_plugin_name(source_file, src_root=src_root),
-        ),
-    )
+    shutil.copy2(emission.source, destination)
 
 
 def render_planned_emission_text(
@@ -1397,6 +1430,88 @@ def plugin_source_files(src_root: Path) -> tuple[Path, ...]:
     )
 
 
+@dataclass(frozen=True)
+class AgentCapability:
+    """One target's native handling of the agent definitions a plugin ships.
+
+    ``manifest_declares_agents`` is the capability that decides everything else:
+    a target whose plugin manifest can declare agents receives them through the
+    manifest in its own authored format, so the build emits the authored file
+    unchanged and no checkout placement is required. A target whose manifest
+    cannot receives a converted artifact inside the plugin's lifecycle skill,
+    plus the placement manifest that directs it into ``checkout_directory``.
+    ``namespaced`` records whether the target namespaces a plugin's agents; a
+    flat namespace takes the plugin slug as a filename and identity prefix so a
+    policy matching on name can tell one plugin's agents from another's.
+    """
+
+    manifest_declares_agents: bool
+    namespaced: bool
+    suffix: str
+    checkout_directory: str | None
+
+
+# Source-owned per-target agent capabilities. Adding a target adds an entry here
+# rather than editing emission logic, per
+# `spx/18-plugin-build.enabler/15-build-architecture.adr.md`. This registry is a
+# sibling of RUNTIME_TOKEN_REGISTRY, not an entry in it: these values parameterize
+# emission, while a runtime token renders a divergent name into authored text.
+AGENT_CAPABILITY_REGISTRY: Final[dict[str, AgentCapability]] = {
+    "claude": AgentCapability(
+        manifest_declares_agents=True,
+        namespaced=True,
+        suffix=".md",
+        checkout_directory=None,
+    ),
+    "codex": AgentCapability(
+        manifest_declares_agents=False,
+        namespaced=False,
+        suffix=".toml",
+        checkout_directory=".codex/agents",
+    ),
+}
+
+
+def agent_capability(target: _Target) -> AgentCapability:
+    """Return ``target``'s agent capability from the source-owned registry."""
+    try:
+        return AGENT_CAPABILITY_REGISTRY[target.value]
+    except KeyError as exc:
+        raise SourceFormatError(
+            f"no agent capability registered for target {target.value}"
+        ) from exc
+
+
+def plugin_names(src_root: Path) -> tuple[str, ...]:
+    """Return every authored plugin's directory name."""
+    plugins_root = src_root / PLUGINS_DIR_NAME
+    return tuple(
+        sorted(child.name for child in plugins_root.iterdir() if child.is_dir())
+    )
+
+
+def template_source_files(src_root: Path) -> tuple[Path, ...]:
+    """Return every per-plugin template source file the build fans out."""
+    templates_root = src_root / TEMPLATES_DIR_NAME
+    if not templates_root.is_dir():
+        return ()
+    return tuple(sorted(path for path in templates_root.rglob("*") if path.is_file()))
+
+
+def template_relative_path(source_file: Path, *, src_root: Path, plugin: str) -> Path:
+    """Return one template source's output path inside ``plugin``'s tree.
+
+    A template directory named ``<template>`` renders into the skill directory
+    ``<plugin>-<template>``, so ``src/templates/plugin/SKILL.md`` reaches
+    ``<plugin>/skills/<plugin>-plugin/SKILL.md`` in every generated target tree.
+    """
+    within_templates = source_file.relative_to(src_root / TEMPLATES_DIR_NAME)
+    template_name = within_templates.parts[0]
+    remainder = Path(*within_templates.parts[1:])
+    skill_dir = f"{plugin}-{template_name}"
+    return Path(plugin) / SKILLS_SUBDIR_NAME / skill_dir / remainder
+
+
 def plan_emissions(src_root: Path) -> BuildPlan:
     """Return the complete collision-free output plan for ``src_root``."""
     _validate_source_tree(src_root)
@@ -1411,12 +1526,15 @@ def plan_emissions(src_root: Path) -> BuildPlan:
             else EmissionAction.COPY
         )
         for target in _Target:
+            target_path, target_action = _agent_aware_destination(
+                relative_path, action=action, target=target
+            )
             emissions.append(
                 PlannedEmission(
                     source=source_file,
                     target=target,
-                    relative_path=relative_path,
-                    action=action,
+                    relative_path=target_path,
+                    action=target_action,
                 )
             )
             emissions.extend(
@@ -1427,6 +1545,8 @@ def plan_emissions(src_root: Path) -> BuildPlan:
                     shared_root=shared_root,
                 )
             )
+    emissions.extend(_planned_template_emissions(src_root, shared_root=shared_root))
+    emissions.extend(_planned_placement_emissions(src_root, emissions))
     plan = BuildPlan(plugin_sources=plugin_sources, emissions=tuple(emissions))
     collisions = plan.collisions()
     if collisions:
@@ -1438,6 +1558,123 @@ def plan_emissions(src_root: Path) -> BuildPlan:
         )
         raise SourceFormatError(f"multiple sources emit the same output: {details}")
     return plan
+
+
+def agent_slug(plugin: str, stem: str, *, capability: AgentCapability) -> str:
+    """Return one agent's filename stem in ``capability``'s namespace.
+
+    A target that namespaces plugin agents carries the bare agent name; a flat
+    namespace takes the plugin slug as a prefix, rendering the namespaced
+    ``<plugin>:<agent>`` identity as ``<plugin>_<agent>``.
+    """
+    return stem if capability.namespaced else f"{plugin}_{stem}"
+
+
+def _agent_aware_destination(
+    relative_path: Path,
+    *,
+    action: EmissionAction,
+    target: _Target,
+) -> tuple[Path, EmissionAction]:
+    """Return one source's destination and action for ``target``.
+
+    Every non-agent source keeps the mirrored path the plan computed. An agent
+    source reaching a target whose manifest cannot declare agents is converted
+    into that target's native artifact and placed inside the plugin's lifecycle
+    skill, the one surface the manifest declares that can carry it.
+    """
+    parts = relative_path.parts
+    if len(parts) < 3 or parts[1] != AGENTS_SUBDIR_NAME:
+        return relative_path, action
+    if relative_path.suffix != MARKDOWN_FILE_SUFFIX:
+        # An agent definition is authored as markdown. Any other file under
+        # `agents/` is not one, so it keeps its mirrored path rather than being
+        # converted into an artifact whose name would collide with the real
+        # agent of the same stem.
+        return relative_path, action
+    capability = agent_capability(target)
+    if capability.manifest_declares_agents:
+        return relative_path, action
+    plugin = parts[0]
+    stem = Path(parts[-1]).stem
+    filename = f"{agent_slug(plugin, stem, capability=capability)}{capability.suffix}"
+    destination = (
+        Path(plugin)
+        / SKILLS_SUBDIR_NAME
+        / f"{plugin}-{LIFECYCLE_TEMPLATE_NAME}"
+        / AGENTS_SUBDIR_NAME
+        / filename
+    )
+    return destination, EmissionAction.CONVERT_AGENT
+
+
+def _planned_placement_emissions(
+    src_root: Path,
+    emissions: Sequence[PlannedEmission],
+) -> tuple[PlannedEmission, ...]:
+    """Return one placement manifest per plugin whose agents need placement.
+
+    The manifest tells a plugin's lifecycle skill which checkout directory its
+    target reads agent definitions from and which namespace this plugin owns
+    there. It exists only where converted agents were planned, so a plugin that
+    ships no agents carries no manifest and its lifecycle skill reports that.
+    """
+    template = src_root / TEMPLATES_DIR_NAME / LIFECYCLE_TEMPLATE_NAME / SKILL_FILENAME
+    planned: dict[tuple[_Target, Path], PlannedEmission] = {}
+    for emission in emissions:
+        if emission.action is not EmissionAction.CONVERT_AGENT:
+            continue
+        manifest_path = emission.relative_path.parent / PLACEMENT_MANIFEST_FILENAME
+        planned[(emission.target, manifest_path)] = PlannedEmission(
+            source=template,
+            target=emission.target,
+            relative_path=manifest_path,
+            action=EmissionAction.PLACEMENT_MANIFEST,
+        )
+    return tuple(
+        planned[key] for key in sorted(planned, key=lambda k: (k[0].value, k[1]))
+    )
+
+
+def _planned_template_emissions(
+    src_root: Path,
+    *,
+    shared_root: Path,
+) -> tuple[PlannedEmission, ...]:
+    """Return every per-plugin template output across plugins and targets.
+
+    Each template source renders once per plugin per target, so one authored
+    body reaches every plugin's generated tree without being copied per plugin.
+    """
+    emissions: list[PlannedEmission] = []
+    for source_file in template_source_files(src_root):
+        action = (
+            EmissionAction.RENDER
+            if _is_rendered_text(source_file)
+            else EmissionAction.COPY
+        )
+        for plugin in plugin_names(src_root):
+            relative_path = template_relative_path(
+                source_file, src_root=src_root, plugin=plugin
+            )
+            for target in _Target:
+                emissions.append(
+                    PlannedEmission(
+                        source=source_file,
+                        target=target,
+                        relative_path=relative_path,
+                        action=action,
+                    )
+                )
+                emissions.extend(
+                    _planned_fan_out_emissions(
+                        source_file,
+                        target=target,
+                        relative_path=relative_path,
+                        shared_root=shared_root,
+                    )
+                )
+    return tuple(emissions)
 
 
 def _planned_fan_out_emissions(
@@ -1557,6 +1794,17 @@ def _validate_source_tree(src_root: Path) -> None:
             if not fragment.is_file():
                 raise SourceFormatError(
                     f"shared topic missing fragment.md: {topic_root}"
+                )
+
+    templates_root = src_root / TEMPLATES_DIR_NAME
+    if templates_root.exists():
+        for template_root in sorted(
+            path for path in templates_root.iterdir() if path.is_dir()
+        ):
+            if not (template_root / SKILL_FILENAME).is_file():
+                raise SourceFormatError(
+                    f"template directory missing {SKILL_FILENAME}: "
+                    f"{template_root.relative_to(src_root)}"
                 )
 
     for plugin_root in sorted(path for path in plugins_root.iterdir() if path.is_dir()):

@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.29.1 langs:python -->
+<!-- SPEC-TREE v0.30.0 langs:python -->
 
 <operator_question_interrupt>
 **OPERATOR QUESTION - IMMEDIATE PRIVILEGE REVOCATION:** When the operator asks a question, immediately relinquish all privileges to modify the current product or any external file, service, or resource. Answer the question immediately.

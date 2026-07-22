@@ -37,3 +37,30 @@ Resolution shape: invert the harness so each helper returns the observation and 
 Revisit condition: the pattern spans twenty-seven of the one hundred forty-two test files under `spx/**/tests/`, so the inversion is one migration with a shared harness contract rather than a per-node repair. Schedule it as that migration and take this node's two files as its first unit.
 
 Deferral reason: the changeset that surfaced this is a subtraction — it withdraws the Codex configured-agent identity preflight and the two spec nodes authored with it. Inverting a roughly one-thousand-line harness and thirty-two test functions inside it would more than double a reduction changeset, and the same inversion is owed across twenty-five further files that this changeset does not touch.
+
+## DEBT [standards]: the shipped placement script's line ceiling excludes script-standards additions
+
+`instructions:skill-auditor` raised two WARNING findings against
+`src/templates/plugin/scripts/place_agents.py`: it carries no `Tested with:` documentation comment
+recording sample-input, expected-output, and error-case coverage, and it lets a malformed
+`placement.json` surface a bare `JSONDecodeError` or `KeyError` rather than a message naming the file
+and the invalid field.
+
+Both are correct against `/skill-standards`. Both also add raw lines to a script that sits at exactly
+fifty, the ceiling `spx/12-shipped-scripting.adr.md` sets before a shipped script becomes debt
+awaiting extraction into the SPX CLI. The two standards pull in opposite directions on the same file,
+and neither yields to the other by its own terms.
+
+The auditor's own severity reasoning bounds the risk: `placement.json` is build-generated and
+trusted, never consumer input, so the unguarded parse cannot be reached by a malformed file a
+consumer authored.
+
+**Resolution shape**: decide which standard governs a shipped script at the ceiling — raise the
+ceiling for scripts carrying mandated documentation and validation, exempt those two categories from
+the raw-line count, or treat reaching the ceiling as the extraction trigger the ADR describes and
+move placement into the SPX CLI, leaving the skill its instruction and no script. The third option is
+what the ADR already prescribes for a proven script, so this may be an extraction decision rather
+than a standards conflict.
+
+**Revisit condition**: when placement next needs a behavior change, since any addition crosses the
+ceiling and forces the decision.

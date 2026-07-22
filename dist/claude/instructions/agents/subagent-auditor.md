@@ -31,9 +31,7 @@ Run the `instructions:audit-subagents` methodology in this already-dispatched, i
 <workflow>
 
 1. Read the caller's subagent configuration path.
-
 2. Follow the preloaded `instructions:audit-subagents` methodology with that value.
-
 3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>

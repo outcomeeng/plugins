@@ -1,8 +1,8 @@
 # Agents
 
-PROVIDES local conversion of rendered plugin agent definitions into Codex custom-agent files
-SO THAT marketplace maintainers and sync orchestration
-CAN exercise wrapper-agent behavior in Codex while the marketplace plugin manifest publishes only Codex-supported plugin surfaces.
+PROVIDES conversion of rendered plugin agent definitions into the Codex-native custom-agent artifact the build publishes with each plugin
+SO THAT every Codex consumer and hosted agent environment
+CAN run the marketplace's agents, which a Codex plugin manifest cannot declare, per `spx/12-marketplace-state.adr.md`.
 
 ## Assertions
 
@@ -24,6 +24,8 @@ CAN exercise wrapper-agent behavior in Codex while the marketplace plugin manife
 - ALWAYS: converted agents set an agent-type environment marker in `shell_environment_policy.set` so local Codex policy surfaces can distinguish one generated agent from another without matching prompt text or filenames ([test](tests/test_agents.compliance.l1.py))
 - NEVER: an agent whose source path resolves to no `<plugin>/agents` ancestor receives a marker - the marker namespaces every generated agent by its owning plugin, so a source outside that namespace fails conversion rather than emitting an unnamespaced marker ([test](tests/test_agents.compliance.l1.py))
 - ALWAYS: converted agents keep manual-review guidance for source fields whose Codex semantics remain prompt guidance rather than hard execution boundaries - `disallowedTools` and command-level meanings inside `tools` do not restrict commands executed through allowed shell tools, and `skills.config` enables named skills without proving spawn-time preload behavior ([test](tests/test_agents.compliance.l1.py))
-- ALWAYS: duplicate source agent names that slugify to the same Codex filename fail conversion before any install writes generated files ([test](tests/test_agents.compliance.l1.py))
-- NEVER: agent installation claims or overwrites pre-existing Codex agent files unless they were recorded in the generated-agent manifest - user-owned files remain outside generated ownership even when their content matches generated output ([test](tests/test_agents.compliance.l1.py))
-- NEVER: agent conversion writes generated agents into published Codex plugin manifest content ([test](tests/test_agents.compliance.l1.py))
+- ALWAYS: two sources whose outputs claim the same path in a target's generated tree fail the build before it writes any generated file ([test](tests/test_agents.compliance.l1.py))
+- NEVER: conversion returns two agents claiming one filename - source names differing only outside the slug alphabet converge on a single converted filename, so conversion fails rather than letting the later definition displace the earlier one ([test](tests/test_agents.compliance.l1.py))
+- NEVER: placing a plugin's converted agents touches a file outside the namespace that plugin's slug prefixes - a definition the developer authored, or one another plugin provides, survives placement and pruning unchanged even when its content matches generated output ([test](tests/test_agents.compliance.l1.py))
+- ALWAYS: for a target whose agent namespace is flat, a converted agent's filename and `name` carry the plugin as slug prefix, `<plugin>_<agent>`, so an agent-harness policy matching on name distinguishes the marketplace's agents from agents the developer authored ([test](tests/test_agents.compliance.l1.py))
+- ALWAYS: the build publishes each converted agent as plugin tree content in its target's generated tree, and the plugin manifest declares the surfaces that target resolves through the manifest without declaring agents ([test](tests/test_agents.compliance.l1.py))

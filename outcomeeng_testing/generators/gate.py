@@ -31,6 +31,7 @@ SELECTED_GATE_PLUGIN_SCRIPT_PATH = (
     "src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py"
 )
 SELECTED_GATE_SHARED_SOURCE_PATH = "src/_shared/spec-tree/instruction-block.md"
+SELECTED_GATE_TEMPLATE_SCRIPT_PATH = "src/templates/plugin/scripts/place_agents.py"
 SELECTED_GATE_WORKFLOW_PATH = "scripts/check.sh"
 # An exact-match selection target, so the value comes from the source module
 # that owns it rather than a copied literal. The other constants here are

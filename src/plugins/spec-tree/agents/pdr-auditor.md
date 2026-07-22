@@ -33,12 +33,8 @@ Run the `spec-tree:audit-pdr` methodology in this already-dispatched, isolated v
 <workflow>
 
 1. Read the caller's PDR path and governing node.
-   {!% if target == 'codex' %!}
-2. Load `spec-tree:audit-pdr` and follow its methodology with those values.
-   {!% else %!}
-3. Follow the preloaded `spec-tree:audit-pdr` methodology with those values.
-   {!% endif %!}
-4. Relay the returned JSON verdict verbatim.
+2. {!% if target == 'codex' %!}Load `spec-tree:audit-pdr` and follow its methodology with those values.{!% else %!}Follow the preloaded `spec-tree:audit-pdr` methodology with those values.{!% endif %!}
+3. Relay the returned JSON verdict verbatim.
 
 </workflow>
 

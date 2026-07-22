@@ -35,12 +35,8 @@ Run the `instructions:audit-subagents` methodology in this already-dispatched, i
 <workflow>
 
 1. Read the caller's {{! term('configured_agent') !}} configuration path.
-   {!% if target == 'codex' %!}
-2. Load `instructions:audit-subagents` and follow its methodology with that value.
-   {!% else %!}
-3. Follow the preloaded `instructions:audit-subagents` methodology with that value.
-   {!% endif %!}
-4. Relay the returned JSON verdict verbatim, including every row and finding.
+2. {!% if target == 'codex' %!}Load `instructions:audit-subagents` and follow its methodology with that value.{!% else %!}Follow the preloaded `instructions:audit-subagents` methodology with that value.{!% endif %!}
+3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>
 
