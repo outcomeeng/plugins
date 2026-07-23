@@ -30,7 +30,7 @@ Whole producer files, named producer sections, and ordered whole-producer sets a
 
 ### Audit
 
-- ALWAYS: skill, agent, classifier, script, or command behavior evals are coupled to the real producer through direct invocation, harness-mediated invocation, or source-derived prompt materialization ([audit])
+- ALWAYS: evals this harness runs for skill, agent, classifier, script, or command behavior are coupled to the real producer through direct invocation, harness-mediated invocation, or source-derived prompt materialization ([audit])
 - ALWAYS: producer-prompt rendering exposes its source-kind and path resolution through explicit definition values so tests exercise the real filesystem boundary without replacing collaborators ([audit])
 - NEVER: a prompt-only simulation that restates the producing artifact's policy is accepted as evidence for that producer ([audit])
 - NEVER: producer-prompt tests use framework mocks or monkeypatching to replace definition loading, path resolution, producer reads, or prompt writes; temporary real workspaces provide the evidence ([audit])
