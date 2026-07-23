@@ -619,10 +619,6 @@ def prepare(
             agent.status == DONE_STATUS
             or agent.worktree_path != candidate.worktree_path
             or agent.agent_type is not candidate.agent_type
-            or (
-                agent.session_id is not None
-                and agent.session_id != candidate.session_id
-            )
         ):
             raise AdapterError(
                 ResultStatus.INVALID_TARGET,

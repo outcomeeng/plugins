@@ -204,6 +204,40 @@ def verify_native_agent_recovery_mappings() -> list[str]:
         if module.NATIVE_HOME_FIELD not in candidate:
             failures.append("prepared manifest omitted the native home field")
 
+    hinted_panes, hinted_agents = _pre_restart_rosters(module, roster)
+    cast(dict[str, object], hinted_agents[0][module.SESSION_FIELD])[module.ID_FIELD] = (
+        roster.session_ids[1]
+    )
+    hinted_prepared = module.prepare(
+        roster.original_pane_ids,
+        hinted_panes,
+        hinted_agents,
+        recovery_candidates(module, roster),
+        identity_evidence(module, roster, roster.original_pane_ids),
+    )
+    if hinted_prepared[module.STATUS_FIELD] != module.ResultStatus.PREPARED:
+        failures.append("non-public evidence was overridden by a public session hint")
+
+    public_index = tuple(module.EvidenceSource).index(
+        module.EvidenceSource.PUBLIC_AGENT
+    )
+    public_hint_agents = _pre_restart_rosters(module, roster)[1]
+    cast(dict[str, object], public_hint_agents[public_index][module.SESSION_FIELD])[
+        module.ID_FIELD
+    ] = roster.session_ids[public_index - 1]
+    public_hint_status = _error_status(
+        module,
+        lambda: module.prepare(
+            roster.original_pane_ids,
+            hinted_panes,
+            public_hint_agents,
+            recovery_candidates(module, roster),
+            identity_evidence(module, roster, roster.original_pane_ids),
+        ),
+    )
+    if public_hint_status != module.ResultStatus.INVALID_TARGET:
+        failures.append("public-agent evidence accepted a conflicting public session")
+
     current_panes, current_agents = _post_restart_rosters(
         module, roster, roster.correlated_count
     )
