@@ -17,11 +17,19 @@ Runtime non-determinism is bounded rather than admitted into the verdict — the
 
 ## Verification
 
-- ALWAYS: an eval for skill, agent, or command behavior invokes the real coding agent on the installed plugin under test through `spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md`
-- ALWAYS: a case declares its skill selection, its prepared workspace, and its expected structural outcome, and is scored against the adapter's result envelope, the trace the run emits, and the workspace's final state
-- ALWAYS: a workflow-conformance verdict computed per `spx/31-outcomeeng.enabler/31-verification.enabler/21-conformance-verification.enabler/conformance-verification.md` is one evidence layer of a skill eval, scored beside the run's structural output, final state, and telemetry
-- ALWAYS: every evidence layer resolves to a deterministic score over structured artifacts, so no layer's verdict comes from a model reading prose
-- ALWAYS: an eval whose invocation withholds the plugin under test fails — a suite that passes with the plugin absent measures the model alone
-- NEVER: a model-facing prompt derived from a producer artifact's text stands as evidence for that producer's shipped behavior
-- NEVER: an eval declares a producer path, producer section, or producer set from which to materialize a prompt — the installed plugin is the producer the run reaches
-- NEVER: a generated-prompt drift check stands as evidence of producer coupling — coupling is established by the run reaching the installed artifact
+### Testing
+
+- ALWAYS: a case declares its skill selection, its prepared workspace, and its expected structural outcome, and is scored against the adapter's result envelope, the trace the run emits, and the workspace's final state ([conformance])
+- NEVER: an eval declares a producer path, producer section, or producer set from which to materialize a prompt — the installed plugin is the producer the run reaches ([compliance])
+
+### Eval
+
+- ALWAYS: an eval whose invocation withholds the plugin under test fails — a suite that passes with the plugin absent measures the model alone ([eval])
+
+### Audit
+
+- ALWAYS: an eval for skill, agent, or command behavior invokes the real coding agent on the installed plugin under test through `spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md` ([audit])
+- ALWAYS: a workflow-conformance verdict computed per `spx/31-outcomeeng.enabler/31-verification.enabler/21-conformance-verification.enabler/conformance-verification.md` is one evidence layer of a skill eval, scored beside the run's structural output, final state, and telemetry ([audit])
+- ALWAYS: every evidence layer resolves to a deterministic score over structured artifacts, so no layer's verdict comes from a model reading prose ([audit])
+- NEVER: a model-facing prompt derived from a producer artifact's text stands as evidence for that producer's shipped behavior ([audit])
+- NEVER: a generated-prompt drift check stands as evidence of producer coupling — coupling is established by the run reaching the installed artifact ([audit])
