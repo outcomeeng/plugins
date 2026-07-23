@@ -157,6 +157,10 @@ DENY   git stash pop stash@{0}
 DENY   git stash clear
 ```
 
+## Autonomy Boundary
+
+Default-branch git and version-control mutation — branching, committing, pushing, publishing, merging, and the merge flow's own cleanup of the branches it created — proceeds only inside a governing skill flow, never as a direct command outside one. This autonomy never extends to force-pushing a shared or protected ref, deleting a ref no active skill flow authorizes, bypassing commit hooks (`--no-verify`) or commit signing, or any action the Git Safety Protocol forbids; each needs explicit operator instruction in the same turn.
+
 ## Mutation Status Updates
 
 Before proposing or performing a repository mutation, name:

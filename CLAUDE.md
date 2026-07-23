@@ -138,6 +138,10 @@ DENY   git stash pop stash@{0}
 DENY   git stash clear
 ```
 
+## Autonomy Boundary
+
+Default-branch git and version-control mutation — branching, committing, pushing, publishing, merging, and the merge flow's own cleanup of the branches it created — proceeds only inside a governing skill flow, never as a direct command outside one. This autonomy never extends to force-pushing a shared or protected ref, deleting a ref no active skill flow authorizes, bypassing commit hooks (`--no-verify`) or commit signing, or any action the Git Safety Protocol forbids; each needs explicit operator instruction in the same turn.
+
 ## Mutation Status Updates
 
 Before proposing or performing a repository mutation, name:
@@ -421,18 +425,6 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 For the contents of any plugin or `spx/` subdirectory, run `ls` or read the catalog. The authored directory layout under each plugin follows the conventions in `src/plugins/instructions/skills/`.
 
 ## Git workflow
-
-### Autonomy
-
-The managed Spec Tree instruction block in this root file is the skill router for spec-tree work. For any change destined for the default branch, invoke `/merge`; it classifies the changeset, reads `spx/local/merging.md` when present, selects the transport, and delegates to the transport skills. Do not reimplement transport selection, gate predicates, review disposition, base-sync, or PR management from the product-owned root instruction content.
-
-The agent never invokes `git commit`, `git push`, `gh pr create`, or `gh pr merge` outside the governing skill flow. The only permitted direct git/GitHub command forms are those an active skill or this repository command section names exactly.
-
-The autonomy does **not** cover blind force-push (`git push --force`), force-push of a shared or protected branch, branch deletion outside the merge flow, skipping pre-commit hooks (`--no-verify`), skipping commit signing, or any action explicitly forbidden by the Git Safety Protocol or `<self_reference_policy>`. Those require explicit human instruction in the same turn. The guarded `--force-with-lease` push that `/manage-github-pr` performs for its own PR branch after base-sync is part of the skill flow.
-
-### Lifecycle
-
-The lifecycle authority is: the managed Spec Tree instruction block routes to skills; `/merge`, `/merging-standards`, `/manage-github-pr`, `/open-pr`, and `/manage-pr` define behavior; `spx/local/merging.md` provides this product's overlay values. Root `CLAUDE.md` supplies exact repository commands only where a skill asks for this product's concrete command surface.
 
 ### How skill content reaches a session
 
