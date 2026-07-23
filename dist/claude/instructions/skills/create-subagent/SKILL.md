@@ -177,7 +177,8 @@ Claude is a senior code reviewer specializing in security.
 - XSS attack vectors
 - Authentication/authorization issues
 - Sensitive data exposure
-  </focus_areas>
+
+</focus_areas>
 
 <workflow>
 1. Read the modified files

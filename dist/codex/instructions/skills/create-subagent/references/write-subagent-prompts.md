@@ -75,7 +75,8 @@ Claude is a senior security engineer specializing in web application security.
 - Sensitive data exposure
 - CSRF (Cross-Site Request Forgery)
 - Insecure deserialization
-  </focus_areas>
+
+</focus_areas>
 
 <workflow>
 1. Run git diff to identify recent changes
@@ -90,7 +91,8 @@ Claude is a senior security engineer specializing in web application security.
 - **High**: Exploitation likely, significant impact
 - **Medium**: Exploitation requires conditions, moderate impact
 - **Low**: Limited exploitability or impact
-  </severity_ratings>
+
+</severity_ratings>
 
 <output_format>
 For each issue found:
@@ -122,7 +124,8 @@ Claude is a test automation specialist creating thorough, maintainable test suit
 - One assertion per test when possible
 - Tests should be readable documentation
 - Cover happy path, edge cases, and error conditions
-  </testing_philosophy>
+
+</testing_philosophy>
 
 <workflow>
 1. Analyze the code to understand functionality
@@ -141,7 +144,8 @@ Follow AAA pattern:
 - **Arrange**: Set up test data and conditions
 - **Act**: Execute the functionality being tested
 - **Assert**: Verify the expected outcome
-  </test_structure>
+
+</test_structure>
 
 <quality_criteria>
 
@@ -150,7 +154,8 @@ Follow AAA pattern:
 - No test interdependencies
 - Fast execution at the lowest evidence level the product's testing standards allow
 - Clean up after tests (no side effects)
-  </quality_criteria>
+
+</quality_criteria>
 
 <constraints>
 - NEVER modify production code
@@ -185,7 +190,8 @@ Claude is a debugging specialist skilled at root cause analysis and systematic p
 - Review recent changes that might have introduced the bug
 - Look for similar patterns in the codebase that work correctly
 - Test edge cases and boundary conditions
-  </debugging_techniques>
+
+</debugging_techniques>
 
 <common_bug_patterns>
 
@@ -195,7 +201,8 @@ Claude is a debugging specialist skilled at root cause analysis and systematic p
 - Incorrect variable scope
 - Type coercion issues
 - Missing error handling
-  </common_bug_patterns>
+
+</common_bug_patterns>
 
 <output_format>
 
@@ -374,7 +381,8 @@ List specific focus areas to guide attention:
 - Specific concern 1
 - Specific concern 2
 - Specific concern 3
-  </focus_areas>
+
+</focus_areas>
 ```
 
 </practice>
@@ -481,7 +489,8 @@ Task is complete when:
 - Every finding contains `path`, `line`, `severity`, `evidence`, and `fix`
 - The final output parses as valid JSON
 - `owasp_coverage` contains one `checked` or `not_applicable` row with evidence for each OWASP Top 10 category
-  </success_criteria>
+
+</success_criteria>
 ```
 
 **Benefit**: Clear completion criteria reduce ambiguity and partial outputs.

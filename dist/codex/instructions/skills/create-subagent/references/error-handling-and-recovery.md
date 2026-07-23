@@ -108,7 +108,8 @@ Industry research identifies these failure patterns:
 - Secondary: Cached docs (may be stale, flag date)
 - Tertiary: Stub docs (minimal, flag as incomplete)
 - Always: Add verification TODOs to generated code
-  </fallback_hierarchy>
+
+</fallback_hierarchy>
 
 ````
 **Key principle**: Partial success better than total failure. Always produce something useful.
@@ -152,7 +153,8 @@ If API endpoint has failed 5 consecutive times:
 - After 5 minutes, attempt one call (circuit "half-open")
 - If succeeds, resume normal calls (circuit "closed")
 - If fails, keep circuit open for another 5 minutes
-  </circuit_breaker_logic>
+
+</circuit_breaker_logic>
 ```
 
 **Application to subagents**: Include in prompt when subagent calls external APIs or services.

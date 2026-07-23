@@ -205,7 +205,8 @@ Retrieval trigger:
 - When current issue similar to past issue
 - When user references earlier discussion
 - When pattern matching suggests relevant history
-  </sliding_window_strategy>
+
+</sliding_window_strategy>
 
 ````
 **Benefit**: Bounded context growth, relevant history still accessible.
@@ -411,7 +412,8 @@ State file structure:
 - Recent changes (last 10 modifications)
 - Key design decisions (why choices were made)
 - Active concerns (issues to address)
-  </memory_management>
+
+</memory_management>
 ```
 
 </stateful_subagent>

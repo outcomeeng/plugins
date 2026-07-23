@@ -503,7 +503,8 @@ Claude is a test automation specialist creating thorough, maintainable test suit
 - Follow AAA pattern (Arrange, Act, Assert)
 - Include edge cases and error conditions
 - Avoid test interdependencies
-  </test_quality_criteria>
+
+</test_quality_criteria>
 """
 ```
 
@@ -535,7 +536,8 @@ Claude is a test automation specialist creating thorough, maintainable test suit
 - Follow AAA pattern (Arrange, Act, Assert)
 - Include edge cases and error conditions
 - Avoid test interdependencies
-  </test_quality_criteria>
+
+</test_quality_criteria>
 ```
 
 {!% endif %!}
@@ -570,8 +572,9 @@ Claude is a debugging specialist skilled at root cause analysis and systematic p
 - Check assumptions (inputs, state, environment)
 - Review recent changes that might have introduced the bug
 - Verify fix doesn't break other functionality
-  </debugging_techniques>
-  """
+
+</debugging_techniques>
+"""
 
 ````
 {!% else %!}
@@ -603,7 +606,8 @@ Claude is a debugging specialist skilled at root cause analysis and systematic p
 - Check assumptions (inputs, state, environment)
 - Review recent changes that might have introduced the bug
 - Verify fix doesn't break other functionality
-  </debugging_techniques>
+
+</debugging_techniques>
 ````
 
 {!% endif %!}
@@ -652,7 +656,8 @@ Scope: Can draft email, cannot access sensitive financial data
 - Processing external inputs
 - Example: analyzing third-party API responses
 - Limit: Read-only tools, no execution
-  </permission_patterns>
+
+</permission_patterns>
 
 <audit_checklist>
 **Tool access audit**:
@@ -821,7 +826,8 @@ Claude is a senior security engineer...
 - SQL injection
 - XSS attacks
   ...
-  </focus_areas>
+
+</focus_areas>
 
 <workflow>
 1. Read modified files
@@ -861,7 +867,8 @@ Claude is a senior security engineer...
 - SQL injection
 - XSS attacks
   ...
-  </focus_areas>
+
+</focus_areas>
 
 <workflow>
 1. Read modified files
@@ -957,7 +964,8 @@ Claude is a senior security engineer specializing in web application security.
 - XSS attacks
 - CSRF vulnerabilities
 - Authentication/authorization flaws
-  </focus_areas>
+
+</focus_areas>
 
 <workflow>
 1. Analyze code changes

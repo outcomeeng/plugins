@@ -15,7 +15,7 @@ allowed-tools: Read, Grep, Glob, Skill
 {!% require_skill 'instructions:create-subagent' %!}
 
 <objective>
-An `APPROVED` or `REJECTED` verdict on one {{! term('configured_agent') !}} configuration file against the `create-subagent` and `/agent-prompt-standards` conventions, with every finding naming its location, violated convention, concrete evidence, and consequence.
+An `APPROVED` or `REJECTED` verdict on one {{! term('configured_agent') !}} configuration file against the `/create-subagent` and `/agent-prompt-standards` conventions, with every finding naming its location, violated convention, concrete evidence, and consequence.
 </objective>
 
 <constraints>
@@ -117,7 +117,7 @@ These issues significantly hurt effectiveness - flag as critical:
 Check against `/agent-prompt-standards` conventions:
 
 - **Voice**: Uses imperative mood for instructions, "Claude" for failure modes/tendencies. Never "the agent", "the model", or "you"
-- **Description style**: Natural-language purpose and usage wording from `create-subagent`; states what the {{! term('configured_agent') !}} does and when to invoke it. Do not apply the directive skill-frontmatter description pattern.
+- **Description style**: Natural-language purpose and usage wording from `/create-subagent`; states what the {{! term('configured_agent') !}} does and when to invoke it. Do not apply the directive skill-frontmatter description pattern.
 - **Constraint language**: Strong modal verbs (MUST/NEVER/ALWAYS) in constraint blocks
 - **Anti-patterns**: No banned phrases ("helpful assistant", "helps with", "please"). No structural anti-patterns (explaining Claude to Claude, motivational prose)
 
@@ -131,7 +131,7 @@ These improve quality - flag as recommendations:
 - Does prompt include focus areas or equivalent specificity?
 - Pass: 3-6 specific focus areas listed somewhere in the prompt
 
-**output structure**:
+**output_structure**:
 
 - Does prompt define expected output structure?
 - Pass: clear deliverable-structure guidance under any semantically appropriate tag

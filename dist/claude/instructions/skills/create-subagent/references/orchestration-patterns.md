@@ -125,7 +125,8 @@ Synchronization challenges:
 - Handling different completion times
 - Dealing with partial failures (some agents fail, others succeed)
 - Combining potentially conflicting outputs
-  </parallel_workflow>
+
+</parallel_workflow>
 
 ````
 **Benefits**: Massive speed improvement, efficient resource utilization.
@@ -183,7 +184,8 @@ Lower-level agents:
 - Execute with deep expertise
 - Report results to coordinator
 - No awareness of other agents' work
-  </hierarchical_workflow>
+
+</hierarchical_workflow>
 
 ````
 **Benefits**: Handles complexity through decomposition, clear responsibility boundaries.
@@ -246,7 +248,8 @@ Claude is an orchestration coordinator. Route tasks to specialized agents based 
 - test-writer: Test creation
 - debugger: Bug investigation
 - refactorer: Code improvement
-  </available_agents>
+
+</available_agents>
 
 <decision_process>
 
@@ -461,7 +464,8 @@ If agent fails:
 - Try alternative agent if available
 - Proceed with partial results if acceptable
 - Escalate to human if critical
-  </error_handling>
+
+</error_handling>
 ```
 
 </coordinator_subagent>
@@ -484,7 +488,8 @@ Context:
 Attachments:
 
 - {relevant files, data, or previous outputs}
-  </agent_handoff_format>
+
+</agent_handoff_format>
 ```
 
 **Why explicit format matters**: Prevents information loss, ensures target agent has full context, enables validation.
@@ -508,7 +513,8 @@ Partial failure handling:
 - If 1 of 3 agents fails: Proceed with 2 results, note gap
 - If 2 of 3 agents fail: Consider retry or workflow failure
 - ALWAYS communicate what was completed vs attempted
-  </parallel_synchronization>
+
+</parallel_synchronization>
 ```
 
 </synchronization>
