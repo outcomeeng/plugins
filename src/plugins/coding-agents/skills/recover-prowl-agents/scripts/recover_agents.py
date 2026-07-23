@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import TextIO, cast
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 TRANSPORT_SCHEMA_VERSION = 1
 TRANSPORT_SUCCEEDED_STATUS = "succeeded"
 TRANSPORT_COMMAND_FAILED_STATUS = "command-failed"
@@ -22,13 +22,17 @@ ACTIVATION_TAB_CREATE_OPERATION = "tab-create"
 DONE_STATUS = "done"
 
 RECOVERY_REASSESSMENT_PROMPT = (
-    "Recovery check: Prowl restored this pane with the expected native session "
-    "identity. Before acting, inspect the prior conversation and authoritative "
-    "current repository and SPX state. Continue only when concrete unfinished work "
-    "remains and continuation is still authorized. If the prior workflow completed, "
-    "the session was deliberately stopped, or continuation is unclear, exit now "
-    "without modifying files or starting background work. Do not remain active "
-    "merely because recovery resumed the session."
+    "Treat the restart, authentication repair, or tool failure as a transport "
+    "interruption, not cancellation. Identify the last substantive operator request "
+    "and whether it received a complete successful response. If not, complete it now "
+    "under its original constraints; after successful authentication, retry the "
+    "interrupted response. If an operator question, structured selection, approval "
+    "request, or external blocker was pending, re-present it with the same known "
+    "facts and options and wait without selecting or acting past it. Continue "
+    "independently authorized work without asking again. Inspect repository or SPX "
+    "state only when the pending request requires it. Stop only when every operator "
+    "request is satisfied and the workflow completed or was explicitly cancelled. "
+    "If the prior state cannot be classified, ask the operator rather than exiting."
 )
 
 SCHEMA_VERSION_FIELD = "schemaVersion"
@@ -61,6 +65,9 @@ WORKTREE_ID_FIELD = "worktreeId"
 WORKTREE_PATH_FIELD = "worktreePath"
 REPOSITORY_ROOT_FIELD = "repositoryRoot"
 SESSION_ID_FIELD = "sessionId"
+RESUME_LOCATOR_FIELD = "resumeLocator"
+NATIVE_HOME_FIELD = "nativeHome"
+REASSESSED_SESSION_IDS_FIELD = "reassessedSessionIds"
 AGENT_TYPE_FIELD = "agentType"
 EVIDENCE_FIELD = "evidence"
 SOURCE_FIELD = "source"
@@ -73,6 +80,7 @@ COMMAND_EXIT_CODE_FIELD = "commandExitCode"
 RESPONSE_FIELD = "response"
 DELIVERED_FIELD = "delivered"
 VERIFIED_FIELD = "verified"
+VERIFICATION_FIELD = "verification"
 MISSING_PANE_IDS_FIELD = "missingPaneIds"
 DUPLICATE_PANE_IDS_FIELD = "duplicatePaneIds"
 UNEXPECTED_AGENT_PANE_IDS_FIELD = "unexpectedAgentPaneIds"
@@ -85,6 +93,7 @@ class Operation(StrEnum):
     RECOVER = "recover"
     SETTLE = "settle"
     VERIFY = "verify"
+    REASSESS = "reassess"
 
 
 class ResultStatus(StrEnum):
@@ -94,6 +103,8 @@ class ResultStatus(StrEnum):
     RESUMED = "resumed"
     ALREADY_CURRENT = "already-current"
     VERIFIED = "verified"
+    REASSESSMENT_READY = "reassessment-ready"
+    REASSESSMENT_SENT = "reassessment-sent"
     INVALID_TARGET = "invalid-target"
     PANE_OCCUPIED = "pane-occupied"
     CORRELATION_INCOMPLETE = "correlation-incomplete"
@@ -162,6 +173,8 @@ class PreparedCandidate:
     original_pane_id: str
     worktree_path: str
     session_id: str
+    resume_locator: str
+    native_home: str | None
     agent_type: AgentType
     evidence: EvidenceSource
     role: RecoveryRole
@@ -172,6 +185,8 @@ class PreparedCandidate:
             ORIGINAL_PANE_ID_FIELD: self.original_pane_id,
             WORKTREE_PATH_FIELD: self.worktree_path,
             SESSION_ID_FIELD: self.session_id,
+            RESUME_LOCATOR_FIELD: self.resume_locator,
+            NATIVE_HOME_FIELD: self.native_home,
             AGENT_TYPE_FIELD: self.agent_type,
             EVIDENCE_FIELD: self.evidence,
             ROLE_FIELD: self.role,
@@ -242,6 +257,12 @@ def _boolean(value: object, location: str) -> bool:
     return value
 
 
+def _optional_absolute_path(value: object, location: str) -> str | None:
+    if value is None:
+        return None
+    return _absolute_path(value, location)
+
+
 def _absolute_path(value: object, location: str) -> str:
     path = _text(value, location)
     if not os.path.isabs(path):
@@ -310,6 +331,12 @@ def _candidate_from_item(item: dict[str, object], location: str) -> PreparedCand
             item.get(WORKTREE_PATH_FIELD), f"{location}.worktreePath"
         ),
         session_id=_text(item.get(SESSION_ID_FIELD), f"{location}.sessionId"),
+        resume_locator=_text(
+            item.get(RESUME_LOCATOR_FIELD), f"{location}.resumeLocator"
+        ),
+        native_home=_optional_absolute_path(
+            item.get(NATIVE_HOME_FIELD), f"{location}.nativeHome"
+        ),
         agent_type=cast(
             AgentType,
             _enum(AgentType, item.get(AGENT_TYPE_FIELD), f"{location}.agentType"),
@@ -340,6 +367,12 @@ def prepared_candidate_from_item(
             item.get(WORKTREE_PATH_FIELD), f"{location}.worktreePath"
         ),
         session_id=_text(item.get(SESSION_ID_FIELD), f"{location}.sessionId"),
+        resume_locator=_text(
+            item.get(RESUME_LOCATOR_FIELD), f"{location}.resumeLocator"
+        ),
+        native_home=_optional_absolute_path(
+            item.get(NATIVE_HOME_FIELD), f"{location}.nativeHome"
+        ),
         agent_type=cast(
             AgentType,
             _enum(AgentType, item.get(AGENT_TYPE_FIELD), f"{location}.agentType"),
@@ -422,6 +455,18 @@ def _validate_candidate_set(candidates: list[PreparedCandidate]) -> None:
         )
     by_worktree: dict[str, list[PreparedCandidate]] = {}
     for candidate in candidates:
+        if candidate.agent_type is not AgentType.CLAUDE and (
+            candidate.resume_locator != candidate.session_id
+        ):
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                "Codex and Pi resume locators must equal their native session identity.",
+            )
+        if candidate.agent_type is not AgentType.CODEX and candidate.native_home:
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                "Only Codex candidates may carry a native home.",
+            )
         by_worktree.setdefault(candidate.worktree_path, []).append(candidate)
     for worktree_path, group in by_worktree.items():
         if len(group) == 1:
@@ -459,7 +504,34 @@ def _prepared_candidates(prepared: object) -> list[PreparedCandidate]:
         )
     ]
     _validate_candidate_set(candidates)
+    reassessed = value.get(REASSESSED_SESSION_IDS_FIELD)
+    if not isinstance(reassessed, list) or any(
+        not isinstance(item, str) or not item for item in reassessed
+    ):
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA,
+            "Prepared manifest reassessedSessionIds must be an array of non-empty strings.",
+        )
+    if len(reassessed) != len(set(reassessed)) or any(
+        item not in {candidate.session_id for candidate in candidates}
+        for item in reassessed
+    ):
+        raise AdapterError(
+            ResultStatus.INVALID_TARGET,
+            "Prepared manifest reassessedSessionIds must identify distinct prepared sessions.",
+        )
     return candidates
+
+
+def _reassessed_session_ids(prepared: object) -> set[str]:
+    value = _object(prepared, PREPARED_FIELD)
+    reassessed = value.get(REASSESSED_SESSION_IDS_FIELD)
+    if not isinstance(reassessed, list):
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA,
+            "Prepared manifest reassessedSessionIds must be an array.",
+        )
+    return {cast(str, item) for item in reassessed}
 
 
 def _validated_bindings(
@@ -580,6 +652,11 @@ def prepare(
         STATUS_FIELD: ResultStatus.PREPARED,
         CANDIDATES_FIELD: [
             candidates_by_pane[pane_id].result() for pane_id in selected
+        ],
+        REASSESSED_SESSION_IDS_FIELD: [
+            candidates_by_pane[pane_id].session_id
+            for pane_id in selected
+            if candidates_by_pane[pane_id].evidence is EvidenceSource.CURRENT_SESSION
         ],
     }
 
@@ -717,7 +794,7 @@ def bind_activations(plan: object, result_items: object) -> dict[str, object]:
     ) not in {ResultStatus.ACTIVATION_REQUIRED, ResultStatus.READY}:
         raise AdapterError(
             ResultStatus.INVALID_SCHEMA,
-            "Activation binding requires a schema-4 activation-required or ready plan.",
+            "Activation binding requires a schema-5 activation-required or ready plan.",
         )
     bindings = [
         _binding_from_item(item, f"plan.bindings[{index}]")
@@ -798,12 +875,26 @@ def bind_activations(plan: object, result_items: object) -> dict[str, object]:
 
 
 def native_resume_command(candidate: PreparedCandidate) -> str:
-    prompt = (
-        f"Expected native session identity: {candidate.session_id}. "
-        f"Recovery role: {candidate.role.value}. {RECOVERY_REASSESSMENT_PROMPT}"
-    )
-    return shlex.join(
-        (*NATIVE_RESUME_PREFIXES[candidate.agent_type], candidate.session_id, prompt)
+    prefix = NATIVE_RESUME_PREFIXES[candidate.agent_type]
+    if candidate.agent_type is AgentType.CLAUDE:
+        return shlex.join((*prefix, candidate.resume_locator))
+    if candidate.agent_type is AgentType.CODEX and candidate.native_home is not None:
+        return shlex.join(
+            (
+                "env",
+                f"CODEX_HOME={candidate.native_home}",
+                *prefix,
+                candidate.session_id,
+            )
+        )
+    return shlex.join((*prefix, candidate.session_id))
+
+
+def reassessment_prompt(candidate: PreparedCandidate) -> str:
+    return (
+        f"Recovery verified native {candidate.agent_type.value} session "
+        f"{candidate.session_id} in {candidate.worktree_path}. "
+        f"{RECOVERY_REASSESSMENT_PROMPT}"
     )
 
 
@@ -894,13 +985,15 @@ def _validated_recovery_plan(plan: object) -> dict[str, object]:
     if value.get(STATUS_FIELD) not in {
         ResultStatus.RESUMED,
         ResultStatus.ALREADY_CURRENT,
+        ResultStatus.REASSESSMENT_READY,
     }:
         raise AdapterError(
             ResultStatus.INVALID_SCHEMA,
-            "Settlement requires a resumed or already-current recovery plan.",
+            "Settlement requires a resumed, already-current, or reassessment-ready plan.",
         )
     _array(value.get(BINDINGS_FIELD), "plan.bindings")
-    _array(value.get(TARGETS_FIELD), "plan.targets")
+    if value.get(STATUS_FIELD) != ResultStatus.REASSESSMENT_READY:
+        _array(value.get(TARGETS_FIELD), "plan.targets")
     _array(value.get(DELIVERIES_FIELD), "plan.deliveries")
     return value
 
@@ -937,7 +1030,25 @@ def settle_recovery(plan: object, result_items: object) -> dict[str, object]:
         return {
             **value,
             STATUS_FIELD: ResultStatus.COMMAND_FAILED,
-            DETAIL_FIELD: "One or more exact native recovery commands were not delivered.",
+            DETAIL_FIELD: "One or more planned recovery sends were not delivered.",
+            DELIVERY_RESULTS_FIELD: checked,
+        }
+    if value.get(STATUS_FIELD) == ResultStatus.REASSESSMENT_READY:
+        prepared = _object(value.get(PREPARED_FIELD), "plan.prepared")
+        reassessed = _reassessed_session_ids(prepared)
+        reassessed.update(
+            _text(delivery.get(SESSION_ID_FIELD), "plan.delivery.sessionId")
+            for delivery in deliveries
+        )
+        updated_prepared = {
+            **prepared,
+            REASSESSED_SESSION_IDS_FIELD: sorted(reassessed),
+        }
+        _prepared_candidates(updated_prepared)
+        return {
+            **value,
+            STATUS_FIELD: ResultStatus.REASSESSMENT_SENT,
+            PREPARED_FIELD: updated_prepared,
             DELIVERY_RESULTS_FIELD: checked,
         }
     return {**value, DELIVERY_RESULTS_FIELD: checked}
@@ -1040,6 +1151,75 @@ def verify(
     }
 
 
+def plan_reassessment(
+    prepared: object,
+    binding_items: object,
+    verification: object,
+) -> dict[str, object]:
+    candidates = _prepared_candidates(prepared)
+    bindings = _validated_bindings(binding_items, candidates)
+    verified = _object(verification, "verification")
+    if (
+        verified.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION
+        or verified.get(STATUS_FIELD) != ResultStatus.VERIFIED
+        or verified.get(TARGETS_FIELD) != len(candidates)
+        or verified.get(VERIFIED_FIELD) != len(candidates)
+        or verified.get(MISSING_PANE_IDS_FIELD) != []
+        or verified.get(DUPLICATE_PANE_IDS_FIELD) != []
+        or verified.get(UNEXPECTED_AGENT_PANE_IDS_FIELD) != []
+    ):
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA,
+            "Reassessment requires one complete verified correlation per prepared candidate.",
+        )
+    correlation_items = _array(
+        verified.get(CORRELATIONS_FIELD), "verification.correlations"
+    )
+    correlated = {
+        (
+            _text(item.get(ORIGINAL_PANE_ID_FIELD), "verification.originalPaneId"),
+            _text(item.get(PANE_ID_FIELD), "verification.paneId"),
+            _text(item.get(SESSION_ID_FIELD), "verification.sessionId"),
+        )
+        for item in correlation_items
+    }
+    expected = {
+        (binding.original_pane_id, binding.pane_id, candidate.session_id)
+        for binding, candidate in zip(bindings, candidates, strict=True)
+    }
+    if correlated != expected:
+        raise AdapterError(
+            ResultStatus.INVALID_TARGET,
+            "Verified correlations do not match the prepared bindings and sessions.",
+        )
+    reassessed = _reassessed_session_ids(prepared)
+    pending = [
+        (binding, candidate)
+        for binding, candidate in zip(bindings, candidates, strict=True)
+        if candidate.session_id not in reassessed
+    ]
+    deliveries = [
+        {
+            ORIGINAL_PANE_ID_FIELD: binding.original_pane_id,
+            PANE_ID_FIELD: binding.pane_id,
+            SESSION_ID_FIELD: candidate.session_id,
+            TEXT_FIELD: reassessment_prompt(candidate),
+        }
+        for binding, candidate in pending
+    ]
+    return {
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        STATUS_FIELD: (
+            ResultStatus.REASSESSMENT_READY
+            if deliveries
+            else ResultStatus.ALREADY_CURRENT
+        ),
+        PREPARED_FIELD: _object(prepared, PREPARED_FIELD),
+        BINDINGS_FIELD: [binding.result() for binding in bindings],
+        DELIVERIES_FIELD: deliveries,
+    }
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="operation", required=True)
@@ -1072,6 +1252,8 @@ def command_exit_code(result: object) -> int:
             ResultStatus.RESUMED,
             ResultStatus.ALREADY_CURRENT,
             ResultStatus.VERIFIED,
+            ResultStatus.REASSESSMENT_READY,
+            ResultStatus.REASSESSMENT_SENT,
         }
         else 2
     )
@@ -1122,7 +1304,7 @@ def main(
             result = settle_recovery(
                 value.get(PLAN_FIELD), value.get(DELIVERY_RESULTS_FIELD)
             )
-        else:
+        elif operation is Operation.VERIFY:
             result = verify(
                 value.get(PREPARED_FIELD),
                 value.get(BINDINGS_FIELD),
@@ -1132,6 +1314,12 @@ def main(
                     value.get(CORRELATION_EVIDENCE_FIELD),
                     CORRELATION_EVIDENCE_FIELD,
                 ),
+            )
+        else:
+            result = plan_reassessment(
+                value.get(PREPARED_FIELD),
+                value.get(BINDINGS_FIELD),
+                value.get(VERIFICATION_FIELD),
             )
         print(json.dumps(result, sort_keys=True), file=output_stream)
         return command_exit_code(result)

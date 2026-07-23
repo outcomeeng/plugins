@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shlex
 import sys
 from collections.abc import Callable
 from copy import deepcopy
@@ -195,6 +196,13 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     )
     if len(prepared_candidates) != len(roster.original_pane_ids):
         failures.append("prepared manifest omitted candidates")
+    for candidate, session_id in zip(
+        prepared_candidates, roster.session_ids, strict=True
+    ):
+        if candidate[module.RESUME_LOCATOR_FIELD] != session_id:
+            failures.append("prepared manifest omitted the exact resume locator")
+        if module.NATIVE_HOME_FIELD not in candidate:
+            failures.append("prepared manifest omitted the native home field")
 
     current_panes, current_agents = _post_restart_rosters(
         module, roster, roster.correlated_count
@@ -414,8 +422,45 @@ def verify_native_agent_recovery_compliance() -> list[str]:
         )
         if delivery[module.TEXT_FIELD] != expected:
             failures.append("recovery did not emit exact native resume command")
+        if module.RECOVERY_REASSESSMENT_PROMPT in cast(
+            str, delivery[module.TEXT_FIELD]
+        ):
+            failures.append("native launch transport included reassessment prose")
         if "--latest" in cast(str, delivery[module.TEXT_FIELD]):
             failures.append("recovery command used a latest-session selector")
+
+    custom_candidates = recovery_candidates(module, roster)
+    custom_candidates[0][module.RESUME_LOCATOR_FIELD] = (
+        f"{roster.worktree_paths[0]}/{roster.session_ids[0]}.jsonl"
+    )
+    custom_candidates[1][module.NATIVE_HOME_FIELD] = str(
+        roster.worktree_paths[1] / ".codex-home"
+    )
+    custom_prepared = module.prepare(
+        roster.original_pane_ids,
+        *_pre_restart_rosters(module, roster),
+        custom_candidates,
+        identity_evidence(module, roster, roster.original_pane_ids),
+    )
+    custom_values = cast(
+        list[dict[str, object]], custom_prepared[module.CANDIDATES_FIELD]
+    )
+    claude_command = module.native_resume_command(
+        module.prepared_candidate_from_item(custom_values[0], "claudeCandidate")
+    )
+    if (
+        shlex.split(claude_command)[-1]
+        != custom_candidates[0][module.RESUME_LOCATOR_FIELD]
+    ):
+        failures.append("Claude recovery ignored the prepared resume locator")
+    codex_command = module.native_resume_command(
+        module.prepared_candidate_from_item(custom_values[1], "codexCandidate")
+    )
+    if shlex.split(codex_command)[:2] != [
+        "env",
+        f"CODEX_HOME={custom_candidates[1][module.NATIVE_HOME_FIELD]}",
+    ]:
+        failures.append("Codex recovery ignored the prepared native home")
 
     successful_results = recovery_delivery_results(
         module,
@@ -454,6 +499,53 @@ def verify_native_agent_recovery_compliance() -> list[str]:
         failures.append("exact process/native-status evidence did not verify")
     if verified[module.VERIFIED_FIELD] != len(roster.original_pane_ids):
         failures.append("verification count omitted prepared candidates")
+
+    reassessment = module.plan_reassessment(prepared, bindings, verified)
+    reassessment_deliveries = cast(
+        list[dict[str, object]], reassessment[module.DELIVERIES_FIELD]
+    )
+    expected_reassessment_count = sum(
+        candidate[module.EVIDENCE_FIELD] is not module.EvidenceSource.CURRENT_SESSION
+        for candidate in cast(
+            list[dict[str, object]], prepared[module.CANDIDATES_FIELD]
+        )
+    )
+    if reassessment[module.STATUS_FIELD] != module.ResultStatus.REASSESSMENT_READY:
+        failures.append("verified recovery did not prepare reassessment")
+    if len(reassessment_deliveries) != expected_reassessment_count:
+        failures.append("reassessment did not exclude only the active controller")
+    for delivery in reassessment_deliveries:
+        if module.RECOVERY_REASSESSMENT_PROMPT not in cast(
+            str, delivery[module.TEXT_FIELD]
+        ):
+            failures.append("separate reassessment delivery omitted its prompt")
+        reassessment_words = shlex.split(cast(str, delivery[module.TEXT_FIELD]))
+        if any(
+            reassessment_words[: len(prefix)] == list(prefix)
+            for prefix in module.NATIVE_RESUME_PREFIXES.values()
+        ):
+            failures.append("reassessment delivery included a native launch command")
+    reassessment_results = recovery_delivery_results(
+        module,
+        tuple(
+            cast(str, delivery[module.PANE_ID_FIELD])
+            for delivery in reassessment_deliveries
+        ),
+    )
+    reassessed = module.settle_recovery(reassessment, reassessment_results)
+    if reassessed[module.STATUS_FIELD] != module.ResultStatus.REASSESSMENT_SENT:
+        failures.append("checked reassessment transports did not settle")
+    updated_prepared = reassessed[module.PREPARED_FIELD]
+    repeated_reassessment = module.plan_reassessment(
+        updated_prepared, bindings, verified
+    )
+    if (
+        repeated_reassessment[module.STATUS_FIELD]
+        != module.ResultStatus.ALREADY_CURRENT
+    ):
+        failures.append("durably reassessed sessions were planned again")
+    if repeated_reassessment[module.DELIVERIES_FIELD]:
+        failures.append("repeated recovery emitted reassessment delivery")
 
     mismatched_correlations = deepcopy(correlations)
     mismatched_correlations[0][module.SESSION_ID_FIELD] = roster.session_ids[1]

@@ -109,6 +109,8 @@ def recovery_candidates(
             module.PANE_ID_FIELD: pane_id,
             module.WORKTREE_PATH_FIELD: str(worktree),
             module.SESSION_ID_FIELD: session_id,
+            module.RESUME_LOCATOR_FIELD: session_id,
+            module.NATIVE_HOME_FIELD: None,
             module.AGENT_TYPE_FIELD: agent_type,
             module.EVIDENCE_FIELD: sources[index % len(sources)],
             module.ROLE_FIELD: module.RecoveryRole.PRIMARY,
