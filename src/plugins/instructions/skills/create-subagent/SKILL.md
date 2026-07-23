@@ -3,7 +3,7 @@ name: create-subagent
 description: >-
   ALWAYS invoke this skill when creating, editing, or configuring {{! term('configured_agents') !}}.
   NEVER create {{! term('configured_agents') !}} without this skill.
-allowed-tools: Read, Glob, Write, Edit, Skill, {{! tool('ask_user') !}}
+allowed-tools: Read, Glob, Write, Edit, Skill
 ---
 
 {!% require_skill 'instructions:agent-prompt-standards' %!}

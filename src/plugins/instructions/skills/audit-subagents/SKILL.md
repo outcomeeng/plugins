@@ -7,7 +7,7 @@ description: >-
 argument-hint: <configured-agent-path>
 arguments: configured_agent_path
 model: sonnet
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 {!% require_skill 'instructions:agent-prompt-standards' %!}
