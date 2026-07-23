@@ -20,6 +20,7 @@ TRANSPORT_SEND_OPERATION = "send"
 ACTIVATION_OPEN_OPERATION = "open"
 ACTIVATION_TAB_CREATE_OPERATION = "tab-create"
 DONE_STATUS = "done"
+LIVE_PREPARATION_STATUSES = frozenset({"working", "idle", "blocked"})
 
 RECOVERY_REASSESSMENT_PROMPT = (
     "Treat the restart, authentication repair, or tool failure as a transport "
@@ -136,6 +137,16 @@ class RecoveryRole(StrEnum):
     PRIMARY = "primary"
     SECONDARY = "secondary"
 
+
+POST_RESTART_EVIDENCE_SOURCES = frozenset(
+    {
+        EvidenceSource.PROCESS_ARGUMENT,
+        EvidenceSource.OPEN_SESSION_FILE,
+        EvidenceSource.NATIVE_STATUS,
+        EvidenceSource.CURRENT_SESSION,
+        EvidenceSource.PUBLIC_AGENT,
+    }
+)
 
 NATIVE_RESUME_PREFIXES: dict[AgentType, tuple[str, ...]] = {
     AgentType.CLAUDE: ("claude", "--resume"),
@@ -468,9 +479,17 @@ def _validate_candidate_set(candidates: list[PreparedCandidate]) -> None:
                 "Only Codex candidates may carry a native home.",
             )
         by_worktree.setdefault(candidate.worktree_path, []).append(candidate)
+    controllers = [
+        candidate
+        for candidate in candidates
+        if candidate.evidence is EvidenceSource.CURRENT_SESSION
+    ]
+    if len(controllers) != 1:
+        raise AdapterError(
+            ResultStatus.INVALID_TARGET,
+            "Recovery candidates require exactly one current-session controller.",
+        )
     for worktree_path, group in by_worktree.items():
-        if len(group) == 1:
-            continue
         primaries = [item for item in group if item.role is RecoveryRole.PRIMARY]
         secondaries = [item for item in group if item.role is RecoveryRole.SECONDARY]
         if len(primaries) != 1 or len(secondaries) != len(group) - 1:
@@ -616,7 +635,7 @@ def prepare(
             )
         agent = matches[0]
         if (
-            agent.status == DONE_STATUS
+            agent.status not in LIVE_PREPARATION_STATUSES
             or agent.worktree_path != candidate.worktree_path
             or agent.agent_type is not candidate.agent_type
         ):
@@ -804,6 +823,7 @@ def bind_activations(plan: object, result_items: object) -> dict[str, object]:
             "Activation results must match planned activations exactly.",
         )
     checked_results: list[dict[str, object]] = []
+    failed_originals: list[str] = []
     for index, (action, result) in enumerate(zip(activations, results, strict=True)):
         original = _text(
             action.get(ORIGINAL_PANE_ID_FIELD),
@@ -818,14 +838,15 @@ def bind_activations(plan: object, result_items: object) -> dict[str, object]:
             action.get(OPERATION_FIELD), f"plan.activations[{index}].operation"
         )
         transport = _checked_transport(result.get(TRANSPORT_FIELD), operation)
-        if not transport.delivered or transport.response is None:
-            return {
-                SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-                STATUS_FIELD: ResultStatus.COMMAND_FAILED,
-                DETAIL_FIELD: f"Activation failed for original pane {original}.",
-                BINDINGS_FIELD: [binding.result() for binding in bindings],
-                ACTIVATION_RESULTS_FIELD: checked_results,
+        checked_results.append(
+            {
+                ORIGINAL_PANE_ID_FIELD: original,
+                TRANSPORT_FIELD: transport.raw,
             }
+        )
+        if not transport.delivered or transport.response is None:
+            failed_originals.append(original)
+            continue
         data = _object(transport.response.get("data"), "transport.response.data")
         target = _object(data.get("target"), "transport.response.data.target")
         pane = _object(target.get("pane"), "transport.response.data.target.pane")
@@ -850,18 +871,24 @@ def bind_activations(plan: object, result_items: object) -> dict[str, object]:
                 _text(pane.get(ID_FIELD), "transport.response.data.target.pane.id"),
             )
         )
-        checked_results.append(
-            {
-                ORIGINAL_PANE_ID_FIELD: original,
-                TRANSPORT_FIELD: transport.raw,
-            }
-        )
     pane_ids = [binding.pane_id for binding in bindings]
     if len(pane_ids) != len(set(pane_ids)):
         raise AdapterError(
             ResultStatus.INVALID_TARGET,
             "Activation results produced duplicate post-restart pane identities.",
         )
+    if failed_originals:
+        return {
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+            STATUS_FIELD: ResultStatus.COMMAND_FAILED,
+            DETAIL_FIELD: (
+                "Activation failed for original panes: "
+                + ", ".join(failed_originals)
+                + "."
+            ),
+            BINDINGS_FIELD: [binding.result() for binding in bindings],
+            ACTIVATION_RESULTS_FIELD: checked_results,
+        }
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         STATUS_FIELD: ResultStatus.READY,
@@ -1109,6 +1136,7 @@ def verify(
                     )
                 )
             )
+            or identity.source not in POST_RESTART_EVIDENCE_SOURCES
             or (
                 identity.source is EvidenceSource.PUBLIC_AGENT
                 and (agent is None or agent.session_id != candidate.session_id)

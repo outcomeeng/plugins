@@ -266,6 +266,29 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     if len(all_bindings) != len(roster.original_pane_ids):
         failures.append("checked activation results did not bind every candidate")
 
+    mixed_results = activation_results(
+        module,
+        activations,
+        roster.post_restart_pane_ids[roster.correlated_count :],
+    )
+    failed_transport = cast(dict[str, object], mixed_results[0][module.TRANSPORT_FIELD])
+    failed_transport[module.STATUS_FIELD] = module.TRANSPORT_COMMAND_FAILED_STATUS
+    failed_transport[module.COMMAND_EXIT_CODE_FIELD] = 1
+    failed_transport[module.DETAIL_FIELD] = "activation failed"
+    failed_transport.pop(module.RESPONSE_FIELD)
+    mixed_bound = module.bind_activations(activation, mixed_results)
+    if mixed_bound[module.STATUS_FIELD] != module.ResultStatus.COMMAND_FAILED:
+        failures.append("mixed activation results did not preserve command failure")
+    if len(cast(list[object], mixed_bound[module.ACTIVATION_RESULTS_FIELD])) != len(
+        activations
+    ):
+        failures.append("mixed activation results omitted checked transports")
+    if (
+        len(cast(list[object], mixed_bound[module.BINDINGS_FIELD]))
+        != len(roster.original_pane_ids) - 1
+    ):
+        failures.append("mixed activation results omitted later successful bindings")
+
     all_panes, _ = _post_restart_rosters(module, roster, len(roster.original_pane_ids))
     recovery = module.recover(prepared, all_bindings, all_panes, current_agents)
     targets = cast(list[dict[str, object]], recovery[module.TARGETS_FIELD])
@@ -283,15 +306,21 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     panes, agents = _pre_restart_rosters(module, roster)
     candidates = recovery_candidates(module, roster)
     evidence = identity_evidence(module, roster, roster.original_pane_ids)
-    agents[0][module.STATUS_FIELD] = module.DONE_STATUS
-    stale_status = _error_status(
-        module,
-        lambda: module.prepare(
-            roster.original_pane_ids, panes, agents, candidates, evidence
-        ),
-    )
-    if stale_status != module.ResultStatus.INVALID_TARGET:
-        failures.append("done pre-restart agent was prepared")
+    for non_live_status in (module.DONE_STATUS, "stale", "starting", "unknown"):
+        non_live_agents = deepcopy(agents)
+        non_live_agents[0][module.STATUS_FIELD] = non_live_status
+        non_live_result = _error_status(
+            module,
+            lambda: module.prepare(
+                roster.original_pane_ids,
+                panes,
+                non_live_agents,
+                candidates,
+                evidence,
+            ),
+        )
+        if non_live_result != module.ResultStatus.INVALID_TARGET:
+            failures.append("non-live pre-restart agent was prepared")
 
     duplicate_session_candidates = deepcopy(candidates)
     duplicate_session_candidates[1][module.SESSION_ID_FIELD] = (
@@ -309,6 +338,43 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     )
     if duplicate_session_status != module.ResultStatus.INVALID_TARGET:
         failures.append("duplicate native session identity was prepared")
+
+    lone_secondary = deepcopy(candidates)
+    lone_secondary[1][module.ROLE_FIELD] = module.RecoveryRole.SECONDARY
+    lone_secondary[1][module.SECONDARY_AUTHORIZED_FIELD] = True
+    lone_secondary_status = _error_status(
+        module,
+        lambda: module.prepare(
+            roster.original_pane_ids,
+            panes,
+            _pre_restart_rosters(module, roster)[1],
+            lone_secondary,
+            evidence,
+        ),
+    )
+    if lone_secondary_status != module.ResultStatus.INVALID_TARGET:
+        failures.append("lone secondary candidate was prepared")
+
+    duplicate_controller_candidates = deepcopy(candidates)
+    duplicate_controller_evidence = deepcopy(evidence)
+    duplicate_controller_candidates[1][module.EVIDENCE_FIELD] = (
+        module.EvidenceSource.CURRENT_SESSION
+    )
+    duplicate_controller_evidence[1][module.SOURCE_FIELD] = (
+        module.EvidenceSource.CURRENT_SESSION
+    )
+    duplicate_controller_status = _error_status(
+        module,
+        lambda: module.prepare(
+            roster.original_pane_ids,
+            panes,
+            _pre_restart_rosters(module, roster)[1],
+            duplicate_controller_candidates,
+            duplicate_controller_evidence,
+        ),
+    )
+    if duplicate_controller_status != module.ResultStatus.INVALID_TARGET:
+        failures.append("multiple current-session controllers were prepared")
 
     shared_panes, shared_agents = _pre_restart_rosters(module, roster)
     shared_candidates = recovery_candidates(module, roster)
@@ -522,6 +588,10 @@ def verify_native_agent_recovery_compliance() -> list[str]:
             agents_without_sessions[index][module.SESSION_FIELD] = {
                 module.ID_FIELD: roster.session_ids[index]
             }
+        elif (
+            correlation[module.SOURCE_FIELD] is module.EvidenceSource.OPERATOR_CONFIRMED
+        ):
+            correlation[module.SOURCE_FIELD] = module.EvidenceSource.PROCESS_ARGUMENT
     verified = module.verify(
         prepared,
         bindings,
@@ -592,6 +662,23 @@ def verify_native_agent_recovery_compliance() -> list[str]:
     )
     if mismatched[module.STATUS_FIELD] != module.ResultStatus.CORRELATION_INCOMPLETE:
         failures.append("mismatched process/native-status evidence verified")
+
+    operator_correlations = deepcopy(correlations)
+    operator_correlations[1][module.SOURCE_FIELD] = (
+        module.EvidenceSource.OPERATOR_CONFIRMED
+    )
+    operator_verified = module.verify(
+        prepared,
+        bindings,
+        panes,
+        agents_without_sessions,
+        operator_correlations,
+    )
+    if (
+        operator_verified[module.STATUS_FIELD]
+        != module.ResultStatus.CORRELATION_INCOMPLETE
+    ):
+        failures.append("operator-confirmed evidence verified a recovered session")
 
     extra_pane = _pane_item(
         module, Path("/unexpected/worktree"), roster.unknown_pane_id

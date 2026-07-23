@@ -99,11 +99,26 @@ def roster_cases() -> SearchStrategy[RecoveryRosterCase]:
     return recovery_roster_cases()
 
 
+def _recovery_sources(module: ModuleType, count: int) -> tuple[object, ...]:
+    non_controller_sources = tuple(
+        source
+        for source in module.EvidenceSource
+        if source is not module.EvidenceSource.CURRENT_SESSION
+    )
+    return (
+        module.EvidenceSource.CURRENT_SESSION,
+        *(
+            non_controller_sources[index % len(non_controller_sources)]
+            for index in range(count - 1)
+        ),
+    )
+
+
 def recovery_candidates(
     module: ModuleType,
     roster: RecoveryRosterCase,
 ) -> list[dict[str, object]]:
-    sources = tuple(module.EvidenceSource)
+    sources = _recovery_sources(module, len(roster.original_pane_ids))
     return [
         {
             module.PANE_ID_FIELD: pane_id,
@@ -133,7 +148,7 @@ def identity_evidence(
     roster: RecoveryRosterCase,
     pane_ids: tuple[str, ...],
 ) -> list[dict[str, object]]:
-    sources = tuple(module.EvidenceSource)
+    sources = _recovery_sources(module, len(pane_ids))
     return [
         {
             module.PANE_ID_FIELD: pane_id,
