@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request, or runs /manage-github-pr.
   NEVER open or manage a GitHub pull request outside this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, AskUserQuestion, Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*), Read
+allowed-tools: Skill, AskUserQuestion, Bash(spx worktree status:*), Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*), Read
 ---
 
 <objective>
@@ -52,7 +52,7 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
 **Step 2 — State the plan; confirm only if the overlay opts in.** Read `spx/local/merging.md` (via `/merging-standards` `<repo_local_overlay>`) for the pre-mutation-confirmation setting. By default — no setting declared — state the plan in prose (the change to make, the branch, the commit shape, and that the flow runs through PR open, merge, and closure unless the user instruction says otherwise) and proceed autonomously; there is no confirmation pause. Only when the overlay opts into a pre-mutation confirmation, present that same plan through the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex) and obtain confirmation before the first mutating action — never branch, commit, push, open, or merge before that confirmation. Establishing *what* to ship in Empty mode (Step 1, `/interview`) is requirements work, not this confirmation, and always proceeds.
 
-After the plan or required confirmation, run every overlay-declared preflight check per `/merging-standards` `<overlay_safety_checks>` immediately before the first branch, commit, or other checkout-sensitive mutation. In Open PR mode, Step 6 delegates this boundary to `/manage-pr`, whose merge cleanup runs the preflight immediately before merge.
+After the plan or required confirmation, run `spx worktree status` from the assigned root and require a fresh passing `/merging-standards` `<occupancy_preflight>` before the first branch, commit, or other checkout-sensitive mutation. Then run every overlay-declared preflight check per `<overlay_safety_checks>`. In Open PR mode, Step 6 delegates these boundaries to `/manage-pr`, whose occupancy preflight precedes checkout-sensitive mutation and whose merge cleanup repeats the overlay preflight immediately before merge.
 
 **Step 3 — Implement if needed.** When the agreed scope requires code that does not exist yet, drive it through the governing skills — `/apply` for a spec-tree node, or the language coding and testing skills — never writing implementation by hand outside them.
 
@@ -60,9 +60,9 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 
 **Step 5 — Open.** Invoke `/open-pr`. It evaluates `VERIFICATION_READINESS` and opens the PR ready. Skip this step in Open PR mode.
 
-**Step 6 — Drive to merge.** Invoke `/manage-pr`. It evaluates `MERGE_READINESS`, merges under the gate, and runs any declared deploy and release phases.
+**Step 6 — Drive to merge.** Invoke `/manage-pr <pr-pointer> --return-closeout` when the pointer is known, or `/manage-pr --return-closeout` when it resolves from the current branch. The explicit marker keeps broader-goal continuation and session closure in this outer lifecycle. `/manage-pr` evaluates `MERGE_READINESS`, merges under the gate, and runs any declared deploy and release phases.
 
-**Step 7 — Continue or close.** Consume `/manage-pr`'s disposition result. When it carries remaining in-scope work — a further PR, a pending `PLAN.md` item, a `spx/EXCLUDE` entry, a declared-but-unimplemented assertion — continue with it directly. When `/manage-pr` determined that no in-scope work remains, it has already invoked `/handoff` plain and returned the handoff closeout with the carried branch-state record; return that closeout without invoking `/handoff` again or appending a separate merge receipt. Session closure is disposition-driven and identical for direct and orchestrated `/manage-pr` invocations.
+**Step 7 — Continue or close.** Consume `/manage-pr`'s closeout-ready result. When it carries remaining in-scope work — a further PR, a pending `PLAN.md` item, a `spx/EXCLUDE` entry, a declared-but-unimplemented assertion — continue with it directly. When no in-scope work remains, invoke `/handoff` plain with the carried branch-state record and return its closeout. Do not append a separate merge receipt. The `--return-closeout` marker makes this outer lifecycle's ownership explicit.
 
 </workflow>
 
@@ -92,6 +92,6 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 - By default the lifecycle ran autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, the plan was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The invocation resolved to the GitHub-PR transport from its arguments and live repository state, and `spx/local/merging.md` configured the transport through `/open-pr`, `/manage-pr`, and `/merging-standards`.
 - Each lifecycle stage ran through its governing skill, not an inline reimplementation.
-- The PR reached merged state through `/manage-pr`'s gates, `/manage-pr` built the branch-state closeout record and ran safe cleanup, and then applied the remaining-work disposition identically for every caller: remaining in-scope work returned for continuation, while a complete disposition invoked `/handoff` plain and returned its closeout (the skill deciding session-file creation per continuation state, never a hardcoded `--no-session`). An explicit gate — an unmet `VERIFICATION_READINESS` or `MERGE_READINESS` predicate, or a withheld `DEPLOYMENT_READINESS` or `RELEASE_READINESS` — surfaced to the user.
+- The PR reached merged state through `/manage-pr`'s gates, `/manage-pr` built the branch-state closeout record and ran safe cleanup, and `--return-closeout` returned that evidence to this outer lifecycle. Remaining in-scope work continued; a complete disposition invoked `/handoff` plain here (the skill deciding session-file creation per continuation state, never a hardcoded `--no-session`). An explicit gate — an unmet `VERIFICATION_READINESS` or `MERGE_READINESS` predicate, or a withheld `DEPLOYMENT_READINESS` or `RELEASE_READINESS` — surfaced to the user.
 
 </success_criteria>

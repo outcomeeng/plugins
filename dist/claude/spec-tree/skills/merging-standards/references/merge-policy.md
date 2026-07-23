@@ -113,6 +113,14 @@ Claude NEVER stops with blocked-by-worktree, cannot-use-other-worktree, or canno
 
 </assigned_cwd_worktree_discipline>
 
+<occupancy_preflight>
+
+Run `spx worktree status` from the assigned root before the first checkout-sensitive mutation in a delivery flow and immediately before every checkout or worktree transition. Re-run it after compaction, restart, or any observed claim-state change. A prior reading, a sibling worktree's reading, cleanliness, branch topology, and path naming are never reusable occupancy proof.
+
+The fresh output must identify the assigned root exactly, show the current session's live claim there, and show no different live holder for that root. Preserve the command result with the mutation plan. When any predicate is absent, stay in the assigned worktree, preserve its state, record the defect in the governing node's `ISSUES.md`, repair the session/worktree claim through the governing coordination workflow, and rerun this preflight before mutation. Never move the work into a worktree selected by inference.
+
+</occupancy_preflight>
+
 <branch_hygiene>
 
 Conditions that must hold before every push (initial or follow-up). A branch-state failure is resolved in place per `<assigned_cwd_worktree_discipline>` — branch in the assigned worktree and continue, never switch to another worktree and never stash; the remaining conditions stop the calling flow until resolved.
@@ -479,7 +487,7 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - Local readiness — clean working tree, committed changes, passing deterministic verification, tests, local review, or audits — is reported as evidence and then carried forward; it is never a reason to ask what to do next.
 - `CLOSE` continues in-scope work directly or invokes `/handoff` plain for operator-useful closeout and continuation disposition; a receipt-only response never satisfies the lifecycle.
 - No structured question or prose confirmation asks the operator to choose between auto-merge, hold-at-green, or pause; the only operator-facing pauses are explicit `<action_tokens>` emissions and structured base-sync conflict reports.
-- The changeset's git work runs in the assigned worktree per `<assigned_cwd_worktree_discipline>` with a fresh occupancy reading — never in a worktree another live session holds, no created worktree, no `git stash`; a branch conflict is resolved by branching in the assigned worktree and continuing.
+- The changeset's git work runs in the assigned worktree per `<assigned_cwd_worktree_discipline>` with a passing `<occupancy_preflight>` — never in a worktree another live session holds, no created worktree, no `git stash`; a branch conflict is resolved by branching in the assigned worktree and continuing.
 - `spx/local/merging.md` is read only when present, its absence applies the defaults with no blocker, and merge behavior is never reconstructed from incidental docs or changed by editing a generated guide.
 - Every overlay-declared preflight runs before the lifecycle entry's first checkout-sensitive mutation, direct-push repeats it before default-branch publication, and a failed check preserves its output and stops mutation.
 - Every detach-based cleanup runs overlay-declared post-cleanup checks before branch deletion, session persistence, deploy, release, or closeout; failure preserves the detached checkout and stops remaining mutation.
