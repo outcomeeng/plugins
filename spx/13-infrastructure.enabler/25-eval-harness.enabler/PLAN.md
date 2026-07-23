@@ -10,7 +10,20 @@ adapter contract the redesigned harness delegates to lives under
 New eval-harness decisions and specs land there; this node's specs, decisions,
 and evidence stay authoritative for the shipped harness until the
 implementation cutover named in the new subtree's `PLAN.md` files, after which
-this node retires. The prompt-caching plan below predates the redesign: its
+this node retires.
+
+Eval coupling for the methodology is decided by
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/15-adapter-derived-evals.adr.md`,
+which reaches the installed plugin through the adapter contract instead of
+materializing producer text into a prompt.
+`spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md`
+is scoped to the `outcomeeng_evals` harness alone, so the two decisions govern
+disjoint subjects while the shipped harness stands. At cutover this node's
+producer-coupling assertions — the `prompt_source` kind conformance rules, the
+`materialize-prompts` CLI rule, and the producer-derived materialization
+property — retire with the `outcomeeng_evals/producer_prompt.py` machinery and
+the generated `prompt.md` files they govern, replaced by the adapter-invoked
+case shape the new decision declares. The prompt-caching plan below predates the redesign: its
 gate condition is stale (`anthropics/claude-code#34629` closed without
 resolution and the regression persists), and the caching decision re-derives at
 the new location rather than being implemented here.

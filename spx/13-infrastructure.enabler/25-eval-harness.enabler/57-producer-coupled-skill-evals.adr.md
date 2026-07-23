@@ -1,6 +1,6 @@
 # Producer-Coupled Skill Evals
 
-Skill and agent eval prompts are generated from declared producer artifacts. An eval for skill, agent, classifier, script, or command behavior declares one whole producer, one named producer section, or an ordered set of whole producers in `eval.toml`; prompt materialization reads every declared producer and derives the model-facing prompt from that source set. A prompt that restates a producer's rules without reading that producer is invalid evidence for that producer.
+The `outcomeeng_evals` harness generates skill and agent eval prompts from declared producer artifacts. An eval this harness runs for skill, agent, classifier, script, or command behavior declares one whole producer, one named producer section, or an ordered set of whole producers in `eval.toml`; prompt materialization reads every declared producer and derives the model-facing prompt from that source set. A prompt that restates a producer's rules without reading that producer is invalid evidence for that producer. Eval coupling for the methodology is decided by `spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/15-adapter-derived-evals.adr.md`, and this decision reaches the `outcomeeng_evals` harness alone.
 
 ## Rationale
 
