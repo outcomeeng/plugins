@@ -147,12 +147,15 @@ def _post_restart_rosters(
 
 def _prepared(module: ModuleType, roster: RecoveryRosterCase) -> dict[str, object]:
     panes, agents = _pre_restart_rosters(module, roster)
-    return module.prepare(
-        roster.original_pane_ids,
-        panes,
-        agents,
-        recovery_candidates(module, roster),
-        identity_evidence(module, roster, roster.original_pane_ids),
+    return cast(
+        dict[str, object],
+        module.prepare(
+            roster.original_pane_ids,
+            panes,
+            agents,
+            recovery_candidates(module, roster),
+            identity_evidence(module, roster, roster.original_pane_ids),
+        ),
     )
 
 
@@ -238,7 +241,7 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     panes, agents = _pre_restart_rosters(module, roster)
     candidates = recovery_candidates(module, roster)
     evidence = identity_evidence(module, roster, roster.original_pane_ids)
-    cast(dict[str, object], agents[0])[module.STATUS_FIELD] = module.DONE_STATUS
+    agents[0][module.STATUS_FIELD] = module.DONE_STATUS
     stale_status = _error_status(
         module,
         lambda: module.prepare(

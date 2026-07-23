@@ -388,9 +388,16 @@ else:
             encoding="utf-8",
         )
         executable.chmod(0o700)
-        environment = {**os.environ, "PATH": f"{temporary_directory}:{os.environ['PATH']}"}
+        environment = {
+            **os.environ,
+            "PATH": f"{temporary_directory}:{os.environ['PATH']}",
+        }
         completed = subprocess.run(
-            [sys.executable, str(PROWL_ENVIRONMENT_PATH), module.CliOperation.RUN.value],
+            [
+                sys.executable,
+                str(PROWL_ENVIRONMENT_PATH),
+                module.CliOperation.RUN.value,
+            ],
             input=json.dumps(request),
             capture_output=True,
             text=True,
@@ -401,7 +408,10 @@ else:
         result = json.loads(completed.stdout)
     except json.JSONDecodeError as error:
         return f"stdin-isolation probe emitted malformed JSON: {error.msg}"
-    if completed.returncode != 0 or result.get(module.STATUS_FIELD) != module.ExecutionStatus.SUCCEEDED:
+    if (
+        completed.returncode != 0
+        or result.get(module.STATUS_FIELD) != module.ExecutionStatus.SUCCEEDED
+    ):
         return "default subprocess runner inherited the adapter request stream"
     return None
 
