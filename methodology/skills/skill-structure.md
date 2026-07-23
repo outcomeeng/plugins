@@ -23,7 +23,7 @@ Within these steps:
 - `verify` is the public evidence entry point and selects test, evaluate, or audit from the real subject's verdict.
 - `test` remains the generic deterministic-evidence specialist invoked after `verify` selects test; `eval` owns generic eval authoring after its follow-on implementation.
 - `apply` orchestrates the full declare → spec → apply flow with audit gates at each step.
-- `commit-changes` enforces Conventional Commits with selective staging and atomic commits.
+- `commit-changes` creates local checkpoints independently of verification state, with Conventional Commits, selective staging, and atomic concerns; readiness gates still require their declared verification predicates.
 - `manage-github-pr` routes shipping intent through committing, PR opening, PR management, merge, and closure. `open-pr` and `manage-pr` are internal protocols loaded by `manage-github-pr`.
 - Make conversational flow explicit and consistent across action skills.
 - Keep migration concerns in a separate optional structure document.
@@ -300,7 +300,8 @@ Skills for writing implementation code and committing results. `apply` is an orc
 - **`commit-changes`** owns the git commit workflow:
   - Conventional Commits format with selective staging
   - Classifies changes by concern, one concern per commit
-  - Runs product validation before committing
+  - Records product validation as `passing`, `failing`, or `not-run` without using it as commit authorization
+  - Preserves hooks and returns exact hook failures without bypassing them
 - **`manage-github-pr`** owns shipping orchestration:
   - Detects instructed, existing-changeset, empty, and open-PR modes
   - Reads local lifecycle routing from `spx/local/merging.md` via `understand`
@@ -388,13 +389,13 @@ Each flow documents only what is unique to that mode. All declare action skills 
 
 #### `contextualize`
 
-1. Intake target path/scope and operation type.
-2. Walk tree from product root to target node.
-3. At each directory along the path, collect lower-index siblings' specs.
-4. Include ancestor specs along the path. Exclude test files.
-5. Validate collected artifacts exist and are readable.
-6. If operation is `author` and no artifacts exist at target level, return empty manifest with `bootstrap=true` instead of aborting.
-7. Emit `<SPEC_TREE_CONTEXT target="full/path">` with context manifest: collected specs, open decisions, readiness status.
+1. Invoke `sync-base` before reading product truth; proceed only after `already_current` or `rebased` establishes a current checkout.
+2. Intake and validate the canonical full target path.
+3. Walk from the product root to the target, collecting every ancestor spec and lower-index sibling spec at each level.
+4. Include every applicable ADR, PDR, explicitly cited methodology-governance decision, guide file, and local lifecycle overlay without heuristic filtering.
+5. List linked tests and the applicable test-directory state without reading test bodies.
+6. If the exact product-root target has a product spec and no nodes, emit `bootstrap=true`; reject missing node targets.
+7. Emit `<SPEC_TREE_CONTEXT target="full/path">` with the complete manifest, sync-base status, and lifecycle continuation state.
 
 #### `bootstrap`
 
@@ -470,29 +471,29 @@ Superset of `test/audit-tests`. Incorporates the full adversarial review protoco
 
 Orchestrates the full declare → spec → apply flow. Spans all three steps because Claude skips declaring prerequisites without guardrails.
 
-1. Load methodology via `understand` (once per session).
-2. Load work item context via `contextualize` (every node).
-3. Architect: produce ADR via language-specific `/architect-[language]` skill.
-4. Review architecture via `/audit-[language]-architecture` — loop until APPROVED.
-5. Verify: invoke `/verify`; when it selects test, `/test` completes generic test decisions before delegating language expression to `/test-[language]`.
-6. Review tests via `/audit-[language]-tests` — loop until APPROVED.
-7. Implement: write code via `/code-[language]` skill.
-8. Review code via `/audit-[language]-code` — loop until APPROVED.
+1. Load methodology via `understand` once per session and current work-item context via `contextualize` for every node.
+2. Architect through the applicable language skill and obtain an approved architecture-auditor verdict on an exact committed scope.
+3. Invoke `verify`; route selected deterministic evidence through `test` or the applicable eval workflow, then obtain the required evidence-auditor verdicts.
+4. Implement through the applicable language coding skill and obtain an approved implementation-auditor projection.
+5. Create atomic local checkpoints through `commit-changes` whenever tracked or untracked work differs from `HEAD`, preserving `passing`, `failing`, or `not-run` verification state.
+6. Dispatch gating audits and reviews only after required deterministic verification passes, against a clean exact checkpoint; keep live-file audits advisory.
+7. Run artifact evidence audits for every changed test or eval surface and a whole-changeset review for cross-node changes, repairing and checkpointing each rejected head.
+8. Run the repository's full deterministic gate once after all agentic gates converge on the same clean committed head.
 
 #### `commit-changes`
 
-1. Run product validation (e.g., `just check`).
+1. Record the latest product-validation state as `passing`, `failing`, or `not-run`.
 2. Review changes: `git status`, `git diff`.
 3. Classify changes by concern — group by type+scope.
 4. Stage specific files for one concern (never `git add .`).
-5. Write Conventional Commits message (imperative, under 50 chars).
-6. Commit, then repeat from step 4 for remaining concerns.
+5. Write a Conventional Commits message (imperative, under 50 chars).
+6. Commit with hooks enabled, confirm the full `HEAD` changed, report remaining paths and validation state, then repeat from step 4 for remaining concerns.
 
 #### `manage-github-pr`
 
 1. Detect mode from arguments, branch state, working tree, commits ahead of base, and existing PR state.
 2. Load `understand` when the foundation marker is absent so local lifecycle routing is known.
-3. Present the lifecycle proposal through the runtime's structured-question tool before mutation.
+3. State the lifecycle plan and proceed autonomously by default; use the runtime's structured-question tool before mutation only when the local merge overlay opts into confirmation.
 4. Invoke implementation skills when the requested work is not yet in the tree.
 5. Invoke `commit-changes`, then the internal `open-pr` and `manage-pr` protocols unless the local lifecycle overlay declares a different route.
 6. Invoke `handoff` after merge unless the route stops earlier; the handoff skill decides whether any continuation needs a session file.

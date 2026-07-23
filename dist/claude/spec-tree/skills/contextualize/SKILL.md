@@ -28,7 +28,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
   - Wrong: `/contextualize 32-parser.outcome`
   - Right: `/contextualize spx/{path-to-node}`
 
-**BOOTSTRAP MODE**: Bootstrap is derived from the documented target and tree state, never from an undeclared caller operation. When `$target` is exactly `spx/`, one product spec exists, and no node directories exist, emit the product-root manifest with `bootstrap=true`. A missing node target always aborts; authoring a new node contextualizes its existing parent (`spx/` for a top-level node or the canonical full parent node path for a nested node).
+**BOOTSTRAP MODE**: Bootstrap is derived from the documented target and tree state, never from an undeclared operation. When `$target` is exactly `spx/`, one product spec exists, and no node directories exist, emit the product-root manifest with `bootstrap=true`. A missing node target always aborts; authoring a new node contextualizes its existing parent (`spx/` for a top-level node or the canonical full parent node path for a nested node).
 
 </essential_principles>
 
@@ -50,9 +50,9 @@ If absent → STOP. Invoke `/understand` first, then resume from Step 0. Do not 
 
 Before reading any product or spec content, invoke `/sync-base` so the loaded context reflects current product truth rather than a stale checkout — a branch or detached worktree behind its base reads superseded specs and decisions. `/sync-base` fetches the base and brings the checkout current automatically from observable git state — rebasing a branch, or advancing a clean detached worktree to the base tip; never ask the operator whether to rebase. Act on its result:
 
-- `already_current` or `rebased` → record the status for the eventual context marker, then immediately proceed to Step 0 for the same target on the now-current checkout. This also covers a detached worktree `/sync-base` advanced to the base tip — the loaded context reads the current base, not the stale parked commit. Do not answer the context-grounded question, inspect pull-request state, push, or manage branch ahead/behind status between the clean sync result and Step 0; those are caller lifecycle concerns after context loading completes.
+- `already_current` or `rebased` → record the status for the eventual context marker, then immediately proceed to Step 0 for the same target on the now-current checkout. This also covers a detached worktree `/sync-base` advanced to the base tip — the loaded context reads the current base, not the stale parked commit. Do not answer the context-grounded question, inspect pull-request state, push, or manage branch ahead/behind status between the clean sync result and Step 0; lifecycle work resumes after context loading completes.
 - `conflict` → STOP and surface the `/sync-base` `conflict` details. The branch cannot be brought current autonomously, and reading stale-or-conflicted context is the failure this gate prevents; leave the rebase active and resume once the operator resolves, continues, or aborts it.
-- `dirty_tree` → ABORT before reading product truth. Context loading never emits a context marker from a checkout whose currency is unestablished. Route the tracked changes through `/commit-changes` to create a local checkpoint on the correct branch, invoke `/sync-base` again, and then restart `/contextualize` for the same target. Never stash, discard, or silently read around the dirty tree.
+- `dirty_tree` → treat the result as an unresolved ownership boundary returned by `/sync-base`, which already owns session-authorized checkpointing and retry. ABORT before reading product truth, preserve the exact reported paths, and resume this target only after `/sync-base` reaches a clean result. Never duplicate its branch, commit, or retry protocol here.
 - `git_failure` → ABORT with the reported `detail`. A failed fetch, unresolved base, or non-advanceable detached checkout leaves currency unestablished, so no authoritative context can be loaded. Resolve the reported git condition, invoke `/sync-base` again, and then restart `/contextualize` for the same target.
 
 </step>
@@ -344,7 +344,7 @@ Claude loaded the structural ancestor context for a plugin-shipping node and saw
 
 Claude checked `PLAN.md` and `ISSUES.md` only inside node directories, so product-level coordination disappeared from every target context even though it applied tree-wide. Check and read product-level coordination notes before walking the node path, then list them with the ancestor and target notes in the context manifest.
 
-**Failure 11: Rejected a canonical product-root caller**
+**Failure 11: Rejected the canonical product-root target**
 
 Claude required at least one node-directory segment after `spx/`, so `/author` could not contextualize the parent of a top-level node even though `spx/` is the canonical product-root address. Treat exact `spx/` as product-root mode, walk zero node segments, and emit product-level context without attempting node-spec lookup.
 

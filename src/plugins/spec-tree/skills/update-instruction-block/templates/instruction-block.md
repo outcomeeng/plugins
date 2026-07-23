@@ -79,6 +79,8 @@ A compacted summary, session file, statement that `/understand` ran, or read of 
 
 **ALWAYS** invoke `/contextualize` before working on a spec node.
 
+`/contextualize` MUST invoke `/sync-base` and receive `already_current` or `rebased` before reading product truth. `/sync-base` owns the complete currency operation: fetch, clean rebase or detached advance, session-authorized dirty-tree checkpointing through `/commit-changes`, and same-invocation retry. Callers consume its final result; they never duplicate branch creation, commit, stash, or retry logic, and they never reinterpret `dirty_tree` as a rebase conflict.
+
 **🛑 STOP TRIGGER — after every compaction event:** all loaded spec-tree context is gone. **Re-invoke `/contextualize` on every node still in scope** before touching it again — not just the next one being worked on.
 
 **NEVER** resume work on a node without having invoked `/contextualize` since the last compaction.
@@ -132,6 +134,14 @@ Default-branch work is complete only when it reaches the default branch on origi
 - the applicable gates have run or produced concrete failing evidence.
 
 🛑 **About to finish on a detached HEAD or stop at a fresh commit** — `git status --short --branch` reporting `## HEAD (no branch)`, or a new local commit, is not an endpoint. Create or switch to a local branch preserving the worktree changes, then continue through `/merge` unless the user explicitly limited the task to local-only work.
+
+## Checkpoint Commits
+
+`/commit-changes` may create an atomic local checkpoint whenever a coherent concern is ready to preserve, independent of verification state. Record the latest state as `passing`, `failing`, or `not-run`; that state controls later gate dispatch, never commit permission. Run hooks normally, confirm the full `HEAD` changed, and report committed paths, remaining paths, and verification state. Never strand dirty work merely because verification fails or has not run.
+
+## Worktree Occupancy
+
+Before treating any worktree as available, run `spx worktree status` and require a live claim for the exact absolute worktree root and current native session. Refresh this proof at session start, after restart or compaction, and immediately before any checkout or worktree transition. A clean tree, detached `HEAD`, branch name, pane title, or absent process in one view never proves availability. When the exact root is absent or claimed by another live session, remain in the assigned worktree and record the ownership issue instead of entering the sibling checkout.
 
 ## Git Safety Protocol
 

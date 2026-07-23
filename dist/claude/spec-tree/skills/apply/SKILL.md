@@ -12,20 +12,6 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 
 </objective>
 
-<quick_start>
-
-0. Select the slice when the work is a plan or proposal, not a specific node or queue — invoke `/slice` to select the observable slice whose node set becomes the work queue (see `<invocation_modes>`)
-1. Load methodology (Step 1 — once per session)
-2. Load work item context (Step 2 — every node)
-3. Architect -> audit until APPROVED (Steps 3–4)
-4. Verify -> evidence specialist -> audit until APPROVED (Steps 5–6)
-5. Implement -> audit until the rendered projection reports `terminalStatus: approved` (Steps 7–8)
-6. Evidence-auditor gates for every touched `[test]` and `[eval]` evidence artifact (Step 8a), then whole-changeset review when the change reaches beyond the target node (Step 9)
-7. Run the terminal full deterministic gate when the repository requires it, only after all agentic gates converge
-8. Merge — carry default-branch work through `/merge` until it reaches the default branch on origin (Step 10)
-
-</quick_start>
-
 <invocation_modes>
 
 The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
@@ -86,10 +72,10 @@ Do not re-run a gate after every micro-edit. Batch the class fix, re-read the af
 
 Before dispatching any persisted audit or review gate, bind its subject to an exact local commit:
 
-1. Run the touched-scope deterministic verification required by the repository overlay over the stabilized changes. Do not run an aggregate gate whose generated-output drift check requires committed `src/` and `dist/` files before creating the checkpoint.
-2. When the relevant tracked or untracked files differ from `HEAD`, invoke `/commit-changes` to create an atomic local verification checkpoint.
+1. Run the touched-scope deterministic verification required by the repository overlay when preparing to dispatch a gate. Do not run an aggregate gate whose generated-output drift check requires committed `src/` and `dist/` files before creating the checkpoint.
+2. When the relevant tracked or untracked files differ from `HEAD`, invoke `/commit-changes` to create an atomic local checkpoint regardless of whether the latest verification state is `passing`, `failing`, or `not-run`; preserve that state in the checkpoint result.
 3. Confirm the worktree is clean and record the checkpoint's full `HEAD` commit ID.
-4. Dispatch the gate against the committed `<base>..<head>` scope. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
+4. Dispatch the gate only when the required deterministic verification is `passing`, against the committed `<base>..<head>` scope. A `failing` or `not-run` checkpoint remains valid local history for recovery and collaboration while withholding gate dispatch. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
 
 An audit over modified or untracked files is advisory. It may provide early feedback, but it never satisfies a Step 4, Step 6, Step 8, evidence-auditor, Step 9, or merge-readiness predicate.
 
