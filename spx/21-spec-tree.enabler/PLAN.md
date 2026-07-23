@@ -57,8 +57,10 @@ open PR branch.
 
 Preserved refs and observed heads:
 
-- `work/inline-foundation-salvage-restart` — repaired PR content at
-  `35001274a20170236016f45aa6403a3fb132f5c4` beneath its restart-plan commit.
+- `work/inline-foundation-salvage-restart` — repaired PR content rebased onto the
+  current `origin/main`; its tip SHA is checkout-local and changes on each rebase.
+  The pre-rebase preserved head `35001274a20170236016f45aa6403a3fb132f5c4`
+  identifies `work/inline-foundation-salvage`, not this restart branch.
 - `work/inline-understand-foundation-squash` —
   `701694b1311a176d1de9b16de7498e6181b820b4`.
 - `work/foundation-audit-followups` —

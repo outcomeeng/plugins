@@ -74,10 +74,10 @@ This is a separate content-consolidation refactor across the overview and five
 references. It does not block the current rename and invocation-lifecycle repair,
 which the same audit approved with no must-fix findings.
 
-The complete-bundle skill audit at head `5d5b6582f` (after the rename and the
-xml_tag_formatting fix) added four `WARNING` findings that belong to this
-refactor and are deferred here, not fixed in the rename changeset, because each
-removes or reworks reference/overview content rather than propagating the rename:
+The complete-bundle skill audit after the rename and the xml_tag_formatting fix
+added four `WARNING` findings that belong to this refactor and are deferred here,
+not fixed in the rename changeset, because each removes or reworks
+reference/overview content rather than propagating the rename:
 
 - f-005 — `references/context-management.md` `<framework_support>` describes
   LangChain and LlamaIndex memory patterns that neither Claude Code nor Codex

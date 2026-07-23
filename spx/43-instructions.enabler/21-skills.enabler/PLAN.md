@@ -6,26 +6,16 @@ remains one reviewable unit.
 
 ## Complete PR 465
 
-PR 465 remains open from `work/inline-foundation-salvage`. Its remote head was
-`f2a3b97c2abf5d9344ebac9b24cbe55c38a62801` when the local finding repairs were
-rebased. The repaired branch content is preserved at
-`35001274a20170236016f45aa6403a3fb132f5c4` beneath the restart-plan commit on
-`work/inline-foundation-salvage-restart`.
-
-The local repair series adds these commits on top of the PR changeset:
-
-- `6823193fe170068e40803db245d0a228575ab1c3` — externalize invocation checks.
-- `35bc7cac2f9758a02dfe87858910242dfb344b23` — track the invocation lifecycle.
-- `64586d4f8dc772850788232fb6f1037c6ecfda95` — route creator validation.
-- `35001274a20170236016f45aa6403a3fb132f5c4` — track the separate creator cleanup.
-
-The focused deterministic lane passed at
-`35001274a20170236016f45aa6403a3fb132f5c4`. The prior changeset review was
-approved under run token `2026-07-21_00-10-59-882-3fb201e43fd2` at the
-pre-rebase head. Base synchronization changed commit identities and advanced
-over governance surfaces, so that review cannot satisfy the current-head gate.
-Two current-head `skill-auditor` dispatch attempts then failed before creating
-an agent handle with `agent type is currently not available`.
+PR 465 remains open from `work/inline-foundation-salvage`, with remote head
+`f2a3b97c2abf5d9344ebac9b24cbe55c38a62801`. The repaired, hardened changeset
+lives on `work/inline-foundation-salvage-restart`, rebased onto the current
+`origin/main`; its commit SHAs are checkout-local and change on every rebase, so
+this plan names restart-branch history by branch rather than by SHA. The
+pre-rebase preserved head `35001274a20170236016f45aa6403a3fb132f5c4` identifies
+the local `work/inline-foundation-salvage` branch content, not the restart
+branch. Base synchronization advanced over governance surfaces, so any
+verification evidence produced before the rebase is superseded and re-run on the
+current base.
 
 Worklist:
 
