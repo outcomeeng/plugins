@@ -6,8 +6,9 @@ Spec alignment applied: `spx/18-plugin-build.enabler/54-conversion.enabler/21-ag
 `spx/13-infrastructure.enabler/32-installation.enabler`, and
 `spx/32-distribution.enabler/21-sync.enabler` are aligned — each node's spec declares only the
 assertions the decision leaves standing, scoped to what their linked evidence verifies, with the
-superseded user-scope assertions removed. Each node's `PLAN.md` names what the decision supersedes,
-what it leaves standing, and the pending implementation cutover. The
+superseded user-scope assertions removed. The installation and sync nodes' `PLAN.md` files name what
+the decision supersedes, what it leaves standing, and the pending implementation cutover; the
+agents-conversion node's plan is fully applied and carries none. The
 `spx/21-spec-tree.enabler/79-diagnostics.enabler` re-declaration is deferred behind a published
 `@outcomeeng/spx` dependency (see that node's `PLAN.md`).
 
