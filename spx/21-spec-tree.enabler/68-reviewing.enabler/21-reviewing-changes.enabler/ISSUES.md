@@ -45,9 +45,15 @@ The failure repeated on 2026-07-22 from branch `work/unconditional-checkpoint-sy
 
 The helper's current-scope render and sealed-run fallback found no matching run, so none of the four tokens produced an admissible review projection.
 
+The failure was narrowed further on 2026-07-23. Agent `019f8bf8-9a97-7760-a38f-ea02669c855c` received raw scope `HEAD` and returned token `2026-07-22_22-36-47-423-1c75456d2b84`. Projection from the assigned `plugins-a` worktree reported the run missing, while projection from the canonical `plugins` worktree succeeded and showed an approved review of head `37c04c2f33ea5e2e10059a77c6b6778852bc5c01` instead of the assigned branch head `9737f096edd9bf742be5b3a775f699964546bbeb`. The token was present; the wrapper agent had resolved `HEAD` in a different worktree and reviewed the wrong changeset.
+
+After rebasing the assigned branch, agent `019f8d43-f6a8-7f91-ac7c-b42949f6b3c5` received explicit raw scope `origin/main...work/unconditional-checkpoint-sync` and failed with `unknown revision or path not in the working tree`. The typed reviewer interface exposes no repository or working-directory selector, so a main session operating outside its native repository cannot direct the reviewer to an unpushed branch in the assigned worktree.
+
 Required handling:
 
 - Make review run lookup derive the same branch scope for wrapper-agent produced runs and main-session projection reads, or provide a supported branch-scope selector for `spx journal render` and `spx journal read`.
+- Let typed reviewer dispatch bind an explicit repository or assigned worktree before resolving raw scope.
+- Reject a projected review when its head and base identities differ from the caller's expected review subject.
 - Add regression coverage for a review run created by `changes-reviewer` and read from the main session on the same changeset head.
 - Keep direct `.spx/branch/**/review/runs/*.jsonl` reads out of the normal merge workflow once the projection lookup resolves the run token.
 
