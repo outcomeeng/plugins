@@ -74,6 +74,25 @@ This is a separate content-consolidation refactor across the overview and five
 references. It does not block the current rename and invocation-lifecycle repair,
 which the same audit approved with no must-fix findings.
 
+The complete-bundle skill audit at head `5d5b6582f` (after the rename and the
+xml_tag_formatting fix) added four `WARNING` findings that belong to this
+refactor and are deferred here, not fixed in the rename changeset, because each
+removes or reworks reference/overview content rather than propagating the rename:
+
+- f-005 — `references/context-management.md` `<framework_support>` describes
+  LangChain and LlamaIndex memory patterns that neither Claude Code nor Codex
+  custom-agent configuration integrates; cut to the file-based memory pattern the
+  config actually supports (~45 lines).
+- f-006 — `references/error-handling-and-recovery.md` presents uncited precise
+  percentages ("32% of failures", "28%", "24%") as measured fact; cite the source
+  or reframe qualitatively, per `/agent-prompt-standards` `<failure_mode_writing>`.
+- f-007 — `SKILL.md` `<failure_modes>` sole entry documents a failure in authoring
+  this SKILL.md (line budget) rather than a failure while using the skill to create
+  a subagent; relocate to a maintainer note or drop the section.
+- f-008 — `references/debugging-agents.md` `<monitoring>` prescribes dashboards,
+  alert-threshold tables, and per-invocation cost tracking as if the product ships
+  that observability; cut or reframe as optional external guidance (~55 lines).
+
 ## Give the subagent cluster a canonical-rules owner (symmetric triad)
 
 The skills-about-skills cluster resolves rule ownership with three peers — builder
