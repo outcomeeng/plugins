@@ -7,11 +7,11 @@ pull request remains one reviewable unit.
 ## Ship the subagent-creator rename and hardening
 
 PR 465 is closed, superseded rather than reconciled.
-`git cherry work/inline-foundation-salvage-restart work/inline-foundation-salvage`
+`git cherry work/skill-naming-and-subagent-cluster work/inline-foundation-salvage`
 reports twelve of that branch's thirteen commits patch-equivalent. The
 thirteenth — the subagent-creator rename — reports non-equivalent because the
-restart branch reworked the rename further rather than dropping it, so no single
-commit retains its patch identity. Its content is carried: on the restart head
+this branch reworked the rename further rather than dropping it, so no single
+commit retains its patch identity. Its content is carried: on this branch's head
 the skill directory is `create-subagent` with all seven references beneath it,
 no `create-subagents` reference remains anywhere in the repository, the Claude
 marketplace entry reads `/create-subagent`, and the diff against `origin/main`
@@ -20,12 +20,11 @@ verification after any further rebase, since patch identity does not survive one
 Never publish to `work/inline-foundation-salvage`, force-push over it, or reopen
 PR 465.
 
-The changeset lives on `work/inline-foundation-salvage-restart`, rebased onto
+The changeset lives on `work/skill-naming-and-subagent-cluster`, rebased onto
 the current `origin/main`; its commit SHAs are checkout-local and change on every
-rebase, so this plan names restart-branch history by branch rather than by SHA.
+rebase, so this plan names this branch's history by branch rather than by SHA.
 The pre-rebase preserved head `35001274a20170236016f45aa6403a3fb132f5c4`
-identifies the local `work/inline-foundation-salvage` branch content, not the
-restart branch. Base movement over a governance surface supersedes any
+identifies the local `work/inline-foundation-salvage` branch content, not this branch. Base movement over a governance surface supersedes any
 verification evidence produced before it, which is then re-established on the
 current base.
 
@@ -43,13 +42,13 @@ Worklist:
 4. After all applicable agentic gates converge on one clean committed head, run
    the terminal full deterministic gate `just check-full` once.
 5. Invoke `/sync-base` again. Re-establish any evidence the base movement
-   invalidated, then publish `work/inline-foundation-salvage-restart` and open
+   invalidated, then publish `work/skill-naming-and-subagent-cluster` and open
    the fresh pull request through `/merge`.
 6. Manage that pull request through current-head integration review and
    terminal-green required checks, merge it, complete the marketplace-source
    release refresh, and close the merge lifecycle.
 
-Do not delete `work/inline-foundation-salvage` until the restart branch's content
+Do not delete `work/inline-foundation-salvage` until this branch's content
 reaches the default branch on origin.
 
 ## Resolve create-skill authority and final verification
