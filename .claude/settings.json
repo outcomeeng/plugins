@@ -4,6 +4,7 @@
     "typescript@outcomeeng": true,
     "prose@outcomeeng": true,
     "python@outcomeeng": true,
-    "spec-tree@outcomeeng": true
+    "spec-tree@outcomeeng": true,
+    "coding-agents@outcomeeng": true
   }
 }

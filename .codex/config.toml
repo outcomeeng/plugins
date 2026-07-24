@@ -16,3 +16,6 @@ enabled = true
 
 [plugins."spec-tree@outcomeeng"]
 enabled = true
+
+[plugins."coding-agents@outcomeeng"]
+enabled = true
