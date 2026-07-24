@@ -25,7 +25,7 @@ The source-owned operation names are:
 | `tab-create` | optional selector and `path`                                                                        | required               |
 | `tab-close`  | one selector; optional `force`                                                                      | required               |
 | `pane-close` | one selector; optional `force`                                                                      | required               |
-| `open`       | optional `path`                                                                                     | no                     |
+| `open`       | optional `path`                                                                                     | required               |
 
 A selector is exactly one of `target`, `worktree`, `tab`, or `pane`. Preserve its complete public value. For `send`, `capture` cannot combine with `noEnter` or `noWait`, and `timeout` cannot combine with `noWait`. The adapter always requests public JSON and owns every Prowl command token and flag.
 
@@ -34,7 +34,7 @@ A selector is exactly one of `target`, `worktree`, `tab`, or `pane`. Preserve it
 <workflow>
 
 1. Interpret `$ARGUMENTS` as one low-level operation, one delegation request, or one terminal handback. When it is empty, require a concrete operation before running the adapter.
-2. For `list`, `agents`, `read`, `send`, or `open`, build this source-owned request shape and set only arguments the operation accepts:
+2. For `list`, `agents`, `read`, or `send`, build this source-owned request shape and set only arguments the operation accepts:
 
 ```json
 {
@@ -44,9 +44,9 @@ A selector is exactly one of `target`, `worktree`, `tab`, or `pane`. Preserve it
 }
 ```
 
-For `open`, set `operation` to `open` and set `arguments` to either `{}` or `{"path":"<complete-source-supplied-path>"}`. Treat both forms as non-mutating and never add `mutationAuthorized`.
+`list` inventories instantiated terminal panes only. A worktree visible in Prowl's sidebar but never entered in the current app process can be absent from `list` because it has no pane UUID yet.
 
-3. For `key`, `focus`, `tab-create`, `tab-close`, or `pane-close`, require an explicit user instruction authorizing that exact external mutation in the same turn. When authorization is absent, use `AskUserQuestion` with the exact operation and complete target identity; do not run the adapter. After authorization, add `"mutationAuthorized": true` inside `arguments`.
+3. For `key`, `focus`, `tab-create`, `tab-close`, `pane-close`, or `open`, require an explicit user instruction authorizing that exact external mutation in the same turn. `open` can visibly switch focus and create a first terminal tab, so it is never read-only. When authorization is absent, use `AskUserQuestion` with the exact operation and complete target identity; do not run the adapter. After authorization, add `"mutationAuthorized": true` inside `arguments`. For `open`, set arguments to `{"mutationAuthorized":true}` or `{"path":"<complete-source-supplied-path>","mutationAuthorized":true}`.
 4. Submit a low-level request over stdin.
 
 When the shell accepts multiline input:
@@ -63,7 +63,7 @@ When the runner requires one physical command line:
 printf '%s\n' '{"schemaVersion":1,"operation":"agents","arguments":{}}' | python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" run
 ```
 
-5. Accept only `status: "succeeded"`. Preserve the complete versioned result, `commandExitCode`, and public `response` values. Stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `prowl-unavailable`, `mutation-unauthorized`, or `operation-unavailable`.
+5. Accept only `status: "succeeded"`. Preserve the complete versioned result, `commandExitCode`, and public `response` values. For `open`, preserve `response.data.resolution`, `created_tab`, and the complete target; `exact-root` with `created_tab: true` is the lazy equivalent of clicking a known sidebar worktree that has no terminal pane. `new-root` means Prowl added a previously unknown root and never proves a prepared recovery target existed. For submitted `send`, preserve `response.data.input.trailing_enter_sent`; a successful command with that field false or absent does not prove the turn left the editor. Stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `prowl-unavailable`, `mutation-unauthorized`, or `operation-unavailable`.
 6. For bounded delegation between two identities returned by `agents`, submit this shape to `delegate`:
 
 ```json
@@ -108,7 +108,8 @@ A complete inline result uses `inlineResult`. A durable result uses `resultRefer
 - ALWAYS preserve complete source-supplied agent, pane, worktree, branch, repository, run, coordination, status, conclusion, exit-code, and result-reference values.
 - ALWAYS execute the bundled script through `${CLAUDE_SKILL_DIR}`; never import it from another filesystem location or manufacture a path outside this skill directory.
 - NEVER invoke raw Prowl commands, Prowl command help, or an external environment-control skill.
-- NEVER mutate focus, keys, tabs, or panes without explicit authorization for the exact operation and target in the same turn.
+- NEVER mutate focus, keys, tabs, panes, or open-path selection without explicit authorization for the exact operation and target in the same turn.
+- NEVER equate `list` with the sidebar worktree inventory or enumerate filesystem worktrees to compensate for an uninstantiated pane.
 - NEVER scan transcripts, parse terminal presentation as identity, or poll for delegation completion.
 - NEVER make retry, checkpoint, persistence, result-interpretation, or continuation decisions for another workflow.
 
@@ -124,7 +125,9 @@ Before release, import the bundled module with controlled `CommandRunner` implem
 
 **A selectorless tab creation was rejected.** Claude applied the shared selector requirement to `tab-create`, even though the public operation accepts both selectorless and selected forms. The shared request builder hid the operation-specific shape. Build `tab-create` from its declared optional-selector contract and preserve optional `path` independently.
 
-**An advertised operation had no construction branch.** Claude listed `open` in the public surface but grouped only list, agents, read, and send into the non-mutating workflow. Claude then had to infer the request shape. Keep every advertised operation in an explicit construction branch; `open` accepts empty arguments or one source-supplied `path`.
+**An advertised operation had no construction branch.** Claude listed `open` in the public surface but grouped only list, agents, read, and send into the non-mutating workflow. Claude then had to infer the request shape. Keep every advertised operation in an explicit construction branch; `open` accepts empty arguments or one source-supplied `path`, always with explicit mutation authorization.
+
+**A visible worktree was absent from `list`.** Claude inferred missing Prowl topology because a sidebar row had no listed pane. The row was known but not entered; `open` returned `resolution: exact-root`, `created_tab: true`, and the first pane UUID. Treat `list` as the terminal inventory and use authorized `open` for visible lazy activation.
 
 </failure_modes>
 
@@ -134,7 +137,8 @@ Before release, import the bundled module with controlled `CommandRunner` implem
 - Every positively identified Prowl participant retains complete public identities verbatim.
 - Every delegation preserves its initiating coordination reference through exactly one completed, failed, rejected, or unavailable terminal handback.
 - Terminal results carry complete inline content or an exact durable reference with a bounded projection.
-- Unauthorized focus, key, creation, and closure requests fail before Prowl runs.
+- Unauthorized focus, key, creation, closure, and open requests fail before Prowl runs.
+- Lazy activation is established by an authorized `open` result carrying `resolution: exact-root`, `created_tab: true`, and the complete returned pane identity.
 - No workflow polls, invokes help, or depends on a separate environment-control skill.
 
 </success_criteria>

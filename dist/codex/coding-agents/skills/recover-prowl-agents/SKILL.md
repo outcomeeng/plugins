@@ -7,7 +7,7 @@ allowed-tools: Read, Write, Skill, Bash(printf:*), Bash(python3 "${SKILL_DIR}/sc
 ---
 
 <objective>
-A durable pre-restart allowlist or an idempotent post-restart recovery in which every prepared native session has one exact Prowl pane correlation, every non-controller session receives one separately settled continuation instruction, and no unprepared agent is running.
+A durable pre-restart allowlist or an idempotent post-restart recovery in which every prepared native session has one exact Prowl pane correlation, every non-controller session receives one separately submitted continuation instruction, and no unprepared agent is running.
 </objective>
 
 <dependencies>
@@ -45,7 +45,7 @@ A candidate requires one exact evidence source:
 | `public-agent`       | `/operate-prowl agents` reports an exact high-confidence session in the pane.        |
 | `operator-confirmed` | The operator explicitly confirms the exact pane, worktree, agent type, and session.  |
 
-A pane title, terminal presentation, saved transcript, rollout existence, recent file, session-file timestamp, or sessionless roster entry is never identity evidence.
+A pane title, terminal presentation, saved transcript, rollout existence, recent file, session-file timestamp, or sessionless roster entry is never identity evidence. Prowl's `working`, `idle`, `blocked`, and `done` values are advisory workflow projections, never native-session eligibility or completion evidence. Preserve a status value when reporting it, but never include or exclude a candidate from that value alone.
 
 Record launch context separately from identity evidence:
 
@@ -73,7 +73,7 @@ Stop preparation when an active session cannot safely reach its native status su
 <prepare_workflow>
 
 1. Invoke `/operate-prowl` once for `list` and once for `agents`; preserve both complete checked results.
-2. Select only process-backed native agents with status `working`, `idle`, or `blocked`. Exclude `done`, stale pane detections without a live process, ordinary shells, and every unconfirmed ambiguous identity.
+2. Select every positively identified native session represented by an instantiated pre-restart pane. Require exact evidence from `<identity_evidence>` and exclude ordinary shells and unconfirmed ambiguous identities. NEVER filter on Prowl status: a `done` projection can still carry an unfinished native conversation, as the live restart test established.
 3. Establish every selected pane's complete worktree, agent type (`claude`, `codex`, or `pi`), native session, exact `resumeLocator`, applicable `nativeHome`, evidence source, role, and secondary authorization through `<identity_evidence>`. Use `<native_status_protocol>` only for unresolved exact identity.
 4. Reconcile by worktree. Require exactly one primary; every distinct secondary requires `secondaryAuthorized: true` after explicit operator authorization. Reject duplicate native sessions globally.
 5. Build the script input with checked public `items`, `agents`, exact `candidates`, and exact `correlationEvidence`. Each candidate uses `paneId`, `worktreePath`, `sessionId`, `resumeLocator`, `nativeHome`, `agentType`, `evidence`, `role`, and `secondaryAuthorized`; each evidence item uses `paneId`, `worktreePath`, `sessionId`, `agentType`, and `source`.
@@ -92,17 +92,17 @@ Stop preparation when an active session cannot safely reach its native status su
    - `ready` carries complete existing bindings and no activation.
    - `activation-required` carries existing bindings plus ordered `open` or `tab-create` actions.
    - `pane-occupied`, `invalid-target`, or `invalid-schema` stops before mutation.
-5. For every `open` action, invoke `/operate-prowl` `open` with the complete worktree path. For every `tab-create` action, require the prepared authorized secondary and treat the operator's exact `recover` invocation as authorization for that action's named worktree. Preserve every complete checked result in action order.
-6. Run `bind` with the activation plan and ordered `{originalPaneId, transport}` results. Accept only `ready`; every binding preserves one original pane and one distinct Prowl-returned post-restart pane.
+5. Treat `list` as the instantiated-terminal inventory, not the visible sidebar-worktree inventory. For every `open` action, invoke `/operate-prowl` `open` with the complete prepared worktree path and `mutationAuthorized: true`; the operator's exact `recover` invocation authorizes the visible focus switch and first-tab creation for that prepared path. NEVER enumerate Git worktrees or filesystem directories to invent activation targets. For every `tab-create` action, require the prepared authorized secondary and use the same exact-worktree authorization. Preserve every complete checked result in action order.
+6. Run `bind` with the activation plan and ordered `{originalPaneId, transport}` results. An `open` result passes only with `resolution: exact-root`, an exact returned worktree path, and a complete returned pane; `new-root`, `inside-root`, path mismatch, or missing target stops recovery. Preserve `created_tab` as evidence rather than requiring one value: false can identify an existing exact target and must not trigger an extra pane. Accept only `ready`; every binding preserves one original pane and one distinct Prowl-returned post-restart pane.
 7. Invoke `/operate-prowl` once for `list` and once for `agents`, then run `recover` with the unchanged prepared manifest and exact bindings. Stop on any occupied, missing, duplicate, or mismatched target without partial delivery.
-8. For every planned launch, invoke `/operate-prowl` once for `send` using its complete `paneId`, exact source-owned native command, and immediate-return mode. The command contains only the prepared agent type, exact resume locator or session identity, and applicable native home; NEVER append reassessment prose or replace it with a recency selector.
-9. Run `settle` with the exact launch plan and ordered checked transports. Accept only `resumed` or `already-current`; never retry a transport that may have delivered.
-10. Wait for each launched native TUI to become input-ready through one bounded stable-screen read. Resolve visible update, trust, authentication, or account-selection dialogs only within explicit operator authority; stop that candidate when exact recovery remains unavailable.
+8. Launch one planned native session at a time. Invoke `/operate-prowl` once for `send` using its complete `paneId`, exact source-owned native command, and immediate-return mode, then require checked transport evidence that a trailing `Enter` was sent. The command contains only the prepared agent type, exact resume locator or session identity, and applicable native home; NEVER append reassessment prose or replace it with a recency selector. Serialize Codex launches sharing one `nativeHome` and wait for the prior Codex TUI to become input-ready before starting the next, preventing shared SQLite initialization locks.
+9. Run `settle` with the exact launch plan and ordered checked transports. Accept only `resumed` or `already-current`; never retry a transport that may have delivered. A transport with no `response.data.input.trailing_enter_sent: true` is not settled.
+10. Wait for each launched native TUI to become input-ready through one bounded stable-screen read. When Claude presents its exact old-session resume-mode prompt, select the recommended `Resume from summary` option with one authorized `Enter`; this preserves the exact native identity while avoiding a full-history reload. Resolve update, trust, authentication, account-selection, or any other usage-affecting dialog only within explicit operator authority; stop that candidate when exact recovery remains unavailable.
 11. Invoke `/operate-prowl` once more for `list` and `agents`. Build exact post-restart `correlationEvidence`: use exact high-confidence public-agent identity where available and `<native_status_protocol>` or process-backed evidence otherwise.
 12. Run `verify` with the prepared manifest, exact bindings, checked public arrays, and correlation evidence. Accept only `verified`, with target count equal to the prepared candidate count and empty missing, duplicate, and unexpected arrays.
 13. Run `reassess` with the verified result. `already-current` emits no delivery. `reassessment-ready` emits one source-owned continuation instruction for each verified non-controller session absent from `reassessedSessionIds`.
-14. For every reassessment delivery, invoke `/operate-prowl` once for `send` using its complete `paneId`, exact source-owned text, and immediate-return mode. These sends occur only after verification and contain no native launch command.
-15. Run `settle` with the reassessment plan and ordered checked transports. Accept only `reassessment-sent`; replace the manifest with the returned `prepared` object so repeated recovery emits no duplicate reassessment.
+14. For every reassessment delivery, invoke `/operate-prowl` once for `send` using its complete `paneId`, exact source-owned text, and immediate-return mode. These sends occur only after verification and contain no native launch command. Require checked transport evidence that trailing `Enter` was sent; visible text still sitting in an editor is not delivery.
+15. Run `settle` with the reassessment plan and ordered checked transports. Accept only `reassessment-sent`, then perform one bounded stable-screen read per recipient to establish that the submitted turn left the editor or began a response. Replace the manifest with the returned `prepared` object only after that submission check so repeated recovery emits no duplicate reassessment.
 16. Preserve the activation plan, bindings, launch plan, checked launch transports, verification result, reassessment plan, checked reassessment transports, and updated manifest together. Report every full old-pane/new-pane/worktree/agent/session correlation.
 
 </recover_workflow>
@@ -125,7 +125,8 @@ printf '%s\n' '{"prepared":{},"bindings":[],"verification":{}}' | python3 "${SKI
 
 - ALWAYS route public Prowl operations through `/operate-prowl` and preserve complete checked results.
 - ALWAYS preserve original and post-restart pane UUIDs, absolute worktree paths, agent types, native session IDs, exact resume locators, applicable native homes, evidence sources, roles, authorization values, and reassessed-session identities verbatim.
-- NEVER reconstruct eligibility or identity from transcript content, saved history, rollout recency, pane presentation, or a latest-session selector.
+- NEVER reconstruct eligibility or identity from Prowl status, transcript content, saved-history recency, rollout recency, pane presentation, or a latest-session selector.
+- NEVER enumerate worktrees blindly; activation targets only complete worktree paths already preserved by prepared native-session candidates.
 - NEVER type into an occupied mismatched pane, close a pane, launch an unprepared identity, or execute one native session in multiple panes or worktrees.
 - NEVER start a watcher, polling loop, daemon, background process, or open-ended wait.
 - NEVER combine native launch and reassessment in one send, treat interruption metadata as cancellation, substitute repository completion for an unanswered operator request, ask again for existing authority, or silently exit when a pending interaction can be restored.
@@ -140,7 +141,15 @@ Exercise schema-5 preparation, exact Claude resume locators, applicable Codex ho
 
 <failure_modes>
 
-**Prowl restart produced no restored panes.** Claude treated old pane UUIDs as restart-stable and stopped recovery. Prowl materializes worktree terminals lazily; preserve old panes as provenance, activate prepared worktrees through `/operate-prowl`, and bind the returned new panes.
+**Sidebar worktrees disappeared from `list`.** Claude treated `prowl list` as the sidebar inventory and concluded Prowl had lost its topology. The live GUI still showed known worktree rows; `list` contained only instantiated terminal panes. Activate only prepared paths with `open`, require `exact-root`, and bind the returned new pane.
+
+**A `done` session was unfinished.** Claude excluded `spx-f` because Prowl reported `done`, but exact native session `5ed10cb0-9295-461d-a13b-38b4aaa1b870` resumed into concrete unfinished implementation work. Treat every Prowl status as advisory and decide eligibility from exact native identity evidence.
+
+**Concurrent Codex launches locked SQLite.** Six exact Codex resumes sharing one `CODEX_HOME` started together; three returned to the shell with a database-lock failure. Serialize launches sharing one native home and wait for each prior TUI to become input-ready.
+
+**Claude required summary resumption.** An old exact session opened a native choice between summary and full-history resumption. Accept the recommended summary option with one `Enter`; do not mistake the prompt for failed identity correlation or send continuation prose into it.
+
+**Continuation text looked delivered but remained editable.** A transport return alone did not prove the turn was submitted. Require the checked public response's `trailing_enter_sent` value and one bounded post-send read before recording durable reassessment.
 
 **SPX selected another session.** `spx agent resume --latest` selected Pi in a worktree whose prepared candidate was Codex and selected a different Claude session elsewhere. Select the exact native command from the prepared agent type and complete session ID; recency never chooses recovery identity.
 
@@ -160,7 +169,7 @@ Exercise schema-5 preparation, exact Claude resume locators, applicable Codex ho
 
 <success_criteria>
 
-- Preparation persists one schema-5 candidate per intended process-backed live session, including exact launch context, with zero unresolved identities and no stale, done, duplicate, or unauthorized candidate.
+- Preparation persists one schema-5 candidate per intended exact native session, including exact launch context, with zero unresolved, duplicate, or unauthorized identity; Prowl status never filters the set.
 - Recovery binds every original pane to one distinct post-restart pane in the same worktree and launches only prepared exact native sessions through launch-only sends.
 - Settlement proves every planned launch and reassessment transport once without caller-supplied delivery claims or retries.
 - Verification reports `verified`, the prepared target count, and empty missing, duplicate, and unexpected agent arrays before reassessment begins.

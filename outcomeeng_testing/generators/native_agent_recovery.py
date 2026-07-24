@@ -189,6 +189,14 @@ def activation_results(
                     module.RESPONSE_FIELD: {
                         "ok": True,
                         "data": {
+                            **(
+                                {
+                                    module.RESOLUTION_FIELD: module.EXACT_ROOT_RESOLUTION,
+                                    module.CREATED_TAB_FIELD: True,
+                                }
+                                if operation == module.ACTIVATION_OPEN_OPERATION
+                                else {}
+                            ),
                             "target": {
                                 "pane": {"id": pane_id},
                                 "worktree": {
@@ -196,7 +204,7 @@ def activation_results(
                                     "path": worktree_path,
                                     "root_path": str(Path(str(worktree_path)).parent),
                                 },
-                            }
+                            },
                         },
                     },
                 },
@@ -227,7 +235,13 @@ def recovery_delivery_results(
                 module.OPERATION_FIELD: module.TRANSPORT_SEND_OPERATION,
                 module.STATUS_FIELD: module.TRANSPORT_SUCCEEDED_STATUS,
                 module.COMMAND_EXIT_CODE_FIELD: 0,
-                module.RESPONSE_FIELD: {},
+                module.RESPONSE_FIELD: {
+                    module.DATA_FIELD: {
+                        module.INPUT_FIELD: {
+                            module.TRAILING_ENTER_SENT_FIELD: True,
+                        }
+                    }
+                },
             }
         results.append(
             {

@@ -172,6 +172,7 @@ MUTATING_OPERATIONS = frozenset(
         Operation.TAB_CREATE,
         Operation.TAB_CLOSE,
         Operation.PANE_CLOSE,
+        Operation.OPEN,
     }
 )
 
@@ -307,7 +308,7 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
         )
     ),
     Operation.OPEN: OperationContract(
-        (RequestShape(optional_fields=frozenset({PATH_FIELD})),)
+        (RequestShape(frozenset({MUTATION_AUTHORIZED_FIELD}), frozenset({PATH_FIELD})),)
     ),
 }
 INTEGER_BOUNDS: Final[Mapping[str, tuple[int, int]]] = {

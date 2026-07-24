@@ -22,8 +22,8 @@ A source-owned coordination envelope delivered through `/operate-prowl` to one c
    - A `mutation-state` response carries the same target plus `observedState` with exact `worktree`, `branch`, `repository`, full `head`, and `status` values matching the live sender identity.
    - A `mutation-authorization` carries the checked target and observed state and targets that same live recipient. Any mismatch returns `invalid-identity` before delivery planning.
 7. Pass the discovery and message request to the bundled script's `build` operation. It returns the complete `envelope` and a semantic `delivery` containing `toPane` and `text`.
-8. Invoke `/operate-prowl` for one `send` operation using the delivery's complete pane, exact text, and immediate-return mode. NEVER construct environment command arguments outside that capability.
-9. Pass the envelope and the exact environment result to the bundled script's `result` operation. Set `delivered` true only when `/operate-prowl` returned a complete checked `send` result with `status: "succeeded"`, `commandExitCode: 0`, and its public response; preserve that complete result under `transport`. The bundled script rejects delivered status when any checked transport field is absent or inconsistent.
+8. Invoke `/operate-prowl` for one `send` operation using the delivery's complete pane, exact text, immediate-return mode, and normal trailing-Enter behavior. NEVER construct environment command arguments outside that capability and NEVER use `noEnter` for a delivery.
+9. Pass the envelope and the exact environment result to the bundled script's `result` operation. Set `delivered` true only when `/operate-prowl` returned a complete checked `send` result with `status: "succeeded"`, `commandExitCode: 0`, and public `response.data.input.trailing_enter_sent: true`; preserve that complete result under `transport`. The bundled script rejects delivered status when any checked transport or submission field is absent or inconsistent. Prefilled text that remains in the recipient editor is not delivered.
 10. Report the complete `coordinationReference`, checked `commandExitCode`, and delivery `status`. `delivered` means only that the environment capability accepted transport; it NEVER means acknowledged, agreed, authorized, or owned. Stop with the exact status and detail on `delivery-failed`, `invalid-identity`, `environment-unavailable`, or `invalid-schema`.
 
 </workflow>
@@ -76,13 +76,15 @@ Before release, exercise `discover_callers`, `coordination_reference`, `build_en
 
 **Transport success was inferred from an exit code alone.** Claude passed `delivered: true` and `commandExitCode: 0` without the checked `/operate-prowl` result, so downstream output claimed delivery with no transport evidence to inspect. The exit code establishes only one field of the environment result. Pass the complete checked `send` result under `transport`; the bundled script rejects delivered status when any required field is absent or inconsistent.
 
+**Continuation prose remained in the editor.** Claude treated a successful immediate-return send as a submitted turn even though the operator could still see editable text. Require `response.data.input.trailing_enter_sent: true`; a prefill or absent submission field is a delivery failure.
+
 </failure_modes>
 
 <success_criteria>
 
 - Discovery passes only with `status: "prowl-pane"`, one complete caller, and complete public targets.
 - Build passes only with one validated envelope and one semantic delivery bound to the target's complete pane UUID.
-- Delivery passes only after `/operate-prowl` returns a checked successful result; every failure preserves its exact status, detail, and command exit code when present.
+- Delivery passes only after `/operate-prowl` returns a checked successful result whose public input record confirms trailing Enter was sent; every failure preserves its exact status, detail, and command exit code when present.
 - Caller, recipient, mutation-target, and observed-state identities validate before delivery.
 - Transport delivery remains distinct from acknowledgement, agreement, authorization, ownership, and continuation.
 

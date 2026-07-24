@@ -19,8 +19,7 @@ TRANSPORT_COMMAND_FAILED_STATUS = "command-failed"
 TRANSPORT_SEND_OPERATION = "send"
 ACTIVATION_OPEN_OPERATION = "open"
 ACTIVATION_TAB_CREATE_OPERATION = "tab-create"
-DONE_STATUS = "done"
-LIVE_PREPARATION_STATUSES = frozenset({"working", "idle", "blocked"})
+EXACT_ROOT_RESOLUTION = "exact-root"
 
 RECOVERY_REASSESSMENT_PROMPT = (
     "Treat the restart, authentication repair, or tool failure as a transport "
@@ -79,6 +78,11 @@ TEXT_FIELD = "text"
 TRANSPORT_FIELD = "transport"
 COMMAND_EXIT_CODE_FIELD = "commandExitCode"
 RESPONSE_FIELD = "response"
+DATA_FIELD = "data"
+INPUT_FIELD = "input"
+TRAILING_ENTER_SENT_FIELD = "trailing_enter_sent"
+RESOLUTION_FIELD = "resolution"
+CREATED_TAB_FIELD = "created_tab"
 DELIVERED_FIELD = "delivered"
 VERIFIED_FIELD = "verified"
 VERIFICATION_FIELD = "verification"
@@ -635,8 +639,7 @@ def prepare(
             )
         agent = matches[0]
         if (
-            agent.status not in LIVE_PREPARATION_STATUSES
-            or agent.worktree_path != candidate.worktree_path
+            agent.worktree_path != candidate.worktree_path
             or agent.agent_type is not candidate.agent_type
         ):
             raise AdapterError(
@@ -802,6 +805,20 @@ def _checked_transport(value: object, expected_operation: str) -> CheckedTranspo
     )
 
 
+def _checked_send_transport(value: object) -> CheckedTransport:
+    transport = _checked_transport(value, TRANSPORT_SEND_OPERATION)
+    if not transport.delivered or transport.response is None:
+        return transport
+    data = _object(transport.response.get(DATA_FIELD), "transport.response.data")
+    input_record = _object(data.get(INPUT_FIELD), "transport.response.data.input")
+    if input_record.get(TRAILING_ENTER_SENT_FIELD) is not True:
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA,
+            "Successful recovery send requires public trailing_enter_sent: true evidence.",
+        )
+    return transport
+
+
 def bind_activations(plan: object, result_items: object) -> dict[str, object]:
     value = _object(plan, PLAN_FIELD)
     if value.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION or value.get(
@@ -847,7 +864,15 @@ def bind_activations(plan: object, result_items: object) -> dict[str, object]:
         if not transport.delivered or transport.response is None:
             failed_originals.append(original)
             continue
-        data = _object(transport.response.get("data"), "transport.response.data")
+        data = _object(transport.response.get(DATA_FIELD), "transport.response.data")
+        if (
+            operation == ACTIVATION_OPEN_OPERATION
+            and data.get(RESOLUTION_FIELD) != EXACT_ROOT_RESOLUTION
+        ):
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                f"Activation for {original} did not lazily enter one known exact-root worktree.",
+            )
         target = _object(data.get("target"), "transport.response.data.target")
         pane = _object(target.get("pane"), "transport.response.data.target.pane")
         worktree = _object(
@@ -1038,9 +1063,7 @@ def settle_recovery(plan: object, result_items: object) -> dict[str, object]:
                 ResultStatus.INVALID_SCHEMA,
                 "Delivery result order or pane identity does not match its plan.",
             )
-        transport = _checked_transport(
-            result.get(TRANSPORT_FIELD), TRANSPORT_SEND_OPERATION
-        )
+        transport = _checked_send_transport(result.get(TRANSPORT_FIELD))
         checked.append(
             {
                 PANE_ID_FIELD: pane_id,

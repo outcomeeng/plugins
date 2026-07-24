@@ -266,6 +266,45 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     if len(all_bindings) != len(roster.original_pane_ids):
         failures.append("checked activation results did not bind every candidate")
 
+    existing_target_results = activation_results(
+        module,
+        activations,
+        roster.post_restart_pane_ids[roster.correlated_count :],
+    )
+    existing_target_transport = cast(
+        dict[str, object], existing_target_results[0][module.TRANSPORT_FIELD]
+    )
+    existing_target_response = cast(
+        dict[str, object], existing_target_transport[module.RESPONSE_FIELD]
+    )
+    existing_target_data = cast(
+        dict[str, object], existing_target_response[module.DATA_FIELD]
+    )
+    existing_target_data[module.CREATED_TAB_FIELD] = False
+    existing_target_bound = module.bind_activations(activation, existing_target_results)
+    if existing_target_bound[module.STATUS_FIELD] != module.ResultStatus.READY:
+        failures.append("exact existing activation target required an extra pane")
+
+    non_exact_results = activation_results(
+        module,
+        activations,
+        roster.post_restart_pane_ids[roster.correlated_count :],
+    )
+    non_exact_transport = cast(
+        dict[str, object], non_exact_results[0][module.TRANSPORT_FIELD]
+    )
+    non_exact_response = cast(
+        dict[str, object], non_exact_transport[module.RESPONSE_FIELD]
+    )
+    non_exact_data = cast(dict[str, object], non_exact_response[module.DATA_FIELD])
+    non_exact_data[module.RESOLUTION_FIELD] = "new-root"
+    non_exact_status = _error_status(
+        module,
+        lambda: module.bind_activations(activation, non_exact_results),
+    )
+    if non_exact_status != module.ResultStatus.INVALID_TARGET:
+        failures.append("new-root activation was accepted for a prepared worktree")
+
     mixed_results = activation_results(
         module,
         activations,
@@ -306,21 +345,20 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     panes, agents = _pre_restart_rosters(module, roster)
     candidates = recovery_candidates(module, roster)
     evidence = identity_evidence(module, roster, roster.original_pane_ids)
-    for non_live_status in (module.DONE_STATUS, "stale", "starting", "unknown"):
-        non_live_agents = deepcopy(agents)
-        non_live_agents[0][module.STATUS_FIELD] = non_live_status
-        non_live_result = _error_status(
-            module,
-            lambda: module.prepare(
-                roster.original_pane_ids,
-                panes,
-                non_live_agents,
-                candidates,
-                evidence,
-            ),
+    for advisory_status in ("working", "idle", "blocked", "done", "unknown"):
+        advisory_agents = deepcopy(agents)
+        advisory_agents[0][module.STATUS_FIELD] = advisory_status
+        advisory_result = module.prepare(
+            roster.original_pane_ids,
+            panes,
+            advisory_agents,
+            candidates,
+            evidence,
         )
-        if non_live_result != module.ResultStatus.INVALID_TARGET:
-            failures.append("non-live pre-restart agent was prepared")
+        if advisory_result[module.STATUS_FIELD] != module.ResultStatus.PREPARED:
+            failures.append(
+                f"advisory Prowl status {advisory_status} changed recovery eligibility"
+            )
 
     duplicate_session_candidates = deepcopy(candidates)
     duplicate_session_candidates[1][module.SESSION_ID_FIELD] = (
@@ -569,6 +607,22 @@ def verify_native_agent_recovery_compliance() -> list[str]:
     settled = module.settle_recovery(plan, successful_results)
     if settled[module.STATUS_FIELD] != module.ResultStatus.RESUMED:
         failures.append("successful exact deliveries did not settle as resumed")
+    unsubmitted_results = deepcopy(successful_results)
+    unsubmitted_transport = cast(
+        dict[str, object], unsubmitted_results[0][module.TRANSPORT_FIELD]
+    )
+    unsubmitted_response = cast(
+        dict[str, object], unsubmitted_transport[module.RESPONSE_FIELD]
+    )
+    unsubmitted_data = cast(dict[str, object], unsubmitted_response[module.DATA_FIELD])
+    unsubmitted_input = cast(dict[str, object], unsubmitted_data[module.INPUT_FIELD])
+    unsubmitted_input[module.TRAILING_ENTER_SENT_FIELD] = False
+    unsubmitted_status = _error_status(
+        module,
+        lambda: module.settle_recovery(plan, unsubmitted_results),
+    )
+    if unsubmitted_status != module.ResultStatus.INVALID_SCHEMA:
+        failures.append("editor-prefilled recovery send settled as submitted")
     malformed_plan = {**plan, module.STATUS_FIELD: module.ResultStatus.INVALID_TARGET}
     malformed_status = _error_status(
         module, lambda: module.settle_recovery(malformed_plan, successful_results)
