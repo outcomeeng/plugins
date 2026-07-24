@@ -2,6 +2,43 @@
 
 Known follow-ups for the audit node. Coordination note; not spec truth.
 
+## Compliance-lane tests read as `assert harness_call()`
+
+`spec-tree:test-evidence-standards` `<predicate_seam>` and
+`python:python-test-standards` `<predicate_and_oracle_litmus>` reject a test whose
+body is a bare `assert helper(...)`: the harness computes the verdict, no
+behavioral predicate is visible in the executed test, a failure reports only
+`assert False` with no observed-versus-expected diagnostic, and inverting the
+claim requires editing the harness rather than the test.
+
+The scenario lane of this node is converted — `observe_implementation_audit_lifecycle`
+and `observe_mismatched_terminal_status_finish` expose observations, and
+`tests/test_implementation_audit_contract.scenario.l1.py` owns every predicate.
+The compliance lane still carries the rejected shape:
+
+- `spx/21-spec-tree.enabler/68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py` — 16 functions
+- `spx/21-spec-tree.enabler/68-audit.enabler/21-state-surface.enabler/tests/test_implementation_audit_runtime.compliance.l1.py`
+- `spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler/tests/test_verification_run_payload_contract.compliance.l1.py`
+
+**Why this is a separate larger concern.** Each of those functions backs a
+different compliance assertion, and the harness functions behind them return a
+boolean derived from a distinct check — surface validation, filename rejection,
+payload rejection, trio completeness. Converting them is not one mechanical
+rename: every function needs its own observation shape designed against the
+assertion it backs, and the surrounding assertions in three nodes across two
+subtrees are re-audited against those shapes. The scenario-lane conversion
+landed with the finding that surfaced it because that lane's evidence was
+already being changed; the compliance lane is untouched by that change.
+
+**Resolution shape**: convert one compliance file at a time, designing each
+harness function's observation from the assertion it backs, and gate each file
+with `spec-tree:test-evidence-auditor` before moving to the next.
+
+**Evidence.** Surfaced by `spec-tree:test-evidence-auditor` on the
+implementation-audit idempotency-key changeset, which audited the scenario
+assertion and named the same defect class in the other two functions of that
+file.
+
 ## Implementation audit has incomplete mixed-changeset coverage
 
 The implementation auditor has no skill covering workflow YAML, so a changeset

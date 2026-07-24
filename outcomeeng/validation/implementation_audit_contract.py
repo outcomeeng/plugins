@@ -210,9 +210,8 @@ def expected_verification_projection(
     finding_count: int,
     terminal_status: AuditTerminalStatus,
 ) -> tuple[object, ...]:
-    """Return expected fields for one sealed verification-run projection."""
+    """Return expected sealed-projection fields for one verification run."""
     return (
-        True,
         terminal_status.value,
         True,
         run_token,
