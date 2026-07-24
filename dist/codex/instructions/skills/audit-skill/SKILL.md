@@ -1,5 +1,5 @@
 ---
-name: audit-skills
+name: audit-skill
 description: >-
   SKILL.md audit methodology — judges skill content for standards compliance,
   operational effectiveness, portability, voice, and structure.
@@ -295,7 +295,7 @@ The skill's `overall` is `APPROVED` iff the `must-fix` row has no `REJECT` findi
 ```json
 {
   "schema_version": 1,
-  "skill": "audit-skills",
+  "skill": "audit-skill",
   "target": "<skill-path>",
   "overall": "APPROVED | REJECTED",
   "rows": [

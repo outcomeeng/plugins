@@ -1,5 +1,5 @@
 ---
-name: audit-skills
+name: audit-skill
 description: >-
   SKILL.md audit methodology — judges skill content for standards compliance,
   operational effectiveness, portability, voice, and structure.
@@ -7,9 +7,9 @@ model: sonnet
 allowed-tools: Read, Grep, Glob, Bash(python3 -c:*), Skill
 ---
 
-{!% require_skill 'instructions:skill-standards' %!}
+Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-{!% require_skill 'instructions:agent-prompt-standards' %!}
+Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
 An `APPROVED` or `REJECTED` verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`, with findings grouped as keep-these-aspects, worth-improving, and must-fix; every rejected finding names the artifact location, violated rule, and evidence.
@@ -162,7 +162,7 @@ Check the capability surface a SKILL.md carries that a slash command also had, a
 
 **File-reference portability**:
 
-- Skill-bundled files use `${CLAUDE_SKILL_DIR}/references/...` or `${CLAUDE_SKILL_DIR}/scripts/...` in authored source. {!# no-codex-skill-dir-rewrite #!}
+- Skill-bundled files use `${CLAUDE_SKILL_DIR}/references/...` or `${CLAUDE_SKILL_DIR}/scripts/...` in authored source.
 - Generated Codex output may contain Codex's skill-directory token; authored source must not.
 - Repository-local authored or generated plugin paths and legacy plugin-root paths are defects in skill prose when they identify bundled plugin files.
 
@@ -209,7 +209,7 @@ Flag these issues:
 - **codex_rendering_assumption**: authored source claims Codex directly consumes Claude-only SKILL.md syntax rather than treating Codex output as a generated rendering concern. Flag as recommendation when wording only confuses authors; flag as critical when it causes a broken generated Codex surface.
 - **overbroad_allowed_tools**: `allowed-tools` grants bare `Bash`, `Bash(git *)`, or a destructive/network tool the skill's task does not need, re-admitting the destructive or exfiltrating commands a narrower grant would bar. Flag as critical for security-sensitive skills.
 - **irrelevant_dynamic_context**: a `<context>` `!` block injecting state the skill never reads. Flag as recommendation — it taxes every load without payoff.
-- **nonportable_bundled_file_reference**: skill prose references a bundled plugin file through repository-local authored or generated plugin paths, legacy plugin-root paths, or an authored Codex-only skill-directory token. Flag as critical: authored source must use `${CLAUDE_SKILL_DIR}/references/...` or `${CLAUDE_SKILL_DIR}/scripts/...` for files bundled with the current skill, or describe the owning workflow/capability when the file belongs elsewhere. {!# no-codex-skill-dir-rewrite #!}
+- **nonportable_bundled_file_reference**: skill prose references a bundled plugin file through repository-local authored or generated plugin paths, legacy plugin-root paths, or an authored Codex-only skill-directory token. Flag as critical: authored source must use `${CLAUDE_SKILL_DIR}/references/...` or `${CLAUDE_SKILL_DIR}/scripts/...` for files bundled with the current skill, or describe the owning workflow/capability when the file belongs elsewhere.
 
 </area>
 </evaluation_areas>
@@ -295,7 +295,7 @@ The skill's `overall` is `APPROVED` iff the `must-fix` row has no `REJECT` findi
 ```json
 {
   "schema_version": 1,
-  "skill": "audit-skills",
+  "skill": "audit-skill",
   "target": "<skill-path>",
   "overall": "APPROVED | REJECTED",
   "rows": [

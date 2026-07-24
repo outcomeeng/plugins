@@ -1,7 +1,7 @@
 ---
-name: audit-subagents
+name: audit-subagent
 description: >-
-  {{! term('configured_agent') | capitalize !}}-configuration audit methodology — judges a {{! term('configured_agent') !}}
+  Subagent-configuration audit methodology — judges a subagent
   configuration file against the create-subagent and agent-prompt standards, covering
   frontmatter, role framing, constraints, and output contract.
 argument-hint: <configured-agent-path>
@@ -10,22 +10,20 @@ model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
-{!% require_skill 'instructions:agent-prompt-standards' %!}
+Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-{!% require_skill 'instructions:create-subagent' %!}
+Invoke the `instructions:create-subagent` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-An `APPROVED` or `REJECTED` verdict on one {{! term('configured_agent') !}} configuration file against the `/create-subagent` and `/agent-prompt-standards` conventions, with every finding naming its location, violated convention, concrete evidence, and consequence.
+An `APPROVED` or `REJECTED` verdict on one subagent configuration file against the `/create-subagent` and `/agent-prompt-standards` conventions, with every finding naming its location, violated convention, concrete evidence, and consequence.
 </objective>
 
 <constraints>
-- NEVER modify the {{! term('configured_agent') !}} file under audit or any other file — this audit produces a verdict, never a fix or a commit
+- NEVER modify the subagent file under audit or any other file — this audit produces a verdict, never a fix or a commit
 - NEVER report a score; report contextual judgment instead
-{!% if target == 'codex' %!}
-- MUST check for markdown headings (##, ###) inside `{{! field('configured_agent_prompt') !}}` and flag as critical
-{!% else %!}
+
 - MUST check for markdown headings (##, ###) in subagent body and flag as critical
-{!% endif %!}
+
 - MUST verify all XML tags are properly closed
 - MUST distinguish between functional deficiencies and style preferences
 - NEVER flag missing tag names if the content/function is present under a different name (e.g., `<critical_workflow>` vs `<workflow>`)
@@ -33,7 +31,7 @@ An `APPROVED` or `REJECTED` verdict on one {{! term('configured_agent') !}} conf
 - NEVER flag formatting preferences that don't impact effectiveness
 - MUST flag missing functionality, not missing exact tag names
 - ONLY flag issues that reduce actual effectiveness
-- ALWAYS apply contextual judgment based on {{! term('configured_agent') !}} purpose and complexity
+- ALWAYS apply contextual judgment based on subagent purpose and complexity
 
 </constraints>
 
@@ -51,7 +49,7 @@ An `APPROVED` or `REJECTED` verdict on one {{! term('configured_agent') !}} conf
 2. Read `instructions:agent-prompt-standards` for voice, description style, constraint language, and anti-patterns.
 3. If `$configured_agent_path` is empty, STOP with `REJECTED` and a critical issue naming the missing required path argument.
 4. Before penalizing any missing section, search entire file for equivalent content under different tag names.
-5. Read the {{! term('configured_agent') !}} configuration file at `$configured_agent_path`.
+5. Read the subagent configuration file at `$configured_agent_path`.
 6. Evaluate against the loaded skills and references, focusing on functionality over formatting.
 
 **Use ACTUAL patterns from references, not memory.**
@@ -61,19 +59,10 @@ An `APPROVED` or `REJECTED` verdict on one {{! term('configured_agent') !}} conf
 <area name="critical" priority="must-fix">
 These issues significantly hurt effectiveness - flag as critical:
 
-{!% if target == 'codex' %!}
-**toml_configuration**:
-
-- **name**: Unique, clear purpose, matches the configured agent's role
-- **description**: Includes BOTH what it does AND when to use it, specific trigger keywords
-- **{{! field('configured_agent_prompt') !}}**: Present, substantive, and structured with role, workflow, constraints, and output expectations
-- **nickname_candidates**: When present, a TOML array of concise display names that fit the configured agent's role and avoid misleading aliases
-  {!% else %!}
-  **yaml_frontmatter**:
+**yaml_frontmatter**:
 
 - **name**: Lowercase-with-hyphens, unique, clear purpose
 - **description**: Includes BOTH what it does AND when to use it, specific trigger keywords
-  {!% endif %!}
 
 **role_definition**:
 
@@ -91,7 +80,7 @@ These issues significantly hurt effectiveness - flag as critical:
 
 - Does prompt include constraints section with clear boundaries?
 - Anti-pattern: No constraints specified, allowing unsafe or out-of-scope actions
-- Pass: Constraints use strong modal verbs (MUST, NEVER, ALWAYS) and cover every material boundary for the {{! term('configured_agent') !}}'s purpose and complexity
+- Pass: Constraints use strong modal verbs (MUST, NEVER, ALWAYS) and cover every material boundary for the subagent's purpose and complexity
 
 **tool_access**:
 
@@ -101,12 +90,8 @@ These issues significantly hurt effectiveness - flag as critical:
 
 **xml_structure**:
 
-{!% if target == 'codex' %!}
-
-- No markdown headings inside `{{! field('configured_agent_prompt') !}}` (##, ###) - use pure XML tags
-  {!% else %!}
 - No markdown headings in body (##, ###) - use pure XML tags
-  {!% endif %!}
+
 - All XML tags properly opened and closed
 - No hybrid XML/markdown structure
 - Note: Markdown formatting WITHIN content (bold, italic, lists, code blocks) is acceptable
@@ -117,7 +102,7 @@ These issues significantly hurt effectiveness - flag as critical:
 Check against `/agent-prompt-standards` conventions:
 
 - **Voice**: Uses imperative mood for instructions, "Claude" for failure modes/tendencies. Never "the agent", "the model", or "you"
-- **Description style**: Natural-language purpose and usage wording from `/create-subagent`; states what the {{! term('configured_agent') !}} does and when to invoke it. Do not apply the directive skill-frontmatter description pattern.
+- **Description style**: Natural-language purpose and usage wording from `/create-subagent`; states what the subagent does and when to invoke it. Do not apply the directive skill-frontmatter description pattern.
 - **Constraint language**: Strong modal verbs (MUST/NEVER/ALWAYS) in constraint blocks
 - **Anti-patterns**: No banned phrases ("helpful assistant", "helps with", "please"). No structural anti-patterns (explaining Claude to Claude, motivational prose)
 
@@ -138,14 +123,8 @@ These improve quality - flag as recommendations:
 
 **model_selection**:
 
-{!% if target == 'codex' %!}
-
-- Is model choice appropriate for task complexity?
-- Guidance: Simple/fast -> gpt-5.4-mini, complex/critical -> gpt-5.4, highest capability -> gpt-5.5
-  {!% else %!}
 - Is model choice appropriate for task complexity?
 - Guidance: Simple/fast → Haiku, Complex/critical → Sonnet, Highest capability → Opus
-  {!% endif %!}
 
 **success_criteria**:
 
@@ -178,26 +157,26 @@ Note these as potential enhancements - don't flag if missing:
 </evaluation_areas>
 
 <contextual_judgment>
-Apply judgment based on {{! term('configured_agent') !}} purpose and complexity:
+Apply judgment based on subagent purpose and complexity:
 
-**Simple {{! term('configured_agents') !}}** (single task, minimal tools):
+**Simple subagents** (single task, minimal tools):
 
 - Focus areas may be implicit in role definition
 - Minimal examples acceptable
 - Light error handling sufficient
 
-**Complex {{! term('configured_agents') !}}** (multi-step, external systems, security concerns):
+**Complex subagents** (multi-step, external systems, security concerns):
 
 - Missing constraints is a real issue
 - Comprehensive output format expected
 - Thorough error handling required
 
-**Delegation {{! term('configured_agents') !}}** (coordinate other subagents):
+**Delegation subagents** (coordinate other subagents):
 
 - Context management becomes important
 - Success criteria should measure orchestration success
 
-Always explain WHY something matters for this specific {{! term('configured_agent') !}}, not just that it violates a rule.
+Always explain WHY something matters for this specific subagent, not just that it violates a rule.
 </contextual_judgment>
 
 <anti_patterns>
@@ -206,15 +185,9 @@ Flag these structural violations:
 <pattern name="markdown_headings_in_body" severity="critical">
 Using markdown headings (##, ###) for structure instead of XML tags.
 
-{!% if target == 'codex' %!}
-**Why this matters**: `{{! field('configured_agent_prompt') !}}` content is consumed by Codex as prompt text. Pure XML structure provides consistent parsing and keeps task boundaries explicit.
-
-**How to detect**: Search `{{! field('configured_agent_prompt') !}}` for `##` or `###` symbols outside code blocks/examples.
-{!% else %!}
 **Why this matters**: Subagent.md files are consumed only by Claude, never read by humans. Pure XML structure provides ~25% better token efficiency and consistent parsing.
 
 **How to detect**: Search file for `##` or `###` symbols outside code blocks/examples.
-{!% endif %!}
 
 **Fix**: Convert to semantic XML tags (e.g., `## Workflow` → `<workflow>`)
 </pattern>
@@ -258,7 +231,7 @@ The skill's `overall` is `APPROVED` iff the `critical-issues` row has no finding
 ```json
 {
   "schema_version": 1,
-  "skill": "audit-subagents",
+  "skill": "audit-subagent",
   "target": "<configured-agent-path>",
   "overall": "APPROVED | REJECTED",
   "rows": [
@@ -296,17 +269,17 @@ The skill's `overall` is `APPROVED` iff the `critical-issues` row has no finding
 
 **Failure 2: Scored the subagent instead of judging it.** Claude assigned "role clarity 7/10" instead of naming the specific deficiency and its consequence. A score names no location, convention, or fix and the author cannot act on it. Emit findings, never scores.
 
-**Failure 3: Skipped an evaluation area and missed a whole class.** Claude judged {!% if target == 'codex' %!}TOML configuration{!% else %!}YAML frontmatter{!% endif %!} and role, formed a verdict, and stopped — leaving tool-access over-permissioning unexamined, so a class of issues passed unseen. The verdict is sound only when every evaluation area was judged; cover them all before issuing the verdict.
+**Failure 3: Skipped an evaluation area and missed a whole class.** Claude judged YAML frontmatter and role, formed a verdict, and stopped — leaving tool-access over-permissioning unexamined, so a class of issues passed unseen. The verdict is sound only when every evaluation area was judged; cover them all before issuing the verdict.
 
 </failure_modes>
 
 <success_criteria>
 The verdict is sound when:
 
-- Every evaluation area was judged with none skipped — {!% if target == 'codex' %!}TOML configuration{!% else %!}YAML frontmatter{!% endif %!}, role definition, workflow specification, constraints, tool access, XML structure, prompt craft, and the recommended areas (coverage-complete).
+- Every evaluation area was judged with none skipped — YAML frontmatter, role definition, workflow specification, constraints, tool access, XML structure, prompt craft, and the recommended areas (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED with findings grouped critical-issues / recommendations / strengths / quick-fixes.
 - Each finding is falsifiable: it names the location, the convention at issue, and the consequence — every critical issue names what breaks if unfixed, judged on functionality rather than exact tag spelling.
-- The same {{! term('configured_agent') !}} file yields the same verdict.
+- The same subagent file yields the same verdict.
 
 </success_criteria>
 
@@ -318,7 +291,7 @@ Before completing the audit, verify:
 3. **Accuracy**: Line numbers verified against actual file content
 4. **Actionability**: Recommendations are specific and implementable
 5. **Fairness**: Verified content isn't present under different tag names before flagging
-6. **Context**: Applied appropriate judgment for {{! term('configured_agent') !}} type and complexity
+6. **Context**: Applied appropriate judgment for subagent type and complexity
 7. **Examples**: At least one concrete example given for major issues
 
 </validation>

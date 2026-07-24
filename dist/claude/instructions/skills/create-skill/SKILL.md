@@ -18,7 +18,7 @@ A skill-authoring request routed to its matching typed workflow.
 - Before any material skill change, apply `/skill-standards` and the repository overlay's required plugin-wide naming review.
 - Classify every skill name independently. A shared word, suffix, or grammatical number never establishes a batch rename.
 - Keep audit-only work read-only. Apply changes only when the operator requested creation or improvement.
-- Dispatch every skill audit through the typed `skill-auditor` role. If the role is unavailable or returns no complete structured verdict, report `BLOCKED`; never invoke `/audit-skills` in the authoring context.
+- Dispatch every skill audit through the typed `skill-auditor` role. If the role is unavailable or returns no complete structured verdict, report `BLOCKED`; never invoke `/audit-skill` in the authoring context.
 
 </essential_principles>
 

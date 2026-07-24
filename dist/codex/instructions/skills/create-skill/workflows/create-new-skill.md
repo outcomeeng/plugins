@@ -70,7 +70,7 @@ Instantiate the selected template with the resolved requirements. Apply `/skill-
 
 <step name="validate">
 
-Run the target repository's canonical skill build and deterministic checks. Dispatch the typed `skill-auditor` over the complete skill bundle. If the role is unavailable or returns no complete structured verdict, return `BLOCKED`; never substitute an in-context `/audit-skills` invocation. Repair every must-fix finding before publication. When the target repository declares no deterministic skill check, apply the closest available validation surface to every applicable `/skill-standards` and `/agent-prompt-standards` check before dispatching the audit.
+Run the target repository's canonical skill build and deterministic checks. Dispatch the typed `skill-auditor` over the complete skill bundle. If the role is unavailable or returns no complete structured verdict, return `BLOCKED`; never substitute an in-context `/audit-skill` invocation. Repair every must-fix finding before publication. When the target repository declares no deterministic skill check, apply the closest available validation surface to every applicable `/skill-standards` and `/agent-prompt-standards` check before dispatching the audit.
 
 </step>
 

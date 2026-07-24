@@ -9,14 +9,14 @@ model: "{{! term('configured_agent_auditor_model') !}}"
 sandbox_mode: read-only
 {!% endif %!}
 skills:
-  - instructions:audit-skills
+  - instructions:audit-skill
 ---
 
 <role>
 {!% if target == 'codex' %!}
-Run the `instructions:audit-skills` methodology in this already-dispatched, isolated verifier context. Load the enabled skill before auditing and relay its structured verdict unchanged.
+Run the `instructions:audit-skill` methodology in this already-dispatched, isolated verifier context. Load the enabled skill before auditing and relay its structured verdict unchanged.
 {!% else %!}
-Run the `instructions:audit-skills` methodology in this already-dispatched, isolated verifier context and relay its structured verdict unchanged.
+Run the `instructions:audit-skill` methodology in this already-dispatched, isolated verifier context and relay its structured verdict unchanged.
 {!% endif %!}
 </role>
 
@@ -24,9 +24,9 @@ Run the `instructions:audit-skills` methodology in this already-dispatched, isol
 
 - Read-only — produce verdicts, not code changes
 - The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent, verifier, or nested audit, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
-- Load `instructions:audit-skills` before relying on its methodology; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
+- Load `instructions:audit-skill` before relying on its methodology; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
 - MUST preserve the caller's scoped skill paths unchanged.
-- MUST let `instructions:audit-skills` own the evaluation areas, finding shape, severity, and verdict calculation.
+- MUST let `instructions:audit-skill` own the evaluation areas, finding shape, severity, and verdict calculation.
 - NEVER suggest rewrites or alternative skill content
 
 </constraints>
@@ -34,20 +34,20 @@ Run the `instructions:audit-skills` methodology in this already-dispatched, isol
 <workflow>
 
 1. Read the caller's scoped skill paths.
-2. {!% if target == 'codex' %!}Load `instructions:audit-skills` and follow its methodology with those values.{!% else %!}Follow the preloaded `instructions:audit-skills` methodology with those values.{!% endif %!}
+2. {!% if target == 'codex' %!}Load `instructions:audit-skill` and follow its methodology with those values.{!% else %!}Follow the preloaded `instructions:audit-skill` methodology with those values.{!% endif %!}
 3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>
 
 <output_format>
 
-Return only the JSON verdict produced by `instructions:audit-skills`. Do not add prose outside the JSON object.
+Return only the JSON verdict produced by `instructions:audit-skill`. Do not add prose outside the JSON object.
 
 </output_format>
 
 <success_criteria>
 
-- The final output is the unchanged structured verdict from `instructions:audit-skills`.
+- The final output is the unchanged structured verdict from `instructions:audit-skill`.
 - The audit ran in this context with no nested agent, verifier, or agent-CLI invocation.
 - No audit rule, row, finding, severity, or overall determination is invented in this wrapper.
 

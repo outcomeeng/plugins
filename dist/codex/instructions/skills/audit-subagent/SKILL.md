@@ -1,5 +1,5 @@
 ---
-name: audit-subagents
+name: audit-subagent
 description: >-
   Custom agent-configuration audit methodology — judges a custom agent
   configuration file against the create-subagent and agent-prompt standards, covering
@@ -233,7 +233,7 @@ The skill's `overall` is `APPROVED` iff the `critical-issues` row has no finding
 ```json
 {
   "schema_version": 1,
-  "skill": "audit-subagents",
+  "skill": "audit-subagent",
   "target": "<configured-agent-path>",
   "overall": "APPROVED | REJECTED",
   "rows": [
