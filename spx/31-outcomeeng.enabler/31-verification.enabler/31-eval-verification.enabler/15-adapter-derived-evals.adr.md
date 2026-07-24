@@ -10,6 +10,8 @@ Deriving a prompt from producer text obliges the harness to keep that copy faith
 
 Runtime non-determinism is bounded rather than admitted into the verdict — the agent varies, while the function scoring its artifacts stays pure — preserving the deterministic verdict mode the evaluate type binds in `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`. The rejected alternative keeps producer-derived prompts as a second lane beside runtime invocation; it sustains the compensation machinery for evidence the runtime lane already subsumes and leaves two eval shapes whose verdicts answer different questions while reading as one number.
 
+This governance supersedes, methodology-wide for skill, agent, and command behavior, the producer-coupling verdict model that the shipped `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-eval-evidence.enabler/audit-eval-evidence.md` methodology records — where a producer-derived prompt earns a Proceed verdict. That auditor is a lower surface this decision governs; its re-derivation to the adapter-invoked coupling model is eval-verification cutover work tracked at its node, and it stays authoritative for its current consumers until that cutover completes, exactly as `spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md` stays authoritative for the shipped `outcomeeng_evals` harness until the same cutover.
+
 ## Invariants
 
 - A verdict is a pure function of the case's declared expectations and the artifacts one trial produced; runtime variation reaches the verdict only through those artifacts.
