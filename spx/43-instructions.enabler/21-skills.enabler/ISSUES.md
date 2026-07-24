@@ -49,15 +49,14 @@ category after merge.
 
 ## Consolidate the create-subagent bundle
 
-The approved complete-bundle skill audit at
-`401712deec4ee7eb307c4a02947b31f5850ea72d` identified two maintenance
-recommendations after the invocation-check repair converged:
+A complete-bundle skill audit identified two maintenance recommendations after
+the invocation-check repair converged:
 
 - `src/plugins/instructions/skills/create-subagent/SKILL.md` repeats prompt
   structure, XML, invocation, and management guidance that also appears in
   `references/write-subagent-prompts.md` and `references/subagents.md`; the
-  authored overview remains under the 500-line limit at 472 lines, but the
-  duplication leaves little room for future required guidance.
+  authored overview remains under the 500-line limit, but the duplication
+  leaves little room for future required guidance.
 - `references/subagents.md`, `references/orchestration-patterns.md`,
   `references/error-handling-and-recovery.md`, and
   `references/debugging-agents.md` contain fast-moving benchmark or runtime
@@ -71,8 +70,9 @@ trees, run the focused skill checks, and obtain a complete-bundle
 `instructions:skill-auditor` verdict before publication.
 
 This is a separate content-consolidation refactor across the overview and five
-references. It does not block the current rename and invocation-lifecycle repair,
-which the same audit approved with no must-fix findings.
+references, tracked independently of the rename and hardening changeset. Each
+skill audit binds to the exact committed head it ran against, so this entry
+records finding content only and makes no standing approval claim.
 
 The complete-bundle skill audit after the rename and the xml_tag_formatting fix
 added four `WARNING` findings that belong to this refactor and are deferred here,

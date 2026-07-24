@@ -93,7 +93,7 @@ Industry research identifies these failure patterns:
 **Pattern**: Workflow produces useful result even when ideal path fails.
 
 <example>
-```markdown
+```text
 <workflow>
 1. Attempt to fetch latest API documentation from web
 2. If fetch fails, use cached documentation (flag as potentially outdated)
@@ -120,7 +120,7 @@ Industry research identifies these failure patterns:
 **Pattern**: Subagent retries failed operations with exponential backoff.
 
 <example>
-```markdown
+```text
 <error_handling>
 When a tool call fails:
 1. Attempt operation
@@ -144,7 +144,7 @@ Maximum 3 retry attempts before falling back.
 
 <conceptual_example>
 
-```markdown
+```text
 <circuit_breaker_logic>
 If API endpoint has failed 5 consecutive times:
 
@@ -167,7 +167,7 @@ If API endpoint has failed 5 consecutive times:
 **Pattern**: Agents going silent shouldn't block workflow indefinitely.
 
 <implementation>
-```markdown
+```text
 <timeout_handling>
 For long-running operations:
 1. Set reasonable timeout (e.g., 2 minutes for analysis)
@@ -188,7 +188,7 @@ For long-running operations:
 **Pattern**: Different validators catch different error types.
 
 <example>
-```markdown
+```text
 <verification_strategy>
 After generating code:
 1. Syntax check: Parse code to verify valid syntax
@@ -210,7 +210,7 @@ Each check catches different error types.
 **Pattern**: Invoke alternative agents or escalate to human when primary approach fails.
 
 <example>
-```markdown
+```text
 <escalation_workflow>
 If automated fix fails after 2 attempts:
 1. Document what was tried and why it failed
@@ -279,7 +279,7 @@ Recommendation: Install Jest or similar framework first
 **Pattern**: Validate every payload against expected schema.
 
 <example>
-```markdown
+```text
 <output_validation>
 Expected output format:
 {

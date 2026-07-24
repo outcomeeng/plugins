@@ -245,7 +245,7 @@ Without a workflow, the subagent may skip important steps or review inconsistent
 
 ✅ Good:
 
-```markdown
+```text
 <workflow>
 1. Run git diff to see changes
 2. Read modified files
@@ -307,7 +307,7 @@ Without constraints, subagents might:
 
 ✅ Good:
 
-```markdown
+```text
 <constraints>
 - NEVER modify files outside the test scope
 - ALWAYS run tests after writing them
@@ -366,7 +366,7 @@ A subagent prompt that includes "ask user", "present options", or "wait for conf
 <practice name="start_with_role">
 Begin with a clear role statement:
 
-```markdown
+```text
 <role>
 Claude is a [specific expertise] specialist in [specific domain].
 </role>
@@ -377,7 +377,7 @@ Claude is a [specific expertise] specialist in [specific domain].
 <practice name="define_focus">
 List specific focus areas to guide attention:
 
-```markdown
+```text
 <focus_areas>
 
 - Specific concern 1
@@ -392,7 +392,7 @@ List specific focus areas to guide attention:
 <practice name="provide_workflow">
 Give step-by-step workflow for consistency:
 
-```markdown
+```text
 <workflow>
 1. First step
 2. Second step
@@ -405,7 +405,7 @@ Give step-by-step workflow for consistency:
 <practice name="specify_output">
 Define expected output format:
 
-```markdown
+```text
 <output_format>
 Structure:
 
@@ -420,7 +420,7 @@ Structure:
 <practice name="set_boundaries">
 Clearly state constraints with strong modal verbs:
 
-```markdown
+```text
 <constraints>
 - NEVER modify X
 - ALWAYS verify Y before Z
@@ -440,7 +440,7 @@ Clearly state constraints with strong modal verbs:
 <practice name="use_examples">
 Include examples for complex behaviors:
 
-```markdown
+```text
 <example>
 Input: [scenario]
 Expected action: [what the subagent should do]
@@ -453,7 +453,7 @@ Output: [what the subagent should produce]
 <practice name="extended_thinking">
 For complex reasoning tasks, leverage extended thinking:
 
-```markdown
+```text
 <thinking_approach>
 Use extended thinking for:
 

@@ -611,7 +611,7 @@ Grant only the tools needed for the task (least privilege):
 <structured_prompts>
 Use XML tags to structure the system prompt for clarity:
 
-```markdown
+```text
 <role>
 Claude is a senior security engineer specializing in web application security.
 </role>

@@ -113,7 +113,7 @@ Time: max(agent_1, agent_2, agent_3) vs sequential: agent_1 + agent_2 + agent_3
 </when_to_use>
 
 <implementation>
-```markdown
+```text
 <parallel_workflow>
 Main chat orchestrates:
 1. Launch all agents simultaneously with same context
@@ -544,7 +544,7 @@ If agent fails:
 <handoff_protocol>
 **Clean handoffs between agents**:
 
-```markdown
+```text
 <agent_handoff_format>
 From: {source_agent}
 To: {target_agent}
@@ -569,7 +569,7 @@ Attachments:
 <synchronization>
 **Handling parallel execution**:
 
-```markdown
+```text
 <parallel_synchronization>
 Launch pattern:
 

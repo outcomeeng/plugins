@@ -250,7 +250,7 @@ On context switch:
 
 **Implementation**:
 
-```markdown
+```text
 <scratchpad_workflow>
 For complex debugging:
 
@@ -271,7 +271,7 @@ For complex debugging:
 
 <smart_write>
 
-```markdown
+```text
 <auto_capture>
 Automatically save to memory:
 
@@ -288,7 +288,7 @@ Store in structured format for easy retrieval.
 
 <smart_read>
 
-```markdown
+```text
 <auto_retrieval>
 Automatically retrieve from memory when:
 
@@ -307,7 +307,7 @@ Inject relevant memories into working context.
 **Pattern**: Summarize near-limit conversations, reinitiate with summary.
 
 <workflow>
-```markdown
+```text
 <compaction_workflow>
 When context reaches 90% capacity:
 1. Identify essential information:
@@ -363,7 +363,7 @@ Summary format:
 <file_based>
 **File-based memory**: Simple, explicit, debuggable.
 
-```markdown
+```text
 <memory_structure>
 .codex/memory/
   core-facts.md          # Essential product information
