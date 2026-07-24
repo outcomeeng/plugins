@@ -165,8 +165,22 @@ expected text lives under `evidence`.
 }
 ```
 
-The idempotency key is a command argument, never a payload field. Never emit
-the retired aliases `id`, `subjectPaths`, `expectedProducerIdentity`,
+The idempotency key is a command argument, never a payload field. A scope
+unit's key is the same value its payload carries in `unitId`: the audit class,
+language partition, concern partition, and subject path joined with `:` —
+`implementation:<lang>:<concern>:<subject-path>`. A finding's key extends its
+unit's key with the violated rule — `<stable-scope-key>:<rule>` — so recording
+the same finding twice stays idempotent. Join key segments only with `:`. A
+separator the shell interprets — `|`, `&`, `;`, `(`, `)`, `<`, `>`, `*`, `?`,
+or whitespace — splits the command, and the shell runs a key segment as a
+program instead of passing the key through.
+
+Pass every key as one single-quoted argument, `--idempotency-key
+'<stable-scope-key>'`, because a subject path can itself carry a character the
+shell interprets. Encode a literal apostrophe inside it with the single-quote
+splice `'"'"'`, exactly as for a payload.
+
+Never emit the retired aliases `id`, `subjectPaths`, `expectedProducerIdentity`,
 `executionProducerIdentity`, `stableProducerIdentity`, top-level `observed`,
 or top-level `expected`; SPX rejects or discards those shapes at the
 verification-type boundary.
@@ -183,7 +197,7 @@ spx verification run scope add \
   --scope <base>..<head> \
   --run <token> \
   --payload stdin \
-  --idempotency-key <stable-scope-key> <<'JSON'
+  --idempotency-key '<stable-scope-key>' <<'JSON'
 <rendered-scope-json-on-one-or-more-lines>
 JSON
 ```
@@ -195,7 +209,7 @@ wraps visually; encode a literal apostrophe with the single-quote splice
 `'"'"'`:
 
 ```bash
-printf '%s\n' '<rendered-json-on-one-line>' | spx verification run scope add --verification-type audit --scope-type changeset --scope <base>..<head> --run <token> --payload stdin --idempotency-key <stable-scope-key>
+printf '%s\n' '<rendered-json-on-one-line>' | spx verification run scope add --verification-type audit --scope-type changeset --scope <base>..<head> --run <token> --payload stdin --idempotency-key '<stable-scope-key>'
 ```
 
 Apply the same two forms to `run start --input stdin` and `finding add
@@ -209,7 +223,7 @@ spx verification run scope add \
   --scope <base>..<head> \
   --run <token> \
   --payload stdin \
-  --idempotency-key <stable-scope-key>
+  --idempotency-key '<stable-scope-key>'
 
 spx verification run finding add \
   --verification-type audit \
@@ -217,7 +231,7 @@ spx verification run finding add \
   --scope <base>..<head> \
   --run <token> \
   --payload stdin \
-  --idempotency-key <stable-finding-key>
+  --idempotency-key '<stable-finding-key>'
 
 spx verification run finish \
   --verification-type audit \

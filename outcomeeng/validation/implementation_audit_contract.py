@@ -73,6 +73,22 @@ def implementation_audit_unit_id(
     return f"{IMPLEMENTATION_AUDIT_CLASS}:{language}:{concern.value}:{subject_path}"
 
 
+def implementation_audit_finding_key(
+    language: str,
+    concern: ImplementationAuditConcern,
+    *,
+    subject_path: str,
+    rule: str,
+) -> str:
+    """Return the stable identity for one finding on one subject and concern."""
+    unit_id = implementation_audit_unit_id(
+        language,
+        concern,
+        subject_path=subject_path,
+    )
+    return f"{unit_id}:{rule}"
+
+
 def implementation_audit_producer_identity(
     language: str,
     concern: ImplementationAuditConcern,

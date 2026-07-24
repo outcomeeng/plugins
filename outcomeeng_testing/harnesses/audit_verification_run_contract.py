@@ -43,6 +43,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     AuditTerminalStatus,
     ImplementationAuditConcern,
     expected_verification_projection,
+    implementation_audit_finding_key,
     implementation_audit_finding_payload,
     implementation_audit_input_payload,
     implementation_audit_provenance,
@@ -625,7 +626,12 @@ def _record_implementation_audit_finding(
             expected=finding_probe.subject_path,
             producer_provenance=provenance,
         ),
-        idempotency_key=rule,
+        idempotency_key=implementation_audit_finding_key(
+            finding_probe.language,
+            finding_probe.concern,
+            subject_path=finding_probe.subject_path,
+            rule=rule,
+        ),
     )
     return scope, run_token, scope_reports, finding_report
 
