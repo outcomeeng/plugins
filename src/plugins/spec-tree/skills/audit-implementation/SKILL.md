@@ -17,12 +17,12 @@ A rendered SPX verification-run verdict for the requested implementation scope, 
 
 <constraints>
 
-- Read-only over the audited project tree. This skill never edits source, tests, specs, commits, branches, or pull requests.
-- Persist audit state only through `spx verification run`; never use legacy journal commands, plugin-side verdict scripts, markdown comments, `.spx/audits/`, or tracked files as audit state.
+- NEVER edit source, tests, specs, commits, branches, or pull requests — this orchestration is read-only over the audited project tree.
+- ALWAYS persist audit state through `spx verification run`; NEVER use legacy journal commands, plugin-side verdict scripts, markdown comments, `.spx/audits/`, or tracked files as audit state.
 - NEVER run deterministic verification — this orchestration composes agentic concern audits only.
 - NEVER include language-specific file extensions, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
-- Treat the `spx verification run` command exit code as payload validity. Never hand-validate emitted payload JSON after SPX accepts it.
-- Start the verification run immediately after validating the request, before reading changed project files or loading any language concern skill or its standards. Every project inspection and concern result belongs to the open run.
+- ALWAYS treat the `spx verification run` command exit code as payload validity; NEVER hand-validate emitted payload JSON after SPX accepts it.
+- ALWAYS start the verification run immediately after validating the request, before reading changed project files or loading any language concern skill or its standards — every project inspection and concern result belongs to the open run.
 
 </constraints>
 
@@ -186,7 +186,7 @@ unknown-language subject compose the same key.
 Pass every key as one single-quoted argument, `--idempotency-key
 '<stable-scope-key>'`, because a subject path can itself carry a character the
 shell interprets. Encode a literal apostrophe inside it with the single-quote
-splice `'"'"'`, exactly as for a payload.
+splice `'"'"'`.
 
 Never emit the retired aliases `id`, `subjectPaths`, `expectedProducerIdentity`,
 `executionProducerIdentity`, `stableProducerIdentity`, top-level `observed`,
@@ -213,8 +213,7 @@ JSON
 Programmatic Claude Code and Codex runners, including hosted runners that
 require one physical command line, use `printf` with the rendered JSON as one
 single-quoted argument. Keep the pipeline on one physical line even when it
-wraps visually; encode a literal apostrophe with the single-quote splice
-`'"'"'`:
+wraps visually; encode a literal apostrophe with the same single-quote splice:
 
 ```bash
 printf '%s\n' '<rendered-json-on-one-line>' | spx verification run scope add --verification-type audit --scope-type changeset --scope <base>..<head> --run <token> --payload stdin --idempotency-key '<stable-scope-key>'
