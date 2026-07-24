@@ -50,7 +50,7 @@ Remaining drift (agent-concept "runtime" usage, distinct from generic "at runtim
 `/skill-standards` `<progressive_disclosure>` requires a table of contents at the top of every reference file over 100 lines, "so partial reads still see the full scope". Twenty-six files across seven plugins exceed the threshold without one, ranging from 108 to 971 lines:
 
 - `hdl` — `review-systemverilog/references/systemverilog-idioms.md` (716), `review-vhdl/references/vhdl-idioms.md` (472)
-- `instructions` — all seven `create-subagent/references/*.md` (410–971), both `audit-skills/references/*.md` (116, 140), both `create-skill/references/*.md` (113, 123)
+- `instructions` — all seven `create-subagent/references/*.md` (410–971), both `audit-skill/references/*.md` (116, 140), both `create-skill/references/*.md` (113, 123)
 - `rust` — `architect-rust/references/{adr-patterns,rust-principles}.md` (120, 108), `code-rust/references/outcome-engineering-patterns.md` (138), `rust-test-standards/references/level-1.md` (111)
 - `spec-tree` — `audit-eval-evidence/references/evidence-model.md` (143)
 - `typescript` — `architect-typescript/references/typescript-principles.md` (144), both `code-typescript/references/*.md` (116, 138), `typescript-test-standards/references/exception-implementations.md` (109)

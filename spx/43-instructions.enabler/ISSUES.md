@@ -24,22 +24,22 @@ Gate changed skills with `instructions:skill-auditor`, then `just build-skills`,
 
 Required handling:
 
-- Add a mechanical `audit-skills` flag for a `<quick_start>` block on a foundation, gate, validator, or reference skill, so a reintroduced block is caught the way `auditor_skeleton_violation` catches it on an `audit-*` skill.
+- Add a mechanical `audit-skill` flag for a `<quick_start>` block on a foundation, gate, validator, or reference skill, so a reintroduced block is caught the way `auditor_skeleton_violation` catches it on an `audit-*` skill.
 - Preserve legitimate `<quick_start>` blocks on on-demand tool skills.
 
 Gate changed skills with `instructions:skill-auditor`.
 
 ## 3. Verification-run row taxonomy
 
-Verdict-emitting skills use different row taxonomies while claiming a shared audit evidence envelope. For example, `audit-skills` uses `keep-these-aspects` / `worth-improving` / `must-fix`, while `audit-subagents` uses `critical-issues` / `recommendations` / `strengths` / `quick-fixes`.
+Verdict-emitting skills use different row taxonomies while claiming a shared audit evidence envelope. For example, `audit-skill` uses `keep-these-aspects` / `worth-improving` / `must-fix`, while `audit-subagent` uses `critical-issues` / `recommendations` / `strengths` / `quick-fixes`.
 
 Required handling: decide whether the SPX verification-run payload contract mandates a uniform row taxonomy or treats row names as free-form labels inside a fixed envelope. This decision affects rendered audit surfaces and any auditor agent that indexes on row names.
 
 Govern with `spx/15-audit-result-delivery.pdr.md` and the audit nodes before editing individual skills.
 
-## 4. Audit-skills eval coverage
+## 4. Audit-skill eval coverage
 
-`audit-skills` now exposes observable flags with no eval suite proving detection, including objective-shape and command-capability findings:
+`audit-skill` now exposes observable flags with no eval suite proving detection, including objective-shape and command-capability findings:
 
 - `actor_or_activity_objective`
 - `objective_criteria_duplication`
@@ -52,7 +52,7 @@ Govern with `spx/15-audit-result-delivery.pdr.md` and the audit nodes before edi
 - `irrelevant_dynamic_context`
 - `codex_rendering_assumption`
 
-Required handling: author the first instructions-plugin eval suite for `audit-skills`, add matching `[eval]` assertions, and run the eval harness before using the auditor as the gate for marketplace-wide objective or argument-syntax sweeps.
+Required handling: author the first instructions-plugin eval suite for `audit-skill`, add matching `[eval]` assertions, and run the eval harness before using the auditor as the gate for marketplace-wide objective or argument-syntax sweeps.
 
 ## 5. Remaining `uv run` command policy
 
@@ -68,13 +68,13 @@ Required handling: decide whether objective statements may use the artifact subj
 
 ## 7. Skill auditor remediation must preserve runtime terminology
 
-`skill-auditor` rejected the phrase "the agent" under the prompt-voice rule, then prescribed "the configured agent" as an acceptable replacement. That remediation bypasses the runtime terminology layer: `configured_agent` is an authoring-time key used through `{{! term('configured_agent') !}}`, which renders as `subagent` for Claude and `custom agent` for Codex. The governing prompt standard prefers imperative, subject-free instructions but does not yet forbid the literal phrase "configured agent", and `src/plugins/instructions/skills/audit-subagents/SKILL.md:65,68` still uses that literal phrase. The auditor recommendation and those existing occurrences expose the same unresolved cross-runtime terminology rule.
+`skill-auditor` rejected the phrase "the agent" under the prompt-voice rule, then prescribed "the configured agent" as an acceptable replacement. That remediation bypasses the runtime terminology layer: `configured_agent` is an authoring-time key used through `{{! term('configured_agent') !}}`, which renders as `subagent` for Claude and `custom agent` for Codex. The governing prompt standard prefers imperative, subject-free instructions but does not yet forbid the literal phrase "configured agent", and `src/plugins/instructions/skills/audit-subagent/SKILL.md:65,68` still uses that literal phrase. The auditor recommendation and those existing occurrences expose the same unresolved cross-runtime terminology rule.
 
 Required handling:
 
 - Declare that cross-runtime skill prose uses imperative, subject-free wording or the canonical terminology expression; the literal internal key name is forbidden.
 - Require auditor remediation for banned-subject findings to follow that rule instead of recommending an internal terminology key as prose.
-- Sweep the existing literal occurrences in `src/plugins/instructions/skills/audit-subagents/SKILL.md` onto imperative wording or `{{! term('configured_agent') !}}` as appropriate.
+- Sweep the existing literal occurrences in `src/plugins/instructions/skills/audit-subagent/SKILL.md` onto imperative wording or `{{! term('configured_agent') !}}` as appropriate.
 - Add an auditor eval case where "the agent" is rejected and "the configured agent" is also rejected as its replacement.
 
 ## 8. Auditor agent model declaration convention
@@ -87,6 +87,27 @@ Required handling: decide which layer owns per-runtime model selection for agent
 
 ## 9. Audit-skill target-argument declaration convention
 
-The audit skills declare their target input two ways. `src/plugins/instructions/skills/audit-subagents/SKILL.md` declares `argument-hint` and `arguments` and substitutes the named argument through its body. `src/plugins/instructions/skills/audit-skills/SKILL.md`, `src/plugins/spec-tree/skills/audit-adr/SKILL.md`, and `src/plugins/spec-tree/skills/audit-pdr/SKILL.md` declare no argument and take their target from the invoking prompt, so `/` autocomplete offers no signal about the expected input. `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` requires `argument-hint` when a skill takes arguments, which does not settle whether an audit target is an argument or prompt context.
+The audit skills declare their target input two ways. `src/plugins/instructions/skills/audit-subagent/SKILL.md` declares `argument-hint` and `arguments` and substitutes the named argument through its body. `src/plugins/instructions/skills/audit-skill/SKILL.md`, `src/plugins/spec-tree/skills/audit-adr/SKILL.md`, and `src/plugins/spec-tree/skills/audit-pdr/SKILL.md` declare no argument and take their target from the invoking prompt, so `/` autocomplete offers no signal about the expected input. `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` requires `argument-hint` when a skill takes arguments, which does not settle whether an audit target is an argument or prompt context.
 
-Required handling: decide whether an audit skill's target is a declared argument, then apply the answer across the audit-skill family rather than one file at a time — the answer changes each skill's input contract and its `missing_argument_hint` exposure under `audit-skills`'s own anti-pattern list. Reconcile with entry 1's skeleton sweep, which rewrites the same frontmatter. Gate changed skills with `instructions:skill-auditor`.
+Required handling: decide whether an audit skill's target is a declared argument, then apply the answer across the audit-skill family rather than one file at a time — the answer changes each skill's input contract and its `missing_argument_hint` exposure under `audit-skill`'s own anti-pattern list. Reconcile with entry 1's skeleton sweep, which rewrites the same frontmatter. Gate changed skills with `instructions:skill-auditor`.
+
+## 10. Subagent cluster has no node-level spec home
+
+This node's `PROVIDES` covers creating and auditing skills **and** subagents plus the
+prompt conventions they share, while its only child
+(`spx/43-instructions.enabler/21-skills.enabler`) scopes itself to SKILL.md files. No
+assertion anywhere in `spx/` names `/create-subagent`, `/audit-subagent`, or
+`/agent-prompt-standards`, so the subagent cluster ships with the builder and the auditor
+governed by nothing below this node's four assertions.
+
+The gap has two consequences. The auditor has no canonical-rules owner to load, so it
+carries a parallel rulebook restating `/agent-prompt-standards` — the violation of this
+node's assertion 2. And the cluster's structure rules — frontmatter fields, tool grants,
+model selection, XML structure, the `inherit` prohibition — are declared nowhere.
+
+Required handling: give the subagent cluster its own node under this one, declaring the
+symmetric triad — builder, canonical-rules owner, auditor — with the single-source
+assertions mirroring `spx/43-instructions.enabler/21-skills.enabler/skills.md:17,24`.
+`/agent-prompt-standards` stays governed here, since both clusters share it and a
+cross-cutting invariant belongs in the ancestor spec. Route the index through
+`/decompose`, which owns proving the dependency consequence.

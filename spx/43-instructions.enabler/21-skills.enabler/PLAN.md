@@ -68,7 +68,7 @@ Worklist:
    before publication.
 3. Keep the route-authority change, auditor-capability decision, and final
    verification loop coherent across `/create-skill`, `/skill-standards`,
-   `/audit-skills`, and the affected templates and workflows.
+   `/audit-skill`, and the affected templates and workflows.
 4. Regenerate both runtime trees, run the focused skill and documentation
    checks, obtain a complete-bundle `skill-auditor` verdict, run the changeset
    review, and ship the independent changeset through `/merge`.

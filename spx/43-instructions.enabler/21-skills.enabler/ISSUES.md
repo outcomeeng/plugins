@@ -27,7 +27,7 @@ without knowing the generated auditor's workflow.
 
 Required handling: decide whether every auditor requires `Bash`, define how a generic
 template expresses least-privilege command grants, and align `/skill-standards`,
-`/audit-skills`, and the auditor template so the same surface cannot be rejected both
+`/audit-skill`, and the auditor template so the same surface cannot be rejected both
 for granting and omitting bare `Bash`.
 
 Source: skill-auditor finding `f-004`, rule `read_only_audit_capabilities`, severity
@@ -96,28 +96,28 @@ reference/overview content rather than propagating the rename:
 ## Give the subagent cluster a canonical-rules owner (symmetric triad)
 
 The skills-about-skills cluster resolves rule ownership with three peers — builder
-`/create-skill`, canonical-rules owner `/skill-standards`, auditor `/audit-skills` —
+`/create-skill`, canonical-rules owner `/skill-standards`, auditor `/audit-skill` —
 and `spx/43-instructions.enabler/21-skills.enabler/skills.md:17,24` bind the discipline: `/skill-standards` owns every rule
-`/audit-skills` enforces, and no rule is restated inside the builder or the auditor.
+`/audit-skill` enforces, and no rule is restated inside the builder or the auditor.
 The subagent cluster ships only a builder (`/create-subagent`) and an auditor
-(`/audit-subagents`) with no canonical-rules owner, so the auditor has nothing to
+(`/audit-subagent`) with no canonical-rules owner, so the auditor has nothing to
 load but the builder's seven references and keeps a parallel rulebook of its own.
 
 Spec grounding:
 
 - `spx/43-instructions.enabler/instructions.md:12` centralizes prompt voice, description, and constraint
   conventions in `/agent-prompt-standards`, shared across skills **and subagents**.
-  `src/plugins/instructions/skills/audit-subagents/SKILL.md:116-124`
+  `src/plugins/instructions/skills/audit-subagent/SKILL.md:116-124`
   (`<area name="prompt_craft">`) says "Check against `/agent-prompt-standards`
   conventions" and then re-lists Voice, Description, Constraint, and Anti-patterns —
   a restatement of content that assertion places in `/agent-prompt-standards`.
 - The restatement is a defect class, not a single site.
-  `src/plugins/instructions/skills/audit-skills/SKILL.md:73-217`
+  `src/plugins/instructions/skills/audit-skill/SKILL.md:73-217`
   (`<evaluation_areas>`, including its own `prompt_craft` and `anti_patterns`
   areas) restates `/skill-standards` the same way, violating `spx/43-instructions.enabler/21-skills.enabler/skills.md:24` directly.
   `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`
   property 7 requires a valid finding to be fixed across every same-class instance;
-  fixing `audit-subagents` alone would be an invalid single-site fix.
+  fixing `audit-subagent` alone would be an invalid single-site fix.
 - Subagent **structure** rules — frontmatter fields, tool grants, model selection,
   XML structure, the `inherit` prohibition — are governed by no assertion. Only
   prompt *craft* is reached by `spx/43-instructions.enabler/instructions.md:12`; the subagent pair has no
@@ -125,9 +125,9 @@ Spec grounding:
 
 Decision (operator-approved): Shape A — symmetric triad. Introduce
 `/subagent-standards` as a reference skill owning the canonical subagent rules;
-`/create-subagent` and `/audit-subagents` both load it and neither restates. This
+`/create-subagent` and `/audit-subagent` both load it and neither restates. This
 restores the `spx/43-instructions.enabler/instructions.md:11` builder/auditor separation (the auditor stops
-depending on the builder for the rules it enforces) and gives `/audit-subagents`
+depending on the builder for the rules it enforces) and gives `/audit-subagent`
 a legitimate load target so its `<evaluation_areas>`/`<anti_patterns>` rulebook can
 be removed.
 
@@ -144,10 +144,10 @@ Required handling:
 - Add `/subagent-standards`; migrate canonical subagent rules into it from
   `/create-subagent` and from the embedded rulebooks in both auditors.
 - Sweep the defect class: strip `<evaluation_areas>` and `<anti_patterns>` from
-  **both** `/audit-subagents` and `/audit-skills`; each loads its standards and
+  **both** `/audit-subagent` and `/audit-skill`; each loads its standards and
   enforces them without restating.
-- Close the evidence gap flagged for `/audit-skills` in
-  `spx/43-instructions.enabler/ISSUES.md` entry 4 for `/audit-subagents` too:
+- Close the evidence gap flagged for `/audit-skill` in
+  `spx/43-instructions.enabler/ISSUES.md` entry 4 for `/audit-subagent` too:
   both auditors are LLM-driven verdict producers and require `[eval]` evidence per
   `spx/15-spec-coverage.adr.md`, yet every assertion here is `[audit]`/`[review]`.
 - Regenerate both runtime trees, run the focused skill checks, dispatch the typed
@@ -160,6 +160,6 @@ two-auditor sweep — reason recorded per `spx/15-merging.pdr.md`. It subsumes t
 "Consolidate the create-subagent bundle" entry above (extracting the canonical
 rules into `/subagent-standards` is that consolidation under a governing
 principle) and should reconcile with `spx/43-instructions.enabler/ISSUES.md`
-entries 3 (verdict-row taxonomy), 4 (audit-skills eval coverage), 7 (runtime
+entries 3 (verdict-row taxonomy), 4 (audit-skill eval coverage), 7 (runtime
 terminology), and 9 (audit-skill target-argument convention). Begin it as the next
 changeset after the subagent-creator track merges, starting with the spec change.
