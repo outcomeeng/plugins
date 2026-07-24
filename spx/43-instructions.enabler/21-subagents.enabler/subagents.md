@@ -14,7 +14,6 @@ The subagents-about-subagents cluster is three peers with distinct roles:
 
 - ALWAYS: `/subagent-standards` owns every rule `/audit-subagent` enforces — standards and enforcement stay in one place so drift cannot open between them
 - ALWAYS: `/create-subagent` and `/audit-subagent` load `/subagent-standards` before doing any authoring or evaluation work — prevents memory-based assessment
-- ALWAYS: `/audit-subagent` emits structured verdicts and performs no file modifications — audits inform decisions; they do not implement them
 - ALWAYS: `/audit-subagent` judges exactly one subagent configuration per invocation, and auditing several configurations dispatches one invocation per configuration
 - NEVER: restate `/subagent-standards` or `/agent-prompt-standards` rules inside `/create-subagent` or `/audit-subagent` — a single source of truth prevents drift between standard and enforcer
 - NEVER: a subagent that produces a verification verdict inherits its model from the invoking context — a verdict a later invocation cannot reproduce is not evidence

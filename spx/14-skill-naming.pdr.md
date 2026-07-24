@@ -10,7 +10,6 @@ Product engineers type the skill name and reason about scope from it, so a name 
 
 1. A workflow skill's name states the artifact one invocation produces or judges, in the grammatical number that invocation handles.
 2. A reference skill's name is a noun phrase naming the domain it standardizes, whose number follows the domain rather than any invocation.
-3. A name that overstates one invocation's scope is a defect in the name, never a licence to widen the skill.
 
 ## Verification
 
