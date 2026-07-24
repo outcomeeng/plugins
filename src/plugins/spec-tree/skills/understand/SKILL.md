@@ -370,9 +370,9 @@ When vocabulary overlaps another grammar, resolve verification vocabulary here f
 
 <recording>
 
-- ALWAYS: record every observed defect immediately with its evidence, governing workflow, handling, and classification.
+- ALWAYS: record every observed imperfection immediately with its evidence, governing workflow, handling, and classification.
 
-Record every observed defect in the current-turn ledger immediately: failing validation, broken link, stale reference, dead code, lint violation, missing evidence, inconsistent naming, misplaced file, wrong index, harmful warning, or any other incoherence. Each entry carries:
+Record every observed imperfection in the current-turn ledger immediately: failing validation, broken link, stale reference, dead code, lint violation, missing evidence, inconsistent naming, misplaced file, wrong index, harmful warning, or anything else that is not right. Each entry carries:
 
 - the exact imperfection;
 - the path, line, command output, or external state that exposed it;
@@ -385,9 +385,11 @@ Apply clear, local, low-risk corrections immediately. Surface a blocking decisio
 
 <no_origin_distinction>
 
-- NEVER: reduce responsibility for a defect because of its age, author, or originating change.
+- NEVER: reduce responsibility for an imperfection because of its age, author, or originating change.
 
-The ledger has no origin distinction. Age and authorship never reduce responsibility. Never dismiss a defect as inherited, already broken, or outside the current change merely because another change created it.
+The ledger has no origin distinction. Age and authorship never reduce responsibility. Never dismiss an imperfection as inherited, already broken, or outside the current change merely because another change created it.
+
+Never investigate origin to reach that judgment — no blame, file history, or authorship lookup. Claude's commits sign as the operator, so the lookup cannot separate Claude's earlier work from the operator's, and compaction has erased what Claude knew. Origin changes nothing about the fix.
 
 </no_origin_distinction>
 
@@ -395,7 +397,7 @@ The ledger has no origin distinction. Age and authorship never reduce responsibi
 
 - ALWAYS: fix debt that the current change causes, surfaces, or invalidates.
 
-Debt the current change causes, surfaces, or invalidates is fix-now wherever it lives. A change invalidates another file when it removes a symbol that file references, enforces a rule it violates, falsifies its guidance, or causes a gate, audit, or review to expose its defect. Location never licenses deferral.
+Debt the current change causes, surfaces, or invalidates is fix-now wherever it lives. A change invalidates another file when it removes a symbol that file references, enforces a rule it violates, falsifies its guidance, or causes a gate, audit, or review to expose its imperfection. Location never licenses deferral.
 
 Record and proceed only for work independent of the current change in a surface the change neither touches nor invalidates. Persist that work at the correct tier: decision/spec for durable truth, methodology for reusable workflow, `PLAN.md` for pending node work, and `ISSUES.md` for known node defects. Recording never ends an otherwise actionable session.
 
