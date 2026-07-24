@@ -175,6 +175,11 @@ separator the shell interprets — `|`, `&`, `;`, `(`, `)`, `<`, `>`, `*`, `?`,
 or whitespace — splits the command, and the shell runs a key segment as a
 program instead of passing the key through.
 
+The key is an opaque token SPX never parses back into segments, so a `:` inside
+a subject path is not a separator. Keep the rule segment colon-free and stable —
+a rule identifier rather than free-form prose — so two findings raised on
+different subjects can never compose one finding key.
+
 Pass every key as one single-quoted argument, `--idempotency-key
 '<stable-scope-key>'`, because a subject path can itself carry a character the
 shell interprets. Encode a literal apostrophe inside it with the single-quote
