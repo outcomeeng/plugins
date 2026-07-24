@@ -64,7 +64,7 @@ Use this bounded protocol only when exact process or high-confidence public-agen
 3. Apply `<dialog_guard>` to the exact pane. Step 1's read satisfies it only when step 2 dismissed nothing; when step 2 sent `Escape`, invoke `/operate-prowl` `read` once more in stable-screen mode and require that no dialog remains. Stop this candidate when one persists. Then invoke `/operate-prowl` `send` with `/status` for Claude or Codex and `/session` for Pi, using immediate return.
 4. Invoke `/operate-prowl` `read` once with stable-screen mode. When slash-command autocomplete consumed the first `Enter`, invoke `/operate-prowl` `key` with `Enter` once and read once more.
 5. Record the complete displayed session identity and cwd with `source: native-status`.
-6. Invoke `/operate-prowl` `key` with `Escape` once to close the status surface.
+6. Invoke `/operate-prowl` `key` with `Escape` once to close the status surface. Step 4's read still satisfies `<dialog_guard>` here because step 5 performs no pane interaction.
 
 Stop preparation when an active session cannot safely reach its native status surface. Never queue a status command into active work or infer the identity from recency instead.
 
