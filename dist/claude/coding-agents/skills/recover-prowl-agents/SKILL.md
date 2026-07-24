@@ -103,7 +103,7 @@ Stop preparation when an active session cannot safely reach its native status su
 13. Establish one global context-read barrier before planning or sending any continuation. In prepared-manifest order, invoke `/operate-prowl` `read` with stable-screen mode for every verified binding, including the active controller and every already-correlated pane. Preserve each complete checked result as `{originalPaneId, paneId, transport}`. Finish all reads before the first reassessment send; NEVER interleave a pane read with continuation delivery. If any pane cannot be read, stop reassessment for the entire set with zero sends.
 14. Run `reassess` with the verified result and the complete ordered `paneReadResults`. `already-current` emits no delivery. `reassessment-ready` emits one source-owned continuation instruction for each verified non-controller session absent from `reassessedSessionIds`. The instruction requires the resumed agent to reconcile the native conversation and every explicitly presented plan or context artifact against the work actually delivered before continuing or marking anything complete; separate useful work never absorbs an unreconciled plan.
 15. For every reassessment delivery, invoke `/operate-prowl` once for `send` using its complete `paneId`, exact source-owned text, and immediate-return mode. These sends occur only after verification and the global context-read barrier and contain no native launch command. Require checked transport evidence that trailing `Enter` was sent; visible text still sitting in an editor is not delivery.
-16. Run `settle` with the reassessment plan and ordered checked transports. Accept only `reassessment-sent`, then perform one bounded stable-screen read per recipient to establish that the submitted turn left the editor or began a response. Replace the manifest with the returned `prepared` object only after that submission check so repeated recovery emits no duplicate reassessment.
+16. Run `settle` with the reassessment plan and ordered checked transports. Accept only `reassessment-sent`, then perform one bounded stable-screen read per recipient and require that read to locate the recipient's own output below the sent text. An apparently empty editor is not that evidence, and the pane's last line is always the status footer, so neither establishes submission. When the read finds the sent text with no output beneath it, send one further `Enter` to that pane and read again before settling it. Replace the manifest with the returned `prepared` object only after every recipient passes that submission check, so repeated recovery emits no duplicate reassessment.
 17. Preserve the activation plan, bindings, launch plan, checked launch transports, verification result, complete pane-read barrier, reassessment plan, checked reassessment transports, and updated manifest together. Report every full old-pane/new-pane/worktree/agent/session correlation.
 
 </recover_workflow>
@@ -131,6 +131,7 @@ printf '%s\n' '{"prepared":{},"bindings":[],"verification":{},"paneReadResults":
 - NEVER type into an occupied mismatched pane, close a pane, launch an unprepared identity, or execute one native session in multiple panes or worktrees.
 - NEVER start a watcher, polling loop, daemon, background process, or open-ended wait.
 - NEVER plan or send reassessment before every verified pane has one checked context read; one unreadable pane blocks all continuation sends.
+- NEVER send a resumed session an instruction to exit, stop, or stand down, and NEVER send generic continuation boilerplate in place of that session's concrete pending state and next action.
 - NEVER combine native launch and reassessment in one send, treat interruption metadata as cancellation, substitute repository completion for an unanswered operator request, treat distinct delivered work as satisfying an unreconciled plan, ask again for existing authority, or silently exit when a pending interaction can be restored.
 
 </constraints>
@@ -151,7 +152,7 @@ Exercise schema-5 preparation, exact Claude resume locators, applicable Codex ho
 
 **Claude required summary resumption.** An old exact session opened a native choice between summary and full-history resumption. Accept the recommended summary option with one `Enter`; do not mistake the prompt for failed identity correlation or send continuation prose into it.
 
-**Continuation text looked delivered but remained editable.** A transport return alone did not prove the turn was submitted. Require the checked public response's `trailing_enter_sent` value and one bounded post-send read before recording durable reassessment.
+**Continuation text looked delivered but remained editable.** A transport return alone did not prove the turn was submitted. In one observed recovery run several sends returned `trailing_enter_sent: true` while their text still sat unsubmitted in the recipient's editor, so that flag is necessary and never sufficient. Only the post-send read distinguishes the two states, and a read that inspects the wrong region reports success either way. Locate the recipient's own output below the sent text before recording durable reassessment.
 
 **A plan was declared absorbed without reading its pane.** A resumed session received a generic continuation instruction before the controller read its visible context. It merged a useful but separate change, then treated an explicit unfinished cutover plan as already covered. Read every verified pane before sending any continuation to any recovered session, then require plan-by-plan acceptance-scope reconciliation; distinct work never completes an unread plan.
 
@@ -168,6 +169,21 @@ Exercise schema-5 preparation, exact Claude resume locators, applicable Codex ho
 **Native storage used another lookup root.** Claude required an exact JSONL path after its project location changed, and Codex required the account-specific `CODEX_HOME` containing its rollout. Preserve the exact resume locator and applicable native home during preparation; never rediscover either by recency after restart.
 
 **The environment adapter leaked its request pipe.** `prowl send` rejected text with “Cannot provide text as both argument and stdin” because the adapter child inherited the JSON request stream. `/operate-prowl` binds absent operation input to null-device stdin; preserve that boundary before recovery delivery.
+
+**Stacked generic instructions told a session to abandon its pending work.** Claude sent three continuation instructions into one long-lived pane across successive restarts. None named that session's concrete pending state, two restated the same session identity, and each made abandonment the default disposition:
+
+```text
+NEVER send text shaped like this:
+  "Continue. If you had been asking the user a question using a tool, ask the
+   question again using the same tool."
+  "…Continue only when concrete unfinished work remains and continuation is
+   still authorized… exit now without modifying files or starting background
+   work. Do not remain active merely because recovery resumed the session."
+  "…If the workflow is complete, deliberately stopped, or continuation is
+   unclear, stop without modifying state or starting background work."
+```
+
+Each delivery went out without being recorded against `reassessedSessionIds`, so every restart appended another instruction to a pane that already carried two. Boilerplate forces the resumed session to re-derive its own pending state, and a conditional exit clause resolves that ambiguity toward quitting — the same defect as `A pending selection became an exit`, compounded by repetition. Record every delivery in the manifest before the next recovery reads it, send exactly one continuation instruction per session, name that session's concrete pending state and next action, and never give a resumed session an instruction to exit.
 
 </failure_modes>
 
