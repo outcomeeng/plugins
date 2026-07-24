@@ -163,7 +163,7 @@ def _prepared(module: ModuleType, roster: RecoveryRosterCase) -> dict[str, objec
 
 def _all_bindings(
     module: ModuleType, roster: RecoveryRosterCase
-) -> list[dict[str, str]]:
+) -> list[dict[str, object]]:
     return [
         {
             module.ORIGINAL_PANE_ID_FIELD: original_pane_id,
