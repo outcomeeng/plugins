@@ -14,7 +14,7 @@ CAN operate between any positively identified Prowl agents without constructing 
 
 ### Conformance
 
-- Every operation emits a versioned JSON result conforming to its source-owned schema while preserving Prowl identity, status, conclusion, and exit-code values verbatim ([test](tests/test_prowl_environment.conformance.l1.py))
+- Every operation emits a versioned JSON result conforming to its source-owned schema while preserving Prowl identity, status, conclusion, exit-code, open resolution, tab-creation, and send-submission values verbatim ([test](tests/test_prowl_environment.conformance.l1.py))
 - A Prowl operation with no explicit input isolates the child command from the adapter request stream, while explicit input reaches the child unchanged ([test](tests/test_prowl_environment.conformance.l1.py))
 
 ### Properties
@@ -23,6 +23,7 @@ CAN operate between any positively identified Prowl agents without constructing 
 
 ### Compliance
 
-- ALWAYS: focus, key injection, tab or pane creation, and tab or pane closure require explicit mutation authorization in the operation request before any Prowl command runs ([test](tests/test_prowl_environment.compliance.l1.py))
+- ALWAYS: focus, key injection, tab or pane creation, tab or pane closure, and open require explicit mutation authorization in the operation request before any Prowl command runs ([test](tests/test_prowl_environment.compliance.l1.py))
+- ALWAYS: `list` represents instantiated terminal panes, while authorized `open` against an exact known worktree maps an unentered sidebar row to its first returned pane without filesystem worktree enumeration ([test](tests/test_prowl_environment.compliance.l1.py))
 - NEVER: another shipped coding-agents script constructs a raw Prowl argument vector or invokes Prowl command help ([test](tests/test_prowl_environment.compliance.l1.py))
 - NEVER: another shipped coding-agents skill instructs a workflow to construct raw Prowl commands, invoke Prowl command help, or depend on an external environment-control skill ([audit])

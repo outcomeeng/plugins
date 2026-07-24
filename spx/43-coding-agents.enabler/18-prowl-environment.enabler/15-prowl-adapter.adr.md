@@ -12,7 +12,8 @@ One capability keeps Prowl command knowledge testable and portable while preserv
 - Every command execution is bounded, argument-vector based, fully reaped before return, and isolated from the adapter request stream unless the operation supplies explicit stdin.
 - A delegation reducer maps one request and one terminal handback to a terminal state; a matching repeated handback is idempotent and a conflicting terminal handback is invalid.
 - Prowl response identities, statuses, conclusions, exit codes, and result references remain byte-for-byte values from the public response.
-- Focus, key injection, creation, and closure operations cannot construct an argument vector unless the request carries explicit mutation authorization.
+- Focus, key injection, creation, closure, and open operations cannot construct an argument vector unless the request carries explicit mutation authorization.
+- The pane inventory contains instantiated terminals only; authorized `open` selects a known sidebar worktree and creates its first tab when absent, reporting the resolution and returned pane identity.
 
 ## Verification
 
@@ -22,7 +23,8 @@ One capability keeps Prowl command knowledge testable and portable while preserv
 - ALWAYS: public Prowl responses map to versioned source-owned results or named schema and command failures without value rewriting ([conformance])
 - ALWAYS: default subprocess execution maps absent operation input to null-device stdin and explicit operation input to an exact captured-text pipe ([conformance])
 - ALWAYS: matching repeated terminal handbacks are idempotent and conflicting terminal kinds for one coordination reference are rejected ([property])
-- ALWAYS: requests for focus, key injection, tab or pane creation, and tab or pane closure fail before command execution when mutation authorization is absent ([compliance])
+- ALWAYS: requests for focus, key injection, tab or pane creation, tab or pane closure, and open fail before command execution when mutation authorization is absent ([compliance])
+- ALWAYS: an open result preserves whether the path resolved to an exact known root and whether Prowl created a tab, distinguishing lazy sidebar activation from adding a new root ([conformance])
 - NEVER: a shipped coding-agents Python script outside `/operate-prowl` constructs a Prowl argument vector or invokes Prowl command help ([compliance])
 
 ### Audit
