@@ -52,6 +52,12 @@ Definitions are generated at build time and ship inside this skill, so placement
 
 </placement>
 
+<persistence>
+
+This agent receives the plugin's agents through its manifest, so the checkout carries no agent files from this plugin and this verb commits nothing.
+
+</persistence>
+
 <ownership_boundary>
 
 This plugin places and prunes only within the namespace its own name prefixes. Agent definitions a developer authored, and definitions another plugin provides, are outside that namespace and stay untouched even when their content matches what this plugin would write.
@@ -66,6 +72,10 @@ A file inside the namespace is this plugin's to replace or remove. A file outsid
 
 The definitions were placed by hand from the skill directory, so pruning never ran and a definition retired in a later version stayed behind, shadowing nothing but reported as current. Run the script; it owns placement and pruning together.
 
+**Claude treated the removals an upgrade made as damage.**
+
+An upgrade retired one definition and renamed another, so the diff carried two deletions. Claude restored them, and the checkout kept dispatching an agent the plugin no longer ships while `check` reported drift that never cleared. Commit the removals with the additions; the verb prunes only inside this plugin's prefix, so a removal there is the upgrade, never a loss.
+
 **Claude reported the version from a manifest elsewhere on disk.**
 
 A marketplace source tree and a cache snapshot both carry a manifest, and they diverge, and each plugin tree carries a manifest directory per agent. The reported version described a plugin the session was not running. Read the one skill-directory-relative path `<version_reporting>` names, resolving it rather than searching for a manifest.
@@ -79,5 +89,6 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 - Placement and pruning happen through the bundled script, never by hand.
 - Every file written or removed carries this plugin's namespace prefix; no other file in the agent directory changes.
 - `check` writes nothing and reports drift.
+- Placed definitions are committed, including every removal and rename an upgrade produces.
 
 </success_criteria>

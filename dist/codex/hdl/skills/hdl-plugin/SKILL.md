@@ -52,6 +52,18 @@ Definitions are generated at build time and ship inside this skill, so placement
 
 </placement>
 
+<persistence>
+
+Placed definitions are durable checkout configuration, not local runtime output. Commit them. A session the placing verb never ran in — a hosted run, a continuous-integration job, a colleague's fresh clone — receives this plugin's agents only from the committed directory. Ignoring these files instead grants agents to whoever ran the verb and withholds them everywhere else.
+
+`upgrade` changes the committed set rather than only adding to it. A version that renames an agent writes the new definition and removes the old one; a version that retires an agent removes it and writes nothing back. Git reports the first as a rename when the two definitions stay similar enough to pair and as a deletion plus an addition when they do not, and reports the second as a deletion. Those removals are the verb working. Commit them alongside the additions: restoring a removed definition keeps a retired agent dispatchable and leaves the checkout claiming a version it no longer carries.
+
+Read the changed paths before committing — every one carries this plugin's prefix. A change outside that prefix came from elsewhere and is not this verb's to commit.
+
+A committed set means each version bump shows in the diff. That cost buys every session the same agents, including the sessions that can run no verb at all.
+
+</persistence>
+
 <ownership_boundary>
 
 This plugin places and prunes only within the namespace its own name prefixes. Agent definitions a developer authored, and definitions another plugin provides, are outside that namespace and stay untouched even when their content matches what this plugin would write.
@@ -66,6 +78,10 @@ A file inside the namespace is this plugin's to replace or remove. A file outsid
 
 The definitions were placed by hand from the skill directory, so pruning never ran and a definition retired in a later version stayed behind, shadowing nothing but reported as current. Run the script; it owns placement and pruning together.
 
+**Claude treated the removals an upgrade made as damage.**
+
+An upgrade retired one definition and renamed another, so the diff carried two deletions. Claude restored them, and the checkout kept dispatching an agent the plugin no longer ships while `check` reported drift that never cleared. Commit the removals with the additions; the verb prunes only inside this plugin's prefix, so a removal there is the upgrade, never a loss.
+
 **Claude reported the version from a manifest elsewhere on disk.**
 
 A marketplace source tree and a cache snapshot both carry a manifest, and they diverge, and each plugin tree carries a manifest directory per agent. The reported version described a plugin the session was not running. Read the one skill-directory-relative path `<version_reporting>` names, resolving it rather than searching for a manifest.
@@ -79,5 +95,6 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 - Placement and pruning happen through the bundled script, never by hand.
 - Every file written or removed carries this plugin's namespace prefix; no other file in the agent directory changes.
 - `check` writes nothing and reports drift.
+- Placed definitions are committed, including every removal and rename an upgrade produces.
 
 </success_criteria>

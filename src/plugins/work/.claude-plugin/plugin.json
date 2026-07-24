@@ -1,6 +1,6 @@
 {
   "name": "work",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Work deliverables: /draw-excalidraw (Excalidraw diagrams), /sanitize-powerpoint (PowerPoint deck cleanup)",
   "author": {
     "name": "Simon Heimlicher"
