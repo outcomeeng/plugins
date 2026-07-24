@@ -6,11 +6,19 @@ pull request remains one reviewable unit.
 
 ## Ship the subagent-creator rename and hardening
 
-PR 465 is closed, superseded rather than reconciled: a cherry-pick-equivalence
-check found no commit on `work/inline-foundation-salvage` lacking an equivalent
-on `work/inline-foundation-salvage-restart`, which carries this work forward and
-ships it through a fresh pull request. Never publish to
-`work/inline-foundation-salvage`, force-push over it, or reopen PR 465.
+PR 465 is closed, superseded rather than reconciled.
+`git cherry work/inline-foundation-salvage-restart work/inline-foundation-salvage`
+reports twelve of that branch's thirteen commits patch-equivalent. The
+thirteenth — the subagent-creator rename — reports non-equivalent because the
+restart branch reworked the rename further rather than dropping it, so no single
+commit retains its patch identity. Its content is carried: on the restart head
+the skill directory is `create-subagent` with all seven references beneath it,
+no `create-subagents` reference remains anywhere in the repository, the Claude
+marketplace entry reads `/create-subagent`, and the diff against `origin/main`
+records those eight paths as renames. Re-run that check and this content
+verification after any further rebase, since patch identity does not survive one.
+Never publish to `work/inline-foundation-salvage`, force-push over it, or reopen
+PR 465.
 
 The changeset lives on `work/inline-foundation-salvage-restart`, rebased onto
 the current `origin/main`; its commit SHAs are checkout-local and change on every
