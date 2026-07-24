@@ -46,9 +46,7 @@ Placement does not apply on this agent: its plugin manifest declares the plugin'
 python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py" --checkout <repository-root>
 ```
 
-The script owns the whole footprint operation: it writes this plugin's definitions, removes definitions that carry this plugin's prefix but no longer ship with it, and leaves every other file in that directory untouched. `check` passes `--check`, which reports drift and writes nothing.
-
-Definitions are generated at build time and ship inside this skill, so placement is a file copy. Claude never edits a placed definition, and never converts, rewrites, or hand-authors one — a placed file that needs to change is changed at its source and re-placed.
+`init`, `upgrade`, and `check` all report the same and write nothing, because this plugin's agents reach a session through the manifest rather than through the checkout.
 
 </placement>
 
@@ -67,14 +65,6 @@ A file inside the namespace is this plugin's to replace or remove. A file outsid
 </ownership_boundary>
 
 <failure_modes>
-
-**Claude hand-copied the agent definitions instead of running the script.**
-
-The definitions were placed by hand from the skill directory, so pruning never ran and a definition retired in a later version stayed behind, shadowing nothing but reported as current. Run the script; it owns placement and pruning together.
-
-**Claude treated the removals an upgrade made as damage.**
-
-An upgrade retired one definition and renamed another, so the diff carried two deletions. Claude restored them, and the checkout kept dispatching an agent the plugin no longer ships while `check` reported drift that never cleared. Commit the removals with the additions; the verb prunes only inside this plugin's prefix, so a removal there is the upgrade, never a loss.
 
 **Claude reported the version from a manifest elsewhere on disk.**
 
