@@ -213,6 +213,43 @@ def activation_results(
     return results
 
 
+def pane_read_results(
+    module: ModuleType,
+    bindings: list[dict[str, object]],
+    *,
+    failed_pane_id: str | None = None,
+) -> list[dict[str, object]]:
+    results: list[dict[str, object]] = []
+    for binding in bindings:
+        pane_id = binding[module.PANE_ID_FIELD]
+        if pane_id == failed_pane_id:
+            transport = {
+                module.SCHEMA_VERSION_FIELD: module.TRANSPORT_SCHEMA_VERSION,
+                module.OPERATION_FIELD: module.TRANSPORT_READ_OPERATION,
+                module.STATUS_FIELD: module.TRANSPORT_COMMAND_FAILED_STATUS,
+                module.DETAIL_FIELD: f"context read failed for {pane_id}",
+                module.COMMAND_EXIT_CODE_FIELD: MAX_RECOVERY_PANES,
+            }
+        else:
+            transport = {
+                module.SCHEMA_VERSION_FIELD: module.TRANSPORT_SCHEMA_VERSION,
+                module.OPERATION_FIELD: module.TRANSPORT_READ_OPERATION,
+                module.STATUS_FIELD: module.TRANSPORT_SUCCEEDED_STATUS,
+                module.COMMAND_EXIT_CODE_FIELD: 0,
+                module.RESPONSE_FIELD: {
+                    module.DATA_FIELD: {"context": f"visible context for {pane_id}"}
+                },
+            }
+        results.append(
+            {
+                module.ORIGINAL_PANE_ID_FIELD: binding[module.ORIGINAL_PANE_ID_FIELD],
+                module.PANE_ID_FIELD: pane_id,
+                module.TRANSPORT_FIELD: transport,
+            }
+        )
+    return results
+
+
 def recovery_delivery_results(
     module: ModuleType,
     pane_ids: tuple[str, ...],

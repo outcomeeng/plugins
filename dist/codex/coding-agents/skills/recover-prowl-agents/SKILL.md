@@ -7,7 +7,7 @@ allowed-tools: Read, Write, Skill, Bash(printf:*), Bash(python3 "${SKILL_DIR}/sc
 ---
 
 <objective>
-A durable pre-restart allowlist or an idempotent post-restart recovery in which every prepared native session has one exact Prowl pane correlation, every non-controller session receives one separately submitted continuation instruction, and no unprepared agent is running.
+A durable pre-restart allowlist or an idempotent post-restart recovery in which every prepared native session has one exact Prowl pane correlation, every verified pane is read before any continuation is planned, every non-controller session receives one separately submitted context-reconciled continuation instruction, and no unprepared agent is running.
 </objective>
 
 <dependencies>
@@ -100,10 +100,11 @@ Stop preparation when an active session cannot safely reach its native status su
 10. Wait for each launched native TUI to become input-ready through one bounded stable-screen read. When Claude presents its exact old-session resume-mode prompt, select the recommended `Resume from summary` option with one authorized `Enter`; this preserves the exact native identity while avoiding a full-history reload. Resolve update, trust, authentication, account-selection, or any other usage-affecting dialog only within explicit operator authority; stop that candidate when exact recovery remains unavailable.
 11. Invoke `/operate-prowl` once more for `list` and `agents`. Build exact post-restart `correlationEvidence`: use exact high-confidence public-agent identity where available and `<native_status_protocol>` or process-backed evidence otherwise.
 12. Run `verify` with the prepared manifest, exact bindings, checked public arrays, and correlation evidence. Accept only `verified`, with target count equal to the prepared candidate count and empty missing, duplicate, and unexpected arrays.
-13. Run `reassess` with the verified result. `already-current` emits no delivery. `reassessment-ready` emits one source-owned continuation instruction for each verified non-controller session absent from `reassessedSessionIds`.
-14. For every reassessment delivery, invoke `/operate-prowl` once for `send` using its complete `paneId`, exact source-owned text, and immediate-return mode. These sends occur only after verification and contain no native launch command. Require checked transport evidence that trailing `Enter` was sent; visible text still sitting in an editor is not delivery.
-15. Run `settle` with the reassessment plan and ordered checked transports. Accept only `reassessment-sent`, then perform one bounded stable-screen read per recipient to establish that the submitted turn left the editor or began a response. Replace the manifest with the returned `prepared` object only after that submission check so repeated recovery emits no duplicate reassessment.
-16. Preserve the activation plan, bindings, launch plan, checked launch transports, verification result, reassessment plan, checked reassessment transports, and updated manifest together. Report every full old-pane/new-pane/worktree/agent/session correlation.
+13. Establish one global context-read barrier before planning or sending any continuation. In prepared-manifest order, invoke `/operate-prowl` `read` with stable-screen mode for every verified binding, including the active controller and every already-correlated pane. Preserve each complete checked result as `{originalPaneId, paneId, transport}`. Finish all reads before the first reassessment send; NEVER interleave a pane read with continuation delivery. If any pane cannot be read, stop reassessment for the entire set with zero sends.
+14. Run `reassess` with the verified result and the complete ordered `paneReadResults`. `already-current` emits no delivery. `reassessment-ready` emits one source-owned continuation instruction for each verified non-controller session absent from `reassessedSessionIds`. The instruction requires the resumed agent to reconcile the native conversation and every explicitly presented plan or context artifact against the work actually delivered before continuing or marking anything complete; separate useful work never absorbs an unreconciled plan.
+15. For every reassessment delivery, invoke `/operate-prowl` once for `send` using its complete `paneId`, exact source-owned text, and immediate-return mode. These sends occur only after verification and the global context-read barrier and contain no native launch command. Require checked transport evidence that trailing `Enter` was sent; visible text still sitting in an editor is not delivery.
+16. Run `settle` with the reassessment plan and ordered checked transports. Accept only `reassessment-sent`, then perform one bounded stable-screen read per recipient to establish that the submitted turn left the editor or began a response. Replace the manifest with the returned `prepared` object only after that submission check so repeated recovery emits no duplicate reassessment.
+17. Preserve the activation plan, bindings, launch plan, checked launch transports, verification result, complete pane-read barrier, reassessment plan, checked reassessment transports, and updated manifest together. Report every full old-pane/new-pane/worktree/agent/session correlation.
 
 </recover_workflow>
 
@@ -116,7 +117,7 @@ printf '%s\n' '{"plan":{},"activationResults":[]}' | python3 "${SKILL_DIR}/scrip
 printf '%s\n' '{"prepared":{},"bindings":[],"items":[],"agents":[]}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" recover
 printf '%s\n' '{"plan":{},"deliveryResults":[]}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" settle
 printf '%s\n' '{"prepared":{},"bindings":[],"items":[],"agents":[],"correlationEvidence":[]}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" verify
-printf '%s\n' '{"prepared":{},"bindings":[],"verification":{}}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" reassess
+printf '%s\n' '{"prepared":{},"bindings":[],"verification":{},"paneReadResults":[]}' | python3 "${SKILL_DIR}/scripts/recover_agents.py" reassess
 ```
 
 </command_forms>
@@ -129,13 +130,14 @@ printf '%s\n' '{"prepared":{},"bindings":[],"verification":{}}' | python3 "${SKI
 - NEVER enumerate worktrees blindly; activation targets only complete worktree paths already preserved by prepared native-session candidates.
 - NEVER type into an occupied mismatched pane, close a pane, launch an unprepared identity, or execute one native session in multiple panes or worktrees.
 - NEVER start a watcher, polling loop, daemon, background process, or open-ended wait.
-- NEVER combine native launch and reassessment in one send, treat interruption metadata as cancellation, substitute repository completion for an unanswered operator request, ask again for existing authority, or silently exit when a pending interaction can be restored.
+- NEVER plan or send reassessment before every verified pane has one checked context read; one unreadable pane blocks all continuation sends.
+- NEVER combine native launch and reassessment in one send, treat interruption metadata as cancellation, substitute repository completion for an unanswered operator request, treat distinct delivered work as satisfying an unreconciled plan, ask again for existing authority, or silently exit when a pending interaction can be restored.
 
 </constraints>
 
 <testing>
 
-Exercise schema-5 preparation, exact Claude resume locators, applicable Codex homes, lazy activation, checked binding, launch-only native command selection for Claude/Codex/Pi, strict launch and reassessment settlement, durable reassessment idempotence, secondary authorization, duplicate rejection, path preservation, external exact correlation evidence, extra-agent rejection, and CLI dispatch through the linked mapping, property, and compliance evidence.
+Exercise schema-5 preparation, exact Claude resume locators, applicable Codex homes, lazy activation, checked binding, launch-only native command selection for Claude/Codex/Pi, all-pane context-read barriers, strict launch and reassessment settlement, durable reassessment idempotence, secondary authorization, duplicate rejection, path preservation, external exact correlation evidence, extra-agent rejection, and CLI dispatch through the linked mapping, property, and compliance evidence.
 
 </testing>
 
@@ -143,13 +145,15 @@ Exercise schema-5 preparation, exact Claude resume locators, applicable Codex ho
 
 **Sidebar worktrees disappeared from `list`.** Claude treated `prowl list` as the sidebar inventory and concluded Prowl had lost its topology. The live GUI still showed known worktree rows; `list` contained only instantiated terminal panes. Activate only prepared paths with `open`, require `exact-root`, and bind the returned new pane.
 
-**A `done` session was unfinished.** Claude excluded `spx-f` because Prowl reported `done`, but exact native session `5ed10cb0-9295-461d-a13b-38b4aaa1b870` resumed into concrete unfinished implementation work. Treat every Prowl status as advisory and decide eligibility from exact native identity evidence.
+**A `done` session was unfinished.** Claude excluded a pane because Prowl reported `done`, but its exact native session resumed into concrete unfinished implementation work. Treat every Prowl status as advisory and decide eligibility from exact native identity evidence.
 
 **Concurrent Codex launches locked SQLite.** Six exact Codex resumes sharing one `CODEX_HOME` started together; three returned to the shell with a database-lock failure. Serialize launches sharing one native home and wait for each prior TUI to become input-ready.
 
 **Claude required summary resumption.** An old exact session opened a native choice between summary and full-history resumption. Accept the recommended summary option with one `Enter`; do not mistake the prompt for failed identity correlation or send continuation prose into it.
 
 **Continuation text looked delivered but remained editable.** A transport return alone did not prove the turn was submitted. Require the checked public response's `trailing_enter_sent` value and one bounded post-send read before recording durable reassessment.
+
+**A plan was declared absorbed without reading its pane.** A resumed session received a generic continuation instruction before the controller read its visible context. It merged a useful but separate change, then treated an explicit unfinished cutover plan as already covered. Read every verified pane before sending any continuation to any recovered session, then require plan-by-plan acceptance-scope reconciliation; distinct work never completes an unread plan.
 
 **SPX selected another session.** `spx agent resume --latest` selected Pi in a worktree whose prepared candidate was Codex and selected a different Claude session elsewhere. Select the exact native command from the prepared agent type and complete session ID; recency never chooses recovery identity.
 
@@ -173,6 +177,7 @@ Exercise schema-5 preparation, exact Claude resume locators, applicable Codex ho
 - Recovery binds every original pane to one distinct post-restart pane in the same worktree and launches only prepared exact native sessions through launch-only sends.
 - Settlement proves every planned launch and reassessment transport once without caller-supplied delivery claims or retries.
 - Verification reports `verified`, the prepared target count, and empty missing, duplicate, and unexpected agent arrays before reassessment begins.
-- Every non-controller session receives one separately settled reassessment instruction that restores unsatisfied operator work or its pending interaction, and the updated manifest prevents duplicate delivery.
+- Every verified pane has one checked stable-screen context read before any reassessment delivery is planned or sent; one failed read produces zero continuation sends.
+- Every non-controller session receives one separately settled reassessment instruction that reconciles explicit plans against delivered scope, restores unsatisfied operator work or its pending interaction, and prevents duplicate delivery through the updated manifest.
 
 </success_criteria>

@@ -21,6 +21,7 @@ from outcomeeng_testing.generators.native_agent_recovery import (
     activation_results,
     identity_evidence,
     invalid_recovery_evidence,
+    pane_read_results,
     recovery_candidates,
     recovery_delivery_results,
     roster_cases,
@@ -658,7 +659,27 @@ def verify_native_agent_recovery_compliance() -> list[str]:
     if verified[module.VERIFIED_FIELD] != len(roster.original_pane_ids):
         failures.append("verification count omitted prepared candidates")
 
-    reassessment = module.plan_reassessment(prepared, bindings, verified)
+    reads = pane_read_results(module, bindings)
+    missing_read_status = _error_status(
+        module,
+        lambda: module.plan_reassessment(prepared, bindings, verified, reads[:-1]),
+    )
+    if missing_read_status != module.ResultStatus.INVALID_SCHEMA:
+        failures.append("reassessment accepted an incomplete all-pane read barrier")
+    failed_reads = pane_read_results(
+        module,
+        bindings,
+        failed_pane_id=roster.post_restart_pane_ids[0],
+    )
+    blocked_reassessment = module.plan_reassessment(
+        prepared, bindings, verified, failed_reads
+    )
+    if blocked_reassessment[module.STATUS_FIELD] != module.ResultStatus.COMMAND_FAILED:
+        failures.append("failed pane read did not block reassessment")
+    if blocked_reassessment[module.DELIVERIES_FIELD]:
+        failures.append("failed pane read produced partial continuation delivery")
+
+    reassessment = module.plan_reassessment(prepared, bindings, verified, reads)
     reassessment_deliveries = cast(
         list[dict[str, object]], reassessment[module.DELIVERIES_FIELD]
     )
@@ -670,6 +691,8 @@ def verify_native_agent_recovery_compliance() -> list[str]:
     )
     if reassessment[module.STATUS_FIELD] != module.ResultStatus.REASSESSMENT_READY:
         failures.append("verified recovery did not prepare reassessment")
+    if reassessment[module.PANE_READ_RESULTS_FIELD] != reads:
+        failures.append("reassessment did not preserve the complete pane-read barrier")
     if len(reassessment_deliveries) != expected_reassessment_count:
         failures.append("reassessment did not exclude only the active controller")
     for delivery in reassessment_deliveries:
@@ -695,7 +718,7 @@ def verify_native_agent_recovery_compliance() -> list[str]:
         failures.append("checked reassessment transports did not settle")
     updated_prepared = reassessed[module.PREPARED_FIELD]
     repeated_reassessment = module.plan_reassessment(
-        updated_prepared, bindings, verified
+        updated_prepared, bindings, verified, reads
     )
     if (
         repeated_reassessment[module.STATUS_FIELD]

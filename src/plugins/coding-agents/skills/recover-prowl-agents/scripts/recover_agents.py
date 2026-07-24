@@ -17,6 +17,7 @@ TRANSPORT_SCHEMA_VERSION = 1
 TRANSPORT_SUCCEEDED_STATUS = "succeeded"
 TRANSPORT_COMMAND_FAILED_STATUS = "command-failed"
 TRANSPORT_SEND_OPERATION = "send"
+TRANSPORT_READ_OPERATION = "read"
 ACTIVATION_OPEN_OPERATION = "open"
 ACTIVATION_TAB_CREATE_OPERATION = "tab-create"
 EXACT_ROOT_RESOLUTION = "exact-root"
@@ -26,13 +27,17 @@ RECOVERY_REASSESSMENT_PROMPT = (
     "interruption, not cancellation. Identify the last substantive operator request "
     "and whether it received a complete successful response. If not, complete it now "
     "under its original constraints; after successful authentication, retry the "
-    "interrupted response. If an operator question, structured selection, approval "
-    "request, or external blocker was pending, re-present it with the same known "
-    "facts and options and wait without selecting or acting past it. Continue "
-    "independently authorized work without asking again. Inspect repository or SPX "
-    "state only when the pending request requires it. Stop only when every operator "
-    "request is satisfied and the workflow completed or was explicitly cancelled. "
-    "If the prior state cannot be classified, ask the operator rather than exiting."
+    "interrupted response. Before acting or declaring anything complete, read the "
+    "resumed conversation and every plan or context artifact explicitly presented "
+    "there, then compare its acceptance scope with the work actually delivered. "
+    "Never treat separate useful work as absorbing or completing an unreconciled "
+    "plan. If an operator question, structured selection, approval request, or "
+    "external blocker was pending, re-present it with the same known facts and "
+    "options and wait without selecting or acting past it. Continue independently "
+    "authorized work without asking again. Inspect repository or SPX state only when "
+    "the pending request requires it. Stop only when every operator request is "
+    "satisfied and the workflow completed or was explicitly cancelled. If the prior "
+    "state cannot be classified, ask the operator rather than exiting."
 )
 
 SCHEMA_VERSION_FIELD = "schemaVersion"
@@ -41,6 +46,7 @@ AGENTS_FIELD = "agents"
 CANDIDATES_FIELD = "candidates"
 CORRELATION_EVIDENCE_FIELD = "correlationEvidence"
 ACTIVATION_RESULTS_FIELD = "activationResults"
+PANE_READ_RESULTS_FIELD = "paneReadResults"
 DELIVERY_RESULTS_FIELD = "deliveryResults"
 PLAN_FIELD = "plan"
 PREPARED_FIELD = "prepared"
@@ -819,6 +825,44 @@ def _checked_send_transport(value: object) -> CheckedTransport:
     return transport
 
 
+def _checked_pane_reads(
+    result_items: object,
+    bindings: list[Binding],
+) -> tuple[list[dict[str, object]], list[str]]:
+    results = _array(result_items, PANE_READ_RESULTS_FIELD)
+    if len(results) != len(bindings):
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA,
+            "Pane-read results must cover every verified binding exactly once.",
+        )
+    checked: list[dict[str, object]] = []
+    failed: list[str] = []
+    for index, (binding, result) in enumerate(zip(bindings, results, strict=True)):
+        original = _text(
+            result.get(ORIGINAL_PANE_ID_FIELD),
+            f"paneReadResults[{index}].originalPaneId",
+        )
+        pane_id = _text(result.get(PANE_ID_FIELD), f"paneReadResults[{index}].paneId")
+        if original != binding.original_pane_id or pane_id != binding.pane_id:
+            raise AdapterError(
+                ResultStatus.INVALID_SCHEMA,
+                "Pane-read result order or identity does not match its verified binding.",
+            )
+        transport = _checked_transport(
+            result.get(TRANSPORT_FIELD), TRANSPORT_READ_OPERATION
+        )
+        checked.append(
+            {
+                ORIGINAL_PANE_ID_FIELD: original,
+                PANE_ID_FIELD: pane_id,
+                TRANSPORT_FIELD: transport.raw,
+            }
+        )
+        if not transport.delivered:
+            failed.append(pane_id)
+    return checked, failed
+
+
 def bind_activations(plan: object, result_items: object) -> dict[str, object]:
     value = _object(plan, PLAN_FIELD)
     if value.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION or value.get(
@@ -1202,6 +1246,7 @@ def plan_reassessment(
     prepared: object,
     binding_items: object,
     verification: object,
+    pane_read_items: object,
 ) -> dict[str, object]:
     candidates = _prepared_candidates(prepared)
     bindings = _validated_bindings(binding_items, candidates)
@@ -1239,6 +1284,21 @@ def plan_reassessment(
             ResultStatus.INVALID_TARGET,
             "Verified correlations do not match the prepared bindings and sessions.",
         )
+    pane_reads, failed_panes = _checked_pane_reads(pane_read_items, bindings)
+    if failed_panes:
+        return {
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+            STATUS_FIELD: ResultStatus.COMMAND_FAILED,
+            DETAIL_FIELD: (
+                "Context read failed before reassessment for panes: "
+                + ", ".join(failed_panes)
+                + "."
+            ),
+            PREPARED_FIELD: _object(prepared, PREPARED_FIELD),
+            BINDINGS_FIELD: [binding.result() for binding in bindings],
+            PANE_READ_RESULTS_FIELD: pane_reads,
+            DELIVERIES_FIELD: [],
+        }
     reassessed = _reassessed_session_ids(prepared)
     pending = [
         (binding, candidate)
@@ -1263,6 +1323,7 @@ def plan_reassessment(
         ),
         PREPARED_FIELD: _object(prepared, PREPARED_FIELD),
         BINDINGS_FIELD: [binding.result() for binding in bindings],
+        PANE_READ_RESULTS_FIELD: pane_reads,
         DELIVERIES_FIELD: deliveries,
     }
 
@@ -1367,6 +1428,7 @@ def main(
                 value.get(PREPARED_FIELD),
                 value.get(BINDINGS_FIELD),
                 value.get(VERIFICATION_FIELD),
+                value.get(PANE_READ_RESULTS_FIELD),
             )
         print(json.dumps(result, sort_keys=True), file=output_stream)
         return command_exit_code(result)
