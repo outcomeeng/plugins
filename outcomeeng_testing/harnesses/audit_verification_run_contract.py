@@ -68,6 +68,7 @@ from outcomeeng.validation.spx_version import (
     verification_run_floor_is_satisfied,
 )
 from outcomeeng_testing.generators.audit_verification_run_contract import (
+    ImplementationAuditVerificationProbe,
     implementation_audit_verification_probes,
 )
 
@@ -218,6 +219,53 @@ def spx_verification_run_rejects_mismatched_terminal_status() -> bool:
             return True
 
     return False
+
+
+def spx_verification_run_counts_one_rule_across_subjects() -> bool:
+    """Return whether one rule on two subjects seals as two findings."""
+    spx_command = _minimum_release_spx_command()
+    rule = spx_verification_run_counts_one_rule_across_subjects.__name__
+    message = spx_verification_run_counts_one_rule_across_subjects.__doc__ or rule
+    terminal_status = AuditTerminalStatus.REJECTED
+
+    with TemporaryDirectory() as temporary_directory:
+        repository = Path(temporary_directory)
+        scope, run_token, provenance, probes, _ = _start_implementation_audit_run(
+            repository,
+            rule,
+            spx_command,
+        )
+        for probe in probes:
+            _add_implementation_audit_finding(
+                repository,
+                spx_command,
+                scope,
+                run_token=run_token,
+                probe=probe,
+                rule=rule,
+                message=message,
+                provenance=provenance,
+            )
+        _run_spx(
+            repository,
+            spx_command,
+            ("finish",),
+            scope,
+            run_token=run_token,
+            terminal_status=terminal_status.value,
+        )
+        render_report = _run_spx(
+            repository,
+            spx_command,
+            ("render",),
+            scope,
+            run_token=run_token,
+        )
+
+    subject_paths = {probe.subject_path for probe in probes}
+    return len(subject_paths) == len(probes) and render_report.get(
+        RUN_FINDING_COUNT_FIELD
+    ) == len(probes)
 
 
 def audit_contract_rejects_language_specific_wrapper() -> bool:
@@ -566,12 +614,17 @@ def _source_plugin_names() -> tuple[str, ...]:
     )
 
 
-def _record_implementation_audit_finding(
+def _start_implementation_audit_run(
     repository: Path,
     rule: str,
-    message: str,
     spx_command: tuple[str, ...],
-) -> tuple[str, str, tuple[dict[str, object], ...], dict[str, object]]:
+) -> tuple[
+    str,
+    str,
+    Mapping[str, object],
+    tuple[ImplementationAuditVerificationProbe, ...],
+    tuple[dict[str, object], ...],
+]:
     language = _source_language()
     probes = implementation_audit_verification_probes(language)
     provenance = implementation_audit_provenance(
@@ -609,29 +662,63 @@ def _record_implementation_audit_finding(
         )
         for probe in probes
     )
-    finding_probe = probes[-1]
-    finding_report = _run_spx(
+    return scope, run_token, provenance, probes, scope_reports
+
+
+def _add_implementation_audit_finding(
+    repository: Path,
+    spx_command: tuple[str, ...],
+    scope: str,
+    *,
+    run_token: str,
+    probe: ImplementationAuditVerificationProbe,
+    rule: str,
+    message: str,
+    provenance: Mapping[str, object],
+) -> dict[str, object]:
+    return _run_spx(
         repository,
         spx_command,
         ("finding", "add"),
         scope,
         run_token=run_token,
         payload=implementation_audit_finding_payload(
-            finding_probe.language,
-            finding_probe.concern,
+            probe.language,
+            probe.concern,
             rule=rule,
-            subject_path=finding_probe.subject_path,
+            subject_path=probe.subject_path,
             message=message,
-            observed=finding_probe.subject_path,
-            expected=finding_probe.subject_path,
+            observed=probe.subject_path,
+            expected=probe.subject_path,
             producer_provenance=provenance,
         ),
         idempotency_key=implementation_audit_finding_key(
-            finding_probe.language,
-            finding_probe.concern,
-            subject_path=finding_probe.subject_path,
+            probe.language,
+            probe.concern,
+            subject_path=probe.subject_path,
             rule=rule,
         ),
+    )
+
+
+def _record_implementation_audit_finding(
+    repository: Path,
+    rule: str,
+    message: str,
+    spx_command: tuple[str, ...],
+) -> tuple[str, str, tuple[dict[str, object], ...], dict[str, object]]:
+    scope, run_token, provenance, probes, scope_reports = (
+        _start_implementation_audit_run(repository, rule, spx_command)
+    )
+    finding_report = _add_implementation_audit_finding(
+        repository,
+        spx_command,
+        scope,
+        run_token=run_token,
+        probe=probes[-1],
+        rule=rule,
+        message=message,
+        provenance=provenance,
     )
     return scope, run_token, scope_reports, finding_report
 

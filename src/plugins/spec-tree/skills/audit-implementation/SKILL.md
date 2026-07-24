@@ -20,7 +20,7 @@ A rendered SPX verification-run verdict for the requested implementation scope, 
 - Read-only over the audited project tree. This skill never edits source, tests, specs, commits, branches, or pull requests.
 - Persist audit state only through `spx verification run`; never use legacy journal commands, plugin-side verdict scripts, markdown comments, `.spx/audits/`, or tracked files as audit state.
 - NEVER run deterministic verification — this orchestration composes agentic concern audits only.
-- Contain no language-specific file extensions, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
+- NEVER include language-specific file extensions, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
 - Treat the `spx verification run` command exit code as payload validity. Never hand-validate emitted payload JSON after SPX accepts it.
 - Start the verification run immediately after validating the request, before reading changed project files or loading any language concern skill or its standards. Every project inspection and concern result belongs to the open run.
 
@@ -178,7 +178,10 @@ program instead of passing the key through.
 The key is an opaque token SPX never parses back into segments, so a `:` inside
 a subject path is not a separator. Keep the rule segment colon-free and stable —
 a rule identifier rather than free-form prose — so two findings raised on
-different subjects can never compose one finding key.
+different subjects can never compose one finding key. When the unit omits the
+optional `languagePartition`, keep the segment count fixed and render the
+language segment as the literal `unknown`, so two runs over the same
+unknown-language subject compose the same key.
 
 Pass every key as one single-quoted argument, `--idempotency-key
 '<stable-scope-key>'`, because a subject path can itself carry a character the
