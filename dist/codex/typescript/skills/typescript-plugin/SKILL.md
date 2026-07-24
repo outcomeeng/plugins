@@ -103,6 +103,6 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 - Placement and pruning happen through the bundled script, never by hand.
 - Every file written or removed carries this plugin's namespace prefix; no other file in the agent directory changes.
 - `check` writes nothing and reports drift.
-- After `upgrade`, a checkout status reports no outstanding change in the agent directory: every addition, removal, and rename it produced is committed.
+- After `upgrade`, a `git status --short` over the agent directory reports no outstanding change: every addition, removal, and rename it produced is committed.
 
 </success_criteria>

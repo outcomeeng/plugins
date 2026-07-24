@@ -58,9 +58,7 @@ This agent receives the plugin's agents through its manifest, so the checkout ca
 
 <ownership_boundary>
 
-This plugin places and prunes only within the namespace its own name prefixes. Agent definitions a developer authored, and definitions another plugin provides, are outside that namespace and stay untouched even when their content matches what this plugin would write.
-
-A file inside the namespace is this plugin's to replace or remove. A file outside it is never this plugin's to claim, and matching content is not ownership.
+This plugin claims no file in the checkout on this agent, because its manifest delivers the agents and no verb writes.
 
 </ownership_boundary>
 
@@ -76,9 +74,6 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 
 - Exactly one verb runs per invocation, defaulting to `help`.
 - `version` reads only the skill-directory-relative manifest path named above, never another copy on disk.
-- Placement and pruning happen through the bundled script, never by hand.
-- Every file written or removed carries this plugin's namespace prefix; no other file in the agent directory changes.
-- `check` writes nothing and reports drift.
-- After `upgrade`, a checkout status reports no outstanding change in the agent directory: every addition, removal, and rename it produced is committed.
+- Every footprint verb reports that the manifest delivers this plugin's agents, and writes nothing.
 
 </success_criteria>
