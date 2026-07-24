@@ -72,11 +72,11 @@ Stop preparation when an active session cannot safely reach its native status su
 
 <dialog_guard>
 
-Every `send` and every `key` requires one immediately preceding `/operate-prowl` `read` in stable-screen mode establishing that the target pane holds no open dialog. A pane presenting a structured question, selection list, confirmation, permission request, or resume-mode prompt consumes the next input as that dialog's answer rather than as a message.
+Every `send` and every `key` requires one immediately preceding `/operate-prowl` `read` in stable-screen mode that establishes the target pane's dialog state: either no dialog is open, or the pane holds exactly one of the authorized dialogs enumerated below. A pane presenting a structured question, selection list, confirmation, permission request, or resume-mode prompt consumes the next input as that dialog's answer rather than as a message.
 
 - A read taken earlier — including the `<recover_workflow>` context-read barrier — never satisfies this guard, because a dialog can open between that read and the input. An intervening action of this skill's own, such as a dismissal, ends immediacy exactly as an external change does.
-- A pane holding an open dialog receives no send and no key. Record it as blocked with its complete pane identity, continue with the remaining panes, and report it.
-- The only dialogs this skill answers are the ones it holds explicit authority for, and each still requires the immediately preceding read that identifies the exact surface: the `<native_status_protocol>` `Escape` dismissal authorized by `prepare`, that protocol's autocomplete `Enter` and its closing `Escape` over the status surface it opened, and the Claude resume-mode prompt answered with one `Enter` in `<recover_workflow>` step 10. Answer no other dialog on the operator's behalf.
+- A pane holding any dialog other than an authorized one receives no send and no key. Record it as blocked with its complete pane identity, continue with the remaining panes, and report it.
+- The authorized dialogs are the ones this skill holds explicit authority for, and each still requires the immediately preceding read that identifies the exact surface: the `<native_status_protocol>` `Escape` dismissal authorized by `prepare`, that protocol's autocomplete `Enter` and its closing `Escape` over the status surface it opened, and the Claude resume-mode prompt answered with one `Enter` in `<recover_workflow>` step 10. Answer no other dialog on the operator's behalf.
 
 </dialog_guard>
 
@@ -141,7 +141,7 @@ printf '%s\n' '{"prepared":{},"bindings":[],"verification":{},"paneReadResults":
 - NEVER type into an occupied mismatched pane, close a pane, launch an unprepared identity, or execute one native session in multiple panes or worktrees.
 - NEVER start a watcher, polling loop, daemon, background process, or open-ended wait.
 - NEVER plan or send reassessment before every verified pane has one checked context read; one unreadable pane blocks all continuation sends.
-- NEVER send text or keys to a pane holding an open dialog, and NEVER treat an earlier read as the required check — `<dialog_guard>` requires one immediately preceding read per input, because input reaching an open dialog answers it instead of arriving as a message.
+- NEVER send text or keys to a pane holding any dialog other than the ones `<dialog_guard>` enumerates as authorized, and NEVER treat an earlier read as the required check for any input — the guard requires one immediately preceding read per input, because input reaching an unauthorized open dialog answers it instead of arriving as a message.
 - NEVER emit a continuation instruction that omits the recipient's non-controller boundary: every instruction states that the recipient is not the recovery controller and must neither invoke recovery nor send text or keys to any pane, because a recipient carrying this skill otherwise recovers an already-recovered set.
 - NEVER send a resumed session an instruction to exit, stop, or stand down, and NEVER send generic continuation boilerplate in place of that session's concrete pending state and next action.
 - NEVER combine native launch and reassessment in one send, treat interruption metadata as cancellation, substitute repository completion for an unanswered operator request, treat distinct delivered work as satisfying an unreconciled plan, ask again for existing authority, or silently exit when a pending interaction can be restored.
@@ -211,7 +211,7 @@ Each delivery went out without being recorded against `reassessedSessionIds`, so
 - Verification reports `verified`, the prepared target count, and empty missing, duplicate, and unexpected agent arrays before reassessment begins.
 - Every verified pane has one checked stable-screen context read before any reassessment delivery is planned or sent; one failed read produces zero continuation sends.
 - Every non-controller session receives one separately settled reassessment instruction that reconciles explicit plans against delivered scope, restores unsatisfied operator work or its pending interaction, and prevents duplicate delivery through the updated manifest.
-- Every send and key carries one immediately preceding read establishing that its target pane holds no open dialog, and a pane holding one is reported blocked with zero input delivered to it.
+- Every send and key carries one immediately preceding read establishing its target pane's dialog state, and a pane holding any dialog other than an authorized one is reported blocked with zero input delivered to it.
 - Every emitted continuation instruction states that its recipient is not the recovery controller and invokes no recovery and sends no text or keys to any pane.
 
 </success_criteria>
