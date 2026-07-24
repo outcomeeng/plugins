@@ -60,7 +60,7 @@ Record launch context separately from identity evidence:
 Use this bounded protocol only when exact process or high-confidence public-agent evidence is unavailable:
 
 1. Invoke `/operate-prowl` `read` with the exact pane UUID and stable-screen mode.
-2. When a selection dialog is visibly open, invoke `/operate-prowl` `key` with `Escape`. The `prepare` invocation authorizes this exact dialog dismissal; NEVER send `Escape` to active generation.
+2. When a selection dialog is visibly open, invoke `/operate-prowl` `key` with `Escape`. The operator's exact `prepare` or `recover` invocation authorizes this exact dialog dismissal, covering this protocol's reuse from `<recover_workflow>` step 11; NEVER send `Escape` to active generation.
 3. Apply `<dialog_guard>` to the exact pane. Step 1's read satisfies it only when step 2 dismissed nothing; when step 2 sent `Escape`, invoke `/operate-prowl` `read` once more in stable-screen mode and require that no dialog remains. Stop this candidate when one persists. Then invoke `/operate-prowl` `send` with `/status` for Claude or Codex and `/session` for Pi, using immediate return.
 4. Invoke `/operate-prowl` `read` once with stable-screen mode. When slash-command autocomplete consumed the first `Enter`, invoke `/operate-prowl` `key` with `Enter` once and read once more.
 5. Record the complete displayed session identity and cwd with `source: native-status`.
@@ -76,7 +76,7 @@ Every `send` and every `key` requires one immediately preceding `/operate-prowl`
 
 - A read taken earlier — including the `<recover_workflow>` context-read barrier — never satisfies this guard, because a dialog can open between that read and the input. An intervening action of this skill's own, such as a dismissal, ends immediacy exactly as an external change does.
 - A pane holding any dialog other than an authorized one receives no send and no key. Record it as blocked with its complete pane identity, continue with the remaining panes, and report it.
-- The authorized dialogs are the ones this skill holds explicit authority for, and each still requires the immediately preceding read that identifies the exact surface: the `<native_status_protocol>` `Escape` dismissal authorized by `prepare`, that protocol's autocomplete `Enter` and its closing `Escape` over the status surface it opened, and the Claude resume-mode prompt answered with one `Enter` in `<recover_workflow>` step 10. Answer no other dialog on the operator's behalf.
+- The authorized dialogs are the ones this skill holds explicit authority for, and each still requires the immediately preceding read that identifies the exact surface: the `<native_status_protocol>` `Escape` dismissal authorized by the operator's exact `prepare` or `recover` invocation, which covers that protocol equally when `<recover_workflow>` step 11 reaches it as a correlation-evidence fallback; that protocol's autocomplete `Enter` and its closing `Escape` over the status surface it opened; and the Claude resume-mode prompt answered with one `Enter` in `<recover_workflow>` step 10. Answer no other dialog on the operator's behalf.
 
 </dialog_guard>
 
