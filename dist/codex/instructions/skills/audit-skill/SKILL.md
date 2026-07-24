@@ -279,14 +279,6 @@ Reference files in the `references/` directory should also use pure XML structur
 **Priority**: Fix SKILL.md first, then reference files.
 </reference_file_guidance>
 
-<xml_structure_examples>
-Read `${SKILL_DIR}/references/xml-structure-examples.md` for annotated examples of each violation type.
-</xml_structure_examples>
-
-<operational_effectiveness_examples>
-Read `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated examples of each issue type.
-</operational_effectiveness_examples>
-
 <verdict_format>
 Emit a structured verdict. The skill's entire output is the verdict payload.
 

@@ -447,7 +447,7 @@ What happened: Claude added target-specific TOML/YAML examples directly to this 
 
 Why it failed: The fast path stopped being an overview and absorbed detail that belongs in references.
 
-How to avoid: Keep SKILL.md under 500 lines; move extended examples and configuration matrices to the cited references, then run `wc -l "${CLAUDE_SKILL_DIR}/SKILL.md"` before audit.
+How to avoid: Keep SKILL.md under 500 lines; move extended examples and configuration matrices to the cited references.
 
 </failure_modes>
 
