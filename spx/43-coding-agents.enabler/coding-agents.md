@@ -9,7 +9,8 @@ CAN use environment capabilities without centralizing workflow ownership or reco
 ### Compliance
 
 - ALWAYS: coordination identifies every participating environment, agent, pane or task, worktree, branch, run, and repository with the complete identity value supplied by its authoritative source ([audit])
-- ALWAYS: explicit SPX facts, public environment projections, checked command results, and operator-confirmed external changes are authoritative coordination evidence; prose inference remains advisory ([audit])
+- ALWAYS: explicit SPX facts, public environment projections, checked command results, and operator-confirmed external changes are authoritative for the facts they directly establish; prose inference remains advisory ([audit])
+- NEVER: an environment workflow-status label alone establishes that a native agent session has completed its operator-authorized work ([audit])
 - ALWAYS: a supported coding environment exposes source-owned operations and explicit unavailable results rather than requiring workflows to discover command syntax or infer unsupported behavior ([audit])
 - ALWAYS: the operating agent owns successful work, run identities, retry selection, checkpoints, results, and continuation state for its workflow ([audit])
 - NEVER: one coding-agent workflow takes ownership of another workflow's internal state, successful results, or continuation decisions ([audit])

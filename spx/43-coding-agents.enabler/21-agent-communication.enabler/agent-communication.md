@@ -15,6 +15,7 @@ CAN exchange facts and authority messages through complete participant identitie
 
 - ALWAYS: delivery validates complete sender and recipient agent, environment endpoint, worktree, branch, repository, and applicable run identities before sending ([test](tests/test_agent_message.compliance.l1.py))
 - ALWAYS: delegated-mutation proposals, state reports, and authorizations validate exact endpoint, worktree, branch, repository, full-HEAD, and status fields before transport ([test](tests/test_agent_message.compliance.l1.py))
+- ALWAYS: successful message delivery requires checked public Prowl input evidence that trailing Enter submitted the turn; text remaining editable in the recipient pane is not delivery ([test](tests/test_agent_message.compliance.l1.py))
 - NEVER: successful transport delivery establishes acknowledgement, agreement, ownership, or mutation authorization ([test](tests/test_agent_message.compliance.l1.py))
 - NEVER: communication targets by title, focus, position, inferred prose, or an undeclared fallback environment ([test](tests/test_agent_message.compliance.l1.py))
 - NEVER: communication skills construct environment command arguments directly; delivery routes through the source-owned environment capability ([audit])

@@ -1,6 +1,6 @@
 {
   "name": "coding-agents",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Coding-agent environments and coordination: /operate-prowl, /message-agents, /coordinate-agents, /recover-prowl-agents",
   "author": {
     "name": "Simon Heimlicher"

@@ -71,7 +71,13 @@ def _successful_transport(module: ModuleType) -> dict[str, object]:
         module.TRANSPORT_OPERATION_FIELD: module.TRANSPORT_SEND_OPERATION,
         module.STATUS_FIELD: module.TRANSPORT_SUCCEEDED_STATUS,
         module.COMMAND_EXIT_CODE_FIELD: 0,
-        module.TRANSPORT_RESPONSE_FIELD: {},
+        module.TRANSPORT_RESPONSE_FIELD: {
+            module.DATA_FIELD: {
+                module.INPUT_FIELD: {
+                    module.TRAILING_ENTER_SENT_FIELD: True,
+                }
+            }
+        },
     }
 
 
@@ -285,6 +291,16 @@ def verify_agent_message_compliance() -> list[str]:
                 module.STATUS_FIELD: f"not-{module.TRANSPORT_SUCCEEDED_STATUS}",
             },
             {**successful_transport, module.COMMAND_EXIT_CODE_FIELD: 1},
+            {
+                **successful_transport,
+                module.TRANSPORT_RESPONSE_FIELD: {
+                    module.DATA_FIELD: {
+                        module.INPUT_FIELD: {
+                            module.TRAILING_ENTER_SENT_FIELD: False,
+                        }
+                    }
+                },
+            },
         )
     )
     for invalid_transport in invalid_transports:

@@ -72,7 +72,7 @@ Use these branch-owned payloads:
 - A signal gap produces `status: "signal-gap"`, `reason: "insufficient-evidence"`, `operatorAction: null`, and no message.
 
 5. Invoke `/message-agents` once for each planned message. NEVER call Prowl directly from this skill.
-6. Preserve each delivery result separately from the coordination verdict. Each operating workflow re-evaluates its own state after receiving facts.
+6. Preserve each delivery result separately from the coordination verdict. A delivery counts only when `/message-agents` reports a checked submitted turn; prefilled text or transport without trailing-Enter evidence remains a delivery failure. Each operating workflow re-evaluates its own state after receiving facts.
 
 </workflow>
 
@@ -88,7 +88,7 @@ Use these branch-owned payloads:
 
 <success_criteria>
 
-- The structured verdict names whether coordination is needed, its authoritative reason, complete participants, and protocol-valid messages.
+- The structured verdict names whether coordination is needed, its authoritative reason, complete participants, and protocol-valid messages whose delivery result proves submission rather than editor prefill.
 - Shared blockers yield one human-owned action and facts for every affected workflow without centralizing execution.
 - Delegated mutations carry an exact target envelope, require an exact pre-mutation state report, and produce no authorization on any identity mismatch.
 - Independent work and signal gaps produce no message.

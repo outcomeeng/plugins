@@ -60,6 +60,9 @@ FULL_HEAD_PATTERN = re.compile(r"[0-9a-f]{40}")
 TRANSPORT_SCHEMA_VERSION = 1
 TRANSPORT_OPERATION_FIELD = "operation"
 TRANSPORT_RESPONSE_FIELD = "response"
+DATA_FIELD = "data"
+INPUT_FIELD = "input"
+TRAILING_ENTER_SENT_FIELD = "trailing_enter_sent"
 TRANSPORT_SEND_OPERATION = "send"
 TRANSPORT_SUCCEEDED_STATUS = "succeeded"
 TRANSPORT_SUCCESS_FIELDS = frozenset(
@@ -711,7 +714,18 @@ def _checked_success_transport(
             DeliveryStatus.INVALID_SCHEMA,
             "A delivered result requires matching zero command exit codes.",
         )
-    _object(value.get(TRANSPORT_RESPONSE_FIELD), f"{TRANSPORT_FIELD}.response")
+    response = _object(
+        value.get(TRANSPORT_RESPONSE_FIELD), f"{TRANSPORT_FIELD}.response"
+    )
+    data = _object(response.get(DATA_FIELD), f"{TRANSPORT_FIELD}.response.data")
+    input_record = _object(
+        data.get(INPUT_FIELD), f"{TRANSPORT_FIELD}.response.data.input"
+    )
+    if input_record.get(TRAILING_ENTER_SENT_FIELD) is not True:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered result requires trailing_enter_sent: true submission evidence.",
+        )
     return value
 
 
