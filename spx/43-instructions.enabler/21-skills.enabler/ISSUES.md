@@ -162,4 +162,4 @@ rules into `/subagent-standards` is that consolidation under a governing
 principle) and should reconcile with `spx/43-instructions.enabler/ISSUES.md`
 entries 3 (verdict-row taxonomy), 4 (audit-skills eval coverage), 7 (runtime
 terminology), and 9 (audit-skill target-argument convention). Begin it as the next
-changeset after PR 465 merges, starting with the spec change.
+changeset after the subagent-creator track merges, starting with the spec change.

@@ -50,10 +50,11 @@ Not required for removal (deferred): per-mechanism available-evidence readers fo
 
 ## Reconcile inline-foundation follow-up histories
 
-Complete PR 465 through the instructions-node plan before consolidating these
-preservation refs. The canonical comparison baseline is `origin/main`; the
-restart branch preserves the repaired PR history without publishing it to the
-open PR branch.
+Ship the subagent-creator track through the instructions-node plan before
+consolidating these preservation refs. The canonical comparison baseline is
+`origin/main`. PR 465 is closed as superseded, so the restart branch carries the
+repaired history forward and ships it through a fresh pull request rather than
+publishing to the closed PR's branch.
 
 Preserved refs and observed heads:
 
@@ -83,10 +84,10 @@ Worklist:
    `spx/31-outcomeeng.enabler/31-verification.enabler`.
 2. Fetch the canonical base and derive the complete commit and patch sets for
    each preservation ref against `origin/main`, then compare the refs pairwise.
-3. Classify every unique change as already merged, represented by PR 465,
-   retained for a new changeset, superseded by current product truth, or blocked
-   on an explicit product decision. Record the full commit identity, affected
-   node, and evidence for each disposition.
+3. Classify every unique change as already merged, carried by the
+   subagent-creator changeset, retained for a new changeset, superseded by
+   current product truth, or blocked on an explicit product decision. Record the
+   full commit identity, affected node, and evidence for each disposition.
 4. Group retained changes into dependency-ordered, independently reviewable
    changesets. Keep skill-content, review-journal, and broader methodology
    changes separate when they can be verified and merged independently.
