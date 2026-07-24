@@ -14,15 +14,15 @@ The spec-tree plugin's consumer-side footprint reported, placed, or refreshed in
 
 Select one verb from the invocation. `help` is the default when none is given.
 
-| Verb      | Result                                                                             |
-| --------- | ---------------------------------------------------------------------------------- |
-| `help`    | This plugin's verbs and what each one changes                                      |
-| `version` | The plugin version the running session resolved                                    |
-| `init`    | This plugin's checkout footprint established for this version                      |
-| `upgrade` | This plugin's checkout footprint brought to this version, retiring what it dropped |
-| `check`   | Whether the checkout's footprint matches this version, changing nothing            |
+| Verb      | Result                                                                               |
+| --------- | ------------------------------------------------------------------------------------ |
+| `help`    | This plugin's verbs and what each one changes                                        |
+| `version` | The plugin version the running session resolved                                      |
+| `init`    | This plugin's checkout footprint established for this version †                      |
+| `upgrade` | This plugin's checkout footprint brought to this version, retiring what it dropped † |
+| `check`   | Whether the checkout's footprint matches this version, changing nothing †            |
 
-This agent's plugin manifest cannot declare agents, so `init`, `upgrade`, and `check` own this plugin's checkout footprint. When the plugin ships no agent definitions, they report that and change nothing.
+† This agent's plugin manifest cannot declare agents, so `init`, `upgrade`, and `check` own this plugin's checkout footprint. When the plugin ships no agent definitions, they report that and change nothing.
 
 </verbs>
 

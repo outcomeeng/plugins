@@ -14,15 +14,15 @@ The {{! plugin_name !}} plugin's consumer-side footprint reported, placed, or re
 
 Select one verb from the invocation. `help` is the default when none is given.
 
-| Verb      | Result                                                                             |
-| --------- | ---------------------------------------------------------------------------------- |
-| `help`    | This plugin's verbs and what each one changes                                      |
-| `version` | The plugin version the running session resolved                                    |
-| `init`    | This plugin's checkout footprint established for this version                      |
-| `upgrade` | This plugin's checkout footprint brought to this version, retiring what it dropped |
-| `check`   | Whether the checkout's footprint matches this version, changing nothing            |
+| Verb      | Result                                                                               |
+| --------- | ------------------------------------------------------------------------------------ |
+| `help`    | This plugin's verbs and what each one changes                                        |
+| `version` | The plugin version the running session resolved                                      |
+| `init`    | This plugin's checkout footprint established for this version †                      |
+| `upgrade` | This plugin's checkout footprint brought to this version, retiring what it dropped † |
+| `check`   | Whether the checkout's footprint matches this version, changing nothing †            |
 
-{!% if target == 'claude' %!}This agent's plugin manifest declares the plugin's agents, so they reach a session through the manifest and no checkout placement applies. `init`, `upgrade`, and `check` report that and change nothing here; they carry the footprint work only for an agent whose manifest cannot declare agents.{!% else %!}This agent's plugin manifest cannot declare agents, so `init`, `upgrade`, and `check` own this plugin's checkout footprint. When the plugin ships no agent definitions, they report that and change nothing.{!% endif %!}
+† {!% if target == 'claude' %!}This agent's plugin manifest declares the plugin's agents, so they reach a session through the manifest and no checkout placement applies. `init`, `upgrade`, and `check` report that and change nothing here; they carry the footprint work only for an agent whose manifest cannot declare agents.{!% else %!}This agent's plugin manifest cannot declare agents, so `init`, `upgrade`, and `check` own this plugin's checkout footprint. When the plugin ships no agent definitions, they report that and change nothing.{!% endif %!}
 
 </verbs>
 
@@ -40,7 +40,7 @@ That path is relative to this skill's own directory, so it resolves inside which
 
 <placement>
 
-{!% if target == 'claude' %!}Placement does not apply on this agent: its plugin manifest declares the plugin's agents, so the installer delivers them and no file is written into the checkout. The bundled script reports that and exits without changing anything.{!% else %!}Placement runs the bundled script, which writes every agent definition this plugin ships into the checkout's agent directory, the only path by which this agent's session receives them:{!% endif %!}
+{!% if target == 'claude' %!}Placement does not apply on this agent: its plugin manifest declares the plugin's agents, so the installer delivers them and no file is written into the checkout. The bundled script reports that and exits without changing anything; the call that reports it looks like this:{!% else %!}Placement runs the bundled script, which writes every agent definition this plugin ships into the checkout's agent directory, the only path by which this agent's session receives them:{!% endif %!}
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py" --checkout <repository-root>
