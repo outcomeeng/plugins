@@ -58,7 +58,7 @@ Placed definitions are durable checkout configuration, not local runtime output.
 
 `upgrade` changes the committed set rather than only adding to it. A version that renames an agent writes the new definition and removes the old one; a version that retires an agent removes it and writes nothing back. Git reports the first as a rename when the two definitions stay similar enough to pair and as a deletion plus an addition when they do not, and reports the second as a deletion. Those removals are the verb working. Commit them alongside the additions: restoring a removed definition keeps a retired agent dispatchable and leaves the checkout claiming a version it no longer carries.
 
-An upgrade that renames one definition, retires another, and revises a third leaves a checkout status of this shape:
+An upgrade that renames one definition, retires another, and revises a third leaves this `git status --short` shape in the agent directory:
 
 ```text
 R  rust_old-name -> rust_new-name
