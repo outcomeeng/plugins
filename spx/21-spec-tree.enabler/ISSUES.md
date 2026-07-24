@@ -126,3 +126,16 @@ Suggested `spx/AGENTS.md` additions:
 - Add a **mutation status shape** for operator-facing updates: target path, action, reason, validation plan, and gate impact.
 - Add a **rendered-output reminder** for source constants that build into `dist/`: source edits that affect generated plugin content require `just build-skills` before any push.
 - Add a **PR gate status shape** for terse prompts such as "check" or "ship it": full head SHA, current-head review verdict, required-check rollup, and the next allowed action token.
+
+## 23. `knowledge/` node subdirectory is not declared in the canonical node shape
+
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/knowledge/oe-skill-eval-brief.md` preserves the external research brief that seeded the eval-verification redesign, placed there by explicit operator instruction. The canonical node shape in the inline `/understand` `<common_structure>` (authored in `src/plugins/spec-tree/skills/understand/SKILL.md`) declares only `{slug}.md`, `tests/`, `evals/{rule-slug}/`, `PLAN.md`, `ISSUES.md`, decision files, and child node directories — no `knowledge/` kind. This is the first `knowledge/` directory in the tree.
+
+Required handling — one of:
+
+- Amend `<common_structure>` in `src/plugins/spec-tree/skills/understand/SKILL.md` to declare `knowledge/` as an optional node artifact (placement, lifecycle, and provenance rules), with the plugin version bump, `just build-skills`, and the `skill-auditor` gate that shipped-skill edit requires.
+- Relocate the knowledge content into an already-sanctioned location and remove the directory.
+
+Why deferred: sanctioning a new node-directory kind changes the shipped methodology's node grammar for every consumer repository — a methodology decision with its own gate chain, not a bounded fix inside the spx-only changeset that surfaced it.
+
+Surfaced by the local `changes-reviewer` (run `2026-07-24_18-55-59-928-7b385135ae6b`, debt) on the eval-brief knowledge changeset (2026-07-24).
