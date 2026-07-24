@@ -197,7 +197,7 @@ Events:
 **Dedicated quality guardrail agents**.
 
 <pattern>
-```markdown
+```text
 ---
 name: output-validator
 description: Validates subagent outputs for correctness, completeness, and format compliance
@@ -261,7 +261,7 @@ Validation result:
 - Human review for critical outputs
 
 **Mitigation**:
-```markdown
+```text
 <anti_hallucination>
 In subagent prompt:
 - "Reference only files already read"
@@ -291,7 +291,7 @@ In subagent prompt:
 
 **Mitigation**:
 
-```markdown
+```text
 <output_format_enforcement>
 Expected format:
 {
@@ -533,7 +533,7 @@ Before using a tool, ask:
 
 **Fix**:
 
-```markdown
+```text
 Before (generic):
 <role>Claude is a code reviewer.</role>
 

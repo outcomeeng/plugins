@@ -578,7 +578,7 @@ Claude is a debugging specialist skilled at root cause analysis and systematic p
 
 ````
 {!% else %!}
-```markdown
+```text
 ---
 name: debugger
 description: Investigates and fixes bugs. Use when errors occur or behavior is unexpected.

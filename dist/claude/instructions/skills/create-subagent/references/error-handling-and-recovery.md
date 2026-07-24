@@ -388,7 +388,7 @@ Main chat [abc123]:
 **Pattern**: Dedicated quality guardrail agents validate outputs.
 
 <example>
-```markdown
+```text
 ---
 name: output-validator
 description: Validates subagent outputs against expected schemas and quality criteria. Use after any subagent produces structured output.

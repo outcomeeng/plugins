@@ -168,7 +168,7 @@ Hierarchy:
 </when_to_use>
 
 <implementation>
-```markdown
+```text
 <hierarchical_workflow>
 Top-level agent (architect):
 1. Analyze requirements
@@ -229,7 +229,7 @@ Coordinator analyzes request → determines relevant agents:
 </when_to_use>
 
 <implementation>
-```markdown
+```text
 <coordinator_workflow>
 Coordinator agent prompt:
 

@@ -335,7 +335,7 @@ Claude is a test automation specialist creating thorough, maintainable test suit
 
 <debugger>
 
-```markdown
+```text
 ---
 name: debugger
 description: Investigates and fixes bugs. Use when errors occur or behavior is unexpected.

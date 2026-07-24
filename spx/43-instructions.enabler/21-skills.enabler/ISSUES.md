@@ -97,7 +97,7 @@ reference/overview content rather than propagating the rename:
 
 The skills-about-skills cluster resolves rule ownership with three peers — builder
 `/create-skill`, canonical-rules owner `/skill-standards`, auditor `/audit-skills` —
-and `skills.md:17,24` bind the discipline: `/skill-standards` owns every rule
+and `spx/43-instructions.enabler/21-skills.enabler/skills.md:17,24` bind the discipline: `/skill-standards` owns every rule
 `/audit-skills` enforces, and no rule is restated inside the builder or the auditor.
 The subagent cluster ships only a builder (`/create-subagent`) and an auditor
 (`/audit-subagents`) with no canonical-rules owner, so the auditor has nothing to
@@ -105,7 +105,7 @@ load but the builder's seven references and keeps a parallel rulebook of its own
 
 Spec grounding:
 
-- `instructions.md:12` centralizes prompt voice, description, and constraint
+- `spx/43-instructions.enabler/instructions.md:12` centralizes prompt voice, description, and constraint
   conventions in `/agent-prompt-standards`, shared across skills **and subagents**.
   `src/plugins/instructions/skills/audit-subagents/SKILL.md:116-124`
   (`<area name="prompt_craft">`) says "Check against `/agent-prompt-standards`
@@ -114,19 +114,19 @@ Spec grounding:
 - The restatement is a defect class, not a single site.
   `src/plugins/instructions/skills/audit-skills/SKILL.md:73-217`
   (`<evaluation_areas>`, including its own `prompt_craft` and `anti_patterns`
-  areas) restates `/skill-standards` the same way, violating `skills.md:24` directly.
+  areas) restates `/skill-standards` the same way, violating `spx/43-instructions.enabler/21-skills.enabler/skills.md:24` directly.
   `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`
   property 7 requires a valid finding to be fixed across every same-class instance;
   fixing `audit-subagents` alone would be an invalid single-site fix.
 - Subagent **structure** rules — frontmatter fields, tool grants, model selection,
   XML structure, the `inherit` prohibition — are governed by no assertion. Only
-  prompt *craft* is reached by `instructions.md:12`; the subagent pair has no
-  single-source assertion analogous to `skills.md:17,24`.
+  prompt *craft* is reached by `spx/43-instructions.enabler/instructions.md:12`; the subagent pair has no
+  single-source assertion analogous to `spx/43-instructions.enabler/21-skills.enabler/skills.md:17,24`.
 
 Decision (operator-approved): Shape A — symmetric triad. Introduce
 `/subagent-standards` as a reference skill owning the canonical subagent rules;
 `/create-subagent` and `/audit-subagents` both load it and neither restates. This
-restores the `instructions.md:11` builder/auditor separation (the auditor stops
+restores the `spx/43-instructions.enabler/instructions.md:11` builder/auditor separation (the auditor stops
 depending on the builder for the rules it enforces) and gives `/audit-subagents`
 a legitimate load target so its `<evaluation_areas>`/`<anti_patterns>` rulebook can
 be removed.
@@ -134,12 +134,12 @@ be removed.
 Required handling:
 
 - Declare the architecture in the spec before the skill edits (truth flows down):
-  add the subagent-cluster single-source assertion(s) mirroring `skills.md:17,24`,
-  and resolve the node-placement question — `skills.md`'s `PROVIDES` covers only
+  add the subagent-cluster single-source assertion(s) mirroring `spx/43-instructions.enabler/21-skills.enabler/skills.md:17,24`,
+  and resolve the node-placement question — `spx/43-instructions.enabler/21-skills.enabler/skills.md`'s `PROVIDES` covers only
   "SKILL.md files" while its parent covers skills **and** subagents, so the
   subagent cluster currently has no node-level spec home. Whether the subagent
-  cluster becomes its own sibling node under `43-instructions.enabler` or
-  `skills.md` broadens to cover both clusters is an index/decomposition question
+  cluster becomes its own sibling node under `spx/43-instructions.enabler` or
+  `spx/43-instructions.enabler/21-skills.enabler/skills.md` broadens to cover both clusters is an index/decomposition question
   routed through `/decompose`, which owns proving the dependency consequence.
 - Add `/subagent-standards`; migrate canonical subagent rules into it from
   `/create-subagent` and from the embedded rulebooks in both auditors.
