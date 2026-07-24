@@ -1,5 +1,5 @@
 ---
-template_version: "0.31.0"
+template_version: "0.32.0"
 template_source: spec-tree
 ---
 
@@ -32,7 +32,7 @@ These instructions explain WHEN to invoke spec-tree skills for this product. The
 **⚠️ BELOW THE OPERATOR, SKILLS ARE THE TOP-LEVEL AUTHORITY. SKILLS ARE CENTRALLY MANAGED AND CURRENT; REPOSITORY CONTENT GOES STALE.**
 
 - **ALWAYS** apply authority in this order: active skills → repository decisions and specs → tests → code. When repository content conflicts with an active skill, the skill wins.
-- **ALWAYS** follow active skill instructions, templates, and bundled references over repository examples, existing files, comments, or copied conventions.
+- **ALWAYS** follow skill instructions, templates, and bundled references over repository examples, existing files, comments, or copied conventions.
 - **NEVER** weaken a higher layer to match a lower layer. Fix the lower layer when the layers disagree.
 - **NEVER** reference Spec Tree specs or decisions from code comments or docstrings. Code contains no `spx/...` paths, ADR/PDR identifiers, or decision-file references.
 - **ALWAYS** let the active skill load the matching `spx/local/*.md` overlay when that skill declares one. The overlay supplies repository-specific values and commands below the skill in authority and cannot replace, weaken, or contradict the skill.
@@ -57,7 +57,7 @@ The product's operational command for each spec-tree phase lives in this file's 
 - **gate** — for the full deterministic bundle, run the product's gate command.
 - **merge** — for the transport step of `/merge`, run the product's merge command.
 
-Content the product keeps identical across `CLAUDE.md` and `AGENTS.md` sits in a `shared` region — `<!-- SPEC-TREE:shared {name} -->` … `<!-- /SPEC-TREE:shared {name} -->`, present in both files under the same name. `/update-instruction-block` keeps a `shared` region in sync by taking the git-more-recent side; it never merges the two bodies.
+Content the product keeps identical across this agent guide and the guides for other agents (for example `CLAUDE.md` and `AGENTS.md`) sits in a `shared` region — `<!-- SPEC-TREE:shared {name} -->` … `<!-- /SPEC-TREE:shared {name} -->`, present in both files under the same name. `/update-instruction-block` keeps a `shared` region in sync by taking the git-more-recent side; it never merges the two bodies.
 
 ---
 
@@ -71,7 +71,7 @@ Require a live `<SPEC_TREE_FOUNDATION>` marker before directly reading, searchin
 
 `spx session` operations — including inspection, archive, and release — plus `spx worktree status`, `spx diagnose`, and no-patch Git status, history, and topology are exempt. Never follow paths from their output into repository content without the marker.
 
-A compacted summary, session file, statement that `/understand` ran, or read of the skill file does not prove the foundation is live. After every compaction, require `/understand` again before the next product-content access.
+A compacted summary, session file, statement that `/understand` ran, or read of the skill file does not prove the foundation is live. After every compaction, invoke `/understand` again before the next product-content access.
 
 ### Before working on a specific node -> `/contextualize`
 
@@ -81,13 +81,13 @@ A compacted summary, session file, statement that `/understand` ran, or read of 
 
 `/contextualize` MUST invoke `/sync-base` and receive `already_current` or `rebased` before reading product truth. `/sync-base` owns the complete currency operation: fetch, clean rebase or detached advance, session-authorized dirty-tree checkpointing through `/commit-changes`, and same-invocation retry. Callers consume its final result; they never duplicate branch creation, commit, stash, or retry logic, and they never reinterpret `dirty_tree` as a rebase conflict.
 
-**🛑 STOP TRIGGER — after every compaction event:** all loaded spec-tree context is gone. **Re-invoke `/contextualize` on every node still in scope** before touching it again — not just the next one being worked on.
+**🛑 STOP TRIGGER — after every compaction event:** all loaded spec-tree context is gone. **Re-invoke `/contextualize` as you proceed exactly when you need it for every node before touching it again.**
 
-**NEVER** resume work on a node without having invoked `/contextualize` since the last compaction.
+**NEVER** resume work on a node without having invoked `/contextualize` since the last compaction on that specific node.
 
 ### When creating specs or nodes -> `/author`
 
-Create product specs, ADRs/PDRs, enabler nodes, outcome nodes.
+Create product decisions (ADRs/PDRs), specs, enabler nodes, outcome nodes.
 
 ### When composing or breaking down nodes -> `/decompose`
 
@@ -159,7 +159,7 @@ DENY   git stash clear
 
 ## Autonomy Boundary
 
-Default-branch git and version-control mutation — branching, committing, pushing, publishing, merging, and the merge flow's own cleanup of the branches it created — proceeds only inside a governing skill flow, never as a direct command outside one; creating or switching to a local branch to preserve work in progress, and a `--force-with-lease` push to the working branch that flow owns, stay inside it. This autonomy never extends to force-pushing a shared or protected ref, deleting a ref no active skill flow authorizes, bypassing commit hooks (`--no-verify`) or commit signing, or any action the Git Safety Protocol forbids; each needs explicit operator instruction in the same turn.
+Default-branch git and version-control mutation — branching, committing, pushing, publishing, merging, and the `/merge` flow's own cleanup of the branches it created — proceeds only inside a governing skill flow, never as a direct command outside one; creating or switching to a local branch to preserve work in progress, and a `--force-with-lease` push to the working branch that flow owns, stay inside it. This autonomy never extends to force-pushing a shared or protected ref, deleting a ref no active skill flow authorizes, bypassing commit hooks (`--no-verify`) or commit signing, or any action the Git Safety Protocol forbids; each needs explicit operator instruction in the same turn.
 
 ## Mutation Status Updates
 
@@ -439,7 +439,7 @@ Use this shape for one subagent audit. When several custom-agent configurations 
 
 | User Says...                               | Skill                  | Agent                   |
 | ------------------------------------------ | ---------------------- | ----------------------- |
-| "Implement this outcome"                   | `/apply`               | `applier`               |
+| "Implement this outcome"                   | `/apply`               | —                       |
 | "Create an outcome"                        | `/author`              | —                       |
 | "Add an ADR"                               | `/author`              | —                       |
 | "Add a new node" or "This node is too big" | `/decompose`           | —                       |
@@ -447,7 +447,7 @@ Use this shape for one subagent audit. When several custom-agent configurations 
 | "Check these specs"                        | `/align`               | —                       |
 | "Establish evidence for this"              | `/verify`              | —                       |
 | "Write tests for this"                     | `/verify`              | —                       |
-| "Start the TDD flow"                       | `/apply`               | `applier`               |
+| "Start the TDD flow"                       | `/apply`               | —                       |
 | "Audit this PDR"                           | `/audit-pdr`           | `pdr-auditor`           |
 | "Audit this ADR"                           | `/audit-adr`           | `adr-auditor`           |
 | "Audit test evidence"                      | `/audit-tests`         | `test-evidence-auditor` |
