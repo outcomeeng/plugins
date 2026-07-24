@@ -88,7 +88,7 @@ The definitions were placed by hand from the skill directory, so pruning never r
 
 **Claude treated the removals an upgrade made as damage.**
 
-An upgrade retired one definition and renamed another, so the diff carried two deletions. Claude restored them, and the checkout kept dispatching an agent the plugin no longer ships while `check` reported drift that never cleared. Commit the removals with the additions; the verb prunes only inside this plugin's prefix, so a removal there is the upgrade, never a loss.
+An upgrade retired one definition and renamed another. The retirement showed as a `D`, and the rename showed as a `D` beside its `A` because Git could not pair the two. Claude restored both removed paths, and the checkout kept dispatching an agent the plugin no longer ships while `check` reported drift that never cleared. Commit the removals with the additions; the verb prunes only inside this plugin's prefix, so a removal there is the upgrade, never a loss.
 
 {!% endif %!}**Claude reported the version from a manifest elsewhere on disk.**
 
