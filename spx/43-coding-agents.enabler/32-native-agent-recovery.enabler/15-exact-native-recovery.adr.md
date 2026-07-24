@@ -14,7 +14,9 @@ Prowl preserves sidebar worktree topology independently from instantiated termin
 - An exact native command contains only the prepared agent type, resume locator or complete session identity, and applicable native home; no continuation prose, Prowl status, or recency selector participates in launch or verification.
 - Activation opens only a prepared worktree and accepts only an exact-root result whose returned path and pane bind that target; no Git-worktree or filesystem enumeration creates recovery targets.
 - Native launches sharing one home are serialized through input-ready state.
+- Reassessment planning requires one checked stable-screen context read for every verified pane, including the controller and already-correlated panes; one absent or failed read permits no continuation send.
 - Reassessment reaches a verified non-controller session through a separate checked send whose public input record proves trailing Enter submission exactly once per prepared manifest.
+- Explicit plans remain unfinished until their own acceptance scope is reconciled against delivered work; a separate useful result never absorbs them.
 
 ## Verification
 
@@ -23,7 +25,7 @@ Prowl preserves sidebar worktree topology independently from instantiated termin
 - ALWAYS: preparation maps a complete pre-restart candidate set and exact identity and launch evidence to one durable versioned manifest, rejecting incomplete, duplicate, mismatched, and unauthorized candidates while treating every Prowl status as advisory ([mapping])
 - ALWAYS: activation planning maps prepared worktrees to existing panes or source-owned exact-root Prowl activation operations, preserving every original-pane identity for post-restart binding and never enumerating filesystem worktrees ([mapping])
 - ALWAYS: recovery maps each exact agent type, session identity, resume locator, and applicable native home to its source-owned native resume command and one post-restart pane binding ([mapping])
-- ALWAYS: verified non-controller candidates not present in the manifest's reassessed set map to one separate reassessment delivery, while only a checked trailing-Enter submission extends that set ([mapping])
+- ALWAYS: the complete verified binding set maps with one checked pane read per binding to reassessment planning; absent or failed reads map to zero delivery, while verified non-controller candidates not present in the reassessed set map after the read barrier to one separate delivery ([mapping])
 - ALWAYS: repeated recovery with every candidate exactly correlated and reassessed emits no activation or delivery ([property])
 - ALWAYS: verification accepts only distinct bindings whose process-backed, native-status, current-session, or exact public-agent evidence matches the prepared worktree, agent type, and native session identity ([compliance])
 - NEVER: preparation, activation, launch, or verification accepts transcript recency, rollout recency, terminal presentation, a roster entry without exact session identity, or a latest-session selector as exact evidence ([compliance])
@@ -31,5 +33,5 @@ Prowl preserves sidebar worktree topology independently from instantiated termin
 ### Audit
 
 - ALWAYS: `/recover-prowl-agents` owns the two-phase prepare/recover lifecycle while `/operate-prowl` remains the sole owner of public Prowl command construction ([audit])
-- ALWAYS: the reassessment instruction prioritizes the last unsatisfied operator request, retries responses interrupted by authentication or tool failure, restores pending operator interactions without selecting them, preserves original constraints and authority, and asks rather than exits when prior state cannot be classified ([audit])
-- NEVER: recovery interprets successful delivery as workflow continuation authority, treats restart metadata as cancellation, substitutes repository completion for an unanswered request, or asks for authorization the operator already supplied ([audit])
+- ALWAYS: the reassessment instruction prioritizes the last unsatisfied operator request, reconciles every explicitly presented plan and context artifact against delivered acceptance scope, retries responses interrupted by authentication or tool failure, restores pending operator interactions without selecting them, preserves original constraints and authority, and asks rather than exits when prior state cannot be classified ([audit])
+- NEVER: recovery plans or sends continuation before every verified pane is read, interprets successful delivery as workflow continuation authority, treats distinct useful work as completion of an unreconciled plan, treats restart metadata as cancellation, substitutes repository completion for an unanswered request, or asks for authorization the operator already supplied ([audit])
