@@ -439,19 +439,21 @@ in `<verification_run_contract>` and relay the complete blocked diagnostic from
 
 **An unquoted idempotency key split the command.**
 
-What happened: Claude passed `--idempotency-key python|code|<subject-path>`
-without quotes. The shell read `|` as a pipeline separator and ran the subject
-path as a program, so the command exited `126` with
-`permission denied: <subject-path>` and `spx` never received the key.
+What happened: Claude passed
+`--idempotency-key implementation:python:tests:tests/audit report.py` without
+quotes. The shell split the key at the space, so `spx` received a truncated key
+and a stray argument. The same defect with a subject path carrying `|` instead
+exits `126` with `permission denied: <subject-path>`, because the shell runs
+the fragment after that character as a program.
 
 Why it failed: An unquoted argument reaches the shell before `spx` sees it, so
-any shell metacharacter in a key segment or subject path becomes syntax rather
-than key text. The symptom names a repository path, which reads as a file
-problem rather than the quoting defect it is.
+any shell metacharacter the key carries — including one inside the subject path
+of an otherwise correctly formatted key — becomes syntax rather than key text.
+Both symptoms name a repository path, which reads as a file problem rather than
+the quoting defect it is.
 
-How to avoid: Join key segments only with `:` and pass every key as one
-single-quoted argument, `--idempotency-key '<stable-scope-key>'`, per
-`<verification_run_contract>`.
+How to avoid: Pass every key as one single-quoted argument,
+`--idempotency-key '<stable-scope-key>'`, per `<verification_run_contract>`.
 
 **Deterministic verification ran inside the audit.**
 
