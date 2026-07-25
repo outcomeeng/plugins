@@ -487,6 +487,8 @@ def mapping_evidence_contract() -> tuple[str, ...]:
         root_instruction_topology_legacy_managed,
         root_instruction_topology_near_identical,
         root_instruction_topology_separate,
+        root_instruction_topology_delegating,
+        root_instruction_topology_mutual_delegation,
     )
     return (
         *(f"duplicate-flag[{option}]" for option in module.CLI_OPTION_NAMES),

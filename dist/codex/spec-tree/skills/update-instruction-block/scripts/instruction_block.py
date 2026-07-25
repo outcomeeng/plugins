@@ -854,9 +854,9 @@ def build_root_instruction_documents(
     # A malformed shared fence (an open marker with no matching close, or a duplicated name) makes
     # `parse_shared_regions` read the body as region-free, which would make the bootstrap wrap the
     # dangling marker verbatim into a new region and bury it — a permanently stuck stale state the
-    # ADR forbids ("refuses the ambiguous cases"). Refuse the bootstrap and leave the fence as
-    # independent content, which `--check` and the drift gate already surface as stale for the
-    # update skill to reconcile.
+    # bootstrap must never produce, because an ambiguous seed is refused rather than guessed at.
+    # Refuse the bootstrap and leave the fence as independent content, which `--check` and the
+    # drift gate already surface as stale for the update skill to reconcile.
     malformed = malformed_shared_regions(body_claude) or malformed_shared_regions(
         body_codex
     )

@@ -138,6 +138,7 @@ def _assert_topology_maps_to_bootstrap_outcome(
     topology_factory: Callable[[], harness.RootInstructionTopology],
     expected_region_body: str | None,
     removed_tokens: tuple[str, ...] = (),
+    delegating_filename: str | None = None,
 ) -> None:
     repo = tmp_path / "repo"
     seeds = harness.materialize_root_instruction_topology(repo, topology_factory())
@@ -169,7 +170,13 @@ def _assert_topology_maps_to_bootstrap_outcome(
             exclusive_lines = set(seeds[filename].splitlines()) - set(
                 seeds[other].splitlines()
             )
-            assert all(line in document for line in exclusive_lines)
+            if filename == delegating_filename:
+                # A delegating file adopts the other body, so its own lines are gone.
+                assert not any(
+                    line.strip() and line in document for line in exclusive_lines
+                )
+            else:
+                assert all(line in document for line in exclusive_lines)
     assert all(token not in claude and token not in agents for token in removed_tokens)
     # the router block is always first, whatever the topology
     assert claude.startswith(MODULE.ROUTER_MARKER_PREFIX)
@@ -243,33 +250,46 @@ def mapping_evidence_run() -> harness.EvidenceRun:
             harness.root_instruction_topology_only_claude,
             harness.ROOT_CLAUDE_BODY,
             (),
+            None,
         ),
         (
             harness.root_instruction_topology_only_agents,
             harness.ROOT_AGENTS_BODY,
             (),
+            None,
         ),
         (
             harness.root_instruction_topology_symlinked,
             harness.ROOT_SHARED_BODY,
             (),
+            None,
         ),
         (
             harness.root_instruction_topology_identical,
             harness.ROOT_SHARED_BODY,
             (),
+            None,
         ),
         (
             harness.root_instruction_topology_legacy_managed,
             harness.ROOT_SHARED_BODY,
             legacy_markers + legacy_metadata_prefixes,
+            None,
         ),
         (
             harness.root_instruction_topology_near_identical,
             harness.ROOT_NEAR_IDENTICAL_SHARED,
             (),
+            None,
         ),
-        (harness.root_instruction_topology_separate, None, ()),
+        (harness.root_instruction_topology_separate, None, (), None),
+        (
+            harness.root_instruction_topology_delegating,
+            harness.ROOT_AGENTS_BODY,
+            (),
+            harness.INSTRUCTION_CLAUDE,
+        ),
+        (harness.root_instruction_topology_mutual_delegation, None, (), None),
     )
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
@@ -286,9 +306,12 @@ def mapping_evidence_run() -> harness.EvidenceRun:
         declared.append("shared-region-state-report")
         _assert_check_maps_shared_region_state_to_report(shared_path)
         executed.append("shared-region-state-report")
-        for index, (topology_factory, expected_body, removed_tokens) in enumerate(
-            topology_cases
-        ):
+        for index, (
+            topology_factory,
+            expected_body,
+            removed_tokens,
+            delegating_filename,
+        ) in enumerate(topology_cases):
             case_name = f"topology[{topology_factory.__name__}]"
             declared.append(case_name)
             topology_path = root / f"topology-{index}"
@@ -298,6 +321,7 @@ def mapping_evidence_run() -> harness.EvidenceRun:
                 topology_factory,
                 expected_body,
                 removed_tokens,
+                delegating_filename,
             )
             executed.append(case_name)
 
