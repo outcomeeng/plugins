@@ -13,7 +13,7 @@ claim requires editing the harness rather than the test.
 
 The scenario lane of this node is converted — `observe_implementation_audit_lifecycle`
 and `observe_mismatched_terminal_status_finish` expose observations, and
-`tests/test_implementation_audit_contract.scenario.l1.py` owns every predicate.
+`tests/test_implementation_audit_contract.scenario.l3.py` owns every predicate.
 The compliance lane still carries the rejected shape:
 
 - `spx/21-spec-tree.enabler/68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py` — 16 functions
