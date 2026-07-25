@@ -70,6 +70,54 @@ class RootContentPair:
     content_b: str
 
 
+@dataclass(frozen=True)
+class DelegationShapeCase:
+    """One named root-instruction-body shape in the delegation-verdict domain."""
+
+    name: str
+    body: str
+
+
+def delegating_root_body(other_filename: str) -> str:
+    """Return a root instruction body that only points the reader at ``other_filename``.
+
+    The pointer names the other harness's instruction filename, which the production module
+    owns; this composes the delegating shape around that source value rather than declaring a
+    filename of its own.
+    """
+    return (
+        "# Product\n"
+        "\n"
+        f"See [{other_filename}]({other_filename}) for build and test commands, "
+        "architecture, packages, and testing conventions.\n"
+    )
+
+
+def delegation_shape_cases(
+    other_filename: str, content_body: str
+) -> tuple[DelegationShapeCase, ...]:
+    """Return the four root-body shapes the delegation-verdict mapping ranges over.
+
+    The shapes are the ones the governing assertion enumerates: a body whose every substantive
+    line names ``other_filename``; a body carrying a substantive line that does not; a body with
+    no substantive line at all; and a body naming ``other_filename`` only inside a fenced code
+    block. Each is composed from ``other_filename`` and ``content_body``, both owned elsewhere.
+    """
+    delegating = delegating_root_body(other_filename)
+    return (
+        DelegationShapeCase(name="every-substantive-line-references", body=delegating),
+        DelegationShapeCase(
+            name="a-substantive-line-does-not-reference",
+            body=delegating + "\n" + content_body,
+        ),
+        DelegationShapeCase(name="no-substantive-line", body="# Product\n\n---\n"),
+        DelegationShapeCase(
+            name="reference-inside-a-code-fence",
+            body=f"# Product\n\n```\nsee {other_filename}\n```\n",
+        ),
+    )
+
+
 def _prior_dotted_version(version: str) -> str:
     """Return a dotted-numeric version strictly below ``version``."""
     parts = [int(part) for part in version.split(".")]

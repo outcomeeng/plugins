@@ -724,6 +724,46 @@ def _wrap_shared_at(text: str, start: int, end: int, name: str) -> str:
     return "\n\n".join(part for part in (before, fenced, after) if part) + "\n"
 
 
+def delegates_to(body: str, other_filename: str) -> bool:
+    """Report whether ``body`` does nothing but point the reader at ``other_filename``.
+
+    A delegating root instruction file states that the two root files carry one set of
+    instructions, so the bootstrap treats it as content-absent. The verdict reads the body's
+    *substantive* lines — every non-blank line that is not an ATX heading and not a horizontal
+    rule — and holds only when at least one exists and every one of them names the other root
+    instruction filename. A body carrying any substantive line that does not name the other file
+    carries content of its own, and a fenced code block is content whatever its lines say, so
+    either makes the verdict false. Pure: a string and a filename in, a bool out.
+    """
+    if "```" in body or "~~~" in body:
+        return False
+    substantive = [
+        line
+        for line in (raw.strip() for raw in body.splitlines())
+        if line and not line.startswith("#") and set(line) - set("-*_ ")
+    ]
+    if not substantive:
+        return False
+    return all(other_filename in line for line in substantive)
+
+
+def resolve_delegation(
+    body_a: str, body_b: str, filename_a: str, filename_b: str
+) -> tuple[str, str]:
+    """Replace a delegating body with the content-bearing body it points at.
+
+    ``body_a`` reads ``filename_a`` and ``body_b`` reads ``filename_b``, so a delegating
+    ``body_a`` names ``filename_b``. Exactly one side may delegate: when both do, neither carries
+    content to adopt, and when neither does, there is nothing to resolve — both cases return the
+    bodies unchanged. Pure: strings in, strings out.
+    """
+    a_delegates = delegates_to(body_a, filename_b)
+    b_delegates = delegates_to(body_b, filename_a)
+    if a_delegates == b_delegates:
+        return body_a, body_b
+    return (body_b, body_b) if a_delegates else (body_a, body_a)
+
+
 def bootstrap_wrap(
     text_a: str,
     text_b: str,
@@ -802,9 +842,11 @@ def build_root_instruction_documents(
 
     Pure over the seed and block strings. Each seed's product content is taken (retired generated
     bodies excluded, any existing managed block removed). On first encounter — neither file
-    carries a shared region — the biggest contiguous identical span is wrapped as one shared
-    region per :func:`bootstrap_wrap`; once a shared region exists, the bodies are left as the
-    operator arranged them. The per-harness router block is then prepended to each.
+    carries a shared region — a body that only delegates to the other root instruction file
+    adopts that file's body per :func:`resolve_delegation`, and the biggest contiguous identical
+    span is then wrapped as one shared region per :func:`bootstrap_wrap`; once a shared region
+    exists, the bodies are left as the operator arranged them. The per-harness router block is
+    then prepended to each.
     """
     body_claude = _strip_managed_block(_product_owned_root_document(seeds["claude"]))
     body_codex = _strip_managed_block(_product_owned_root_document(seeds["codex"]))
@@ -824,6 +866,12 @@ def build_root_instruction_documents(
         and not parse_shared_regions(body_codex)
     )
     if first_encounter:
+        body_claude, body_codex = resolve_delegation(
+            body_claude,
+            body_codex,
+            AGENT_HARNESS_INSTRUCTION_FILENAMES["claude"],
+            AGENT_HARNESS_INSTRUCTION_FILENAMES["codex"],
+        )
         body_claude, body_codex = bootstrap_wrap(body_claude, body_codex)
 
     return {

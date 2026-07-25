@@ -196,7 +196,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "Diagnose the spx environment"                          | `/diagnose`            | —                       |
 | "File a follow-up in a dependency queue"                | `/issue`               | —                       |
 
-Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically:
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
 
 | User Says...            | Skill (composed)             | Composing agent          |
 | ----------------------- | ---------------------------- | ------------------------ |

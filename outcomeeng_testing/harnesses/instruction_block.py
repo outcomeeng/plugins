@@ -39,9 +39,12 @@ from hypothesis import given, seed, settings
 from outcomeeng.distribution import instruction_block as distribution
 from outcomeeng_testing.generators.instruction_block import (
     BootstrapThresholdRelation,
+    DelegationShapeCase,
     InstructionBlockCases,
     build_macro as generate_build_macro,
     build_template as generate_template,
+    delegating_root_body as generate_delegating_root_body,
+    delegation_shape_cases as generate_delegation_shape_cases,
     harness_line as generate_harness_line,
     instruction_block_cases,
     unsupported_language_tokens,
@@ -106,6 +109,15 @@ class EvidenceRun:
 
 
 @dataclass(frozen=True)
+class BootstrapOutcome:
+    """The seed bodies and both written root documents observed after one bootstrap write."""
+
+    seeds: dict[str, str]
+    claude: str
+    agents: str
+
+
+@dataclass(frozen=True)
 class RouterSpacingObservation:
     """One source-owned harness/language rendering observed by mapping evidence."""
 
@@ -137,6 +149,36 @@ def root_instruction_topology_only_agents() -> RootInstructionTopology:
     cases = generated_cases()
     return RootInstructionTopology(
         files={cases.instruction_agents: ROOT_AGENTS_BODY}, symlinks={}
+    )
+
+
+def root_instruction_topology_delegating() -> RootInstructionTopology:
+    """Return a root topology whose Claude file only points at the content-bearing Codex file."""
+    cases = generated_cases()
+    return RootInstructionTopology(
+        files={
+            cases.instruction_claude: generate_delegating_root_body(
+                cases.instruction_agents
+            ),
+            cases.instruction_agents: ROOT_AGENTS_BODY,
+        },
+        symlinks={},
+    )
+
+
+def root_instruction_topology_mutual_delegation() -> RootInstructionTopology:
+    """Return a root topology whose two files point at each other and carry no content."""
+    cases = generated_cases()
+    return RootInstructionTopology(
+        files={
+            cases.instruction_claude: generate_delegating_root_body(
+                cases.instruction_agents
+            ),
+            cases.instruction_agents: generate_delegating_root_body(
+                cases.instruction_claude
+            ),
+        },
+        symlinks={},
     )
 
 
@@ -761,6 +803,33 @@ def run_generator_write_primary(
         repo_root,
         template_path,
         languages=cases.lang_primary,
+    )
+
+
+def delegation_shape_cases() -> tuple[DelegationShapeCase, ...]:
+    """Return the generated delegation-verdict shapes over the source-owned Codex filename."""
+    cases = generated_cases()
+    return generate_delegation_shape_cases(cases.instruction_agents, ROOT_AGENTS_BODY)
+
+
+def observe_bootstrap_outcome(
+    tmp_path: pathlib.Path,
+    topology_factory: Callable[[], RootInstructionTopology],
+) -> BootstrapOutcome:
+    """Materialize a root topology, run the real generator write, and read both root documents.
+
+    Owns the temporary repository, the rendered template, and the generator invocation, and
+    returns the seed bodies alongside the two written documents. It applies no predicate — the
+    linked test decides what the observed documents mean.
+    """
+    repo = tmp_path / "repo"
+    seeds = materialize_root_instruction_topology(repo, topology_factory())
+    template = write_template(tmp_path, NEW_VERSION)
+    run_generator_write_primary(repo, template)
+    return BootstrapOutcome(
+        seeds=seeds,
+        claude=(repo / INSTRUCTION_CLAUDE).read_text(encoding="utf-8"),
+        agents=(repo / INSTRUCTION_AGENTS).read_text(encoding="utf-8"),
     )
 
 
