@@ -13,9 +13,11 @@ Product engineers type the skill name and reason about scope from it, so a name 
 
 ## Verification
 
-- ALWAYS: a workflow skill invocable as `/<skill-name>` names the artifact one invocation produces or judges, in the grammatical number that invocation handles
-- ALWAYS: a reference skill is named as a noun phrase naming the domain it standardizes
-- ALWAYS: a thin agent fronting a skill takes its name from the artifact that skill names
-- ALWAYS: a skill whose name misstates the scope of one invocation is renamed to match the invocation
-- NEVER: a skill's grammatical number is derived from a sibling skill's name, a directory name, or a shipped artifact rather than from the artifact one invocation acts on
-- NEVER: a skill's behavior is widened to match a name that overstates its scope
+### Audit
+
+- ALWAYS: a workflow skill invocable as `/<skill-name>` names the artifact one invocation produces or judges, in the grammatical number that invocation handles ([audit])
+- ALWAYS: a reference skill is named as a noun phrase naming the domain it standardizes ([audit])
+- ALWAYS: a thin agent fronting a skill takes its name from the artifact that skill names ([audit])
+- ALWAYS: a skill whose name misstates the scope of one invocation is renamed to match the invocation ([audit])
+- NEVER: a skill's grammatical number is derived from a sibling skill's name, a directory name, or a shipped artifact rather than from the artifact one invocation acts on ([audit])
+- NEVER: a skill's behavior is widened to match a name that overstates its scope ([audit])
