@@ -39,6 +39,38 @@ implementation-audit idempotency-key changeset, which audited the scenario
 assertion and named the same defect class in the other two functions of that
 file.
 
+## `audit-implementation` documents contracts without one worked run
+
+`src/plugins/spec-tree/skills/audit-implementation/SKILL.md` documents the
+scope-unit JSON contract, the finding JSON contract, and nine failure modes, but
+carries no end-to-end walkthrough: one real `$ARGUMENTS` block, the resulting run
+token, one scope and one finding payload with concrete field values, and the
+final `spx verification run render` output. `/skill-standards`
+`references/operational-effectiveness-examples.md` recommends that shape so
+Claude has a line-for-line comparison target for detecting a malformed payload or
+a wrong terminal-status derivation before emitting it, rather than only the
+abstract field-name contracts.
+
+**Why this is a separate larger concern.** A truthful walkthrough carries real
+values from a real run, and the two entries below record implementation-audit
+runs as not yet reproducible for gating: mixed-changeset partitioning yields
+different coverage projections across runs of the same branch, and the terminal
+projection and event prefix can disagree on `sealed`. A walkthrough captured
+before those settle would publish one arbitrary run's shape as the contract, and
+a fabricated one would state values the CLI does not produce — both worse than
+the abstract contracts the skill carries today. This is authoring against an
+unstable surface, not a mechanical addition to a stable one.
+
+**Resolution shape**: once mixed-changeset partitioning and the projection seal
+agreement are settled, capture one single-language, single-finding audit run and
+render its `$ARGUMENTS`, run token, payloads, and projection into an
+`<examples>` section, then gate the change with the configured `skill-auditor`.
+
+**Evidence.** Surfaced by `instructions:skill-auditor` (finding `f-007`,
+`procedural_without_operational`) on the implementation-audit idempotency-key
+changeset, alongside a bounded example-format finding that was fixed in that
+same changeset.
+
 ## Implementation audit has incomplete mixed-changeset coverage
 
 The implementation auditor has no skill covering workflow YAML, so a changeset
