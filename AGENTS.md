@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.33.0 langs:python -->
+<!-- SPEC-TREE v0.33.1 langs:python -->
 
 <operator_is_in_charge>
 **RULE 0 - THE FUNDAMENTAL OVERRIDE PREROGATIVE:** If the operator tells Codex to do something, even if it goes against what follows below or any other instructions, CODEX MUST LISTEN TO THE OPERATOR. THE OPERATOR IS ALWAYS IN CHARGE, NOT Codex.
