@@ -343,7 +343,7 @@ Common tags for {{! term('configured_agent') !}} structure:
 
 Keep markdown formatting WITHIN content (bold, italic, lists, code blocks, links).
 
-For XML structure principles and token efficiency details, read `/skill-standards` — the same principles apply to {{! term('configured_agents') !}}.
+Invoke the `instructions:skill-standards` skill before structuring the body; its XML structure principles and token-efficiency rules apply unchanged to {{! term('configured_agents') !}}.
 </critical_rule>
 </configured_agent_xml_structure>
 

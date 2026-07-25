@@ -38,19 +38,20 @@ An `APPROVED` or `REJECTED` verdict on one subagent configuration file against t
 <audit_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
-1. Read `instructions:create-subagent`. From that skill's `<reference>` index, follow the owning skill's links for every guide that supplies an evaluation area:
+1. Read `instructions:create-subagent`. From that skill's `<reference>` index, follow the owning skill's links for the two guides that supply every must-fix and should-fix area:
    - `subagents.md`
    - `write-subagent-prompts.md`
-   - `evaluation-and-testing.md`
-   - `error-handling-and-recovery.md`
-   - `context-management.md`
-   - `orchestration-patterns.md`
-   - `debugging-agents.md`
 2. Read `instructions:agent-prompt-standards` for voice, description style, constraint language, and anti-patterns.
 3. If `$configured_agent_path` is empty, STOP with `REJECTED` and a critical issue naming the missing required path argument.
-4. Before penalizing any missing section, search entire file for equivalent content under different tag names.
-5. Read the subagent configuration file at `$configured_agent_path`.
-6. Evaluate against the loaded skills and references, focusing on functionality over formatting.
+4. Read the subagent configuration file at `$configured_agent_path`.
+5. Follow the owning skill's link for each remaining guide whose area the configuration puts in play, and skip the rest:
+   - `error-handling-and-recovery.md` when the configuration addresses tool failures, missing data, or unexpected inputs
+   - `orchestration-patterns.md` when the configuration delegates, coordinates, or spawns other subagents
+   - `context-management.md` when the configuration is long-running or declares a context or memory strategy
+   - `evaluation-and-testing.md` when the configuration declares tests, validation criteria, or evaluation metrics
+   - `debugging-agents.md` when the configuration declares logging, tracing, or observability
+6. Before penalizing any missing section, search entire file for equivalent content under different tag names.
+7. Evaluate against the loaded skills and references, focusing on functionality over formatting. An unread guide's area is out of play for this configuration and yields no finding.
 
 **Use ACTUAL patterns from references, not memory.**
 </audit_workflow>

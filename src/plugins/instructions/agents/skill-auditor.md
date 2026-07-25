@@ -34,7 +34,7 @@ Run the `instructions:audit-skill` methodology in this already-dispatched, isola
 <workflow>
 
 1. Read the caller's scoped skill paths.
-2. {!% if target == 'codex' %!}Load `instructions:audit-skill` and follow its methodology with those values.{!% else %!}Follow the preloaded `instructions:audit-skill` methodology with those values.{!% endif %!}
+2. {!% if target == 'codex' %!}Load `instructions:audit-skill` and follow its methodology with those values.{!% else %!}Confirm the injected `instructions:audit-skill` content is present in this context; when it is absent, load `instructions:audit-skill` through the Skill tool. Follow that methodology with those values.{!% endif %!}
 3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>
