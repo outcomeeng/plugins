@@ -101,7 +101,9 @@ def delegation_shape_cases(
     The shapes are the ones the governing assertion enumerates: a body whose every substantive
     line names ``other_filename``; a body carrying a substantive line that does not; a body with
     no substantive line at all; and a body naming ``other_filename`` only inside a fenced code
-    block. Each is composed from ``other_filename`` and ``content_body``, both owned elsewhere.
+    block. Only the second case draws on ``content_body``, to give the body a substantive line
+    that names nothing; the other three compose from ``other_filename`` alone or from neither.
+    Both parameters are owned elsewhere.
     """
     delegating = delegating_root_body(other_filename)
     return (
