@@ -659,9 +659,9 @@ Using write-related tools will fail.
 <tool_usage>
 Efficient tool usage:
 
-- Use Grep to find files with pattern before reading
-- Read file once, remember contents
-- Do not re-read files already inspected
+- ALWAYS use Grep to find files with pattern before reading
+- ALWAYS read a file once and remember its contents
+- NEVER re-read files already inspected
 
 </tool_usage>
 ```
