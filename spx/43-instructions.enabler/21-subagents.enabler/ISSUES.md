@@ -24,6 +24,15 @@ exercise the affected create/edit paths in fresh contexts. Regenerate both runti
 trees, run the focused skill checks, and obtain a complete-bundle
 `instructions:skill-auditor` verdict before publication.
 
+The overview's section order belongs to the same rework. `SKILL.md`'s one hard rule
+— {{! term('configured_agents') !}} are black boxes that cannot interact with users —
+sits inside `<critical_constraint>` nested under `<execution_model>`, after
+`<quick_start>`, `<file_structure>`, and `<configuration>`. A rule whose violation
+manifests as a silently hung {{! term('configured_agent') !}} reads better near the
+objective, and the sibling `/create-skill` surfaces its rules in a top-level block.
+Decide the builder-skill section taxonomy once during the rework rather than moving
+this block ahead of it.
+
 This is a separate content-consolidation refactor across the overview and five
 references. Each skill audit binds to the exact committed head it ran against, so
 this entry records finding content only and makes no standing approval claim.
