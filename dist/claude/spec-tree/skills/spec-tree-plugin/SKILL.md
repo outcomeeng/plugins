@@ -14,15 +14,15 @@ The spec-tree plugin's consumer-side footprint reported, placed, or refreshed in
 
 Select one verb from the invocation. `help` is the default when none is given.
 
-| Verb      | Result                                                                             |
-| --------- | ---------------------------------------------------------------------------------- |
-| `help`    | This plugin's verbs and what each one changes                                      |
-| `version` | The plugin version the running session resolved                                    |
-| `init`    | This plugin's checkout footprint established for this version                      |
-| `upgrade` | This plugin's checkout footprint brought to this version, retiring what it dropped |
-| `check`   | Whether the checkout's footprint matches this version, changing nothing            |
+| Verb      | Result                                                                               |
+| --------- | ------------------------------------------------------------------------------------ |
+| `help`    | This plugin's verbs and what each one changes                                        |
+| `version` | The plugin version the running session resolved                                      |
+| `init`    | This plugin's checkout footprint established for this version †                      |
+| `upgrade` | This plugin's checkout footprint brought to this version, retiring what it dropped † |
+| `check`   | Whether the checkout's footprint matches this version, changing nothing †            |
 
-This agent's plugin manifest declares the plugin's agents, so they reach a session through the manifest and no checkout placement applies. `init`, `upgrade`, and `check` report that and change nothing here; they carry the footprint work only for an agent whose manifest cannot declare agents.
+† This agent's plugin manifest declares the plugin's agents, so they reach a session through the manifest and no checkout placement applies. `init`, `upgrade`, and `check` report that and change nothing here; they carry the footprint work only for an agent whose manifest cannot declare agents.
 
 </verbs>
 
@@ -40,31 +40,29 @@ That path is relative to this skill's own directory, so it resolves inside which
 
 <placement>
 
-Placement does not apply on this agent: its plugin manifest declares the plugin's agents, so the installer delivers them and no file is written into the checkout. The bundled script reports that and exits without changing anything.
+Placement does not apply on this agent: its plugin manifest declares the plugin's agents, so the installer delivers them and no file is written into the checkout. The bundled script reports that and exits without changing anything; the call that reports it looks like this:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py" --checkout <repository-root>
 ```
 
-The script owns the whole footprint operation: it writes this plugin's definitions, removes definitions that carry this plugin's prefix but no longer ship with it, and leaves every other file in that directory untouched. `check` passes `--check`, which reports drift and writes nothing.
-
-Definitions are generated at build time and ship inside this skill, so placement is a file copy. Claude never edits a placed definition, and never converts, rewrites, or hand-authors one — a placed file that needs to change is changed at its source and re-placed.
+`init`, `upgrade`, and `check` all report the same and write nothing, because this plugin's agents reach a session through the manifest rather than through the checkout.
 
 </placement>
 
+<persistence>
+
+This agent receives the plugin's agents through its manifest, so the checkout carries no agent files from this plugin and this verb commits nothing.
+
+</persistence>
+
 <ownership_boundary>
 
-This plugin places and prunes only within the namespace its own name prefixes. Agent definitions a developer authored, and definitions another plugin provides, are outside that namespace and stay untouched even when their content matches what this plugin would write.
-
-A file inside the namespace is this plugin's to replace or remove. A file outside it is never this plugin's to claim, and matching content is not ownership.
+This plugin claims no file in the checkout on this agent, because its manifest delivers the agents and no verb writes.
 
 </ownership_boundary>
 
 <failure_modes>
-
-**Claude hand-copied the agent definitions instead of running the script.**
-
-The definitions were placed by hand from the skill directory, so pruning never ran and a definition retired in a later version stayed behind, shadowing nothing but reported as current. Run the script; it owns placement and pruning together.
 
 **Claude reported the version from a manifest elsewhere on disk.**
 
@@ -76,8 +74,6 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 
 - Exactly one verb runs per invocation, defaulting to `help`.
 - `version` reads only the skill-directory-relative manifest path named above, never another copy on disk.
-- Placement and pruning happen through the bundled script, never by hand.
-- Every file written or removed carries this plugin's namespace prefix; no other file in the agent directory changes.
-- `check` writes nothing and reports drift.
+- Every footprint verb reports that the manifest delivers this plugin's agents, and writes nothing.
 
 </success_criteria>
