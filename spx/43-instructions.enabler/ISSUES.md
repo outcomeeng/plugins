@@ -90,24 +90,3 @@ Required handling: decide which layer owns per-runtime model selection for agent
 The audit skills declare their target input two ways. `src/plugins/instructions/skills/audit-subagent/SKILL.md` declares `argument-hint` and `arguments` and substitutes the named argument through its body. `src/plugins/instructions/skills/audit-skill/SKILL.md`, `src/plugins/spec-tree/skills/audit-adr/SKILL.md`, and `src/plugins/spec-tree/skills/audit-pdr/SKILL.md` declare no argument and take their target from the invoking prompt, so `/` autocomplete offers no signal about the expected input. `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` requires `argument-hint` when a skill takes arguments, which does not settle whether an audit target is an argument or prompt context.
 
 Required handling: decide whether an audit skill's target is a declared argument, then apply the answer across the audit-skill family rather than one file at a time — the answer changes each skill's input contract and its `missing_argument_hint` exposure under `audit-skill`'s own anti-pattern list. Reconcile with entry 1's skeleton sweep, which rewrites the same frontmatter. Gate changed skills with `instructions:skill-auditor`.
-
-## 10. Subagent cluster has no node-level spec home
-
-This node's `PROVIDES` covers creating and auditing skills **and** subagents plus the
-prompt conventions they share, while its only child
-(`spx/43-instructions.enabler/21-skills.enabler`) scopes itself to SKILL.md files. No
-assertion anywhere in `spx/` names `/create-subagent`, `/audit-subagent`, or
-`/agent-prompt-standards`, so the subagent cluster ships with the builder and the auditor
-governed by nothing below this node's four assertions.
-
-The gap has two consequences. The auditor has no canonical-rules owner to load, so it
-carries a parallel rulebook restating `/agent-prompt-standards` — the violation of this
-node's assertion 2. And the cluster's structure rules — frontmatter fields, tool grants,
-model selection, XML structure, the `inherit` prohibition — are declared nowhere.
-
-Required handling: give the subagent cluster its own node under this one, declaring the
-symmetric triad — builder, canonical-rules owner, auditor — with the single-source
-assertions mirroring `spx/43-instructions.enabler/21-skills.enabler/skills.md:17,24`.
-`/agent-prompt-standards` stays governed here, since both clusters share it and a
-cross-cutting invariant belongs in the ancestor spec. Route the index through
-`/decompose`, which owns proving the dependency consequence.

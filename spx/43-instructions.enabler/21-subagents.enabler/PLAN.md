@@ -29,9 +29,9 @@ Worklist:
    dispatch `instructions:skill-auditor` over every changed skill surface, then run the
    changeset review.
 
-The consolidation entries in
-`spx/43-instructions.enabler/21-skills.enabler/ISSUES.md` — the `/create-subagent`
-bundle duplication and the four deferred `WARNING` findings — resolve inside this work
+The consolidation entry in
+`spx/43-instructions.enabler/21-subagents.enabler/ISSUES.md` — the `/create-subagent`
+bundle duplication and the four deferred `WARNING` findings — resolves inside this work
 rather than separately: extracting the canonical rules is that consolidation under a
 governing principle.
 
