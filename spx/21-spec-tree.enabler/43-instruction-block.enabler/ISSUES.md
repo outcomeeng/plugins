@@ -11,6 +11,18 @@ The node concept is "instruction block" across this node, its decision, the gene
 
 Renaming "the agent guide" and `root_guide` requires one product-vocabulary decision followed by a coordinated build-token migration. Revisit this issue before any change renames either term; until that decision, "guide" remains the general description of the root files and `root_guide` remains the build token.
 
+## Evidence-run modules hold the predicates their linked tests should own
+
+Four modules — `outcomeeng_testing/harnesses/instruction_block_{scenario,mapping,property,compliance}_evidence.py` — carry every behavioral predicate for this node, while each linked test file asserts only that a case-name list of executed checks equals a declared list. That inverts the predicate seam `spec-tree:test-evidence-standards` `<predicate_seam>` requires: a reader cannot see the pass/fail predicate from the linked test, and inverting any behavioral claim changes a harness rather than the linked test. The same standard's litmus 1 and litmus 2 both fail. `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` states the same rule as an audit assertion: infrastructure exposes observations and never calls an assertion API.
+
+The pattern is confined to this node; no other node in the tree uses it, and no decision records it as an accepted shape. `outcomeeng_testing/harnesses/property_evidence.py` is not part of this issue — it owns replayable property-run configuration, which is legitimate harness ownership.
+
+**Resolution shape**: move each `_assert_*` body into its linked test file as a named test function, reduce the evidence modules to observation and resource providers returning the documents, exit codes, and parsed regions the tests judge, and delete the declared/executed case-name bookkeeping once no test depends on it.
+
+**Why it is large**: roughly sixty assertions across four evidence modules and six linked test files, none of which changes product behavior. It is a test-architecture migration whose scope is the node's whole evidence chain, independent of any single generator change, and it is best gated by `test-evidence-auditor` in one pass rather than folded into an unrelated change.
+
+**Evidence**: surfaced while adding delegating-stub evidence for the bootstrap render model. The two scenario cases and one mapping case added in that change are written in the corrected shape — predicates in the linked test, `observe_bootstrap_outcome` returning observations only — so the node now carries both shapes until this migration lands.
+
 ## Generator migration awaits a published SPX CLI capability
 
 `src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py` runs to 1419 lines — parse, dotted-version compare, language/harness filtering, router rendering, shared-region parsing with whole-side git-recency reconcile, and biggest-identical-span bootstrap — imported as a module by `outcomeeng_testing/harnesses/instruction_block.py` and exercised by the four `l1` suites here. Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; this generator has proven its value many times over. The render model (router block plus shared regions, reconciled by git recency) keeps that obligation alive even though it deletes the earlier command-slot parser.
