@@ -45,7 +45,7 @@ def test_root_topology_maps_to_bootstrap_outcome(tmp_path: pathlib.Path) -> None
             }
             if filename == case.delegating_filename:
                 assert not any(line in document for line in own_lines), case.name
-            elif case.expected_region_body is not None:
+            else:
                 assert all(line in document for line in own_lines), case.name
             assert document.startswith(MODULE.ROUTER_MARKER_PREFIX), case.name
             for token in case.removed_tokens:
