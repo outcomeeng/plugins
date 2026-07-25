@@ -109,6 +109,17 @@ class EvidenceRun:
 
 
 @dataclass(frozen=True)
+class BootstrapTopologyCase:
+    """One member of the finite initial-topology domain the bootstrap mapping ranges over."""
+
+    name: str
+    factory: Callable[[], RootInstructionTopology]
+    expected_region_body: str | None
+    removed_tokens: tuple[str, ...]
+    delegating_filename: str | None
+
+
+@dataclass(frozen=True)
 class BootstrapOutcome:
     """The seed bodies and both written root documents observed after one bootstrap write."""
 
@@ -479,17 +490,6 @@ def scenario_evidence_contract() -> tuple[str, ...]:
 def mapping_evidence_contract() -> tuple[str, ...]:
     """Return the independent case manifest required by mapping evidence."""
     module = load_instruction_block_module()
-    topology_factories = (
-        root_instruction_topology_only_claude,
-        root_instruction_topology_only_agents,
-        root_instruction_topology_symlinked,
-        root_instruction_topology_identical,
-        root_instruction_topology_legacy_managed,
-        root_instruction_topology_near_identical,
-        root_instruction_topology_separate,
-        root_instruction_topology_delegating,
-        root_instruction_topology_mutual_delegation,
-    )
     return (
         *(f"duplicate-flag[{option}]" for option in module.CLI_OPTION_NAMES),
         *(
@@ -500,7 +500,6 @@ def mapping_evidence_contract() -> tuple[str, ...]:
         "detected-language-set",
         "router-state-report",
         "shared-region-state-report",
-        *(f"topology[{factory.__name__}]" for factory in topology_factories),
         "span-ratio-wrap-decision",
     )
 
@@ -805,6 +804,72 @@ def run_generator_write_primary(
         repo_root,
         template_path,
         languages=cases.lang_primary,
+    )
+
+
+def bootstrap_topology_cases() -> tuple[BootstrapTopologyCase, ...]:
+    """Return the complete finite initial-topology domain of the bootstrap mapping.
+
+    One entry per domain member the governing assertion enumerates. Each carries the topology
+    factory, the shared-region body the bootstrap is expected to produce (``None`` when no region
+    is wrapped), the tokens the write must remove, and the file whose own lines are adopted away
+    when the topology delegates. It applies no predicate; the linked mapping test judges each
+    observed outcome against these values.
+    """
+    module = load_instruction_block_module()
+    legacy_markers = tuple(
+        marker for pair in module.LEGACY_MANAGED_BLOCK_MARKERS for marker in pair
+    )
+    legacy_metadata_prefixes = (
+        module.MANAGED_TEMPLATE_VERSION_PREFIX,
+        module.MANAGED_TEMPLATE_SOURCE_PREFIX,
+        module.MANAGED_LANGUAGES_PREFIX,
+    )
+    return (
+        BootstrapTopologyCase(
+            "only_claude",
+            root_instruction_topology_only_claude,
+            ROOT_CLAUDE_BODY,
+            (),
+            None,
+        ),
+        BootstrapTopologyCase(
+            "only_agents",
+            root_instruction_topology_only_agents,
+            ROOT_AGENTS_BODY,
+            (),
+            None,
+        ),
+        BootstrapTopologyCase(
+            "symlinked", root_instruction_topology_symlinked, ROOT_SHARED_BODY, (), None
+        ),
+        BootstrapTopologyCase(
+            "delegating",
+            root_instruction_topology_delegating,
+            ROOT_AGENTS_BODY,
+            (),
+            INSTRUCTION_CLAUDE,
+        ),
+        BootstrapTopologyCase(
+            "identical", root_instruction_topology_identical, ROOT_SHARED_BODY, (), None
+        ),
+        BootstrapTopologyCase(
+            "legacy_managed",
+            root_instruction_topology_legacy_managed,
+            ROOT_SHARED_BODY,
+            legacy_markers + legacy_metadata_prefixes,
+            None,
+        ),
+        BootstrapTopologyCase(
+            "near_identical",
+            root_instruction_topology_near_identical,
+            ROOT_NEAR_IDENTICAL_SHARED,
+            (),
+            None,
+        ),
+        BootstrapTopologyCase(
+            "separate", root_instruction_topology_separate, None, (), None
+        ),
     )
 
 
