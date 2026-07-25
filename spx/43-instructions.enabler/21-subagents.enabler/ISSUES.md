@@ -52,3 +52,35 @@ propagating a rename:
 Reconcile with `spx/43-instructions.enabler/ISSUES.md` entries 3 (verdict-row
 taxonomy), 4 (audit-skill eval coverage), 7 (runtime terminology), and 9
 (audit-skill target-argument convention) before editing the auditor surface.
+
+## Reference description examples model the weaker activation form
+
+`/agent-prompt-standards` `<description_style>` measures description wording at
+~100% activation for the directive form (`ALWAYS invoke ... when <triggers>`) and
+~77% for the passive form (`... Use when ...`), and
+`spx/43-instructions.enabler/instructions.md:12` centralizes description
+conventions there for skills **and** subagents. The worked examples in
+`src/plugins/instructions/skills/create-subagent/references/subagents.md` teach the
+passive form, including the ✅ Good example under `<clear_triggers>`
+("Reviews code for security risks. Use after changes involving authentication,
+data access, or user input.") and the configuration samples that follow it. An
+author copying an example gets the weaker form; the two auditor agents this plugin
+ships use the directive form, so the reference and the shipped configurations
+disagree.
+
+The `<clear_triggers>` block also states a description-convention rule that
+`/agent-prompt-standards` owns, which
+`spx/43-instructions.enabler/21-subagents.enabler/subagents.md:20` forbids
+restating inside `/create-subagent`.
+
+**Resolution shape**: resolve inside the `/subagent-standards` extraction above —
+the block is a canonical rule to migrate, not a local edit. Decide whether
+`<clear_triggers>` keeps a specificity rule that cites the standard for style, or
+disappears into `/subagent-standards` entirely, then bring every worked example
+onto the chosen form in one pass.
+
+**Evidence.** An `instructions:subagent-auditor` run recommended rewriting
+`src/plugins/instructions/agents/subagent-auditor.md`'s directive description into
+the passive form, citing these reference examples. The recommendation was dropped
+because the governing standard prescribes the directive form the configuration
+already uses — but the disagreement it read is real and lives in the reference.

@@ -16,6 +16,13 @@ Before starting, reconcile this work with:
 - `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md` for the run-journal migration.
 - Any active structural-conformance session touching the same audit-skill family.
 
+A concrete instance for the sweep: `audit-skill/SKILL.md` and `audit-subagent/SKILL.md` both carry a
+`<validation>` checklist (Completeness, Precision, Accuracy, Actionability, Fairness, Context,
+Examples) restating ground `<success_criteria>` already covers, and the auditor skeleton carries no
+such block. Both instances are the same defect, so fold each checklist item not already stated in
+`<success_criteria>` into that section and drop the rest across the family in one pass rather than
+per skill.
+
 Gate changed skills with `instructions:skill-auditor`, then `just build-skills`, `just check-skills`, and `just docs-check`.
 
 ## 2. `<quick_start>` policy enforcement on reference skills
