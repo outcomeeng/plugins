@@ -561,9 +561,7 @@ def verify_native_agent_recovery_compliance() -> list[str]:
         )
         if delivery[module.TEXT_FIELD] != expected:
             failures.append("recovery did not emit exact native resume command")
-        if module.RECOVERY_REASSESSMENT_PROMPT in cast(
-            str, delivery[module.TEXT_FIELD]
-        ):
+        if module.NON_CONTROLLER_BOUNDARY in cast(str, delivery[module.TEXT_FIELD]):
             failures.append("native launch transport included reassessment prose")
         if "--latest" in cast(str, delivery[module.TEXT_FIELD]):
             failures.append("recovery command used a latest-session selector")
@@ -679,27 +677,47 @@ def verify_native_agent_recovery_compliance() -> list[str]:
     if blocked_reassessment[module.DELIVERIES_FIELD]:
         failures.append("failed pane read produced partial continuation delivery")
 
-    reassessment = module.plan_reassessment(prepared, bindings, verified, reads)
-    reassessment_deliveries = cast(
-        list[dict[str, object]], reassessment[module.DELIVERIES_FIELD]
-    )
-    expected_reassessment_count = sum(
-        candidate[module.EVIDENCE_FIELD] is not module.EvidenceSource.CURRENT_SESSION
+    continuation_sessions = [
+        cast(str, candidate[module.SESSION_ID_FIELD])
         for candidate in cast(
             list[dict[str, object]], prepared[module.CANDIDATES_FIELD]
         )
+        if candidate[module.EVIDENCE_FIELD] is not module.EvidenceSource.CURRENT_SESSION
+    ]
+    # A recipient the controller judged intact supplies no fact and receives nothing.
+    intact_session = continuation_sessions[-1]
+    restored = [
+        {
+            module.SESSION_ID_FIELD: session_id,
+            module.TEXT_FIELD: f"The restart killed the command {session_id} was running.",
+        }
+        for session_id in continuation_sessions
+        if session_id != intact_session
+    ]
+    reassessment = module.plan_reassessment(
+        prepared, bindings, verified, reads, restored
+    )
+    reassessment_deliveries = cast(
+        list[dict[str, object]], reassessment[module.DELIVERIES_FIELD]
     )
     if reassessment[module.STATUS_FIELD] != module.ResultStatus.REASSESSMENT_READY:
         failures.append("verified recovery did not prepare reassessment")
     if reassessment[module.PANE_READ_RESULTS_FIELD] != reads:
         failures.append("reassessment did not preserve the complete pane-read barrier")
-    if len(reassessment_deliveries) != expected_reassessment_count:
-        failures.append("reassessment did not exclude only the active controller")
+    if len(reassessment_deliveries) != len(restored):
+        failures.append("reassessment did not deliver exactly the restored recipients")
+    if cast(list[str], reassessment[module.NO_CONTINUATION_SESSION_IDS_FIELD]) != [
+        intact_session
+    ]:
+        failures.append("reassessment did not record the judged-intact recipient")
+    if any(
+        delivery[module.SESSION_ID_FIELD] == intact_session
+        for delivery in reassessment_deliveries
+    ):
+        failures.append("reassessment delivered to a recipient judged intact")
     for delivery in reassessment_deliveries:
-        if module.RECOVERY_REASSESSMENT_PROMPT not in cast(
-            str, delivery[module.TEXT_FIELD]
-        ):
-            failures.append("separate reassessment delivery omitted its prompt")
+        if module.NON_CONTROLLER_BOUNDARY not in cast(str, delivery[module.TEXT_FIELD]):
+            failures.append("separate reassessment delivery omitted its boundary")
         reassessment_words = shlex.split(cast(str, delivery[module.TEXT_FIELD]))
         if any(
             reassessment_words[: len(prefix)] == list(prefix)

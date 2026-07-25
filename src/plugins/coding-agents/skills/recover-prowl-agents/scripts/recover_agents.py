@@ -22,22 +22,10 @@ ACTIVATION_OPEN_OPERATION = "open"
 ACTIVATION_TAB_CREATE_OPERATION = "tab-create"
 EXACT_ROOT_RESOLUTION = "exact-root"
 
-RECOVERY_REASSESSMENT_PROMPT = (
-    "Treat the restart, authentication repair, or tool failure as a transport "
-    "interruption, not cancellation. Identify the last substantive operator request "
-    "and whether it received a complete successful response. If not, complete it now "
-    "under its original constraints; after successful authentication, retry the "
-    "interrupted response. Before acting or declaring anything complete, read the "
-    "resumed conversation and every plan or context artifact explicitly presented "
-    "there, then compare its acceptance scope with the work actually delivered. "
-    "Never treat separate useful work as absorbing or completing an unreconciled "
-    "plan. If an operator question, structured selection, approval request, or "
-    "external blocker was pending, re-present it with the same known facts and "
-    "options and wait without selecting or acting past it. Continue independently "
-    "authorized work without asking again. Inspect repository or SPX state only when "
-    "the pending request requires it. Stop only when every operator request is "
-    "satisfied and the workflow completed or was explicitly cancelled. If the prior "
-    "state cannot be classified, ask the operator rather than exiting."
+NON_CONTROLLER_BOUNDARY = (
+    "You are not the recovery controller. Another session owns this restart "
+    "recovery, so invoke no recovery workflow and send no text and no keys to any "
+    "pane, including your own siblings."
 )
 
 SCHEMA_VERSION_FIELD = "schemaVersion"
@@ -67,6 +55,7 @@ STATUS_FIELD = "status"
 DETAIL_FIELD = "detail"
 PANE_ID_FIELD = "paneId"
 ORIGINAL_PANE_ID_FIELD = "originalPaneId"
+CONTROLLER_PANE_ID_FIELD = "controllerPaneId"
 WORKTREE_ID_FIELD = "worktreeId"
 WORKTREE_PATH_FIELD = "worktreePath"
 REPOSITORY_ROOT_FIELD = "repositoryRoot"
@@ -74,6 +63,8 @@ SESSION_ID_FIELD = "sessionId"
 RESUME_LOCATOR_FIELD = "resumeLocator"
 NATIVE_HOME_FIELD = "nativeHome"
 REASSESSED_SESSION_IDS_FIELD = "reassessedSessionIds"
+RESTORED_FIELD = "restored"
+NO_CONTINUATION_SESSION_IDS_FIELD = "noContinuationSessionIds"
 AGENT_TYPE_FIELD = "agentType"
 EVIDENCE_FIELD = "evidence"
 SOURCE_FIELD = "source"
@@ -187,6 +178,12 @@ class AgentIdentity:
     agent_type: AgentType
     status: str
     session_id: str | None
+
+
+@dataclass(frozen=True)
+class AttestedController:
+    pane_id: str
+    candidate: "PreparedCandidate"
 
 
 @dataclass(frozen=True)
@@ -461,6 +458,67 @@ def _agent_roster(items: list[dict[str, object]]) -> dict[str, list[AgentIdentit
     return roster
 
 
+def _attested_controller(
+    value: object,
+    candidates: list[PreparedCandidate],
+    panes: dict[str, PaneIdentity],
+    agents: dict[str, list[AgentIdentity]],
+) -> AttestedController | None:
+    """Bind the running controller to its post-restart pane on current-session evidence.
+
+    A controller whose native transcript resolves under a different project root than
+    its pane's working directory stays unidentified in the public agent roster, so
+    activation would read the controller's own pane as a mismatched occupant and stop.
+    The caller attests the exact pane it is running in; every other pane keeps the
+    strict roster match, and the attested pane is never relaunched.
+    """
+    if value is None:
+        return None
+    pane_id = _text(value, CONTROLLER_PANE_ID_FIELD)
+    controller = next(
+        (
+            candidate
+            for candidate in candidates
+            if candidate.evidence is EvidenceSource.CURRENT_SESSION
+        ),
+        None,
+    )
+    if controller is None:
+        raise AdapterError(
+            ResultStatus.INVALID_TARGET,
+            "An attested controller pane requires one current-session candidate.",
+        )
+    pane = panes.get(pane_id)
+    if pane is None:
+        raise AdapterError(
+            ResultStatus.INVALID_TARGET,
+            f"Attested controller pane {pane_id} is absent from the post-restart panes.",
+        )
+    if pane.worktree_path != controller.worktree_path:
+        raise AdapterError(
+            ResultStatus.INVALID_TARGET,
+            "Attested controller pane does not sit in the controller candidate worktree.",
+        )
+    matches = agents.get(pane_id, [])
+    if len(matches) > 1:
+        raise AdapterError(
+            ResultStatus.INVALID_TARGET,
+            "Attested controller pane reports more than one agent.",
+        )
+    for agent in matches:
+        if agent.agent_type is not controller.agent_type:
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                "Attested controller pane reports another agent type.",
+            )
+        if agent.session_id is not None and agent.session_id != controller.session_id:
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                "Attested controller pane reports another native session.",
+            )
+    return AttestedController(pane_id=pane_id, candidate=controller)
+
+
 def _validate_candidate_set(candidates: list[PreparedCandidate]) -> None:
     pane_ids = [candidate.original_pane_id for candidate in candidates]
     session_ids = [candidate.session_id for candidate in candidates]
@@ -689,10 +747,12 @@ def plan_activation(
     prepared: object,
     pane_items: list[dict[str, object]],
     agent_items: list[dict[str, object]],
+    controller_pane: object = None,
 ) -> dict[str, object]:
     candidates = _prepared_candidates(prepared)
     panes = _pane_roster(pane_items)
     agents = _agent_roster(agent_items)
+    attested = _attested_controller(controller_pane, candidates, panes, agents)
     by_worktree: dict[str, list[PreparedCandidate]] = {}
     panes_by_worktree: dict[str, list[PaneIdentity]] = {}
     for candidate in candidates:
@@ -716,6 +776,12 @@ def plan_activation(
         )
         unoccupied: list[PaneIdentity] = []
         for pane in current:
+            if attested is not None and pane.pane_id == attested.pane_id:
+                bindings.append(
+                    Binding(attested.candidate.original_pane_id, pane.pane_id)
+                )
+                remaining.remove(attested.candidate)
+                continue
             matches = agents.get(pane.pane_id, [])
             if not matches:
                 unoccupied.append(pane)
@@ -982,12 +1048,15 @@ def native_resume_command(candidate: PreparedCandidate) -> str:
     return shlex.join((*prefix, candidate.session_id))
 
 
-def reassessment_prompt(candidate: PreparedCandidate) -> str:
-    return (
-        f"Recovery verified native {candidate.agent_type.value} session "
-        f"{candidate.session_id} in {candidate.worktree_path}. "
-        f"{RECOVERY_REASSESSMENT_PROMPT}"
-    )
+def reassessment_prompt(restored: str) -> str:
+    """Carry one restored fact under the machine-enforced non-controller boundary.
+
+    The controller supplies what this restart destroyed for this one recipient,
+    having read that recipient's pane. Nothing else is added: a recipient's next
+    action belongs to the recipient, which holds the conversation the controller
+    cannot see.
+    """
+    return f"{NON_CONTROLLER_BOUNDARY} {restored}"
 
 
 def recover(
@@ -995,11 +1064,13 @@ def recover(
     binding_items: object,
     pane_items: list[dict[str, object]],
     agent_items: list[dict[str, object]],
+    controller_pane: object = None,
 ) -> dict[str, object]:
     candidates = _prepared_candidates(prepared)
     bindings = _validated_bindings(binding_items, candidates)
     panes = _pane_roster(pane_items)
     agents = _agent_roster(agent_items)
+    attested = _attested_controller(controller_pane, candidates, panes, agents)
     candidates_by_original = {
         candidate.original_pane_id: candidate for candidate in candidates
     }
@@ -1015,11 +1086,15 @@ def recover(
                 f"Binding for {binding.original_pane_id} does not match one post-restart pane and worktree.",
             )
         matches = agents.get(binding.pane_id, [])
+        is_attested = attested is not None and binding.pane_id == attested.pane_id
         if len(matches) > 1 or (
             matches
             and (
                 matches[0].agent_type is not candidate.agent_type
-                or matches[0].session_id != candidate.session_id
+                or (
+                    matches[0].session_id != candidate.session_id
+                    and not (is_attested and matches[0].session_id is None)
+                )
             )
         ):
             occupied.append(binding.pane_id)
@@ -1129,6 +1204,18 @@ def settle_recovery(plan: object, result_items: object) -> dict[str, object]:
         reassessed.update(
             _text(delivery.get(SESSION_ID_FIELD), "plan.delivery.sessionId")
             for delivery in deliveries
+        )
+        # A recipient the controller read and judged intact is settled by that
+        # judgment; recording it keeps a repeated recovery from revisiting it.
+        judged_none = value.get(NO_CONTINUATION_SESSION_IDS_FIELD) or []
+        if not isinstance(judged_none, list):
+            raise AdapterError(
+                ResultStatus.INVALID_SCHEMA,
+                "Plan noContinuationSessionIds must be an array.",
+            )
+        reassessed.update(
+            _text(session_id, f"plan.noContinuationSessionIds[{index}]")
+            for index, session_id in enumerate(judged_none)
         )
         updated_prepared = {
             **prepared,
@@ -1242,11 +1329,44 @@ def verify(
     }
 
 
+def _restored_facts(items: object, pending_sessions: set[str]) -> dict[str, str]:
+    """Read the controller's per-recipient judgment of what the restart destroyed.
+
+    One entry per recipient that needs anything at all. A recipient the controller
+    read and judged intact is simply absent, and receives nothing: a restart that
+    destroyed nothing for a session gives that session no reason to spend a turn.
+    """
+    facts: dict[str, str] = {}
+    for index, item in enumerate(_array(items or [], RESTORED_FIELD)):
+        location = f"{RESTORED_FIELD}[{index}]"
+        entry = _object(item, location)
+        session_id = _text(entry.get(SESSION_ID_FIELD), f"{location}.sessionId")
+        text = _text(entry.get(TEXT_FIELD), f"{location}.text").strip()
+        if not text:
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                f"Restored fact for {session_id} is empty; omit the entry instead.",
+            )
+        if session_id not in pending_sessions:
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                f"Restored fact names {session_id}, which is not awaiting continuation.",
+            )
+        if session_id in facts:
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                f"Restored facts name {session_id} more than once.",
+            )
+        facts[session_id] = text
+    return facts
+
+
 def plan_reassessment(
     prepared: object,
     binding_items: object,
     verification: object,
     pane_read_items: object,
+    restored_items: object = None,
 ) -> dict[str, object]:
     candidates = _prepared_candidates(prepared)
     bindings = _validated_bindings(binding_items, candidates)
@@ -1305,15 +1425,19 @@ def plan_reassessment(
         for binding, candidate in zip(bindings, candidates, strict=True)
         if candidate.session_id not in reassessed
     ]
+    pending_sessions = {candidate.session_id for _, candidate in pending}
+    restored = _restored_facts(restored_items, pending_sessions)
     deliveries = [
         {
             ORIGINAL_PANE_ID_FIELD: binding.original_pane_id,
             PANE_ID_FIELD: binding.pane_id,
             SESSION_ID_FIELD: candidate.session_id,
-            TEXT_FIELD: reassessment_prompt(candidate),
+            TEXT_FIELD: reassessment_prompt(restored[candidate.session_id]),
         }
         for binding, candidate in pending
+        if candidate.session_id in restored
     ]
+    judged_none = sorted(pending_sessions - set(restored))
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         STATUS_FIELD: (
@@ -1325,6 +1449,7 @@ def plan_reassessment(
         BINDINGS_FIELD: [binding.result() for binding in bindings],
         PANE_READ_RESULTS_FIELD: pane_reads,
         DELIVERIES_FIELD: deliveries,
+        NO_CONTINUATION_SESSION_IDS_FIELD: judged_none,
     }
 
 
@@ -1395,6 +1520,7 @@ def main(
                 value.get(PREPARED_FIELD),
                 _array(value.get(ITEMS_FIELD), ITEMS_FIELD),
                 _array(value.get(AGENTS_FIELD), AGENTS_FIELD),
+                value.get(CONTROLLER_PANE_ID_FIELD),
             )
         elif operation is Operation.BIND:
             result = bind_activations(
@@ -1407,6 +1533,7 @@ def main(
                 value.get(BINDINGS_FIELD),
                 _array(value.get(ITEMS_FIELD), ITEMS_FIELD),
                 _array(value.get(AGENTS_FIELD), AGENTS_FIELD),
+                value.get(CONTROLLER_PANE_ID_FIELD),
             )
         elif operation is Operation.SETTLE:
             result = settle_recovery(
@@ -1429,6 +1556,7 @@ def main(
                 value.get(BINDINGS_FIELD),
                 value.get(VERIFICATION_FIELD),
                 value.get(PANE_READ_RESULTS_FIELD),
+                value.get(RESTORED_FIELD) or [],
             )
         print(json.dumps(result, sort_keys=True), file=output_stream)
         return command_exit_code(result)
