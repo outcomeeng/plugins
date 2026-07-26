@@ -1,6 +1,8 @@
-# Methodology Versioning and Changelogs
+# Outcome Engineering Methodology Releases
 
-A proposal. It states the model and the reasoning behind it. It does not describe how to build any of it.
+Status: Proposed
+
+This document states the model and the reasoning behind it. It does not describe how to build any of it.
 
 ## The problem
 
@@ -12,45 +14,83 @@ methodology:
   version: 0.85.0
 ```
 
-`0.85.0` is a plugin distribution version. It is not a methodology version, and the two are different quantities: the plugin has released dozens of times without the methodology changing at all.
+`0.85.0` is a plugin distribution version. It is not a methodology version, and the two are different quantities: the delivering plugin has released dozens of times without the methodology changing at all.
 
-The cause is not carelessness in filling the field. `source` correctly names the plugin that delivers the methodology, but nothing in that plugin declares which **methodology** it implements — so the only number the installed side exposes is its own package version. The wrong value is the only observable one.
+The cause is not carelessness in filling the field. `source` correctly names the plugin that delivers the methodology, but nothing in that plugin declares which **methodology** it provides — so the only number the installed side exposes is its own package version. The wrong value is the only observable one.
 
-Fixing the declaration alone would not hold. The installed side has to declare what it implements, or the package version returns.
+This is why an explicit provider declaration is required rather than merely desirable. Correcting the consumer's number without it returns the package version at the next reading.
+
+## Release subject
+
+Outcome Engineering methodology releases version the methodology itself. Plugin packages, the SPX CLI, and other delivery mechanisms retain independent versions.
+
+A methodology release is a coordinated contract for humans and coding agents. It binds the human-readable methodology, agent behavior, generated instruction behavior, and the repository declarations through which consumers adopt that contract.
 
 ## Authority
 
-The methodology repository assigns methodology versions. It is the source for the terms and operating rules, and it determines what version X is.
+The authoritative methodology release repository assigns methodology versions and determines what a given version is.
 
-Plugins report which methodology version they implement. A plugin may lag the methodology, and during the release process for a new version a plugin may temporarily deviate in specifics — this avoids churn in the written methodology while implementations learn fast. The deviation is temporary and local to specifics. What version X means is settled by the methodology, never by whichever plugin shipped last.
+Delivery mechanisms report rather than decide. A plugin declares the release it provides and the releases it supports; neither declaration establishes what a release means. A plugin may lag the current release, and while a next release is being prepared a plugin may temporarily deviate in specifics — this avoids churn in the written methodology while implementations learn quickly. Such deviation is temporary and confined to specifics. What a release contains is settled by the methodology, never by whichever delivery mechanism shipped last.
 
-## The version scheme
+## Version semantics
 
-The methodology carries a single semantic version.
+Outcome Engineering methodology releases follow Semantic Versioning:
 
-| Bump  | Meaning                                                    | Consequence for an existing tree |
-| ----- | ---------------------------------------------------------- | -------------------------------- |
-| major | the node model changes — a generation boundary             | the tree stops conforming        |
-| minor | additive — a new assertion type, verification type, or tag | the tree still conforms          |
-| patch | clarification with no grammar change                       | none                             |
+- A **major** release introduces a methodology generation with incompatible changes to the consumer contract.
+- A **minor** release extends a generation compatibly.
+- A **patch** release corrects a release without changing its contract.
 
-Generations map onto majors. The methodology has had three: the first and second shared a fixed three-level hierarchy; the third introduced two recursive node types. The third generation is therefore `3.x.x`, and the six-kind model in preparation is `4.0.0`.
+Methodology generations behave as language editions. Consumers opt into a generation explicitly, and delivery mechanisms can understand more than one generation without collapsing their contracts.
 
-The current `3.N.M` is deliberately unresolved here. It follows from enumerating what actually changed in the node model since the third generation began, which the methodology changelog produces. Picking a number first and justifying it afterward inverts that.
+## Historical releases
 
-## Four declarations
+| Release | Methodology generation                                                 | Repository adoption commit                 |
+| ------- | ---------------------------------------------------------------------- | ------------------------------------------ |
+| 1.0.0   | `specs/work/` with capability, feature, and story structure            | `ba8b1e454a387fe861817faabbb783e2666f4634` |
+| 2.0.0   | Durable `spx/` with capability, feature, and story structure           | `d0dfab59a3cdf7ef9e1e2904ff0109b6048a569a` |
+| 3.0.0   | Recursive enabler and outcome nodes with deterministic context loading | `42433920bafb8f1dc1f91b1b41f7d98788f94bd4` |
 
-Each answers a different question, and none substitutes for another.
+The current methodology release is 3.1.0.
 
-**The methodology assigns the version.** It states what exists and what each version means.
+Historical release tags identify the commits where this repository adopted each generation. The changelog describes methodology changes independently of plugin and package changes.
 
-**A plugin declares the range it supports.** A plugin operates on trees written against more than one version, so it declares a set:
+## Release contract
 
-```text
-methodology.supports: "^3.4.0 || ^4.0.0"
+Each methodology release has:
+
+- one SemVer identity;
+- a changelog entry describing its methodology changes;
+- a complete human-and-agent contract;
+- migration guidance when adoption changes existing consumer artifacts;
+- an explicit relationship to delivery mechanisms that provide or support it.
+
+Methodology release identity remains stable regardless of which plugin or package version delivers it.
+
+## Provider and plugin compatibility
+
+The methodology-providing plugin declares the exact methodology release it provides. Every plugin whose behavior depends on Outcome Engineering declares the range of methodology releases it supports.
+
+```json
+{
+  "methodology": {
+    "source": "outcomeeng/spec-tree",
+    "provides": "4.0.0",
+    "supports": "^3.1.0 || ^4.0.0"
+  }
+}
 ```
 
-**A consumer repository declares one version.** A repository targets one grammar, so it declares a point, not a range:
+`provides` is exact. `supports` is a SemVer range whose grammar is defined by the release contract; the union form is preferred over a single continuous interval, because disjoint major support is what the range usually means and a continuous interval hides it.
+
+Support ranges express compatibility with individually selected methodology releases. They do not express that one consumer repository contains artifacts from several releases.
+
+The exact methodology release selected by a consumer must fall within every enabled plugin's support range. An empty compatibility intersection is an invalid plugin set, and the report of an unsatisfied selection names the plugin whose range excludes it.
+
+**Prereleases are named, never implied.** A release still in preparation carries a prerelease identifier such as `4.0.0-rc.1`. A stable range never implies support for a prerelease of any release it covers. A prerelease is usable only when the provider, every supporting plugin, and the consumer each name it explicitly.
+
+## Consumer declaration
+
+A consumer repository declares an exact methodology source and version. The version selects the methodology behavior used for newly authored and materially revised artifacts.
 
 ```yaml
 methodology:
@@ -58,53 +98,94 @@ methodology:
   version: 4.0.0
 ```
 
-**A node declares its own version.** From the fourth generation onward, a spec file carries YAML front matter naming the version it is written against. A node without that front matter is a third-generation node. The tree therefore describes its own migration state at node granularity, and no repository-level construct has to approximate it.
+Repository declarations do not change as a side effect of routine SPX or plugin upgrades. Methodology adoption is an explicit consumer decision.
 
-## Range conventions
+## Independently versioned artifacts
 
-Ranges follow the semantics every package ecosystem already uses, so nothing here is novel to learn.
+The smallest independently migratable methodology artifact carries its own edition identity. From version 4, a specification file declares its methodology version in YAML front matter. Earlier specification artifacts, which carry no front matter, are identified deterministically by their earlier representation.
 
-- **Union for spanning majors.** `"^3.4.0 || ^4.0.0"` is the established idiom for supporting two majors through a transition — the same shape peer dependencies, engine constraints, and language-version requirements use.
-- **Prerelease identifiers for a version still in flight.** A methodology being prepared is `4.0.0-rc.1`. It sorts below `4.0.0`, and ranges over `3.x` do not match it unless it is named, so opting into a draft is explicit on both sides.
-- **Point versions on the consumer side, never ranges.** A range there would express nothing: the grammar's own tolerance already covers a mixed tree, and per-node front matter records which nodes have moved.
+Edition identity attaches to the specification file rather than to a containing directory, because directory representation and file identity can change in different releases and must remain separately determinable.
 
-## Resolution
+Artifacts from accepted editions interoperate within one repository. Their relationships retain the same meaning across editions, and conversion between supported representations preserves methodology information.
 
-Language and domain plugins will not all support a new major on the day it lands. That is expected, and it resolves as an intersection.
+This model permits gradual migration without parallel copies of the specification tree and without an ecosystem-wide cutover.
 
-A consumer's declared version has to satisfy every installed plugin's supported range. When it does not, the answer names the plugin that is behind rather than reporting a bare mismatch — the consumer's next action is either waiting for that plugin or dropping it, and neither is discoverable from a two-value comparison.
+## Version 4 contract
 
-The same resolution reports how much migration remains: a count of nodes still on the previous generation's forms, drawn from the front matter that is present or absent on each node.
+Version 4:
 
-## Deprecation
+- adds YAML front matter to specification files;
+- names specification files `{slug}.spec.md`;
+- introduces the `.surface` node representation;
+- makes `.enabler` invalid as a version 4 representation.
 
-**A form deprecated in major N is removed in major N+1.**
+An `.enabler` encountered during an authorized transition remains a version 3 artifact. Its temporary acceptance does not make it valid under the version 4 contract.
 
-The removal is not optional and does not wait for an unrelated reason for N+1 to exist. Compatibility is carried for exactly one major.
+## Mixed-edition transition
 
-This bound exists because compatibility is not free to the maintainer. Every tolerated legacy form is a code path that is maintained and regression-tested on every patch release. An open-ended deprecation window makes that bill open-ended too. One major is a known expiry that can be budgeted, and it makes each deprecation a decision with a price attached rather than a default — at a major boundary the question becomes which forms are worth carrying for one more cycle and which should simply break.
+A repository adopting a new major declares that major as its exact methodology version and explicitly identifies the finite set of earlier editions it temporarily accepts.
 
-It also holds consumers to a real deadline. A tree still using a removed form when N+1 ships is unsupported, which is what the support window already says: the current and prior versions are supported, everything older is not, and the window rolls forward with each release.
+```yaml
+methodology:
+  source: outcomeeng/spec-tree
+  version: 4.0.0
+  accepts:
+    - 3.1.0
+```
+
+`accepts` is distinct from a plugin's `supports`. `supports` is a compatibility range over alternative single selections — any one of which a consumer might choose. `accepts` is a finite set of exact earlier editions simultaneously present in one repository. The two are not interchangeable, and a SemVer range cannot express the second: a range offers several interchangeable single-version selections, while a mixed-edition repository intentionally contains artifacts governed by distinct editions at the same time.
+
+During this state:
+
+- the selected version is the default for new and materially revised artifacts;
+- each artifact is interpreted according to its own deterministic edition identity;
+- earlier artifacts remain identifiable migration debt;
+- the repository exposes the remaining earlier-artifact inventory;
+- removing the `accepts` declaration marks completion of the transition.
+
+**Adjacent-major bound.** For a repository selecting major N, `accepts` may name exact releases from N-1 only. This bounds set membership and the resulting compatibility cost; it does not by itself define when a transition completes. Because a repository selecting N+1 may accept only releases from N, selecting N+1 requires eliminating any remaining N-1 artifacts first. Every reader is therefore bounded to two adjacent majors, while a single migration may run for months.
+
+**Completion.** A transition completes when the earlier-edition artifact inventory reaches zero and the `accepts` declaration is removed. Completion is established by the inventory, not by elapsed time and not by the adjacent-major bound.
+
+## Deprecation and removal
+
+A representation deprecated in major N is removed in major N+1. The removal is not optional and does not wait for an unrelated reason for N+1 to exist.
+
+This rule is stated separately from the transition-completion rule above and serves a different purpose. Completion describes when one repository has finished migrating. This rule bounds what the methodology and its delivery mechanisms must keep understanding.
+
+The bound exists because compatibility is not free to the maintainer. Every tolerated earlier representation is a code path that is maintained and regression-tested on every patch release, so an unbounded acceptance window makes that cost unbounded too. One major is a known expiry that can be budgeted, and it makes each deprecation a decision with a price attached rather than a default: at a major boundary the question becomes which representations are worth carrying for one more cycle and which should simply be removed.
+
+## Migration invariants
+
+- Readers understand every edition accepted by the repository before artifacts of the newly selected major appear.
+- Writers produce artifacts of the selected major once that major is selected.
+- Edition identity is explicit or deterministically inferred; ambient plugin versions never reinterpret an artifact.
+- Conversion preserves identity, relationships, metadata, and unknown front-matter fields.
+- Earlier-edition acceptance is finite, observable, and removable.
+- Forward methodology development occurs in the selected major after it is selected.
+- The transition completes only when no accepted earlier-edition artifacts remain.
+
+These invariants avoid the ecosystem split, dependency deadlock, ambiguous interpretation, parallel source trees, and indefinite compatibility period associated with Python 2 to Python 3.
 
 ## Changelogs
 
 **The reader is a consumer repository** — its maintainers and its agents, opening the changelog mid-upgrade to answer "what changed for me, and what must I now do?"
 
-That single fact settles the content. An entry earns its place only when the reader must do or know something: a skill or agent added, renamed, or removed; a behavior change in something they invoke; a change that rewrites a file in their repository; a dependency floor that advances. Specifications, decisions, tests, build machinery, generated output, formatting, and release mechanics stay out — they are real work, and none of it is the reader's to act on.
+**Inclusion follows consumer effect, not source artifact class.** An entry earns its place when the change alters what a consumer can rely on, must do, or must know. A change to a specification or a decision that alters the consumer contract belongs in the methodology changelog; a change to any artifact that leaves the consumer contract untouched is excluded regardless of which class it belongs to. Artifact class is a poor proxy for consumer effect and must not be used as the test.
 
-**Three lines, each on its own clock.**
+**Three release lines, each on its own clock.**
 
-| Line        | Records                                                                                                                    | Cadence                             |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| Methodology | generation transitions, additive grammar changes, support standing                                                         | rare — three changes in three years |
-| Per plugin  | what changed in that plugin                                                                                                | frequent                            |
-| Marketplace | events no single plugin owns: a new agent harness, a plugin added or removed or renamed, a floor that moves across plugins | occasional                          |
+| Line                   | Records                                                                                                                               | Cadence    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Methodology            | generation transitions, compatible extensions, deprecations and removals, support standing                                            | rare       |
+| Per delivery mechanism | what changed in that plugin or package                                                                                                | frequent   |
+| Marketplace            | events no single delivery mechanism owns: a new agent harness, a plugin added, removed, or renamed, a floor that moves across plugins | occasional |
 
-**Sections** are `Breaking`, `Added`, `Changed`, `Removed`, `Fixed`, `Requires`. `Breaking` is elevated rather than folded into `Changed` because renames break invocation outright and must not be discoverable only by careful reading. `Requires` carries floor advances so a version constraint is readable without prose.
+**Sections** are `Breaking`, `Added`, `Changed`, `Removed`, `Fixed`, `Requires`. `Breaking` is elevated rather than folded into `Changed`, because a rename breaks invocation outright and must not be discoverable only by careful reading. `Requires` carries floor and compatibility advances so a version constraint is readable without prose.
 
-**Delivery reaches the consumer in-session.** A consumer's checkout contains installed plugin trees and nothing else from this repository, so anything at this repository's root is invisible to them. Each plugin already ships a lifecycle skill that reports its own version; presenting its changelog beside that version is the same surface, already discoverable, already offline.
+**In-session accessibility is a release-contract requirement.** A consumer's checkout contains installed delivery artifacts and nothing else from the providing repository, so a changelog kept only in that repository is unreachable by the consumer's agent. Each changelog line must be readable by a consumer agent in-session and without network access. Which delivery surface satisfies that requirement is a design decision outside this proposal.
 
 ## Open
 
-- **The current methodology version.** Falls out of the methodology changelog.
-- **Whether a consumer's declaration becomes mandatory.** It is optional today. A repository carrying a tracked spec tree while declaring no durable methodology identity is already recognizable as a distinct state, so the question is whether that state is a warning or an error.
+- **The terminology for the accepted-earlier-editions field.** `accepts` is the leading candidate: it reads naturally as the repository accepting exact earlier editions, and it avoids the value judgment carried by `legacy`. The concept is settled; the field name is not part of the proposed contract until the terminology is chosen.
+- **Whether a consumer declaration becomes mandatory.** It is optional today. A repository carrying a tracked specification tree while declaring no durable methodology identity is already recognizable as a distinct state, so the question is whether that state is a warning or an error.
