@@ -16,13 +16,13 @@ methodology:
 
 `0.85.0` is a plugin distribution version. It is not a methodology version, and the two are different quantities: the delivering plugin has released dozens of times without the methodology changing at all.
 
-The cause is not carelessness in filling the field. `source` correctly names the plugin that delivers the methodology, but nothing in that plugin declares which **methodology** it provides — so the only number the installed side exposes is its own package version. The wrong value is the only observable one.
+The cause is not carelessness in filling the field. `source` correctly names the plugin that delivers the methodology, but nothing in that plugin declares which **methodology** it provides — so the only number the installed side exposes is its own plugin version. The wrong value is the only observable one.
 
-This is why an explicit provider declaration is required rather than merely desirable. Correcting the consumer's number without it returns the package version at the next reading.
+This is why an explicit provider declaration is required rather than merely desirable. Correcting the consumer's number without it returns the plugin version at the next reading.
 
 ## Release subject
 
-Outcome Engineering methodology releases version the methodology itself. Plugin packages, the SPX CLI, and other delivery mechanisms retain independent versions.
+Outcome Engineering methodology releases version the methodology itself. Plugins, the SPX CLI, and other delivery mechanisms retain independent versions.
 
 A methodology release is a coordinated contract for humans and coding agents. It binds the human-readable methodology, agent behavior, generated instruction behavior, and the repository declarations through which consumers adopt that contract.
 
@@ -52,7 +52,7 @@ Methodology generations behave as language editions. Consumers opt into a genera
 
 The current methodology release is 3.1.0.
 
-Historical release tags identify the commits where this repository adopted each generation. The changelog describes methodology changes independently of plugin and package changes.
+Historical release tags identify the commits where this repository adopted each generation. The changelog describes methodology changes independently of plugin and CLI changes.
 
 ## Release contract
 
@@ -64,7 +64,7 @@ Each methodology release has:
 - migration guidance when adoption changes existing consumer artifacts;
 - an explicit relationship to delivery mechanisms that provide or support it.
 
-Methodology release identity remains stable regardless of which plugin or package version delivers it.
+Methodology release identity remains stable regardless of which plugin or CLI version delivers it.
 
 ## Provider and plugin compatibility
 
