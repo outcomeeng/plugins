@@ -20,6 +20,22 @@ The cause is not carelessness in filling the field. `source` correctly names the
 
 This is why an explicit provider declaration is required rather than merely desirable. Correcting the consumer's number without it returns the plugin version at the next reading.
 
+## Terms
+
+| Term                    | Meaning                                                                                                                                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Methodology version** | The SemVer identity of one published methodology release — `3.1.0`.                                                                                                                                                                                                       |
+| **Release**             | One published methodology version, whether major, minor, or patch.                                                                                                                                                                                                        |
+| **Edition**             | The major axis of a methodology version. `4` is an edition; `4.0.0` and `4.2.1` are releases within it. An edition is the grammar an artifact is written against, so **only an edition change can invalidate an existing artifact** — a minor or patch release never can. |
+| **Plugin version**      | A plugin's own distribution identity, moving independently of the methodology version it provides.                                                                                                                                                                        |
+| **Provider**            | The plugin that delivers the methodology.                                                                                                                                                                                                                                 |
+| **Consumer repository** | A repository that declares which methodology it adheres to.                                                                                                                                                                                                               |
+| **Specification file**  | The single spec file a node carries.                                                                                                                                                                                                                                      |
+
+Edition and version are not interchangeable, and the difference decides where each is declared. A repository selects an exact **version**, because a minor release adds behavior it opts into precisely. An artifact carries an **edition**, because no minor or patch can invalidate it and recording one would imply otherwise.
+
+The methodology's own vocabulary uses *release* for a work-coordination operation — releasing a claim returns a change to the available pool. This document uses it only in the versioning sense.
+
 ## Release subject
 
 Outcome Engineering methodology releases version the methodology itself. Plugins, the SPX CLI, and other delivery mechanisms retain independent versions.
@@ -36,15 +52,15 @@ Delivery mechanisms report rather than decide. A plugin declares the release it 
 
 Outcome Engineering methodology releases follow Semantic Versioning:
 
-- A **major** release introduces a methodology generation with incompatible changes to the consumer contract.
-- A **minor** release extends a generation compatibly.
+- A **major** release opens a new edition, with incompatible changes to the consumer contract.
+- A **minor** release extends the current edition compatibly.
 - A **patch** release corrects a release without changing its contract.
 
-Methodology generations behave as language editions. Consumers opt into a generation explicitly, and delivery mechanisms can understand more than one generation without collapsing their contracts.
+The major axis is therefore the edition axis, and nothing below it can invalidate an artifact. Consumers opt into an edition explicitly, and delivery mechanisms can understand more than one edition without collapsing their contracts — the same two-axis split a language uses when its editions advance independently of its toolchain's version.
 
 ## Historical releases
 
-| Release | Methodology generation                                                 | Repository adoption commit                 |
+| Release | Edition                                                                | Repository adoption commit                 |
 | ------- | ---------------------------------------------------------------------- | ------------------------------------------ |
 | 1.0.0   | `specs/work/` with capability, feature, and story structure            | `ba8b1e454a387fe861817faabbb783e2666f4634` |
 | 2.0.0   | Durable `spx/` with capability, feature, and story structure           | `d0dfab59a3cdf7ef9e1e2904ff0109b6048a569a` |
@@ -52,7 +68,7 @@ Methodology generations behave as language editions. Consumers opt into a genera
 
 The current methodology release is 3.1.0.
 
-Historical release tags identify the commits where this repository adopted each generation. The changelog describes methodology changes independently of plugin and CLI changes.
+Historical release tags identify the commits where this repository adopted each edition. The changelog describes methodology changes independently of plugin and CLI changes.
 
 ## Release contract
 
@@ -102,67 +118,72 @@ Repository declarations do not change as a side effect of routine SPX or plugin 
 
 ## Independently versioned artifacts
 
-The smallest independently migratable methodology artifact carries its own edition identity. From version 4, a specification file declares its methodology version in YAML front matter. Earlier specification artifacts, which carry no front matter, are identified deterministically by their earlier representation.
+The smallest independently migratable methodology artifact declares its own edition. It declares an edition and not a version, because no minor or patch release can invalidate it — recording a full version would assert a precision the artifact does not have and would go stale on every release that leaves it valid.
 
-Edition identity attaches to the specification file rather than to a containing directory, because directory representation and file identity can change in different releases and must remain separately determinable.
+From edition 4, a specification file declares its edition in YAML front matter. Earlier specification files, which carry no front matter, are identified deterministically by their earlier form.
 
-Artifacts from accepted editions interoperate within one repository. Their relationships retain the same meaning across editions, and conversion between supported representations preserves methodology information.
+Edition identity attaches to the specification file rather than to a containing directory, because the two can change in different editions and must remain separately determinable.
+
+Artifacts from accepted editions interoperate within one repository. Their relationships retain the same meaning across editions, and conversion between supported forms preserves methodology information.
 
 This model permits gradual migration without parallel copies of the specification tree and without an ecosystem-wide cutover.
 
-## Version 4 contract
+## Why edition 4 requires a migration phase
 
-Version 4:
+Edition 4 revises the node-kind vocabulary and the specification-file grammar. The methodology owns that enumeration; restating it here would duplicate it and go stale.
 
-- adds YAML front matter to specification files;
-- names specification files `{slug}.spec.md`;
-- introduces the `.surface` node representation;
-- makes `.enabler` invalid as a version 4 representation.
+One settled change carries the whole consequence. Edition 4 names a node's specification file `{slug}.spec.md`, where edition 3 names it `{slug}.md`. Every node carries exactly one specification file, so **every node in every tree is invalid under edition 4 until renamed** — not a subset, not an edge case, the entire tree at once.
 
-An `.enabler` encountered during an authorized transition remains a version 3 artifact. Its temporary acceptance does not make it valid under the version 4 contract.
+That is what makes a migration phase a requirement rather than a convenience. An edition whose adoption invalidates one construct leaves a repository mostly working while it migrates. An edition that invalidates every node leaves nothing working, so either the whole tree converts in a single commit — across every branch, worktree, and open change in flight — or the two editions read side by side for as long as the conversion takes. The first is not available to a real repository. The second is this proposal.
+
+An artifact in the earlier form encountered during an authorized transition remains an artifact of its own edition. Its temporary acceptance never makes it valid under the later edition's contract.
+
+Edition 4 introduces YAML front matter on specification files, and the methodology is settling which fields it carries. The edition declaration described above is this proposal's request against that schema, not a field the methodology has already fixed.
 
 ## Mixed-edition transition
 
-A repository adopting a new major declares that major as its exact methodology version and explicitly identifies the finite set of earlier editions it temporarily accepts.
+A repository adopting a new edition selects an exact version within it and names the finite set of earlier editions still present in its tree.
 
 ```yaml
 methodology:
   source: outcomeeng/spec-tree
   version: 4.0.0
-  <term-pending>:
-    - 3.1.0
+  migratingFrom:
+    - 3
 ```
 
-The accepted-earlier-editions declaration is distinct from a plugin's `supports`. `supports` is a compatibility range over alternative single selections — any one of which a consumer might choose. The accepted-earlier-editions declaration is a finite set of exact earlier editions simultaneously present in one repository. The two are not interchangeable, and a range cannot express the second: a range offers several interchangeable single-version selections, while a mixed-edition repository intentionally contains artifacts governed by distinct editions at the same time.
+`version` is exact because a repository opts into minor behavior precisely. `migratingFrom` names editions rather than versions, because an artifact's identity is its edition and no minor or patch distinction exists among artifacts of the same edition.
+
+`migratingFrom` is distinct from a plugin's `supports`. `supports` is a compatibility range over alternative single selections — any one of which a consumer might choose. `migratingFrom` is a finite set of editions simultaneously present in one repository. The two are not interchangeable, and a range cannot express the second: a range offers several interchangeable single selections, while a migrating repository intentionally contains artifacts governed by distinct editions at the same time.
 
 During this state:
 
-- the selected version is the default for new and materially revised artifacts;
-- each artifact is interpreted according to its own deterministic edition identity;
-- earlier artifacts remain identifiable migration debt;
-- the repository exposes the remaining earlier-artifact inventory;
-- removing the accepted-earlier-editions declaration marks completion of the transition.
+- the selected edition is the default for new and materially revised artifacts;
+- each artifact is interpreted according to its own declared edition;
+- earlier-edition artifacts remain identifiable migration debt;
+- the repository exposes the remaining earlier-edition inventory;
+- removing `migratingFrom` marks completion of the transition.
 
-**Adjacent-major bound.** For a repository selecting major N, the accepted-earlier-editions declaration may name exact releases from N-1 only. This bounds set membership and the resulting compatibility cost; it does not by itself define when a transition completes. Because a repository selecting N+1 may accept only releases from N, selecting N+1 requires eliminating any remaining N-1 artifacts first. Every reader is therefore bounded to two adjacent majors, while a single migration may run for months.
+**Adjacent-edition bound.** For a repository on edition N, `migratingFrom` may name edition N-1 only. This bounds set membership and the resulting compatibility cost; it does not by itself define when a transition completes. Because a repository on N+1 may name only N, moving to N+1 requires eliminating any remaining N-1 artifacts first. Every reader is therefore bounded to two adjacent editions, while a single migration may run for months.
 
-**Completion.** A transition completes when the earlier-edition artifact inventory reaches zero and the accepted-earlier-editions declaration is removed. Completion is established by the inventory, not by elapsed time and not by the adjacent-major bound.
+**Completion.** A transition completes when the earlier-edition inventory reaches zero and `migratingFrom` is removed. Completion is established by the inventory, not by elapsed time and not by the adjacent-edition bound.
 
 ## Deprecation and removal
 
-A representation deprecated in major N is removed in major N+1. The removal is not optional and does not wait for an unrelated reason for N+1 to exist.
+A form deprecated in edition N is removed in edition N+1. The removal is not optional and does not wait for an unrelated reason for N+1 to exist.
 
 This rule is stated separately from the transition-completion rule above and serves a different purpose. Completion describes when one repository has finished migrating. This rule bounds what the methodology and its delivery mechanisms must keep understanding.
 
-The bound exists because compatibility is not free to the maintainer. Every tolerated earlier representation is a code path that is maintained and regression-tested on every patch release, so an unbounded acceptance window makes that cost unbounded too. One major is a known expiry that can be budgeted, and it makes each deprecation a decision with a price attached rather than a default: at a major boundary the question becomes which representations are worth carrying for one more cycle and which should simply be removed.
+The bound exists because compatibility is not free to the maintainer. Every tolerated earlier form is a code path that is maintained and regression-tested on every patch release, so an unbounded acceptance window makes that cost unbounded too. One edition is a known expiry that can be budgeted, and it makes each deprecation a decision with a price attached rather than a default: at an edition boundary the question becomes which forms are worth carrying for one more cycle and which should simply be removed.
 
 ## Migration invariants
 
-- Readers understand every edition accepted by the repository before artifacts of the newly selected major appear.
-- Writers produce artifacts of the selected major once that major is selected.
+- Readers understand every edition the repository names before artifacts of the newly selected edition appear.
+- Writers produce artifacts of the selected edition once that edition is selected.
 - Edition identity is explicit or deterministically inferred; ambient plugin versions never reinterpret an artifact.
 - Conversion preserves identity, relationships, metadata, and unknown front-matter fields.
 - Earlier-edition acceptance is finite, observable, and removable.
-- Forward methodology development occurs in the selected major after it is selected.
+- Forward methodology development occurs in the selected edition after it is selected.
 - The transition completes only when no accepted earlier-edition artifacts remain.
 
 These invariants avoid the ecosystem split, dependency deadlock, ambiguous interpretation, parallel source trees, and indefinite compatibility period associated with Python 2 to Python 3.
@@ -177,14 +198,14 @@ These invariants avoid the ecosystem split, dependency deadlock, ambiguous inter
 
 | Line        | Records                                                                                                                   | Cadence    |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| Methodology | generation transitions, compatible extensions, deprecations and removals, support standing                                | rare       |
+| Methodology | edition transitions, compatible extensions, deprecations and removals, support standing                                   | rare       |
 | Per plugin  | what changed in that plugin                                                                                               | frequent   |
 | Marketplace | events no single plugin owns: a new agent harness, a plugin added, removed, or renamed, a floor that moves across plugins | occasional |
 
 **Sections** are `Breaking`, `Added`, `Changed`, `Removed`, `Fixed`, `Requires`. `Breaking` is elevated rather than folded into `Changed`, because a rename breaks invocation outright and must not be discoverable only by careful reading. `Requires` carries floor and compatibility advances so a version constraint is readable without prose.
 
-**In-session accessibility is a release-contract requirement.** A consumer's checkout contains installed delivery artifacts and nothing else from the providing repository, so a changelog kept only in that repository is unreachable by the consumer's agent. Each changelog line must be readable by a consumer agent in-session and without network access. Which delivery surface satisfies that requirement is a design decision outside this proposal.
+**In-session accessibility is a release-contract requirement.** A consumer's checkout contains installed delivery artifacts and nothing else from the providing repository, so a changelog kept only in that repository is unreachable by the consumer's agent. Each changelog line must be readable by a consumer agent in-session and without network access. Which delivery mechanism satisfies that requirement is a design decision outside this proposal.
 
 ## Open
 
-- **The terminology for the accepted-earlier-editions field.** `accepts` is the leading candidate: it reads naturally as the repository accepting exact earlier editions, and it avoids the value judgment carried by `legacy`. The concept is settled; the field name is not part of the proposed contract until the terminology is chosen, and the declaration is written `<term-pending>` throughout until then.
+- **Where a specification file's edition is declared.** Edition 4 introduces YAML front matter, and the methodology is settling that schema. This proposal requires per-file edition identity and asks for the field; it does not assume the schema already carries one. Should the methodology place edition identity elsewhere, the transition model holds unchanged as long as an artifact's edition remains deterministically derivable without consulting ambient plugin state.
