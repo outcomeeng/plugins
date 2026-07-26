@@ -122,6 +122,10 @@ BOOTSTRAP_SHARED_REGION_NAME = "root"
 BOOTSTRAP_SHARED_THRESHOLD = 0.8
 # A pointer line that carries one of these joins a clause of its own to the reference, so the
 # line states something beyond "read the other file" and the body keeps its content.
+# An ATX heading is one to six ``#`` characters closed by whitespace or the line end. A ``#`` run
+# without that closer opens no heading, so ``#123 owned by the release queue`` is content and
+# stays in the delegation judgment rather than disappearing from it.
+_ATX_HEADING_RE = re.compile(r"^#{1,6}(?:\s|$)")
 DELEGATION_CLAUSE_BREAKS = (
     " but ",
     " however ",
@@ -775,7 +779,7 @@ def delegates_to(body: str, other_filename: str) -> bool:
     substantive = [
         line
         for line in (raw.strip() for raw in body.splitlines())
-        if line and not line.startswith("#") and set(line) - set("-*_ ")
+        if line and not _ATX_HEADING_RE.match(line) and set(line) - set("-*_ ")
     ]
     if not substantive:
         return False
