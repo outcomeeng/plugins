@@ -442,19 +442,20 @@ The `push-marketplace`, `sync-marketplace`, and `marketplace-source-root` recipe
 
 This repository declares the `outcomeeng` marketplace in committed configuration, and both agents resolve from it: `.claude/settings.json` carries `extraKnownMarketplaces.outcomeeng` — source `github`, repo `outcomeeng/plugins` — alongside the enabled plugin set, and `.agents/plugins/marketplace.json` with `.codex/config.toml` carries the Codex catalog and selection. No worktree serves plugin content to a session.
 
-**Claude** loads a plugin's skills from the source tree in place: a skill invocation reports its base directory as `<repo>/dist/claude/<plugin>/skills/<skill>/`, the `dist/claude/` of the checkout registered as the marketplace source — which in a multi-worktree setup may differ from the worktree you are editing in. When `claude plugin marketplace update outcomeeng` runs and a plugin's version has bumped, Claude repoints each running session from that source directory to a versioned snapshot under `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/`, so the session stays on one consistent version while the source `dist/` advances — the load path moves (source → cache) but the version a session sees does not change underneath it. A session can therefore show a source `dist/` path while the cache holds other versions; the snapshot it is pinned to, if any, is the one its last version-bumped update repointed it to.
+**Claude** clones the marketplace to `~/.claude/plugins/marketplaces/outcomeeng` and resolves each plugin from a versioned snapshot beneath it: a skill invocation reports its base directory as `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/skills/<skill>/`. Several versions coexist in that cache. A session stays pinned to the snapshot it resolved, and `claude plugin marketplace update outcomeeng` is what moves it to a newer one. No worktree's `dist/` is on the load path.
 
 **Codex** resolves the same `outcomeeng` marketplace. Repository-scoped marketplace registration is not yet available upstream ([openai/codex#18115](https://github.com/openai/codex/issues/18115)), so each developer registers it once against the same source with `codex plugin marketplace add outcomeeng/plugins`, and the committed `.codex/config.toml` carries the enabled plugin set. The merge lifecycle reconciles no registration and repairs no plugin cache.
 
-The Skill tool loads SKILL.md content into per-session memory the first time the skill is invoked and keeps it for the rest of the session, re-attaching it (truncated) after compaction. `/reload-plugins` re-indexes the marketplace and re-reads each SKILL.md from disk during registration — from the path the session resolves to, the source `dist/` or a pinned cache snapshot — so the first invocation after a reload picks up the current content.
+The Skill tool loads SKILL.md content into per-session memory the first time the skill is invoked and keeps it for the rest of the session, re-attaching it (truncated) after compaction. `/reload-plugins` re-indexes the marketplace and re-reads each SKILL.md from the snapshot the session resolves to, so the first invocation after a reload picks up that content.
 
 ### Smoke-testing skill changes
 
-Work in the checkout registered as the marketplace source (`claude plugin marketplace list` shows which directory that is):
+An edit under `src/plugins/` does not reach a session by being built, because no worktree serves plugin content. Either publish it and update the marketplace, or register a local Directory source at the worktree under test — the one sanctioned use of a local marketplace directory:
 
 1. Edit `src/plugins/<plugin>/` and run `just build-skills` so the change lands in `dist/claude/<plugin>/`.
-2. Run `/reload-plugins`. For a Claude session serving from the source `dist/` — the usual case while developing — this re-reads the edited SKILL.md directly, so no version bump or sync is needed to smoke-test a Claude change in the source checkout.
-3. Invoke the skill — the first invocation after the reload loads the new content.
+2. Register this worktree as a local Directory source for `outcomeeng`, replacing the published registration for the duration of the test.
+3. Run `/reload-plugins`, then invoke the skill.
+4. Restore the published registration when finished. The registration is machine-wide: a worktree left registered serves its uncommitted content to every session on the machine, not just yours.
 
 Picking up newly published plugin versions is a developer's own operation, outside the merge lifecycle. Run `claude plugin marketplace update outcomeeng` when a session should see newer versions, then `/reload-plugins`; Codex takes the same update against its own registration. A merge to `origin/main` publishes the change — no worktree is fast-forwarded, no registration is reconciled, and no install refresh runs as part of shipping, per [`spx/local/merging.md`](spx/local/merging.md).
 
