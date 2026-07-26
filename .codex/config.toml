@@ -1,7 +1,3 @@
-# Mirrors .claude/settings.json for this repository.
-# Global config keeps installed plugins available but disabled by default; this
-# project layer enables the repository-specific allowlist.
-
 [plugins."instructions@outcomeeng"]
 enabled = true
 
