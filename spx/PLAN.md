@@ -16,9 +16,16 @@ The decision governs user-scope state ownership. Alignment removes the assertion
 supersedes and preserves the rest with their evidence — an assertion the decision does not
 reach keeps its declaration, whatever else changes around it.
 
-Pending implementation: the tree declares the bounded model but does not yet implement it. The
-live `just sync-marketplace` and installation tooling still run the superseded user-scope
-model. The production cutover — checkout-bounded sync and install implementation, the isolated
-real-runtime harness, and the release-path change in `spx/local/merging.md` — realizes the
-"Repository-scoped marketplace synchronization and install verification" scope item. Until
-then, that scope bullet is a declared, governing capability, not delivered behavior.
+Release-path alignment applied: `spx/local/merging.md` declares no release action, and both root
+guides state that a merge to the default branch on origin is the publication. Both agents resolve
+from the `outcomeeng/plugins` marketplace this checkout declares, so no worktree serves plugin
+content.
+
+Pending implementation: the live `just sync-marketplace`, `just push-marketplace`, and
+`just marketplace-source-root` recipes and the distribution modules behind them still carry the
+superseded user-scope model and have no remaining subject. Their retirement, and the re-scoping of
+`spx/32-distribution.enabler/21-sync.enabler` that follows, is tracked in that node's `PLAN.md`,
+together with the disposable-home install-completeness harness that
+`spx/12-marketplace-state.adr.md` asserts and no test on the default branch establishes. Until that
+lands, the "Repository-scoped marketplace synchronization and install verification" scope bullet is a
+declared, governing capability, not delivered behavior.

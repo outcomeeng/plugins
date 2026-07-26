@@ -2,34 +2,42 @@
 
 Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownership).
 
-Spec alignment applied: `sync.md` now declares the checkout-bounded model. The superseded
-assertions are removed — Codex cache-topology inspection, user-scope marketplace-registration
-reconciliation, canonical default-branch-worktree source resolution, and the file-backed
-single-flight lock coordination that serialized user-scope cache repair. The surviving guards are
-preserved: the change probe compares `base_ref` against the working tree rather than `HEAD`; no
-validation step is skipped when plugin distribution paths change; tool availability is checked
-before any orchestration step for `claude`, `codex`, `ps`, and `uv`. The `codex_cache_preserve`
-prohibition cites the governing decision directly.
+Spec alignment applied: `sync.md` declares the checkout-bounded model. The superseded assertions are
+removed — Codex cache-topology inspection, user-scope marketplace-registration reconciliation,
+canonical default-branch-worktree source resolution, and the file-backed single-flight lock that
+serialized user-scope cache repair.
 
-Pending implementation (production cutover of `just sync-marketplace`):
+Release-path alignment applied: `spx/local/merging.md` declares no release action, and the root
+guides state the same delivery model. A merge to the default branch on origin is the publication.
 
-- Rewrite the sync implementation to the checkout-bounded model, dropping user-scope
-  marketplace-registration reconciliation, plugin-cache reconciliation, and
-  compatibility-symlink handling, and updating `tests/test_sync.scenario.l1.py` and
-  `tests/test_sync.compliance.l1.py` to the reduced orchestration.
-- Re-declare the agent-install ordering — on a distribution change with rendered Claude agents,
-  sync installs the converted Codex custom-agent files before installed-plugin validation runs.
-  The ordering is an orchestration contract the decision does not reach, but its evidence block in
-  `tests/test_sync.scenario.l1.py` (the inline agent fixture, the in-file `AgentInstallRunner`
-  double, and the hardcoded `SyncStep` name literals) is the same test-infrastructure the cutover
-  rebuilds; the assertion re-declares with harness- and fixture-owned evidence alongside that
-  rewrite rather than landing on the pre-existing in-file doubles now.
-- Drop `ps` from `outcomeeng/distribution/sync.py`'s `REQUIRED_TOOLS` and the
-  `tests/test_sync.compliance.l1.py` tool-availability parametrization when the rewrite removes the
-  file-backed single-flight lock, whose zombie-owner check is the only consumer of `ps`; the
-  tool-availability assertion narrows to `claude`, `codex`, and `uv` at that point.
-- Resolve the release-path contradiction: the post-merge "Release marketplace sync" in
-  `spx/local/merging.md` invokes `just sync-marketplace`, which under the superseded model
-  refreshes the maintainer's live user-scope installation. Move the release path to the
-  checkout-bounded model and establish install completeness through the isolated harness. This
-  touches `spx/15-merging.pdr.md`'s `RELEASE_READINESS` instantiation.
+## Pending: retire sync rather than rewrite it
+
+Both agents resolve from the `outcomeeng/plugins` marketplace this checkout declares, so no local
+worktree serves plugin content and nothing refreshes a maintainer's installation. Synchronization has
+no remaining subject, and the earlier plan to rewrite it checkout-bounded is superseded.
+
+- Remove the `sync-marketplace`, `push-marketplace`, and `marketplace-source-root` recipes from
+  `Justfile`. `marketplace-source-root` already exits non-zero: it resolves a Claude Directory source
+  that no longer exists.
+- Remove `outcomeeng/distribution/sync.py` and `outcomeeng/distribution/push.py`'s sync step.
+- Remove `outcomeeng/distribution/marketplace_sources.py`, whose `configured_local_marketplace_root`
+  requires both agents to resolve one shared local root — a predicate no longer satisfiable — and
+  `outcomeeng/distribution/codex_cache.py`, whose compatibility-symlink repair mutated user-scope
+  state the governing decision places outside the toolchain's reach.
+- Repoint `just check-installed`: it reads `~/.claude/plugins/cache/` and resolves the Codex root
+  through `marketplace_sources`. Frontmatter validity of the generated trees is already covered by
+  `just check-skills`, so establish whether the recipe has an independent subject before keeping it.
+- Re-scope this node. Its spec declares synchronization orchestration; if nothing remains to
+  orchestrate, the node is a `/refactor` question rather than an implementation one, and its
+  assertions and tests retire with the modules.
+
+## Pending: install completeness in a disposable home
+
+`spx/12-marketplace-state.adr.md` asserts install completeness is verified by an isolated harness
+provisioning each registered agent in a disposable home and mutating no user-scope state. No test on
+`origin/main` establishes it. `work/sync-marketplace-cutover` carries an implementation —
+`outcomeeng_testing/harnesses/marketplace_runtime.py` and
+`spx/13-infrastructure.enabler/32-installation.enabler/tests/test_install_completeness.compliance.l2.py` —
+whose predicates live in the test file and whose harness exposes observations only. Salvage it into
+the installation node; it needs a real `codex` binary, so confirm CI provisioning before linking the
+assertion.

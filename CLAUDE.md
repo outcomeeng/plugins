@@ -434,16 +434,9 @@ The lifecycle authority is: the managed Spec Tree instruction block routes to sk
 
 ### Marketplace Publish Commands
 
-When an active workflow calls for the product's marketplace push wrapper, use `just push-marketplace` rather than bare `git push`; the recipe pushes first, then refreshes the local marketplace only when the pushed range changed plugin distribution files. Pass the same remote and ref arguments that would have gone to `git push`:
+Publishing is the merge. Both agents resolve from the `outcomeeng/plugins` marketplace this checkout declares, so a change reaches consumers when it lands on the default branch on origin — the merge lifecycle's own push, with no publish wrapper and no post-merge refresh.
 
-```bash
-just push-marketplace               # git push (current branch) + just sync-marketplace
-just push-marketplace origin main   # explicit remote/branch
-```
-
-Bare `git push origin main` skips the change-aware publish wrapper. For plugin distribution changes that means the local marketplace stays stale, the Codex compatibility symlinks are not created, and `validate_install` never runs.
-
-⚠️ **NEVER run `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` by hand.** These are the primitives that `just sync-marketplace` (and therefore `just push-marketplace`) already orchestrates in the right order. Running them manually risks the wrong product scope, steps out of order, or skipped post-install validation. Read the Justfile before any marketplace operation.
+The `push-marketplace`, `sync-marketplace`, and `marketplace-source-root` recipes served the superseded model in which a local worktree served plugin content. They are retired but still defined; their removal, and the removal of the distribution modules behind them, is tracked in `spx/32-distribution.enabler/21-sync.enabler/PLAN.md`. Do not invoke them.
 
 ### How skill content reaches a session
 
