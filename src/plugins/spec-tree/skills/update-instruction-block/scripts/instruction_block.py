@@ -44,6 +44,9 @@ from enum import StrEnum
 
 FRONTMATTER_DELIMITER = "---"
 TEMPLATE_VERSION_KEY = "template_version"
+# The stable prefix of the missing-version failure; the CLI appends the offending template path
+# and the remedy, so a caller matching on the prefix stays coupled to the condition, not the
+# advice.
 MISSING_TEMPLATE_VERSION_ERROR = "error: template has no template_version"
 DUPLICATE_FLAG_ERROR_PREFIX = "error: duplicate flag: "
 TEMPLATE_SOURCE_KEY = "template_source"
@@ -1385,7 +1388,11 @@ def main(argv: list[str] | None = None) -> int:
     template_text = template_path.read_text(encoding="utf-8")
     installed = parse_template_frontmatter_version(template_text)
     if installed is None:
-        print(MISSING_TEMPLATE_VERSION_ERROR, file=sys.stderr)
+        print(
+            f"{MISSING_TEMPLATE_VERSION_ERROR}: add a dotted-numeric "
+            f"{TEMPLATE_VERSION_KEY} to the frontmatter of {template_path}",
+            file=sys.stderr,
+        )
         return 2
 
     try:
