@@ -96,14 +96,15 @@ def delegating_root_body(other_filename: str) -> str:
 def delegation_shape_cases(
     other_filename: str, content_body: str
 ) -> tuple[DelegationShapeCase, ...]:
-    """Return the four root-body shapes the delegation-verdict mapping ranges over.
+    """Return the five root-body shapes the delegation-verdict mapping ranges over.
 
     The shapes are the ones the governing assertion enumerates: a body whose every substantive
-    line names ``other_filename``; a body carrying a substantive line that does not; a body with
-    no substantive line at all; and a body naming ``other_filename`` only inside a fenced code
-    block. Only the second case draws on ``content_body``, to give the body a substantive line
-    that names nothing; the other three compose from ``other_filename`` alone or from neither.
-    Both parameters are owned elsewhere.
+    line points only at ``other_filename``; a body carrying a substantive line that names no
+    other file; a body whose only substantive line names ``other_filename`` while joining an
+    instruction of its own; a body with no substantive line at all; and a body naming
+    ``other_filename`` only inside a fenced code block. Only the second case draws on
+    ``content_body``, to give the body a substantive line that names nothing; the rest compose
+    from ``other_filename`` alone or from neither. Both parameters are owned elsewhere.
     """
     delegating = delegating_root_body(other_filename)
     return (
@@ -111,6 +112,15 @@ def delegation_shape_cases(
         DelegationShapeCase(
             name="a-substantive-line-does-not-reference",
             body=delegating + "\n" + content_body,
+        ),
+        DelegationShapeCase(
+            name="a-reference-line-adds-its-own-instruction",
+            body=(
+                "# Product\n"
+                "\n"
+                f"See [{other_filename}]({other_filename}) for commands, "
+                "but also run the extra credentialing step before deploys.\n"
+            ),
         ),
         DelegationShapeCase(name="no-substantive-line", body="# Product\n\n---\n"),
         DelegationShapeCase(
