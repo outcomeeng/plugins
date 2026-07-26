@@ -61,7 +61,7 @@ def test_root_topology_maps_to_bootstrap_outcome(tmp_path: pathlib.Path) -> None
 def test_root_body_shape_maps_to_delegation_verdict() -> None:
     other = harness.INSTRUCTION_AGENTS
     verdicts = {
-        case.name: MODULE.delegates_to(case.body, other)
+        case.name: MODULE.delegates_to(case.body, other, case.other_body)
         for case in harness.delegation_shape_cases()
     }
     assert verdicts == {
@@ -69,6 +69,7 @@ def test_root_body_shape_maps_to_delegation_verdict() -> None:
         "a-substantive-line-does-not-reference": False,
         "a-reference-line-adds-its-own-instruction": False,
         "a-hash-run-without-a-closer-is-not-a-heading": False,
+        "a-heading-the-adopted-body-does-not-carry": False,
         "no-substantive-line": False,
         "reference-inside-a-code-fence": False,
     }

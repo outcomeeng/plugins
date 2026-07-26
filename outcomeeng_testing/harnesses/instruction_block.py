@@ -43,6 +43,7 @@ from outcomeeng_testing.generators.instruction_block import (
     InstructionBlockCases,
     build_macro as generate_build_macro,
     build_template as generate_template,
+    adopted_body_heading as generate_adopted_body_heading,
     delegating_root_body as generate_delegating_root_body,
     delegation_shape_cases as generate_delegation_shape_cases,
     harness_line as generate_harness_line,
@@ -169,7 +170,8 @@ def root_instruction_topology_delegating() -> RootInstructionTopology:
     return RootInstructionTopology(
         files={
             cases.instruction_claude: generate_delegating_root_body(
-                cases.instruction_agents
+                cases.instruction_agents,
+                generate_adopted_body_heading(ROOT_AGENTS_BODY),
             ),
             cases.instruction_agents: ROOT_AGENTS_BODY,
         },
@@ -183,10 +185,12 @@ def root_instruction_topology_mutual_delegation() -> RootInstructionTopology:
     return RootInstructionTopology(
         files={
             cases.instruction_claude: generate_delegating_root_body(
-                cases.instruction_agents
+                cases.instruction_agents,
+                generate_adopted_body_heading(ROOT_AGENTS_BODY),
             ),
             cases.instruction_agents: generate_delegating_root_body(
-                cases.instruction_claude
+                cases.instruction_claude,
+                generate_adopted_body_heading(ROOT_CLAUDE_BODY),
             ),
         },
         symlinks={},

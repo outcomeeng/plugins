@@ -76,66 +76,79 @@ class DelegationShapeCase:
 
     name: str
     body: str
+    other_body: str
 
 
-def delegating_root_body(other_filename: str) -> str:
+def delegating_root_body(other_filename: str, heading: str) -> str:
     """Return a root instruction body that only points the reader at ``other_filename``.
 
-    The pointer names the other harness's instruction filename, which the production module
-    owns; this composes the delegating shape around that source value rather than declaring a
-    filename of its own.
+    A real delegating stub carries the same title as the file it points at, so the pointer is
+    composed under ``heading`` — the adopted body's own heading — rather than a title this module
+    invents. Both the filename and the heading are owned elsewhere.
     """
     return (
-        "# Product\n"
+        f"{heading}\n"
         "\n"
         f"See [{other_filename}]({other_filename}) for build and test commands, "
         "architecture, packages, and testing conventions.\n"
     )
 
 
+def adopted_body_heading(content_body: str) -> str:
+    """Return the first ATX heading line of ``content_body``."""
+    return next(line for line in content_body.splitlines() if line.startswith("#"))
+
+
 def delegation_shape_cases(
     other_filename: str, content_body: str
 ) -> tuple[DelegationShapeCase, ...]:
-    """Return the six root-body shapes the delegation-verdict mapping ranges over.
+    """Return the seven root-body shapes the delegation-verdict mapping ranges over.
 
     The shapes are the ones the governing assertion enumerates: a body whose every substantive
     line points only at ``other_filename``; a body carrying a substantive line that names no
     other file; a body whose only substantive line names ``other_filename`` while joining an
     instruction of its own; a body carrying a ``#`` run that opens no heading because no
-    whitespace closes it; a body with no substantive line at all; and a body naming
-    ``other_filename`` only inside a fenced code block. Only the second case draws on
-    ``content_body``, to give the body a substantive line that names nothing; the rest compose
-    from ``other_filename`` alone or from neither. Both parameters are owned elsewhere.
+    whitespace closes it; a body whose heading ``content_body`` does not carry; a body with no
+    substantive line at all; and a body naming ``other_filename`` only inside a fenced code
+    block. Every shape is judged against ``content_body``, the body adoption would put in its
+    place, so each case carries it. Both parameters are owned elsewhere.
     """
-    delegating = delegating_root_body(other_filename)
+    heading = adopted_body_heading(content_body)
+    delegating = delegating_root_body(other_filename, heading)
+
+    def case(name: str, body: str) -> DelegationShapeCase:
+        return DelegationShapeCase(name=name, body=body, other_body=content_body)
+
     return (
-        DelegationShapeCase(name="every-substantive-line-references", body=delegating),
-        DelegationShapeCase(
-            name="a-substantive-line-does-not-reference",
-            body=delegating + "\n" + content_body,
+        case("every-substantive-line-references", delegating),
+        case(
+            "a-substantive-line-does-not-reference",
+            delegating + "\n" + content_body,
         ),
-        DelegationShapeCase(
-            name="a-reference-line-adds-its-own-instruction",
-            body=(
-                "# Product\n"
-                "\n"
-                f"See [{other_filename}]({other_filename}) for commands, "
-                "but also run the extra credentialing step before deploys.\n"
-            ),
+        case(
+            "a-reference-line-adds-its-own-instruction",
+            f"{heading}\n"
+            "\n"
+            f"See [{other_filename}]({other_filename}) for commands, "
+            "but also run the extra credentialing step before deploys.\n",
         ),
-        DelegationShapeCase(
-            name="a-hash-run-without-a-closer-is-not-a-heading",
-            body=(
-                "# Product\n"
-                "\n"
-                f"See [{other_filename}]({other_filename}) for commands.\n"
-                "#123 stays owned by the release queue.\n"
-            ),
+        case(
+            "a-hash-run-without-a-closer-is-not-a-heading",
+            f"{heading}\n"
+            "\n"
+            f"See [{other_filename}]({other_filename}) for commands.\n"
+            "#123 stays owned by the release queue.\n",
         ),
-        DelegationShapeCase(name="no-substantive-line", body="# Product\n\n---\n"),
-        DelegationShapeCase(
-            name="reference-inside-a-code-fence",
-            body=f"# Product\n\n```\nsee {other_filename}\n```\n",
+        case(
+            "a-heading-the-adopted-body-does-not-carry",
+            "# Deprecated checkout — never deploy from here\n"
+            "\n"
+            f"See [{other_filename}]({other_filename}) for commands.\n",
+        ),
+        case("no-substantive-line", f"{heading}\n\n---\n"),
+        case(
+            "reference-inside-a-code-fence",
+            f"{heading}\n\n```\nsee {other_filename}\n```\n",
         ),
     )
 
