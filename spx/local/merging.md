@@ -48,11 +48,10 @@ After the canonical-checkout preflight proves that the assigned worktree is a di
 git fetch origin main
 git switch --detach origin/main
 git rev-parse --show-toplevel
-just marketplace-source-root outcomeeng
 spx diagnose --format json
 ```
 
-Stop and inspect the post-cleanup `worktree-pool` record and both path command outputs under the canonical checkout safety predicates. A failed check leaves the feature worktree detached and the remote branch intact for inspection. Only after every predicate passes, run:
+Stop and inspect the post-cleanup `worktree-pool` record and the worktree-root output under the canonical checkout safety predicates. A failed check leaves the feature worktree detached and the remote branch intact for inspection. Only after every predicate passes, run:
 
 ```bash
 git push origin --delete <branch>
