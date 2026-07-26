@@ -42,7 +42,7 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
 - Input shape: changeset, base ref, selected transport, and optional overlay declarations for `PREVIEW`, `DEPLOY`, and `RELEASE`.
 - Behavior: establish `VERIFICATION_READINESS`, run any declared `PREVIEW`, merge under `MERGE_READINESS`, run any declared `DEPLOY` under `DEPLOYMENT_READINESS`, run any declared `RELEASE` under `RELEASE_READINESS`, then close or continue.
 - State change: the changeset reaches the default branch on origin, and any declared deploy or release action runs after the merge in phase order.
-- Inspection surface: skill status prose, action tokens, PR/check state for PR transports, deterministic tests, eval cases, and this repository's marketplace-source worktree state for the repo-local release.
+- Inspection surface: skill status prose, action tokens, PR/check state for PR transports, deterministic tests, and eval cases.
 - Failure behavior: a missing predicate stops at the named readiness gate with an observable action token or report; a declared release cannot be skipped after merge.
 - Verification: spec validation, status check, changed-node tests, lifecycle eval cases, and skill audit after `SKILL.md` edits.
 
@@ -78,19 +78,10 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
    - Remove the retired production-readiness implementation and tests once the transport flow and shared methodology use `DEPLOYMENT_READINESS` and `RELEASE_READINESS`.
    - Verification: focused tests for gate mapping and transport behavior, lifecycle eval cases, `just check-skills`, `just docs-check`, and skill audit.
 
-4. **Repo-local release PR: marketplace refresh as `RELEASE`**
-   - Update `spx/local/merging.md`:
-     - rename production-relevance content to deployment and release readiness content;
-     - declare this repo's `RELEASE` action;
-     - resolve the marketplace-source worktree;
-     - capture `previous-main-ref` in that worktree before fast-forward;
-     - fetch and fast-forward the marketplace-source `main` to `origin/main`;
-     - run `(cd "$src" && just sync-marketplace <previous-main-ref>)`.
-   - Update root guidance that currently frames marketplace sync as conditional post-merge behavior:
-     - `AGENTS.md`
-     - the shared `CLAUDE.md` symlink target, through the same edit surface
-   - Remove wording that lets an agent pre-classify whether `just sync-marketplace` is needed; the declared release action runs, and the command owns distribution-change detection.
-   - Verification: spec-only validation for Markdown, plus any docs checks required by guide changes.
+4. **Repo-local release PR: no release action** — applied.
+   - `spx/local/merging.md` declares no deployment and no release action. Both agents resolve from the `outcomeeng/plugins` marketplace named in this checkout's committed configuration, so a merge to the default branch on origin is the publication and `RELEASE` is a no-op.
+   - The overlay carries only values that differ per repository. The canonical-checkout diagnosis and the post-merge cleanup sequence were removed as duplicates of the shipped `/merging-standards` `<occupancy_preflight>`, `<assigned_cwd_worktree_discipline>`, and `<merge_cleanup>` contracts.
+   - `AGENTS.md` and `CLAUDE.md` state the same delivery model at every site that previously described a marketplace-source worktree refresh.
 
 5. **Eval and regression PR: lifecycle order evidence**
    - Add or update eval coverage for:
@@ -101,7 +92,7 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
      - declared `RELEASE` runs after `MERGE` and after any declared `DEPLOY`;
      - absent `RELEASE` is a no-op;
      - a flow that stops after `MERGE` fails when `RELEASE` is declared;
-     - this repo's release runs `just sync-marketplace <previous-main-ref>` after the marketplace-source checkout fast-forwards to `origin/main`.
+     - this repo declares no release action, so `RELEASE` is a no-op that never blocks `CLOSE`.
    - Add deterministic mapping coverage for the two newly declared target assertions:
      - `test_declared_deploy_without_authorization_awaits_deployment_authorization`;
      - `test_absent_deploy_declaration_skips_deploy`;
