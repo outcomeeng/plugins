@@ -6,17 +6,6 @@ from outcomeeng_testing.harnesses import instruction_block_mapping_evidence as e
 MODULE = harness.load_instruction_block_module()
 
 
-def appear_in_order(lines: list[str], document: str) -> bool:
-    """Report whether every line occurs in the document, in the order the seed carries them."""
-    cursor = 0
-    for line in lines:
-        found = document.find(line, cursor)
-        if found < 0:
-            return False
-        cursor = found + len(line)
-    return True
-
-
 def test_instruction_block_mapping_evidence() -> None:
     assert (
         evidence.mapping_evidence_run().executed
@@ -59,7 +48,11 @@ def test_root_topology_maps_to_bootstrap_outcome(tmp_path: pathlib.Path) -> None
             elif case.expected_region_body is None:
                 assert outcome.seeds[filename].strip() in document, case.name
             else:
-                assert appear_in_order(own_lines, document), case.name
+                cursor = 0
+                for line in own_lines:
+                    found = document.find(line, cursor)
+                    assert found >= 0, (case.name, line)
+                    cursor = found + len(line)
             assert document.startswith(MODULE.ROUTER_MARKER_PREFIX), case.name
             for token in case.removed_tokens:
                 assert token not in document, case.name
