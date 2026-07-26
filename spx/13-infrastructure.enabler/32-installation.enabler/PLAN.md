@@ -2,75 +2,162 @@
 
 Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownership).
 
-The decision bounds the marketplace toolchain to the invocation checkout: it reconciles only
-that checkout's committed runtime configuration and never mutates a developer's user-scope
-marketplace registrations, plugin caches, or agent directories. Install completeness is
-established by an isolated harness that provisions real runtimes in disposable homes.
+## What RELEASE means for this repository
 
-Spec alignment applied: `installation.md` now declares the checkout-bounded read and refresh
-mechanics the decision leaves standing — the Codex installed-set CLI payload contract, the
-addable-plugin-set derivation from `dist/codex/*/.codex-plugin/plugin.json`, and the per-plugin
-`codex plugin add` refresh command form (never `codex plugin marketplace upgrade`). The superseded
-user-scope assertions are removed — Codex plugin-cache preservation (compatibility symlinks,
-version-directory topology, orphan and unmanaged-plugin pruning, reconciliation-timestamp
-freshness), user-scope marketplace-source reconciliation, registration repair, and
-plugin-selection restore, and the `validate_install` assertions verifying user-scope cache
-topology and cache listing. The preserved assertions survive because the decision changes where
-install state lives and forbids user-scope mutation, not how a payload parses, where the addable
-set is derived, or which refresh command installs a plugin; the isolated harness performs these
-same reads and installs in disposable runtime homes.
+A plugin change that reaches the default branch on origin has released only when **everyone on this
+machine picks up the new version from GitHub** on their next refresh or new session. Publication is
+not release; a merged commit nobody's agent resolves is not delivered.
 
-## This repository's release process
+The release action is therefore:
 
-This product ships plugins for two agents, and a published plugin reaches nobody until each agent's
-marketplace is updated to the new version. That update is this repository's `RELEASE` action: after a
-plugin change merges to the default branch on origin, both agents' marketplaces advance to the merged
-versions so sessions resolve them. The action is declared in `spx/local/merging.md` and runs under
-`RELEASE_READINESS` in the phase order the spec-tree plugin ships.
+1. Update the Claude plugins from the GitHub marketplace.
+2. Update the Codex plugins from the same GitHub marketplace.
+3. Update the agent definitions.
 
-Declaring it is not optional bookkeeping. `spx/21-spec-tree.enabler/76-merging.enabler` builds the
-shipped capability of driving a consumer's declared `PREVIEW`, `DEPLOY`, and `RELEASE` phases; this
-repository is the consumer that exercises the release path. With no declaration here, the shipped
-`RELEASE` phase has no live exerciser and only ever runs as a no-op.
+Step 3 exists because a Codex plugin manifest ships skills but not agents. Both agents' definitions
+come from one authored source, but the shipped artifacts are not identical — the build converts each
+into that agent's native form, and the conversion is lossy. Comparing
+`dist/claude/spec-tree/agents/spec-auditor.md` against its Codex counterpart: Markdown with YAML
+frontmatter against TOML, `spec-auditor` against the flat-namespace `spec-tree_spec-auditor`, `model:
+sonnet` against a mapped Codex model, a `tools` allowlist against derived `sandbox_mode` and
+`web_search` values, a `skills` list against `[[skills.config]]` blocks, plus a
+`shell_environment_policy` marker and an appended manual-review block that the source has no
+counterpart for. `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/agents.md`
+governs those mappings and requires that guidance precisely because some source semantics have no
+Codex equivalent.
 
-**Sync is not what we are doing.** Reconciling a developer's marketplace registration, repairing a
-plugin cache, or fast-forwarding a worktree that serves plugin content are all the superseded
-user-scope model that `spx/12-marketplace-state.adr.md` removes from the toolchain's reach. The
-release action updates each agent's marketplace to the published versions and nothing else.
+What is identical is the intent, not the bytes. Claude receives its artifact through the manifest;
+Codex cannot, so its converted artifact arrives by a separate install. That is the only asymmetry,
+and it is a Codex capability limit rather than a design choice.
 
-Steps:
+The action is declared in `spx/local/merging.md` and runs under `RELEASE_READINESS` in the phase
+order the spec-tree plugin ships. `spx/21-spec-tree.enabler/76-merging.enabler` builds the shipped
+capability of driving a consumer's declared `PREVIEW`, `DEPLOY`, and `RELEASE` phases; this
+repository is the consumer that exercises the release path, and with no declaration here that phase
+never runs as anything but a no-op.
 
-- Declare `RELEASE` in `spx/local/merging.md` with the update command for each agent, and state the
-  `RELEASE_READINESS` predicates that authorize it. Keep the overlay to those values; the phase
-  order, the gate, and the worktree and cleanup protocols are the shipped skills'.
-- Widen this node beyond Codex. `installation.md` declares the Codex installed-set payload contract,
-  the addable-set derivation, and the per-plugin refresh form; the release updates both agents, so
-  the Claude side needs the same declared read and update contracts before the action is verifiable.
-- Establish evidence for the release action through `/verify`, which selects the verification type,
-  then `/test` for whatever it routes to test. Do not presuppose the type, the assertion type, or the
-  execution level here: the assertion's quantifier selects the assertion type, and operational
-  reality selects the level. This node already reads a real agent CLI at `L1`
-  (`test_installed_set.conformance.l1.py`), so invoking a CLI is not what makes evidence heavier —
-  full install cost across the catalog is. Whatever setup the routing needs, including a disposable
-  agent home, belongs to a spec-governed harness; the executed test owns the assertion flow alone.
-- Correct the root guides to name the release command as the way published versions reach an agent,
-  and drop any text telling a developer to run the underlying primitives by hand.
+## What consumers need
 
-Out of scope here: `spx/21-spec-tree.enabler/76-merging.enabler/PLAN.md` describes the shipped
-lifecycle and stays free of this repository's specifics. Restore it complete and pure; the
-declaration above is what makes its release path exercised, not part of its content.
+A consumer declares the plugins it requires in `.claude/` and `.codex/`. That declaration is the
+same for both agents: the same marketplace, the same plugin set.
 
-Pending implementation:
+**Claude is done.** `.claude/settings.json` names the GitHub marketplace and the enabled set, Claude
+reads it, and the manifest carries both skills and agents. Nothing further is required.
 
-- Build the isolated real-runtime installation harness — real `claude` and `codex` binaries in
-  disposable runtime homes — that verifies every catalog plugin installs and enables while
-  mutating no user-scope state. The harness assertion belongs in a node of its own: `spx/EXCLUDE`
-  is node-granular, so excluding this node to admit a not-yet-implemented harness assertion would
-  also stop its passing test files. Declare the harness node with `/author`, then route its
-  assertions through `/test`. When that node exists, the addable-set and refresh-command-form
-  assertions re-home to it alongside the harness.
-- Remove the superseded user-scope installation implementation and its now-unlinked test files
-  (`test_codex_plugin_cache.scenario.l1.py`, `test_codex_plugin_cache.property.l1.py`,
-  `test_marketplace_sources.*`, `test_validate_install.scenario.l1.py`) in the production cutover
-  of `just sync-marketplace`. `test_codex_plugin_cache.compliance.l1.py` stays linked — it backs
-  the preserved addable-set and refresh-command-form assertions.
+**Codex needs two steps:**
+
+1. Install, or ensure installed, the marketplace and the declared plugins. Codex installs skills
+   through the plugin, so this step delivers every skill.
+2. Materialize the agent definitions into the same destination those skills landed in.
+
+The destination is `CODEX_HOME` by default, because that is where step 1 put the skills and agents
+belong beside them. A `--scope project` override is available, matching what `claude plugin install`
+already offers, so the two agents end up with the same semantics rather than Codex being
+user-scope-only. What is insufficient is project scope as the *only* option — it would force the
+placement to repeat for every repository on the machine while still costing the same explicit step
+that one user-scope placement costs once.
+
+Both steps exist because Codex requires an install regardless. Step 2 is not extra machinery bolted
+on to work around a limitation; it is the second half of an install the developer is already
+running.
+
+## Sync is not what we are doing
+
+There is no sync. Sync names a two-way convergence between a declaration and an installation, and no
+such operation exists here. The flow is one-directional: a repository declares, and an explicit
+install applies that declaration to the agent's installation. What an agent holds never feeds back
+into what a repository declares.
+
+Everything that assumed otherwise goes: reconciling a developer's marketplace registration,
+repairing a plugin cache, resolving a marketplace-source worktree and fast-forwarding it so a local
+`dist/` serves current content, compatibility-symlink repair, and cache-topology inspection. The
+Directory-source registration that machinery serves is a preview pointer at one worktree under
+review — never a delivery mechanism, and never a gate predicate.
+
+## Work, in truth order
+
+**Decision.** `spx/12-marketplace-state.adr.md` is wrong at the root and changes first. It declares
+the toolchain checkout-bounded and forbids mutating user-scope marketplace state, and it places
+converted agent definitions as committed repository content under the checkout's agent directory
+(opening paragraph, and the assertions at lines 19, 23, 25). The corrected decision says: a
+repository declares per agent; an explicit install applies that declaration to `CODEX_HOME`; release
+advances every agent's installation to the published version; an installation changes only across an
+install or a release.
+
+**Specs.** First affected, in the same changeset as the decision:
+
+- `spx/13-infrastructure.enabler/32-installation.enabler/installation.md` — declares checkout-bounded
+  reading and a per-plugin refresh form that forbids `codex plugin marketplace upgrade`. Becomes the
+  one-directional install into `CODEX_HOME`.
+- `spx/32-distribution.enabler/21-sync.enabler/sync.md` — the node is named for the concept that does
+  not exist. Its disposition is structural, so it routes through `/decompose` on
+  `spx/32-distribution.enabler` rather than being reworded: sync goes, `21-push.enabler` loses the
+  half that invokes it, and neither the install nor the release action has a node today.
+- `spx/21-spec-tree.enabler/79-diagnostics.enabler/13-diagnose-engine.adr.md` — restates the
+  superseded per-agent configuration enumeration; the derive-from-committed-config rule itself
+  survives.
+- `spx/outcomeeng.product.md` scope bullet — "Repository-scoped marketplace synchronization".
+
+**Code.** Follows the specs.
+
+How agent definitions are shipped is the thing to preserve. A Codex plugin manifest declares skills
+and not agents, so the agents ride inside a skill's own directory — `spec-tree-plugin/agents/` — and
+the script that materializes them ships in that same skill at
+`dist/codex/spec-tree/skills/spec-tree-plugin/scripts/place_agents.py`, authored at
+`src/templates/plugin/scripts/place_agents.py`. That is what makes delivery contractual rather than
+incidental, and it is why the decision requires the definitions to sit inside a surface the manifest
+declares.
+
+- **Keep `place_agents.py`.** It already does the whole placement job: reads its declaration, copies
+  drifted definitions, prunes stale ones within its own plugin's prefix, and offers `--check` for
+  drift detection. Nothing about it is superseded.
+- **Add its equivalent as the install step.** Install is required for Codex regardless, so the new
+  script is the operation that registers the marketplace and installs the declared plugin set — the
+  half `place_agents.py` does not cover.
+- **Make the destination scope-aware.** `outcomeeng/distribution/build.py:1470` sets
+  `checkout_directory=".codex/agents"`, which the build writes into each plugin's `placement.json`
+  and `place_agents.py` resolves against `--checkout`, defaulting to the working directory. Default
+  the resolution to `CODEX_HOME` instead — beside the skills — and accept `--scope project` for the
+  Claude-equivalent override. The registry field's name follows the semantics rather than the
+  reverse.
+- This repository's 14 committed `.codex/agents/*.toml` exist because placement defaulted to project
+  scope. Once the default is the agent home, whether this repository still keeps a project-scope copy
+  is a choice to make deliberately, not a state to inherit.
+
+**Overlay.** `spx/local/merging.md` carries the release declaration. Its current "Release marketplace
+sync" section is the superseded model end to end, including the `worktree-pool` preflight predicate
+that requires the diagnosed main checkout to equal the marketplace-source path.
+
+## Evidence
+
+Route the release and install assertions through `/verify`, then `/test` for whatever it routes to
+test. Do not presuppose the verification type, the assertion type, or the execution level: the
+assertion's quantifier selects the assertion type and operational reality selects the level. This
+node already reads a real agent CLI at `L1` (`test_installed_set.conformance.l1.py`), so invoking a
+CLI is not what makes evidence heavier — full install cost across the catalog is. Whatever setup the
+routing needs, including a disposable agent home, belongs to a spec-governed harness; the executed
+test owns the assertion flow alone.
+
+State what we want, not what we do not. An assertion like "NEVER declare a step whose contract is
+`codex_cache_preserve`" can only be tested by grepping for a literal string, passes the moment the
+step is renamed, and is defined entirely by reference to a design being removed. The provable form
+names the observable outcome: what an agent's installation holds after the operation.
+
+`work/sync-marketplace-cutover` holds an isolated real-runtime harness
+(`outcomeeng_testing/harnesses/marketplace_runtime.py`) that provisions real `claude` and `codex`
+against a disposable home, installs every real catalog plugin, and reads the install state back from
+the CLIs. It is worth porting for the install-completeness evidence. Port it to a fresh branch rather
+than rebasing: that branch is 421 behind `origin/main` and overlaps main in 14 files including
+`agents.py`, `contracts.py`, `orchestration.py`, `sync.py`, and `install.py`.
+
+## Open — operator's call
+
+Release step 3 reads two ways. "Update the agent definitions in each consuming repo" and "install
+agents in `CODEX_HOME`, not per project" agree if release updates `CODEX_HOME` once and every
+repository on the machine resolves that one copy. Confirm before the decision is written.
+
+## Out of scope
+
+`spx/21-spec-tree.enabler/76-merging.enabler/PLAN.md` describes product truth for the spec-tree
+plugin and stays free of this repository's specifics. The declaration above is what makes that
+plugin's release path exercised, never part of its content.
