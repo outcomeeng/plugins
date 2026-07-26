@@ -75,12 +75,12 @@ The methodology-providing plugin declares the exact methodology release it provi
   "methodology": {
     "source": "outcomeeng/spec-tree",
     "provides": "4.0.0",
-    "supports": "^3.1.0 || ^4.0.0"
+    "supports": ">=3.1.0 <5.0.0"
   }
 }
 ```
 
-`provides` is exact. `supports` is a SemVer range whose grammar is defined by the release contract; the union form is preferred over a single continuous interval, because disjoint major support is what the range usually means and a continuous interval hides it.
+`provides` is exact. `supports` is a range over methodology releases whose grammar the release contract defines. The example above states comparator bounds illustratively and commits to no particular serialization; existing ecosystems differ on whether a range may express a disjoint set at all, so that expressiveness is a decision the grammar makes rather than an assumption this proposal inherits.
 
 Support ranges express compatibility with individually selected methodology releases. They do not express that one consumer repository contains artifacts from several releases.
 
@@ -129,11 +129,11 @@ A repository adopting a new major declares that major as its exact methodology v
 methodology:
   source: outcomeeng/spec-tree
   version: 4.0.0
-  accepts:
+  <term-pending>:
     - 3.1.0
 ```
 
-`accepts` is distinct from a plugin's `supports`. `supports` is a compatibility range over alternative single selections — any one of which a consumer might choose. `accepts` is a finite set of exact earlier editions simultaneously present in one repository. The two are not interchangeable, and a SemVer range cannot express the second: a range offers several interchangeable single-version selections, while a mixed-edition repository intentionally contains artifacts governed by distinct editions at the same time.
+The accepted-earlier-editions declaration is distinct from a plugin's `supports`. `supports` is a compatibility range over alternative single selections — any one of which a consumer might choose. The accepted-earlier-editions declaration is a finite set of exact earlier editions simultaneously present in one repository. The two are not interchangeable, and a range cannot express the second: a range offers several interchangeable single-version selections, while a mixed-edition repository intentionally contains artifacts governed by distinct editions at the same time.
 
 During this state:
 
@@ -141,11 +141,11 @@ During this state:
 - each artifact is interpreted according to its own deterministic edition identity;
 - earlier artifacts remain identifiable migration debt;
 - the repository exposes the remaining earlier-artifact inventory;
-- removing the `accepts` declaration marks completion of the transition.
+- removing the accepted-earlier-editions declaration marks completion of the transition.
 
-**Adjacent-major bound.** For a repository selecting major N, `accepts` may name exact releases from N-1 only. This bounds set membership and the resulting compatibility cost; it does not by itself define when a transition completes. Because a repository selecting N+1 may accept only releases from N, selecting N+1 requires eliminating any remaining N-1 artifacts first. Every reader is therefore bounded to two adjacent majors, while a single migration may run for months.
+**Adjacent-major bound.** For a repository selecting major N, the accepted-earlier-editions declaration may name exact releases from N-1 only. This bounds set membership and the resulting compatibility cost; it does not by itself define when a transition completes. Because a repository selecting N+1 may accept only releases from N, selecting N+1 requires eliminating any remaining N-1 artifacts first. Every reader is therefore bounded to two adjacent majors, while a single migration may run for months.
 
-**Completion.** A transition completes when the earlier-edition artifact inventory reaches zero and the `accepts` declaration is removed. Completion is established by the inventory, not by elapsed time and not by the adjacent-major bound.
+**Completion.** A transition completes when the earlier-edition artifact inventory reaches zero and the accepted-earlier-editions declaration is removed. Completion is established by the inventory, not by elapsed time and not by the adjacent-major bound.
 
 ## Deprecation and removal
 
@@ -175,11 +175,11 @@ These invariants avoid the ecosystem split, dependency deadlock, ambiguous inter
 
 **Three release lines, each on its own clock.**
 
-| Line                   | Records                                                                                                                               | Cadence    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| Methodology            | generation transitions, compatible extensions, deprecations and removals, support standing                                            | rare       |
-| Per delivery mechanism | what changed in that plugin or package                                                                                                | frequent   |
-| Marketplace            | events no single delivery mechanism owns: a new agent harness, a plugin added, removed, or renamed, a floor that moves across plugins | occasional |
+| Line        | Records                                                                                                                   | Cadence    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Methodology | generation transitions, compatible extensions, deprecations and removals, support standing                                | rare       |
+| Per plugin  | what changed in that plugin                                                                                               | frequent   |
+| Marketplace | events no single plugin owns: a new agent harness, a plugin added, removed, or renamed, a floor that moves across plugins | occasional |
 
 **Sections** are `Breaking`, `Added`, `Changed`, `Removed`, `Fixed`, `Requires`. `Breaking` is elevated rather than folded into `Changed`, because a rename breaks invocation outright and must not be discoverable only by careful reading. `Requires` carries floor and compatibility advances so a version constraint is readable without prose.
 
@@ -187,5 +187,4 @@ These invariants avoid the ecosystem split, dependency deadlock, ambiguous inter
 
 ## Open
 
-- **The terminology for the accepted-earlier-editions field.** `accepts` is the leading candidate: it reads naturally as the repository accepting exact earlier editions, and it avoids the value judgment carried by `legacy`. The concept is settled; the field name is not part of the proposed contract until the terminology is chosen.
-- **Whether a consumer declaration becomes mandatory.** It is optional today. A repository carrying a tracked specification tree while declaring no durable methodology identity is already recognizable as a distinct state, so the question is whether that state is a warning or an error.
+- **The terminology for the accepted-earlier-editions field.** `accepts` is the leading candidate: it reads naturally as the repository accepting exact earlier editions, and it avoids the value judgment carried by `legacy`. The concept is settled; the field name is not part of the proposed contract until the terminology is chosen, and the declaration is written `<term-pending>` throughout until then.
