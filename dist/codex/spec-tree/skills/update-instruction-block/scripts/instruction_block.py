@@ -763,26 +763,31 @@ def points_only_at(line: str, other_filename: str) -> bool:
     return not set(residual) & set(".!?")
 
 
-def delegates_to(body: str, other_filename: str) -> bool:
+def delegates_to(body: str, other_filename: str, other_body: str) -> bool:
     """Report whether ``body`` does nothing but point the reader at ``other_filename``.
 
     A delegating root instruction file states that the two root files carry one set of
-    instructions, so the bootstrap treats it as content-absent. The verdict reads the body's
-    *substantive* lines — every non-blank line that is not an ATX heading and not a horizontal
-    rule — and holds only when at least one exists and every one of them points only at the other
-    root instruction file. A body carrying any substantive line that names something else or adds
-    an instruction of its own carries content, and a fenced code block is content whatever its
-    lines say, so either makes the verdict false. The verdict errs toward false because adoption
-    runs once and replaces the body: an unrecognized pointer costs the file only its shared
-    region, while a misread instruction costs the file its content. Pure: a string and a filename
-    in, a bool out.
+    instructions, so the bootstrap treats it as content-absent. The verdict reads the whole body
+    against ``other_body``, the body adoption would put in its place, and holds only when the
+    body has a *substantive* line and every substantive line points only at the other root
+    instruction file. A line is substantive unless it is blank, a horizontal rule, or an ATX
+    heading ``other_body`` also carries — a title both files already share survives adoption, so
+    skipping it loses nothing, while a heading only this body carries is content that adoption
+    would destroy. A substantive line that names something else or adds an instruction of its own
+    makes the verdict false, as does a fenced code block whatever its lines say. The verdict errs
+    toward false because adoption runs once and replaces the body: an unrecognized pointer costs
+    the file only its shared region, while a misread instruction costs the file its content.
+    Pure: three strings in, a bool out.
     """
     if "```" in body or "~~~" in body:
         return False
+    adopted = {line.strip() for line in other_body.splitlines()}
     substantive = [
         line
         for line in (raw.strip() for raw in body.splitlines())
-        if line and not _ATX_HEADING_RE.match(line) and set(line) - set("-*_ ")
+        if line
+        and set(line) - set("-*_ ")
+        and not (_ATX_HEADING_RE.match(line) and line in adopted)
     ]
     if not substantive:
         return False
@@ -799,8 +804,8 @@ def resolve_delegation(
     content to adopt, and when neither does, there is nothing to resolve — both cases return the
     bodies unchanged. Pure: strings in, strings out.
     """
-    a_delegates = delegates_to(body_a, filename_b)
-    b_delegates = delegates_to(body_b, filename_a)
+    a_delegates = delegates_to(body_a, filename_b, body_b)
+    b_delegates = delegates_to(body_b, filename_a, body_a)
     if a_delegates == b_delegates:
         return body_a, body_b
     return (body_b, body_b) if a_delegates else (body_a, body_a)
