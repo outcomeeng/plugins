@@ -31,7 +31,7 @@ The readiness gates become:
 - Transports bind predicates and actions for the ordered phases; they do not reorder the lifecycle.
 - Absence of `PREVIEW`, `DEPLOY`, or `RELEASE` declarations means a no-op phase, never a blocker.
 - Generic shipped plugin content stays portable: no marketplace commands, Vercel-specific assumptions, repo-local paths, or single-consumer verification policy.
-- This repository's marketplace refresh is a repo-local `RELEASE` declaration in `spx/local/merging.md`, not shared methodology.
+- A consumer's release action is that consumer's own overlay declaration, never shared methodology.
 - `spx/21-spec-tree.enabler/76-merging.enabler/15-merging.pdr.md` does not exist; the governing decision is the product-level `spx/15-merging.pdr.md`. Keep it there unless a later decomposition has a concrete reason to split it.
 
 ### First Observable Slice
@@ -42,7 +42,7 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
 - Input shape: changeset, base ref, selected transport, and optional overlay declarations for `PREVIEW`, `DEPLOY`, and `RELEASE`.
 - Behavior: establish `VERIFICATION_READINESS`, run any declared `PREVIEW`, merge under `MERGE_READINESS`, run any declared `DEPLOY` under `DEPLOYMENT_READINESS`, run any declared `RELEASE` under `RELEASE_READINESS`, then close or continue.
 - State change: the changeset reaches the default branch on origin, and any declared deploy or release action runs after the merge in phase order.
-- Inspection surface: skill status prose, action tokens, PR/check state for PR transports, deterministic tests, eval cases, and this repository's marketplace-source worktree state for the repo-local release.
+- Inspection surface: skill status prose, action tokens, PR/check state for PR transports, deterministic tests, eval cases, and whatever state a consumer's declared deploy or release action changes.
 - Failure behavior: a missing predicate stops at the named readiness gate with an observable action token or report; a declared release cannot be skipped after merge.
 - Verification: spec validation, status check, changed-node tests, lifecycle eval cases, and skill audit after `SKILL.md` edits.
 
@@ -78,21 +78,7 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
    - Remove the retired production-readiness implementation and tests once the transport flow and shared methodology use `DEPLOYMENT_READINESS` and `RELEASE_READINESS`.
    - Verification: focused tests for gate mapping and transport behavior, lifecycle eval cases, `just check-skills`, `just docs-check`, and skill audit.
 
-4. **Repo-local release PR: marketplace refresh as `RELEASE`**
-   - Update `spx/local/merging.md`:
-     - rename production-relevance content to deployment and release readiness content;
-     - declare this repo's `RELEASE` action;
-     - resolve the marketplace-source worktree;
-     - capture `previous-main-ref` in that worktree before fast-forward;
-     - fetch and fast-forward the marketplace-source `main` to `origin/main`;
-     - run `(cd "$src" && just sync-marketplace <previous-main-ref>)`.
-   - Update root guidance that currently frames marketplace sync as conditional post-merge behavior:
-     - `AGENTS.md`
-     - the shared `CLAUDE.md` symlink target, through the same edit surface
-   - Remove wording that lets an agent pre-classify whether `just sync-marketplace` is needed; the declared release action runs, and the command owns distribution-change detection.
-   - Verification: spec-only validation for Markdown, plus any docs checks required by guide changes.
-
-5. **Eval and regression PR: lifecycle order evidence**
+4. **Eval and regression PR: lifecycle order evidence**
    - Add or update eval coverage for:
      - declared `PREVIEW` runs before merge-relevant advancement;
      - absent `PREVIEW` is a no-op;
@@ -100,8 +86,7 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
      - absent `DEPLOY` is a no-op;
      - declared `RELEASE` runs after `MERGE` and after any declared `DEPLOY`;
      - absent `RELEASE` is a no-op;
-     - a flow that stops after `MERGE` fails when `RELEASE` is declared;
-     - this repo's release runs `just sync-marketplace <previous-main-ref>` after the marketplace-source checkout fast-forwards to `origin/main`.
+     - a flow that stops after `MERGE` fails when `RELEASE` is declared.
    - Add deterministic mapping coverage for the two newly declared target assertions:
      - `test_declared_deploy_without_authorization_awaits_deployment_authorization`;
      - `test_absent_deploy_declaration_skips_deploy`;
@@ -115,7 +100,7 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
    - Rename eval prompts and cases from `review-readiness` and production-readiness vocabulary only where their subject changes; keep review-specific evals when the subject is the `review` verification type.
    - Verification: `just eval-case` or `just eval-node` for changed eval suites, plus focused tests that enforce skill/spec coupling.
 
-6. **Cleanup PR: stale vocabulary and docs sweep**
+5. **Cleanup PR: stale vocabulary and docs sweep**
    - Sweep authored and generated surfaces for stale lifecycle terms:
      - `REVIEW_READINESS` where the subject is the first readiness gate;
      - `PRODUCTION_READINESS`;
@@ -137,8 +122,6 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
 - `src/plugins/spec-tree/skills/open-pr/SKILL.md`
 - `src/plugins/spec-tree/skills/manage-github-pr/SKILL.md`
 - `src/plugins/spec-tree/skills/manage-pr/SKILL.md`
-- `spx/local/merging.md`
-- `AGENTS.md`
 - lifecycle eval prompts, cases, histories, and tests under `spx/21-spec-tree.enabler/76-merging.enabler/`
 
 ### Naming Guardrails
@@ -147,7 +130,7 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
 - Use `review` only for the verification type or for reviewer/finding mechanics.
 - Use `DEPLOYMENT_READINESS` only for environment mutation authorization.
 - Use `RELEASE_READINESS` only for publication or refresh authorization.
-- Use `RELEASE` for this repo's marketplace sync action.
+- Use `RELEASE` for a consumer-declared publication or refresh action.
 - Use full `spx/...` paths for decisions and nodes in PR descriptions and follow-up notes.
 
 ## Direct-push transport: remaining work
