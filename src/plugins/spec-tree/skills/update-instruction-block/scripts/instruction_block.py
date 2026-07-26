@@ -120,6 +120,17 @@ BOOTSTRAP_SHARED_REGION_NAME = "root"
 # The bootstrap pass wraps one shared region only when the biggest contiguous identical span
 # covers more than this fraction of the larger file.
 BOOTSTRAP_SHARED_THRESHOLD = 0.8
+# A pointer line that carries one of these joins a clause of its own to the reference, so the
+# line states something beyond "read the other file" and the body keeps its content.
+DELEGATION_CLAUSE_BREAKS = (
+    " but ",
+    " however ",
+    " except ",
+    " unless ",
+    ", also ",
+    ", then ",
+    ";",
+)
 
 # Each agent harness reads its own instruction filename from the product root.
 AGENT_HARNESS_INSTRUCTION_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
@@ -724,16 +735,40 @@ def _wrap_shared_at(text: str, start: int, end: int, name: str) -> str:
     return "\n\n".join(part for part in (before, fenced, after) if part) + "\n"
 
 
+def points_only_at(line: str, other_filename: str) -> bool:
+    """Report whether one substantive line does nothing but name ``other_filename``.
+
+    Naming the other file is necessary but never sufficient: a line that names it while adding
+    an instruction of its own carries content. Two decidable conditions separate the two. The
+    line states one sentence — with every occurrence of the filename removed, the residual text
+    holds no sentence terminator, so its own ``.`` inside ``NAME.md`` never counts — and it joins
+    no clause of its own through a ``DELEGATION_CLAUSE_BREAKS`` marker. A descriptive pointer
+    ("see the other file for commands, packages, and conventions") satisfies both; a pointer with
+    an instruction attached ("see the other file, but also run the migration") satisfies neither.
+    Pure: a line and a filename in, a bool out.
+    """
+    if other_filename not in line:
+        return False
+    lowered = line.lower()
+    if any(marker in lowered for marker in DELEGATION_CLAUSE_BREAKS):
+        return False
+    residual = line.strip().rstrip(".!?").replace(other_filename, " ")
+    return not set(residual) & set(".!?")
+
+
 def delegates_to(body: str, other_filename: str) -> bool:
     """Report whether ``body`` does nothing but point the reader at ``other_filename``.
 
     A delegating root instruction file states that the two root files carry one set of
     instructions, so the bootstrap treats it as content-absent. The verdict reads the body's
     *substantive* lines — every non-blank line that is not an ATX heading and not a horizontal
-    rule — and holds only when at least one exists and every one of them names the other root
-    instruction filename. A body carrying any substantive line that does not name the other file
-    carries content of its own, and a fenced code block is content whatever its lines say, so
-    either makes the verdict false. Pure: a string and a filename in, a bool out.
+    rule — and holds only when at least one exists and every one of them points only at the other
+    root instruction file. A body carrying any substantive line that names something else or adds
+    an instruction of its own carries content, and a fenced code block is content whatever its
+    lines say, so either makes the verdict false. The verdict errs toward false because adoption
+    runs once and replaces the body: an unrecognized pointer costs the file only its shared
+    region, while a misread instruction costs the file its content. Pure: a string and a filename
+    in, a bool out.
     """
     if "```" in body or "~~~" in body:
         return False
@@ -744,7 +779,7 @@ def delegates_to(body: str, other_filename: str) -> bool:
     ]
     if not substantive:
         return False
-    return all(other_filename in line for line in substantive)
+    return all(points_only_at(line, other_filename) for line in substantive)
 
 
 def resolve_delegation(
