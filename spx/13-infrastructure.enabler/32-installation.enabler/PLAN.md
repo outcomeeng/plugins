@@ -20,6 +20,46 @@ install state lives and forbids user-scope mutation, not how a payload parses, w
 set is derived, or which refresh command installs a plugin; the isolated harness performs these
 same reads and installs in disposable runtime homes.
 
+## This repository's release process
+
+This product ships plugins for two agents, and a published plugin reaches nobody until each agent's
+marketplace is updated to the new version. That update is this repository's `RELEASE` action: after a
+plugin change merges to the default branch on origin, both agents' marketplaces advance to the merged
+versions so sessions resolve them. The action is declared in `spx/local/merging.md` and runs under
+`RELEASE_READINESS` in the phase order the spec-tree plugin ships.
+
+Declaring it is not optional bookkeeping. `spx/21-spec-tree.enabler/76-merging.enabler` builds the
+shipped capability of driving a consumer's declared `PREVIEW`, `DEPLOY`, and `RELEASE` phases; this
+repository is the consumer that exercises the release path. With no declaration here, the shipped
+`RELEASE` phase has no live exerciser and only ever runs as a no-op.
+
+**Sync is not what we are doing.** Reconciling a developer's marketplace registration, repairing a
+plugin cache, or fast-forwarding a worktree that serves plugin content are all the superseded
+user-scope model that `spx/12-marketplace-state.adr.md` removes from the toolchain's reach. The
+release action updates each agent's marketplace to the published versions and nothing else.
+
+Steps:
+
+- Declare `RELEASE` in `spx/local/merging.md` with the update command for each agent, and state the
+  `RELEASE_READINESS` predicates that authorize it. Keep the overlay to those values; the phase
+  order, the gate, and the worktree and cleanup protocols are the shipped skills'.
+- Widen this node beyond Codex. `installation.md` declares the Codex installed-set payload contract,
+  the addable-set derivation, and the per-plugin refresh form; the release updates both agents, so
+  the Claude side needs the same declared read and update contracts before the action is verifiable.
+- Establish evidence for the release action through `/verify`, which selects the verification type,
+  then `/test` for whatever it routes to test. Do not presuppose the type, the assertion type, or the
+  execution level here: the assertion's quantifier selects the assertion type, and operational
+  reality selects the level. This node already reads a real agent CLI at `L1`
+  (`test_installed_set.conformance.l1.py`), so invoking a CLI is not what makes evidence heavier —
+  full install cost across the catalog is. Whatever setup the routing needs, including a disposable
+  agent home, belongs to a spec-governed harness; the executed test owns the assertion flow alone.
+- Correct the root guides to name the release command as the way published versions reach an agent,
+  and drop any text telling a developer to run the underlying primitives by hand.
+
+Out of scope here: `spx/21-spec-tree.enabler/76-merging.enabler/PLAN.md` describes the shipped
+lifecycle and stays free of this repository's specifics. Restore it complete and pure; the
+declaration above is what makes its release path exercised, not part of its content.
+
 Pending implementation:
 
 - Build the isolated real-runtime installation harness — real `claude` and `codex` binaries in
