@@ -56,15 +56,18 @@ ownership), which the existing harnesses do not model, plus a `prompt.md` and a 
 
 ## Strict-finding-disposition extraction
 
-PR #447 on `work/merge-skill-runtime-contracts` is the merge-owned consumer cycle. Reconcile it only
-after the node-local changeset-scope, test-verification, review, and audit contracts it consumes have
-converged on `origin/main`.
+PR #447 ("fix(merging): make PR lifecycle portable across runtimes") closed unmerged on
+2026-07-23. Its work survives only on `work/merge-skill-runtime-contracts` at
+`6046ed5354fc02350cadade7d45f253d854ebfa0` — 82 commits that are neither ancestors of nor
+patch-equivalent to the default branch, so nothing of it has shipped.
+
+Decide the disposition before that branch is treated as either live or disposable: re-open the
+lifecycle cluster as a new PR rebased onto current `main`, or retire the branch and re-derive
+whatever of it still applies. The node-local changeset-scope, test-verification, review, and audit
+contracts it consumed have moved since it closed, so the cluster needs re-reading against current
+truth rather than a mechanical rebase.
 
 Keep one PR when the authored `/merge`, `/open-pr`, `/manage-github-pr`, `/manage-pr`, shared
 readiness rules, action tokens, and first affected merging specs form one portable lifecycle contract
 with one rollback boundary. Split any independently mergeable review-result implementation or
 verifier infrastructure into its owning node.
-
-**Revisit condition:** update this section after PR #447 is rebased onto its merged prerequisites and
-a current semantic-cohesion review either approves that lifecycle cluster or identifies the exact
-replacement PR sequence.
