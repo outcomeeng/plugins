@@ -96,12 +96,13 @@ def delegating_root_body(other_filename: str) -> str:
 def delegation_shape_cases(
     other_filename: str, content_body: str
 ) -> tuple[DelegationShapeCase, ...]:
-    """Return the five root-body shapes the delegation-verdict mapping ranges over.
+    """Return the six root-body shapes the delegation-verdict mapping ranges over.
 
     The shapes are the ones the governing assertion enumerates: a body whose every substantive
     line points only at ``other_filename``; a body carrying a substantive line that names no
     other file; a body whose only substantive line names ``other_filename`` while joining an
-    instruction of its own; a body with no substantive line at all; and a body naming
+    instruction of its own; a body carrying a ``#`` run that opens no heading because no
+    whitespace closes it; a body with no substantive line at all; and a body naming
     ``other_filename`` only inside a fenced code block. Only the second case draws on
     ``content_body``, to give the body a substantive line that names nothing; the rest compose
     from ``other_filename`` alone or from neither. Both parameters are owned elsewhere.
@@ -120,6 +121,15 @@ def delegation_shape_cases(
                 "\n"
                 f"See [{other_filename}]({other_filename}) for commands, "
                 "but also run the extra credentialing step before deploys.\n"
+            ),
+        ),
+        DelegationShapeCase(
+            name="a-hash-run-without-a-closer-is-not-a-heading",
+            body=(
+                "# Product\n"
+                "\n"
+                f"See [{other_filename}]({other_filename}) for commands.\n"
+                "#123 stays owned by the release queue.\n"
             ),
         ),
         DelegationShapeCase(name="no-substantive-line", body="# Product\n\n---\n"),

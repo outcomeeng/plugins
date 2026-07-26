@@ -75,6 +75,7 @@ def test_root_body_shape_maps_to_delegation_verdict() -> None:
         "every-substantive-line-references": True,
         "a-substantive-line-does-not-reference": False,
         "a-reference-line-adds-its-own-instruction": False,
+        "a-hash-run-without-a-closer-is-not-a-heading": False,
         "no-substantive-line": False,
         "reference-inside-a-code-fence": False,
     }
