@@ -38,7 +38,9 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     assert (
         observation.claude_registration_target == observation.codex_registration_target
     )
-    assert observation.claude_registration_target.endswith("/checkout")
+    assert observation.claude_registration_target == str(
+        observation.invocation_checkout
+    )
     state_root = observation.state_roots[0].parent
     assert all(root.is_relative_to(state_root) for root in observation.state_roots)
     assert observation.claude_plugins_first == claude_plugins

@@ -151,6 +151,7 @@ class RealInstallationObservation:
     codex_catalog: bytes
     claude_registration_target: str
     codex_registration_target: str
+    invocation_checkout: Path
     state_roots: tuple[Path, ...]
     placed_initial: tuple[tuple[str, bytes], ...]
     placed_first: tuple[tuple[str, bytes], ...]
@@ -317,8 +318,20 @@ def observe_missing_codex_home() -> str:
     raise RuntimeError("persistent installation accepted a missing CODEX_HOME")
 
 
-def observe_first_failure() -> FailureObservation:
-    """Fail the first plugin installation and expose the attempted prefix."""
+def observe_planned_operations() -> tuple[Operation, ...]:
+    """Expose the ordered operations one isolated installation plan performs."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        plan = build_isolated_installation_plan(
+            checkout,
+            Path(temporary_directory),
+            os.environ,
+        )
+    return tuple(dict.fromkeys(command.operation for command in plan.commands))
+
+
+def observe_first_failure(operation: Operation) -> FailureObservation:
+    """Fail the selected operation and expose the attempted prefix."""
     from outcomeeng.distribution.installation import execute_installation
 
     checkout = repository_root()
@@ -328,7 +341,7 @@ def observe_first_failure() -> FailureObservation:
             Path(temporary_directory),
             os.environ,
         )
-        runner = RecordingRunner(failed_operation=Operation.PLUGIN_INSTALL)
+        runner = RecordingRunner(failed_operation=operation)
         try:
             execute_installation(plan, runner)
         except InstallationFailure as failure:
@@ -527,6 +540,7 @@ def observe_real_installation() -> RealInstallationObservation:
         codex_catalog=codex_catalog,
         claude_registration_target=claude_target,
         codex_registration_target=codex_target,
+        invocation_checkout=mirror.resolve(),
         state_roots=state_roots,
         placed_initial=placed_initial,
         placed_first=placed_first,
@@ -843,6 +857,7 @@ __all__ = [
     "observe_missing_codex_home",
     "observe_persistent_execution",
     "observe_persistent_plan",
+    "observe_planned_operations",
     "observe_real_installation",
     "observe_repository_plan",
     "observe_verification_recipe",

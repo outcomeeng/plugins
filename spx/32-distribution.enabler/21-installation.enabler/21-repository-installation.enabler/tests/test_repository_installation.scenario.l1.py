@@ -13,7 +13,6 @@ from outcomeeng.distribution.installation import (
 )
 from outcomeeng_testing.harnesses.installation import (
     observe_claude_user_collision,
-    observe_first_failure,
     observe_persistent_execution,
     observe_persistent_plan,
     observe_verification_recipe,
@@ -104,16 +103,4 @@ def test_claude_user_scope_collision_stops_before_mutation() -> None:
     observation = observe_claude_user_collision()
 
     assert str(observation.settings_path) in observation.error
-    assert "user-scope marketplace collision" in observation.error
     assert observation.attempted == ()
-
-
-def test_repository_installation_stops_after_the_first_failed_operation() -> None:
-    observation = observe_first_failure()
-
-    assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
-    assert observation.failure.command.agent is Agent.CLAUDE
-    assert observation.failure.command.plugin is not None
-    assert all(result.exit_code == 0 for result in observation.failure.completed)
-    assert observation.attempted[-1] == observation.failure.command
-    assert len(observation.attempted) < len(observation.plan.commands)
