@@ -5,6 +5,26 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
+from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL
+
+GATE_JOB_NAME: Final = "check"
+GATE_PULL_REQUEST_EVENT: Final = "pull_request"
+GATE_PUSH_EVENT: Final = "push"
+GATE_PUSH_BRANCH: Final = "main"
+JUST_BINARY: Final = "just"
+GATE_RECIPE_COMMAND: Final = f"{JUST_BINARY} {RECIPE_CHECK_FULL}"
+CONTINUE_ON_ERROR_DISABLED: Final = "false"
+FAIL_FAST_PREAMBLE: Final = "set -euo pipefail"
+TRAP_COMMAND_PREFIX: Final = "trap "
+SOFT_PASS_SHELL_SNIPPETS: Final = (
+    "|| true",
+    "|| :",
+    "|| exit 0",
+    "set +e",
+    "exit 0",
+    "if !",
+)
+
 
 @dataclass(frozen=True)
 class CiToolRequirement:
@@ -71,6 +91,16 @@ CI_STEP_ENVIRONMENT_REQUIREMENTS: Final = (
 __all__ = [
     "CI_STEP_ENVIRONMENT_REQUIREMENTS",
     "CI_TOOL_REQUIREMENTS",
+    "CONTINUE_ON_ERROR_DISABLED",
+    "FAIL_FAST_PREAMBLE",
+    "GATE_JOB_NAME",
+    "GATE_PULL_REQUEST_EVENT",
+    "GATE_PUSH_BRANCH",
+    "GATE_PUSH_EVENT",
+    "GATE_RECIPE_COMMAND",
+    "JUST_BINARY",
+    "SOFT_PASS_SHELL_SNIPPETS",
+    "TRAP_COMMAND_PREFIX",
     "CiStepEnvironmentRequirement",
     "CiToolRequirement",
 ]

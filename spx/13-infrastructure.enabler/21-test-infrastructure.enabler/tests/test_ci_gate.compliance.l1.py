@@ -2,31 +2,47 @@
 
 from __future__ import annotations
 
+from outcomeeng.validation import ACTIONLINT_ARGV, SHELLCHECK_ARGV
 from outcomeeng.validation.ci_gate import (
     CI_STEP_ENVIRONMENT_REQUIREMENTS,
     CI_TOOL_REQUIREMENTS,
+    CONTINUE_ON_ERROR_DISABLED,
+    FAIL_FAST_PREAMBLE,
+    GATE_PULL_REQUEST_EVENT,
+    GATE_PUSH_BRANCH,
+    GATE_PUSH_EVENT,
+    GATE_RECIPE_COMMAND,
+    SOFT_PASS_SHELL_SNIPPETS,
+    TRAP_COMMAND_PREFIX,
 )
 from outcomeeng_testing.harnesses.ci_gate import (
-    assert_gate_declares_workflow_and_shell_lint_steps,
-    assert_gate_job_runs_unconditionally,
-    assert_workflow_has_no_soft_passed_step,
-    assert_workflow_invokes_full_gate_recipe,
-    assert_workflow_python_matches_project_metadata,
-    assert_workflow_triggers_on_pull_request_and_main_push,
     observe_ci_toolchain,
+    observe_gate_job,
+    observe_gate_python_versions,
+    observe_gate_run_commands,
+    observe_gate_steps,
+    observe_gate_triggers,
+    observe_validation_step_argvs,
 )
 
 
 def test_gate_workflow_triggers_on_pull_request_and_main_push() -> None:
-    assert_workflow_triggers_on_pull_request_and_main_push()
+    observation = observe_gate_triggers()
+
+    assert GATE_PULL_REQUEST_EVENT in observation.events
+    assert GATE_PUSH_EVENT in observation.events
+    assert GATE_PUSH_BRANCH in observation.push_branches
 
 
 def test_gate_workflow_invokes_the_full_gate_recipe() -> None:
-    assert_workflow_invokes_full_gate_recipe()
+    assert GATE_RECIPE_COMMAND in observe_gate_run_commands()
 
 
 def test_gate_declares_workflow_and_shell_lint_steps() -> None:
-    assert_gate_declares_workflow_and_shell_lint_steps()
+    step_argvs = observe_validation_step_argvs()
+
+    assert ACTIONLINT_ARGV in step_argvs
+    assert SHELLCHECK_ARGV in step_argvs
 
 
 def test_gate_workflow_provisions_the_declared_toolchain() -> None:
@@ -56,12 +72,25 @@ def test_gate_workflow_provisions_the_declared_toolchain() -> None:
 
 
 def test_gate_workflow_python_matches_project_metadata() -> None:
-    assert_workflow_python_matches_project_metadata()
+    observation = observe_gate_python_versions()
+
+    assert observation.workflow_version == observation.project_version
 
 
 def test_gate_workflow_has_no_soft_passed_step() -> None:
-    assert_workflow_has_no_soft_passed_step()
+    for step in observe_gate_steps():
+        assert step.continue_on_error == CONTINUE_ON_ERROR_DISABLED
+        assert not step.has_condition
+        if len(step.shell_lines) > 1:
+            assert step.shell_lines[0] == FAIL_FAST_PREAMBLE
+        assert not any(snippet in step.run for snippet in SOFT_PASS_SHELL_SNIPPETS)
+        assert not any(
+            line.startswith(TRAP_COMMAND_PREFIX) for line in step.shell_lines
+        )
 
 
 def test_gate_job_runs_unconditionally() -> None:
-    assert_gate_job_runs_unconditionally()
+    observation = observe_gate_job()
+
+    assert not observation.has_condition
+    assert observation.continue_on_error == CONTINUE_ON_ERROR_DISABLED
