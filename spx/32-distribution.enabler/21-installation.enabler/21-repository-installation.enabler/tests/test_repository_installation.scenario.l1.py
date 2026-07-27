@@ -7,38 +7,52 @@ from outcomeeng.distribution.installation import (
     SourceAction,
 )
 from outcomeeng_testing.harnesses.installation import (
+    VERIFICATION_TEST,
     observe_claude_user_collision,
     observe_first_failure,
+    observe_persistent_execution,
     observe_persistent_plan,
+    observe_verification_recipe,
 )
 
 
 def test_persistent_installation_refreshes_canonical_sources_and_catalogs() -> None:
-    observation = observe_persistent_plan()
+    observation = observe_persistent_execution()
+    plan = observation.report.plan
 
     assert observation.preflight.claude_source_action is SourceAction.REFRESH
     assert any(
         command.agent is Agent.CLAUDE
         and command.operation is Operation.MARKETPLACE_REFRESH
-        for command in observation.plan.commands
+        for command in plan.commands
     )
     assert any(
         command.agent is Agent.CODEX
         and command.operation is Operation.MARKETPLACE_REFRESH
-        for command in observation.plan.commands
+        for command in plan.commands
     )
     assert {
         command.plugin
-        for command in observation.plan.commands
+        for command in plan.commands
         if command.agent is Agent.CLAUDE
         and command.operation is Operation.PLUGIN_INSTALL
-    } == set(observation.plan.claude_plugins)
+    } == set(plan.claude_plugins)
     assert {
         command.plugin
-        for command in observation.plan.commands
+        for command in plan.commands
         if command.agent is Agent.CODEX
         and command.operation is Operation.PLUGIN_INSTALL
-    } == set(observation.plan.codex_plugins)
+    } == set(plan.codex_plugins)
+    assert observation.attempted[1:] == plan.commands
+
+
+def test_verification_recipe_aliases_the_exact_l2_evidence() -> None:
+    observation = observe_verification_recipe()
+    output = observation.stdout + observation.stderr
+
+    assert observation.exit_code == 0, observation.stderr
+    assert f"just test {VERIFICATION_TEST}" in output
+    assert "install-marketplace" not in output
 
 
 def test_persistent_installation_replaces_noncanonical_sources() -> None:

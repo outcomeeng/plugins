@@ -26,6 +26,7 @@ from outcomeeng.distribution.installation import (
     InstallationCommand,
     InstallationFailure,
     InstallationPlan,
+    InstallationReport,
     Operation,
     PersistentPreflight,
     build_isolated_installation_plan,
@@ -61,6 +62,17 @@ class PersistentPlanObservation:
 
     preflight: PersistentPreflight
     plan: InstallationPlan
+    claude_catalog: bytes
+    codex_catalog: bytes
+
+
+@dataclass(frozen=True)
+class PersistentExecutionObservation:
+    """Preflight, report, and calls from one controlled persistent execution."""
+
+    preflight: PersistentPreflight
+    report: InstallationReport
+    attempted: tuple[InstallationCommand, ...]
     claude_catalog: bytes
     codex_catalog: bytes
 
@@ -122,6 +134,10 @@ class RealInstallationObservation:
     unowned_initial: bytes
     unowned_first: bytes
     unowned_second: bytes
+    ownership_prefixes: tuple[str, ...]
+    persistent_initial: tuple[tuple[str, bytes], ...]
+    persistent_first: tuple[tuple[str, bytes], ...]
+    persistent_second: tuple[tuple[str, bytes], ...]
     first_stdout: str
     first_stderr: str
     second_stdout: str
@@ -195,6 +211,29 @@ def observe_persistent_plan(
     return PersistentPlanObservation(
         preflight=preflight,
         plan=plan,
+        claude_catalog=claude_catalog,
+        codex_catalog=codex_catalog,
+    )
+
+
+def observe_persistent_execution() -> PersistentExecutionObservation:
+    """Execute the persistent path through a recording command collaborator."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
+        codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
+        preflight = build_persistent_preflight(mirror, environment)
+        runner = RecordingRunner()
+        report = execute_persistent_installation(mirror, environment, runner)
+    return PersistentExecutionObservation(
+        preflight=preflight,
+        report=report,
+        attempted=tuple(runner.calls),
         claude_catalog=claude_catalog,
         codex_catalog=codex_catalog,
     )
@@ -294,12 +333,17 @@ def observe_real_installation() -> RealInstallationObservation:
         _mirror_installation_inputs(checkout, mirror)
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
         codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
+        ownership_prefixes = _placement_prefixes(mirror)
+        persistent_root = temporary_root / "persistent"
+        persistent_environment = _persistent_environment(persistent_root)
+        _seed_persistent_state(persistent_root)
+        persistent_initial = _tree_snapshot(persistent_root)
         unowned = mirror / CODEX_AGENTS_PATH / UNOWNED_AGENT_FILENAME
         unowned.parent.mkdir(parents=True, exist_ok=True)
         unowned.write_text(UNOWNED_AGENT_CONTENT, encoding="utf-8")
         unowned_initial = unowned.read_bytes()
         placed_initial = _agent_snapshot(mirror)
-        plan = build_isolated_installation_plan(mirror, state, os.environ)
+        plan = build_isolated_installation_plan(mirror, state, persistent_environment)
         environment = dict(plan.commands[0].environment)
         claude_target = _registration_target(plan, Agent.CLAUDE)
         codex_target = _registration_target(plan, Agent.CODEX)
@@ -309,11 +353,13 @@ def observe_real_installation() -> RealInstallationObservation:
         codex_first = _run_listing(Agent.CODEX, mirror, environment)
         placed_first = _agent_snapshot(mirror)
         unowned_first = unowned.read_bytes()
+        persistent_first = _tree_snapshot(persistent_root)
         second = _run_recipe(checkout, mirror, state, environment)
         claude_second = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_second = _run_listing(Agent.CODEX, mirror, environment)
         placed_second = _agent_snapshot(mirror)
         unowned_second = unowned.read_bytes()
+        persistent_second = _tree_snapshot(persistent_root)
     return RealInstallationObservation(
         first_exit_code=first.returncode,
         second_exit_code=second.returncode,
@@ -334,6 +380,10 @@ def observe_real_installation() -> RealInstallationObservation:
         unowned_initial=unowned_initial,
         unowned_first=unowned_first,
         unowned_second=unowned_second,
+        ownership_prefixes=ownership_prefixes,
+        persistent_initial=persistent_initial,
+        persistent_first=persistent_first,
+        persistent_second=persistent_second,
         first_stdout=first.stdout,
         first_stderr=first.stderr,
         second_stdout=second.stdout,
@@ -483,10 +533,42 @@ def _agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
     return tuple((path.name, path.read_bytes()) for path in sorted(directory.glob("*")))
 
 
+def _placement_prefixes(checkout: Path) -> tuple[str, ...]:
+    prefixes = []
+    manifests = (checkout / "dist/codex").glob("*/skills/*/agents/placement.json")
+    for manifest in sorted(manifests):
+        document = json.loads(manifest.read_text(encoding="utf-8"))
+        if document.get("directory") == str(CODEX_AGENTS_PATH):
+            prefixes.append(str(document["prefix"]))
+    return tuple(prefixes)
+
+
+def _seed_persistent_state(root: Path) -> None:
+    for relative_path in (
+        Path("home/.claude/settings.json"),
+        Path("claude/plugins/installed.json"),
+        Path("codex/plugins/installed.json"),
+        Path("codex-sqlite/state.db"),
+        Path("checkout/.codex/agents/developer.toml"),
+    ):
+        path = root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(str(relative_path), encoding="utf-8")
+
+
+def _tree_snapshot(root: Path) -> tuple[tuple[str, bytes], ...]:
+    return tuple(
+        (str(path.relative_to(root)), path.read_bytes())
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    )
+
+
 __all__ = [
     "CollisionObservation",
     "ConfigObservation",
     "FailureObservation",
+    "PersistentExecutionObservation",
     "PersistentPlanObservation",
     "PlanObservation",
     "RealInstallationObservation",
@@ -496,6 +578,7 @@ __all__ = [
     "observe_claude_user_collision",
     "observe_codex_config_independence",
     "observe_first_failure",
+    "observe_persistent_execution",
     "observe_persistent_plan",
     "observe_real_installation",
     "observe_repository_plan",

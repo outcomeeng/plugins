@@ -44,8 +44,13 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
         for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
     )
     assert observation.placed_first != observation.placed_initial
-    assert any(
-        name != "developer-owned.toml" for name, _content in observation.placed_first
+    changed_names = {
+        name for name, _content in observation.placed_first
+    } - {name for name, _content in observation.placed_initial}
+    assert changed_names
+    assert all(
+        any(name.startswith(prefix) for prefix in observation.ownership_prefixes)
+        for name in changed_names
     )
     assert observation.placed_first == observation.placed_second
     assert observation.unowned_first == observation.unowned_initial

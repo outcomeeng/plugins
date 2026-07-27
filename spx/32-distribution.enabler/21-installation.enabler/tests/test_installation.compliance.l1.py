@@ -1,9 +1,13 @@
-"""State-boundary and failure evidence for repository installation."""
+"""Catalog, state-boundary, and failure evidence for repository installation."""
 
+import json
 from pathlib import Path
+from typing import cast
 
 from outcomeeng.distribution.installation import (
     Agent,
+    CATALOG_PLUGIN_NAME_FIELD,
+    CATALOG_PLUGINS_FIELD,
     CODEX_HOME_ENV,
     InstallationMode,
     Operation,
@@ -11,9 +15,33 @@ from outcomeeng.distribution.installation import (
 )
 from outcomeeng_testing.harnesses.installation import (
     observe_first_failure,
-    observe_persistent_plan,
+    observe_persistent_execution,
     observe_repository_plan,
 )
+
+
+def test_each_mode_uses_each_catalogs_complete_ordered_plugin_set() -> None:
+    isolated = observe_repository_plan()
+    persistent = observe_persistent_execution()
+    claude_catalog = cast(
+        dict[str, list[dict[str, object]]], json.loads(isolated.claude_catalog)
+    )
+    codex_catalog = cast(
+        dict[str, list[dict[str, object]]], json.loads(isolated.codex_catalog)
+    )
+    expected_claude = tuple(
+        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
+        for plugin in claude_catalog[CATALOG_PLUGINS_FIELD]
+    )
+    expected_codex = tuple(
+        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
+        for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
+    )
+
+    assert isolated.plan.claude_plugins == expected_claude
+    assert isolated.plan.codex_plugins == expected_codex
+    assert persistent.report.plan.claude_plugins == expected_claude
+    assert persistent.report.plan.codex_plugins == expected_codex
 
 
 def test_every_command_uses_the_explicit_checkout_and_agent_homes() -> None:
@@ -34,26 +62,35 @@ def test_every_command_uses_the_explicit_checkout_and_agent_homes() -> None:
 
 
 def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None:
-    observation = observe_persistent_plan()
+    observation = observe_persistent_execution()
+    plan = observation.report.plan
 
-    assert observation.plan.mode is InstallationMode.PERSISTENT
+    assert plan.mode is InstallationMode.PERSISTENT
     assert all(
-        "project" in command.argv
-        for command in observation.plan.commands
+        "--scope" in command.argv and "project" in command.argv
+        for command in plan.commands
         if command.agent is Agent.CLAUDE
-        and command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        and command.operation
+        in {
+            Operation.MARKETPLACE_REMOVE,
+            Operation.MARKETPLACE_ADD,
+            Operation.PLUGIN_INSTALL,
+            Operation.PLUGIN_ENABLE,
+        }
     )
     assert all(
         dict(command.environment)[CODEX_HOME_ENV]
-        == str(observation.plan.roots.codex_home)
-        for command in observation.plan.commands
+        == str(plan.roots.codex_home)
+        for command in plan.commands
         if command.agent is Agent.CODEX
     )
+    assert observation.attempted[1:] == plan.commands
 
 
 def test_first_agent_cli_failure_reports_the_operation_and_stops() -> None:
     observation = observe_first_failure()
 
+    assert observation.failure.command.agent is Agent.CLAUDE
     assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
     assert observation.failure.command.plugin is not None
     assert observation.failure.result.exit_code != 0
