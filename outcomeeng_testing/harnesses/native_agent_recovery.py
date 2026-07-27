@@ -8,6 +8,7 @@ import shlex
 import sys
 from collections.abc import Callable
 from copy import deepcopy
+from dataclasses import dataclass
 from io import StringIO
 from pathlib import Path
 from types import ModuleType
@@ -554,9 +555,7 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     if blocked[module.DELIVERIES_FIELD]:
         failures.append("failed pane read mapped to partial continuation delivery")
 
-    continuation_sessions, intact_session, restored = _continuation_plan(
-        module, roster, fixture
-    )
+    _, intact_session, restored = _continuation_plan(module, roster, fixture)
     reassessment = module.plan_reassessment(
         reassess_prepared, reassess_bindings, verified, reads, restored
     )
@@ -574,31 +573,54 @@ def verify_native_agent_recovery_mappings() -> list[str]:
         for delivery in reassessment_deliveries
     ):
         failures.append("a judged-intact candidate mapped to a delivery")
-
-    all_intact = module.plan_reassessment(
-        reassess_prepared, reassess_bindings, verified, reads, []
-    )
-    if all_intact[module.STATUS_FIELD] != module.ResultStatus.REASSESSMENT_READY:
-        failures.append("a wholly intact candidate set did not reach settlement")
-    if all_intact[module.DELIVERIES_FIELD]:
-        failures.append("a wholly intact candidate set mapped to a delivery")
-    all_intact_sessions = cast(
-        list[str], all_intact[module.NO_CONTINUATION_SESSION_IDS_FIELD]
-    )
-    if all_intact_sessions != sorted(continuation_sessions):
-        failures.append("a wholly intact candidate set omitted a verified identity")
-    settled_intact = module.settle_recovery(all_intact, [])
-    if settled_intact[module.STATUS_FIELD] != module.ResultStatus.REASSESSMENT_SENT:
-        failures.append("a zero-delivery reassessment plan did not settle")
-    recorded_intact = cast(
-        list[str],
-        cast(dict[str, object], settled_intact[module.PREPARED_FIELD])[
-            module.REASSESSED_SESSION_IDS_FIELD
-        ],
-    )
-    if not set(all_intact_sessions).issubset(recorded_intact):
-        failures.append("settling zero deliveries recorded no judged-intact identity")
     return failures
+
+
+@dataclass(frozen=True)
+class WhollyIntactSettlement:
+    """Observations from planning and settling a recovery whose every pending candidate is judged intact."""
+
+    planned_status: str
+    reassessment_ready_status: str
+    settled_status: str
+    reassessment_sent_status: str
+    deliveries: list[dict[str, object]]
+    judged_intact_sessions: list[str]
+    pending_sessions: list[str]
+    recorded_sessions: list[str]
+
+
+def observe_wholly_intact_settlement() -> WhollyIntactSettlement:
+    """Plan and settle a verified recovery for which the controller supplies no destroyed fact."""
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    fixture = _verified_recovery(module, roster)
+    continuation_sessions, _, _ = _continuation_plan(module, roster, fixture)
+    planned = module.plan_reassessment(
+        cast(dict[str, object], fixture["prepared"]),
+        cast(list[dict[str, object]], fixture["bindings"]),
+        cast(dict[str, object], fixture["verified"]),
+        cast(list[dict[str, object]], fixture["reads"]),
+        [],
+    )
+    settled = module.settle_recovery(planned, [])
+    return WhollyIntactSettlement(
+        planned_status=cast(str, planned[module.STATUS_FIELD]),
+        reassessment_ready_status=module.ResultStatus.REASSESSMENT_READY,
+        settled_status=cast(str, settled[module.STATUS_FIELD]),
+        reassessment_sent_status=module.ResultStatus.REASSESSMENT_SENT,
+        deliveries=cast(list[dict[str, object]], planned[module.DELIVERIES_FIELD]),
+        judged_intact_sessions=cast(
+            list[str], planned[module.NO_CONTINUATION_SESSION_IDS_FIELD]
+        ),
+        pending_sessions=sorted(continuation_sessions),
+        recorded_sessions=cast(
+            list[str],
+            cast(dict[str, object], settled[module.PREPARED_FIELD])[
+                module.REASSESSED_SESSION_IDS_FIELD
+            ],
+        ),
+    )
 
 
 def verify_native_agent_recovery_properties() -> list[str]:
