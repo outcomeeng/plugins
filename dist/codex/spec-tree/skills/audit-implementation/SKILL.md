@@ -181,7 +181,9 @@ a rule identifier rather than free-form prose — so two findings raised on
 different subjects can never compose one finding key. When the unit omits the
 optional `languagePartition`, keep the segment count fixed and render the
 language segment as the literal `unknown`, so two runs over the same
-unknown-language subject compose the same key.
+unknown-language subject compose the same key. Supply that literal explicitly —
+the key carries whatever language segment it is given and no default is
+substituted for an omitted one.
 
 Pass every key as one single-quoted argument, `--idempotency-key
 '<stable-scope-key>'`, because a subject path can itself carry a character the
@@ -442,15 +444,16 @@ in `<verification_run_contract>` and relay the complete blocked diagnostic from
 What happened: Claude passed
 `--idempotency-key implementation:python:tests:tests/audit report.py` without
 quotes. The shell split the key at the space, so `spx` received a truncated key
-and a stray argument. The same defect with a subject path carrying `|` instead
-exits `126` with `permission denied: <subject-path>`, because the shell runs
-the fragment after that character as a program.
+and a stray argument.
 
 Why it failed: An unquoted argument reaches the shell before `spx` sees it, so
 any shell metacharacter the key carries — including one inside the subject path
 of an otherwise correctly formatted key — becomes syntax rather than key text.
-Both symptoms name a repository path, which reads as a file problem rather than
-the quoting defect it is.
+The same cause yields a different symptom for a subject path carrying `|`: the
+command exits `126` with `permission denied: <subject-path>`, because the shell
+runs the fragment after that character as a program. Each symptom names a
+repository path, which reads as a file problem rather than the quoting defect it
+is.
 
 How to avoid: Pass every key as one single-quoted argument,
 `--idempotency-key '<stable-scope-key>'`, per `<verification_run_contract>`.
