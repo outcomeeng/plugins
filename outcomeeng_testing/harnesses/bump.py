@@ -53,7 +53,6 @@ from outcomeeng.distribution.bump import (
     REQUIRED_TOOLS,
     Segment,
     _real_change_probe,
-    auto_segment,
     bump,
     main,
 )
@@ -75,9 +74,9 @@ from outcomeeng_testing.generators.bump import (
     patch_changes,
     plugin_names,
     relative_subpaths,
-    version_of,
 )
 
+TOOL_EVENT_PREFIX = "tool:"
 BUMP_PROPERTY_SEED = 20260704
 BUMP_PROPERTY_EXAMPLES = 50
 DIFF_PATH_LIST_MAX_SIZE = 12
@@ -98,7 +97,7 @@ class RecordingToolProbe:
     def __call__(self, name: str) -> bool:
         self.queries.append(name)
         if self.event_log is not None:
-            self.event_log.append(f"tool:{name}")
+            self.event_log.append(f"{TOOL_EVENT_PREFIX}{name}")
         return name in self.available
 
 
@@ -174,6 +173,64 @@ class RecordingManifestWriter:
 
 
 @dataclass(frozen=True)
+class BumpOutcome:
+    """Everything one bump invocation exposed to its caller."""
+
+    exit_code: int
+    writes: tuple[tuple[str, str], ...]
+    written: dict[str, str]
+    stdout: str
+    stderr: str
+    change_queries: tuple[str, ...]
+    content_queries: tuple[tuple[str, str], ...]
+    reader_queries: tuple[str, ...]
+    tool_queries: tuple[str, ...]
+
+    @property
+    def diagnostics(self) -> str:
+        """Return both captured streams for a diagnostic-content assertion."""
+        return self.stderr + self.stdout
+
+
+@dataclass(frozen=True)
+class MissingToolOutcome:
+    """One bump invocation run with a single required tool withheld."""
+
+    missing_tool: str
+    outcome: BumpOutcome
+
+
+@dataclass(frozen=True)
+class SingleManifestOutcome:
+    """A single-manifest plugin's identity paired with its bump outcome."""
+
+    plugin: str
+    path: str
+    outcome: BumpOutcome
+
+
+@dataclass(frozen=True)
+class DualManifestOutcome:
+    """A dual-manifest plugin's identity paired with its bump outcome."""
+
+    plugin: str
+    claude_path: str
+    codex_path: str
+    outcome: BumpOutcome
+
+
+@dataclass(frozen=True)
+class TwoPluginOutcome:
+    """Two changed plugins' identities paired with one shared bump outcome."""
+
+    already_bumped_plugin: str
+    already_bumped_path: str
+    unbumped_plugin: str
+    unbumped_path: str
+    outcome: BumpOutcome
+
+
+@dataclass(frozen=True)
 class BumpRun:
     """Complete injected bump call with its recording boundaries."""
 
@@ -199,6 +256,26 @@ class BumpRun:
 
     def written(self) -> dict[str, str]:
         return dict(self.manifest_writer.writes)
+
+    def capture(
+        self, segment: Segment | None = Segment.PATCH, mode: Mode = Mode.WRITE
+    ) -> BumpOutcome:
+        """Run bump while capturing its streams and recorded boundary calls."""
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            exit_code = self.run(segment, mode)
+        return BumpOutcome(
+            exit_code=exit_code,
+            writes=tuple(self.manifest_writer.writes),
+            written=dict(self.manifest_writer.writes),
+            stdout=stdout.getvalue(),
+            stderr=stderr.getvalue(),
+            change_queries=tuple(self.change_probe.queries),
+            content_queries=tuple(self.content_probe.queries),
+            reader_queries=tuple(self.manifest_reader.queries),
+            tool_queries=tuple(self.tool_probe.queries),
+        )
 
 
 @dataclass(frozen=True)
@@ -294,7 +371,9 @@ def single_manifest_case(
     return SingleManifestCase(plugin=plugin, path=path, run=run)
 
 
-def missing_required_tool_fails_fast_with_diagnostic() -> bool:
+def observe_missing_required_tool_runs() -> tuple[MissingToolOutcome, ...]:
+    """Run bump once per required tool, withholding that tool each time."""
+    outcomes: list[MissingToolOutcome] = []
     for missing_tool in REQUIRED_TOOLS:
         run = BumpRun(
             change_probe=ScriptedChangeProbe(changed=patch_changes("foo")),
@@ -305,24 +384,14 @@ def missing_required_tool_fails_fast_with_diagnostic() -> bool:
                 available=all_tools_available() - {missing_tool}
             ),
         )
-        stdout = io.StringIO()
-        stderr = io.StringIO()
-
-        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            exit_code = run.run()
-
-        if not (
-            exit_code != 0
-            and run.manifest_writer.writes == []
-            and run.change_probe.queries == []
-            and run.manifest_reader.queries == []
-            and missing_tool in (stderr.getvalue() + stdout.getvalue())
-        ):
-            return False
-    return True
+        outcomes.append(
+            MissingToolOutcome(missing_tool=missing_tool, outcome=run.capture())
+        )
+    return tuple(outcomes)
 
 
-def tool_availability_is_probed_before_any_other_probe_or_write() -> bool:
+def observe_probe_ordering() -> tuple[int, tuple[str, ...]]:
+    """Return the exit code and ordered boundary events of one bump run."""
     plugin = "foo"
     claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
     content = manifest_text(plugin, "0.4.1")
@@ -345,31 +414,21 @@ def tool_availability_is_probed_before_any_other_probe_or_write() -> bool:
     )
 
     exit_code = run.run()
-    first_non_tool_index = next(
-        (i for i, event in enumerate(event_log) if not event.startswith("tool:")),
-        len(event_log),
-    )
-    early_tools = {
-        event.removeprefix("tool:") for event in event_log[:first_non_tool_index]
-    }
-    return exit_code == 0 and early_tools >= set(REQUIRED_TOOLS)
+    return exit_code, tuple(event_log)
 
 
-def already_bumped_plugin_is_skipped_not_rewritten() -> bool:
+def observe_already_bumped_plugin(mode: Mode = Mode.WRITE) -> SingleManifestOutcome:
+    """Run bump against a plugin whose working tree is already ahead of base."""
     case = single_manifest_case("foo", version="0.4.2", base_version="0.4.1")
-    stderr = io.StringIO()
-
-    with contextlib.redirect_stderr(stderr):
-        exit_code = case.run.run()
-
-    return (
-        exit_code == 0
-        and case.run.manifest_writer.writes == []
-        and case.plugin in stderr.getvalue()
+    return SingleManifestOutcome(
+        plugin=case.plugin, path=case.path, outcome=case.run.capture(mode=mode)
     )
 
 
-def already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped() -> bool:
+def observe_already_bumped_beside_unbumped_plugin(
+    mode: Mode = Mode.WRITE,
+) -> TwoPluginOutcome:
+    """Run bump over one already-bumped and one unbumped changed plugin."""
     foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
     bar_path = manifest_relpath("bar", CLAUDE_MANIFEST)
     run = BumpRun(
@@ -397,85 +456,39 @@ def already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped() -> bool
         manifest_writer=RecordingManifestWriter(),
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
-    stderr = io.StringIO()
-
-    with contextlib.redirect_stderr(stderr):
-        exit_code = run.run()
-
-    written = run.written()
-    return (
-        exit_code == 0
-        and foo_path not in written
-        and bar_path in written
-        and version_of(written[bar_path]) == "0.4.2"
-        and "foo" in stderr.getvalue()
+    return TwoPluginOutcome(
+        already_bumped_plugin="foo",
+        already_bumped_path=foo_path,
+        unbumped_plugin="bar",
+        unbumped_path=bar_path,
+        outcome=run.capture(mode=mode),
     )
 
 
-def mixed_dual_manifest_plugin_aligns_lagging_manifest_to_current_bump() -> bool:
+def observe_mixed_dual_manifest_plugin(
+    *,
+    claude_version: str,
+    segment: Segment | None = Segment.PATCH,
+    mode: Mode = Mode.WRITE,
+) -> DualManifestOutcome:
+    """Run bump against a dual-manifest plugin whose owned versions differ."""
     case = dual_manifest_case(
         "foo",
-        claude_version="0.4.2",
+        claude_version=claude_version,
         codex_version="0.4.1",
         claude_base_version="0.4.1",
         codex_base_version="0.4.1",
     )
-
-    with contextlib.redirect_stderr(io.StringIO()):
-        exit_code = case.run.run()
-
-    written = case.run.written()
-    return (
-        exit_code == 0
-        and set(written) == {case.claude_path, case.codex_path}
-        and version_of(written[case.claude_path]) == "0.4.2"
-        and version_of(written[case.codex_path]) == "0.4.2"
+    return DualManifestOutcome(
+        plugin=case.plugin,
+        claude_path=case.claude_path,
+        codex_path=case.codex_path,
+        outcome=case.run.capture(segment=segment, mode=mode),
     )
 
 
-def mixed_dual_manifest_plugin_aligns_every_owned_manifest_to_current_max() -> bool:
-    case = dual_manifest_case(
-        "foo",
-        claude_version="0.4.3",
-        codex_version="0.4.1",
-        claude_base_version="0.4.1",
-        codex_base_version="0.4.1",
-    )
-
-    with contextlib.redirect_stderr(io.StringIO()):
-        exit_code = case.run.run()
-
-    written = case.run.written()
-    return (
-        exit_code == 0
-        and set(written) == {case.claude_path, case.codex_path}
-        and version_of(written[case.claude_path]) == "0.4.3"
-        and version_of(written[case.codex_path]) == "0.4.3"
-    )
-
-
-def mixed_dual_manifest_plugin_fails_check() -> bool:
-    case = dual_manifest_case(
-        "foo",
-        claude_version="0.4.2",
-        codex_version="0.4.1",
-        claude_base_version="0.4.1",
-        codex_base_version="0.4.1",
-    )
-    stderr = io.StringIO()
-
-    with contextlib.redirect_stderr(stderr):
-        exit_code = case.run.run(mode=Mode.CHECK)
-
-    return (
-        exit_code == 1
-        and case.run.manifest_writer.writes == []
-        and case.plugin in stderr.getvalue()
-        and "out of lockstep" in stderr.getvalue()
-    )
-
-
-def new_plugin_without_base_manifest_passes_check() -> bool:
+def observe_new_plugin_without_base_manifest() -> BumpOutcome:
+    """Run check mode for a changed plugin absent from the base reference."""
     plugin = "foo"
     path = manifest_relpath(plugin, CLAUDE_MANIFEST)
     run = BumpRun(
@@ -491,74 +504,11 @@ def new_plugin_without_base_manifest_passes_check() -> bool:
         manifest_writer=RecordingManifestWriter(),
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
-    stderr = io.StringIO()
-
-    with contextlib.redirect_stderr(stderr):
-        exit_code = run.run(segment=None, mode=Mode.CHECK)
-
-    return (
-        exit_code == 0 and run.manifest_writer.writes == [] and stderr.getvalue() == ""
-    )
+    return run.capture(segment=None, mode=Mode.CHECK)
 
 
-def already_bumped_plugin_skipped_in_dry_run() -> bool:
-    case = single_manifest_case("foo", version="0.4.2", base_version="0.4.1")
-    stderr = io.StringIO()
-
-    with contextlib.redirect_stderr(stderr):
-        exit_code = case.run.run(mode=Mode.DRY_RUN)
-
-    return (
-        exit_code == 0
-        and case.run.manifest_writer.writes == []
-        and case.plugin in stderr.getvalue()
-    )
-
-
-def dry_run_skips_already_bumped_plugin_and_reports_the_other() -> bool:
-    foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
-    bar_path = manifest_relpath("bar", CLAUDE_MANIFEST)
-    run = BumpRun(
-        change_probe=ScriptedChangeProbe(changed=patch_changes("foo", "bar")),
-        content_probe=ScriptedContentProbe(
-            content={
-                (base_ref(), foo_path): manifest_text("foo", "0.4.1"),
-                (base_ref(), bar_path): manifest_text("bar", "0.4.1"),
-            },
-        ),
-        manifest_reader=ScriptedManifestReader(
-            manifests={
-                "foo": (
-                    ManifestRecord(
-                        path=foo_path, content=manifest_text("foo", "0.4.2")
-                    ),
-                ),
-                "bar": (
-                    ManifestRecord(
-                        path=bar_path, content=manifest_text("bar", "0.4.1")
-                    ),
-                ),
-            },
-        ),
-        manifest_writer=RecordingManifestWriter(),
-        tool_probe=RecordingToolProbe(available=all_tools_available()),
-    )
-    stdout = io.StringIO()
-    stderr = io.StringIO()
-
-    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-        exit_code = run.run(mode=Mode.DRY_RUN)
-
-    return (
-        exit_code == 0
-        and run.manifest_writer.writes == []
-        and "bar" in stdout.getvalue()
-        and "0.4.1 -> 0.4.2" in stdout.getvalue()
-        and "foo" in stderr.getvalue()
-    )
-
-
-def unchanged_plugins_never_have_manifests_written() -> bool:
+def observe_unchanged_plugins_run() -> tuple[str, BumpOutcome]:
+    """Run bump where only one of three readable plugins has changes."""
     foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
     foo_content = manifest_text("foo", "0.4.1")
     run = BumpRun(
@@ -586,25 +536,14 @@ def unchanged_plugins_never_have_manifests_written() -> bool:
         manifest_writer=RecordingManifestWriter(),
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
-
-    exit_code = run.run()
-    written_paths = [path for path, _ in run.manifest_writer.writes]
-    return (
-        exit_code == 0
-        and written_paths == [foo_path]
-        and run.manifest_reader.queries == ["foo"]
-    )
+    return foo_path, run.capture()
 
 
-def dual_manifest_plugin_writes_every_owned_manifest() -> bool:
-    return dual_manifest_plugin_writes_both_with_same_new_version()
-
-
-def non_version_content_is_preserved_character_for_character() -> bool:
+def observe_fixture_manifest_rewrite() -> tuple[str, str, BumpOutcome]:
+    """Bump a whole-payload manifest fixture and return its path and original."""
     plugin = "fixture-plugin"
     claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
     original = manifest_fixture_path("representative_plugin.json").read_text()
-    old_version = version_of(original)
     run = BumpRun(
         change_probe=ScriptedChangeProbe(changed=patch_changes(plugin)),
         content_probe=ScriptedContentProbe(
@@ -616,38 +555,26 @@ def non_version_content_is_preserved_character_for_character() -> bool:
         manifest_writer=RecordingManifestWriter(),
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
-
-    exit_code = run.run()
-    written = run.written()
-    new_content = written[claude_path]
-    new_version = version_of(new_content)
-    expected = original.replace(
-        f'"version": "{old_version}"',
-        f'"version": "{new_version}"',
-        1,
-    )
-    return exit_code == 0 and new_content == expected
+    return claude_path, original, run.capture()
 
 
-def read_only_modes_never_write_regardless_of_plugin_state() -> bool:
+def observe_read_only_mode_runs() -> tuple[BumpOutcome, ...]:
+    """Run every read-only mode against bumped and unbumped plugin states."""
+    outcomes: list[BumpOutcome] = []
     for mode in (Mode.DRY_RUN, Mode.CHECK):
         for wt_version, base_version in (("0.4.1", "0.4.1"), ("0.4.2", "0.4.1")):
             case = single_manifest_case(
                 "foo", version=wt_version, base_version=base_version
             )
-            with (
-                contextlib.redirect_stdout(io.StringIO()),
-                contextlib.redirect_stderr(io.StringIO()),
-            ):
-                case.run.run(mode=mode)
-            if case.run.manifest_writer.writes != []:
-                return False
-    return True
+            outcomes.append(case.run.capture(mode=mode))
+    return tuple(outcomes)
 
 
-def unparseable_manifest_returns_diagnostic_without_writes() -> bool:
+def observe_malformed_manifest_runs() -> tuple[tuple[str, str, BumpOutcome], ...]:
+    """Bump each malformed manifest case and return path, expected text, outcome."""
     plugin = "foo"
     path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    outcomes: list[tuple[str, str, BumpOutcome]] = []
     for case in malformed_manifest_cases(plugin):
         run = BumpRun(
             change_probe=ScriptedChangeProbe(changed=patch_changes(plugin)),
@@ -660,34 +587,23 @@ def unparseable_manifest_returns_diagnostic_without_writes() -> bool:
             manifest_writer=RecordingManifestWriter(),
             tool_probe=RecordingToolProbe(available=all_tools_available()),
         )
-        stderr = io.StringIO()
-
-        with contextlib.redirect_stderr(stderr):
-            exit_code = run.run()
-
-        output = stderr.getvalue()
-        if (
-            exit_code != 1
-            or run.manifest_writer.writes != []
-            or path not in output
-            or case.expected_diagnostic not in output
-        ):
-            return False
-    return True
+        outcomes.append((path, case.expected_diagnostic, run.capture()))
+    return tuple(outcomes)
 
 
-def dry_run_and_check_are_mutually_exclusive_at_the_cli_boundary() -> bool:
+def observe_cli_dry_run_check_combination() -> tuple[int | str | None, str]:
+    """Invoke the CLI with both read-only flags and return its exit and stderr."""
     stderr = io.StringIO()
-
     try:
         with contextlib.redirect_stderr(stderr):
             main(["--dry-run", "--check"])
     except SystemExit as exc:
-        return exc.code != 0 and "not allowed with" in stderr.getvalue()
-    return False
+        return exc.code, stderr.getvalue()
+    raise RuntimeError("the CLI accepted --dry-run together with --check")
 
 
-def auto_detection_never_writes_a_major_bump_through_the_orchestrator() -> bool:
+def observe_all_minor_triggering_changes_run() -> tuple[str, BumpOutcome]:
+    """Run auto-detected bump where every change triggers a minor segment."""
     plugin = "foo"
     claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
     content = manifest_text(plugin, "0.4.1")
@@ -717,11 +633,11 @@ def auto_detection_never_writes_a_major_bump_through_the_orchestrator() -> bool:
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
 
-    exit_code = run.run(segment=None)
-    return exit_code == 0 and version_of(run.written()[claude_path]) == "0.5.0"
+    return claude_path, run.capture(segment=None)
 
 
-def only_changed_plugin_manifests_are_written() -> bool:
+def observe_single_changed_plugin_run() -> tuple[str, str, BumpOutcome]:
+    """Run bump where only one of two readable plugins has changes."""
     foo_claude = manifest_relpath("foo", CLAUDE_MANIFEST)
     bar_claude = manifest_relpath("bar", CLAUDE_MANIFEST)
     foo_content = manifest_text("foo", "0.4.1")
@@ -744,67 +660,44 @@ def only_changed_plugin_manifests_are_written() -> bool:
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
 
-    exit_code = run.run()
-    written = run.written()
-    return (
-        exit_code == 0
-        and list(written) == [foo_claude]
-        and version_of(written[foo_claude]) == "0.4.2"
-        and "bar" not in run.manifest_reader.queries
-    )
+    return foo_claude, "bar", run.capture()
 
 
-def dual_manifest_plugin_writes_both_with_same_new_version() -> bool:
+def observe_dual_manifest_plugin(
+    segment: Segment | None = Segment.PATCH,
+) -> DualManifestOutcome:
+    """Run bump against a dual-manifest plugin whose owned versions agree."""
     case = dual_manifest_case("foo", claude_version="0.4.1", codex_version="0.4.1")
-
-    exit_code = case.run.run()
-    written = case.run.written()
-    written_versions = {version_of(content) for content in written.values()}
-    return (
-        exit_code == 0
-        and set(written) == {case.claude_path, case.codex_path}
-        and written_versions == {"0.4.2"}
+    return DualManifestOutcome(
+        plugin=case.plugin,
+        claude_path=case.claude_path,
+        codex_path=case.codex_path,
+        outcome=case.run.capture(segment=segment),
     )
 
 
-def mixed_dual_manifest_minor_change_uses_current_segment() -> bool:
-    case = dual_manifest_case(
-        "foo",
-        claude_version="0.4.2",
-        codex_version="0.4.1",
-        claude_base_version="0.4.1",
-        codex_base_version="0.4.1",
-    )
-
-    with contextlib.redirect_stderr(io.StringIO()):
-        exit_code = case.run.run(segment=Segment.MINOR)
-    written = case.run.written()
-    return (
-        exit_code == 0
-        and set(written) == {case.claude_path, case.codex_path}
-        and version_of(written[case.claude_path]) == "0.5.0"
-        and version_of(written[case.codex_path]) == "0.5.0"
-    )
-
-
-def segment_selection_produces_expected_versions() -> bool:
-    expected_by_segment = {
-        Segment.PATCH: "0.4.2",
-        Segment.MINOR: "0.5.0",
-        Segment.MAJOR: "1.0.0",
-    }
-    for segment, expected_version in expected_by_segment.items():
+def observe_segment_selection_runs() -> tuple[
+    tuple[Segment, SingleManifestOutcome], ...
+]:
+    """Run bump once per explicit segment against the same starting version."""
+    runs: list[tuple[Segment, SingleManifestOutcome]] = []
+    for segment in Segment:
         case = single_manifest_case("foo", version="0.4.1")
-        exit_code = case.run.run(segment=segment)
-        if (
-            exit_code != 0
-            or version_of(case.run.written()[case.path]) != expected_version
-        ):
-            return False
-    return True
+        runs.append(
+            (
+                segment,
+                SingleManifestOutcome(
+                    plugin=case.plugin,
+                    path=case.path,
+                    outcome=case.run.capture(segment=segment),
+                ),
+            )
+        )
+    return tuple(runs)
 
 
-def no_changed_plugins_exits_zero_without_writing() -> bool:
+def observe_no_changed_plugins_run() -> BumpOutcome:
+    """Run bump where the change probe reports no changed plugin at all."""
     run = BumpRun(
         change_probe=ScriptedChangeProbe(changed={}),
         content_probe=ScriptedContentProbe(content={}),
@@ -812,31 +705,19 @@ def no_changed_plugins_exits_zero_without_writing() -> bool:
         manifest_writer=RecordingManifestWriter(),
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
-
-    return (
-        run.run() == 0
-        and run.manifest_writer.writes == []
-        and run.manifest_reader.queries == []
-    )
+    return run.capture()
 
 
-def dry_run_reports_would_be_new_version_without_writing() -> bool:
+def observe_dry_run_report() -> SingleManifestOutcome:
+    """Run bump in dry-run mode against an unbumped changed plugin."""
     case = single_manifest_case("foo", version="0.4.1")
-    stdout = io.StringIO()
-
-    with contextlib.redirect_stdout(stdout):
-        exit_code = case.run.run(mode=Mode.DRY_RUN)
-
-    output = stdout.getvalue()
-    return (
-        exit_code == 0
-        and case.run.manifest_writer.writes == []
-        and "0.4.2" in output
-        and case.plugin in output
+    return SingleManifestOutcome(
+        plugin=case.plugin, path=case.path, outcome=case.run.capture(mode=Mode.DRY_RUN)
     )
 
 
-def check_passes_when_every_changed_plugin_is_already_bumped() -> bool:
+def observe_check_all_plugins_bumped() -> BumpOutcome:
+    """Run check mode where every changed plugin already carries a bump."""
     foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
     bar_path = manifest_relpath("bar", CLAUDE_MANIFEST)
     run = BumpRun(
@@ -864,59 +745,34 @@ def check_passes_when_every_changed_plugin_is_already_bumped() -> bool:
         manifest_writer=RecordingManifestWriter(),
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
-    stderr = io.StringIO()
+    return run.capture(segment=None, mode=Mode.CHECK)
 
-    with contextlib.redirect_stderr(stderr):
-        exit_code = run.run(segment=None, mode=Mode.CHECK)
 
-    return (
-        exit_code == 0 and run.manifest_writer.writes == [] and stderr.getvalue() == ""
+def observe_below_base_plugin(mode: Mode = Mode.WRITE) -> SingleManifestOutcome:
+    """Run bump where the working-tree version trails the base version."""
+    case = single_manifest_case("foo", version="0.72.4", base_version="0.73.0")
+    return SingleManifestOutcome(
+        plugin=case.plugin, path=case.path, outcome=case.run.capture(mode=mode)
     )
 
 
-def write_bumps_from_base_when_working_tree_version_is_below_base() -> bool:
-    case = single_manifest_case("foo", version="0.72.4", base_version="0.73.0")
-    exit_code = case.run.run()
-    return exit_code == 0 and version_of(case.run.written()[case.path]) == "0.73.1"
+def observe_base_source_path_comparison(
+    status: FileStatus,
+) -> tuple[str, str, BumpOutcome]:
+    """Run check mode for a manifest whose base content lives at its old path."""
+    return _observe_manifest_against_base_source_path(status)
 
 
-def check_fails_when_working_tree_version_is_below_base() -> bool:
-    case = single_manifest_case("foo", version="0.72.4", base_version="0.73.0")
-    stderr = io.StringIO()
-
-    with contextlib.redirect_stderr(stderr):
-        exit_code = case.run.run(mode=Mode.CHECK)
-
-    return (
-        exit_code == 1
-        and case.run.manifest_writer.writes == []
-        and case.plugin in stderr.getvalue()
-    )
-
-
-def check_compares_added_manifest_to_base_source_path() -> bool:
-    return _check_compares_manifest_to_base_source_path(FileStatus.ADDED)
-
-
-def check_compares_copied_manifest_to_base_source_path() -> bool:
-    return _check_compares_manifest_to_base_source_path(FileStatus.COPIED)
-
-
-def check_fails_when_changed_plugin_is_not_yet_bumped() -> bool:
+def observe_check_unbumped_plugin() -> SingleManifestOutcome:
+    """Run check mode against a changed plugin that carries no bump yet."""
     case = single_manifest_case("foo", version="0.4.1")
-    stderr = io.StringIO()
-
-    with contextlib.redirect_stderr(stderr):
-        exit_code = case.run.run(mode=Mode.CHECK)
-
-    return (
-        exit_code != 0
-        and case.run.manifest_writer.writes == []
-        and case.plugin in stderr.getvalue()
+    return SingleManifestOutcome(
+        plugin=case.plugin, path=case.path, outcome=case.run.capture(mode=Mode.CHECK)
     )
 
 
-def check_fails_when_any_changed_plugin_is_not_yet_bumped() -> bool:
+def observe_check_one_plugin_unbumped() -> TwoPluginOutcome:
+    """Run check mode where one changed plugin is bumped and one is not."""
     foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
     bar_path = manifest_relpath("bar", CLAUDE_MANIFEST)
     run = BumpRun(
@@ -944,130 +800,72 @@ def check_fails_when_any_changed_plugin_is_not_yet_bumped() -> bool:
         manifest_writer=RecordingManifestWriter(),
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
-    stderr = io.StringIO()
-
-    with contextlib.redirect_stderr(stderr):
-        exit_code = run.run(segment=None, mode=Mode.CHECK)
-
-    output = stderr.getvalue()
-    return (
-        exit_code != 0
-        and run.manifest_writer.writes == []
-        and "foo" in output
-        and "bar" not in output
+    return TwoPluginOutcome(
+        already_bumped_plugin="bar",
+        already_bumped_path=bar_path,
+        unbumped_plugin="foo",
+        unbumped_path=foo_path,
+        outcome=run.capture(segment=None, mode=Mode.CHECK),
     )
 
 
-def auto_detected_segment_is_minor_for_new_skill_addition() -> bool:
+def observe_new_skill_addition_run() -> tuple[str, BumpOutcome]:
+    """Run auto-detected bump where a change adds a new skill file."""
     run = _single_manifest_run_for_changes("foo", changes=minor_change("foo"))
-
-    exit_code = run.run(segment=None)
-
-    return (
-        exit_code == 0
-        and version_of(run.written()[manifest_relpath("foo", CLAUDE_MANIFEST)])
-        == "0.5.0"
-    )
+    return manifest_relpath("foo", CLAUDE_MANIFEST), run.capture(segment=None)
 
 
-def auto_detected_segment_is_patch_for_modification_only_changes() -> bool:
+def observe_modification_only_changes_run() -> tuple[str, BumpOutcome]:
+    """Run auto-detected bump where every change is a plain modification."""
     run = _single_manifest_run_for_changes("foo", changes=patch_changes("foo")["foo"])
+    return manifest_relpath("foo", CLAUDE_MANIFEST), run.capture(segment=None)
 
-    exit_code = run.run(segment=None)
 
+def observe_explicit_segment_override_run() -> tuple[str, str, BumpOutcome]:
+    """Force a patch segment over minor-triggering changes for one plugin."""
+    plugin = "foo"
+    run = _single_manifest_run_for_changes(plugin, changes=minor_change(plugin))
     return (
-        exit_code == 0
-        and version_of(run.written()[manifest_relpath("foo", CLAUDE_MANIFEST)])
-        == "0.4.2"
+        plugin,
+        manifest_relpath(plugin, CLAUDE_MANIFEST),
+        run.capture(segment=Segment.PATCH),
     )
 
 
-def explicit_segment_patch_overrides_detected_minor_with_warning() -> bool:
-    run = _single_manifest_run_for_changes("foo", changes=minor_change("foo"))
-    stderr = io.StringIO()
-
-    with contextlib.redirect_stderr(stderr):
-        exit_code = run.run(segment=Segment.PATCH)
-
-    output = stderr.getvalue()
-    return (
-        exit_code == 0
-        and version_of(run.written()[manifest_relpath("foo", CLAUDE_MANIFEST)])
-        == "0.4.2"
-        and "foo" in output
-        and "minor" in output
-    )
-
-
-def real_change_probe_detects_untracked_new_skill_as_added() -> bool:
+def observe_untracked_new_skill_changes() -> tuple[
+    UntrackedSkillRepo, Mapping[str, tuple[ChangedPath, ...]]
+]:
+    """Build a real repo with an untracked new skill and probe its changes."""
     with TemporaryDirectory() as directory:
-        return _real_change_probe_detects_untracked_new_skill_as_added(
+        handle = build_repo_with_untracked_new_skill(pathlib.Path(directory) / "repo")
+        return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
+
+
+def observe_renamed_structural_path_changes() -> tuple[
+    RenamedStructuralRepo, Mapping[str, tuple[ChangedPath, ...]]
+]:
+    """Build a real repo with a structural rename and probe its changes."""
+    with TemporaryDirectory() as directory:
+        handle = build_repo_with_renamed_structural_path(
             pathlib.Path(directory) / "repo"
         )
+        return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
 
 
-def _real_change_probe_detects_untracked_new_skill_as_added(
-    repo: pathlib.Path,
-) -> bool:
-    handle = build_repo_with_untracked_new_skill(repo)
-
-    changes = _real_change_probe(handle.base_ref, cwd=handle.repo)
-    by_path = {change.path: change for change in changes.get(handle.plugin, ())}
-    return (
-        by_path[handle.tracked_modified_path].status is FileStatus.MODIFIED
-        and by_path[handle.untracked_added_path].status is FileStatus.ADDED
-        and by_path[handle.untracked_codex_added_path].status is FileStatus.ADDED
-    )
-
-
-def real_change_probe_detects_rename_away_from_structural_path() -> bool:
+def observe_cross_plugin_rename_changes() -> tuple[
+    CrossPluginRenameRepo, Mapping[str, tuple[ChangedPath, ...]]
+]:
+    """Build a real repo with a cross-plugin structural rename and probe it."""
     with TemporaryDirectory() as directory:
-        return _real_change_probe_detects_rename_away_from_structural_path(
+        handle = build_repo_with_cross_plugin_structural_rename(
             pathlib.Path(directory) / "repo"
         )
+        return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
 
 
-def _real_change_probe_detects_rename_away_from_structural_path(
-    repo: pathlib.Path,
-) -> bool:
-    handle = build_repo_with_renamed_structural_path(repo)
-
-    changes = _real_change_probe(handle.base_ref, cwd=handle.repo)
-    by_path = {change.path: change for change in changes.get(handle.plugin, ())}
-    change = by_path.get(handle.renamed_path)
-    return (
-        change is not None
-        and change.status is FileStatus.RENAMED
-        and change.old_path == handle.structural_path
-        and auto_segment(changes[handle.plugin]) is Segment.MINOR
-    )
-
-
-def real_change_probe_detects_cross_plugin_structural_rename() -> bool:
-    with TemporaryDirectory() as directory:
-        return _real_change_probe_detects_cross_plugin_structural_rename(
-            pathlib.Path(directory) / "repo"
-        )
-
-
-def _real_change_probe_detects_cross_plugin_structural_rename(
-    repo: pathlib.Path,
-) -> bool:
-    handle = build_repo_with_cross_plugin_structural_rename(repo)
-
-    changes = _real_change_probe(handle.base_ref, cwd=handle.repo)
-    source_changes = {change.path: change for change in changes[handle.source_plugin]}
-    target_changes = {change.path: change for change in changes[handle.target_plugin]}
-    return (
-        source_changes.keys() == target_changes.keys() == {handle.target_path}
-        and source_changes[handle.target_path].old_path == handle.source_path
-        and target_changes[handle.target_path].old_path == handle.source_path
-        and auto_segment(changes[handle.source_plugin]) is Segment.MINOR
-        and auto_segment(changes[handle.target_plugin]) is Segment.MINOR
-    )
-
-
-def _check_compares_manifest_to_base_source_path(status: FileStatus) -> bool:
+def _observe_manifest_against_base_source_path(
+    status: FileStatus,
+) -> tuple[str, str, BumpOutcome]:
     src_path = manifest_relpath("foo", CLAUDE_MANIFEST)
     base_path = src_path.removeprefix("src/")
     run = BumpRun(
@@ -1091,18 +889,8 @@ def _check_compares_manifest_to_base_source_path(status: FileStatus) -> bool:
         manifest_writer=RecordingManifestWriter(),
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
-    stderr = io.StringIO()
-
-    with contextlib.redirect_stderr(stderr):
-        exit_code = run.run(segment=None, mode=Mode.CHECK)
-
-    return (
-        exit_code == 0
-        and run.manifest_writer.writes == []
-        and stderr.getvalue() == ""
-        and run.content_probe.queries
-        == [(base_ref(), src_path), (base_ref(), base_path)]
-    )
+    outcome = run.capture(segment=None, mode=Mode.CHECK)
+    return src_path, base_path, outcome
 
 
 def _single_manifest_run_for_changes(
@@ -1374,27 +1162,66 @@ def run_diff_path_list_property(check: Callable[[list[str]], None]) -> None:
 
 
 __all__ = [
+    "BUMP_PROPERTY_EXAMPLES",
+    "BUMP_PROPERTY_REPLAY_PATH",
+    "BUMP_PROPERTY_SEED",
+    "BumpOutcome",
+    "BumpRun",
     "CrossPluginRenameRepo",
+    "DIFF_PATH_LIST_MAX_SIZE",
+    "DualManifestCase",
+    "DualManifestOutcome",
+    "MissingToolOutcome",
     "RecordingManifestWriter",
     "RecordingToolProbe",
+    "RenamedStructuralRepo",
     "ScriptedChangeProbe",
     "ScriptedContentProbe",
     "ScriptedManifestReader",
-    "RenamedStructuralRepo",
     "SingleManifestCase",
+    "SingleManifestOutcome",
+    "TOOL_EVENT_PREFIX",
+    "TwoPluginOutcome",
     "UntrackedSkillRepo",
     "all_tools_available",
     "base_ref",
-    "observe_property_failure_notes",
     "build_repo_with_cross_plugin_structural_rename",
     "build_repo_with_renamed_structural_path",
     "build_repo_with_untracked_new_skill",
-    "run_distribution_path_property",
+    "bump_property",
+    "dual_manifest_case",
+    "observe_all_minor_triggering_changes_run",
+    "observe_already_bumped_beside_unbumped_plugin",
+    "observe_already_bumped_plugin",
+    "observe_base_source_path_comparison",
+    "observe_below_base_plugin",
+    "observe_check_all_plugins_bumped",
+    "observe_check_one_plugin_unbumped",
+    "observe_check_unbumped_plugin",
+    "observe_cli_dry_run_check_combination",
+    "observe_cross_plugin_rename_changes",
+    "observe_dry_run_report",
+    "observe_dual_manifest_plugin",
+    "observe_explicit_segment_override_run",
+    "observe_fixture_manifest_rewrite",
+    "observe_malformed_manifest_runs",
+    "observe_missing_required_tool_runs",
+    "observe_mixed_dual_manifest_plugin",
+    "observe_modification_only_changes_run",
+    "observe_new_plugin_without_base_manifest",
+    "observe_new_skill_addition_run",
+    "observe_no_changed_plugins_run",
+    "observe_probe_ordering",
+    "observe_property_failure_notes",
+    "observe_read_only_mode_runs",
+    "observe_renamed_structural_path_changes",
+    "observe_segment_selection_runs",
+    "observe_single_changed_plugin_run",
+    "observe_unchanged_plugins_run",
+    "observe_untracked_new_skill_changes",
     "run_diff_path_list_property",
+    "run_distribution_path_property",
     "run_single_diff_path_property",
-    "new_plugin_without_base_manifest_passes_check",
-    "real_change_probe_detects_cross_plugin_structural_rename",
-    "real_change_probe_detects_rename_away_from_structural_path",
     "single_manifest_case",
 ]
 
