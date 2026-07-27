@@ -19,6 +19,9 @@ from hypothesis.strategies import SearchStrategy
 
 _LANGUAGE_TOKEN_CHARACTERS = string.ascii_letters + string.digits + "-_"
 _DOCUMENT_LINE_CHARACTERS = string.ascii_letters + string.digits + " -_`"
+# A ``#`` run that no whitespace closes. Markdown opens no heading here, so the line is ordinary
+# content — an issue reference, not a title.
+_HASH_RUN_LINE = "#123 stays owned by the release queue."
 
 
 @dataclass(frozen=True)
@@ -110,14 +113,16 @@ def delegation_shape_cases(
     instruction of its own; a body carrying a ``#`` run that opens no heading because no
     whitespace closes it; a body whose heading ``content_body`` does not carry; a body with no
     substantive line at all; and a body naming ``other_filename`` only inside a fenced code
-    block. Every shape is judged against ``content_body``, the body adoption would put in its
-    place, so each case carries it. Both parameters are owned elsewhere.
+    block. Every shape is judged against the body adoption would put in its place, so each case
+    carries that counterpart body. Both parameters are owned elsewhere.
     """
     heading = adopted_body_heading(content_body)
     delegating = delegating_root_body(other_filename, heading)
 
-    def case(name: str, body: str) -> DelegationShapeCase:
-        return DelegationShapeCase(name=name, body=body, other_body=content_body)
+    def case(
+        name: str, body: str, other_body: str = content_body
+    ) -> DelegationShapeCase:
+        return DelegationShapeCase(name=name, body=body, other_body=other_body)
 
     return (
         case("every-substantive-line-references", delegating),
@@ -137,7 +142,13 @@ def delegation_shape_cases(
             f"{heading}\n"
             "\n"
             f"See [{other_filename}]({other_filename}) for commands.\n"
-            "#123 stays owned by the release queue.\n",
+            f"{_HASH_RUN_LINE}\n",
+            # The counterpart carries the ``#`` run verbatim, so the heading exemption's
+            # "adopted body also carries it" half holds. What decides the verdict is the other
+            # half: only a ``#`` run closed by whitespace opens a heading. Judged correctly the
+            # run stays content, keeps a substantive line that names no other file, and the body
+            # delegates to nothing; judged as a heading it is exempted and the body delegates.
+            content_body + f"\n{_HASH_RUN_LINE}\n",
         ),
         case(
             "a-heading-the-adopted-body-does-not-carry",
