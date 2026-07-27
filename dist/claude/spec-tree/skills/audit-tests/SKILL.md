@@ -84,7 +84,7 @@ Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` m
 
 **Step 2: Map assertions to test files**
 
-Read the spec's Assertions section. Only assertions carrying `[test]` evidence enter this audit. Skip assertions tagged `[eval]`, `[audit]`, or legacy `[review]`; their evidence belongs to other verification workflows.
+Read the spec's Assertions section. Only assertions carrying `[test]` evidence enter this audit. Skip assertions tagged `[eval]` or `[audit]`; their evidence belongs to other verification workflows.
 
 For each included assertion, extract:
 
