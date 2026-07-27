@@ -1,37 +1,13 @@
-# Marketplace Changelog
+# Changelogs
 
-Events that no single plugin owns: an agent harness gained or dropped, a plugin added, removed, or renamed, a floor that moves across plugins.
+This repository publishes three changelog lines, each on its own clock. None of them is kept at this path — a changelog only reaches its reader if it ships, and a consumer checkout receives installed plugin trees and nothing else from here.
 
-Two other changelog lines run on their own clocks. What changed in the **methodology** is in `src/plugins/spec-tree/METHODOLOGY-CHANGELOG.md`. What changed in a **plugin** is in that plugin's own `CHANGELOG.md`.
+| Line            | Records                                                        | Authored at                                      | Ships as                                                                 |
+| --------------- | -------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------ |
+| **Methodology** | edition transitions, compatible extensions, deprecations       | `src/plugins/spec-tree/METHODOLOGY-CHANGELOG.md` | `<spec-tree>/METHODOLOGY-CHANGELOG.md`                                   |
+| **Plugin**      | what changed in one plugin                                     | `src/plugins/<name>/CHANGELOG.md`                | `<plugin>/CHANGELOG.md`                                                  |
+| **Marketplace** | events no single plugin owns: harnesses, plugins added/renamed | `src/templates/plugin/MARKETPLACE-CHANGELOG.md`  | `<plugin>/skills/<plugin>-plugin/MARKETPLACE-CHANGELOG.md`, every plugin |
 
-The marketplace carries no version of its own — each plugin is versioned independently — so entries here are dated rather than numbered.
+**Editing.** The methodology and plugin lines are authored once and ship from their own plugin. The marketplace line is authored once under `src/templates/plugin/` and fans out to every plugin, because a marketplace event has to stay readable whatever subset of plugins a repository installs. Never edit a generated copy under `dist/`; edit the authored source and run `just build-skills`.
 
-## 2026-07-18
-
-### Added
-
-- **`coding-agents` plugin.** Coordination between coding agents running in parallel worktrees: recipient discovery, bounded delegation with correlated handbacks, and Prowl pane operation.
-
-## 2026-07-11
-
-### Breaking
-
-- **The `develop` plugin is renamed to `instructions`.** Every reference to `develop@outcomeeng` stops resolving. Re-install as `instructions@outcomeeng` and update any product-scoped `.claude/settings.json` or `.codex/config.toml` that names the old identity. Its skills — skill authoring, subagent authoring, and their audits — carry over unchanged.
-
-## 2026-05-26
-
-### Changed
-
-- **Plugins ship from generated runtime trees.** Authored sources live under `src/plugins/`; the installed trees under `dist/claude/` and `dist/codex/` are generated from them. Consumers install from the generated trees, so a plugin now carries exactly what its target harness can read.
-
-## 2026-04-20
-
-### Added
-
-- **Codex harness support.** The marketplace publishes a second catalog at `.agents/plugins/marketplace.json` alongside the Claude Code catalog at `.claude-plugin/marketplace.json`. Shared plugins ship both manifests, and Codex registration is user-scoped through `codex plugin marketplace add outcomeeng/plugins`, with per-product enablement committed in `.codex/config.toml`.
-
-## 2026-01-05
-
-### Added
-
-- **The marketplace.** Initial catalog, Claude Code only.
+**Sections** are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. An entry earns its place when the change alters what a consumer can rely on, must do, or must know — artifact class is not the test.
