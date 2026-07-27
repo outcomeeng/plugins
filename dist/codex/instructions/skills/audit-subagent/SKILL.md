@@ -44,14 +44,14 @@ An `APPROVED` or `REJECTED` verdict on one custom agent configuration file again
 2. Read `instructions:agent-prompt-standards` for voice, description style, constraint language, and anti-patterns.
 3. If `$configured_agent_path` is empty, STOP with `REJECTED` and a critical issue naming the missing required path argument.
 4. Read the custom agent configuration file at `$configured_agent_path`.
-5. Follow the owning skill's link for each remaining guide whose area the configuration puts in play, and skip the rest:
+5. Follow the owning skill's link for each remaining guide whose area the configuration puts in play, and skip the rest. A guide whose condition holds is required: when it cannot be read, STOP with `REJECTED` and a critical issue naming the unreadable guide and the area left unjudged.
    - `error-handling-and-recovery.md` when the configuration addresses tool failures, missing data, or unexpected inputs
    - `orchestration-patterns.md` when the configuration delegates, coordinates, or spawns other custom agents
    - `context-management.md` when the configuration is long-running or declares a context or memory strategy
    - `evaluation-and-testing.md` when the configuration declares tests, validation criteria, or evaluation metrics
    - `debugging-agents.md` when the configuration declares logging, tracing, or observability
 6. Before penalizing any missing section, search entire file for equivalent content under different tag names.
-7. Evaluate against the loaded skills and references, focusing on functionality over formatting. An unread guide's area is out of play for this configuration and yields no finding.
+7. Evaluate against the loaded skills and references, focusing on functionality over formatting. A guide skipped in step 5 because its condition does not hold is out of play for this configuration and yields no finding. Never treat a guide left unread for any other reason as out of play — its area is in play and unjudged, which step 5 rejects.
 
 **Use ACTUAL patterns from references, not memory.**
 </audit_workflow>
