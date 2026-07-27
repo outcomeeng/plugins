@@ -64,10 +64,19 @@ class GatePythonObservation:
     project_version: str
 
 
-def workflow() -> dict[str, Any]:
+CI_GATE_FIXTURES: Final = REPO_ROOT / "outcomeeng_testing" / "fixtures" / "ci_gate"
+
+
+def gate_fixture_path(name: str) -> Path:
+    """Return the path to an inert violating- or conforming-workflow fixture."""
+    return CI_GATE_FIXTURES / name
+
+
+def workflow(workflow_path: Path | None = None) -> dict[str, Any]:
+    source = GATE_WORKFLOW if workflow_path is None else workflow_path
     return cast(
         "dict[str, Any]",
-        yaml.load(GATE_WORKFLOW.read_text(), Loader=yaml.BaseLoader),
+        yaml.load(source.read_text(), Loader=yaml.BaseLoader),
     )
 
 
@@ -102,9 +111,9 @@ def shell_lines(run: str) -> list[str]:
     ]
 
 
-def observe_gate_triggers() -> GateTriggerObservation:
+def observe_gate_triggers(workflow_path: Path | None = None) -> GateTriggerObservation:
     """Return the events and push branches the gate workflow declares."""
-    on_section = cast("dict[str, object]", workflow()["on"])
+    on_section = cast("dict[str, object]", workflow(workflow_path)["on"])
     push_section = cast("dict[str, object]", on_section.get("push", {}))
     return GateTriggerObservation(
         events=frozenset(on_section),
@@ -112,11 +121,11 @@ def observe_gate_triggers() -> GateTriggerObservation:
     )
 
 
-def observe_gate_run_commands() -> tuple[str, ...]:
+def observe_gate_run_commands(workflow_path: Path | None = None) -> tuple[str, ...]:
     """Return every normalized `run:` body the gate job declares."""
     return tuple(
         cast("str", step["run"]).strip()
-        for step in gate_steps(workflow())
+        for step in gate_steps(workflow(workflow_path))
         if "run" in step
     )
 
@@ -158,10 +167,12 @@ def observe_gate_python_versions() -> GatePythonObservation:
     )
 
 
-def observe_gate_steps() -> tuple[GateStepObservation, ...]:
+def observe_gate_steps(
+    workflow_path: Path | None = None,
+) -> tuple[GateStepObservation, ...]:
     """Return each gate step's condition, soft-pass surface, and shell body."""
     observations: list[GateStepObservation] = []
-    for step in gate_steps(workflow()):
+    for step in gate_steps(workflow(workflow_path)):
         run = cast("str", step.get("run", ""))
         observations.append(
             GateStepObservation(
@@ -177,9 +188,9 @@ def observe_gate_steps() -> tuple[GateStepObservation, ...]:
     return tuple(observations)
 
 
-def observe_gate_job() -> GateJobObservation:
+def observe_gate_job(workflow_path: Path | None = None) -> GateJobObservation:
     """Return the gate job's own condition and soft-pass surface."""
-    job = gate_job(workflow())
+    job = gate_job(workflow(workflow_path))
     return GateJobObservation(
         has_condition="if" in job,
         continue_on_error=cast(
