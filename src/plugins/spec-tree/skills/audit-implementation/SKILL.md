@@ -170,10 +170,12 @@ unit's key is the same value its payload carries in `unitId`: the audit class,
 language partition, concern partition, and subject path joined with `:` —
 `implementation:<lang>:<concern>:<subject-path>`. A finding's key extends its
 unit's key with the violated rule — `<stable-scope-key>:<rule>` — so recording
-the same finding twice stays idempotent. Join key segments only with `:`. A
-separator the shell interprets — `|`, `&`, `;`, `(`, `)`, `<`, `>`, `*`, `?`,
-or whitespace — splits the command, and the shell runs a key segment as a
-program instead of passing the key through.
+the same finding twice stays idempotent. Join key segments only with `:`, which
+keeps the key parseable at its last-segment boundary. Shell safety comes from
+the quoting rule below rather than from the join character: a subject path can
+carry `|`, `&`, `;`, `(`, `)`, `<`, `>`, `*`, `?`, or whitespace however the
+segments are joined, and unquoted it splits the command so the shell runs a
+fragment as a program.
 
 The key is an opaque token SPX never parses back into segments, so a `:` inside
 a subject path is not a separator. Keep the rule segment colon-free and stable —
