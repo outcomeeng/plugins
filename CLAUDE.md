@@ -142,12 +142,12 @@ Default-branch git and version-control mutation — branching, committing, pushi
 
 ### Sub-agent dispatch
 
-The configured verifier and reviewer roles this router names are pre-authorized. Dispatching one is a standing operator authorization recorded here, so a harness rule withholding sub-agent use until the operator requests it reads this section as that request. Authorization follows the named role, never a role resemblance.
+The configured verifier and reviewer roles this router names are pre-authorized. A harness rule may require the operator to request sub-agent use before one is dispatched; treat this section as that standing request. Authorization follows the named role, never a role resemblance.
 
 - **NEVER** ask the operator to confirm dispatching one — not at a gate, not per node, not once per session, and never as a structured-question option set. A harness permission prompt is the operator's to answer, never a question to raise.
 - **NEVER** dispatch a sub-agent this router does not name merely because it is discovered, available, or plausibly useful.
 - **NEVER** run a verification skill — audit or review — in the main conversation; the separate context is what keeps the verdict free of that conversation's bias.
-- When a named role cannot be dispatched or does not return, the gate is blocked: finish the deterministic verification, then report the exact dispatch attempted and how it failed.
+- **ALWAYS** treat the gate as blocked when a named role cannot be dispatched or does not return: finish the deterministic verification, then report the exact dispatch attempted and how it failed.
 
 ## Mutation Status Updates
 

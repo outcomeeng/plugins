@@ -230,6 +230,32 @@ ROUTER_POLICY_NAMES: Final = (
     "operator-question-interrupt",
     "codex-verifier-dispatch",
     "codex-deferred-agent-discovery",
+    "subagent-dispatch",
+)
+SUBAGENT_DISPATCH_POLICY_HEADING: Final = "### Sub-agent dispatch"
+SUBAGENT_DISPATCH_POLICY_REQUIREMENTS: Final = (
+    ("named-role pre-authorization", "roles this router names are pre-authorized"),
+    ("standing request", "treat this section as that standing request"),
+    ("role-resemblance boundary", "never a role resemblance"),
+    ("no confirmation prompt", "**NEVER** ask the operator to confirm dispatching one"),
+    ("confirmation evasions", "not once per session"),
+    (
+        "structured-question evasion",
+        "never as a structured-question option set",
+    ),
+    (
+        "harness prompt ownership",
+        "harness permission prompt is the operator's to answer",
+    ),
+    (
+        "unnamed-role prohibition",
+        "**NEVER** dispatch a sub-agent this router does not name",
+    ),
+    (
+        "main-conversation verification prohibition",
+        "**NEVER** run a verification skill — audit or review — in the main conversation",
+    ),
+    ("blocked-gate fallback", "**ALWAYS** treat the gate as blocked"),
 )
 OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
 OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
@@ -475,6 +501,10 @@ class VerifierDispatchPolicyError(InstructionBlockRenderError):
     """Raised when the Codex router weakens or contradicts verifier dispatch policy."""
 
 
+class SubagentDispatchPolicyError(InstructionBlockRenderError):
+    """A rendered harness router weakens the sub-agent dispatch authorization."""
+
+
 class DeferredAgentDiscoveryPolicyError(InstructionBlockRenderError):
     """Raised when the Codex router omits deferred typed-agent discovery policy."""
 
@@ -708,6 +738,40 @@ def validate_authority_hierarchy_policy(
             )
 
 
+def subagent_dispatch_policy_section(router: str) -> str | None:
+    """Return the sub-agent dispatch section from a complete router."""
+    try:
+        return _markdown_section(router, SUBAGENT_DISPATCH_POLICY_HEADING)
+    except FoundationAccessPolicyError:
+        return None
+
+
+def validate_subagent_dispatch_policy(blocks_by_harness: Mapping[str, str]) -> None:
+    """Reject a rendered harness router missing the sub-agent dispatch authorization.
+
+    Every harness router carries the section, because a harness whose router omits
+    it withholds sub-agent use at every gate until the operator is asked.
+    """
+    for harness, document in blocks_by_harness.items():
+        router = managed_router_block(document)
+        try:
+            section = _markdown_section(router, SUBAGENT_DISPATCH_POLICY_HEADING)
+        except FoundationAccessPolicyError as exc:
+            raise SubagentDispatchPolicyError(
+                f"missing router section: {SUBAGENT_DISPATCH_POLICY_HEADING}"
+            ) from exc
+        missing = [
+            name
+            for name, required_text in SUBAGENT_DISPATCH_POLICY_REQUIREMENTS
+            if required_text not in section
+        ]
+        if missing:
+            details = ", ".join(missing)
+            raise SubagentDispatchPolicyError(
+                f"{harness} router sub-agent dispatch authorization is incomplete: {details}"
+            )
+
+
 def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
     """Reject a rendered harness router that weakens the load-wait policy."""
     for harness, document in blocks_by_harness.items():
@@ -894,6 +958,7 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     validate_authority_hierarchy_policy(rendered)
     validate_wait_for_load_policy(rendered)
     validate_operator_question_policy(rendered)
+    validate_subagent_dispatch_policy(rendered)
     validate_verifier_dispatch_policy(rendered)
     validate_deferred_agent_discovery_policy(rendered)
     module.write_root_instruction_files(repo_root, rendered)

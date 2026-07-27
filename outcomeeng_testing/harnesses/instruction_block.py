@@ -480,6 +480,7 @@ def property_evidence_contract() -> tuple[str, ...]:
 def compliance_evidence_contract() -> tuple[str, ...]:
     """Return the independent case manifest required by compliance evidence."""
     return (
+        "all_routers_authorize_subagent_dispatch",
         "all_routers_enforce_operator_question_interrupt",
         "authority_hierarchy_policy_is_complete",
         "claude_router_uses_native_configured_agent_dispatch",

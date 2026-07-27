@@ -585,6 +585,33 @@ def _assert_all_routers_enforce_operator_question_interrupt() -> None:
                     )
 
 
+def _assert_all_routers_authorize_subagent_dispatch() -> None:
+    """Challenge sub-agent dispatch authorization across every language subset."""
+    for enabled_languages in harness.template_language_subsets():
+        documents = _render_shipped_instruction_blocks(enabled_languages)
+        dist.validate_subagent_dispatch_policy(documents)
+        for agent_harness, document in documents.items():
+            router = dist.managed_router_block(document)
+            section = dist.subagent_dispatch_policy_section(router)
+            assert section is not None
+
+            for _, required_text in dist.SUBAGENT_DISPATCH_POLICY_REQUIREMENTS:
+                invalid_document = document.replace(
+                    section, section.replace(required_text, "", 1), 1
+                )
+                try:
+                    dist.validate_subagent_dispatch_policy(
+                        {agent_harness: invalid_document}
+                    )
+                except dist.SubagentDispatchPolicyError:
+                    pass
+                else:
+                    raise AssertionError(
+                        "incomplete sub-agent dispatch authorization was accepted: "
+                        f"{required_text}"
+                    )
+
+
 def _assert_codex_router_bounds_dispatched_verifiers() -> None:
     """Challenge verifier policy across every declared language subset."""
     for enabled_languages in harness.template_language_subsets():
@@ -702,6 +729,7 @@ def router_policy_evidence_run() -> harness.EvidenceRun:
         dist.ROUTER_POLICY_NAMES[2]: (
             _assert_codex_router_discovers_deferred_agent_tools
         ),
+        dist.ROUTER_POLICY_NAMES[3]: _assert_all_routers_authorize_subagent_dispatch,
     }
     executed: list[str] = []
     for policy_name in dist.ROUTER_POLICY_NAMES:
