@@ -68,7 +68,7 @@ The major axis is therefore the edition axis, and nothing below it can invalidat
 
 The current methodology release is 3.1.0.
 
-Historical release tags identify the commits where this repository adopted each edition. The changelog describes methodology changes independently of plugin and CLI changes.
+The commit identities in the table are what locate each adoption; this repository carries no release tags, and the model requires none. The changelog describes methodology changes independently of plugin and CLI changes.
 
 ## Release contract
 
