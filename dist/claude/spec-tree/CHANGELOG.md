@@ -6,7 +6,7 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 This plugin delivers the methodology but is versioned separately from it. What changed in the **methodology** is in `METHODOLOGY-CHANGELOG.md` beside this file — a methodology release keeps its identity regardless of which plugin version delivers it.
 
-Sections are `Breaking`, `Added`, `Changed`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
+Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
 ## 0.85.2
 
