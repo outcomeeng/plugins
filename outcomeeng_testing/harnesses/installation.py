@@ -35,8 +35,8 @@ class PlanObservation:
     """Catalog and command observations from one repository plan."""
 
     plan: InstallationPlan
-    claude_catalog_names: tuple[str, ...]
-    codex_catalog_names: tuple[str, ...]
+    claude_catalog: bytes
+    codex_catalog: bytes
 
 
 @dataclass(frozen=True)
@@ -67,8 +67,8 @@ class RealInstallationObservation:
     claude_plugins_second: frozenset[str]
     codex_plugins_first: frozenset[str]
     codex_plugins_second: frozenset[str]
-    catalog_claude_plugins: frozenset[str]
-    catalog_codex_plugins: frozenset[str]
+    claude_catalog: bytes
+    codex_catalog: bytes
     placed_first: tuple[tuple[str, bytes], ...]
     placed_second: tuple[tuple[str, bytes], ...]
     unowned_initial: bytes
@@ -105,8 +105,6 @@ def repository_root() -> Path:
 
 def observe_repository_plan() -> PlanObservation:
     """Build a plan in a temporary state root and expose catalog observations."""
-    from outcomeeng.distribution.installation import catalog_plugin_names
-
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         plan = build_installation_plan(
@@ -116,8 +114,8 @@ def observe_repository_plan() -> PlanObservation:
         )
     return PlanObservation(
         plan=plan,
-        claude_catalog_names=catalog_plugin_names(checkout / CLAUDE_CATALOG_PATH),
-        codex_catalog_names=catalog_plugin_names(checkout / CODEX_CATALOG_PATH),
+        claude_catalog=(checkout / CLAUDE_CATALOG_PATH).read_bytes(),
+        codex_catalog=(checkout / CODEX_CATALOG_PATH).read_bytes(),
     )
 
 
@@ -182,6 +180,8 @@ def observe_real_installation() -> RealInstallationObservation:
         codex_second = _run_listing(Agent.CODEX, mirror, environment)
         placed_second = _agent_snapshot(mirror)
         unowned_second = unowned.read_bytes()
+        claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
+        codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
     return RealInstallationObservation(
         first_exit_code=first.returncode,
         second_exit_code=second.returncode,
@@ -191,8 +191,8 @@ def observe_real_installation() -> RealInstallationObservation:
         ),
         codex_plugins_first=installed_plugin_names(Agent.CODEX, codex_first.stdout),
         codex_plugins_second=installed_plugin_names(Agent.CODEX, codex_second.stdout),
-        catalog_claude_plugins=frozenset(plan.claude_plugins),
-        catalog_codex_plugins=frozenset(plan.codex_plugins),
+        claude_catalog=claude_catalog,
+        codex_catalog=codex_catalog,
         placed_first=placed_first,
         placed_second=placed_second,
         unowned_initial=unowned_initial,
