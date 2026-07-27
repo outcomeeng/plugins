@@ -31,11 +31,11 @@ Tested with: a stale router below the installed version; a router whose recorded
 from the detected set; a retired marker block and a markerless generated body; an absent surface;
 a surface already current; the initial topologies (one file present, a symlinked file, a
 delegating file, mutual delegation, two identical files, two near-identical files above and below
-the 80% span threshold, two independent files); every delegation body shape (pointer only,
-substantive non-pointer line, pointer joining its own instruction, a ``#`` run opening no heading,
-a heading the adopted body lacks, no substantive line, a fenced reference); a diverged, one-sided,
-duplicated, and unclosed shared region; a recency tie and an operator tie break; a dirty root
-file; and the CLI rejections (missing or non-directory repo root, missing or directory template, a
+the 80% span threshold, two independent files); delegation candidacy on both sides of each fact it
+reads (a body naming the other root file within the bound, exactly at it, and one character past
+it, and a body naming no other root file); a write that carries no operator answer and one that
+carries ``--adopt``; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
+and an operator tie break; a dirty root file; and the CLI rejections (missing or non-directory repo root, missing or directory template, a
 template without ``template_version``, a symlink escaping the repository, an unsupported language
 token, a duplicate flag). The executable cases live in the governing node's ``tests/`` directory.
 
@@ -51,8 +51,10 @@ import subprocess
 import sys
 from collections.abc import Iterable
 from collections.abc import Mapping
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Protocol
 
 FRONTMATTER_DELIMITER = "---"
 TEMPLATE_VERSION_KEY = "template_version"
@@ -1132,19 +1134,56 @@ class ReconcileReport:
         )
 
 
-def _git(repo_root: pathlib.Path, *args: str) -> subprocess.CompletedProcess[str]:
-    """Run a git command in ``repo_root``, capturing output; never raising on non-zero exit."""
+class Runner(Protocol):
+    """Execute one git command through an injectable process boundary."""
+
+    def __call__(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: pathlib.Path,
+        capture_output: bool,
+        text: bool,
+        check: bool,
+    ) -> subprocess.CompletedProcess[str]: ...
+
+
+def _subprocess_runner(
+    argv: Sequence[str],
+    *,
+    cwd: pathlib.Path,
+    capture_output: bool,
+    text: bool,
+    check: bool,
+) -> subprocess.CompletedProcess[str]:
+    """The default runner: the one place this script reaches a real process."""
     return subprocess.run(  # noqa: S603
-        ["git", "-C", str(repo_root), *args],
+        argv,
+        cwd=cwd,
+        capture_output=capture_output,
+        text=text,
+        check=check,
+    )
+
+
+def _git(
+    repo_root: pathlib.Path, *args: str, runner: Runner = _subprocess_runner
+) -> subprocess.CompletedProcess[str]:
+    """Run a git command in ``repo_root``, capturing output; never raising on non-zero exit."""
+    return runner(
+        ["git", *args],
+        cwd=repo_root,
         capture_output=True,
         text=True,
         check=False,
     )
 
 
-def _working_tree_dirty(repo_root: pathlib.Path, filename: str) -> bool:
+def _working_tree_dirty(
+    repo_root: pathlib.Path, filename: str, *, runner: Runner = _subprocess_runner
+) -> bool:
     """Report whether ``filename`` carries uncommitted working-tree changes."""
-    proc = _git(repo_root, "status", "--porcelain", "--", filename)
+    proc = _git(repo_root, "status", "--porcelain", "--", filename, runner=runner)
     return bool(proc.stdout.strip())
 
 
@@ -1177,7 +1216,12 @@ def _region_line_range(text: str, name: str) -> tuple[int, int] | None:
 
 
 def _region_committed_timestamp(
-    repo_root: pathlib.Path, filename: str, text: str, name: str
+    repo_root: pathlib.Path,
+    filename: str,
+    text: str,
+    name: str,
+    *,
+    runner: Runner = _subprocess_runner,
 ) -> int | None:
     """Return the committer timestamp of the last commit that touched the region's lines, or None.
 
@@ -1198,6 +1242,7 @@ def _region_committed_timestamp(
         "--no-patch",
         "--format=%ct",
         f"-L{start_line},{end_line}:{filename}",
+        runner=runner,
     )
     output = proc.stdout.strip()
     if proc.returncode != 0 or not output:
@@ -1209,7 +1254,12 @@ def _region_committed_timestamp(
 
 
 def _region_recency_winner(
-    repo_root: pathlib.Path, name: str, text_a: str, text_b: str
+    repo_root: pathlib.Path,
+    name: str,
+    text_a: str,
+    text_b: str,
+    *,
+    runner: Runner = _subprocess_runner,
 ) -> str | None:
     """Return the harness whose shared region was committed more recently, or None.
 
@@ -1218,10 +1268,18 @@ def _region_recency_winner(
     deterministic reconcile guesses.
     """
     claude = _region_committed_timestamp(
-        repo_root, AGENT_HARNESS_INSTRUCTION_FILENAMES["claude"], text_a, name
+        repo_root,
+        AGENT_HARNESS_INSTRUCTION_FILENAMES["claude"],
+        text_a,
+        name,
+        runner=runner,
     )
     codex = _region_committed_timestamp(
-        repo_root, AGENT_HARNESS_INSTRUCTION_FILENAMES["codex"], text_b, name
+        repo_root,
+        AGENT_HARNESS_INSTRUCTION_FILENAMES["codex"],
+        text_b,
+        name,
+        runner=runner,
     )
     if claude is None or codex is None or claude == codex:
         return None
@@ -1229,7 +1287,10 @@ def _region_recency_winner(
 
 
 def reconcile_root_shared_regions(
-    repo_root: pathlib.Path, forced_winner: str | None = None
+    repo_root: pathlib.Path,
+    forced_winner: str | None = None,
+    *,
+    runner: Runner = _subprocess_runner,
 ) -> ReconcileReport:
     """Reconcile diverged shared regions across the two root files by git recency.
 
@@ -1245,7 +1306,7 @@ def reconcile_root_shared_regions(
     dirty = tuple(
         filename
         for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values()
-        if _working_tree_dirty(repo_root, filename)
+        if _working_tree_dirty(repo_root, filename, runner=runner)
     )
     if dirty:
         return ReconcileReport(dirty=dirty)
@@ -1287,7 +1348,9 @@ def reconcile_root_shared_regions(
         winner = (
             forced_winner
             if forced_winner is not None
-            else _region_recency_winner(repo_root, name, original_a, original_b)
+            else _region_recency_winner(
+                repo_root, name, original_a, original_b, runner=runner
+            )
         )
         if winner is None:
             tie.append(name)

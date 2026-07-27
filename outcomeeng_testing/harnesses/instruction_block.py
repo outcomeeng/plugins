@@ -822,6 +822,18 @@ def run_generator_write_primary(
     )
 
 
+def seed_both_root_files(repo_root: pathlib.Path, body: str) -> pathlib.Path:
+    """Create ``repo_root`` and write ``body`` as both root instruction files.
+
+    The scenario tests that start from one identical seed share this setup, and temporary product
+    scaffolding is the harness's to own rather than each test file's.
+    """
+    repo_root.mkdir(parents=True, exist_ok=True)
+    for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        (repo_root / filename).write_text(body, encoding="utf-8")
+    return repo_root
+
+
 def retired_managed_block_tokens() -> tuple[str, ...]:
     """Return the source-owned markers and metadata prefixes a retired managed block carries."""
     module = load_instruction_block_module()

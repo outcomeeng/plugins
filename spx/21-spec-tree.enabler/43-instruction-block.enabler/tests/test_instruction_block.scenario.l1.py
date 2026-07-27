@@ -10,15 +10,6 @@ def _template(tmp_path: pathlib.Path) -> pathlib.Path:
     return harness.write_template(tmp_path, harness.NEW_VERSION)
 
 
-def _seeded_repo(tmp_path: pathlib.Path, body: str) -> pathlib.Path:
-    """Write ``body`` as both root instruction files in a fresh repository."""
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
-        (repo / name).write_text(body, encoding="utf-8")
-    return repo
-
-
 def test_instruction_block_scenario_evidence() -> None:
     assert (
         evidence.scenario_evidence_run().executed
@@ -134,7 +125,7 @@ def test_markerless_generated_body_is_replaced(tmp_path: pathlib.Path) -> None:
         f"{MODULE.TEMPLATE_SOURCE_KEY}: {MODULE.DEFAULT_TEMPLATE_SOURCE}\n---\n"
         f"{heading}\n\nretired generated body\n"
     )
-    repo = _seeded_repo(tmp_path, retired)
+    repo = harness.seed_both_root_files(tmp_path / "repo", retired)
 
     harness.run_generator_write_primary(repo, _template(tmp_path))
 
@@ -151,7 +142,7 @@ def test_retired_marker_block_reported_stale_and_replaced(
         f"{open_marker}\n{MODULE.MANAGED_TEMPLATE_VERSION_PREFIX} 0.1.0 -->\n"
         f"retired block body\n{close_marker}\n\nproduct prose kept\n"
     )
-    repo = _seeded_repo(tmp_path, retired_doc)
+    repo = harness.seed_both_root_files(tmp_path / "repo", retired_doc)
     claude = repo / harness.INSTRUCTION_CLAUDE
 
     assert (
@@ -170,7 +161,9 @@ def test_retired_marker_block_reported_stale_and_replaced(
 
 
 def test_blank_run_in_independent_content_preserved(tmp_path: pathlib.Path) -> None:
-    repo = _seeded_repo(tmp_path, "# Product\n\nfirst\n\n\n\nsecond\n")
+    repo = harness.seed_both_root_files(
+        tmp_path / "repo", "# Product\n\nfirst\n\n\n\nsecond\n"
+    )
 
     harness.run_generator_write_primary(repo, _template(tmp_path))
 
@@ -189,7 +182,7 @@ def test_malformed_shared_fence_is_reported_stale(tmp_path: pathlib.Path) -> Non
     # --check would report current unless the malformed fence is surfaced.
     body = f"{MODULE.shared_open_marker('commands')}\n\nbody with no closing fence\n"
     doc = MODULE.prepend_router_block(block, body)
-    repo = _seeded_repo(tmp_path, doc)
+    repo = harness.seed_both_root_files(tmp_path / "repo", doc)
     claude = repo / harness.INSTRUCTION_CLAUDE
 
     assert MODULE.parse_shared_regions(doc) == {}
