@@ -4,7 +4,7 @@ Repository marketplace installation uses a Python ports-and-adapters boundary: c
 
 ## Rationale
 
-Separating deterministic declaration parsing and plan construction from external CLI execution makes the selected plugin set inspectable before any mutation and keeps agent-specific command contracts behind typed adapters. Real Claude Code and Codex invocations in disposable homes establish install behavior at the product boundary, while controlled runner implementations cover first-failure and interaction-order behavior that a successful real install cannot expose reliably. Explicit checkout and environment roots make the state-ownership boundary structural: no fallback resolves a maintainer's ambient agent home, cache, marketplace registration, or agent directory.
+Separating deterministic declaration parsing and plan construction from external CLI execution makes the selected plugin set inspectable before any mutation and keeps agent-specific command contracts behind typed adapters. Real Claude Code and Codex invocations in disposable homes establish install behavior at the product boundary. Controlled runners used under `/test` Stage 5 Failure simulation expose first-failure behavior that a successful real install cannot produce reliably, while recording collaborators used under `/test` Stage 5 Interaction protocols expose command order and shape. Explicit checkout and environment roots make the state-ownership boundary structural: no fallback resolves a maintainer's ambient agent home, cache, marketplace registration, or agent directory.
 
 ## Invariants
 
@@ -28,5 +28,6 @@ Separating deterministic declaration parsing and plan construction from external
 
 - ALWAYS: external agent and lifecycle commands execute through an injected Protocol using array arguments, an explicit working directory, and an explicit environment; the real subprocess implementation is bound only at the CLI composition edge ([audit])
 - ALWAYS: the real-agent installation harness owns disposable-home creation, mirrored-checkout setup, environment redirection, dependency checks, and cleanup while exposing observations for linked tests to judge ([audit])
-- NEVER: a harness, controlled runner, or recording collaborator accepts an expected result, calls an assertion API, or returns a verdict ([audit])
+- ALWAYS: controlled runners are used only under `/test` Stage 5 Failure simulation to expose otherwise unreliable command failures, and recording collaborators are used only under `/test` Stage 5 Interaction protocols to expose command order and shape; both preserve the real Protocol boundary and leave every predicate to the linked test ([audit])
+- NEVER: a real-agent harness, Failure simulation controlled runner, or Interaction protocols recording collaborator accepts an expected result, calls an assertion API, or returns a verdict ([audit])
 - NEVER: framework mocks or process-global monkeypatching replace an agent CLI, lifecycle command, declaration reader, or subprocess boundary ([audit])
