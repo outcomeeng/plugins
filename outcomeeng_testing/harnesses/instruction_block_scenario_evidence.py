@@ -1,11 +1,14 @@
-"""Scenario harness evidence for the instruction-block render model.
+"""Scenario harness evidence for the instruction-block CLI edge and shared-region reconcile.
 
-Each scenario exercises one concrete interaction of the generator and its shared-region
-reconcile: rendering both root files, preserving a shared region and independent prose across a
-re-render, the router marker format, per-harness divergence, new-section propagation, template
-path rejection, staleness of an unparseable version, symlink and legacy-block migration,
-quoted-marker safety, blank-run preservation, and the git-recency reconcile of a diverged shared
-region. The harness owns all fixture setup — templates, topologies, git commits at fixed dates.
+Each scenario exercises one concrete interaction: rendering both root files, preserving a shared
+region and independent prose across a re-render, the router marker format, per-harness divergence,
+new-section propagation, template path rejection, staleness of an unparseable version,
+quoted-marker safety, and the git-recency reconcile of a diverged shared region. The harness owns
+all fixture setup — templates, topologies, git commits at fixed dates.
+
+The bootstrap-topology scenarios live in the linked scenario test, which owns their predicates
+directly. The scenarios still here hold their predicates against the seam
+``spec-tree:test-evidence-standards`` requires; ``ISSUES.md`` records that remaining migration.
 """
 
 from __future__ import annotations
@@ -422,72 +425,6 @@ def _assert_unparseable_version_is_stale(tmp_path: pathlib.Path) -> None:
     )
 
 
-def _assert_symlinked_root_file_becomes_regular_file(tmp_path: pathlib.Path) -> None:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    (repo / harness.INSTRUCTION_AGENTS).write_text(
-        harness.ROOT_SHARED_BODY, encoding="utf-8"
-    )
-    (repo / harness.INSTRUCTION_CLAUDE).symlink_to(harness.INSTRUCTION_AGENTS)
-    assert (repo / harness.INSTRUCTION_CLAUDE).is_symlink()
-
-    harness.run_generator_write_primary(repo, _template(tmp_path))
-    assert not (repo / harness.INSTRUCTION_CLAUDE).is_symlink()
-    assert (repo / harness.INSTRUCTION_CLAUDE).is_file()
-    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
-        assert (
-            (repo / name)
-            .read_text(encoding="utf-8")
-            .startswith(MODULE.ROUTER_MARKER_PREFIX)
-        )
-
-
-def _assert_markerless_generated_body_is_replaced(tmp_path: pathlib.Path) -> None:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    heading = MODULE.RETIRED_GENERATED_INSTRUCTION_HEADINGS[0]
-    legacy = (
-        f'---\n{MODULE.TEMPLATE_VERSION_KEY}: "0.1.0"\n'
-        f"{MODULE.TEMPLATE_SOURCE_KEY}: {MODULE.DEFAULT_TEMPLATE_SOURCE}\n---\n"
-        f"{heading}\n\nretired generated body\n"
-    )
-    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
-        (repo / name).write_text(legacy, encoding="utf-8")
-
-    harness.run_generator_write_primary(repo, _template(tmp_path))
-    result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
-    assert "retired generated body" not in result
-    assert result.startswith(MODULE.ROUTER_MARKER_PREFIX)
-
-
-def _assert_legacy_marker_block_reported_stale_and_replaced(
-    tmp_path: pathlib.Path,
-) -> None:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    open_marker, close_marker = MODULE.LEGACY_MANAGED_BLOCK_MARKERS[0]
-    legacy_doc = (
-        f"{open_marker}\n{MODULE.MANAGED_TEMPLATE_VERSION_PREFIX} 0.1.0 -->\n"
-        f"retired block body\n{close_marker}\n\nproduct prose kept\n"
-    )
-    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
-        (repo / name).write_text(legacy_doc, encoding="utf-8")
-
-    claude = repo / harness.INSTRUCTION_CLAUDE
-    assert (
-        MODULE.instruction_status(
-            claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
-        )
-        == "stale"
-    )
-
-    harness.run_generator_write_primary(repo, _template(tmp_path))
-    result = claude.read_text(encoding="utf-8")
-    assert open_marker not in result
-    assert result.startswith(MODULE.ROUTER_MARKER_PREFIX)
-    assert "product prose kept" in result
-
-
 def _assert_quoted_router_marker_in_prose_is_preserved(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -532,154 +469,6 @@ def _assert_quoted_router_closing_marker_after_block_is_preserved(
 def _assert_quoted_shared_fence_in_prose_is_not_a_region() -> None:
     inline = f"Use `{MODULE.shared_open_marker('example')}` inline to open a region.\n"
     assert MODULE.parse_shared_regions(inline) == {}
-
-
-def _assert_malformed_shared_fence_is_reported_stale(tmp_path: pathlib.Path) -> None:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    block = MODULE.render(
-        harness.build_template(harness.NEW_VERSION),
-        (harness.LANG_PRIMARY,),
-        harness.NEW_VERSION,
-        harness.HARNESS_CLAUDE,
-    )
-    # a shared open fence with no matching close: parse_shared_regions skips it, so drift/check
-    # would report current unless the malformed fence is surfaced
-    body = f"{MODULE.shared_open_marker('commands')}\n\nbody with no closing fence\n"
-    doc = MODULE.prepend_router_block(block, body)
-    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
-        (repo / name).write_text(doc, encoding="utf-8")
-
-    claude = repo / harness.INSTRUCTION_CLAUDE
-    assert MODULE.parse_shared_regions(doc) == {}
-    assert (
-        MODULE.instruction_status(
-            claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
-        )
-        == "stale"
-    )
-    assert "commands" in MODULE.shared_region_drift(repo)
-
-
-def _assert_bootstrap_refuses_a_malformed_seed_fence() -> None:
-    # The sixth initial topology: both seeds carry the same malformed (unclosed) shared fence.
-    # parse_shared_regions reads them as region-free, so a naive bootstrap would wrap the dangling
-    # marker into a new region and bury it in a permanently stuck stale state. The bootstrap must
-    # refuse and leave the fence as independent content, which --check/drift surface as malformed.
-    open_marker = MODULE.shared_open_marker("commands")
-    seed = f"# Head\n\n{open_marker}\n\nbody with no close\n\nmore product content.\n"
-    blocks = {
-        harness_name: MODULE.render(
-            harness.build_template(harness.NEW_VERSION),
-            (harness.LANG_PRIMARY,),
-            harness.NEW_VERSION,
-            harness_name,
-        )
-        for harness_name in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES
-    }
-    docs = MODULE.build_root_instruction_documents(
-        {"claude": seed, "codex": seed}, blocks
-    )
-    claude_doc = docs["claude"]
-    # the malformed fence is not wrapped into a region; it stays surfaced as malformed
-    assert MODULE.parse_shared_regions(claude_doc) == {}
-    assert "commands" in MODULE.malformed_shared_regions(claude_doc)
-    assert claude_doc.startswith(MODULE.ROUTER_MARKER_PREFIX)
-
-
-def _assert_duplicate_shared_region_name_is_malformed() -> None:
-    open_marker = MODULE.shared_open_marker("commands")
-    close_marker = MODULE.shared_close_marker("commands")
-    # the same name opened twice: parse_shared_regions silently collapses to the last body, so the
-    # duplicate must be surfaced as malformed rather than allowing a diverged earlier region to hide
-    duplicated = (
-        f"# Head\n\n{open_marker}\n\nfirst\n\n{close_marker}\n\n"
-        f"{open_marker}\n\nsecond\n\n{close_marker}\n"
-    )
-    assert MODULE.parse_shared_regions(duplicated) == {"commands": "second"}
-    assert "commands" in MODULE.malformed_shared_regions(duplicated)
-
-
-def _assert_blank_run_in_independent_content_preserved(tmp_path: pathlib.Path) -> None:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    seed = "# Product\n\nfirst\n\n\n\nsecond\n"
-    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
-        (repo / name).write_text(seed, encoding="utf-8")
-
-    harness.run_generator_write_primary(repo, _template(tmp_path))
-    result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
-    assert "first\n\n\n\nsecond" in result
-
-
-def _assert_bootstrap_preserves_lines_when_common_span_ends_mid_line() -> None:
-    # Two root files more than 80% identical whose longest common span ends mid-line, at a
-    # harness-specific word — the case a byte-level span would split across the fence.
-    claude = harness.ROOT_NEAR_IDENTICAL_CLAUDE
-    codex = harness.ROOT_NEAR_IDENTICAL_CODEX
-    _, ratio = MODULE.biggest_identical_span(claude, codex)
-    assert ratio > MODULE.BOOTSTRAP_SHARED_THRESHOLD
-
-    wrapped_claude, wrapped_codex = MODULE.bootstrap_wrap(claude, codex)
-    region_claude = MODULE.parse_shared_regions(wrapped_claude)[
-        MODULE.BOOTSTRAP_SHARED_REGION_NAME
-    ]
-    region_codex = MODULE.parse_shared_regions(wrapped_codex)[
-        MODULE.BOOTSTRAP_SHARED_REGION_NAME
-    ]
-    # the shared region is byte-identical across the two files
-    assert region_claude == region_codex
-    # every original line survives intact in each wrapped file — no line split across the fence
-    for line in (candidate for candidate in claude.splitlines() if candidate.strip()):
-        assert line in wrapped_claude
-    for line in (candidate for candidate in codex.splitlines() if candidate.strip()):
-        assert line in wrapped_codex
-    # every harness-specific line stays in independent content, outside the shared region
-    claude_only = set(claude.splitlines()) - set(codex.splitlines())
-    codex_only = set(codex.splitlines()) - set(claude.splitlines())
-    assert claude_only.isdisjoint(region_claude.splitlines())
-    assert codex_only.isdisjoint(region_codex.splitlines())
-
-
-def _assert_bootstrap_finds_whole_line_block_over_longer_straddling_match() -> None:
-    # The byte-level-longest common substring is the long near-duplicate line, which snaps away to
-    # nothing at a line boundary; the biggest *whole-line* span is the block elsewhere. The span
-    # must be that block, not empty — proving the search considers more than the single longest
-    # byte match.
-    claude = harness.ROOT_STRADDLING_CLAUDE
-    codex = harness.ROOT_STRADDLING_CODEX
-    span, _ = MODULE.biggest_identical_span(claude, codex)
-    shared_lines = set(claude.splitlines()) & set(codex.splitlines())
-    divergent_lines = set(claude.splitlines()) ^ set(codex.splitlines())
-    assert shared_lines
-    assert all(line in span for line in shared_lines)
-    assert all(line not in span for line in divergent_lines)
-
-
-def _assert_bootstrap_snaps_span_to_line_boundaries_in_both_files() -> None:
-    # The shared content starts at a line boundary in one file but mid-line in the other — the
-    # second file carries a harness-specific prefix on the otherwise-shared first line. Snapping to
-    # line boundaries in only the first file would place the fence mid-line in the second and split
-    # its line; the span must be whole lines in both files.
-    claude = harness.ROOT_MIDLINE_CLAUDE
-    codex = harness.ROOT_MIDLINE_CODEX
-    wrapped_claude, wrapped_codex = MODULE.bootstrap_wrap(claude, codex)
-    region_claude = MODULE.parse_shared_regions(wrapped_claude)[
-        MODULE.BOOTSTRAP_SHARED_REGION_NAME
-    ]
-    region_codex = MODULE.parse_shared_regions(wrapped_codex)[
-        MODULE.BOOTSTRAP_SHARED_REGION_NAME
-    ]
-    assert region_claude == region_codex
-    # every whole line survives intact in both files — the prefixed line is never split
-    for line in (candidate for candidate in claude.splitlines() if candidate.strip()):
-        assert line in wrapped_claude
-    for line in (candidate for candidate in codex.splitlines() if candidate.strip()):
-        assert line in wrapped_codex
-    # the divergent prefixed line stays whole in independent content, never inside the region
-    codex_only = set(codex.splitlines()) - set(claude.splitlines())
-    assert codex_only.issubset(set(wrapped_codex.splitlines()))
-    assert codex_only.isdisjoint(region_codex.splitlines())
 
 
 def _init_repo_with_committed_shared_region(

@@ -1,9 +1,76 @@
 import pathlib
+from collections.abc import Callable
+from dataclasses import dataclass
 
 from outcomeeng_testing.harnesses import instruction_block as harness
 from outcomeeng_testing.harnesses import instruction_block_mapping_evidence as evidence
 
 MODULE = harness.load_instruction_block_module()
+
+
+@dataclass(frozen=True)
+class _TopologyCase:
+    """One initial topology paired with the bootstrap outcome this test requires of it."""
+
+    name: str
+    factory: Callable[[], harness.RootInstructionTopology]
+    expected_region_body: str | None
+    removed_tokens: tuple[str, ...] = ()
+    delegating_filename: str | None = None
+
+
+def _topology_cases() -> tuple[_TopologyCase, ...]:
+    """Pair every member of the finite initial-topology domain with its required outcome."""
+    return (
+        _TopologyCase(
+            "only_claude",
+            harness.root_instruction_topology_only_claude,
+            harness.ROOT_CLAUDE_BODY,
+        ),
+        _TopologyCase(
+            "only_agents",
+            harness.root_instruction_topology_only_agents,
+            harness.ROOT_AGENTS_BODY,
+        ),
+        _TopologyCase(
+            "symlinked",
+            harness.root_instruction_topology_symlinked,
+            harness.ROOT_SHARED_BODY,
+        ),
+        _TopologyCase(
+            "delegating",
+            harness.root_instruction_topology_delegating,
+            harness.ROOT_AGENTS_BODY,
+            delegating_filename=harness.INSTRUCTION_CLAUDE,
+        ),
+        _TopologyCase(
+            "reverse_delegating",
+            harness.root_instruction_topology_reverse_delegating,
+            harness.ROOT_CLAUDE_BODY,
+            delegating_filename=harness.INSTRUCTION_AGENTS,
+        ),
+        _TopologyCase(
+            "identical",
+            harness.root_instruction_topology_identical,
+            harness.ROOT_SHARED_BODY,
+        ),
+        _TopologyCase(
+            "legacy_managed",
+            harness.root_instruction_topology_legacy_managed,
+            harness.ROOT_SHARED_BODY,
+            removed_tokens=harness.retired_managed_block_tokens(),
+        ),
+        _TopologyCase(
+            "near_identical",
+            harness.root_instruction_topology_near_identical,
+            harness.ROOT_NEAR_IDENTICAL_SHARED,
+        ),
+        _TopologyCase(
+            "separate",
+            harness.root_instruction_topology_separate,
+            None,
+        ),
+    )
 
 
 def test_instruction_block_mapping_evidence() -> None:
@@ -14,7 +81,7 @@ def test_instruction_block_mapping_evidence() -> None:
 
 
 def test_root_topology_maps_to_bootstrap_outcome(tmp_path: pathlib.Path) -> None:
-    for case in harness.bootstrap_topology_cases():
+    for case in _topology_cases():
         outcome = harness.observe_bootstrap_outcome(tmp_path / case.name, case.factory)
         documents = {
             harness.INSTRUCTION_CLAUDE: outcome.claude,

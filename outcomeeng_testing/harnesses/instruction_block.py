@@ -110,17 +110,6 @@ class EvidenceRun:
 
 
 @dataclass(frozen=True)
-class BootstrapTopologyCase:
-    """One member of the finite initial-topology domain the bootstrap mapping ranges over."""
-
-    name: str
-    factory: Callable[[], RootInstructionTopology]
-    expected_region_body: str | None
-    removed_tokens: tuple[str, ...]
-    delegating_filename: str | None
-
-
-@dataclass(frozen=True)
 class BootstrapOutcome:
     """The seed bodies and both written root documents observed after one bootstrap write."""
 
@@ -174,6 +163,26 @@ def root_instruction_topology_delegating() -> RootInstructionTopology:
                 generate_adopted_body_heading(ROOT_AGENTS_BODY),
             ),
             cases.instruction_agents: ROOT_AGENTS_BODY,
+        },
+        symlinks={},
+    )
+
+
+def root_instruction_topology_reverse_delegating() -> RootInstructionTopology:
+    """Return a root topology whose Codex file only points at the content-bearing Claude file.
+
+    The mirror of ``root_instruction_topology_delegating``. Adoption is direction-agnostic, so the
+    two directions are separate members of the topology domain rather than one member observed
+    twice.
+    """
+    cases = generated_cases()
+    return RootInstructionTopology(
+        files={
+            cases.instruction_claude: ROOT_CLAUDE_BODY,
+            cases.instruction_agents: generate_delegating_root_body(
+                cases.instruction_claude,
+                generate_adopted_body_heading(ROOT_CLAUDE_BODY),
+            ),
         },
         symlinks={},
     )
@@ -444,11 +453,6 @@ TEMPLATE_HARNESSES = _GENERATED_CASES.template_harnesses
 def scenario_evidence_contract() -> tuple[str, ...]:
     """Return the independent case manifest required by scenario evidence."""
     return (
-        "blank_run_in_independent_content_preserved",
-        "bootstrap_finds_whole_line_block_over_longer_straddling_match",
-        "bootstrap_preserves_lines_when_common_span_ends_mid_line",
-        "bootstrap_refuses_a_malformed_seed_fence",
-        "bootstrap_snaps_span_to_line_boundaries_in_both_files",
         "both_files_identical_except_harness_spans",
         "cli_check_marks_router_not_first_as_stale",
         "cli_check_reports_absent_when_one_file_missing",
@@ -466,10 +470,6 @@ def scenario_evidence_contract() -> tuple[str, ...]:
         "cli_rejects_template_without_frontmatter_version",
         "cli_write_without_repo_root_exits",
         "diverged_shared_region_reconciles_to_more_recent_side",
-        "duplicate_shared_region_name_is_malformed",
-        "legacy_marker_block_reported_stale_and_replaced",
-        "malformed_shared_fence_is_reported_stale",
-        "markerless_generated_body_is_replaced",
         "newer_template_adds_section_preserving_shared_region",
         "one_sided_shared_region_is_reported_ambiguous",
         "quoted_router_closing_marker_after_block_is_preserved",
@@ -483,7 +483,6 @@ def scenario_evidence_contract() -> tuple[str, ...]:
         "reconcile_uses_region_recency_not_whole_file_recency",
         "region_line_range_covers_content_lines_only",
         "router_marker_format",
-        "symlinked_root_file_becomes_regular_file",
         "template_symlink_is_rejected",
         "unparseable_version_is_stale",
         "write_preserves_shared_region_and_independent_prose",
@@ -811,69 +810,15 @@ def run_generator_write_primary(
     )
 
 
-def bootstrap_topology_cases() -> tuple[BootstrapTopologyCase, ...]:
-    """Return the complete finite initial-topology domain of the bootstrap mapping.
-
-    One entry per domain member the governing assertion enumerates. Each carries the topology
-    factory, the shared-region body the bootstrap is expected to produce (``None`` when no region
-    is wrapped), the tokens the write must remove, and the file whose own lines are adopted away
-    when the topology delegates. It applies no predicate; the linked mapping test judges each
-    observed outcome against these values.
-    """
+def retired_managed_block_tokens() -> tuple[str, ...]:
+    """Return the source-owned markers and metadata prefixes a retired managed block carries."""
     module = load_instruction_block_module()
-    legacy_markers = tuple(
+    return tuple(
         marker for pair in module.LEGACY_MANAGED_BLOCK_MARKERS for marker in pair
-    )
-    legacy_metadata_prefixes = (
+    ) + (
         module.MANAGED_TEMPLATE_VERSION_PREFIX,
         module.MANAGED_TEMPLATE_SOURCE_PREFIX,
         module.MANAGED_LANGUAGES_PREFIX,
-    )
-    return (
-        BootstrapTopologyCase(
-            "only_claude",
-            root_instruction_topology_only_claude,
-            ROOT_CLAUDE_BODY,
-            (),
-            None,
-        ),
-        BootstrapTopologyCase(
-            "only_agents",
-            root_instruction_topology_only_agents,
-            ROOT_AGENTS_BODY,
-            (),
-            None,
-        ),
-        BootstrapTopologyCase(
-            "symlinked", root_instruction_topology_symlinked, ROOT_SHARED_BODY, (), None
-        ),
-        BootstrapTopologyCase(
-            "delegating",
-            root_instruction_topology_delegating,
-            ROOT_AGENTS_BODY,
-            (),
-            INSTRUCTION_CLAUDE,
-        ),
-        BootstrapTopologyCase(
-            "identical", root_instruction_topology_identical, ROOT_SHARED_BODY, (), None
-        ),
-        BootstrapTopologyCase(
-            "legacy_managed",
-            root_instruction_topology_legacy_managed,
-            ROOT_SHARED_BODY,
-            legacy_markers + legacy_metadata_prefixes,
-            None,
-        ),
-        BootstrapTopologyCase(
-            "near_identical",
-            root_instruction_topology_near_identical,
-            ROOT_NEAR_IDENTICAL_SHARED,
-            (),
-            None,
-        ),
-        BootstrapTopologyCase(
-            "separate", root_instruction_topology_separate, None, (), None
-        ),
     )
 
 
