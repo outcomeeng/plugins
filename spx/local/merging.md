@@ -4,7 +4,7 @@ Loaded by `/merging-standards` `<repo_local_overlay>` and `/merge`. The product-
 
 ## Deployment and release recognition
 
-No deployment action is declared. Every change proceeds without deployment authorization. Release is declared as the disposable marketplace installation proof in the release section, governed by `RELEASE_READINESS`. Never ask the operator whether to merge.
+No deployment action is declared. Every change proceeds without deployment authorization. Release is declared as persistent marketplace installation from the merged assigned checkout, governed by `RELEASE_READINESS`. Never ask the operator whether to merge.
 
 ## Canonical checkout safety
 
@@ -63,6 +63,8 @@ The touched-scope principle is `/merging-standards` `<local_deterministic_scope>
 - Skill/doc Markdown under `src/plugins/` or `dist/`: `just check-skills` and `just docs-check`.
 - Implementation, test, validation-config, or broad changes: the focused node/package/module tests plus the narrow validation lane that covers the changed files, widening to full `just check-full` for shared validation/test infrastructure, package-manager files, generated catalog output, or distribution build machinery.
 
+Marketplace installation changes include `just verify-marketplace-installation` in the focused deterministic scope. This command runs the exact repository-installation L2 test in disposable homes and performs no persistent installation.
+
 When the full `just check-full` bundle is required, it is the terminal local deterministic gate. Run the focused lane first, then all applicable evidence auditors and agentic reviews to convergence, then run `just check-full` once against the clean committed head. Never run `just check-full` before those agentic checks, inside an agent, or concurrently with another heavy command. Any change after it invalidates the result and reopens the affected agentic gates before the next full-gate run.
 
 ## Governance surfaces (base-sync review reuse)
@@ -73,12 +75,12 @@ A prior local review is reusable across a clean rebase only when the branch patc
 
 `@spec-tree` (configured in `.github/workflows/spec-tree-review.yml` `trigger_phrase`; repository-variable override `SPEC_TREE_REVIEW_TRIGGER_PHRASE`).
 
-## Release installation proof
+## Release installation
 
-After the merge and feature-worktree cleanup place the assigned checkout at `origin/main`, run the repository installation proof from that checkout:
+After the merge and feature-worktree cleanup place the assigned checkout at `origin/main`, refresh the selected persistent Claude Code project and Codex home from that checkout:
 
 ```bash
 just install-marketplace
 ```
 
-The command derives both complete plugin sets from the merged checkout's committed catalogs, invokes the real Claude Code and Codex plugin CLIs in disposable homes, and runs shipped Codex lifecycle placement against the invocation checkout. It leaves developer marketplace registrations, plugin caches, and user homes unchanged. `RELEASE_READINESS` holds when the command exits successfully; preserve its structured first-failure diagnostic when it fails.
+The command derives both complete plugin sets from the merged checkout's committed catalogs, enforces the canonical GitHub source, installs every plugin into Claude Code project scope and the selected `CODEX_HOME`, and runs shipped Codex lifecycle placement against the invocation checkout. A colliding Claude Code user-scope `outcomeeng` registration withholds `RELEASE_READINESS` before mutation. Preserve the structured first-failure diagnostic when the command fails.
