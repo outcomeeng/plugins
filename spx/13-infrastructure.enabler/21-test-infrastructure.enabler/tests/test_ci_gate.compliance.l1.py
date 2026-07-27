@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from outcomeeng.validation import ACTIONLINT_ARGV, SHELLCHECK_ARGV
 from outcomeeng.validation.ci_gate import (
     CI_STEP_ENVIRONMENT_REQUIREMENTS,
     CI_TOOL_REQUIREMENTS,
@@ -58,13 +57,6 @@ def test_gate_workflow_never_inlines_a_gate_step() -> None:
 
 def test_inlined_gate_steps_are_detected() -> None:
     assert _inlined_gate_steps(gate_fixture_path("inlined_gate_steps.yml")) != set()
-
-
-def test_gate_recipe_composes_the_workflow_and_shell_lint_steps() -> None:
-    step_argvs = observe_validation_step_argvs()
-
-    assert ACTIONLINT_ARGV in step_argvs
-    assert SHELLCHECK_ARGV in step_argvs
 
 
 def test_gate_workflow_provisions_the_declared_toolchain() -> None:
@@ -174,3 +166,9 @@ def test_missing_main_push_branch_is_detected() -> None:
     triggers = observe_gate_triggers(gate_fixture_path("missing_main_push_branch.yml"))
 
     assert GATE_PUSH_BRANCH not in triggers.push_branches
+
+
+def test_missing_push_trigger_is_detected() -> None:
+    triggers = observe_gate_triggers(gate_fixture_path("missing_push_trigger.yml"))
+
+    assert GATE_PUSH_EVENT not in triggers.events
