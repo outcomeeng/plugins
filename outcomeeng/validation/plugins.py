@@ -10,8 +10,8 @@ Also checks:
       - .agents/plugins/marketplace.json (Codex)
   - For plugins with both .claude-plugin/plugin.json and
     .codex-plugin/plugin.json, the ``version`` field matches across both
-    manifests. Drift breaks Codex plugin refreshes and validate_install because
-    each runtime reads its own manifest.
+    manifests. Drift breaks repository installation because each agent reads
+    its own manifest.
 
 Usage::
 
