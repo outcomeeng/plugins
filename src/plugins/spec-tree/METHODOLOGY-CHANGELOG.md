@@ -23,10 +23,6 @@ Verification became a closed vocabulary, and agentic evidence gained a determini
 
 - **`[audit]` is the assertion tag for agentic evidence.** Review itself becomes an open-ended changeset gate that backs no assertion tag.
 
-### Deprecated
-
-- **`[review]` as an assertion tag.** It remains readable through edition 3 as the legacy spelling of `[audit]`. Convert `[review]` to `[audit]` in new and revised artifacts; a legacy spelling is not guaranteed to survive an edition boundary, and no removal release is set.
-
 ### Requires
 
 - Edition 3. No artifact valid under 3.0.0 is invalidated by this release.
