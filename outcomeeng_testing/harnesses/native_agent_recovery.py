@@ -745,8 +745,28 @@ def verify_native_agent_recovery_compliance() -> list[str]:
         failures.append("verification count omitted prepared candidates")
 
     reads = cast(list[dict[str, object]], fixture["reads"])
-    # The barrier and per-recipient correspondences are mapping evidence; this lane
-    # exercises the boundary, launch-separation, settlement, and idempotence rules.
+    # The mapping lane proves the same two rejections as an input-output correspondence;
+    # this lane proves the compliance rule that an incomplete barrier gates reassessment.
+    if (
+        _error_status(
+            module,
+            lambda: module.plan_reassessment(prepared, bindings, verified, reads[:-1]),
+        )
+        != module.ResultStatus.INVALID_SCHEMA
+    ):
+        failures.append("reassessment accepted an incomplete all-pane read barrier")
+    blocked_reassessment = module.plan_reassessment(
+        prepared,
+        bindings,
+        verified,
+        pane_read_results(
+            module, bindings, failed_pane_id=roster.post_restart_pane_ids[0]
+        ),
+    )
+    if blocked_reassessment[module.STATUS_FIELD] != module.ResultStatus.COMMAND_FAILED:
+        failures.append("failed pane read did not block reassessment")
+    if blocked_reassessment[module.DELIVERIES_FIELD]:
+        failures.append("failed pane read produced partial continuation delivery")
     _, _, restored = _continuation_plan(module, roster, fixture)
     reassessment = module.plan_reassessment(
         prepared, bindings, verified, reads, restored
