@@ -122,8 +122,13 @@ class VerificationRecipeObservation:
 
 @dataclass(frozen=True)
 class RealInstallationObservation:
-    """Real command, plugin-state, and placement observations across two runs."""
+    """Real persistent and repeated isolated installation observations."""
 
+    persistent_exit_code: int
+    persistent_claude_plugins: frozenset[str]
+    persistent_codex_plugins: frozenset[str]
+    persistent_stdout: str
+    persistent_stderr: str
     first_exit_code: int
     second_exit_code: int
     claude_plugins_first: frozenset[str]
@@ -163,7 +168,7 @@ class RecordingRunner:
     def __call__(self, command: InstallationCommand) -> CommandResult:
         self.calls.append(command)
         exit_code = 1 if command.operation is self.failed_operation else 0
-        stdout = _codex_marketplace_payload(CANONICAL_CODEX_SOURCE)
+        stdout = _codex_marketplace_payload(CANONICAL_MARKETPLACE_SOURCE)
         if command.operation is not Operation.MARKETPLACE_INSPECT:
             stdout = ""
         return CommandResult(
@@ -371,11 +376,36 @@ def observe_verification_recipe() -> VerificationRecipeObservation:
 
 
 def observe_real_installation() -> RealInstallationObservation:
-    """Run isolated installation twice with real agent CLIs."""
+    """Run persistent and isolated installation with real agent CLIs."""
     checkout = repository_root()
     _require_binaries(REQUIRED_BINARIES)
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
+        persistent_mirror = temporary_root / "persistent-checkout"
+        _mirror_installation_inputs(checkout, persistent_mirror)
+        selected_environment = _persistent_environment(
+            temporary_root / "selected-agent-state"
+        )
+        _prepare_agent_state(selected_environment)
+        _register_persistent_claude_marketplace(
+            persistent_mirror,
+            selected_environment,
+        )
+        persistent = _run_persistent_recipe(
+            checkout,
+            persistent_mirror,
+            selected_environment,
+        )
+        persistent_claude = _run_listing(
+            Agent.CLAUDE,
+            persistent_mirror,
+            selected_environment,
+        )
+        persistent_codex = _run_listing(
+            Agent.CODEX,
+            persistent_mirror,
+            selected_environment,
+        )
         mirror = temporary_root / "checkout"
         state = temporary_root / "state"
         _mirror_installation_inputs(checkout, mirror)
@@ -411,6 +441,17 @@ def observe_real_installation() -> RealInstallationObservation:
         unowned_second = unowned.read_bytes()
         persistent_second = _tree_snapshot(persistent_root)
     return RealInstallationObservation(
+        persistent_exit_code=persistent.returncode,
+        persistent_claude_plugins=_listed_plugin_names(
+            Agent.CLAUDE,
+            persistent_claude.stdout,
+        ),
+        persistent_codex_plugins=_listed_plugin_names(
+            Agent.CODEX,
+            persistent_codex.stdout,
+        ),
+        persistent_stdout=persistent.stdout,
+        persistent_stderr=persistent.stderr,
         first_exit_code=first.returncode,
         second_exit_code=second.returncode,
         claude_plugins_first=_listed_plugin_names(Agent.CLAUDE, claude_first.stdout),
@@ -510,6 +551,7 @@ def _claude_settings(repository: str) -> dict[str, object]:
 
 
 def _persistent_environment(root: Path) -> dict[str, str]:
+    root = root.resolve()
     environment = dict(os.environ)
     environment.update(
         {
@@ -520,6 +562,11 @@ def _persistent_environment(root: Path) -> dict[str, str]:
         }
     )
     return environment
+
+
+def _prepare_agent_state(environment: Mapping[str, str]) -> None:
+    for name in STATE_ENV_NAMES:
+        Path(environment[name]).mkdir(parents=True, exist_ok=True)
 
 
 def _codex_marketplace_payload(source: str) -> str:
@@ -587,6 +634,54 @@ def _run_recipe(
         text=True,
         check=False,
     )
+
+
+def _run_persistent_recipe(
+    source_checkout: Path,
+    mirror: Path,
+    environment: Mapping[str, str],
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        (
+            "just",
+            "install-marketplace",
+            "--checkout",
+            str(mirror),
+            "--json",
+        ),
+        cwd=source_checkout,
+        env=dict(environment),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _register_persistent_claude_marketplace(
+    checkout: Path,
+    environment: Mapping[str, str],
+) -> None:
+    result = subprocess.run(
+        (
+            "claude",
+            "plugin",
+            "marketplace",
+            "add",
+            CANONICAL_MARKETPLACE_SOURCE,
+            "--scope",
+            "project",
+        ),
+        cwd=checkout,
+        env=dict(environment),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Claude project marketplace registration failed with exit "
+            f"{result.returncode}: {result.stderr}"
+        )
 
 
 def _run_listing(

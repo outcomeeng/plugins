@@ -18,7 +18,18 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     codex_catalog = cast(
         dict[str, list[dict[str, object]]], json.loads(observation.codex_catalog)
     )
+    claude_plugins = frozenset(
+        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
+        for plugin in claude_catalog[CATALOG_PLUGINS_FIELD]
+    )
+    codex_plugins = frozenset(
+        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
+        for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
+    )
 
+    assert observation.persistent_exit_code == 0, observation.persistent_stderr
+    assert observation.persistent_claude_plugins == claude_plugins
+    assert observation.persistent_codex_plugins == codex_plugins
     assert observation.first_exit_code == 0, observation.first_stderr
     assert observation.second_exit_code == 0, observation.second_stderr
     assert (
@@ -27,22 +38,10 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     assert observation.claude_registration_target.endswith("/checkout")
     state_root = observation.state_roots[0].parent
     assert all(root.is_relative_to(state_root) for root in observation.state_roots)
-    assert observation.claude_plugins_first == frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in claude_catalog[CATALOG_PLUGINS_FIELD]
-    )
-    assert observation.claude_plugins_second == frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in claude_catalog[CATALOG_PLUGINS_FIELD]
-    )
-    assert observation.codex_plugins_first == frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
-    )
-    assert observation.codex_plugins_second == frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
-    )
+    assert observation.claude_plugins_first == claude_plugins
+    assert observation.claude_plugins_second == claude_plugins
+    assert observation.codex_plugins_first == codex_plugins
+    assert observation.codex_plugins_second == codex_plugins
     assert set(observation.placed_first) == (
         set(observation.placed_initial) | set(observation.shipped_agents)
     )
