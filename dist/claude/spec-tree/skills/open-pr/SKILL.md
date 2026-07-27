@@ -2,12 +2,12 @@
 name: open-pr
 user-invocable: false
 description: >-
-  PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass.
-allowed-tools: Read, Glob, Grep, Agent, Bash(spx worktree status:*), Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(printf:*), Skill
+  PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass. Loaded by /manage-github-pr.
+allowed-tools: Read, Glob, Grep, Agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(just marketplace-source-root:*), Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(printf:*), Skill
 ---
 
 <objective>
-A pull request opened in the review state required by its branch topology.
+A pull request opened ready for review.
 </objective>
 
 <project_specialization>
@@ -24,7 +24,7 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 **Step 0 — Load references.** Invoke /merging-standards (shared vocabulary) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
 
-**Step 1 — GATE: Pre-flight.** Run `spx worktree status` from the assigned root and require a fresh passing /merging-standards `<occupancy_preflight>` before any checkout-sensitive mutation. Run every overlay-declared preflight check per `<overlay_safety_checks>`, then run `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this step before the push even when a calling lifecycle already ran its entry preflight; the later check guards the checkout state at publication time.
+**Step 1 — GATE: Pre-flight.** Run `spx worktree status` from the assigned root and require a fresh passing /merging-standards `<occupancy_preflight>` before any checkout-sensitive mutation. Run every overlay-declared preflight check per `<overlay_safety_checks>`, then run `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this step before the push even when `/manage-github-pr` already ran the lifecycle-entry preflight before branch or commit work; the later check guards the checkout state at publication time.
 
 **Step 2 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails.
 
@@ -36,7 +36,7 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 *(b) Evidence-auditor predicates.* Dispatch every evidence auditor /merging-standards `<authority_gates>` requires for the diff: `test-evidence-auditor` for changed `[test]` assertions, linked tests, or imported test-infrastructure artifacts; `eval-evidence-auditor` for changed `[eval]` assertions, eval artifacts, or producer artifacts for eval-backed assertions. Handle rejected, failing, or unknown verdicts per /merging-standards `<auditor_verdicts>`, re-running deterministic verification and the relevant auditor until the evidence predicate is clean.
 
-*(c) Local review to convergence.* Run the `changes-reviewer` agent on the working diff in an isolated context scoped to that diff. Invoke it per /merging-standards `<local_review_invocation>`: let it resolve its own scope — the worktree it runs in and the working diff — with no interpretive scope, no severity pre-filter, and no instruction on what to emphasize; the reviewer reads the repository's own instructions and the shared taxonomy itself. The reviewer emits findings only (no decision/verdict); process its findings by **validity and phase** per /merging-standards `<review_classification>` — this is the before-open phase:
+*(c) Local review to convergence.* Run the `changes-reviewer` agent on the working diff — it runs in an isolated context, so the verdict is not biased by everything the operator's main context has been doing. Invoke it per /merging-standards `<local_review_invocation>`: let it resolve its own scope — the worktree it runs in and the working diff — with no interpretive scope, no severity pre-filter, and no instruction on what to emphasize; the reviewer reads the repository's own instructions and the shared taxonomy itself. The reviewer emits findings only (no decision/verdict); process its findings by **validity and phase** per /merging-standards `<review_classification>` — this is the before-open phase:
 
 - **Validate each finding** against its cited rule, the product-local / language / spec-tree governance, and the PDR/ADR decisions. Drop any finding the citation does not support.
 - **Apply every valid finding that belongs.** Treat each valid finding as defect-class evidence: sweep the touched node(s) for parallel instances with the same rule, source contract, evidence pattern, lifecycle step, or generated-source relationship. Fix the cited site and every in-scope parallel instance, commit via /commit-changes, re-invoke the reviewer, and repeat. When a valid finding's fix is too large to belong in this changeset, **split it out** — the work leaves the diff, recorded in the owning node's `ISSUES.md` or `PLAN.md` — instead of applying it here.
@@ -55,7 +55,34 @@ git push -u origin HEAD:refs/heads/"${branch}"
 
 If the product defines a custom branch-push command, follow CLAUDE.md instead — the explicit destination ref must remain part of any custom command.
 
-**Step 5 — GATE: Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
+**Step 5 — GATE: Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Choose the stdin form by harness.
+
+Interactive Claude Code and Codex sessions use a quoted heredoc:
+
+```bash
+GIT_TERMINAL_PROMPT=0 gh pr create \
+  --title "<commit-subject under 70 chars per /commit-changes>" \
+  --body-file - \
+  --head "$(git branch --show-current)" <<'EOF'
+## Summary
+
+- <bullet>
+
+## Background
+
+<prose>
+
+## Test plan
+
+- [ ] <verification step>
+
+## Refs
+
+- <ref>
+EOF
+```
+
+Programmatic runners that require one physical command line use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
 
 ```bash
 printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
@@ -69,7 +96,7 @@ Flag rationale:
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
 - `GIT_TERMINAL_PROMPT=0` — disables git credential prompts. (gh detects non-TTY stdin/stdout and skips its own prompts automatically; no `GH_*` env var is needed.)
 
-Single-quoted `printf` arguments preserve backticks, `$variables`, and `!` literally; a literal apostrophe inside one line uses `'"'"'`. Never embed multi-line content in `--body "..."` — gh does not expand `\n` escapes. Never use temporary files, helper files, command substitution, or post-hoc text substitution to assemble or repair the body.
+The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside the body — backticks, `$variables`, and `!` pass through literally. Use the unquoted form (`<<EOF`) only when the body must interpolate shell variables. In programmatic runner form, single-quoted `printf` arguments preserve those characters literally; a literal apostrophe inside one line uses `'"'"'`. Never embed multi-line content in `--body "..."` — gh does not expand `\n` escapes. Never use temporary files, helper files, command substitution, or post-hoc text substitution to assemble or repair the body.
 
 Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
 
