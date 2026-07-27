@@ -19,9 +19,6 @@ from hypothesis.strategies import SearchStrategy
 
 _LANGUAGE_TOKEN_CHARACTERS = string.ascii_letters + string.digits + "-_"
 _DOCUMENT_LINE_CHARACTERS = string.ascii_letters + string.digits + " -_`"
-# A ``#`` run that no whitespace closes. Markdown opens no heading here, so the line is ordinary
-# content — an issue reference, not a title.
-_HASH_RUN_LINE = "#123 stays owned by the release queue."
 
 
 @dataclass(frozen=True)
@@ -74,12 +71,12 @@ class RootContentPair:
 
 
 @dataclass(frozen=True)
-class DelegationShapeCase:
-    """One named root-instruction-body shape in the delegation-verdict domain."""
+class DelegationCandidateCase:
+    """One named root-instruction-body shape in the delegation-candidate domain."""
 
     name: str
     body: str
-    other_body: str
+    other_filename: str
 
 
 def delegating_root_body(other_filename: str, heading: str) -> str:
@@ -102,65 +99,50 @@ def adopted_body_heading(content_body: str) -> str:
     return next(line for line in content_body.splitlines() if line.startswith("#"))
 
 
-def delegation_shape_cases(
-    other_filename: str, content_body: str
-) -> tuple[DelegationShapeCase, ...]:
-    """Return the seven root-body shapes the delegation-verdict mapping ranges over.
+def delegation_candidate_cases(
+    other_filename: str, content_body: str, max_characters: int
+) -> tuple[DelegationCandidateCase, ...]:
+    """Return the root-body shapes the delegation-candidate mapping ranges over.
 
-    The shapes are the ones the governing assertion enumerates: a body whose every substantive
-    line points only at ``other_filename``; a body carrying a substantive line that names no
-    other file; a body whose only substantive line names ``other_filename`` while joining an
-    instruction of its own; a body carrying a ``#`` run that opens no heading because no
-    whitespace closes it; a body whose heading ``content_body`` does not carry; a body with no
-    substantive line at all; and a body naming ``other_filename`` only inside a fenced code
-    block. Every shape is judged against the body adoption would put in its place, so each case
-    carries that counterpart body. Both parameters are owned elsewhere.
+    Candidacy turns on two facts about the file and nothing else: whether the body names
+    ``other_filename``, and whether its text stays within ``max_characters``. The shapes therefore
+    cover naming the other file well inside the bound, naming it at the bound exactly, naming it
+    one character past the bound, and not naming it at all. Whether a body that names the other
+    file *also* carries an instruction of its own is deliberately absent from this domain: no
+    property of the text decides it, so the operator does. Every parameter is owned elsewhere.
     """
     heading = adopted_body_heading(content_body)
-    delegating = delegating_root_body(other_filename, heading)
+    pointer = delegating_root_body(other_filename, heading)
 
-    def case(
-        name: str, body: str, other_body: str = content_body
-    ) -> DelegationShapeCase:
-        return DelegationShapeCase(name=name, body=body, other_body=other_body)
+    def padded_to(size: int) -> str:
+        """Return a body naming ``other_filename`` whose stripped text is exactly ``size`` long.
+
+        The padding follows the pointer on its own line, so the separating newline counts toward
+        the size the bound measures.
+        """
+        padding = size - len(pointer.strip()) - len("\n")
+        if padding < 0:
+            raise ValueError(f"the pointer body already exceeds {size} characters")
+        body = pointer + "x" * padding
+        if len(body.strip()) != size:
+            raise ValueError(
+                f"padded body is {len(body.strip())} characters, not {size}"
+            )
+        return body
+
+    def case(name: str, body: str) -> DelegationCandidateCase:
+        return DelegationCandidateCase(
+            name=name, body=body, other_filename=other_filename
+        )
 
     return (
-        case("every-substantive-line-references", delegating),
+        case("names-the-other-file-well-inside-the-bound", pointer),
+        case("names-the-other-file-at-the-bound", padded_to(max_characters)),
         case(
-            "a-substantive-line-does-not-reference",
-            delegating + "\n" + content_body,
+            "names-the-other-file-one-character-past-the-bound",
+            padded_to(max_characters + 1),
         ),
-        case(
-            "a-reference-line-adds-its-own-instruction",
-            f"{heading}\n"
-            "\n"
-            f"See [{other_filename}]({other_filename}) for commands, "
-            "but also run the extra credentialing step before deploys.\n",
-        ),
-        case(
-            "a-hash-run-without-a-closer-is-not-a-heading",
-            f"{heading}\n"
-            "\n"
-            f"See [{other_filename}]({other_filename}) for commands.\n"
-            f"{_HASH_RUN_LINE}\n",
-            # The counterpart carries the ``#`` run verbatim, so the heading exemption's
-            # "adopted body also carries it" half holds. What decides the verdict is the other
-            # half: only a ``#`` run closed by whitespace opens a heading. Judged correctly the
-            # run stays content, keeps a substantive line that names no other file, and the body
-            # delegates to nothing; judged as a heading it is exempted and the body delegates.
-            content_body + f"\n{_HASH_RUN_LINE}\n",
-        ),
-        case(
-            "a-heading-the-adopted-body-does-not-carry",
-            "# Deprecated checkout — never deploy from here\n"
-            "\n"
-            f"See [{other_filename}]({other_filename}) for commands.\n",
-        ),
-        case("no-substantive-line", f"{heading}\n\n---\n"),
-        case(
-            "reference-inside-a-code-fence",
-            f"{heading}\n\n```\nsee {other_filename}\n```\n",
-        ),
+        case("omits-the-other-file", content_body),
     )
 
 

@@ -26,11 +26,27 @@ def test_instruction_block_scenario_evidence() -> None:
     )
 
 
-def test_delegating_root_file_adopts_the_content_bearing_body(
+def test_a_pointer_body_survives_a_write_that_carries_no_operator_answer(
     tmp_path: pathlib.Path,
 ) -> None:
     outcome = harness.observe_bootstrap_outcome(
         tmp_path, harness.root_instruction_topology_delegating
+    )
+    pointer = outcome.seeds[harness.INSTRUCTION_CLAUDE].strip()
+
+    # Adoption replaces a whole body, so the write never decides it — the pointer stands until the
+    # operator answers, and no region is wrapped over two bodies that still differ.
+    assert pointer in outcome.claude
+    assert harness.ROOT_AGENTS_BODY.strip() in outcome.agents
+    assert MODULE.parse_shared_regions(outcome.claude) == {}
+    assert MODULE.parse_shared_regions(outcome.agents) == {}
+    assert outcome.claude.startswith(MODULE.ROUTER_MARKER_PREFIX)
+    assert outcome.agents.startswith(MODULE.ROUTER_MARKER_PREFIX)
+
+
+def test_an_operator_answer_adopts_the_body_it_names(tmp_path: pathlib.Path) -> None:
+    outcome = harness.observe_bootstrap_outcome(
+        tmp_path, harness.root_instruction_topology_delegating, adopt_harness="codex"
     )
     pointer = outcome.seeds[harness.INSTRUCTION_CLAUDE].strip()
     shared_body = harness.ROOT_AGENTS_BODY.strip("\n")
@@ -47,19 +63,47 @@ def test_delegating_root_file_adopts_the_content_bearing_body(
     assert outcome.agents.startswith(MODULE.ROUTER_MARKER_PREFIX)
 
 
-def test_mutually_delegating_root_files_adopt_neither_body(
+def test_both_pointer_bodies_are_reported_and_neither_is_adopted(
     tmp_path: pathlib.Path,
 ) -> None:
-    outcome = harness.observe_bootstrap_outcome(
-        tmp_path, harness.root_instruction_topology_mutual_delegation
+    repo = tmp_path / "repo"
+    seeds = harness.materialize_root_instruction_topology(
+        repo, harness.root_instruction_topology_mutual_delegation()
     )
 
-    assert MODULE.parse_shared_regions(outcome.claude) == {}
-    assert MODULE.parse_shared_regions(outcome.agents) == {}
-    assert outcome.seeds[harness.INSTRUCTION_CLAUDE].strip() in outcome.claude
-    assert outcome.seeds[harness.INSTRUCTION_AGENTS].strip() in outcome.agents
-    assert outcome.claude.startswith(MODULE.ROUTER_MARKER_PREFIX)
-    assert outcome.agents.startswith(MODULE.ROUTER_MARKER_PREFIX)
+    reported = MODULE.unresolved_delegation(repo)
+
+    # Neither stub carries a body for the other to take, so both are reported rather than one being
+    # picked; the write then leaves each file its own pointer.
+    assert set(reported) == {harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS}
+    harness.run_generator_write_primary(
+        repo, harness.write_template(tmp_path, harness.NEW_VERSION)
+    )
+    claude = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+    agents = (repo / harness.INSTRUCTION_AGENTS).read_text(encoding="utf-8")
+    assert seeds[harness.INSTRUCTION_CLAUDE].strip() in claude
+    assert seeds[harness.INSTRUCTION_AGENTS].strip() in agents
+    assert MODULE.parse_shared_regions(claude) == {}
+    assert MODULE.parse_shared_regions(agents) == {}
+
+
+def test_an_unresolved_pointer_keeps_the_surface_stale(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    harness.materialize_root_instruction_topology(
+        repo, harness.root_instruction_topology_delegating()
+    )
+    template = harness.write_template(tmp_path, harness.NEW_VERSION)
+    harness.run_generator_write_primary(repo, template)
+
+    # The routers are current after that write, so only the pending answer can hold the surface
+    # stale — reporting current here would strand the pointer unresolved forever.
+    assert MODULE.unresolved_delegation(repo) == (harness.INSTRUCTION_CLAUDE,)
+    assert harness.run_generator_check(repo, template)[1] == "stale"
+
+    harness.run_generator_write_primary(repo, template, adopt_harness="codex")
+
+    assert MODULE.unresolved_delegation(repo) == ()
+    assert harness.run_generator_check(repo, template)[1] == "current"
 
 
 def test_symlinked_root_file_becomes_regular_file(tmp_path: pathlib.Path) -> None:

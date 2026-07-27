@@ -16,7 +16,6 @@ class _TopologyCase:
     factory: Callable[[], harness.RootInstructionTopology]
     expected_region_body: str | None
     removed_tokens: tuple[str, ...] = ()
-    delegating_filename: str | None = None
 
 
 def _topology_cases() -> tuple[_TopologyCase, ...]:
@@ -37,17 +36,22 @@ def _topology_cases() -> tuple[_TopologyCase, ...]:
             harness.root_instruction_topology_symlinked,
             harness.ROOT_SHARED_BODY,
         ),
+        # A body that only points at the other file is reported for the operator, never adopted by
+        # the write itself, so the default run leaves both bodies standing and wraps no region.
         _TopologyCase(
             "delegating",
             harness.root_instruction_topology_delegating,
-            harness.ROOT_AGENTS_BODY,
-            delegating_filename=harness.INSTRUCTION_CLAUDE,
+            None,
         ),
         _TopologyCase(
             "reverse_delegating",
             harness.root_instruction_topology_reverse_delegating,
-            harness.ROOT_CLAUDE_BODY,
-            delegating_filename=harness.INSTRUCTION_AGENTS,
+            None,
+        ),
+        _TopologyCase(
+            "mutual_delegation",
+            harness.root_instruction_topology_mutual_delegation,
+            None,
         ),
         _TopologyCase(
             "identical",
@@ -110,9 +114,7 @@ def test_root_topology_maps_to_bootstrap_outcome(tmp_path: pathlib.Path) -> None
                 for line in outcome.seeds[filename].splitlines()
                 if line.strip() and line not in other_lines
             ]
-            if filename == case.delegating_filename:
-                assert not any(line in document for line in own_lines), case.name
-            elif case.expected_region_body is None:
+            if case.expected_region_body is None:
                 assert outcome.seeds[filename].strip() in document, case.name
             else:
                 cursor = 0
@@ -125,18 +127,14 @@ def test_root_topology_maps_to_bootstrap_outcome(tmp_path: pathlib.Path) -> None
                 assert token not in document, case.name
 
 
-def test_root_body_shape_maps_to_delegation_verdict() -> None:
-    other = harness.INSTRUCTION_AGENTS
+def test_root_body_shape_maps_to_delegation_candidacy() -> None:
     verdicts = {
-        case.name: MODULE.delegates_to(case.body, other, case.other_body)
-        for case in harness.delegation_shape_cases()
+        case.name: MODULE.is_delegation_candidate(case.body, case.other_filename)
+        for case in harness.delegation_candidate_cases()
     }
     assert verdicts == {
-        "every-substantive-line-references": True,
-        "a-substantive-line-does-not-reference": False,
-        "a-reference-line-adds-its-own-instruction": False,
-        "a-hash-run-without-a-closer-is-not-a-heading": False,
-        "a-heading-the-adopted-body-does-not-carry": False,
-        "no-substantive-line": False,
-        "reference-inside-a-code-fence": False,
+        "names-the-other-file-well-inside-the-bound": True,
+        "names-the-other-file-at-the-bound": True,
+        "names-the-other-file-one-character-past-the-bound": False,
+        "omits-the-other-file": False,
     }
