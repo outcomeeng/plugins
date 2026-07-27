@@ -62,56 +62,36 @@ Reconcile with `spx/43-instructions.enabler/ISSUES.md` entries 3 (verdict-row
 taxonomy), 4 (audit-skill eval coverage), 7 (runtime terminology), and 9
 (audit-skill target-argument convention) before editing the auditor surface.
 
-## Reference description examples model the weaker activation form
+## `/create-subagent` states a description rule `/agent-prompt-standards` owns
 
-`/agent-prompt-standards` `<description_style>` measures description wording at
-~100% activation for the directive form (`ALWAYS invoke ... when <triggers>`) and
-~77% for the passive form (`... Use when ...`), and
-`spx/43-instructions.enabler/instructions.md:12` centralizes description
-conventions there for skills **and** subagents. The worked examples in
-`src/plugins/instructions/skills/create-subagent/references/subagents.md` teach the
-passive form, including the ✅ Good example under `<clear_triggers>`
-("Reviews code for security risks. Use after changes involving authentication,
-data access, or user input.") and the configuration samples that follow it. An
-author copying an example gets the weaker form; the two auditor agents this plugin
-ships use the directive form, so the reference and the shipped configurations
-disagree.
-
-The `<clear_triggers>` block also states a description-convention rule that
-`/agent-prompt-standards` owns, which
+`spx/43-instructions.enabler/instructions.md:12` centralizes prompt voice,
+description, and constraint conventions in `/agent-prompt-standards` for skills
+**and** subagents, and
 `spx/43-instructions.enabler/21-subagents.enabler/subagents.md:20` forbids
-restating inside `/create-subagent`.
+restating a canonical rule inside `/create-subagent`. The `<clear_triggers>` block
+in `src/plugins/instructions/skills/create-subagent/references/subagents.md` still
+carries a description-convention statement of its own rather than deferring
+outright, and `write-subagent-prompts.md` carries a parallel
+`<anti_pattern name="unclear_trigger">` block.
 
-`src/plugins/instructions/skills/audit-subagent/SKILL.md:121` states the opposing
-rule directly — a subagent description carries natural-language purpose and usage
-wording and does not apply the directive skill-frontmatter pattern. So the two
-conventions are both written down, in different files, and neither cites the other.
+This is a placement question, not a disagreement: every worked example, the
+`audit-subagent` description-style rule, the two `instructions` auditor
+descriptions, and all ten `spec-tree` agent descriptions now use the directive
+form `/agent-prompt-standards` `<description_style>` prescribes. What remains is
+that the rule is stated in more than one file.
 
-**Concrete sites**, all of which the sweep resolves together:
+**Resolution shape**: resolve inside the `/subagent-standards` extraction above.
+Decide whether `<clear_triggers>` keeps a specificity rule that cites the standard
+for wording, or disappears into `/subagent-standards` entirely, then apply the same
+choice to `write-subagent-prompts.md`'s parallel block in one pass.
 
-- `src/plugins/instructions/skills/create-subagent/references/subagents.md:464` —
-  configuration sample description, passive form.
-- `src/plugins/instructions/skills/create-subagent/references/subagents.md:940` —
-  `<clear_triggers>` ✅ Good example, passive form.
-- `src/plugins/instructions/skills/create-subagent/references/write-subagent-prompts.md` —
-  `<anti_pattern name="unclear_trigger">` ✅ Good examples carry the same passive
-  form; a parallel site the sweep reaches.
-- `src/plugins/instructions/agents/skill-auditor.md:3` and
-  `src/plugins/instructions/agents/subagent-auditor.md:3` — shipped descriptions,
-  directive form, disagreeing with the references above.
-- All ten `spec-tree` agents under `src/plugins/spec-tree/agents/` carry the
-  directive form as well, which puts the sweep across two plugins.
-
-**Resolution shape**: resolve inside the `/subagent-standards` extraction above —
-the block is a canonical rule to migrate, not a local edit. Decide whether a
-subagent description follows `/agent-prompt-standards` `<description_style>` or a
-distinct subagent convention that `audit-subagent` owns, record the winner in one
-place, then bring every worked example and every shipped auditor description onto
-the chosen form in one pass. Deciding the rule without the sweep leaves the same
-disagreement in different files.
-
-**Evidence.** An `instructions:subagent-auditor` run recommended rewriting
+**Evidence.** The changeset that renamed these skills first introduced a competing
+convention — `audit-subagent`'s description-style rule forbade the directive
+pattern, and two worked examples moved from directive to passive wording to match
+it. Local review caught that the same changeset both created the instances and
+recorded them as deferred. The competing rule and the reworded examples were
+reverted to the standard, leaving only the placement question above. A
+`subagent-auditor` run had separately recommended rewriting
 `src/plugins/instructions/agents/subagent-auditor.md`'s directive description into
-the passive form, citing these reference examples. The recommendation was dropped
-because the governing standard prescribes the directive form the configuration
-already uses — but the disagreement it read is real and lives in the reference.
+the passive form, citing those examples; that recommendation was dropped, and the
+examples it cited no longer teach the weaker form.
