@@ -82,11 +82,33 @@ The `<clear_triggers>` block also states a description-convention rule that
 `spx/43-instructions.enabler/21-subagents.enabler/subagents.md:20` forbids
 restating inside `/create-subagent`.
 
+`src/plugins/instructions/skills/audit-subagent/SKILL.md:121` states the opposing
+rule directly — a subagent description carries natural-language purpose and usage
+wording and does not apply the directive skill-frontmatter pattern. So the two
+conventions are both written down, in different files, and neither cites the other.
+
+**Concrete sites**, all of which the sweep resolves together:
+
+- `src/plugins/instructions/skills/create-subagent/references/subagents.md:464` —
+  configuration sample description, passive form.
+- `src/plugins/instructions/skills/create-subagent/references/subagents.md:940` —
+  `<clear_triggers>` ✅ Good example, passive form.
+- `src/plugins/instructions/skills/create-subagent/references/write-subagent-prompts.md` —
+  `<anti_pattern name="unclear_trigger">` ✅ Good examples carry the same passive
+  form; a parallel site the sweep reaches.
+- `src/plugins/instructions/agents/skill-auditor.md:3` and
+  `src/plugins/instructions/agents/subagent-auditor.md:3` — shipped descriptions,
+  directive form, disagreeing with the references above.
+- All ten `spec-tree` agents under `src/plugins/spec-tree/agents/` carry the
+  directive form as well, which puts the sweep across two plugins.
+
 **Resolution shape**: resolve inside the `/subagent-standards` extraction above —
-the block is a canonical rule to migrate, not a local edit. Decide whether
-`<clear_triggers>` keeps a specificity rule that cites the standard for style, or
-disappears into `/subagent-standards` entirely, then bring every worked example
-onto the chosen form in one pass.
+the block is a canonical rule to migrate, not a local edit. Decide whether a
+subagent description follows `/agent-prompt-standards` `<description_style>` or a
+distinct subagent convention that `audit-subagent` owns, record the winner in one
+place, then bring every worked example and every shipped auditor description onto
+the chosen form in one pass. Deciding the rule without the sweep leaves the same
+disagreement in different files.
 
 **Evidence.** An `instructions:subagent-auditor` run recommended rewriting
 `src/plugins/instructions/agents/subagent-auditor.md`'s directive description into
