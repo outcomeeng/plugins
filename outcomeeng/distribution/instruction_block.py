@@ -235,7 +235,6 @@ ROUTER_POLICY_NAMES: Final = (
     "operator-question-interrupt",
     "codex-verifier-dispatch",
     "codex-deferred-agent-discovery",
-    "subagent-dispatch",
 )
 SUBAGENT_DISPATCH_POLICY_HEADING: Final = "### Sub-agent dispatch"
 SUBAGENT_DISPATCH_POLICY_REQUIREMENTS: Final = (
