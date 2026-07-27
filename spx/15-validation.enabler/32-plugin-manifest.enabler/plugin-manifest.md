@@ -25,5 +25,5 @@ CAN commit manifest files that the installed Claude Code CLI will accept without
 
 ### Compliance
 
-- NEVER: allow plugin manifest version drift between `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` — drift breaks marketplace cache preservation and `validate_install` ([test](tests/test_plugin_manifest.scenario.l1.py))
+- NEVER: allow plugin manifest version drift between `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` — repository installation resolves both agent artifacts from one catalog version ([test](tests/test_plugin_manifest.scenario.l1.py))
 - NEVER: the manifest-validation runner makes an unbounded capturing subprocess call — capture without a timeout, or any wait on pipe EOF — per `spx/15-validation.enabler/21-subprocess-execution.adr.md` ([audit])
