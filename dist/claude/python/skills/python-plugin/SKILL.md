@@ -36,7 +36,7 @@ Select one verb from the invocation. `help` is the default when none is given.
 | Plugin      | what changed in this plugin                              | `${CLAUDE_SKILL_DIR}/../../CHANGELOG.md`                                                   |
 | Methodology | edition transitions, compatible extensions, deprecations | `${CLAUDE_SKILL_DIR}/../../METHODOLOGY-CHANGELOG.md`, shipped only in the spec-tree plugin |
 
-The marketplace line is identical in every installed plugin, because a plugin rename is unreadable from the renamed plugin once its old identity stops resolving. Reading this plugin's copy is therefore always enough. A checkout without the spec-tree plugin has no methodology changelog to read, and that absence is normal rather than a fault.
+The marketplace line is identical in every installed plugin, because a plugin rename is unreadable from the renamed plugin once its old identity stops resolving. Reading this plugin's copy is therefore always enough. The methodology path above resolves only from the spec-tree plugin's own skill directory; from any other plugin, reach it by invoking the spec-tree plugin's lifecycle skill. A checkout without that plugin has no methodology changelog to read, and that absence is normal rather than a fault.
 
 </changelogs>
 
