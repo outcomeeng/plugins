@@ -27,6 +27,18 @@ extensions, replaces symlinked root instruction files with regular files, remove
 ``spx/`` instruction files, reads committed git state for the recency reconcile, and writes both
 root files.
 
+Tested with: a stale router below the installed version; a router whose recorded languages differ
+from the detected set; a retired marker block and a markerless generated body; an absent surface;
+a surface already current; the initial topologies (one file present, a symlinked file, a
+delegating file, mutual delegation, two identical files, two near-identical files above and below
+the 80% span threshold, two independent files); every delegation body shape (pointer only,
+substantive non-pointer line, pointer joining its own instruction, a ``#`` run opening no heading,
+a heading the adopted body lacks, no substantive line, a fenced reference); a diverged, one-sided,
+duplicated, and unclosed shared region; a recency tie and an operator tie break; a dirty root
+file; and the CLI rejections (missing or non-directory repo root, missing or directory template, a
+template without ``template_version``, a symlink escaping the repository, an unsupported language
+token, a duplicate flag). The executable cases live in the governing node's ``tests/`` directory.
+
 """
 
 from __future__ import annotations
