@@ -48,7 +48,6 @@ from outcomeeng.distribution.installation import (
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
-    catalog_plugin_names,
     claude_marketplace_settings,
     codex_marketplace_listing_payload,
     codex_source_action,
@@ -525,11 +524,8 @@ def observe_real_installation() -> RealInstallationObservation:
             selected_environment,
         )
         persistent_settings = persistent_mirror / CLAUDE_PROJECT_SETTINGS_PATH
-        persistent_catalog = catalog_plugin_names(
-            persistent_mirror / CLAUDE_CATALOG_PATH
-        )
-        persistent_selection = frozenset(sorted(persistent_catalog)[:2])
-        _declare_project_selection(persistent_settings, persistent_selection)
+        _copy_committed_project_settings(checkout, persistent_settings)
+        persistent_selection = _declared_selection(persistent_settings)
         persistent_settings_before = persistent_settings.read_bytes()
         persistent = _run_persistent_recipe(
             checkout,
@@ -686,27 +682,31 @@ def _mirror_installation_inputs(source: Path, destination: Path) -> None:
     shutil.copytree(source / "dist/claude", destination / "dist/claude")
 
 
-def _declare_project_selection(settings: Path, selection: frozenset[str]) -> None:
-    """Declare `selection` as the project scope's enabled plugin set.
+def _copy_committed_project_settings(checkout: Path, destination: Path) -> None:
+    """Copy the checkout's committed Claude project settings into a mirror.
 
-    The document is written in the key order the Claude CLI emits, the shape
-    a committed checkout already carries, so a later install that preserves
-    the selection leaves the file byte-identical.
+    The committed document carries this repository's real plugin selection,
+    the whole-payload artifact the persistent-installation scenario is about.
     """
-    settings.parent.mkdir(parents=True, exist_ok=True)
-    existing: dict[str, object] = {}
-    if settings.exists():
-        existing = cast(
-            "dict[str, object]", json.loads(settings.read_text(encoding="utf-8"))
-        )
-    existing.pop(CLAUDE_ENABLED_PLUGINS_FIELD, None)
-    document: dict[str, object] = {
-        CLAUDE_ENABLED_PLUGINS_FIELD: {
-            f"{plugin}@{MARKETPLACE_NAME}": True for plugin in sorted(selection)
-        },
-        **existing,
-    }
-    settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    source = checkout / CLAUDE_PROJECT_SETTINGS_PATH
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source, destination)
+
+
+def _declared_selection(settings: Path) -> frozenset[str]:
+    """Read the plugin names a project settings document declares enabled."""
+    document = cast(
+        "dict[str, object]", json.loads(settings.read_text(encoding="utf-8"))
+    )
+    enabled = document.get(CLAUDE_ENABLED_PLUGINS_FIELD)
+    if not isinstance(enabled, dict):
+        raise RuntimeError(f"{settings} declares no plugin selection")
+    suffix = f"@{MARKETPLACE_NAME}"
+    return frozenset(
+        identifier.removesuffix(suffix)
+        for identifier, active in enabled.items()
+        if active is True and identifier.endswith(suffix)
+    )
 
 
 def _write_project_marketplace(checkout: Path, repository: str) -> None:
