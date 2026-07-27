@@ -89,3 +89,20 @@ outputs = [
 sources = ["spx/**/evals/**/eval.toml"]
 generator = ["outcomeeng_evals/**"]
 regenerate = "just build-eval-triggers"
+
+# Producer-coupled eval prompts. Each eval's `eval.toml` `[prompt_source]`
+# declares its template and producer file(s); the producer set spans authored
+# skill sources under src/plugins/ and generated runtime copies under dist/
+# (a relation's source may itself be another relation's output). The gate's
+# `eval-prompts` step runs the regenerate command's `--check` form.
+[[relation]]
+outputs = ["spx/**/evals/**/prompt.md"]
+sources = [
+  "spx/**/evals/**/prompt.template.md",
+  "spx/**/evals/**/eval.toml",
+  "src/plugins/**",
+  "dist/claude/**",
+  "dist/codex/**",
+]
+generator = ["outcomeeng_evals/**"]
+regenerate = "just eval-materialize-prompts spx"
