@@ -66,6 +66,11 @@ LEFTHOOK_PATH: Final = Path("lefthook.yml")
 PRECOMMIT_BUILD_INSTRUCTIONS_COMMAND: Final = "run: just build-instructions"
 LEGACY_DIRECT_TEMPLATE_ARGUMENT: Final = "--template src/plugins"
 LEGACY_DIRECT_REPO_ROOT_ARGUMENT: Final = "--repo-root ."
+# Each *_POLICY_REQUIREMENTS tuple below asserts literal substrings of one authored
+# template section in
+# src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md.
+# Rewording a pinned section without updating its tuple in the same change fails the
+# render with a named missing requirement rather than a readable wording diff.
 FOUNDATION_POLICY_HEADING: Final = "### Before product-content access -> `/understand`"
 FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("live foundation marker", "live `<SPEC_TREE_FOUNDATION>` marker"),
