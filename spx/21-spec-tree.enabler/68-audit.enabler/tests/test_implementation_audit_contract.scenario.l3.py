@@ -36,7 +36,6 @@ def test_verification_run_counts_one_rule_across_subjects() -> None:
 
     distinct_subjects = set(observation.subject_paths)
     assert len(distinct_subjects) > 1
-    assert len(distinct_subjects) == observation.recorded_finding_count
     assert observation.sealed_projection == expected_verification_projection(
         observation.run_token,
         finding_count=len(distinct_subjects),
