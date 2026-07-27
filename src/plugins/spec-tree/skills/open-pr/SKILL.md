@@ -3,11 +3,11 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass.
-allowed-tools: Read, Glob, Grep,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(printf:*), Skill
+allowed-tools: Read, Glob, Grep,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Bash(spx worktree status:*), Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(printf:*), Skill
 ---
 
 <objective>
-A pull request opened ready for review.
+A pull request opened in the review state required by its branch topology.
 </objective>
 
 <project_specialization>
