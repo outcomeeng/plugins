@@ -16,7 +16,7 @@ Select one verb from the invocation. `help` is the default when none is given.
 
 | Verb      | Result                                                                               |
 | --------- | ------------------------------------------------------------------------------------ |
-| `help`    | This plugin's verbs and what each one changes                                        |
+| `help`    | This plugin's verbs, what each one changes, and where its changelogs are             |
 | `version` | The plugin version the running session resolved                                      |
 | `init`    | This plugin's checkout footprint established for this version †                      |
 | `upgrade` | This plugin's checkout footprint brought to this version, retiring what it dropped † |
@@ -25,6 +25,20 @@ Select one verb from the invocation. `help` is the default when none is given.
 † {!% if target == 'claude' %!}This agent's plugin manifest declares the plugin's agents, so they reach a session through the manifest and no checkout placement applies. `init`, `upgrade`, and `check` report that and change nothing here; they carry the footprint work only for an agent whose manifest cannot declare agents.{!% else %!}This agent's plugin manifest cannot declare agents, so `init`, `upgrade`, and `check` own this plugin's checkout footprint. When the plugin ships no agent definitions, they report that and change nothing.{!% endif %!}
 
 </verbs>
+
+<changelogs>
+
+`help` names where a reader answers "what changed for me, and what must I now do?". Each line runs on its own clock, and all three ship inside installed plugins, so a session reads them without network access. Read one only when the reader asks what changed; never read all three by default.
+
+| Line        | Records                                                  | Path                                                      |
+| ----------- | -------------------------------------------------------- | --------------------------------------------------------- |
+| Marketplace | events no single plugin owns: harnesses, plugins renamed | `${CLAUDE_SKILL_DIR}/references/MARKETPLACE-CHANGELOG.md` |
+| Plugin      | what changed in this plugin                              | `${CLAUDE_SKILL_DIR}/../../CHANGELOG.md`                  |
+| Methodology | edition transitions, compatible extensions, deprecations | `../../METHODOLOGY-CHANGELOG.md`, in the providing plugin |
+
+The marketplace line is identical in every installed plugin, because a plugin rename is unreadable from the renamed plugin once its old identity stops resolving. The methodology line ships only with the plugin that provides the methodology; a plugin that provides none carries no such file, and its absence is normal rather than a fault.
+
+</changelogs>
 
 <version_reporting>
 
