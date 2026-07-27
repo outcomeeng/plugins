@@ -132,13 +132,16 @@ claude plugin marketplace update outcomeeng
 codex plugin marketplace upgrade outcomeeng
 ```
 
-Repository maintainers can verify both catalogs with `just install-marketplace`.
-The command installs every catalog plugin through the real Claude Code and Codex
-CLIs in disposable homes, then runs Codex agent placement against the invocation
-checkout. It leaves developer plugin homes unchanged.
+Repository maintainers can verify both catalogs with
+`just verify-marketplace-installation`. The command installs every catalog plugin
+through the real Claude Code and Codex CLIs in disposable homes, then runs Codex
+agent placement against the invocation checkout. It leaves persistent plugin state
+unchanged.
 
-`just push-marketplace` forwards its arguments directly to `git push`. Installation
-verification runs as a separate release step.
+After merged distribution changes, `just install-marketplace` refreshes the
+project-scoped Claude Code marketplace and the selected `$CODEX_HOME` from the
+canonical GitHub source, installs every plugin from both committed catalogs, and
+runs Codex lifecycle placement against the invocation checkout.
 
 ### Bumping plugin versions on a branch
 
