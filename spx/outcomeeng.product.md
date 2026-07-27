@@ -53,7 +53,7 @@ CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted dev
 - Language-specific plugins (Python, TypeScript, Rust) for architecture, tests, code, and review
 - Session management (handoff, pickup) for conversation continuity
 - Pre-commit validation infrastructure for plugin and skill quality
-- Repository-scoped marketplace synchronization and install verification, governed by `spx/12-marketplace-state.adr.md`
+- Persistent marketplace installation and isolated end-to-end install verification, governed by `spx/12-marketplace-state.adr.md`
 - Interface surfaces (browser) that render the spec tree from the SPX CLI projection and support interactive review and restructuring
 
 ### What's excluded
