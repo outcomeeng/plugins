@@ -183,6 +183,13 @@ WAIT_FOR_LOAD_POLICY_CONTRADICTIONS: Final = (
     ),
 )
 CODEX_HARNESS: Final = "codex"
+CLAUDE_HARNESS: Final = "claude"
+# The dispatch mechanics each harness block owns. The authorization section is
+# harness-neutral, so each marker below belongs to exactly one rendered router.
+HARNESS_DISPATCH_MECHANICS_MARKERS: Final = {
+    CLAUDE_HARNESS: "Use the `Agent` tool for every configured verifier or reviewer",
+    CODEX_HARNESS: "exposed typed-subagent spawn capability",
+}
 WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
     (
         "standalone waiter call",

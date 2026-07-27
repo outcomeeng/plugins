@@ -26,6 +26,17 @@ def test_every_harness_router_authorizes_subagent_dispatch() -> None:
             assert section is not None
 
 
+def test_each_harness_block_carries_only_its_own_dispatch_mechanics() -> None:
+    documents = evidence.rendered_instruction_blocks()
+    for owning_harness, marker in source.HARNESS_DISPATCH_MECHANICS_MARKERS.items():
+        for agent_harness, document in documents.items():
+            router = source.managed_router_block(document)
+            if agent_harness == owning_harness:
+                assert marker in router
+            else:
+                assert marker not in router
+
+
 def test_dropping_a_required_dispatch_literal_is_rejected() -> None:
     for enabled_languages in harness.template_language_subsets():
         documents = evidence.rendered_instruction_blocks(enabled_languages)
