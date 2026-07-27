@@ -572,13 +572,8 @@ def codex_source_action(payload: str) -> SourceAction:
         source = entry.get("marketplaceSource")
         if not isinstance(source, dict):
             return SourceAction.REPLACE
-        source_type = source.get("sourceType")
         source_value = source.get("source")
-        if (
-            source_type == "git"
-            and isinstance(source_value, str)
-            and _canonical_codex_source(source_value)
-        ):
+        if isinstance(source_value, str) and _canonical_codex_source(source_value):
             return SourceAction.REFRESH
         return SourceAction.REPLACE
     return SourceAction.ADD
