@@ -10,5 +10,7 @@ def test_minimum_spx_release_accepts_implementation_audit_lifecycle() -> None:
 
     assert observation.run_token
     assert observation.scope_sequences
+    assert None not in observation.scope_sequences
     assert observation.finding_sequences
-    assert observation.sealed_projection
+    assert None not in observation.finding_sequences
+    assert None not in observation.sealed_projection
