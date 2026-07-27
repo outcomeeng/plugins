@@ -106,6 +106,7 @@ After the operator selects `claude`, replace the complete `AGENTS.md` region bod
 - NEVER merge the two bodies of a diverged `shared` region — the reconcile or operator-selected edit replaces the losing side's region whole from the winning side; a recency tie is resolved through one whole-side replacement, never a hand-blend.
 - NEVER copy the template into another skill — `${SKILL_DIR}/templates/instruction-block.md` is its single owned location.
 - NEVER pass an authored build template carrying unresolved delimiters to the generator — runtime generation consumes the rendered, delimiter-free template bundled with the installed skill, and rejects unresolved delimiters before writing.
+- NEVER reword a template section a router-policy requirement tuple pins without updating that tuple in the same change — each tuple asserts literal substrings of one section, so a prose tidy alone fails the render with a named missing requirement rather than a wording diff.
 
 </constraints>
 
