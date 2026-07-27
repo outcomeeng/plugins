@@ -189,17 +189,23 @@ def root_instruction_topology_reverse_delegating() -> RootInstructionTopology:
 
 
 def root_instruction_topology_mutual_delegation() -> RootInstructionTopology:
-    """Return a root topology whose two files point at each other and carry no content."""
+    """Return a root topology whose two files point at each other and carry no content.
+
+    Both stubs carry one identical heading. Neither side has a content-bearing body to take a
+    heading from, and a heading only stays exempt while the body opposite it carries the same one —
+    so giving the two stubs different headings would make each side's heading substantive content
+    and both verdicts false, reaching the cancellation through ordinary non-delegation instead of
+    the two-pointer standoff this topology exists to exercise.
+    """
     cases = generated_cases()
+    shared_heading = generate_adopted_body_heading(ROOT_SHARED_BODY)
     return RootInstructionTopology(
         files={
             cases.instruction_claude: generate_delegating_root_body(
-                cases.instruction_agents,
-                generate_adopted_body_heading(ROOT_AGENTS_BODY),
+                cases.instruction_agents, shared_heading
             ),
             cases.instruction_agents: generate_delegating_root_body(
-                cases.instruction_claude,
-                generate_adopted_body_heading(ROOT_CLAUDE_BODY),
+                cases.instruction_claude, shared_heading
             ),
         },
         symlinks={},
