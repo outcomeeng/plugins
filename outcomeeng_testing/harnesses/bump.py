@@ -55,7 +55,6 @@ from outcomeeng.distribution.bump import (
     _real_change_probe,
     auto_segment,
     bump,
-    changed_plugins_from_diff,
     main,
 )
 from outcomeeng.distribution.contracts import (
@@ -67,7 +66,6 @@ from outcomeeng.distribution.contracts import (
 )
 from outcomeeng_testing.generators.bump import (
     arbitrary_diff_paths,
-    distribution_relpath,
     distribution_roots,
     manifest_fixture_path,
     manifest_relpath,
@@ -82,6 +80,7 @@ from outcomeeng_testing.generators.bump import (
 
 BUMP_PROPERTY_SEED = 20260704
 BUMP_PROPERTY_EXAMPLES = 50
+DIFF_PATH_LIST_MAX_SIZE = 12
 BUMP_PROPERTY_REPLAY_PATH = (
     "just test "
     "spx/32-distribution.enabler/21-bump.enabler/tests/test_bump.property.l1.py"
@@ -1322,76 +1321,56 @@ def bump_property(test_func: Callable[..., None]) -> Callable[[], None]:
     return wrapper
 
 
-def bump_property_failure_notes_include_seed_and_replay() -> bool:
+def observe_property_failure_notes() -> tuple[str, ...]:
+    """Run a deliberately failing property and return its attached notes."""
+
     @bump_property
     @given(path=arbitrary_diff_paths())
     def always_fails(path: str) -> None:
-        assert path == ""
+        raise AssertionError(path)
 
     try:
         always_fails()
     except AssertionError as error:
-        notes = getattr(error, "__notes__", ())
-        return (
-            f"Hypothesis seed: {BUMP_PROPERTY_SEED}" in notes
-            and f"Replay path: {BUMP_PROPERTY_REPLAY_PATH}" in notes
-        )
-    return False
+        return tuple(getattr(error, "__notes__", ()))
+    raise RuntimeError("the failing property completed without raising")
 
 
-def any_path_under_recognized_distribution_root_extracts_that_plugin() -> bool:
+def run_distribution_path_property(check: Callable[[str, str, str], None]) -> None:
+    """Drive `check` over generated distribution root, plugin, and subpath triples."""
+
     @bump_property
     @given(
         root=st.sampled_from(distribution_roots()),
         plugin=plugin_names(),
         subpath=relative_subpaths(),
     )
-    def assertion(root: str, plugin: str, subpath: str) -> None:
-        path = distribution_relpath(root, plugin, subpath)
-        assert changed_plugins_from_diff([path]) == frozenset({plugin})
+    def run(root: str, plugin: str, subpath: str) -> None:
+        check(root, plugin, subpath)
 
-    assertion()
-    return True
+    run()
 
 
-def changed_plugins_match_spec_oracle_over_arbitrary_diff_paths() -> bool:
+def run_single_diff_path_property(check: Callable[[str], None]) -> None:
+    """Drive `check` over one generated arbitrary diff path per example."""
+
     @bump_property
     @given(path=arbitrary_diff_paths())
-    def assertion(path: str) -> None:
-        assert changed_plugins_from_diff([path]) == _expected_plugins([path])
+    def run(path: str) -> None:
+        check(path)
 
-    assertion()
-    return True
+    run()
 
 
-def changed_plugin_aggregation_is_union_of_per_path_results() -> bool:
+def run_diff_path_list_property(check: Callable[[list[str]], None]) -> None:
+    """Drive `check` over generated lists of arbitrary diff paths."""
+
     @bump_property
-    @given(paths=st.lists(arbitrary_diff_paths(), max_size=12))
-    def assertion(paths: list[str]) -> None:
-        aggregated = changed_plugins_from_diff(paths)
-        per_path_union: frozenset[str] = frozenset()
-        for path in paths:
-            per_path_union = per_path_union | changed_plugins_from_diff([path])
-        assert aggregated == per_path_union
+    @given(paths=st.lists(arbitrary_diff_paths(), max_size=DIFF_PATH_LIST_MAX_SIZE))
+    def run(paths: list[str]) -> None:
+        check(paths)
 
-    assertion()
-    return True
-
-
-def _expected_plugins(paths: list[str]) -> frozenset[str]:
-    plugins: set[str] = set()
-    root_prefixes = tuple(f"{root}/" for root in distribution_roots())
-    for path in paths:
-        for prefix in root_prefixes:
-            if not path.startswith(prefix):
-                continue
-            rest = path[len(prefix) :]
-            next_slash = rest.find("/")
-            name = rest if next_slash == -1 else rest[:next_slash]
-            if name:
-                plugins.add(name)
-            break
-    return frozenset(plugins)
+    run()
 
 
 __all__ = [
@@ -1406,13 +1385,13 @@ __all__ = [
     "UntrackedSkillRepo",
     "all_tools_available",
     "base_ref",
-    "bump_property_failure_notes_include_seed_and_replay",
+    "observe_property_failure_notes",
     "build_repo_with_cross_plugin_structural_rename",
     "build_repo_with_renamed_structural_path",
     "build_repo_with_untracked_new_skill",
-    "any_path_under_recognized_distribution_root_extracts_that_plugin",
-    "changed_plugin_aggregation_is_union_of_per_path_results",
-    "changed_plugins_match_spec_oracle_over_arbitrary_diff_paths",
+    "run_distribution_path_property",
+    "run_diff_path_list_property",
+    "run_single_diff_path_property",
     "new_plugin_without_base_manifest_passes_check",
     "real_change_probe_detects_cross_plugin_structural_rename",
     "real_change_probe_detects_rename_away_from_structural_path",
