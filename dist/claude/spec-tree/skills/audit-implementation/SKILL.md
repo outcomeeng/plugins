@@ -451,7 +451,7 @@ in `<verification_run_contract>` and relay the complete blocked diagnostic from
 **An unquoted idempotency key split the command.**
 
 What happened: Claude passed
-`--idempotency-key implementation:python:tests:tests/audit report.py` without
+`--idempotency-key implementation:<lang>:tests:reports/audit report` without
 quotes. The shell split the key at the space, so `spx` received a truncated key
 and a stray argument.
 
