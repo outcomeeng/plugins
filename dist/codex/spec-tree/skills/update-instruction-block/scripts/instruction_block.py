@@ -72,6 +72,7 @@ CLI_OPTION_NAMES = (
     "--write",
     "--reconcile",
     "--from",
+    "--adopt",
     "--languages",
 )
 UNRESOLVED_BUILD_TEMPLATE_TOKENS = (
@@ -135,21 +136,13 @@ BOOTSTRAP_SHARED_REGION_NAME = "root"
 # The bootstrap pass wraps one shared region only when the biggest contiguous identical span
 # covers more than this fraction of the larger file.
 BOOTSTRAP_SHARED_THRESHOLD = 0.8
-# A pointer line that carries one of these joins a clause of its own to the reference, so the
-# line states something beyond "read the other file" and the body keeps its content.
-# An ATX heading is one to six ``#`` characters closed by whitespace or the line end. A ``#`` run
-# without that closer opens no heading, so ``#123 owned by the release queue`` is content and
-# stays in the delegation judgment rather than disappearing from it.
-_ATX_HEADING_RE = re.compile(r"^#{1,6}(?:\s|$)")
-DELEGATION_CLAUSE_BREAKS = (
-    " but ",
-    " however ",
-    " except ",
-    " unless ",
-    ", also ",
-    ", then ",
-    ";",
-)
+# A root instruction file that only points at the other one is absolutely small — a title and a
+# sentence or two — however large the file it points at. The bound is therefore a character count,
+# not a ratio: measured against the other file, a 400-line body would read as a stub whenever the
+# body opposite it ran to 4000 lines. The bound only decides when to ask the operator, never what
+# the answer is, so it is set well above a real stub rather than tuned to exclude borderline
+# bodies; a body that clears it costs one question, never its content.
+DELEGATION_STUB_MAX_CHARACTERS = 500
 
 # Each agent harness reads its own instruction filename from the product root.
 AGENT_HARNESS_INSTRUCTION_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
@@ -754,73 +747,54 @@ def _wrap_shared_at(text: str, start: int, end: int, name: str) -> str:
     return "\n\n".join(part for part in (before, fenced, after) if part) + "\n"
 
 
-def points_only_at(line: str, other_filename: str) -> bool:
-    """Report whether one substantive line does nothing but name ``other_filename``.
+def is_delegation_candidate(body: str, other_filename: str) -> bool:
+    """Report whether ``body`` is small enough to be nothing but a pointer at ``other_filename``.
 
-    Naming the other file is necessary but never sufficient: a line that names it while adding
-    an instruction of its own carries content. Two decidable conditions separate the two. The
-    line states one sentence — with every occurrence of the filename removed, the residual text
-    holds no sentence terminator, so its own ``.`` inside ``NAME.md`` never counts — and it joins
-    no clause of its own through a ``DELEGATION_CLAUSE_BREAKS`` marker. A descriptive pointer
-    ("see the other file for commands, packages, and conventions") satisfies both; a pointer with
-    an instruction attached ("see the other file, but also run the migration") satisfies neither.
-    Pure: a line and a filename in, a bool out.
+    Two facts about the file decide this, and neither is a reading of its prose: the body names
+    the other root instruction file, and its text stays under
+    :data:`DELEGATION_STUB_MAX_CHARACTERS`. Whether a sentence naming the other file *also*
+    carries an instruction of its own is a question about English, not about the file, and no
+    pattern over the text answers it — "see the other file for commands and run the migration
+    first" and "see the other file for commands, packages, and conventions" differ by meaning
+    alone. Adoption replaces the whole body, so guessing wrong costs the file its instructions.
+    This therefore reports a *candidate* the operator resolves, never a verdict.
+    Pure: two strings in, a bool out.
     """
-    if other_filename not in line:
-        return False
-    lowered = line.lower()
-    if any(marker in lowered for marker in DELEGATION_CLAUSE_BREAKS):
-        return False
-    residual = line.strip().rstrip(".!?").replace(other_filename, " ")
-    return not set(residual) & set(".!?")
+    # Naming the other file already implies a non-empty body, so the size bound is the only
+    # further condition.
+    return (
+        other_filename in body and len(body.strip()) <= DELEGATION_STUB_MAX_CHARACTERS
+    )
 
 
-def delegates_to(body: str, other_filename: str, other_body: str) -> bool:
-    """Report whether ``body`` does nothing but point the reader at ``other_filename``.
+def delegation_candidates(bodies_by_harness: Mapping[str, str]) -> tuple[str, ...]:
+    """Return the harnesses whose body may be a pointer at the other root instruction file.
 
-    A delegating root instruction file states that the two root files carry one set of
-    instructions, so the bootstrap treats it as content-absent. The verdict reads the whole body
-    against ``other_body``, the body adoption would put in its place, and holds only when the
-    body has a *substantive* line and every substantive line points only at the other root
-    instruction file. A line is substantive unless it is blank, a horizontal rule, or an ATX
-    heading ``other_body`` also carries — a title both files already share survives adoption, so
-    skipping it loses nothing, while a heading only this body carries is content that adoption
-    would destroy. A substantive line that names something else or adds an instruction of its own
-    makes the verdict false, as does a fenced code block whatever its lines say. The verdict errs
-    toward false because adoption runs once and replaces the body: an unrecognized pointer costs
-    the file only its shared region, while a misread instruction costs the file its content.
-    Pure: three strings in, a bool out.
+    Both sides can qualify: two stubs naming each other carry no content for either to adopt, and
+    the operator resolves that standoff by writing a body rather than choosing a side. Pure: a
+    mapping of bodies in, harness names out.
     """
-    if "```" in body or "~~~" in body:
-        return False
-    adopted = {line.strip() for line in other_body.splitlines()}
-    substantive = [
-        line
-        for line in (raw.strip() for raw in body.splitlines())
-        if line
-        and set(line) - set("-*_ ")
-        and not (_ATX_HEADING_RE.match(line) and line in adopted)
-    ]
-    if not substantive:
-        return False
-    return all(points_only_at(line, other_filename) for line in substantive)
+    candidates = []
+    for harness, body in sorted(bodies_by_harness.items()):
+        others = [name for name in bodies_by_harness if name != harness]
+        if any(
+            is_delegation_candidate(body, AGENT_HARNESS_INSTRUCTION_FILENAMES[other])
+            for other in others
+        ):
+            candidates.append(harness)
+    return tuple(candidates)
 
 
-def resolve_delegation(
-    body_a: str, body_b: str, filename_a: str, filename_b: str
-) -> tuple[str, str]:
-    """Replace a delegating body with the content-bearing body it points at.
+def adopt_delegated_body(
+    bodies_by_harness: Mapping[str, str], adopt_harness: str
+) -> dict[str, str]:
+    """Give every harness the body of ``adopt_harness``, the side the operator kept.
 
-    ``body_a`` reads ``filename_a`` and ``body_b`` reads ``filename_b``, so a delegating
-    ``body_a`` names ``filename_b``. Exactly one side may delegate: when both do, neither carries
-    content to adopt, and when neither does, there is nothing to resolve — both cases return the
-    bodies unchanged. Pure: strings in, strings out.
+    The operator names the content-bearing side after reading both files; this applies that
+    choice. Pure: a mapping of bodies and a harness name in, a mapping of bodies out.
     """
-    a_delegates = delegates_to(body_a, filename_b, body_b)
-    b_delegates = delegates_to(body_b, filename_a, body_a)
-    if a_delegates == b_delegates:
-        return body_a, body_b
-    return (body_b, body_b) if a_delegates else (body_a, body_a)
+    kept = bodies_by_harness[adopt_harness]
+    return {harness: kept for harness in bodies_by_harness}
 
 
 def bootstrap_wrap(
@@ -895,17 +869,22 @@ def _product_owned_root_document(document: str) -> str:
 
 
 def build_root_instruction_documents(
-    seeds: Mapping[str, str], blocks_by_harness: Mapping[str, str]
+    seeds: Mapping[str, str],
+    blocks_by_harness: Mapping[str, str],
+    adopt_harness: str | None = None,
 ) -> dict[str, str]:
     """Compose each harness's root document: router block first, then product content.
 
     Pure over the seed and block strings. Each seed's product content is taken (retired generated
     bodies excluded, any existing managed block removed). On first encounter — neither file
-    carries a shared region — a body that only delegates to the other root instruction file
-    adopts that file's body per :func:`resolve_delegation`, and the biggest contiguous identical
-    span is then wrapped as one shared region per :func:`bootstrap_wrap`; once a shared region
-    exists, the bodies are left as the operator arranged them. The per-harness router block is
-    then prepended to each.
+    carries a shared region — the biggest contiguous identical span is wrapped as one shared
+    region per :func:`bootstrap_wrap`; once a shared region exists, the bodies are left as the
+    operator arranged them. The per-harness router block is then prepended to each.
+
+    ``adopt_harness`` carries an operator decision and defaults to none. A body that merely looks
+    like a pointer at the other root instruction file is never adopted here: the reconcile reports
+    it as an ambiguity, and only the operator's answer arrives as ``adopt_harness``. Composing a
+    document never destroys a body on its own reading of that body.
     """
     body_claude = _strip_managed_block(_product_owned_root_document(seeds["claude"]))
     body_codex = _strip_managed_block(_product_owned_root_document(seeds["codex"]))
@@ -925,12 +904,11 @@ def build_root_instruction_documents(
         and not parse_shared_regions(body_codex)
     )
     if first_encounter:
-        body_claude, body_codex = resolve_delegation(
-            body_claude,
-            body_codex,
-            AGENT_HARNESS_INSTRUCTION_FILENAMES["claude"],
-            AGENT_HARNESS_INSTRUCTION_FILENAMES["codex"],
-        )
+        if adopt_harness is not None:
+            adopted = adopt_delegated_body(
+                {"claude": body_claude, "codex": body_codex}, adopt_harness
+            )
+            body_claude, body_codex = adopted["claude"], adopted["codex"]
         body_claude, body_codex = bootstrap_wrap(body_claude, body_codex)
 
     return {
@@ -1104,11 +1082,15 @@ def instruction_status(
 
 
 def write_root_instruction_files(
-    repo_root: pathlib.Path, blocks_by_harness: Mapping[str, str]
+    repo_root: pathlib.Path,
+    blocks_by_harness: Mapping[str, str],
+    adopt_harness: str | None = None,
 ) -> None:
     """Insert router blocks and bootstrap shared regions, replacing symlinks with files."""
     seeds = _root_seed_documents(repo_root)
-    documents = build_root_instruction_documents(seeds, blocks_by_harness)
+    documents = build_root_instruction_documents(
+        seeds, blocks_by_harness, adopt_harness
+    )
     for harness, filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.items():
         _replace_path_with_text(_repo_child(repo_root, filename), documents[harness])
 
@@ -1136,11 +1118,18 @@ class ReconcileReport:
     tie: tuple[str, ...] = ()
     one_sided: tuple[str, ...] = ()
     malformed: tuple[str, ...] = ()
+    delegating: tuple[str, ...] = ()
 
     @property
     def ambiguous(self) -> bool:
         """Whether any region needs the update skill's judgment rather than a deterministic write."""
-        return bool(self.dirty or self.tie or self.one_sided or self.malformed)
+        return bool(
+            self.dirty
+            or self.tie
+            or self.one_sided
+            or self.malformed
+            or self.delegating
+        )
 
 
 def _git(repo_root: pathlib.Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -1283,8 +1272,11 @@ def reconcile_root_shared_regions(
         for name in diverged_shared_regions(text_a, text_b)
         if name not in malformed_set
     )
+    delegating = unresolved_delegation(repo_root)
     if not diverged:
-        return ReconcileReport(one_sided=one_sided, malformed=malformed)
+        return ReconcileReport(
+            one_sided=one_sided, malformed=malformed, delegating=delegating
+        )
 
     # Recency and the winning body read the committed originals (line ranges match git history),
     # while the writes accumulate on text_a / text_b; reconciling one region shifts another's line
@@ -1322,6 +1314,29 @@ def reconcile_root_shared_regions(
         tie=tuple(tie),
         one_sided=one_sided,
         malformed=malformed,
+        delegating=delegating,
+    )
+
+
+def unresolved_delegation(repo_root: pathlib.Path) -> tuple[str, ...]:
+    """CLI-edge helper: return the root instruction files that may be a pointer at the other.
+
+    Only a first encounter can adopt a body — once either file carries a shared region the two
+    bodies are the arrangement the operator already chose — so a candidate outside that state is
+    not reported. The pure test is :func:`delegation_candidates`.
+    """
+    texts = _read_both_root_texts(repo_root)
+    if texts is None:
+        return ()
+    bodies = {
+        harness: _strip_managed_block(_product_owned_root_document(text))
+        for harness, text in zip(("claude", "codex"), texts, strict=True)
+    }
+    if any(parse_shared_regions(body) for body in bodies.values()):
+        return ()
+    return tuple(
+        AGENT_HARNESS_INSTRUCTION_FILENAMES[harness]
+        for harness in delegation_candidates(bodies)
     )
 
 
@@ -1390,6 +1405,12 @@ def main(argv: list[str] | None = None) -> int:
         dest="from_harness",
         choices=tuple(AGENT_HARNESS_INSTRUCTION_FILENAMES),
         help="With --reconcile, apply this harness's diverged region bodies (operator tie break) instead of git recency.",
+    )
+    parser.add_argument(
+        "--adopt",
+        dest="adopt_harness",
+        choices=tuple(AGENT_HARNESS_INSTRUCTION_FILENAMES),
+        help="With --write, give both root files this harness's body (operator answer to a reported delegation candidate).",
     )
     parser.add_argument(
         "--languages",
@@ -1464,6 +1485,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ambiguous (one-sided): {name}", file=sys.stderr)
         for name in report.malformed:
             print(f"malformed: {name}", file=sys.stderr)
+        for filename in report.delegating:
+            print(f"ambiguous (delegating): {filename}", file=sys.stderr)
         for name in report.reconciled:
             print(f"reconciled: {name}")
         return 1 if report.ambiguous else 0
@@ -1482,9 +1505,11 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values()
             }
-            if shared_region_drift(repo_root):
+            if shared_region_drift(repo_root) or unresolved_delegation(repo_root):
                 # A diverged or one-sided shared region is drift the reconcile resolves; report
-                # it as stale so the gate does not pass over it.
+                # it as stale so the gate does not pass over it. An unresolved delegation
+                # candidate is the same: the routers alone can be current while one body still
+                # waits on the operator's answer, and reporting current there would strand it.
                 statuses.add(InstructionStatus.STALE)
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)
@@ -1511,7 +1536,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.write and repo_root is not None:
         try:
-            write_root_instruction_files(repo_root, rendered)
+            write_root_instruction_files(repo_root, rendered, args.adopt_harness)
             remove_obsolete_spx_instruction_files(repo_root)
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)
