@@ -1,7 +1,11 @@
 """Controlled first-failure evidence for repository installation."""
 
+import json
+
 from outcomeeng.distribution.installation import (
     Agent,
+    CATALOG_PLUGIN_NAME_FIELD,
+    CATALOG_PLUGINS_FIELD,
     CANONICAL_MARKETPLACE_SOURCE,
     Operation,
     SourceAction,
@@ -36,19 +40,28 @@ def test_persistent_installation_refreshes_canonical_sources_and_catalogs() -> N
         for command in plan.commands
         if command.agent is Agent.CLAUDE
         and command.operation is Operation.PLUGIN_INSTALL
-    } == set(plan.claude_plugins)
+    } == {
+        plugin[CATALOG_PLUGIN_NAME_FIELD]
+        for plugin in json.loads(observation.claude_catalog)[CATALOG_PLUGINS_FIELD]
+    }
     assert {
         command.plugin
         for command in plan.commands
         if command.agent is Agent.CLAUDE
         and command.operation is Operation.PLUGIN_ENABLE
-    } == set(plan.claude_plugins)
+    } == {
+        plugin[CATALOG_PLUGIN_NAME_FIELD]
+        for plugin in json.loads(observation.claude_catalog)[CATALOG_PLUGINS_FIELD]
+    }
     assert {
         command.plugin
         for command in plan.commands
         if command.agent is Agent.CODEX
         and command.operation is Operation.PLUGIN_INSTALL
-    } == set(plan.codex_plugins)
+    } == {
+        plugin[CATALOG_PLUGIN_NAME_FIELD]
+        for plugin in json.loads(observation.codex_catalog)[CATALOG_PLUGINS_FIELD]
+    }
     assert observation.attempted[1:] == plan.commands
 
 
