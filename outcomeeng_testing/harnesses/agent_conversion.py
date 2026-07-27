@@ -56,13 +56,11 @@ from outcomeeng.distribution.agents import (
     render_agent_toml,
 )
 from outcomeeng.distribution.contracts import (
+    CODEX_PLUGIN_MANIFEST,
     CODEX_PLUGIN_SUBDIR_NAME,
+    DIST_CODEX_PLUGINS_DIR,
     PLUGINS_DIR_NAME,
     SOURCE_ROOT_NAME,
-)
-from outcomeeng.distribution.marketplace_sources import (
-    CODEX_PLUGIN_MANIFEST,
-    DIST_CODEX_PLUGINS_DIR,
 )
 from outcomeeng_testing.harnesses.src_tree import write_agent_source, write_agent_tree
 

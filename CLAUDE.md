@@ -277,7 +277,8 @@ Spec-tree methodology rules (node types, states, assertion types, ordering) live
   - Generated plugin trees after `src/plugins/` edits: `just build-skills`. Do not hand-edit `dist/`.
   - Generated root Spec Tree instruction blocks after instruction-block-template or distribution-render changes: `just build-skills`, then `just build-instructions`. Do not hand-edit the managed instruction blocks in `CLAUDE.md` or `AGENTS.md`; regenerate them from the rendered harness templates in `dist/`, then verify with `just instructions-check`.
   - Generated eval CI trigger paths after an `eval.toml` `owned_paths` edit: `just build-eval-triggers`. Do not hand-edit the marker-delimited `paths:` blocks in `.github/workflows/spec-tree-evals.yml`; the gate's `eval-triggers` step fails on drift.
-  - Marketplace install refresh after merged plugin-distribution changes: `just sync-marketplace <previous-main-ref>` from the marketplace-source worktree, as directed by `spx/local/merging.md`.
+  - Marketplace installation verification before merge: `just verify-marketplace-installation`. The command runs the repository-installation L2 evidence through real agent CLIs in disposable homes and leaves persistent state unchanged.
+  - Marketplace release installation after merged plugin-distribution changes: `just install-marketplace` from the merged assigned checkout, as directed by `spx/local/merging.md`. The command refreshes Claude Code project scope and the selected `$CODEX_HOME` from the canonical GitHub marketplace and installs every committed catalog plugin.
 - 🛑 **STOP TRIGGER — NEVER raise command expense ceilings without explicit operator approval** - Command defaults are authority for cost-bearing and quota-bearing runs. Do not add or increase flags, environment variables, or config values that raise spend, quota use, hosted minutes, paid API usage, token budget, worker parallelism, retry count, timeout, or external-service capacity without structured operator approval in the same turn. Examples include `--max-budget-usd`, model/API budget caps, worker or parallelism counts, retry limits, hosted-runner minutes, and paid-provider switches. If a command fails because the default ceiling is too low, stop and ask with `request_user_input`, naming the exact failed command, the blocked ceiling, the proposed new ceiling, and a pause/inspect option.
 - ✅ **Use the Justfile as this repo's command interface** - Use `just --list` / `just help` only to confirm exact recipe spelling after a governing instruction has selected the command class; do not use recipe discovery to choose an independent validation strategy. Repository-local Python modules (`python3 -m outcomeeng.*`, `uv run python -m outcomeeng.*`, and similar module invocations) run through `just` recipes only; inside the `Justfile`, those invocations are recipe implementation details. If a needed repository operation exists only as a Python module, add or fix the narrow Just recipe first, then run the recipe. Plugin-shipped skill scripts are different: when an active skill instructs a direct `python3 "${CLAUDE_SKILL_DIR}/scripts/..."` command, run that exact portable skill script. To understand a recipe, inspect `Justfile` and the underlying source with read-only tools; execute through `just`.
 - ✅ **Dog-food platform features in skills** - When you discover an undocumented Claude Code capability (e.g., `skills:` field in subagents), check whether our skills teach it and update them if not
@@ -413,7 +414,8 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 - `.claude-plugin/marketplace.json` — Claude Code marketplace catalog (one entry per shipped plugin).
 - `.agents/plugins/marketplace.json` — Codex marketplace catalog (mirror of the above).
 - `.spx/` — gitignored operational files (sessions, audit state).
-- `.claude/settings.json`, `.codex/config.toml` — product-scoped harness settings, committed for collaborators.
+- `.claude/settings.json` — product-scoped Claude Code plugin selection, committed for collaborators.
+- `.codex/config.toml` — repository Codex settings unrelated to plugin installation or enablement.
 - `CLAUDE.md` (this file), `AGENTS.md` (Codex counterpart) — repo-level instruction surfaces.
 
 For the contents of any plugin or `spx/` subdirectory, run `ls` or read the catalog. The authored directory layout under each plugin follows the conventions in `src/plugins/instructions/skills/`.
@@ -432,100 +434,29 @@ The autonomy does **not** cover blind force-push (`git push --force`), force-pus
 
 The lifecycle authority is: the managed Spec Tree instruction block routes to skills; `/merge`, `/merging-standards`, `/manage-github-pr`, `/open-pr`, and `/manage-pr` define behavior; `spx/local/merging.md` provides this product's overlay values. Root `CLAUDE.md` supplies exact repository commands only where a skill asks for this product's concrete command surface.
 
-### Marketplace Publish Commands
-
-When an active workflow calls for the product's marketplace push wrapper, use `just push-marketplace` rather than bare `git push`; the recipe pushes first, then refreshes the local marketplace only when the pushed range changed plugin distribution files. Pass the same remote and ref arguments that would have gone to `git push`:
-
-```bash
-just push-marketplace               # git push (current branch) + just sync-marketplace
-just push-marketplace origin main   # explicit remote/branch
-```
-
-Bare `git push origin main` skips the change-aware publish wrapper. For plugin distribution changes that means the local marketplace stays stale, the Codex compatibility symlinks are not created, and `validate_install` never runs.
-
-⚠️ **NEVER run `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` by hand.** These are the primitives that `just sync-marketplace` (and therefore `just push-marketplace`) already orchestrates in the right order. Running them manually risks the wrong product scope, steps out of order, or skipped post-install validation. Read the Justfile before any marketplace operation.
-
 ### How skill content reaches a session
 
-This repository registers the `outcomeeng` marketplace with Claude Code as a **Directory source** at the repo root — `claude plugin marketplace list` reports `Source: Directory (.../outcomeeng/plugins)`, and each plugin's `marketplace.json` entry uses a relative `source: "./dist/claude/<name>"`.
+**Claude Code** uses the project-scoped GitHub marketplace `outcomeeng/plugins`. `just install-marketplace` validates that user scope carries no colliding `outcomeeng` registration, reconciles the project registration to that canonical source, refreshes it, and installs and enables every plugin from `.claude-plugin/marketplace.json`.
 
-**Claude** loads a plugin's skills from the source tree in place: a skill invocation reports its base directory as `<repo>/dist/claude/<plugin>/skills/<skill>/`, the `dist/claude/` of the checkout registered as the marketplace source — which in a multi-worktree setup may differ from the worktree you are editing in. When `claude plugin marketplace update outcomeeng` runs and a plugin's version has bumped, Claude repoints each running session from that source directory to a versioned snapshot under `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/`, so the session stays on one consistent version while the source `dist/` advances — the load path moves (source → cache) but the version a session sees does not change underneath it. A session can therefore show a source `dist/` path while the cache holds other versions; the snapshot it is pinned to, if any, is the one its last version-bumped update repointed it to.
+**Codex** marketplace registration and plugin installation belong to the selected `$CODEX_HOME`. Explicit `codex plugin marketplace add` and `codex plugin add` commands update that selected home. Repository `.codex/config.toml` has no plugin installation or enablement semantics. Plugin lifecycle skills place and prune plugin-owned agent definitions in the invocation checkout's `.codex/agents/` namespace.
 
-**Codex** maintainer sync uses the default-branch local marketplace root for `outcomeeng`. `just sync-marketplace` repairs absent, Git-backed, or stale local Codex marketplace registration to that source, refreshes every generated Codex plugin exposed under `dist/codex` with `codex plugin add <plugin>@outcomeeng`, and then repairs compatibility symlinks so each plugin cache keeps exactly one real version directory: the Codex-reported installed version. Older in-window versions remain direct symlinks to that directory so running sessions keep resolving, and out-of-window or unmanaged plugin roots are pruned. A Git-backed Codex registration re-enters Codex's startup auto-upgrade path, which can replace a plugin cache root with only the staged current version directory and strand sessions on removed paths.
-
-The Skill tool loads SKILL.md content into per-session memory the first time the skill is invoked and keeps it for the rest of the session, re-attaching it (truncated) after compaction. `/reload-plugins` re-indexes the marketplace and re-reads each SKILL.md from disk during registration — from the path the session resolves to, the source `dist/` or a pinned cache snapshot — so the first invocation after a reload picks up the current content.
+Each harness retains plugin content already loaded by a running session. Reload the harness plugin index or start a new session after persistent installation when the current session must consume refreshed content.
 
 ### Smoke-testing skill changes
 
-Work in the checkout registered as the marketplace source (`claude plugin marketplace list` shows which directory that is):
+Work in the checkout whose authored plugin files you are changing:
 
 1. Edit `src/plugins/<plugin>/` and run `just build-skills` so the change lands in `dist/claude/<plugin>/`.
-2. Run `/reload-plugins`. For a Claude session serving from the source `dist/` — the usual case while developing — this re-reads the edited SKILL.md directly, so no version bump or sync is needed to smoke-test a Claude change in the source checkout.
-3. Invoke the skill — the first invocation after the reload loads the new content.
+2. Run `just verify-marketplace-installation` to install both committed catalogs through the real agent CLIs in disposable homes and exercise Codex lifecycle placement against the invocation checkout.
+3. After a merged release, run `just install-marketplace` from the assigned checkout at `origin/main` to refresh the selected persistent Claude Code project and Codex home.
 
-`just sync-marketplace` is for the cross-runtime install state, not for serving a Claude edit in the source checkout. It runs `claude plugin marketplace update outcomeeng` (which, on a version bump, repoints running Claude sessions to the versioned cache snapshot), reconciles Claude and Codex `outcomeeng` registrations to the default-branch local marketplace source, refreshes every generated Codex plugin from that source with `codex plugin add <plugin>@outcomeeng`, repairs compatibility symlinks, and then runs `validate_install` and `check-installed`. After a PR merge or direct `main` publication that changes plugin distribution files, fast-forward the **marketplace-source worktree's** `main` to the merged state and refresh installs — `git -C "$src" fetch origin main && git -C "$src" merge --ff-only origin/main`, then `(cd "$src" && just sync-marketplace <previous-main-ref>)`, where `$src` is the Directory-source path from `claude plugin marketplace list --json` (the exact steps and rationale are in [`spx/local/merging.md`](spx/local/merging.md) Post-merge marketplace sync) — then `/reload-plugins`. `sync-marketplace` must run from the source worktree: its `validate_install` reads `current_versions` from its own working directory, so running it from a feature worktree behind `origin/main` false-fails against that worktree's stale versions. Detaching the current feature worktree onto `origin/main` does not advance the source worktree the marketplace serves from.
+`just verify-marketplace-installation` is the pre-merge proof and mutates only disposable state. `just install-marketplace` is the release action and mutates the selected persistent state. A persistent run stops before its first state-changing command when Claude Code user scope contains an `outcomeeng` registration, reporting the exact colliding settings path.
 
 ## Missing plugins or skills
 
-### Claude Code
+With explicit operator authorization to change persistent plugin state, run `just install-marketplace` from the intended checkout. The command derives the complete Claude Code and Codex plugin sets from the two committed marketplace catalogs, reconciles the canonical GitHub source, installs and enables every catalog plugin, and runs Codex lifecycle placement against that checkout.
 
-When product-required Claude plugins are missing, ask the user before changing project-scoped Claude settings. Use Claude's project scope so the marketplace and enabled plugins are written to `.claude/settings.json`; commit that file so collaborators get the same plugin set.
-
-```bash
-claude plugin marketplace add outcomeeng/plugins --scope project
-
-for plugin in instructions python prose spec-tree; do
-  claude plugin install "${plugin}@outcomeeng" --scope project
-done
-```
-
-If an installed product-scoped plugin has been disabled, re-enable it at product scope:
-
-```bash
-for plugin in instructions python prose spec-tree; do
-  claude plugin enable "${plugin}@outcomeeng" --scope project
-done
-```
-
-After changing plugin state in a running Claude Code session, run `/reload-plugins`.
-
-### Codex
-
-Codex marketplace registration is user-scoped. Ask the user before changing `~/.codex/config.toml`, then register the marketplace once:
-
-```bash
-codex plugin marketplace add outcomeeng/plugins
-```
-
-Enable plugins per product by committing `.codex/config.toml`. Keep the product list explicit so each repo gets only the plugins it needs:
-
-```toml
-[plugins."instructions@outcomeeng"]
-enabled = true
-
-[plugins."prose@outcomeeng"]
-enabled = true
-
-[plugins."spec-tree@outcomeeng"]
-enabled = true
-```
-
-Add language or domain plugins only for projects that use them:
-
-```toml
-[plugins."python@outcomeeng"]
-enabled = true
-
-[plugins."typescript@outcomeeng"]
-enabled = true
-```
-
-If a user's global Codex config already enables a plugin that the product should keep off, add an explicit product override:
-
-```toml
-[plugins."typescript@outcomeeng"]
-enabled = false
-```
+Claude Code state is project-scoped. A user-scoped `outcomeeng` registration blocks the command and must be resolved by the owner of that settings file. Codex state belongs to the selected `$CODEX_HOME`; repository `.codex/config.toml` remains unrelated to plugin setup. Use `just verify-marketplace-installation` when the goal is disposable proof rather than a persistent state change.
 
 <!-- SPEC-TREE:shared commands -->
 

@@ -132,9 +132,16 @@ claude plugin marketplace update outcomeeng
 codex plugin marketplace upgrade outcomeeng
 ```
 
-From this checkout, `just push-marketplace` wraps the Codex upgrade with cache
-path preservation so active sessions with stale skill paths keep resolving for
-seven days.
+Repository maintainers can verify both catalogs with
+`just verify-marketplace-installation`. The command installs every catalog plugin
+through the real Claude Code and Codex CLIs in disposable homes, then runs Codex
+agent placement against the invocation checkout. It leaves persistent plugin state
+unchanged.
+
+After merged distribution changes, `just install-marketplace` refreshes the
+project-scoped Claude Code marketplace and the selected `$CODEX_HOME` from the
+canonical GitHub source, installs every plugin from both committed catalogs, and
+runs Codex lifecycle placement against the invocation checkout.
 
 ### Bumping plugin versions on a branch
 
@@ -326,7 +333,7 @@ Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refact
 | Skill | `/manage-pr`                  | Managing, waiting on, or continuing an open pull request lifecycle after a PR exists                                                                                                                                                                                                                                                                            |
 | Skill | `/merge`                      | The user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge                                                                                                                                                                                                                                                        |
 | Skill | `/merging-standards`          | Shared merge-lifecycle invariants and routing for detailed preflight, branch, review, authority-gate, transport, and closeout policy                                                                                                                                                                                                                            |
-| Skill | `/open-pr`                    | PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass                                                                                                                                                                                                                                                       |
+| Skill | `/open-pr`                    | PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and the first management pass                                                                                                                                                                                                                                                   |
 | Skill | `/pickup`                     | Resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context                                                                                                                                                                                                                                |
 | Skill | `/project-run-journal`        | Verification run-journal projection methodology loaded by audit and review skills when building spx journal events, computing rollups, or rendering verdict surfaces                                                                                                                                                                                            |
 | Skill | `/refactor`                   | Moving nodes, re-scoping content, or extracting shared enablers                                                                                                                                                                                                                                                                                                 |

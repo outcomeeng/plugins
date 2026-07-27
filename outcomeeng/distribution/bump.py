@@ -42,6 +42,7 @@ from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
     CLAUDE_PLUGIN_SUBDIR_NAME,
     CODEX_PLUGIN_SUBDIR_NAME,
+    DIST_CODEX_PLUGINS_DIR as DIST_CODEX_PLUGINS_PATH,
     MARKDOWN_FILE_SUFFIX,
     SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
@@ -50,7 +51,7 @@ from outcomeeng.distribution.contracts import (
 REQUIRED_TOOLS: tuple[str, ...] = ("git",)
 SOURCE_PLUGINS_DIR: str = "src/plugins"
 DIST_CLAUDE_PLUGINS_DIR: str = "dist/claude"
-DIST_CODEX_PLUGINS_DIR: str = "dist/codex"
+DIST_CODEX_PLUGINS_DIR: str = DIST_CODEX_PLUGINS_PATH.as_posix()
 CLAUDE_MANIFEST: str = f"{CLAUDE_PLUGIN_SUBDIR_NAME}/plugin.json"
 CODEX_MANIFEST: str = f"{CODEX_PLUGIN_SUBDIR_NAME}/plugin.json"
 
