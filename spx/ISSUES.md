@@ -68,11 +68,10 @@ A table of contents is satisfied by a `## Contents` section, an XML `<contents>`
 
 Product-level decisions carry per-agent facts inline, so adding an agent harness edits decisions
 whose subject is not that harness. `spx/12-marketplace-state.adr.md` enumerates each agent's
-committed configuration paths twice — in the decision body and in the registration conformance
-assertion — naming Codex's `.agents/plugins/marketplace.json` and `.codex/config.toml` beside Claude
-Code's `.claude-plugin/marketplace.json` and project-scope `.claude/settings.json`. A third agent
-harness therefore churns a product-level decision that governs state ownership rather than agent
-identity.
+committed marketplace catalog, plugin-selection boundary, and configuration location — Codex's
+`.agents/plugins/marketplace.json` and caller-selected `CODEX_HOME` beside Claude Code's
+`.claude-plugin/marketplace.json` and project-scope `.claude/settings.json`. A third agent harness
+therefore churns a product-level decision that governs state ownership rather than agent identity.
 
 **Resolution shape**: author a `coding-agents` node with one child per agent, each child declaring
 its own agent's capabilities and configuration locations — whether its plugin manifest can declare
@@ -88,7 +87,8 @@ chosen when the node is authored.
 `spx/18-plugin-build.enabler/15-build-architecture.adr.md` capability-keyed for committed agent
 delivery. The build decision now resolves per-target agent format, filename shape, and namespace
 behavior from the source-owned per-target registry, so a new target is a registry entry; the
-configuration enumeration in the marketplace-state decision is the remaining per-agent coupling.
+catalog and state-boundary enumeration in the marketplace-state decision is the remaining
+per-agent coupling.
 
 **Revisit condition.** Resolve before a third agent harness ships, since that is the change the
 coupling taxes. Related to the agent-harness terminology sweep recorded above, which the same

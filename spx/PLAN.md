@@ -5,7 +5,8 @@ Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownersh
 Spec alignment applies through `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler`,
 `spx/13-infrastructure.enabler/32-installation.enabler`, and
 `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler`. The
-repository-installation node declares the checkout-bounded command and isolated real-agent harness,
+repository-installation node declares catalog-derived installation, the checkout-bounded command,
+and the isolated real-agent harness,
 while `spx/32-distribution.enabler/21-installation.enabler/PLAN.md` reserves explicit consumer
 installation as the dependent next slice. The
 `spx/21-spec-tree.enabler/79-diagnostics.enabler` re-declaration is deferred behind a published
