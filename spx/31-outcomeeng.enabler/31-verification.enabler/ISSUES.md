@@ -2,52 +2,46 @@
 
 Known defects in this node's governance. Coordination note; not spec truth.
 
-## Materialized eval prompts are generated extents with no declared relation
+## The eval-prompt relation claims seven hand-authored prompts
 
-`spx/local/generated-sources.toml` declares six relations and is described by the
-root guide as "the committed declaration of every generated extent in this
-repository". Materialized eval prompts are not among them.
+`spx/local/generated-sources.toml` declares a relation whose `outputs` glob is
+`spx/**/evals/**/prompt.md`, with sources spanning each eval's
+`prompt.template.md` and `eval.toml` plus `src/plugins/**`, `dist/claude/**`, and
+`dist/codex/**`, and `just eval-materialize-prompts spx` as its regeneration
+command.
 
-Twelve `eval.toml` files (of nineteen `prompt.md` files under `spx/`) carry a
-`[prompt_source]` table naming `kind`, `producer`, and `template`.
-`outcomeeng_evals/producer_prompt.py` renders each producer into its sibling
-`prompt.md`, and the `eval-prompts` gate step runs
-`outcomeeng-evals materialize-prompts spx --repo-root . --check`, which
-regenerates and byte-compares them. A file a gate regenerates and byte-compares
-is a generated extent by the same test every declared relation satisfies.
+The glob is unrestricted, and only some of the files it claims are generated.
+Nineteen `prompt.md` files sit under `spx/`; twelve of their `eval.toml` files
+carry a `[prompt_source]` table naming `kind`, `producer`, and `template`, and
+`outcomeeng_evals/producer_prompt.py` renders those twelve. The remaining seven
+declare no `[prompt_source]` and are hand-authored.
 
-Two consequences follow from the gap:
+The consequence runs opposite to an undeclared extent. Because the root guide
+keys the exclusion on the declaration, agentic verification excludes every file
+the glob claims — including the seven authored ones — so a reviewer skips
+authored spec content as though a generator had produced it, and a defect in one
+of those prompts reaches the default branch unjudged. The regeneration command
+only rewrites the twelve it can render, so the gate never contradicts the
+over-broad claim.
 
-- Agentic verification cannot exclude these extents from judgment, because the
-  exclusion is keyed on the declaration and the root guide forbids inferring
-  generated status from path names. A reviewer reading a `prompt.md` diff judges
-  rendered producer text as if it were hand-authored spec content.
-- A drifted prompt has no sanctioned repair command. Every other relation names a
-  `just` recipe in its `regenerate` field; the repo has no
-  `just materialize-prompts`, so repairing the gate means invoking
-  `outcomeeng-evals` directly, against the root guide's Justfile-interface rule.
+**Resolution shape**: restrict the relation's `outputs` to the evals that declare
+`[prompt_source]`, or split it into one relation for the generated twelve and an
+explicit non-generated classification for the seven. The governing decision is
+this node's
+`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`,
+which owns whether a declaration may claim a file its generator never writes.
 
-**Resolution shape**: author the relation under
-`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`
-— outputs `spx/**/evals/**/prompt.md` restricted to evals declaring
-`[prompt_source]`, sources the producer file and `prompt.template.md` each
-`eval.toml` names plus the `eval.toml` itself, generator
-`outcomeeng_evals/producer_prompt.py` — and add the `just` recipe its
-`regenerate` field names. Decide first whether the `outputs` glob may cover the
-seven `prompt.md` files that declare no `[prompt_source]` and are therefore
-hand-authored, since a relation that claims them would exclude authored content
-from judgment.
-
-**Evidence.** Surfaced when the `eval-prompts` gate step failed on
-`spx/43-coding-agents.enabler/32-inter-worktree-coordination.enabler/evals/coordination-decision/prompt.md`
-after its `/coordinate-agents` producer advanced on the default branch. The
-regeneration was committed; the attribution gap it exposed is recorded here.
+**Evidence.** An earlier form of this entry recorded the inverse defect — the
+extents were generated but undeclared, and the relation's `regenerate` field
+named no `just` recipe. Both are resolved: the relation and
+`just eval-materialize-prompts` now exist. That fix chose the unrestricted glob,
+which converts the original risk into the live one recorded above.
 
 **Why this is separate.** The fix edits `spx/local/generated-sources.toml`, a
 governance surface whose governing decision is this node's
 `15-generated-attribution.pdr.md`, and it must classify all nineteen `prompt.md`
-files rather than the one a regeneration touched. Both belong to this node's
-decision, not to a changeset that regenerated a single extent.
+files. That belongs to this node's decision, not to a changeset that renames
+skills.
 
 ## Three decisions in this subtree carry untyped Verification rules
 
