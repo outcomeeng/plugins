@@ -2,6 +2,27 @@
 
 Coordination note; not spec truth.
 
+## DEBT [evidence]: the reassessment mapping assertion resolves to the compliance lane
+
+The Mappings assertion covering reassessment planning links
+`tests/test_native_agent_recovery.mapping.l1.py`, but every reassessment predicate — the read
+barrier, the per-recipient delivery correspondence, and the judged-intact record — is computed in
+`verify_native_agent_recovery_compliance` in `outcomeeng_testing/harnesses/native_agent_recovery.py`
+and therefore executes only through `tests/test_native_agent_recovery.compliance.l1.py`. The linked
+mapping file never calls `plan_reassessment`, so the assertion's declared evidence does not exercise
+its own subject.
+
+**Resolution shape**: move the reassessment state-correspondence checks into
+`verify_native_agent_recovery_mappings` so the mapping link resolves to the lane its assertion type
+names, leaving the compliance function the boundary and settlement rules that are genuinely
+compliance-shaped.
+
+**Deferral reason**: `verified` is built in the compliance function from a chain of pane, agent, and
+correlation fixtures assembled across roughly fifty preceding lines, so relocating the reassessment
+checks means extracting that chain into a shared fixture rather than moving a few statements. That
+extraction lands inside the harness inversion the entry below already defers as one migration across
+three files, and doing it separately would rewrite the same setup twice.
+
 ## DEBT [evidence]: this node's linked tests hold every predicate in their harness
 
 `test-evidence-auditor` raised fifteen blocking findings, one per `[test]`-tagged assertion on this
