@@ -2,9 +2,16 @@
 
 from pathlib import Path
 
-from outcomeeng.distribution.installation import Operation, STATE_ENV_NAMES
+from outcomeeng.distribution.installation import (
+    Agent,
+    CODEX_HOME_ENV,
+    InstallationMode,
+    Operation,
+    STATE_ENV_NAMES,
+)
 from outcomeeng_testing.harnesses.installation import (
     observe_first_failure,
+    observe_persistent_plan,
     observe_repository_plan,
 )
 
@@ -23,6 +30,24 @@ def test_every_command_uses_the_explicit_checkout_and_agent_homes() -> None:
             if name in STATE_ENV_NAMES
         )
         for command in observation.plan.commands
+    )
+
+
+def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None:
+    observation = observe_persistent_plan()
+
+    assert observation.plan.mode is InstallationMode.PERSISTENT
+    assert all(
+        "project" in command.argv
+        for command in observation.plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+    )
+    assert all(
+        dict(command.environment)[CODEX_HOME_ENV]
+        == str(observation.plan.roots.codex_home)
+        for command in observation.plan.commands
+        if command.agent is Agent.CODEX
     )
 
 

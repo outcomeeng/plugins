@@ -1,7 +1,11 @@
 """Ambient-state and repository-config evidence for installation."""
 
 from outcomeeng.distribution.installation import CODEX_CONFIG_PATH
-from outcomeeng_testing.harnesses.installation import observe_codex_config_independence
+from outcomeeng_testing.harnesses.installation import (
+    VERIFICATION_TEST,
+    observe_codex_config_independence,
+    observe_verification_recipe,
+)
 
 
 def test_repository_codex_config_has_no_installation_semantics() -> None:
@@ -16,3 +20,12 @@ def test_repository_codex_config_has_no_installation_semantics() -> None:
         for command in observation.after.commands
         for argument in command.argv
     )
+
+
+def test_verification_recipe_aliases_the_exact_l2_evidence() -> None:
+    observation = observe_verification_recipe()
+    output = observation.stdout + observation.stderr
+
+    assert observation.exit_code == 0, observation.stderr
+    assert f"just test {VERIFICATION_TEST}" in output
+    assert "install-marketplace" not in output

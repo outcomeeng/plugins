@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -12,28 +13,53 @@ from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.installation import (
     Agent,
+    CANONICAL_MARKETPLACE_SOURCE,
     CLAUDE_CATALOG_PATH,
+    CLAUDE_PROJECT_SETTINGS_PATH,
     CODEX_AGENTS_PATH,
     CODEX_CATALOG_PATH,
     CODEX_CONFIG_PATH,
+    CODEX_HOME_ENV,
+    CODEX_SQLITE_HOME_ENV,
     CommandResult,
+    HOME_ENV,
     InstallationCommand,
     InstallationFailure,
     InstallationPlan,
     Operation,
-    build_installation_plan,
+    PersistentPreflight,
+    build_isolated_installation_plan,
+    build_persistent_installation_plan,
+    build_persistent_preflight,
+    execute_persistent_installation,
     installed_plugin_names,
 )
 
 UNOWNED_AGENT_FILENAME = "developer-owned.toml"
 UNOWNED_AGENT_CONTENT = 'name = "developer-owned"\n'
 REQUIRED_BINARIES: tuple[str, ...] = ("just", "claude", "codex")
+CANONICAL_CODEX_SOURCE = "https://github.com/outcomeeng/plugins.git"
+VERIFICATION_TEST = (
+    "spx/32-distribution.enabler/21-installation.enabler/"
+    "21-repository-installation.enabler/tests/"
+    "test_repository_installation.scenario.l2.py"
+)
 
 
 @dataclass(frozen=True)
 class PlanObservation:
-    """Catalog and command observations from one repository plan."""
+    """Catalog and command observations from one isolated plan."""
 
+    plan: InstallationPlan
+    claude_catalog: bytes
+    codex_catalog: bytes
+
+
+@dataclass(frozen=True)
+class PersistentPlanObservation:
+    """Catalog, preflight, and command observations from a persistent plan."""
+
+    preflight: PersistentPreflight
     plan: InstallationPlan
     claude_catalog: bytes
     codex_catalog: bytes
@@ -49,12 +75,30 @@ class FailureObservation:
 
 
 @dataclass(frozen=True)
+class CollisionObservation:
+    """A user-scope collision and the commands attempted before rejection."""
+
+    settings_path: Path
+    error: str
+    attempted: tuple[InstallationCommand, ...]
+
+
+@dataclass(frozen=True)
 class ConfigObservation:
     """Plans and config bytes around a repository-config mutation."""
 
     before: InstallationPlan
     after: InstallationPlan
     config_bytes: bytes
+
+
+@dataclass(frozen=True)
+class VerificationRecipeObservation:
+    """Dry-run output from the public isolated-verification recipe."""
+
+    exit_code: int
+    stdout: str
+    stderr: str
 
 
 @dataclass(frozen=True)
@@ -69,6 +113,10 @@ class RealInstallationObservation:
     codex_plugins_second: frozenset[str]
     claude_catalog: bytes
     codex_catalog: bytes
+    claude_registration_target: str
+    codex_registration_target: str
+    state_roots: tuple[Path, ...]
+    placed_initial: tuple[tuple[str, bytes], ...]
     placed_first: tuple[tuple[str, bytes], ...]
     placed_second: tuple[tuple[str, bytes], ...]
     unowned_initial: bytes
@@ -82,18 +130,21 @@ class RealInstallationObservation:
 
 @dataclass
 class RecordingRunner:
-    """Installation runner that records commands and fails one selected operation."""
+    """Installation runner that records commands and can fail one operation."""
 
-    failed_operation: Operation
+    failed_operation: Operation | None = None
     calls: list[InstallationCommand] = field(default_factory=list)
 
     def __call__(self, command: InstallationCommand) -> CommandResult:
         self.calls.append(command)
         exit_code = 1 if command.operation is self.failed_operation else 0
+        stdout = _codex_marketplace_payload(CANONICAL_CODEX_SOURCE)
+        if command.operation is not Operation.MARKETPLACE_INSPECT:
+            stdout = ""
         return CommandResult(
             argv=command.argv,
             exit_code=exit_code,
-            stdout="",
+            stdout=stdout,
             stderr=command.operation.value if exit_code else "",
         )
 
@@ -104,19 +155,76 @@ def repository_root() -> Path:
 
 
 def observe_repository_plan() -> PlanObservation:
-    """Build a plan in a temporary state root and expose catalog observations."""
+    """Build an isolated plan from immutable pre-execution catalog bytes."""
     checkout = repository_root()
+    claude_catalog = (checkout / CLAUDE_CATALOG_PATH).read_bytes()
+    codex_catalog = (checkout / CODEX_CATALOG_PATH).read_bytes()
     with TemporaryDirectory() as temporary_directory:
-        plan = build_installation_plan(
+        plan = build_isolated_installation_plan(
             checkout,
             Path(temporary_directory),
             os.environ,
         )
     return PlanObservation(
         plan=plan,
-        claude_catalog=(checkout / CLAUDE_CATALOG_PATH).read_bytes(),
-        codex_catalog=(checkout / CODEX_CATALOG_PATH).read_bytes(),
+        claude_catalog=claude_catalog,
+        codex_catalog=codex_catalog,
     )
+
+
+def observe_persistent_plan(
+    *,
+    claude_repository: str = CANONICAL_MARKETPLACE_SOURCE,
+    codex_source: str = CANONICAL_CODEX_SOURCE,
+) -> PersistentPlanObservation:
+    """Build a persistent plan in caller-selected temporary homes."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, claude_repository)
+        environment = _persistent_environment(temporary_root)
+        claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
+        codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
+        preflight = build_persistent_preflight(mirror, environment)
+        plan = build_persistent_installation_plan(
+            preflight,
+            _codex_marketplace_payload(codex_source),
+        )
+    return PersistentPlanObservation(
+        preflight=preflight,
+        plan=plan,
+        claude_catalog=claude_catalog,
+        codex_catalog=codex_catalog,
+    )
+
+
+def observe_claude_user_collision() -> CollisionObservation:
+    """Expose user-scope collision rejection before command execution."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        settings_path = temporary_root / "claude" / "settings.json"
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        settings_path.write_text(
+            json.dumps(_claude_settings(CANONICAL_MARKETPLACE_SOURCE)),
+            encoding="utf-8",
+        )
+        runner = RecordingRunner()
+        try:
+            execute_persistent_installation(mirror, environment, runner)
+        except ValueError as error:
+            return CollisionObservation(
+                settings_path=settings_path,
+                error=str(error),
+                attempted=tuple(runner.calls),
+            )
+    raise RuntimeError("persistent installation accepted a user-scope collision")
 
 
 def observe_first_failure() -> FailureObservation:
@@ -125,7 +233,11 @@ def observe_first_failure() -> FailureObservation:
 
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
-        plan = build_installation_plan(checkout, Path(temporary_directory), os.environ)
+        plan = build_isolated_installation_plan(
+            checkout,
+            Path(temporary_directory),
+            os.environ,
+        )
         runner = RecordingRunner(failed_operation=Operation.PLUGIN_INSTALL)
         try:
             execute_installation(plan, runner)
@@ -139,24 +251,40 @@ def observe_first_failure() -> FailureObservation:
 
 
 def observe_codex_config_independence() -> ConfigObservation:
-    """Build plans before and after adding conflicting repository config bytes."""
+    """Build plans before and after adding repository config bytes."""
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         _mirror_installation_inputs(checkout, mirror)
         state = temporary_root / "state"
-        before = build_installation_plan(mirror, state, os.environ)
+        before = build_isolated_installation_plan(mirror, state, os.environ)
         config = mirror / CODEX_CONFIG_PATH
         config.parent.mkdir(parents=True, exist_ok=True)
         config.write_text("[plugins]\nenabled = false\n", encoding="utf-8")
-        after = build_installation_plan(mirror, state, os.environ)
+        after = build_isolated_installation_plan(mirror, state, os.environ)
         config_bytes = config.read_bytes()
     return ConfigObservation(before=before, after=after, config_bytes=config_bytes)
 
 
+def observe_verification_recipe() -> VerificationRecipeObservation:
+    """Render the verification recipe without running its L2 test."""
+    result = subprocess.run(
+        ("just", "--dry-run", "verify-marketplace-installation"),
+        cwd=repository_root(),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return VerificationRecipeObservation(
+        exit_code=result.returncode,
+        stdout=result.stdout,
+        stderr=result.stderr,
+    )
+
+
 def observe_real_installation() -> RealInstallationObservation:
-    """Run the public recipe twice with real agent CLIs in one disposable home."""
+    """Run isolated installation twice with real agent CLIs."""
     checkout = repository_root()
     _require_binaries(REQUIRED_BINARIES)
     with TemporaryDirectory() as temporary_directory:
@@ -164,12 +292,18 @@ def observe_real_installation() -> RealInstallationObservation:
         mirror = temporary_root / "checkout"
         state = temporary_root / "state"
         _mirror_installation_inputs(checkout, mirror)
+        claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
+        codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
         unowned = mirror / CODEX_AGENTS_PATH / UNOWNED_AGENT_FILENAME
         unowned.parent.mkdir(parents=True, exist_ok=True)
         unowned.write_text(UNOWNED_AGENT_CONTENT, encoding="utf-8")
         unowned_initial = unowned.read_bytes()
-        plan = build_installation_plan(mirror, state, os.environ)
+        placed_initial = _agent_snapshot(mirror)
+        plan = build_isolated_installation_plan(mirror, state, os.environ)
         environment = dict(plan.commands[0].environment)
+        claude_target = _registration_target(plan, Agent.CLAUDE)
+        codex_target = _registration_target(plan, Agent.CODEX)
+        state_roots = _state_roots(plan)
         first = _run_recipe(checkout, mirror, state, environment)
         claude_first = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_first = _run_listing(Agent.CODEX, mirror, environment)
@@ -180,8 +314,6 @@ def observe_real_installation() -> RealInstallationObservation:
         codex_second = _run_listing(Agent.CODEX, mirror, environment)
         placed_second = _agent_snapshot(mirror)
         unowned_second = unowned.read_bytes()
-        claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
-        codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
     return RealInstallationObservation(
         first_exit_code=first.returncode,
         second_exit_code=second.returncode,
@@ -193,6 +325,10 @@ def observe_real_installation() -> RealInstallationObservation:
         codex_plugins_second=installed_plugin_names(Agent.CODEX, codex_second.stdout),
         claude_catalog=claude_catalog,
         codex_catalog=codex_catalog,
+        claude_registration_target=claude_target,
+        codex_registration_target=codex_target,
+        state_roots=state_roots,
+        placed_initial=placed_initial,
         placed_first=placed_first,
         placed_second=placed_second,
         unowned_initial=unowned_initial,
@@ -207,15 +343,83 @@ def observe_real_installation() -> RealInstallationObservation:
 
 def _mirror_installation_inputs(source: Path, destination: Path) -> None:
     destination.mkdir(parents=True)
-    for relative_path in (
-        CODEX_CATALOG_PATH,
-        CLAUDE_CATALOG_PATH,
-    ):
+    for relative_path in (CODEX_CATALOG_PATH, CLAUDE_CATALOG_PATH):
         target = destination / relative_path
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source / relative_path, target)
     shutil.copytree(source / "dist/codex", destination / "dist/codex")
     shutil.copytree(source / "dist/claude", destination / "dist/claude")
+
+
+def _write_project_marketplace(checkout: Path, repository: str) -> None:
+    settings = checkout / CLAUDE_PROJECT_SETTINGS_PATH
+    settings.parent.mkdir(parents=True, exist_ok=True)
+    settings.write_text(json.dumps(_claude_settings(repository)), encoding="utf-8")
+
+
+def _claude_settings(repository: str) -> dict[str, object]:
+    source: dict[str, str]
+    if repository == CANONICAL_MARKETPLACE_SOURCE:
+        source = {"source": "github", "repo": repository}
+    else:
+        source = {"source": "directory", "path": repository}
+    return {
+        "extraKnownMarketplaces": {
+            "outcomeeng": {
+                "source": source,
+            }
+        }
+    }
+
+
+def _persistent_environment(root: Path) -> dict[str, str]:
+    environment = dict(os.environ)
+    environment.update(
+        {
+            HOME_ENV: str(root / "home"),
+            "CLAUDE_CONFIG_DIR": str(root / "claude"),
+            CODEX_HOME_ENV: str(root / "codex"),
+            CODEX_SQLITE_HOME_ENV: str(root / "codex-sqlite"),
+        }
+    )
+    return environment
+
+
+def _codex_marketplace_payload(source: str) -> str:
+    return json.dumps(
+        {
+            "marketplaces": [
+                {
+                    "name": "outcomeeng",
+                    "marketplaceSource": {
+                        "sourceType": "git" if source.startswith("http") else "local",
+                        "source": source,
+                    },
+                }
+            ]
+        }
+    )
+
+
+def _registration_target(plan: InstallationPlan, agent: Agent) -> str:
+    command = next(
+        command
+        for command in plan.commands
+        if command.agent is agent and command.operation is Operation.MARKETPLACE_ADD
+    )
+    return command.argv[4]
+
+
+def _state_roots(plan: InstallationPlan) -> tuple[Path, ...]:
+    roots = plan.roots
+    if roots.state is None or roots.codex_sqlite_home is None:
+        raise RuntimeError("real installation plan is not isolated")
+    return (
+        roots.home,
+        roots.claude_config,
+        roots.codex_home,
+        roots.codex_sqlite_home,
+    )
 
 
 def _require_binaries(names: Sequence[str]) -> None:
@@ -280,13 +484,20 @@ def _agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
 
 
 __all__ = [
+    "CollisionObservation",
     "ConfigObservation",
     "FailureObservation",
+    "PersistentPlanObservation",
     "PlanObservation",
     "RealInstallationObservation",
     "RecordingRunner",
+    "VERIFICATION_TEST",
+    "VerificationRecipeObservation",
+    "observe_claude_user_collision",
     "observe_codex_config_independence",
     "observe_first_failure",
+    "observe_persistent_plan",
     "observe_real_installation",
     "observe_repository_plan",
+    "observe_verification_recipe",
 ]

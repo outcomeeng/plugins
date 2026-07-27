@@ -21,6 +21,12 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
 
     assert observation.first_exit_code == 0, observation.first_stderr
     assert observation.second_exit_code == 0, observation.second_stderr
+    assert (
+        observation.claude_registration_target == observation.codex_registration_target
+    )
+    assert observation.claude_registration_target.endswith("/checkout")
+    state_root = observation.state_roots[0].parent
+    assert all(root.is_relative_to(state_root) for root in observation.state_roots)
     assert observation.claude_plugins_first == frozenset(
         cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
         for plugin in claude_catalog[CATALOG_PLUGINS_FIELD]
@@ -36,6 +42,10 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     assert observation.codex_plugins_second == frozenset(
         cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
         for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
+    )
+    assert observation.placed_first != observation.placed_initial
+    assert any(
+        name != "developer-owned.toml" for name, _content in observation.placed_first
     )
     assert observation.placed_first == observation.placed_second
     assert observation.unowned_first == observation.unowned_initial
