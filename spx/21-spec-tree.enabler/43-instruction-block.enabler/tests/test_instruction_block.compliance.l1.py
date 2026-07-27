@@ -28,6 +28,7 @@ def test_every_harness_router_authorizes_subagent_dispatch() -> None:
 
 def test_each_harness_block_carries_only_its_own_dispatch_mechanics() -> None:
     documents = evidence.rendered_instruction_blocks()
+    source.validate_harness_dispatch_mechanics(documents)
     for owning_harness, marker in source.HARNESS_DISPATCH_MECHANICS_MARKERS.items():
         for agent_harness, document in documents.items():
             router = source.managed_router_block(document)
@@ -35,6 +36,18 @@ def test_each_harness_block_carries_only_its_own_dispatch_mechanics() -> None:
                 assert marker in router
             else:
                 assert marker not in router
+
+
+def test_leaked_harness_dispatch_mechanics_are_rejected() -> None:
+    documents = evidence.rendered_instruction_blocks()
+    for agent_harness, document in documents.items():
+        own_marker = source.HARNESS_DISPATCH_MECHANICS_MARKERS[agent_harness]
+        for owning_harness, marker in source.HARNESS_DISPATCH_MECHANICS_MARKERS.items():
+            if owning_harness == agent_harness:
+                continue
+            leaked = document.replace(own_marker, f"{own_marker} {marker}", 1)
+            with pytest.raises(source.HarnessDispatchMechanicsError):
+                source.validate_harness_dispatch_mechanics({agent_harness: leaked})
 
 
 def test_dropping_a_required_dispatch_literal_is_rejected() -> None:

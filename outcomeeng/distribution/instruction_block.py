@@ -516,6 +516,10 @@ class SubagentDispatchPolicyError(InstructionBlockRenderError):
     """A rendered harness router weakens the sub-agent dispatch authorization."""
 
 
+class HarnessDispatchMechanicsError(InstructionBlockRenderError):
+    """A rendered harness router carries another harness's dispatch mechanics."""
+
+
 class DeferredAgentDiscoveryPolicyError(InstructionBlockRenderError):
     """Raised when the Codex router omits deferred typed-agent discovery policy."""
 
@@ -749,6 +753,26 @@ def validate_authority_hierarchy_policy(
             )
 
 
+def validate_harness_dispatch_mechanics(blocks_by_harness: Mapping[str, str]) -> None:
+    """Reject a rendered router carrying another harness's dispatch mechanics.
+
+    The dispatch authorization is harness-neutral, so each marker belongs to
+    exactly one render; a marker crossing over means harness filtering broke.
+    """
+    for harness, document in blocks_by_harness.items():
+        router = managed_router_block(document)
+        for owning_harness, marker in HARNESS_DISPATCH_MECHANICS_MARKERS.items():
+            present = marker in router
+            if owning_harness == harness and not present:
+                raise HarnessDispatchMechanicsError(
+                    f"{harness} router is missing its own dispatch mechanics: {marker}"
+                )
+            if owning_harness != harness and present:
+                raise HarnessDispatchMechanicsError(
+                    f"{harness} router carries {owning_harness} dispatch mechanics: {marker}"
+                )
+
+
 def subagent_dispatch_policy_section(router: str) -> str | None:
     """Return the sub-agent dispatch section from a complete router."""
     try:
@@ -970,6 +994,7 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     validate_wait_for_load_policy(rendered)
     validate_operator_question_policy(rendered)
     validate_subagent_dispatch_policy(rendered)
+    validate_harness_dispatch_mechanics(rendered)
     validate_verifier_dispatch_policy(rendered)
     validate_deferred_agent_discovery_policy(rendered)
     module.write_root_instruction_files(repo_root, rendered)
