@@ -12,16 +12,25 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import cast
 
 from outcomeeng.distribution.installation import (
     Agent,
+    CANONICAL_CODEX_SOURCE,
     CANONICAL_MARKETPLACE_SOURCE,
     CLAUDE_CATALOG_PATH,
+    CLAUDE_CONFIG_ENV,
+    CLAUDE_PLUGIN_ENABLED_FIELD,
+    CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PROJECT_SETTINGS_PATH,
     CODEX_AGENTS_PATH,
     CODEX_CATALOG_PATH,
     CODEX_CONFIG_PATH,
     CODEX_HOME_ENV,
+    CODEX_MARKETPLACE_LIST_COMMAND,
+    CODEX_PLUGIN_ENABLED_FIELD,
+    CODEX_PLUGIN_ENTRIES_FIELD,
+    CODEX_PLUGIN_ID_FIELD,
     CODEX_SQLITE_HOME_ENV,
     CommandResult,
     HOME_ENV,
@@ -33,22 +42,22 @@ from outcomeeng.distribution.installation import (
     Operation,
     PersistentPreflight,
     PYTHON_EXECUTABLE,
+    SourceAction,
     STATE_ENV_NAMES,
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
+    claude_marketplace_settings,
+    codex_marketplace_listing_payload,
+    codex_source_action,
     execute_persistent_installation,
 )
 
 UNOWNED_AGENT_FILENAME = "developer-owned.toml"
 UNOWNED_AGENT_CONTENT = 'name = "developer-owned"\n'
 REQUIRED_BINARIES: tuple[str, ...] = ("just", "claude", "codex", PYTHON_EXECUTABLE)
-CANONICAL_CODEX_SOURCE = "https://github.com/outcomeeng/plugins.git"
-_CLAUDE_PLUGIN_ID_FIELD = "id"
-_CLAUDE_PLUGIN_ENABLED_FIELD = "enabled"
-_CODEX_PLUGIN_ENTRIES_FIELD = "installed"
-_CODEX_PLUGIN_ID_FIELD = "pluginId"
-_CODEX_PLUGIN_ENABLED_FIELD = "enabled"
+_RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
+_REAL_JUST_ENV = "OUTCOMEENG_REAL_JUST"
 
 
 @dataclass(frozen=True)
@@ -113,9 +122,10 @@ class ConfigObservation:
 
 @dataclass(frozen=True)
 class VerificationRecipeObservation:
-    """Dry-run output from the public isolated-verification recipe."""
+    """Executed nested command from the public isolated-verification recipe."""
 
     exit_code: int
+    invoked: tuple[str, ...]
     stdout: str
     stderr: str
 
@@ -127,6 +137,8 @@ class RealInstallationObservation:
     persistent_exit_code: int
     persistent_claude_plugins: frozenset[str]
     persistent_codex_plugins: frozenset[str]
+    persistent_claude_source_action: SourceAction
+    persistent_codex_source_action: SourceAction
     persistent_stdout: str
     persistent_stderr: str
     first_exit_code: int
@@ -168,7 +180,7 @@ class RecordingRunner:
     def __call__(self, command: InstallationCommand) -> CommandResult:
         self.calls.append(command)
         exit_code = 1 if command.operation is self.failed_operation else 0
-        stdout = _codex_marketplace_payload(CANONICAL_MARKETPLACE_SOURCE)
+        stdout = codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
         if command.operation is not Operation.MARKETPLACE_INSPECT:
             stdout = ""
         return CommandResult(
@@ -228,7 +240,7 @@ def observe_persistent_plan(
         preflight = build_persistent_preflight(mirror, environment)
         plan = build_persistent_installation_plan(
             preflight,
-            _codex_marketplace_payload(codex_source),
+            codex_marketplace_listing_payload(codex_source),
         )
     return PersistentPlanObservation(
         preflight=preflight,
@@ -273,7 +285,7 @@ def observe_claude_user_collision() -> CollisionObservation:
         settings_path = temporary_root / "claude" / "settings.json"
         settings_path.parent.mkdir(parents=True, exist_ok=True)
         settings_path.write_text(
-            json.dumps(_claude_settings(CANONICAL_MARKETPLACE_SOURCE)),
+            json.dumps(claude_marketplace_settings(CANONICAL_MARKETPLACE_SOURCE)),
             encoding="utf-8",
         )
         runner = RecordingRunner()
@@ -361,15 +373,56 @@ def observe_codex_config_independence() -> ConfigObservation:
 
 def observe_verification_recipe() -> VerificationRecipeObservation:
     """Run the public isolated-verification recipe."""
-    result = subprocess.run(
-        ("just", "verify-marketplace-installation"),
-        cwd=repository_root(),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    real_just = _required_binary("just")
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        invocation_path = temporary_root / "invocation.json"
+        shim_directory = temporary_root / "bin"
+        shim_directory.mkdir()
+        shim = shim_directory / "just"
+        shim.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json\n"
+            "import os\n"
+            "import sys\n"
+            "from pathlib import Path\n"
+            f"invocation_path = Path(os.environ[{_RECORDED_JUST_INVOCATION_ENV!r}])\n"
+            "if not invocation_path.exists():\n"
+            "    invocation_path.write_text("
+            "json.dumps(sys.argv[1:]), encoding='utf-8')\n"
+            f"real_just = os.environ[{_REAL_JUST_ENV!r}]\n"
+            "os.execv(real_just, [real_just, *sys.argv[1:]])\n",
+            encoding="utf-8",
+        )
+        shim.chmod(shim.stat().st_mode | stat.S_IXUSR)
+        environment = dict(os.environ)
+        environment.update(
+            {
+                _RECORDED_JUST_INVOCATION_ENV: str(invocation_path),
+                _REAL_JUST_ENV: real_just,
+                "PATH": f"{shim_directory}{os.pathsep}{environment['PATH']}",
+            }
+        )
+        result = subprocess.run(
+            (real_just, "verify-marketplace-installation"),
+            cwd=repository_root(),
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        recorded = cast(
+            object,
+            json.loads(invocation_path.read_text(encoding="utf-8")),
+        )
+        if not isinstance(recorded, list) or not all(
+            isinstance(argument, str) for argument in recorded
+        ):
+            raise RuntimeError("recorded just invocation must be a string array")
+        invoked = tuple(recorded)
     return VerificationRecipeObservation(
         exit_code=result.returncode,
+        invoked=invoked,
         stdout=result.stdout,
         stderr=result.stderr,
     )
@@ -403,6 +456,14 @@ def observe_real_installation() -> RealInstallationObservation:
         )
         persistent_codex = _run_listing(
             Agent.CODEX,
+            persistent_mirror,
+            selected_environment,
+        )
+        persistent_preflight = build_persistent_preflight(
+            persistent_mirror,
+            selected_environment,
+        )
+        persistent_codex_marketplaces = _run_codex_marketplace_listing(
             persistent_mirror,
             selected_environment,
         )
@@ -450,6 +511,10 @@ def observe_real_installation() -> RealInstallationObservation:
             Agent.CODEX,
             persistent_codex.stdout,
         ),
+        persistent_claude_source_action=persistent_preflight.claude_source_action,
+        persistent_codex_source_action=codex_source_action(
+            persistent_codex_marketplaces.stdout
+        ),
         persistent_stdout=persistent.stdout,
         persistent_stderr=persistent.stderr,
         first_exit_code=first.returncode,
@@ -492,16 +557,16 @@ def _listed_plugin_names(agent: Agent, payload: str) -> frozenset[str]:
     if agent is Agent.CODEX:
         if not isinstance(document, dict):
             raise RuntimeError("Codex plugin listing must be a JSON object")
-        entries = document.get(_CODEX_PLUGIN_ENTRIES_FIELD)
+        entries = document.get(CODEX_PLUGIN_ENTRIES_FIELD)
     if not isinstance(entries, list):
         raise RuntimeError(f"{agent.value} plugin listing must contain an array")
     plugin_id_field = (
-        _CLAUDE_PLUGIN_ID_FIELD if agent is Agent.CLAUDE else _CODEX_PLUGIN_ID_FIELD
+        CLAUDE_PLUGIN_ID_FIELD if agent is Agent.CLAUDE else CODEX_PLUGIN_ID_FIELD
     )
     plugin_enabled_field = (
-        _CLAUDE_PLUGIN_ENABLED_FIELD
+        CLAUDE_PLUGIN_ENABLED_FIELD
         if agent is Agent.CLAUDE
-        else _CODEX_PLUGIN_ENABLED_FIELD
+        else CODEX_PLUGIN_ENABLED_FIELD
     )
     marketplace_suffix = f"@{MARKETPLACE_NAME}"
     names: set[str] = set()
@@ -532,22 +597,10 @@ def _mirror_installation_inputs(source: Path, destination: Path) -> None:
 def _write_project_marketplace(checkout: Path, repository: str) -> None:
     settings = checkout / CLAUDE_PROJECT_SETTINGS_PATH
     settings.parent.mkdir(parents=True, exist_ok=True)
-    settings.write_text(json.dumps(_claude_settings(repository)), encoding="utf-8")
-
-
-def _claude_settings(repository: str) -> dict[str, object]:
-    source: dict[str, str]
-    if repository == CANONICAL_MARKETPLACE_SOURCE:
-        source = {"source": "github", "repo": repository}
-    else:
-        source = {"source": "directory", "path": repository}
-    return {
-        "extraKnownMarketplaces": {
-            "outcomeeng": {
-                "source": source,
-            }
-        }
-    }
+    settings.write_text(
+        json.dumps(claude_marketplace_settings(repository)),
+        encoding="utf-8",
+    )
 
 
 def _persistent_environment(root: Path) -> dict[str, str]:
@@ -556,7 +609,7 @@ def _persistent_environment(root: Path) -> dict[str, str]:
     environment.update(
         {
             HOME_ENV: str(root / "home"),
-            "CLAUDE_CONFIG_DIR": str(root / "claude"),
+            CLAUDE_CONFIG_ENV: str(root / "claude"),
             CODEX_HOME_ENV: str(root / "codex"),
             CODEX_SQLITE_HOME_ENV: str(root / "codex-sqlite"),
         }
@@ -567,22 +620,6 @@ def _persistent_environment(root: Path) -> dict[str, str]:
 def _prepare_agent_state(environment: Mapping[str, str]) -> None:
     for name in STATE_ENV_NAMES:
         Path(environment[name]).mkdir(parents=True, exist_ok=True)
-
-
-def _codex_marketplace_payload(source: str) -> str:
-    return json.dumps(
-        {
-            "marketplaces": [
-                {
-                    "name": "outcomeeng",
-                    "marketplaceSource": {
-                        "sourceType": "git" if source.startswith("http") else "local",
-                        "source": source,
-                    },
-                }
-            ]
-        }
-    )
 
 
 def _registration_target(plan: InstallationPlan, agent: Agent) -> str:
@@ -610,6 +647,13 @@ def _require_binaries(names: Sequence[str]) -> None:
     missing = tuple(name for name in names if shutil.which(name) is None)
     if missing:
         raise RuntimeError(f"required installation binaries are unavailable: {missing}")
+
+
+def _required_binary(name: str) -> str:
+    executable = shutil.which(name)
+    if executable is None:
+        raise RuntimeError(f"required installation binary is unavailable: {name}")
+    return executable
 
 
 def _run_recipe(
@@ -706,6 +750,26 @@ def _run_listing(
         raise RuntimeError(
             f"{agent.value} plugin listing failed with exit {result.returncode}: "
             f"{result.stderr}"
+        )
+    return result
+
+
+def _run_codex_marketplace_listing(
+    checkout: Path,
+    environment: Mapping[str, str],
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        CODEX_MARKETPLACE_LIST_COMMAND,
+        cwd=checkout,
+        env=dict(environment),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Codex marketplace listing failed with exit "
+            f"{result.returncode}: {result.stderr}"
         )
     return result
 

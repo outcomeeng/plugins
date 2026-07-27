@@ -9,7 +9,7 @@ from outcomeeng.distribution.installation import (
     CANONICAL_MARKETPLACE_SOURCE,
     Operation,
     SourceAction,
-    VERIFICATION_TEST,
+    VERIFICATION_RECIPE_COMMAND,
 )
 from outcomeeng_testing.harnesses.installation import (
     observe_claude_user_collision,
@@ -67,11 +67,9 @@ def test_persistent_installation_refreshes_canonical_sources_and_catalogs() -> N
 
 def test_verification_recipe_aliases_the_exact_l2_evidence() -> None:
     observation = observe_verification_recipe()
-    output = observation.stdout + observation.stderr
 
     assert observation.exit_code == 0, observation.stderr
-    assert f"just test {VERIFICATION_TEST}" in output
-    assert "install-marketplace" not in output
+    assert observation.invoked == VERIFICATION_RECIPE_COMMAND
 
 
 def test_persistent_installation_replaces_noncanonical_sources() -> None:
@@ -114,6 +112,7 @@ def test_repository_installation_stops_after_the_first_failed_operation() -> Non
     observation = observe_first_failure()
 
     assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
+    assert observation.failure.command.agent is Agent.CLAUDE
     assert observation.failure.command.plugin is not None
     assert all(result.exit_code == 0 for result in observation.failure.completed)
     assert observation.attempted[-1] == observation.failure.command

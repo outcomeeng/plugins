@@ -6,6 +6,7 @@ from typing import cast
 from outcomeeng.distribution.installation import (
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
+    SourceAction,
 )
 from outcomeeng_testing.harnesses.installation import observe_real_installation
 
@@ -30,6 +31,8 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
     assert observation.persistent_claude_plugins == claude_plugins
     assert observation.persistent_codex_plugins == codex_plugins
+    assert observation.persistent_claude_source_action is SourceAction.REFRESH
+    assert observation.persistent_codex_source_action is SourceAction.REFRESH
     assert observation.first_exit_code == 0, observation.first_stderr
     assert observation.second_exit_code == 0, observation.second_stderr
     assert (

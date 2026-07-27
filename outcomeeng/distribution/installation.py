@@ -23,6 +23,7 @@ VERIFICATION_TEST = (
     "21-repository-installation.enabler/tests/"
     "test_repository_installation.scenario.l2.py"
 )
+VERIFICATION_RECIPE_COMMAND = ("test", VERIFICATION_TEST)
 CLAUDE_PROJECT_SETTINGS_PATH = Path(".claude/settings.json")
 CODEX_CONFIG_PATH = Path(".codex/config.toml")
 CODEX_AGENTS_PATH = Path(".codex/agents")
@@ -56,6 +57,21 @@ CLAUDE_ALREADY_ENABLED_FRAGMENT = "already enabled"
 EXTRA_MARKETPLACES_FIELD = "extraKnownMarketplaces"
 CLAUDE_SOURCE_FIELD = "source"
 CLAUDE_REPOSITORY_FIELD = "repo"
+CLAUDE_DIRECTORY_FIELD = "path"
+CLAUDE_GITHUB_SOURCE_TYPE = "github"
+CLAUDE_DIRECTORY_SOURCE_TYPE = "directory"
+CODEX_MARKETPLACES_FIELD = "marketplaces"
+CODEX_MARKETPLACE_NAME_FIELD = "name"
+CODEX_MARKETPLACE_SOURCE_FIELD = "marketplaceSource"
+CODEX_SOURCE_TYPE_FIELD = "sourceType"
+CODEX_SOURCE_FIELD = "source"
+CODEX_GIT_SOURCE_TYPE = "git"
+CODEX_LOCAL_SOURCE_TYPE = "local"
+CLAUDE_PLUGIN_ID_FIELD = "id"
+CLAUDE_PLUGIN_ENABLED_FIELD = "enabled"
+CODEX_PLUGIN_ENTRIES_FIELD = "installed"
+CODEX_PLUGIN_ID_FIELD = "pluginId"
+CODEX_PLUGIN_ENABLED_FIELD = "enabled"
 
 
 class Agent(StrEnum):
@@ -399,7 +415,7 @@ def build_persistent_preflight(
             "registration before project-scoped installation"
         )
     project_document = _settings_document(roots.checkout / CLAUDE_PROJECT_SETTINGS_PATH)
-    claude_source_action = _claude_source_action(project_document)
+    project_source_action = claude_source_action(project_document)
     environment = persistent_environment(roots, base_environment)
     inspection = _command(
         Agent.CODEX,
@@ -414,7 +430,7 @@ def build_persistent_preflight(
         environment=environment,
         claude_plugins=catalog_plugin_names(roots.checkout / CLAUDE_CATALOG_PATH),
         codex_plugins=catalog_plugin_names(roots.checkout / CODEX_CATALOG_PATH),
-        claude_source_action=claude_source_action,
+        claude_source_action=project_source_action,
         codex_inspection=inspection,
     )
 
@@ -561,18 +577,18 @@ def codex_source_action(payload: str) -> SourceAction:
         raise ValueError(f"invalid Codex marketplace listing: {error}") from error
     if not isinstance(document, dict):
         raise ValueError("Codex marketplace listing must be a JSON object")
-    marketplaces = document.get("marketplaces")
+    marketplaces = document.get(CODEX_MARKETPLACES_FIELD)
     if not isinstance(marketplaces, list):
         raise ValueError("Codex marketplace listing must contain a marketplaces array")
     for entry in marketplaces:
         if not isinstance(entry, dict):
             raise ValueError("Codex marketplace listing contains a non-object")
-        if entry.get("name") != MARKETPLACE_NAME:
+        if entry.get(CODEX_MARKETPLACE_NAME_FIELD) != MARKETPLACE_NAME:
             continue
-        source = entry.get("marketplaceSource")
+        source = entry.get(CODEX_MARKETPLACE_SOURCE_FIELD)
         if not isinstance(source, dict):
             return SourceAction.REPLACE
-        source_value = source.get("source")
+        source_value = source.get(CODEX_SOURCE_FIELD)
         if isinstance(source_value, str) and _canonical_codex_source(source_value):
             return SourceAction.REFRESH
         return SourceAction.REPLACE
@@ -860,7 +876,8 @@ def _marketplace_entry(document: Mapping[str, object]) -> object | None:
     return marketplaces.get(MARKETPLACE_NAME)
 
 
-def _claude_source_action(document: Mapping[str, object]) -> SourceAction:
+def claude_source_action(document: Mapping[str, object]) -> SourceAction:
+    """Classify one Claude project settings marketplace source."""
     entry = _marketplace_entry(document)
     if entry is None:
         return SourceAction.ADD
@@ -870,11 +887,52 @@ def _claude_source_action(document: Mapping[str, object]) -> SourceAction:
     if not isinstance(source, dict):
         return SourceAction.REPLACE
     if (
-        source.get(CLAUDE_SOURCE_FIELD) == "github"
+        source.get(CLAUDE_SOURCE_FIELD) == CLAUDE_GITHUB_SOURCE_TYPE
         and source.get(CLAUDE_REPOSITORY_FIELD) == CANONICAL_MARKETPLACE_SOURCE
     ):
         return SourceAction.REFRESH
     return SourceAction.REPLACE
+
+
+def claude_marketplace_settings(repository: str) -> dict[str, object]:
+    """Build one Claude project settings document for the marketplace."""
+    if repository == CANONICAL_MARKETPLACE_SOURCE:
+        source = {
+            CLAUDE_SOURCE_FIELD: CLAUDE_GITHUB_SOURCE_TYPE,
+            CLAUDE_REPOSITORY_FIELD: repository,
+        }
+    else:
+        source = {
+            CLAUDE_SOURCE_FIELD: CLAUDE_DIRECTORY_SOURCE_TYPE,
+            CLAUDE_DIRECTORY_FIELD: repository,
+        }
+    return {
+        EXTRA_MARKETPLACES_FIELD: {
+            MARKETPLACE_NAME: {
+                CLAUDE_SOURCE_FIELD: source,
+            }
+        }
+    }
+
+
+def codex_marketplace_listing_payload(source: str) -> str:
+    """Build one Codex marketplace-listing payload at its public boundary."""
+    source_type = (
+        CODEX_GIT_SOURCE_TYPE if source.startswith("http") else CODEX_LOCAL_SOURCE_TYPE
+    )
+    return json.dumps(
+        {
+            CODEX_MARKETPLACES_FIELD: [
+                {
+                    CODEX_MARKETPLACE_NAME_FIELD: MARKETPLACE_NAME,
+                    CODEX_MARKETPLACE_SOURCE_FIELD: {
+                        CODEX_SOURCE_TYPE_FIELD: source_type,
+                        CODEX_SOURCE_FIELD: source,
+                    },
+                }
+            ]
+        }
+    )
 
 
 def _canonical_codex_source(source: str) -> bool:
@@ -993,17 +1051,35 @@ __all__ = [
     "AGENT_ADAPTERS",
     "Agent",
     "AgentAdapter",
+    "CANONICAL_CODEX_SOURCE",
     "CANONICAL_MARKETPLACE_SOURCE",
     "CATALOG_PLUGIN_NAME_FIELD",
     "CATALOG_PLUGINS_FIELD",
     "CLAUDE_CATALOG_PATH",
     "CLAUDE_CONFIG_ENV",
+    "CLAUDE_DIRECTORY_FIELD",
+    "CLAUDE_DIRECTORY_SOURCE_TYPE",
+    "CLAUDE_GITHUB_SOURCE_TYPE",
+    "CLAUDE_PLUGIN_ENABLED_FIELD",
+    "CLAUDE_PLUGIN_ID_FIELD",
     "CLAUDE_PROJECT_SETTINGS_PATH",
+    "CLAUDE_SOURCE_FIELD",
     "CODEX_AGENTS_PATH",
     "CODEX_CATALOG_PATH",
     "CODEX_CONFIG_PATH",
+    "CODEX_GIT_SOURCE_TYPE",
     "CODEX_HOME_ENV",
+    "CODEX_LOCAL_SOURCE_TYPE",
+    "CODEX_MARKETPLACES_FIELD",
+    "CODEX_MARKETPLACE_LIST_COMMAND",
+    "CODEX_MARKETPLACE_NAME_FIELD",
+    "CODEX_MARKETPLACE_SOURCE_FIELD",
+    "CODEX_PLUGIN_ENABLED_FIELD",
+    "CODEX_PLUGIN_ENTRIES_FIELD",
+    "CODEX_PLUGIN_ID_FIELD",
     "CODEX_SQLITE_HOME_ENV",
+    "CODEX_SOURCE_FIELD",
+    "CODEX_SOURCE_TYPE_FIELD",
     "CommandResult",
     "CommandRunner",
     "HOME_ENV",
@@ -1020,10 +1096,14 @@ __all__ = [
     "SourceAction",
     "STATE_ENV_NAMES",
     "VERIFICATION_TEST",
+    "VERIFICATION_RECIPE_COMMAND",
     "build_isolated_installation_plan",
     "build_persistent_installation_plan",
     "build_persistent_preflight",
     "catalog_plugin_names",
+    "claude_marketplace_settings",
+    "claude_source_action",
+    "codex_marketplace_listing_payload",
     "codex_source_action",
     "execute_installation",
     "execute_persistent_installation",
