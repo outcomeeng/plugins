@@ -1021,6 +1021,7 @@ __all__ = [
     "MARKETPLACE_NAME",
     "Operation",
     "PersistentPreflight",
+    "PYTHON_EXECUTABLE",
     "SourceAction",
     "STATE_ENV_NAMES",
     "VERIFICATION_TEST",

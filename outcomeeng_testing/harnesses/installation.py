@@ -32,6 +32,7 @@ from outcomeeng.distribution.installation import (
     MARKETPLACE_NAME,
     Operation,
     PersistentPreflight,
+    PYTHON_EXECUTABLE,
     STATE_ENV_NAMES,
     build_isolated_installation_plan,
     build_persistent_installation_plan,
@@ -41,7 +42,7 @@ from outcomeeng.distribution.installation import (
 
 UNOWNED_AGENT_FILENAME = "developer-owned.toml"
 UNOWNED_AGENT_CONTENT = 'name = "developer-owned"\n'
-REQUIRED_BINARIES: tuple[str, ...] = ("just", "claude", "codex")
+REQUIRED_BINARIES: tuple[str, ...] = ("just", "claude", "codex", PYTHON_EXECUTABLE)
 CANONICAL_CODEX_SOURCE = "https://github.com/outcomeeng/plugins.git"
 _CLAUDE_PLUGIN_ID_FIELD = "id"
 _CLAUDE_PLUGIN_ENABLED_FIELD = "enabled"
