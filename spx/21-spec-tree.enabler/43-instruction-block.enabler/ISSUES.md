@@ -10,7 +10,7 @@ Step 5 of `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md` verif
 
 **Why it is large**: the restructure rewords all six topology branches, not the one clause a delegation change appends, and the missing example is for a topology no delegation change touches. Both are editorial passes over the whole skill body whose surface is the file's structure rather than any one behavior, and each invalidates the skill-authoring gate for the entire surface — best taken in one pass gated by `skill-auditor` rather than folded into an unrelated behavior change.
 
-**Evidence**: surfaced by `instructions:audit-skills` on the changeset that added delegating-root-file adoption, as two `worth-improving` findings on an otherwise approved surface.
+**Evidence**: surfaced by `instructions:audit-skills` on the changeset that added delegating-root-file adoption, as `worth-improving` findings on an otherwise approved surface. The same audit's two other findings are resolved in that changeset: the three stop conditions carry explicit `GATE` labels, and the two success criteria that asked for a confirmation now name the diff that decides them.
 
 ## Root instruction terminology decision
 
@@ -25,15 +25,17 @@ Renaming "the agent guide" and `root_guide` requires one product-vocabulary deci
 
 ## Evidence-run modules hold the predicates their linked tests should own
 
-Four modules — `outcomeeng_testing/harnesses/instruction_block_{scenario,mapping,property,compliance}_evidence.py` — carry every behavioral predicate for this node, while each linked test file asserts only that a case-name list of executed checks equals a declared list. That inverts the predicate seam `spec-tree:test-evidence-standards` `<predicate_seam>` requires: a reader cannot see the pass/fail predicate from the linked test, and inverting any behavioral claim changes a harness rather than the linked test. The same standard's litmus 1 and litmus 2 both fail. `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` states the same rule as an audit assertion: infrastructure exposes observations and never calls an assertion API.
+Four modules — `outcomeeng_testing/harnesses/instruction_block_{scenario,mapping,property,compliance}_evidence.py` — carry behavioral predicates for this node, while each linked test file asserts only that a case-name list of executed checks equals a declared list. That inverts the predicate seam `spec-tree:test-evidence-standards` `<predicate_seam>` requires: a reader cannot see the pass/fail predicate from the linked test, and inverting any behavioral claim changes a harness rather than the linked test. The same standard's litmus 1 and litmus 2 both fail. `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` states the same rule as an audit assertion: infrastructure exposes observations and never calls an assertion API.
 
 The pattern is confined to this node; no other node in the tree uses it, and no decision records it as an accepted shape. `outcomeeng_testing/harnesses/property_evidence.py` is not part of this issue — it owns replayable property-run configuration, which is legitimate harness ownership.
 
-**Resolution shape**: move each `_assert_*` body into its linked test file as a named test function, reduce the evidence modules to observation and resource providers returning the documents, exit codes, and parsed regions the tests judge, and delete the declared/executed case-name bookkeeping once no test depends on it.
+**Remaining scope**: the CLI-edge scenarios (template and repo-root rejection, `--check` reporting, language detection, quoted-marker safety), the shared-region reconcile scenarios (git recency, tie and one-sided ambiguity, dirty-file refusal), and the whole mapping, property, and compliance evidence modules. The bootstrap-topology scenarios are migrated and are not part of this entry.
 
-**Why it is large**: roughly sixty assertions across four evidence modules and six linked test files, none of which changes product behavior. It is a test-architecture migration whose scope is the node's whole evidence chain, independent of any single generator change, and it is best gated by `test-evidence-auditor` in one pass rather than folded into an unrelated change.
+**Resolution shape**: move each remaining `_assert_*` body into its linked test file as a named test function, reduce the evidence modules to observation and resource providers returning the documents, exit codes, and parsed regions the tests judge, and delete the declared/executed case-name bookkeeping once no test depends on it.
 
-**Evidence**: surfaced while adding delegating-stub evidence for the bootstrap render model. The two scenario cases and one mapping case added in that change are written in the corrected shape — predicates in the linked test, `observe_bootstrap_outcome` returning observations only — so the node now carries both shapes until this migration lands.
+**Why it is large**: roughly fifty remaining assertions across four evidence modules and six linked test files, none of which changes product behavior. It is a test-architecture migration whose scope is the node's CLI, reconcile, and non-scenario evidence chain, independent of any single generator change, and it is best gated by `test-evidence-auditor` in one pass rather than folded into an unrelated change.
+
+**Evidence**: surfaced while adding delegating-stub evidence for the bootstrap render model, then confirmed by `test-evidence-auditor` against the same changeset. The bootstrap-topology scenarios that audit named — symlink migration, retired generated body and retired marker block, blank-run preservation, malformed and duplicate shared fences, and the three whole-line span cases — now hold their predicates in `tests/test_instruction_block.scenario.l1.py`, alongside the delegation scenarios and the topology-to-outcome table in `tests/test_instruction_block.mapping.l1.py`. The node carries both shapes until the remaining scope above lands.
 
 ## Generator migration awaits a published SPX CLI capability
 
