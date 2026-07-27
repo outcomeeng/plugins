@@ -152,7 +152,10 @@ class CommandRunner(Protocol):
 class AgentAdapter(Protocol):
     """Build and normalize commands for one supported agent harness."""
 
-    agent: Agent
+    @property
+    def agent(self) -> Agent:
+        """Return the agent harness this adapter implements."""
+        ...
 
     def commands(
         self,
