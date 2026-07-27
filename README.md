@@ -132,9 +132,13 @@ claude plugin marketplace update outcomeeng
 codex plugin marketplace upgrade outcomeeng
 ```
 
-From this checkout, `just push-marketplace` wraps the Codex upgrade with cache
-path preservation so active sessions with stale skill paths keep resolving for
-seven days.
+Repository maintainers can verify both catalogs with `just install-marketplace`.
+The command installs every catalog plugin through the real Claude Code and Codex
+CLIs in disposable homes, then runs Codex agent placement against the invocation
+checkout. It leaves developer plugin homes unchanged.
+
+`just push-marketplace` forwards its arguments directly to `git push`. Installation
+verification runs as a separate release step.
 
 ### Bumping plugin versions on a branch
 

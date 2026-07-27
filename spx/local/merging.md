@@ -4,7 +4,7 @@ Loaded by `/merging-standards` `<repo_local_overlay>` and `/merge`. The product-
 
 ## Deployment and release recognition
 
-No deployment action is declared. Every change proceeds without deployment authorization. Release is declared as the marketplace-source refresh in the release marketplace sync section, governed by `RELEASE_READINESS`; the command owns distribution-change detection. Never ask the operator whether to merge.
+No deployment action is declared. Every change proceeds without deployment authorization. Release is declared as the disposable marketplace installation proof in the release section, governed by `RELEASE_READINESS`. Never ask the operator whether to merge.
 
 ## Canonical checkout safety
 
@@ -12,7 +12,6 @@ Run the released default diagnosis before the first merge mutation, without a ma
 
 ```bash
 git rev-parse --show-toplevel
-just marketplace-source-root outcomeeng
 spx diagnose --format json
 ```
 
@@ -21,12 +20,11 @@ Inspect the JSON record whose `name` is `worktree-pool`; do not gate on the aggr
 - the report is valid JSON and contains exactly one `worktree-pool` record;
 - that record's `verdict` is `compliant`;
 - `readings.mainCheckoutPath` is a non-empty absolute path;
-- the absolute marketplace-source path from `just marketplace-source-root outcomeeng` equals `readings.mainCheckoutPath`;
 - `readings.mainCheckoutBranchRead` is `true`;
 - `readings.mainCheckoutBranch` equals `readings.defaultBranch`;
 - the assigned worktree root from `git rev-parse --show-toplevel` differs from `readings.mainCheckoutPath`.
 
-Stop before mutation and report the record verbatim when any predicate fails. A missing, detached, wrong-branch, unreadable, or marketplace-source-mismatched designated main checkout therefore blocks the lifecycle, as does an assigned worktree that is itself the designated main checkout. The merge lifecycle never switches, detaches, or performs feature-branch cleanup in the designated main checkout. The release phase may access that checkout only through the explicit `git -C "$src"` fast-forward commands below after the preflight has established its identity and branch standing.
+Stop before mutation and report the record verbatim when any predicate fails. A missing, detached, wrong-branch, or unreadable designated main checkout blocks the lifecycle, as does an assigned worktree that is itself the designated main checkout. The merge lifecycle never switches, detaches, or performs feature-branch cleanup in the designated main checkout.
 
 After detach-based feature-worktree cleanup, run `spx diagnose --format json` again and require the same `worktree-pool` health predicates. At that point the assigned feature worktree may be detached, while the designated main checkout must remain readable and attached to the resolved default branch.
 
@@ -48,11 +46,10 @@ After the canonical-checkout preflight proves that the assigned worktree is a di
 git fetch origin main
 git switch --detach origin/main
 git rev-parse --show-toplevel
-just marketplace-source-root outcomeeng
 spx diagnose --format json
 ```
 
-Stop and inspect the post-cleanup `worktree-pool` record and both path command outputs under the canonical checkout safety predicates. A failed check leaves the feature worktree detached and the remote branch intact for inspection. Only after every predicate passes, run:
+Stop and inspect the post-cleanup `worktree-pool` record and assigned-root output under the canonical checkout safety predicates. A failed check leaves the feature worktree detached and the remote branch intact for inspection. Only after every predicate passes, run:
 
 ```bash
 git push origin --delete <branch>
@@ -76,17 +73,12 @@ A prior local review is reusable across a clean rebase only when the branch patc
 
 `@spec-tree` (configured in `.github/workflows/spec-tree-review.yml` `trigger_phrase`; repository-variable override `SPEC_TREE_REVIEW_TRIGGER_PHRASE`).
 
-## Release marketplace sync
+## Release installation proof
 
-The Claude marketplace is registered as a **Directory source** at the authoritative default-branch worktree — the checkout named like the remote (for example `~/Code/outcomeeng/plugins/plugins`), which stays on branch `main`. That worktree's `dist/` is what every Claude session and `claude plugin marketplace update` reads, so the marketplace serves current content only when **that worktree's `main` is current**.
-
-After a merge lands on `origin/main`, fast-forward the **marketplace-source worktree's** `main`, then refresh installs:
+After the merge and feature-worktree cleanup place the assigned checkout at `origin/main`, run the repository installation proof from that checkout:
 
 ```bash
-src=$(just marketplace-source-root outcomeeng)
-git -C "$src" fetch origin main
-git -C "$src" merge --ff-only origin/main   # the source worktree is on main; fast-forward it to the merged tip
-(cd "$src" && just sync-marketplace <previous-main-ref>)   # run FROM the source worktree
+just install-marketplace
 ```
 
-`just sync-marketplace` must run from the source worktree: its `validate_install` reads `current_versions` from its own working directory, so a feature worktree behind `origin/main` false-fails against stale versions. A PR that changes no plugin-distribution files leaves `dist/` unchanged, so the refresh is skipped, but the source `main` is still fast-forwarded so it never drifts. If `merge --ff-only` fails, the source worktree carries unexpected local commits — move them onto a feature branch (never `reset --hard`), then re-run.
+The command derives both complete plugin sets from the merged checkout's committed catalogs, invokes the real Claude Code and Codex plugin CLIs in disposable homes, and runs shipped Codex lifecycle placement against the invocation checkout. It leaves developer marketplace registrations, plugin caches, and user homes unchanged. `RELEASE_READINESS` holds when the command exits successfully; preserve its structured first-failure diagnostic when it fails.
