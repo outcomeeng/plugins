@@ -6,8 +6,11 @@ CAN refresh selected Claude Code and Codex installations while proving the same 
 
 ## Assertions
 
+### Mappings
+
+- For each supported agent, repository installation derives the complete ordered plugin set from that agent's committed marketplace catalog. ([test](tests/test_installation.mapping.l1.py))
+
 ### Compliance
 
-- ALWAYS: repository installation derives each agent's complete plugin set from that agent's committed marketplace catalog. ([test](tests/test_installation.compliance.l1.py))
 - ALWAYS: persistent installation targets Claude Code project scope and the selected `CODEX_HOME`, while isolated verification targets only caller-selected disposable homes. ([test](tests/test_installation.compliance.l1.py))
 - ALWAYS: an agent-CLI failure identifies the exact agent and plugin operation and stops every subsequent installation operation. ([test](tests/test_installation.compliance.l1.py))

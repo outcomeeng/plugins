@@ -40,6 +40,12 @@ def test_persistent_installation_refreshes_canonical_sources_and_catalogs() -> N
     assert {
         command.plugin
         for command in plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation is Operation.PLUGIN_ENABLE
+    } == set(plan.claude_plugins)
+    assert {
+        command.plugin
+        for command in plan.commands
         if command.agent is Agent.CODEX
         and command.operation is Operation.PLUGIN_INSTALL
     } == set(plan.codex_plugins)

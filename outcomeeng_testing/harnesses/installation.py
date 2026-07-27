@@ -29,6 +29,7 @@ from outcomeeng.distribution.installation import (
     InstallationReport,
     Operation,
     PersistentPreflight,
+    STATE_ENV_NAMES,
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
@@ -54,6 +55,7 @@ class PlanObservation:
     plan: InstallationPlan
     claude_catalog: bytes
     codex_catalog: bytes
+    ambient_state_values: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -101,6 +103,8 @@ class ConfigObservation:
 
     before: InstallationPlan
     after: InstallationPlan
+    persistent_before: InstallationPlan
+    persistent_after: InstallationPlan
     config_bytes: bytes
 
 
@@ -176,15 +180,23 @@ def observe_repository_plan() -> PlanObservation:
     claude_catalog = (checkout / CLAUDE_CATALOG_PATH).read_bytes()
     codex_catalog = (checkout / CODEX_CATALOG_PATH).read_bytes()
     with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        ambient_environment = _persistent_environment(
+            temporary_root / "developer-state"
+        )
         plan = build_isolated_installation_plan(
             checkout,
-            Path(temporary_directory),
-            os.environ,
+            temporary_root / "isolated-state",
+            ambient_environment,
+        )
+        ambient_state_values = tuple(
+            ambient_environment[name] for name in STATE_ENV_NAMES
         )
     return PlanObservation(
         plan=plan,
         claude_catalog=claude_catalog,
         codex_catalog=codex_catalog,
+        ambient_state_values=ambient_state_values,
     )
 
 
@@ -266,6 +278,23 @@ def observe_claude_user_collision() -> CollisionObservation:
     raise RuntimeError("persistent installation accepted a user-scope collision")
 
 
+def observe_missing_codex_home() -> str:
+    """Expose rejection when persistent state has no selected Codex home."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        del environment[CODEX_HOME_ENV]
+        try:
+            build_persistent_preflight(mirror, environment)
+        except ValueError as error:
+            return str(error)
+    raise RuntimeError("persistent installation accepted a missing CODEX_HOME")
+
+
 def observe_first_failure() -> FailureObservation:
     """Fail the first plugin installation and expose the attempted prefix."""
     from outcomeeng.distribution.installation import execute_installation
@@ -290,20 +319,34 @@ def observe_first_failure() -> FailureObservation:
 
 
 def observe_codex_config_independence() -> ConfigObservation:
-    """Build plans before and after adding repository config bytes."""
+    """Build isolated and persistent plans around repository config bytes."""
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         state = temporary_root / "state"
         before = build_isolated_installation_plan(mirror, state, os.environ)
+        environment = _persistent_environment(temporary_root / "persistent")
+        persistent_before = execute_persistent_installation(
+            mirror, environment, RecordingRunner()
+        ).plan
         config = mirror / CODEX_CONFIG_PATH
         config.parent.mkdir(parents=True, exist_ok=True)
         config.write_text("[plugins]\nenabled = false\n", encoding="utf-8")
         after = build_isolated_installation_plan(mirror, state, os.environ)
+        persistent_after = execute_persistent_installation(
+            mirror, environment, RecordingRunner()
+        ).plan
         config_bytes = config.read_bytes()
-    return ConfigObservation(before=before, after=after, config_bytes=config_bytes)
+    return ConfigObservation(
+        before=before,
+        after=after,
+        persistent_before=persistent_before,
+        persistent_after=persistent_after,
+        config_bytes=config_bytes,
+    )
 
 
 def observe_verification_recipe() -> VerificationRecipeObservation:
@@ -578,6 +621,7 @@ __all__ = [
     "observe_claude_user_collision",
     "observe_codex_config_independence",
     "observe_first_failure",
+    "observe_missing_codex_home",
     "observe_persistent_execution",
     "observe_persistent_plan",
     "observe_real_installation",
