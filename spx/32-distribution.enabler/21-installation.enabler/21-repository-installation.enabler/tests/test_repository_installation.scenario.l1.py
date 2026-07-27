@@ -9,9 +9,9 @@ from outcomeeng.distribution.installation import (
     CANONICAL_MARKETPLACE_SOURCE,
     Operation,
     SourceAction,
+    VERIFICATION_TEST,
 )
 from outcomeeng_testing.harnesses.installation import (
-    VERIFICATION_TEST,
     observe_claude_user_collision,
     observe_first_failure,
     observe_persistent_execution,

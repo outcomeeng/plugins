@@ -18,16 +18,16 @@ CANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins"
 CANONICAL_CODEX_SOURCE = "https://github.com/outcomeeng/plugins"
 CODEX_CATALOG_PATH = Path(".agents/plugins/marketplace.json")
 CLAUDE_CATALOG_PATH = Path(".claude-plugin/marketplace.json")
+VERIFICATION_TEST = (
+    "spx/32-distribution.enabler/21-installation.enabler/"
+    "21-repository-installation.enabler/tests/"
+    "test_repository_installation.scenario.l2.py"
+)
 CLAUDE_PROJECT_SETTINGS_PATH = Path(".claude/settings.json")
 CODEX_CONFIG_PATH = Path(".codex/config.toml")
 CODEX_AGENTS_PATH = Path(".codex/agents")
 CATALOG_PLUGINS_FIELD = "plugins"
 CATALOG_PLUGIN_NAME_FIELD = "name"
-CLAUDE_PLUGIN_ID_FIELD = "id"
-CLAUDE_PLUGIN_ENABLED_FIELD = "enabled"
-CODEX_INSTALLED_FIELD = "installed"
-CODEX_PLUGIN_ID_FIELD = "pluginId"
-CODEX_PLUGIN_ENABLED_FIELD = "enabled"
 HOME_ENV = "HOME"
 CLAUDE_CONFIG_ENV = "CLAUDE_CONFIG_DIR"
 CODEX_HOME_ENV = "CODEX_HOME"
@@ -584,43 +584,6 @@ def codex_source_action(payload: str) -> SourceAction:
     return SourceAction.ADD
 
 
-def installed_plugin_names(agent: Agent, payload: str) -> frozenset[str]:
-    """Parse installed and enabled marketplace plugin names from CLI JSON."""
-    try:
-        document = cast(object, json.loads(payload))
-    except json.JSONDecodeError as error:
-        raise ValueError(f"invalid {agent.value} plugin listing: {error}") from error
-    entries: object = document
-    if agent is Agent.CODEX:
-        if not isinstance(document, dict):
-            raise ValueError("Codex plugin listing must be a JSON object")
-        entries = document.get(CODEX_INSTALLED_FIELD)
-    if not isinstance(entries, list):
-        raise ValueError(f"{agent.value} plugin listing must contain an array")
-    names: set[str] = set()
-    for entry in entries:
-        if not isinstance(entry, dict):
-            raise ValueError(f"{agent.value} plugin listing contains a non-object")
-        plugin_field = (
-            CLAUDE_PLUGIN_ID_FIELD if agent is Agent.CLAUDE else CODEX_PLUGIN_ID_FIELD
-        )
-        enabled_field = (
-            CLAUDE_PLUGIN_ENABLED_FIELD
-            if agent is Agent.CLAUDE
-            else CODEX_PLUGIN_ENABLED_FIELD
-        )
-        plugin_id = entry.get(plugin_field)
-        enabled = entry.get(enabled_field)
-        if not isinstance(plugin_id, str) or not isinstance(enabled, bool):
-            raise ValueError(
-                f"{agent.value} plugin listing entry lacks typed identity or state"
-            )
-        suffix = f"@{MARKETPLACE_NAME}"
-        if enabled and plugin_id.endswith(suffix):
-            names.add(plugin_id.removesuffix(suffix))
-    return frozenset(names)
-
-
 def isolated_environment(
     roots: InstallationRoots,
     base_environment: Mapping[str, str],
@@ -1060,6 +1023,7 @@ __all__ = [
     "PersistentPreflight",
     "SourceAction",
     "STATE_ENV_NAMES",
+    "VERIFICATION_TEST",
     "build_isolated_installation_plan",
     "build_persistent_installation_plan",
     "build_persistent_preflight",
@@ -1067,7 +1031,6 @@ __all__ = [
     "codex_source_action",
     "execute_installation",
     "execute_persistent_installation",
-    "installed_plugin_names",
     "isolated_environment",
     "main",
     "persistent_environment",

@@ -44,9 +44,9 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
         for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
     )
     assert observation.placed_first != observation.placed_initial
-    changed_names = {
-        name for name, _content in observation.placed_first
-    } - {name for name, _content in observation.placed_initial}
+    changed_names = {name for name, _content in observation.placed_first} - {
+        name for name, _content in observation.placed_initial
+    }
     assert changed_names
     assert all(
         any(name.startswith(prefix) for prefix in observation.ownership_prefixes)

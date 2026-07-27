@@ -27,25 +27,26 @@ from outcomeeng.distribution.installation import (
     InstallationFailure,
     InstallationPlan,
     InstallationReport,
+    MARKETPLACE_NAME,
     Operation,
     PersistentPreflight,
     STATE_ENV_NAMES,
+    VERIFICATION_TEST,
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
     execute_persistent_installation,
-    installed_plugin_names,
 )
 
 UNOWNED_AGENT_FILENAME = "developer-owned.toml"
 UNOWNED_AGENT_CONTENT = 'name = "developer-owned"\n'
 REQUIRED_BINARIES: tuple[str, ...] = ("just", "claude", "codex")
 CANONICAL_CODEX_SOURCE = "https://github.com/outcomeeng/plugins.git"
-VERIFICATION_TEST = (
-    "spx/32-distribution.enabler/21-installation.enabler/"
-    "21-repository-installation.enabler/tests/"
-    "test_repository_installation.scenario.l2.py"
-)
+_CLAUDE_PLUGIN_ID_FIELD = "id"
+_CLAUDE_PLUGIN_ENABLED_FIELD = "enabled"
+_CODEX_PLUGIN_ENTRIES_FIELD = "installed"
+_CODEX_PLUGIN_ID_FIELD = "pluginId"
+_CODEX_PLUGIN_ENABLED_FIELD = "enabled"
 
 
 @dataclass(frozen=True)
@@ -406,12 +407,10 @@ def observe_real_installation() -> RealInstallationObservation:
     return RealInstallationObservation(
         first_exit_code=first.returncode,
         second_exit_code=second.returncode,
-        claude_plugins_first=installed_plugin_names(Agent.CLAUDE, claude_first.stdout),
-        claude_plugins_second=installed_plugin_names(
-            Agent.CLAUDE, claude_second.stdout
-        ),
-        codex_plugins_first=installed_plugin_names(Agent.CODEX, codex_first.stdout),
-        codex_plugins_second=installed_plugin_names(Agent.CODEX, codex_second.stdout),
+        claude_plugins_first=_listed_plugin_names(Agent.CLAUDE, claude_first.stdout),
+        claude_plugins_second=_listed_plugin_names(Agent.CLAUDE, claude_second.stdout),
+        codex_plugins_first=_listed_plugin_names(Agent.CODEX, codex_first.stdout),
+        codex_plugins_second=_listed_plugin_names(Agent.CODEX, codex_second.stdout),
         claude_catalog=claude_catalog,
         codex_catalog=codex_catalog,
         claude_registration_target=claude_target,
@@ -432,6 +431,43 @@ def observe_real_installation() -> RealInstallationObservation:
         second_stdout=second.stdout,
         second_stderr=second.stderr,
     )
+
+
+def _listed_plugin_names(agent: Agent, payload: str) -> frozenset[str]:
+    """Read installed and enabled plugin names from a real agent CLI listing."""
+    try:
+        document = json.loads(payload)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"invalid {agent.value} plugin listing: {error}") from error
+    entries: object = document
+    if agent is Agent.CODEX:
+        if not isinstance(document, dict):
+            raise RuntimeError("Codex plugin listing must be a JSON object")
+        entries = document.get(_CODEX_PLUGIN_ENTRIES_FIELD)
+    if not isinstance(entries, list):
+        raise RuntimeError(f"{agent.value} plugin listing must contain an array")
+    plugin_id_field = (
+        _CLAUDE_PLUGIN_ID_FIELD if agent is Agent.CLAUDE else _CODEX_PLUGIN_ID_FIELD
+    )
+    plugin_enabled_field = (
+        _CLAUDE_PLUGIN_ENABLED_FIELD
+        if agent is Agent.CLAUDE
+        else _CODEX_PLUGIN_ENABLED_FIELD
+    )
+    marketplace_suffix = f"@{MARKETPLACE_NAME}"
+    names: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise RuntimeError(f"{agent.value} plugin listing contains a non-object")
+        plugin_id = entry.get(plugin_id_field)
+        enabled = entry.get(plugin_enabled_field)
+        if not isinstance(plugin_id, str) or not isinstance(enabled, bool):
+            raise RuntimeError(
+                f"{agent.value} plugin listing entry lacks typed identity or state"
+            )
+        if enabled and plugin_id.endswith(marketplace_suffix):
+            names.add(plugin_id.removesuffix(marketplace_suffix))
+    return frozenset(names)
 
 
 def _mirror_installation_inputs(source: Path, destination: Path) -> None:
@@ -616,7 +652,6 @@ __all__ = [
     "PlanObservation",
     "RealInstallationObservation",
     "RecordingRunner",
-    "VERIFICATION_TEST",
     "VerificationRecipeObservation",
     "observe_claude_user_collision",
     "observe_codex_config_independence",
