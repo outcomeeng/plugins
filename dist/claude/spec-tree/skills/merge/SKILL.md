@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge.
   NEVER select a merge transport or drive a changeset to the default branch on origin without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, Agent, AskUserQuestion, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(grep:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/classify_changeset.py":*), Bash(echo:*), Read
+allowed-tools: Skill, Agent, AskUserQuestion, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(grep:*), Bash(head:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/classify_changeset.py":*), Bash(echo:*), Read
 ---
 
 <objective>
@@ -19,8 +19,8 @@ Live repository state for transport selection, read at invocation.
 **Current branch:**
 !`git branch --show-current || echo '(not a git repo)'`
 
-**Working tree (empty = clean):**
-!`git status --porcelain || echo '(not a git repo)'`
+**Working tree (empty = clean, bounded preview):**
+!`git rev-parse --git-dir >/dev/null 2>&1 && git status --porcelain 2>&1 | head -40 || echo '(not a git repo)'`
 
 **Transport overlay (selector, if any):**
 !`grep -iE '^transport:' spx/local/merging.md 2>/dev/null || echo '(no explicit transport: selector — default applies)'`
