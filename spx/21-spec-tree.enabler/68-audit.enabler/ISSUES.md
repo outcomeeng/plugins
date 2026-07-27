@@ -45,7 +45,7 @@ file.
 scope-unit JSON contract, the finding JSON contract, and nine failure modes, but
 carries no end-to-end walkthrough: one real `$ARGUMENTS` block, the resulting run
 token, one scope and one finding payload with concrete field values, and the
-final `spx verification run render` output. `/skill-standards`
+final `spx verification run render` output. `/audit-skills`
 `references/operational-effectiveness-examples.md` recommends that shape so
 Claude has a line-for-line comparison target for detecting a malformed payload or
 a wrong terminal-status derivation before emitting it, rather than only the
