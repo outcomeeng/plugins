@@ -906,6 +906,29 @@ def run_generator_check(
     return result, output.getvalue().strip()
 
 
+def run_generator_reconcile(
+    repo_root: pathlib.Path, template_path: pathlib.Path
+) -> tuple[int, str]:
+    """Run the real ``--reconcile`` surface and return its exit code and stderr report."""
+    errors = io.StringIO()
+    cases = generated_cases()
+    with redirect_stderr(errors):
+        result = cast(
+            int,
+            load_instruction_block_module().main(
+                [
+                    "--template",
+                    str(template_path),
+                    "--repo-root",
+                    str(repo_root),
+                    f"--languages={cases.lang_primary}",
+                    "--reconcile",
+                ]
+            ),
+        )
+    return result, errors.getvalue()
+
+
 def root_document_with_shared_region(
     module: ModuleType,
     harness: str,

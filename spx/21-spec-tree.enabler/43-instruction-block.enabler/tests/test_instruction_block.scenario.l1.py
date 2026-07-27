@@ -78,6 +78,30 @@ def test_both_pointer_bodies_are_reported_and_neither_is_adopted(
     assert MODULE.parse_shared_regions(agents) == {}
 
 
+def test_the_reconcile_reports_a_pointer_body_as_an_ambiguity(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = tmp_path / "repo"
+    harness.materialize_root_instruction_topology(
+        repo, harness.root_instruction_topology_delegating()
+    )
+
+    report = MODULE.reconcile_root_shared_regions(repo)
+
+    # The reconcile is where the skill collects what it must put to the operator, so a candidate
+    # reaches the operator only by arriving in this report and counting as ambiguous.
+    assert report.delegating == (harness.INSTRUCTION_CLAUDE,)
+    assert report.ambiguous
+    assert report.reconciled == ()
+
+    exit_code, stderr = harness.run_generator_reconcile(
+        repo, harness.write_template(tmp_path, harness.NEW_VERSION)
+    )
+
+    assert exit_code != 0
+    assert f"ambiguous (delegating): {harness.INSTRUCTION_CLAUDE}" in stderr
+
+
 def test_an_unresolved_pointer_keeps_the_surface_stale(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     harness.materialize_root_instruction_topology(
