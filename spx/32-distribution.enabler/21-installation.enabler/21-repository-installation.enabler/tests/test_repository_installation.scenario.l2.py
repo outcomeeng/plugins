@@ -29,7 +29,11 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     )
 
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
-    assert observation.persistent_claude_plugins == claude_plugins
+    assert observation.persistent_claude_plugins == observation.persistent_selection
+    assert observation.persistent_selection < claude_plugins
+    assert (
+        observation.persistent_settings_after == observation.persistent_settings_before
+    )
     assert observation.persistent_codex_plugins == codex_plugins
     assert observation.persistent_claude_source_action is SourceAction.REFRESH
     assert observation.persistent_codex_source_action is SourceAction.REFRESH

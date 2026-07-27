@@ -20,6 +20,7 @@ from outcomeeng.distribution.installation import (
     CANONICAL_MARKETPLACE_SOURCE,
     CLAUDE_CATALOG_PATH,
     CLAUDE_CONFIG_ENV,
+    CLAUDE_ENABLED_PLUGINS_FIELD,
     CLAUDE_PLUGIN_ENABLED_FIELD,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PROJECT_SETTINGS_PATH,
@@ -47,6 +48,7 @@ from outcomeeng.distribution.installation import (
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
+    catalog_plugin_names,
     claude_marketplace_settings,
     codex_marketplace_listing_payload,
     codex_source_action,
@@ -140,6 +142,9 @@ class RealInstallationObservation:
     persistent_exit_code: int
     persistent_claude_plugins: frozenset[str]
     persistent_codex_plugins: frozenset[str]
+    persistent_selection: frozenset[str]
+    persistent_settings_before: bytes
+    persistent_settings_after: bytes
     persistent_claude_source_action: SourceAction
     persistent_codex_source_action: SourceAction
     persistent_stdout: str
@@ -357,14 +362,39 @@ def observe_planned_operations() -> tuple[Operation, ...]:
 
     An isolated plan registers fresh sources, so it never carries the
     marketplace remove and refresh operations a persistent plan performs
-    against an already-registered source. The union of both plans is the
-    complete operation domain repository installation can fail on.
+    against an already-registered source. The union across every plan is the
+    domain of operations a plan itself performs; the persistent preflight's
+    marketplace inspection fails outside any plan and is exposed separately.
     """
     with TemporaryDirectory() as temporary_directory:
         plans = _installation_plans(Path(temporary_directory))
     return tuple(
         dict.fromkeys(command.operation for plan in plans for command in plan.commands)
     )
+
+
+def observe_inspection_failure() -> FailureObservation:
+    """Fail the persistent preflight's marketplace inspection before any plan."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        runner = RecordingRunner(failed_operation=Operation.MARKETPLACE_INSPECT)
+        try:
+            execute_persistent_installation(mirror, environment, runner)
+        except InstallationFailure as failure:
+            return FailureObservation(
+                plan=build_persistent_installation_plan(
+                    build_persistent_preflight(mirror, environment),
+                    codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE),
+                ),
+                attempted=tuple(runner.calls),
+                failure=failure,
+            )
+    raise RuntimeError("persistent installation accepted a failed inspection")
 
 
 def observe_first_failure(operation: Operation) -> FailureObservation:
@@ -494,6 +524,13 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mirror,
             selected_environment,
         )
+        persistent_settings = persistent_mirror / CLAUDE_PROJECT_SETTINGS_PATH
+        persistent_catalog = catalog_plugin_names(
+            persistent_mirror / CLAUDE_CATALOG_PATH
+        )
+        persistent_selection = frozenset(sorted(persistent_catalog)[:2])
+        _declare_project_selection(persistent_settings, persistent_selection)
+        persistent_settings_before = persistent_settings.read_bytes()
         persistent = _run_persistent_recipe(
             checkout,
             persistent_mirror,
@@ -551,6 +588,7 @@ def observe_real_installation() -> RealInstallationObservation:
         placed_second = _agent_snapshot(mirror)
         unowned_second = unowned.read_bytes()
         persistent_second = _tree_snapshot(persistent_root)
+        persistent_settings_after = persistent_settings.read_bytes()
     return RealInstallationObservation(
         persistent_exit_code=persistent.returncode,
         persistent_claude_plugins=_listed_plugin_names(
@@ -561,6 +599,9 @@ def observe_real_installation() -> RealInstallationObservation:
             Agent.CODEX,
             persistent_codex.stdout,
         ),
+        persistent_selection=persistent_selection,
+        persistent_settings_before=persistent_settings_before,
+        persistent_settings_after=persistent_settings_after,
         persistent_claude_source_action=persistent_preflight.claude_source_action,
         persistent_codex_source_action=codex_source_action(
             persistent_codex_marketplaces.stdout
@@ -643,6 +684,29 @@ def _mirror_installation_inputs(source: Path, destination: Path) -> None:
         shutil.copy2(source / relative_path, target)
     shutil.copytree(source / "dist/codex", destination / "dist/codex")
     shutil.copytree(source / "dist/claude", destination / "dist/claude")
+
+
+def _declare_project_selection(settings: Path, selection: frozenset[str]) -> None:
+    """Declare `selection` as the project scope's enabled plugin set.
+
+    The document is written in the key order the Claude CLI emits, the shape
+    a committed checkout already carries, so a later install that preserves
+    the selection leaves the file byte-identical.
+    """
+    settings.parent.mkdir(parents=True, exist_ok=True)
+    existing: dict[str, object] = {}
+    if settings.exists():
+        existing = cast(
+            "dict[str, object]", json.loads(settings.read_text(encoding="utf-8"))
+        )
+    existing.pop(CLAUDE_ENABLED_PLUGINS_FIELD, None)
+    document: dict[str, object] = {
+        CLAUDE_ENABLED_PLUGINS_FIELD: {
+            f"{plugin}@{MARKETPLACE_NAME}": True for plugin in sorted(selection)
+        },
+        **existing,
+    }
+    settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
 
 def _write_project_marketplace(checkout: Path, repository: str) -> None:
@@ -891,6 +955,7 @@ __all__ = [
     "observe_claude_user_collision",
     "observe_codex_config_independence",
     "observe_first_failure",
+    "observe_inspection_failure",
     "observe_missing_codex_home",
     "observe_persistent_execution",
     "observe_persistent_plan",

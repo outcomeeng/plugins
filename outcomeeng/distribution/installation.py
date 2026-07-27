@@ -70,6 +70,7 @@ CODEX_GIT_SOURCE_TYPE = "git"
 CODEX_LOCAL_SOURCE_TYPE = "local"
 CLAUDE_PLUGIN_ID_FIELD = "id"
 CLAUDE_PLUGIN_ENABLED_FIELD = "enabled"
+CLAUDE_ENABLED_PLUGINS_FIELD = "enabledPlugins"
 CODEX_PLUGIN_ENTRIES_FIELD = "installed"
 CODEX_PLUGIN_ID_FIELD = "pluginId"
 CODEX_PLUGIN_ENABLED_FIELD = "enabled"
@@ -246,38 +247,38 @@ class ClaudeInstallationAdapter:
         )
         for plugin in plugins:
             plugin_id = f"{plugin}@{MARKETPLACE_NAME}"
-            commands.extend(
-                (
-                    _command(
-                        self.agent,
-                        Operation.PLUGIN_INSTALL,
-                        plugin,
-                        (
-                            CLAUDE_EXECUTABLE,
-                            "plugin",
-                            "install",
-                            plugin_id,
-                            "--scope",
-                            scope,
-                        ),
-                        roots,
-                        environment,
+            commands.append(
+                _command(
+                    self.agent,
+                    Operation.PLUGIN_INSTALL,
+                    plugin,
+                    (
+                        CLAUDE_EXECUTABLE,
+                        "plugin",
+                        "install",
+                        plugin_id,
+                        "--scope",
+                        scope,
                     ),
-                    _command(
-                        self.agent,
-                        Operation.PLUGIN_ENABLE,
-                        plugin,
-                        (
-                            CLAUDE_EXECUTABLE,
-                            "plugin",
-                            "enable",
-                            plugin_id,
-                            "--scope",
-                            scope,
-                        ),
-                        roots,
-                        environment,
+                    roots,
+                    environment,
+                )
+            )
+            commands.append(
+                _command(
+                    self.agent,
+                    Operation.PLUGIN_ENABLE,
+                    plugin,
+                    (
+                        CLAUDE_EXECUTABLE,
+                        "plugin",
+                        "enable",
+                        plugin_id,
+                        "--scope",
+                        scope,
                     ),
+                    roots,
+                    environment,
                 )
             )
         commands.append(
@@ -471,7 +472,13 @@ def execute_persistent_installation(
             (),
         )
     plan = build_persistent_installation_plan(preflight, inspection_result.stdout)
-    return execute_installation(plan, runner, completed=(inspection_result,))
+    settings = checkout / CLAUDE_PROJECT_SETTINGS_PATH
+    declared = settings.read_bytes() if settings.exists() else None
+    try:
+        return execute_installation(plan, runner, completed=(inspection_result,))
+    finally:
+        if declared is not None:
+            settings.write_bytes(declared)
 
 
 def _build_plan(
@@ -1063,6 +1070,7 @@ __all__ = [
     "CLAUDE_GITHUB_SOURCE_TYPE",
     "CLAUDE_PLUGIN_ENABLED_FIELD",
     "CLAUDE_PLUGIN_ID_FIELD",
+    "CLAUDE_ENABLED_PLUGINS_FIELD",
     "CLAUDE_PROJECT_SETTINGS_PATH",
     "USER_SCOPE_COLLISION_DIAGNOSTIC",
     "CLAUDE_SOURCE_FIELD",

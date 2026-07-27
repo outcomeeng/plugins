@@ -5,11 +5,7 @@
     "prose@outcomeeng": true,
     "python@outcomeeng": true,
     "spec-tree@outcomeeng": true,
-    "coding-agents@outcomeeng": true,
-    "frontend@outcomeeng": true,
-    "work@outcomeeng": true,
-    "hdl@outcomeeng": true,
-    "rust@outcomeeng": true
+    "coding-agents@outcomeeng": true
   },
   "extraKnownMarketplaces": {
     "outcomeeng": {
