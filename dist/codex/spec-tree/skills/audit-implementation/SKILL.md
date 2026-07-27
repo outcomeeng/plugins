@@ -177,13 +177,20 @@ program instead of passing the key through.
 
 The key is an opaque token SPX never parses back into segments, so a `:` inside
 a subject path is not a separator. Keep the rule segment colon-free and stable —
-a rule identifier rather than free-form prose — so two findings raised on
-different subjects can never compose one finding key. When the unit omits the
-optional `languagePartition`, keep the segment count fixed and render the
-language segment as the literal `unknown`, so two runs over the same
+a rule identifier rather than free-form prose. The rule is the final segment, so
+a colon-free rule makes the last `:` in the key an unambiguous boundary: the
+rule is exactly the text after it and the subject path is everything before it,
+however many colons that path carries. Two findings on different subjects
+therefore cannot compose one finding key. A colon inside the rule segment
+destroys that boundary and lets two distinct findings collide on one key, which
+records the second as a duplicate of the first.
+
+The key always carries a language segment; only the nested
+`priorContext.languagePartition` field is ever omitted. When the language is
+unknown, render that segment as the literal `unknown`, so two runs over the same
 unknown-language subject compose the same key. Supply that literal explicitly —
-the key carries whatever language segment it is given and no default is
-substituted for an omitted one.
+the key carries whatever language segment it is given and substitutes no default
+for one left out.
 
 Pass every key as one single-quoted argument, `--idempotency-key
 '<stable-scope-key>'`, because a subject path can itself carry a character the
