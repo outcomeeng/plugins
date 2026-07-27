@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final, cast
 
@@ -31,6 +32,16 @@ SOFT_PASS_SHELL_SNIPPETS: Final = (
     "if !",
 )
 FAIL_FAST_PREAMBLE: Final = "set -euo pipefail"
+
+
+@dataclass(frozen=True)
+class CiToolchainObservation:
+    """Raw job environment, action, command, and step-environment observations."""
+
+    job_environment: frozenset[str]
+    action_references: tuple[str, ...]
+    run_commands: tuple[str, ...]
+    step_environments: tuple[tuple[str, frozenset[str]], ...]
 
 
 def workflow() -> dict[str, Any]:
@@ -99,19 +110,28 @@ def assert_gate_declares_workflow_and_shell_lint_steps() -> None:
     assert SHELLCHECK_ARGV in step_argvs
 
 
-def assert_workflow_provisions_workflow_and_shell_lint_tools() -> None:
+def observe_ci_toolchain() -> CiToolchainObservation:
+    """Return the workflow surfaces that provision and authenticate gate tools."""
     workflow_data = workflow()
     env = cast("dict[str, str]", gate_job(workflow_data)["env"])
-    runs = [
+    steps = gate_steps(workflow_data)
+    runs = tuple(
         cast("str", step["run"]) for step in gate_steps(workflow_data) if "run" in step
-    ]
-
-    assert "JUST_VERSION" in env
-    assert "ACTIONLINT_VERSION" in env
-    assert "SHELLCHECK_VERSION" in env
-    assert any("just --version" in run for run in runs)
-    assert any("actionlint" in run for run in runs)
-    assert any("shellcheck" in run for run in runs)
+    )
+    return CiToolchainObservation(
+        job_environment=frozenset(env),
+        action_references=tuple(
+            cast("str", step["uses"]) for step in steps if "uses" in step
+        ),
+        run_commands=runs,
+        step_environments=tuple(
+            (
+                cast("str", step.get("name", "")),
+                frozenset(cast("dict[str, str]", step.get("env", {}))),
+            )
+            for step in steps
+        ),
+    )
 
 
 def assert_workflow_python_matches_project_metadata() -> None:
