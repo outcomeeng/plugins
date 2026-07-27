@@ -60,6 +60,9 @@ _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 _REAL_JUST_ENV = "OUTCOMEENG_REAL_JUST"
 
 
+NONCANONICAL_MARKETPLACE_SOURCE = "/tmp/local-marketplace"
+
+
 @dataclass(frozen=True)
 class PlanObservation:
     """Catalog and command observations from one isolated plan."""
@@ -318,28 +321,62 @@ def observe_missing_codex_home() -> str:
     raise RuntimeError("persistent installation accepted a missing CODEX_HOME")
 
 
-def observe_planned_operations() -> tuple[Operation, ...]:
-    """Expose the ordered operations one isolated installation plan performs."""
+def _installation_plans(temporary_root: Path) -> tuple[InstallationPlan, ...]:
+    """Build every plan repository installation performs across its modes.
+
+    A persistent plan against an already-canonical source refreshes it, while
+    a noncanonical source is replaced (removed, then added), so both persistent
+    variants are needed to cover the marketplace operation vocabulary.
+    """
     checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        plan = build_isolated_installation_plan(
-            checkout,
-            Path(temporary_directory),
-            os.environ,
+    isolated = build_isolated_installation_plan(
+        checkout,
+        temporary_root / "isolated",
+        os.environ,
+    )
+    plans = [isolated]
+    for index, source in enumerate(
+        (NONCANONICAL_MARKETPLACE_SOURCE, CANONICAL_MARKETPLACE_SOURCE)
+    ):
+        mirror = temporary_root / f"checkout-{index}"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, source)
+        environment = _persistent_environment(temporary_root / f"state-{index}")
+        preflight = build_persistent_preflight(mirror, environment)
+        plans.append(
+            build_persistent_installation_plan(
+                preflight,
+                codex_marketplace_listing_payload(source),
+            )
         )
-    return tuple(dict.fromkeys(command.operation for command in plan.commands))
+    return tuple(plans)
+
+
+def observe_planned_operations() -> tuple[Operation, ...]:
+    """Expose every operation a repository-installation plan performs.
+
+    An isolated plan registers fresh sources, so it never carries the
+    marketplace remove and refresh operations a persistent plan performs
+    against an already-registered source. The union of both plans is the
+    complete operation domain repository installation can fail on.
+    """
+    with TemporaryDirectory() as temporary_directory:
+        plans = _installation_plans(Path(temporary_directory))
+    return tuple(
+        dict.fromkeys(command.operation for plan in plans for command in plan.commands)
+    )
 
 
 def observe_first_failure(operation: Operation) -> FailureObservation:
-    """Fail the selected operation and expose the attempted prefix."""
+    """Fail the selected operation in the plan that performs it."""
     from outcomeeng.distribution.installation import execute_installation
 
-    checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
-        plan = build_isolated_installation_plan(
-            checkout,
-            Path(temporary_directory),
-            os.environ,
+        plans = _installation_plans(Path(temporary_directory))
+        plan = next(
+            candidate
+            for candidate in plans
+            if any(command.operation is operation for command in candidate.commands)
         )
         runner = RecordingRunner(failed_operation=operation)
         try:

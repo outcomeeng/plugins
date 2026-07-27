@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Protocol, cast
 
 MARKETPLACE_NAME = "outcomeeng"
+USER_SCOPE_COLLISION_DIAGNOSTIC = "Claude Code user-scope marketplace collision"
 CANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins"
 CANONICAL_CODEX_SOURCE = "https://github.com/outcomeeng/plugins"
 CODEX_CATALOG_PATH = Path(".agents/plugins/marketplace.json")
@@ -410,7 +411,7 @@ def build_persistent_preflight(
     user_document = _settings_document(user_settings)
     if _marketplace_entry(user_document) is not None:
         raise ValueError(
-            "Claude Code user-scope marketplace collision: "
+            f"{USER_SCOPE_COLLISION_DIAGNOSTIC}: "
             f"{user_settings} declares `{MARKETPLACE_NAME}`; remove that user-scope "
             "registration before project-scoped installation"
         )
@@ -1063,6 +1064,7 @@ __all__ = [
     "CLAUDE_PLUGIN_ENABLED_FIELD",
     "CLAUDE_PLUGIN_ID_FIELD",
     "CLAUDE_PROJECT_SETTINGS_PATH",
+    "USER_SCOPE_COLLISION_DIAGNOSTIC",
     "CLAUDE_SOURCE_FIELD",
     "CODEX_AGENTS_PATH",
     "CODEX_CATALOG_PATH",

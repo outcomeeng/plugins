@@ -9,6 +9,7 @@ from outcomeeng.distribution.installation import (
     CANONICAL_MARKETPLACE_SOURCE,
     Operation,
     SourceAction,
+    USER_SCOPE_COLLISION_DIAGNOSTIC,
     VERIFICATION_RECIPE_COMMAND,
 )
 from outcomeeng_testing.harnesses.installation import (
@@ -103,4 +104,5 @@ def test_claude_user_scope_collision_stops_before_mutation() -> None:
     observation = observe_claude_user_collision()
 
     assert str(observation.settings_path) in observation.error
+    assert USER_SCOPE_COLLISION_DIAGNOSTIC in observation.error
     assert observation.attempted == ()
