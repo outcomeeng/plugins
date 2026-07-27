@@ -554,7 +554,9 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     if blocked[module.DELIVERIES_FIELD]:
         failures.append("failed pane read mapped to partial continuation delivery")
 
-    _, intact_session, restored = _continuation_plan(module, roster, fixture)
+    continuation_sessions, intact_session, restored = _continuation_plan(
+        module, roster, fixture
+    )
     reassessment = module.plan_reassessment(
         reassess_prepared, reassess_bindings, verified, reads, restored
     )
@@ -572,6 +574,30 @@ def verify_native_agent_recovery_mappings() -> list[str]:
         for delivery in reassessment_deliveries
     ):
         failures.append("a judged-intact candidate mapped to a delivery")
+
+    all_intact = module.plan_reassessment(
+        reassess_prepared, reassess_bindings, verified, reads, []
+    )
+    if all_intact[module.STATUS_FIELD] != module.ResultStatus.REASSESSMENT_READY:
+        failures.append("a wholly intact candidate set did not reach settlement")
+    if all_intact[module.DELIVERIES_FIELD]:
+        failures.append("a wholly intact candidate set mapped to a delivery")
+    all_intact_sessions = cast(
+        list[str], all_intact[module.NO_CONTINUATION_SESSION_IDS_FIELD]
+    )
+    if all_intact_sessions != sorted(continuation_sessions):
+        failures.append("a wholly intact candidate set omitted a verified identity")
+    settled_intact = module.settle_recovery(all_intact, [])
+    if settled_intact[module.STATUS_FIELD] != module.ResultStatus.REASSESSMENT_SENT:
+        failures.append("a zero-delivery reassessment plan did not settle")
+    recorded_intact = cast(
+        list[str],
+        cast(dict[str, object], settled_intact[module.PREPARED_FIELD])[
+            module.REASSESSED_SESSION_IDS_FIELD
+        ],
+    )
+    if not set(all_intact_sessions).issubset(recorded_intact):
+        failures.append("settling zero deliveries recorded no judged-intact identity")
     return failures
 
 

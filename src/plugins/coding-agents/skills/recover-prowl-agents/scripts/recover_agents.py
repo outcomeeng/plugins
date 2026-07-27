@@ -1440,9 +1440,13 @@ def plan_reassessment(
     judged_none = sorted(pending_sessions - set(restored))
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        # Every pending candidate reaches settlement, including a set the
+        # controller judged wholly intact: settling zero deliveries is what
+        # records those identities as reassessed, so a repeated recovery
+        # reads them as settled rather than pending them again.
         STATUS_FIELD: (
             ResultStatus.REASSESSMENT_READY
-            if deliveries
+            if pending_sessions
             else ResultStatus.ALREADY_CURRENT
         ),
         PREPARED_FIELD: _object(prepared, PREPARED_FIELD),
