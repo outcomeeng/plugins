@@ -668,7 +668,8 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 - `.claude-plugin/marketplace.json` — Claude Code marketplace catalog (one entry per shipped plugin).
 - `.agents/plugins/marketplace.json` — Codex marketplace catalog (mirror of the above).
 - `.spx/` — gitignored operational files (sessions, audit state).
-- `.claude/settings.json`, `.codex/config.toml` — product-scoped harness settings, committed for collaborators.
+- `.claude/settings.json` — product-scoped Claude Code plugin selection, committed for collaborators.
+- `.codex/config.toml` — repository Codex settings unrelated to plugin installation or enablement.
 - `AGENTS.md` (this file), `CLAUDE.md` (harness-specific copy) — repo-level instruction surfaces.
 
 For the contents of any plugin or `spx/` subdirectory, run `ls` or read the catalog. The authored directory layout under each plugin follows the conventions in `src/plugins/instructions/skills/`.
@@ -729,7 +730,7 @@ When product-required Claude plugins are missing, ask the user before changing p
 ```bash
 claude plugin marketplace add outcomeeng/plugins --scope project
 
-for plugin in instructions python prose spec-tree; do
+for plugin in instructions typescript prose python spec-tree coding-agents; do
   claude plugin install "${plugin}@outcomeeng" --scope project
 done
 ```
@@ -737,7 +738,7 @@ done
 If an installed product-scoped plugin has been disabled, re-enable it at product scope:
 
 ```bash
-for plugin in instructions python prose spec-tree; do
+for plugin in instructions typescript prose python spec-tree coding-agents; do
   claude plugin enable "${plugin}@outcomeeng" --scope project
 done
 ```
@@ -746,41 +747,17 @@ After changing plugin state in a running Claude Code session, run `/reload-plugi
 
 ### Codex
 
-Codex marketplace registration is user-scoped. Ask the user before changing `~/.codex/config.toml`, then register the marketplace once:
+Codex marketplace registration and plugin installation are user-scoped under the selected `$CODEX_HOME`. Ask the user before changing `$CODEX_HOME/config.toml` or invoking a state-mutating plugin command, then register the marketplace and install the required plugins:
 
 ```bash
 codex plugin marketplace add outcomeeng/plugins
+
+for plugin in instructions typescript prose python spec-tree coding-agents; do
+  codex plugin add "${plugin}@outcomeeng"
+done
 ```
 
-Enable plugins per product by committing `.codex/config.toml`. Keep the product list explicit so each repo gets only the plugins it needs:
-
-```toml
-[plugins."instructions@outcomeeng"]
-enabled = true
-
-[plugins."prose@outcomeeng"]
-enabled = true
-
-[plugins."spec-tree@outcomeeng"]
-enabled = true
-```
-
-Add language or domain plugins only for projects that use them:
-
-```toml
-[plugins."python@outcomeeng"]
-enabled = true
-
-[plugins."typescript@outcomeeng"]
-enabled = true
-```
-
-If a user's global Codex config already enables a plugin that the product should keep off, add an explicit product override:
-
-```toml
-[plugins."typescript@outcomeeng"]
-enabled = false
-```
+Repository `.codex/config.toml` does not install, enable, or disable plugins. Do not edit it for plugin setup. Inspect the selected home's effective installation state with `codex plugin list --json`.
 
 <!-- SPEC-TREE:shared commands -->
 
