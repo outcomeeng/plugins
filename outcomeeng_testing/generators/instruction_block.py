@@ -117,12 +117,19 @@ def delegation_candidate_cases(
     def padded_to(size: int) -> str:
         """Return a body naming ``other_filename`` whose stripped text is exactly ``size`` long.
 
-        The padding follows the pointer on its own line, so the separating newline counts toward
-        the size the bound measures.
+        Padding follows the pointer on its own line, so the separating newline counts toward the
+        size the bound measures. One size is therefore unreachable — a single character past the
+        bare pointer would need that newline and nothing after it — and asking for it raises
+        rather than returning a body of the wrong length.
         """
-        padding = size - len(pointer.strip()) - len("\n")
-        if padding < 0:
-            raise ValueError(f"the pointer body already exceeds {size} characters")
+        bare = len(pointer.strip())
+        if size == bare:
+            return pointer
+        padding = size - bare - len("\n")
+        if padding < 1:
+            raise ValueError(
+                f"no body naming {other_filename} has exactly {size} characters"
+            )
         body = pointer + "x" * padding
         if len(body.strip()) != size:
             raise ValueError(

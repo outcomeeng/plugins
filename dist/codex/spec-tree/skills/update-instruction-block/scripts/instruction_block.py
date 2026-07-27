@@ -787,6 +787,26 @@ def delegation_candidates(bodies_by_harness: Mapping[str, str]) -> tuple[str, ..
     return tuple(candidates)
 
 
+def is_first_encounter(body_claude: str, body_codex: str) -> bool:
+    """Report whether the bootstrap pass may still arrange these two bodies.
+
+    A surface is a first encounter while neither body carries a valid shared region and neither
+    carries a malformed fence. A malformed fence (an open marker with no matching close, or a
+    duplicated name) makes ``parse_shared_regions`` read the body as region-free, so a bootstrap
+    would wrap the dangling marker verbatim into a new region and bury it in a permanently stuck
+    stale state; an ambiguous seed is refused rather than guessed at, and ``--check`` and the drift
+    gate surface it as stale instead.
+
+    Every step that only a first encounter may take reads this one function, so the reported
+    remedy and the write that applies it can never disagree about whether the pass is open.
+    Pure: two strings in, a bool out.
+    """
+    return not any(
+        malformed_shared_regions(body) or parse_shared_regions(body)
+        for body in (body_claude, body_codex)
+    )
+
+
 def adopt_delegated_body(
     bodies_by_harness: Mapping[str, str], adopt_harness: str
 ) -> dict[str, str]:
@@ -796,6 +816,18 @@ def adopt_delegated_body(
     choice. Pure: a mapping of bodies and a harness name in, a mapping of bodies out.
     """
     kept = bodies_by_harness[adopt_harness]
+    others = [name for name in bodies_by_harness if name != adopt_harness]
+    if any(
+        is_delegation_candidate(kept, AGENT_HARNESS_INSTRUCTION_FILENAMES[other])
+        for other in others
+    ):
+        # The named side points at the other. Adopting it would install a body that sends the
+        # reader to a file now carrying that same pointer, and the surface would read as current.
+        raise CliInputError(
+            f"--adopt {adopt_harness} names a body that only points at the other root "
+            "instruction file; no side carries content to adopt, so write the intended "
+            "instructions into one file first"
+        )
     return {harness: kept for harness in bodies_by_harness}
 
 
@@ -891,21 +923,7 @@ def build_root_instruction_documents(
     body_claude = _strip_managed_block(_product_owned_root_document(seeds["claude"]))
     body_codex = _strip_managed_block(_product_owned_root_document(seeds["codex"]))
 
-    # A malformed shared fence (an open marker with no matching close, or a duplicated name) makes
-    # `parse_shared_regions` read the body as region-free, which would make the bootstrap wrap the
-    # dangling marker verbatim into a new region and bury it — a permanently stuck stale state the
-    # bootstrap must never produce, because an ambiguous seed is refused rather than guessed at.
-    # Refuse the bootstrap and leave the fence as independent content, which `--check` and the
-    # drift gate already surface as stale for the update skill to reconcile.
-    malformed = malformed_shared_regions(body_claude) or malformed_shared_regions(
-        body_codex
-    )
-    first_encounter = (
-        not malformed
-        and not parse_shared_regions(body_claude)
-        and not parse_shared_regions(body_codex)
-    )
-    if first_encounter:
+    if is_first_encounter(body_claude, body_codex):
         if adopt_harness is not None:
             adopted = adopt_delegated_body(
                 {"claude": body_claude, "codex": body_codex}, adopt_harness
@@ -1384,9 +1402,9 @@ def reconcile_root_shared_regions(
 def unresolved_delegation(repo_root: pathlib.Path) -> tuple[str, ...]:
     """CLI-edge helper: return the root instruction files that may be a pointer at the other.
 
-    Only a first encounter can adopt a body — once either file carries a shared region the two
-    bodies are the arrangement the operator already chose — so a candidate outside that state is
-    not reported. The pure test is :func:`delegation_candidates`.
+    Only a first encounter can adopt a body, so a candidate outside that state is not reported —
+    reporting one there would name a remedy the write would decline to apply. The state test is
+    :func:`is_first_encounter` and the candidate test is :func:`delegation_candidates`.
     """
     texts = _read_both_root_texts(repo_root)
     if texts is None:
@@ -1395,7 +1413,7 @@ def unresolved_delegation(repo_root: pathlib.Path) -> tuple[str, ...]:
         harness: _strip_managed_block(_product_owned_root_document(text))
         for harness, text in zip(("claude", "codex"), texts, strict=True)
     }
-    if any(parse_shared_regions(body) for body in bodies.values()):
+    if not is_first_encounter(bodies["claude"], bodies["codex"]):
         return ()
     return tuple(
         AGENT_HARNESS_INSTRUCTION_FILENAMES[harness]

@@ -102,6 +102,46 @@ def test_the_reconcile_reports_a_pointer_body_as_an_ambiguity(
     assert f"ambiguous (delegating): {harness.INSTRUCTION_CLAUDE}" in stderr
 
 
+def test_an_answer_naming_a_pointer_body_is_refused(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    seeds = harness.materialize_root_instruction_topology(
+        repo, harness.root_instruction_topology_mutual_delegation()
+    )
+    template = harness.write_template(tmp_path, harness.NEW_VERSION)
+
+    exit_code = harness.run_generator_write_primary(
+        repo, template, adopt_harness="claude"
+    )
+
+    # Adopting either side would install a body that sends the reader to a file now carrying the
+    # same pointer, and the surface would then read as current with nothing left to signal it.
+    assert exit_code == 2
+    for filename in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+        assert (repo / filename).read_text(encoding="utf-8") == seeds[filename]
+
+
+def test_a_pointer_beside_a_malformed_fence_is_never_reported(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = tmp_path / "repo"
+    topology = harness.root_instruction_topology_delegating()
+    # The content-bearing side also carries an unclosed fence, which refuses the bootstrap. The
+    # pointer is still a pointer, so only agreement between the report and the write keeps the
+    # reported remedy from being one the write would decline to apply.
+    topology.files[harness.INSTRUCTION_AGENTS] += (
+        f"\n{MODULE.shared_open_marker('commands')}\n\nbody with no closing fence\n"
+    )
+    harness.materialize_root_instruction_topology(repo, topology)
+    template = harness.write_template(tmp_path, harness.NEW_VERSION)
+
+    assert MODULE.unresolved_delegation(repo) == ()
+
+    harness.run_generator_write_primary(repo, template, adopt_harness="codex")
+
+    claude = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+    assert topology.files[harness.INSTRUCTION_CLAUDE].strip() in claude
+
+
 def test_an_unresolved_pointer_keeps_the_surface_stale(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     harness.materialize_root_instruction_topology(
