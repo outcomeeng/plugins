@@ -18,3 +18,4 @@
 21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/54-workflow-review.enabler
 21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/65-workflow-evolution.enabler
 21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler
+43-instructions.enabler/21-subagents.enabler

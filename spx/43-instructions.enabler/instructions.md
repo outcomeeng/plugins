@@ -8,7 +8,7 @@ CAN build high-quality plugins that follow established patterns and best practic
 
 ### Compliance
 
-- ALWAYS: separate builder skills from auditor skills — builders produce, auditors evaluate ([review])
-- ALWAYS: centralize prompt voice, description, and constraint conventions in `/agent-prompt-standards` — prompt craft is shared across skills and subagents ([review])
-- ALWAYS: auditor skills produce structured verdicts, not code changes — audit skills are read-only ([review])
-- NEVER: use auditor skills to modify files — they inform decisions but do not implement them ([review])
+- ALWAYS: separate builder skills from auditor skills — builders produce, auditors evaluate ([audit])
+- ALWAYS: centralize prompt voice, description, and constraint conventions in `/agent-prompt-standards` — prompt craft is shared across skills and subagents ([audit])
+- ALWAYS: auditor skills produce structured verdicts, not code changes — audit skills are read-only ([audit])
+- NEVER: use auditor skills to modify files — they inform decisions but do not implement them ([audit])

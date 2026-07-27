@@ -16,7 +16,7 @@ Resolve the target to its `SKILL.md` plus every file recursively present under `
 
 <step name="dispatch_audit">
 
-Dispatch the typed `skill-auditor` role with the repository path, every target skill-content path, governing node paths when known, and deterministic verification already run. If the role is unavailable or returns no complete structured JSON verdict, return `BLOCKED`; never substitute an in-context `/audit-skills` invocation. Preserve a completed structured verdict unchanged.
+Dispatch the typed `skill-auditor` role with the repository path, every target skill-content path, governing node paths when known, and deterministic verification already run. If the role is unavailable or returns no complete structured JSON verdict, return `BLOCKED`; never substitute an in-context `/audit-skill` invocation. Preserve a completed structured verdict unchanged.
 
 The audit is read-only: never edit files, assign a numeric score, ask the auditor to produce fixes, or append an unsolicited fix offer. For an audit-only request, return the verdict and stop. For an explicit improvement request, preserve the verdict as repair input and continue.
 
@@ -46,14 +46,14 @@ For an explicit improvement request, confirm every accepted finding and same-cla
 
 <audit_anti_patterns>
 
-| Anti-pattern          | Rejected behavior                                                                                           |
-| --------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Ad hoc audit          | Evaluating the skill without the typed `skill-auditor` or invoking `/audit-skills` in the authoring context |
-| Runtime-specific path | Assuming a home-directory skill location instead of using the supplied or repository path                   |
-| Scored report         | Replacing the structured verdict with a numeric score                                                       |
-| Automatic fix offer   | Soliciting mutations after an audit-only request                                                            |
-| Lexical batch rename  | Renaming unlike skill types because their names share a token, suffix, or grammatical form                  |
-| Restated standards    | Copying `/skill-standards` rules into this workflow                                                         |
+| Anti-pattern          | Rejected behavior                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Ad hoc audit          | Evaluating the skill without the typed `skill-auditor` or invoking `/audit-skill` in the authoring context |
+| Runtime-specific path | Assuming a home-directory skill location instead of using the supplied or repository path                  |
+| Scored report         | Replacing the structured verdict with a numeric score                                                      |
+| Automatic fix offer   | Soliciting mutations after an audit-only request                                                           |
+| Lexical batch rename  | Renaming unlike skill types because their names share a token, suffix, or grammatical form                 |
+| Restated standards    | Copying `/skill-standards` rules into this workflow                                                        |
 
 </audit_anti_patterns>
 

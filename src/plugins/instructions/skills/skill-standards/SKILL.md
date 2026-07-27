@@ -11,7 +11,7 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 lines unless it qualifies for the eager-foundation exception in `<progressive_disclosure>`, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — (e) the skill is independent of its caller, and (f) the skill passes `/audit-skills` with no must-fix items.
+Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 lines unless it qualifies for the eager-foundation exception in `<progressive_disclosure>`, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — (e) the skill is independent of its caller, and (f) the skill passes `/audit-skill` with no must-fix items.
 </success_criteria>
 
 <reference_note>

@@ -50,7 +50,7 @@ Remaining drift (agent-concept "runtime" usage, distinct from generic "at runtim
 `/skill-standards` `<progressive_disclosure>` requires a table of contents at the top of every reference file over 100 lines, "so partial reads still see the full scope". Twenty-six files across seven plugins exceed the threshold without one, ranging from 108 to 971 lines:
 
 - `hdl` — `review-systemverilog/references/systemverilog-idioms.md` (716), `review-vhdl/references/vhdl-idioms.md` (472)
-- `instructions` — all seven `create-subagents/references/*.md` (410–971), both `audit-skills/references/*.md` (116, 140), both `create-skill/references/*.md` (113, 123)
+- `instructions` — all seven `create-subagent/references/*.md` (410–971), both `audit-skill/references/*.md` (116, 140), both `create-skill/references/*.md` (113, 123)
 - `rust` — `architect-rust/references/{adr-patterns,rust-principles}.md` (120, 108), `code-rust/references/outcome-engineering-patterns.md` (138), `rust-test-standards/references/level-1.md` (111)
 - `spec-tree` — `audit-eval-evidence/references/evidence-model.md` (143)
 - `typescript` — `architect-typescript/references/typescript-principles.md` (144), both `code-typescript/references/*.md` (116, 138), `typescript-test-standards/references/exception-implementations.md` (109)
@@ -62,7 +62,7 @@ A table of contents is satisfied by a `## Contents` section, an XML `<contents>`
 
 **Resolution shape**: add a table of contents to each file in the form its surrounding skill already uses — `## Contents` for markdown-structured references, `<contents>` for XML-structured ones — listing every top-level section. Run `instructions:skill-auditor` over each affected skill afterward. The sweep divides cleanly by plugin, so it can land as one changeset per plugin rather than one large one.
 
-**Revisit condition.** Resolve per plugin when that plugin next needs a reference-file change, or as one dedicated sweep. `create-subagents` is the highest-value single target: seven files, 4,646 lines, the largest partial-read exposure in the marketplace.
+**Revisit condition.** Resolve per plugin when that plugin next needs a reference-file change, or as one dedicated sweep. `create-subagent` is the highest-value single target: seven files, 4,646 lines, the largest partial-read exposure in the marketplace.
 
 ## Agent-specific behavior is enumerated inside product-level decisions
 

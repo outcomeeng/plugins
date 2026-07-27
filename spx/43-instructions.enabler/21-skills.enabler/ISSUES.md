@@ -27,7 +27,7 @@ without knowing the generated auditor's workflow.
 
 Required handling: decide whether every auditor requires `Bash`, define how a generic
 template expresses least-privilege command grants, and align `/skill-standards`,
-`/audit-skills`, and the auditor template so the same surface cannot be rejected both
+`/audit-skill`, and the auditor template so the same surface cannot be rejected both
 for granting and omitting bare `Bash`.
 
 Source: skill-auditor finding `f-004`, rule `read_only_audit_capabilities`, severity

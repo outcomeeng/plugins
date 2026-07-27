@@ -24,3 +24,22 @@ Next step, once that migration lands: author the declared `voice`,
 `just eval-node spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler`
 at the default budget, commit the fresh `history.jsonl` rows, and remove this
 node's `spx/EXCLUDE` entry once the suites pass.
+
+## Rename `/audit-specs` to `/audit-spec`
+
+`spx/14-skill-naming.pdr.md` names a workflow skill after the artifact one
+invocation judges. One `/audit-specs` invocation judges one spec node — the
+`spec-auditor` role task carries a single full node path — so the plural
+overstates the invocation's scope.
+
+The rename reaches further than the instructions-plugin renames that established
+the rule, because the skill name is also the node slug: this node directory,
+its spec filename, and its `spx/EXCLUDE` entry all carry `audit-specs`. A node
+rename is `/refactor` work, and the producer skill is embedded verbatim in the
+`structure` eval suite's `prompt.md`, so the rename re-materializes that prompt
+and invalidates its committed `history.jsonl` rows.
+
+Do it in the same pass as the eval-suite build above, after the verification-run
+migration lands — the producer is rewritten once and the run evidence is paid
+for once. Reconcile with the family-wide audit-skill concerns in
+`spx/21-spec-tree.enabler/32-decisions.enabler/ISSUES.md`.
