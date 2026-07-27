@@ -103,7 +103,7 @@ These issues significantly hurt effectiveness - flag as critical:
 Check against `/agent-prompt-standards` conventions:
 
 - **Voice**: Uses imperative mood for instructions, "Claude" for failure modes/tendencies. Never "the agent", "the model", or "you"
-- **Description style**: Natural-language purpose and usage wording from `/create-subagent`; states what the subagent does and when to invoke it. Do not apply the directive skill-frontmatter description pattern.
+- **Description style**: The directive form `/agent-prompt-standards` `<description_style>` prescribes, naming the triggers that select this subagent. That standard owns the convention for skills and subagents alike.
 - **Constraint language**: Strong modal verbs (MUST/NEVER/ALWAYS) in constraint blocks
 - **Anti-patterns**: No banned phrases ("helpful assistant", "helps with", "please"). No structural anti-patterns (explaining Claude to Claude, motivational prose)
 

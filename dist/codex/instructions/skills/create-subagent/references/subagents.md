@@ -563,7 +563,9 @@ Create task-specific subagents, not generic helpers.
 Make the `description` clear about when to invoke:
 
 ❌ Bad: "Helps with code"
-✅ Good: "Reviews code for security risks. Use after changes involving authentication, data access, or user input."
+✅ Good: "ALWAYS invoke when changes involve authentication, data access, or user input."
+
+The directive opening is the form `/agent-prompt-standards` `<description_style>` measures highest; it governs skill and custom agent descriptions alike.
 </clear_triggers>
 
 <focused_tools>

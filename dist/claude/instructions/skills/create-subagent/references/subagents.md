@@ -285,7 +285,7 @@ Follow the file format specified above (YAML frontmatter + system prompt).
 ```bash
 claude --agents '{
   "code-reviewer": {
-    "description": "Reviews code quality, security, and best practices. Use after code changes.",
+    "description": "ALWAYS invoke this subagent when code changes need review for quality, security, or best practices.",
     "prompt": "Claude is a senior code reviewer. Focus on quality, security, and best practices.",
     "tools": ["Read", "Grep", "Glob", "Bash"],
     "model": "sonnet"
@@ -595,7 +595,9 @@ Create task-specific subagents, not generic helpers.
 Make the `description` clear about when to invoke:
 
 ❌ Bad: "Helps with code"
-✅ Good: "Reviews code for security risks. Use after changes involving authentication, data access, or user input."
+✅ Good: "ALWAYS invoke when changes involve authentication, data access, or user input."
+
+The directive opening is the form `/agent-prompt-standards` `<description_style>` measures highest; it governs skill and subagent descriptions alike.
 </clear_triggers>
 
 <focused_tools>

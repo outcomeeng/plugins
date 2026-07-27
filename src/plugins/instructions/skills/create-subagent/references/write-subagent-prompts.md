@@ -302,13 +302,13 @@ description: Billing agent
 {!% if target == 'codex' %!}
 
 ```toml
-description = "Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient."
+description = "ALWAYS invoke when new code needs tests or test coverage is insufficient."
 ```
 
 {!% else %!}
 
 ```yaml
-description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient.
+description: ALWAYS invoke when new code needs tests or test coverage is insufficient.
 ```
 
 {!% endif %!}
@@ -318,13 +318,13 @@ description: Creates comprehensive test suites. Use when new code needs tests or
 {!% if target == 'codex' %!}
 
 ```toml
-description = "Handles current billing statements and payment processing. Use when the user asks about invoices, payments, or billing history, excluding subscription changes."
+description = "ALWAYS invoke when the user asks about invoices, payments, or billing history, excluding subscription changes."
 ```
 
 {!% else %!}
 
 ```yaml
-description: Handles current billing statements and payment processing. Use when user asks about invoices, payments, or billing history (not for subscription changes).
+description: ALWAYS invoke when the user asks about invoices, payments, or billing history, excluding subscription changes.
 ```
 
 {!% endif %!}
@@ -576,7 +576,7 @@ Task is complete when:
 
 ```toml
 name = "agent-name"
-description = "What it does and when to use it. Include trigger keywords."
+description = "ALWAYS invoke when <triggers>."
 model = "{{! term('configured_agent_standard_model') !}}"
 model_reasoning_effort = "high"
 {{! field('configured_agent_prompt') !}} = """
@@ -613,7 +613,7 @@ Expected output structure
 ```text
 ---
 name: subagent-name
-description: What it does and when to use it. Include trigger keywords.
+description: ALWAYS invoke when <triggers>.
 tools: Tool1, Tool2, Tool3
 model: {{! term('configured_agent_standard_model') !}}
 ---

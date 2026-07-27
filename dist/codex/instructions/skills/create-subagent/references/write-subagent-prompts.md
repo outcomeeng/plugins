@@ -277,13 +277,13 @@ description = "Billing agent"
 ✅ Good (specific triggers + differentiation):
 
 ```toml
-description = "Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient."
+description = "ALWAYS invoke when new code needs tests or test coverage is insufficient."
 ```
 
 ✅ Good (clear scope):
 
 ```toml
-description = "Handles current billing statements and payment processing. Use when the user asks about invoices, payments, or billing history, excluding subscription changes."
+description = "ALWAYS invoke when the user asks about invoices, payments, or billing history, excluding subscription changes."
 ```
 
 **Optimization tips**:
@@ -525,7 +525,7 @@ Task is complete when:
 
 ```toml
 name = "agent-name"
-description = "What it does and when to use it. Include trigger keywords."
+description = "ALWAYS invoke when <triggers>."
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 developer_instructions = """

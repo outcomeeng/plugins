@@ -277,13 +277,13 @@ description: Billing agent
 ✅ Good (specific triggers + differentiation):
 
 ```yaml
-description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient.
+description: ALWAYS invoke when new code needs tests or test coverage is insufficient.
 ```
 
 ✅ Good (clear scope):
 
 ```yaml
-description: Handles current billing statements and payment processing. Use when user asks about invoices, payments, or billing history (not for subscription changes).
+description: ALWAYS invoke when the user asks about invoices, payments, or billing history, excluding subscription changes.
 ```
 
 **Optimization tips**:
@@ -528,7 +528,7 @@ Task is complete when:
 ```text
 ---
 name: subagent-name
-description: What it does and when to use it. Include trigger keywords.
+description: ALWAYS invoke when <triggers>.
 tools: Tool1, Tool2, Tool3
 model: sonnet
 ---
