@@ -457,10 +457,10 @@ Why it failed: An unquoted argument reaches the shell before `spx` sees it, so
 any shell metacharacter the key carries — including one inside the subject path
 of an otherwise correctly formatted key — becomes syntax rather than key text.
 A subject path carrying `|` yields a different symptom: the shell runs the
-fragment after it as a command, reporting `command not found`, or
-`Permission denied` when that fragment names an existing non-executable file.
-Each symptom names a path fragment, which reads as a file problem rather than
-the quoting defect it is.
+fragment after it as a command, reporting `command not found` or `No such file
+or directory`, and `Permission denied` when that fragment names an existing
+non-executable file. Each symptom names a path fragment, which reads as a file
+problem rather than the quoting defect it is.
 
 How to avoid: Pass every key as one single-quoted argument,
 `--idempotency-key '<stable-scope-key>'`, per `<verification_run_contract>`.
