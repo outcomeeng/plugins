@@ -28,15 +28,15 @@ Select one verb from the invocation. `help` is the default when none is given.
 
 <changelogs>
 
-`help` names where a reader answers "what changed for me, and what must I now do?". Each line runs on its own clock, and all three ship inside installed plugins, so a session reads them without network access. Read one only when the reader asks what changed; never read all three by default.
+`help` names where a reader answers "what changed for me, and what must I now do?". Each line runs on its own clock. The marketplace and plugin lines ship inside every installed plugin; the methodology line ships only where its providing plugin is installed. Whichever are present are read from disk, without network access. Read one only when the reader asks what changed; never read all three by default.
 
-| Line        | Records                                                  | Path                                                      |
-| ----------- | -------------------------------------------------------- | --------------------------------------------------------- |
-| Marketplace | events no single plugin owns: harnesses, plugins renamed | `${CLAUDE_SKILL_DIR}/references/MARKETPLACE-CHANGELOG.md` |
-| Plugin      | what changed in this plugin                              | `${CLAUDE_SKILL_DIR}/../../CHANGELOG.md`                  |
-| Methodology | edition transitions, compatible extensions, deprecations | `../../METHODOLOGY-CHANGELOG.md`, in the providing plugin |
+| Line        | Records                                                  | Path                                                                                       |
+| ----------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Marketplace | events no single plugin owns: harnesses, plugins renamed | `${CLAUDE_SKILL_DIR}/references/MARKETPLACE-CHANGELOG.md`                                  |
+| Plugin      | what changed in this plugin                              | `${CLAUDE_SKILL_DIR}/../../CHANGELOG.md`                                                   |
+| Methodology | edition transitions, compatible extensions, deprecations | `${CLAUDE_SKILL_DIR}/../../METHODOLOGY-CHANGELOG.md`, shipped only in the spec-tree plugin |
 
-The marketplace line is identical in every installed plugin, because a plugin rename is unreadable from the renamed plugin once its old identity stops resolving. The methodology line ships only with the plugin that provides the methodology; a plugin that provides none carries no such file, and its absence is normal rather than a fault.
+The marketplace line is identical in every installed plugin, because a plugin rename is unreadable from the renamed plugin once its old identity stops resolving. Reading this plugin's copy is therefore always enough. A checkout without the spec-tree plugin has no methodology changelog to read, and that absence is normal rather than a fault.
 
 </changelogs>
 
