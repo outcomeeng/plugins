@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import stat
 import subprocess
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -135,13 +137,15 @@ class RealInstallationObservation:
     placed_initial: tuple[tuple[str, bytes], ...]
     placed_first: tuple[tuple[str, bytes], ...]
     placed_second: tuple[tuple[str, bytes], ...]
+    shipped_agents: tuple[tuple[str, bytes], ...]
     unowned_initial: bytes
     unowned_first: bytes
     unowned_second: bytes
-    ownership_prefixes: tuple[str, ...]
     persistent_initial: tuple[tuple[str, bytes], ...]
     persistent_first: tuple[tuple[str, bytes], ...]
     persistent_second: tuple[tuple[str, bytes], ...]
+    persistent_mode_first: int
+    persistent_mode_second: int
     first_stdout: str
     first_stderr: str
     second_stdout: str
@@ -350,9 +354,9 @@ def observe_codex_config_independence() -> ConfigObservation:
 
 
 def observe_verification_recipe() -> VerificationRecipeObservation:
-    """Render the verification recipe without running its L2 test."""
+    """Run the public isolated-verification recipe."""
     result = subprocess.run(
-        ("just", "--dry-run", "verify-marketplace-installation"),
+        ("just", "verify-marketplace-installation"),
         cwd=repository_root(),
         capture_output=True,
         text=True,
@@ -376,7 +380,7 @@ def observe_real_installation() -> RealInstallationObservation:
         _mirror_installation_inputs(checkout, mirror)
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
         codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
-        ownership_prefixes = _placement_prefixes(mirror)
+        shipped_agents = _shipped_agent_snapshot(mirror)
         persistent_root = temporary_root / "persistent"
         persistent_environment = _persistent_environment(persistent_root)
         _seed_persistent_state(persistent_root)
@@ -391,13 +395,15 @@ def observe_real_installation() -> RealInstallationObservation:
         claude_target = _registration_target(plan, Agent.CLAUDE)
         codex_target = _registration_target(plan, Agent.CODEX)
         state_roots = _state_roots(plan)
-        first = _run_recipe(checkout, mirror, state, environment)
+        with _blocked_directory(persistent_root) as persistent_mode_first:
+            first = _run_recipe(checkout, mirror, state, environment)
         claude_first = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_first = _run_listing(Agent.CODEX, mirror, environment)
         placed_first = _agent_snapshot(mirror)
         unowned_first = unowned.read_bytes()
         persistent_first = _tree_snapshot(persistent_root)
-        second = _run_recipe(checkout, mirror, state, environment)
+        with _blocked_directory(persistent_root) as persistent_mode_second:
+            second = _run_recipe(checkout, mirror, state, environment)
         claude_second = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_second = _run_listing(Agent.CODEX, mirror, environment)
         placed_second = _agent_snapshot(mirror)
@@ -418,13 +424,15 @@ def observe_real_installation() -> RealInstallationObservation:
         placed_initial=placed_initial,
         placed_first=placed_first,
         placed_second=placed_second,
+        shipped_agents=shipped_agents,
         unowned_initial=unowned_initial,
         unowned_first=unowned_first,
         unowned_second=unowned_second,
-        ownership_prefixes=ownership_prefixes,
         persistent_initial=persistent_initial,
         persistent_first=persistent_first,
         persistent_second=persistent_second,
+        persistent_mode_first=persistent_mode_first,
+        persistent_mode_second=persistent_mode_second,
         first_stdout=first.stdout,
         first_stderr=first.stderr,
         second_stdout=second.stdout,
@@ -611,14 +619,31 @@ def _agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
     return tuple((path.name, path.read_bytes()) for path in sorted(directory.glob("*")))
 
 
-def _placement_prefixes(checkout: Path) -> tuple[str, ...]:
-    prefixes = []
+def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
+    shipped: dict[str, bytes] = {}
     manifests = (checkout / "dist/codex").glob("*/skills/*/agents/placement.json")
     for manifest in sorted(manifests):
         document = json.loads(manifest.read_text(encoding="utf-8"))
-        if document.get("directory") == str(CODEX_AGENTS_PATH):
-            prefixes.append(str(document["prefix"]))
-    return tuple(prefixes)
+        if document.get("directory") != str(CODEX_AGENTS_PATH):
+            continue
+        prefix = str(document["prefix"])
+        for definition in sorted(manifest.parent.glob(f"{prefix}*")):
+            if definition.name in shipped:
+                raise RuntimeError(
+                    f"duplicate shipped Codex agent definition: {definition.name}"
+                )
+            shipped[definition.name] = definition.read_bytes()
+    return tuple(sorted(shipped.items()))
+
+
+@contextmanager
+def _blocked_directory(path: Path) -> Iterator[int]:
+    original_mode = stat.S_IMODE(path.stat().st_mode)
+    path.chmod(0)
+    try:
+        yield stat.S_IMODE(path.stat().st_mode)
+    finally:
+        path.chmod(original_mode)
 
 
 def _seed_persistent_state(root: Path) -> None:
