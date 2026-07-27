@@ -31,7 +31,6 @@ from outcomeeng.distribution.installation import (
     Operation,
     PersistentPreflight,
     STATE_ENV_NAMES,
-    VERIFICATION_TEST,
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
