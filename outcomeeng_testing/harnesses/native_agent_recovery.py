@@ -177,6 +177,66 @@ def _all_bindings(
     ]
 
 
+def _verified_recovery(
+    module: ModuleType, roster: RecoveryRosterCase
+) -> dict[str, object]:
+    """One verified post-restart recovery fixture shared by the mapping and compliance lanes."""
+    prepared = _prepared(module, roster)
+    panes, _ = _post_restart_rosters(module, roster, len(roster.original_pane_ids))
+    bindings = _all_bindings(module, roster)
+    agents_without_sessions = _post_restart_rosters(
+        module,
+        roster,
+        len(roster.original_pane_ids),
+        exact_sessions=False,
+    )[1]
+    correlations = identity_evidence(module, roster, roster.post_restart_pane_ids)
+    for index, correlation in enumerate(correlations):
+        if correlation[module.SOURCE_FIELD] is module.EvidenceSource.PUBLIC_AGENT:
+            agents_without_sessions[index][module.SESSION_FIELD] = {
+                module.ID_FIELD: roster.session_ids[index]
+            }
+        elif (
+            correlation[module.SOURCE_FIELD] is module.EvidenceSource.OPERATOR_CONFIRMED
+        ):
+            correlation[module.SOURCE_FIELD] = module.EvidenceSource.PROCESS_ARGUMENT
+    return {
+        "prepared": prepared,
+        "panes": panes,
+        "bindings": bindings,
+        "agents": agents_without_sessions,
+        "correlations": correlations,
+        "verified": module.verify(
+            prepared, bindings, panes, agents_without_sessions, correlations
+        ),
+        "reads": pane_read_results(module, bindings),
+    }
+
+
+def _continuation_plan(
+    module: ModuleType, roster: RecoveryRosterCase, fixture: dict[str, object]
+) -> tuple[list[str], str, list[dict[str, object]]]:
+    """The non-controller sessions, the one judged intact, and the restored facts for the rest."""
+    continuation_sessions = [
+        cast(str, candidate[module.SESSION_ID_FIELD])
+        for candidate in cast(
+            list[dict[str, object]],
+            cast(dict[str, object], fixture["prepared"])[module.CANDIDATES_FIELD],
+        )
+        if candidate[module.EVIDENCE_FIELD] is not module.EvidenceSource.CURRENT_SESSION
+    ]
+    intact_session = continuation_sessions[-1]
+    restored: list[dict[str, object]] = [
+        {
+            module.SESSION_ID_FIELD: session_id,
+            module.TEXT_FIELD: f"The restart killed the command {session_id} was running.",
+        }
+        for session_id in continuation_sessions
+        if session_id != intact_session
+    ]
+    return continuation_sessions, intact_session, restored
+
+
 def _error_status(module: ModuleType, action: Callable[[], object]) -> object:
     try:
         action()
@@ -466,6 +526,52 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     occupied = module.plan_activation(prepared, occupied_panes, occupied_agents)
     if occupied[module.STATUS_FIELD] != module.ResultStatus.PANE_OCCUPIED:
         failures.append("mismatched occupied pane did not block activation")
+
+    fixture = _verified_recovery(module, roster)
+    reassess_prepared = cast(dict[str, object], fixture["prepared"])
+    reassess_bindings = cast(list[dict[str, object]], fixture["bindings"])
+    verified = cast(dict[str, object], fixture["verified"])
+    reads = cast(list[dict[str, object]], fixture["reads"])
+
+    incomplete_barrier = _error_status(
+        module,
+        lambda: module.plan_reassessment(
+            reassess_prepared, reassess_bindings, verified, reads[:-1]
+        ),
+    )
+    if incomplete_barrier != module.ResultStatus.INVALID_SCHEMA:
+        failures.append("incomplete pane-read barrier mapped to reassessment planning")
+    blocked = module.plan_reassessment(
+        reassess_prepared,
+        reassess_bindings,
+        verified,
+        pane_read_results(
+            module, reassess_bindings, failed_pane_id=roster.post_restart_pane_ids[0]
+        ),
+    )
+    if blocked[module.STATUS_FIELD] != module.ResultStatus.COMMAND_FAILED:
+        failures.append("failed pane read did not map to blocked reassessment")
+    if blocked[module.DELIVERIES_FIELD]:
+        failures.append("failed pane read mapped to partial continuation delivery")
+
+    _, intact_session, restored = _continuation_plan(module, roster, fixture)
+    reassessment = module.plan_reassessment(
+        reassess_prepared, reassess_bindings, verified, reads, restored
+    )
+    reassessment_deliveries = cast(
+        list[dict[str, object]], reassessment[module.DELIVERIES_FIELD]
+    )
+    if len(reassessment_deliveries) != len(restored):
+        failures.append("supplied destroyed facts did not map one-to-one to deliveries")
+    if cast(list[str], reassessment[module.NO_CONTINUATION_SESSION_IDS_FIELD]) != [
+        intact_session
+    ]:
+        failures.append("a candidate without a destroyed fact did not map to intact")
+    if any(
+        delivery[module.SESSION_ID_FIELD] == intact_session
+        for delivery in reassessment_deliveries
+    ):
+        failures.append("a judged-intact candidate mapped to a delivery")
     return failures
 
 
@@ -629,71 +735,19 @@ def verify_native_agent_recovery_compliance() -> list[str]:
     if malformed_status != module.ResultStatus.INVALID_SCHEMA:
         failures.append("settlement accepted a non-recovery plan status")
 
-    agents_without_sessions = _post_restart_rosters(
-        module,
-        roster,
-        len(roster.original_pane_ids),
-        exact_sessions=False,
-    )[1]
-    correlations = identity_evidence(module, roster, roster.post_restart_pane_ids)
-    for index, correlation in enumerate(correlations):
-        if correlation[module.SOURCE_FIELD] is module.EvidenceSource.PUBLIC_AGENT:
-            agents_without_sessions[index][module.SESSION_FIELD] = {
-                module.ID_FIELD: roster.session_ids[index]
-            }
-        elif (
-            correlation[module.SOURCE_FIELD] is module.EvidenceSource.OPERATOR_CONFIRMED
-        ):
-            correlation[module.SOURCE_FIELD] = module.EvidenceSource.PROCESS_ARGUMENT
-    verified = module.verify(
-        prepared,
-        bindings,
-        panes,
-        agents_without_sessions,
-        correlations,
-    )
+    fixture = _verified_recovery(module, roster)
+    agents_without_sessions = cast(list[dict[str, object]], fixture["agents"])
+    correlations = cast(list[dict[str, object]], fixture["correlations"])
+    verified = cast(dict[str, object], fixture["verified"])
     if verified[module.STATUS_FIELD] != module.ResultStatus.VERIFIED:
         failures.append("exact process/native-status evidence did not verify")
     if verified[module.VERIFIED_FIELD] != len(roster.original_pane_ids):
         failures.append("verification count omitted prepared candidates")
 
-    reads = pane_read_results(module, bindings)
-    missing_read_status = _error_status(
-        module,
-        lambda: module.plan_reassessment(prepared, bindings, verified, reads[:-1]),
-    )
-    if missing_read_status != module.ResultStatus.INVALID_SCHEMA:
-        failures.append("reassessment accepted an incomplete all-pane read barrier")
-    failed_reads = pane_read_results(
-        module,
-        bindings,
-        failed_pane_id=roster.post_restart_pane_ids[0],
-    )
-    blocked_reassessment = module.plan_reassessment(
-        prepared, bindings, verified, failed_reads
-    )
-    if blocked_reassessment[module.STATUS_FIELD] != module.ResultStatus.COMMAND_FAILED:
-        failures.append("failed pane read did not block reassessment")
-    if blocked_reassessment[module.DELIVERIES_FIELD]:
-        failures.append("failed pane read produced partial continuation delivery")
-
-    continuation_sessions = [
-        cast(str, candidate[module.SESSION_ID_FIELD])
-        for candidate in cast(
-            list[dict[str, object]], prepared[module.CANDIDATES_FIELD]
-        )
-        if candidate[module.EVIDENCE_FIELD] is not module.EvidenceSource.CURRENT_SESSION
-    ]
-    # A recipient the controller judged intact supplies no fact and receives nothing.
-    intact_session = continuation_sessions[-1]
-    restored = [
-        {
-            module.SESSION_ID_FIELD: session_id,
-            module.TEXT_FIELD: f"The restart killed the command {session_id} was running.",
-        }
-        for session_id in continuation_sessions
-        if session_id != intact_session
-    ]
+    reads = cast(list[dict[str, object]], fixture["reads"])
+    # The barrier and per-recipient correspondences are mapping evidence; this lane
+    # exercises the boundary, launch-separation, settlement, and idempotence rules.
+    _, _, restored = _continuation_plan(module, roster, fixture)
     reassessment = module.plan_reassessment(
         prepared, bindings, verified, reads, restored
     )
@@ -704,17 +758,6 @@ def verify_native_agent_recovery_compliance() -> list[str]:
         failures.append("verified recovery did not prepare reassessment")
     if reassessment[module.PANE_READ_RESULTS_FIELD] != reads:
         failures.append("reassessment did not preserve the complete pane-read barrier")
-    if len(reassessment_deliveries) != len(restored):
-        failures.append("reassessment did not deliver exactly the restored recipients")
-    if cast(list[str], reassessment[module.NO_CONTINUATION_SESSION_IDS_FIELD]) != [
-        intact_session
-    ]:
-        failures.append("reassessment did not record the judged-intact recipient")
-    if any(
-        delivery[module.SESSION_ID_FIELD] == intact_session
-        for delivery in reassessment_deliveries
-    ):
-        failures.append("reassessment delivered to a recipient judged intact")
     for delivery in reassessment_deliveries:
         if module.NON_CONTROLLER_BOUNDARY not in cast(str, delivery[module.TEXT_FIELD]):
             failures.append("separate reassessment delivery omitted its boundary")
