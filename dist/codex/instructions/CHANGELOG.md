@@ -6,7 +6,7 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
-## 0.14.2
+## 0.15.1
 
 The changelog begins at this release. Entries below record changes from this version forward.
 
