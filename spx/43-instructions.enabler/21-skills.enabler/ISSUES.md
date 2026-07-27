@@ -46,3 +46,27 @@ skill audit before publication.
 
 Source: PR 458 review comment `3610850053`, classified as `DEBT` in the `evidence`
 category after merge.
+
+## `/audit-skill` declares no target argument and no no-target edge case
+
+`src/plugins/instructions/skills/audit-subagent/SKILL.md` declares
+`arguments: configured_agent_path` and stops with `REJECTED` naming the missing
+argument when that path is empty. Its sibling
+`src/plugins/instructions/skills/audit-skill/SKILL.md` declares no `arguments`,
+no `argument-hint`, and no `$ARGUMENTS`, and carries no matching edge case for a
+dispatch that names no target.
+
+The asymmetry has two effects. A direct `/audit-skill` invocation resolves its
+target from surrounding conversation rather than a declared contract, which
+`/skill-standards` `<skill_organization>` requires to stay independently
+invocable. And a malformed dispatch that supplies no path has no defined stop,
+so the audit proceeds against whatever the context suggests.
+
+Required handling: declare the argument surface `audit-skill` actually takes —
+a multi-path bundle plus governing nodes and verification state, which
+`/skill-standards` `references/command-capabilities.md` shapes as `$ARGUMENTS`
+rather than a named positional — and add the no-target edge case its sibling
+already states.
+
+Source: `instructions:skill-auditor` findings `f-007` and `f-010`, severity
+`WARNING`, on the changeset merged as PR 488.

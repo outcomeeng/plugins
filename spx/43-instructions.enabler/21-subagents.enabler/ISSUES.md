@@ -95,3 +95,26 @@ reverted to the standard, leaving only the placement question above. A
 `src/plugins/instructions/agents/subagent-auditor.md`'s directive description into
 the passive form, citing those examples; that recommendation was dropped, and the
 examples it cited no longer teach the weaker form.
+
+## `/audit-subagent`'s objective states its categories in a second sentence
+
+`src/plugins/instructions/skills/audit-subagent/SKILL.md` opens with the verdict
+sentence and then names the four finding categories in a second sentence, while
+the sibling `src/plugins/instructions/skills/audit-skill/SKILL.md` carries the
+equivalent content in one sentence joined by a semicolon.
+
+Successive `instructions:skill-auditor` runs read this differently. One run
+flagged the shortened objective and required the categories be named; a later run
+accepted the categories and flagged the second sentence. Both cite
+`/skill-standards` `references/auditor-skeleton.md`, which requires `<objective>`
+to carry the finding categories **and** holds it to one sentence, two only when
+the output has two distinct parts. Naming categories is settled; whether that
+makes a second part is not.
+
+Required handling: decide once whether an auditor's finding-category clause is a
+distinct output part or a subordinate clause, record it in the skeleton so the
+rule stops depending on which run reads it, and bring both auditor objectives
+onto the chosen shape.
+
+Source: `instructions:skill-auditor` finding `f-009`, severity `WARNING`, on the
+changeset merged as PR 488, reconciled against an earlier run's opposing finding.
