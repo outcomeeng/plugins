@@ -8,7 +8,8 @@ CAN contribute code, test, and architecture audit intelligence without shipping 
 
 ### Scenarios
 
-- Given the pinned published SPX CLI and source-owned implementation-audit payload contracts, when the verification-run lifecycle records scope and finding evidence and finishes with the evidence-derived status, then it returns monotonic evidence sequences and a sealed projection carrying the authoritative finding count ([test](tests/test_implementation_audit_contract.scenario.l1.py))
+- Given the pinned published SPX CLI and source-owned implementation-audit payload contracts, when the verification-run lifecycle records scope and finding evidence and finishes with the evidence-derived status, then it returns monotonic evidence sequences and a sealed projection carrying the authoritative finding count ([test](tests/test_implementation_audit_contract.scenario.l3.py))
+- Given a verification run carrying a recorded blocking finding, when the lifecycle finishes with an approving terminal status, then the finish fails rather than sealing a terminal status the recorded evidence contradicts ([test](tests/test_implementation_audit_contract.scenario.l3.py))
 
 ### Compliance
 

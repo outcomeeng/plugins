@@ -17,12 +17,12 @@ A rendered SPX verification-run verdict for the requested implementation scope, 
 
 <constraints>
 
-- Read-only over the audited project tree. This skill never edits source, tests, specs, commits, branches, or pull requests.
-- Persist audit state only through `spx verification run`; never use legacy journal commands, plugin-side verdict scripts, markdown comments, `.spx/audits/`, or tracked files as audit state.
+- NEVER edit source, tests, specs, commits, branches, or pull requests — this orchestration is read-only over the audited project tree.
+- ALWAYS persist audit state through `spx verification run`; NEVER use legacy journal commands, plugin-side verdict scripts, markdown comments, `.spx/audits/`, or tracked files as audit state.
 - NEVER run deterministic verification — this orchestration composes agentic concern audits only.
-- Contain no language-specific file extensions, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
-- Treat the `spx verification run` command exit code as payload validity. Never hand-validate emitted payload JSON after SPX accepts it.
-- Start the verification run immediately after validating the request, before reading changed project files or loading any language concern skill or its standards. Every project inspection and concern result belongs to the open run.
+- NEVER include language-specific file extensions, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
+- ALWAYS treat the `spx verification run` command exit code as payload validity; NEVER hand-validate emitted payload JSON after SPX accepts it.
+- ALWAYS start the verification run immediately after validating the request, before reading changed project files or loading any language concern skill or its standards — every project inspection and concern result belongs to the open run.
 
 </constraints>
 
@@ -165,8 +165,41 @@ expected text lives under `evidence`.
 }
 ```
 
-The idempotency key is a command argument, never a payload field. Never emit
-the retired aliases `id`, `subjectPaths`, `expectedProducerIdentity`,
+The idempotency key is a command argument, never a payload field. A scope
+unit's key is the same value its payload carries in `unitId`: the audit class,
+language partition, concern partition, and subject path joined with `:` —
+`implementation:<lang>:<concern>:<subject-path>`. A finding's key extends its
+unit's key with the violated rule — `<stable-scope-key>:<rule>` — so recording
+the same finding twice stays idempotent. Join key segments only with `:`, which
+keeps the key parseable at its last-segment boundary. Shell safety comes from
+the quoting rule below rather than from the join character: a subject path can
+carry `|`, `&`, `;`, `(`, `)`, `<`, `>`, `*`, `?`, or whitespace however the
+segments are joined, and unquoted it splits the command so the shell runs a
+fragment as a program.
+
+The key is an opaque token SPX never parses back into segments, so a `:` inside
+a subject path is not a separator. Keep the rule segment colon-free and stable —
+a rule identifier rather than free-form prose. The rule is the final segment, so
+a colon-free rule makes the last `:` in the key an unambiguous boundary: the
+rule is exactly the text after it and the subject path is everything before it,
+however many colons that path carries. Two findings on different subjects
+therefore cannot compose one finding key. A colon inside the rule segment
+destroys that boundary and lets two distinct findings collide on one key, which
+records the second as a duplicate of the first.
+
+The key always carries a language segment; only the nested
+`priorContext.languagePartition` field is ever omitted. When the language is
+unknown, render that segment as the literal `unknown`, so two runs over the same
+unknown-language subject compose the same key. Supply that literal explicitly —
+the key carries whatever language segment it is given and substitutes no default
+for one left out.
+
+Pass every key as one single-quoted argument, `--idempotency-key
+'<stable-scope-key>'`, because a subject path can itself carry a character the
+shell interprets. Encode a literal apostrophe inside it with the single-quote
+splice `'"'"'`.
+
+Never emit the retired aliases `id`, `subjectPaths`, `expectedProducerIdentity`,
 `executionProducerIdentity`, `stableProducerIdentity`, top-level `observed`,
 or top-level `expected`; SPX rejects or discards those shapes at the
 verification-type boundary.
@@ -183,7 +216,7 @@ spx verification run scope add \
   --scope <base>..<head> \
   --run <token> \
   --payload stdin \
-  --idempotency-key <stable-scope-key> <<'JSON'
+  --idempotency-key '<stable-scope-key>' <<'JSON'
 <rendered-scope-json-on-one-or-more-lines>
 JSON
 ```
@@ -191,11 +224,10 @@ JSON
 Programmatic Claude Code and Codex runners, including hosted runners that
 require one physical command line, use `printf` with the rendered JSON as one
 single-quoted argument. Keep the pipeline on one physical line even when it
-wraps visually; encode a literal apostrophe with the single-quote splice
-`'"'"'`:
+wraps visually; encode a literal apostrophe with the same single-quote splice:
 
 ```bash
-printf '%s\n' '<rendered-json-on-one-line>' | spx verification run scope add --verification-type audit --scope-type changeset --scope <base>..<head> --run <token> --payload stdin --idempotency-key <stable-scope-key>
+printf '%s\n' '<rendered-json-on-one-line>' | spx verification run scope add --verification-type audit --scope-type changeset --scope <base>..<head> --run <token> --payload stdin --idempotency-key '<stable-scope-key>'
 ```
 
 Apply the same two forms to `run start --input stdin` and `finding add
@@ -209,7 +241,7 @@ spx verification run scope add \
   --scope <base>..<head> \
   --run <token> \
   --payload stdin \
-  --idempotency-key <stable-scope-key>
+  --idempotency-key '<stable-scope-key>'
 
 spx verification run finding add \
   --verification-type audit \
@@ -217,7 +249,7 @@ spx verification run finding add \
   --scope <base>..<head> \
   --run <token> \
   --payload stdin \
-  --idempotency-key <stable-finding-key>
+  --idempotency-key '<stable-finding-key>'
 
 spx verification run finish \
   --verification-type audit \
@@ -415,6 +447,26 @@ evidence needed to reproduce the rejected payload boundary.
 How to avoid: Construct scope and finding payloads from the exact JSON contracts
 in `<verification_run_contract>` and relay the complete blocked diagnostic from
 `<verdict_format>` without reformatting or omission.
+
+**An unquoted idempotency key split the command.**
+
+What happened: Claude passed
+`--idempotency-key implementation:<lang>:tests:reports/audit report` without
+quotes. The shell split the key at the space, so `spx` received a truncated key
+and a stray argument.
+
+Why it failed: An unquoted argument reaches the shell before `spx` sees it, so
+any shell metacharacter the key carries — including one inside the subject path
+of an otherwise correctly formatted key — becomes syntax rather than key text.
+A subject path carrying `|` yields a different symptom: the shell runs the
+fragment after it as a command, reporting `command not found` when the fragment
+carries no slash and the `PATH` lookup fails, `No such file or directory` when a
+slash-bearing fragment names nothing, and `Permission denied` when it names an
+existing non-executable file. Each symptom names a path fragment, which reads as
+a file problem rather than the quoting defect it is.
+
+How to avoid: Pass every key as one single-quoted argument,
+`--idempotency-key '<stable-scope-key>'`, per `<verification_run_contract>`.
 
 **Deterministic verification ran inside the audit.**
 

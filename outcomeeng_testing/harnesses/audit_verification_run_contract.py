@@ -6,7 +6,7 @@ import json
 import subprocess
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
-from itertools import pairwise
+from dataclasses import dataclass
 from pathlib import Path
 from shutil import rmtree
 from tempfile import TemporaryDirectory
@@ -42,7 +42,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     RUN_TOKEN_FIELD,
     AuditTerminalStatus,
     ImplementationAuditConcern,
-    expected_verification_projection,
+    implementation_audit_finding_key,
     implementation_audit_finding_payload,
     implementation_audit_input_payload,
     implementation_audit_provenance,
@@ -67,6 +67,7 @@ from outcomeeng.validation.spx_version import (
     verification_run_floor_is_satisfied,
 )
 from outcomeeng_testing.generators.audit_verification_run_contract import (
+    ImplementationAuditVerificationProbe,
     implementation_audit_verification_probes,
 )
 
@@ -130,22 +131,47 @@ def audit_runtime_trees_exclude_retired_artifacts() -> bool:
     return _all_live_surfaces_pass(check_audit_runtime_surface)
 
 
-def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
-    """Exercise the SPX lifecycle used by implementation-audit orchestration."""
+@dataclass(frozen=True)
+class VerificationRunObservation:
+    """Observed evidence sequences and sealed projection of one audit run."""
+
+    run_token: str
+    terminal_status: AuditTerminalStatus
+    recorded_finding_count: int
+    subject_paths: tuple[str, ...]
+    scope_sequences: tuple[object, ...]
+    finding_sequences: tuple[object, ...]
+    sealed_projection: tuple[object, ...]
+
+
+def observe_implementation_audit_lifecycle(
+    *,
+    findings_per_subject: bool = False,
+) -> VerificationRunObservation:
+    """Drive one audit run and expose its sequences and sealed projection."""
     spx_command = _minimum_release_spx_command()
-    rule = spx_verification_run_accepts_implementation_audit_payloads.__name__
+    rule = observe_implementation_audit_lifecycle.__name__
+    message = observe_implementation_audit_lifecycle.__doc__ or rule
     terminal_status = AuditTerminalStatus.REJECTED
 
     with TemporaryDirectory() as temporary_directory:
         repository = Path(temporary_directory)
-        scope, run_token, scope_reports, finding_report = (
-            _record_implementation_audit_finding(
+        scope, run_token, provenance, probes, scope_reports = (
+            _start_implementation_audit_run(repository, rule, spx_command)
+        )
+        finding_probes = probes if findings_per_subject else probes[-1:]
+        finding_reports = tuple(
+            _add_implementation_audit_finding(
                 repository,
-                rule,
-                spx_verification_run_accepts_implementation_audit_payloads.__doc__
-                or rule,
                 spx_command,
+                scope,
+                run_token=run_token,
+                probe=probe,
+                rule=rule,
+                message=message,
+                provenance=provenance,
             )
+            for probe in finding_probes
         )
         finish_report = _run_spx(
             repository,
@@ -163,45 +189,39 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
             run_token=run_token,
         )
 
-    scope_sequences = tuple(
-        scope_report.get(RUN_SEQUENCE_FIELD) for scope_report in scope_reports
-    )
-    scope_sequence_numbers = tuple(
-        sequence for sequence in scope_sequences if isinstance(sequence, int)
-    )
-    actual_projection = (
-        bool(scope_sequence_numbers)
-        and len(scope_sequence_numbers) == len(scope_sequences)
-        and all(
-            current == previous + 1
-            for previous, current in pairwise(scope_sequence_numbers)
-        )
-        and finding_report.get(RUN_SEQUENCE_FIELD) == scope_sequence_numbers[-1] + 1,
-        finish_report.get(RUN_TERMINAL_STATUS_FIELD),
-        finish_report.get(RUN_SEALED_FIELD),
-        render_report.get(RUN_TOKEN_FIELD),
-        render_report.get(RUN_FINDING_COUNT_FIELD),
-        render_report.get(RUN_SEALED_FIELD),
-        render_report.get(RUN_TERMINAL_STATUS_FIELD),
-    )
-    return actual_projection == expected_verification_projection(
-        run_token,
-        finding_count=1,
+    return VerificationRunObservation(
+        run_token=run_token,
         terminal_status=terminal_status,
+        recorded_finding_count=len(finding_reports),
+        subject_paths=tuple(probe.subject_path for probe in finding_probes),
+        scope_sequences=tuple(
+            scope_report.get(RUN_SEQUENCE_FIELD) for scope_report in scope_reports
+        ),
+        finding_sequences=tuple(
+            finding_report.get(RUN_SEQUENCE_FIELD) for finding_report in finding_reports
+        ),
+        sealed_projection=(
+            finish_report.get(RUN_TERMINAL_STATUS_FIELD),
+            finish_report.get(RUN_SEALED_FIELD),
+            render_report.get(RUN_TOKEN_FIELD),
+            render_report.get(RUN_FINDING_COUNT_FIELD),
+            render_report.get(RUN_SEALED_FIELD),
+            render_report.get(RUN_TERMINAL_STATUS_FIELD),
+        ),
     )
 
 
-def spx_verification_run_rejects_mismatched_terminal_status() -> bool:
-    """Return whether SPX rejects approval after a blocking finding."""
+def observe_mismatched_terminal_status_finish() -> int | None:
+    """Return the finish exit status when approval follows a blocking finding."""
     spx_command = _minimum_release_spx_command()
-    rule = spx_verification_run_rejects_mismatched_terminal_status.__name__
+    rule = observe_mismatched_terminal_status_finish.__name__
 
     with TemporaryDirectory() as temporary_directory:
         repository = Path(temporary_directory)
         scope, run_token, _, _ = _record_implementation_audit_finding(
             repository,
             rule,
-            spx_verification_run_rejects_mismatched_terminal_status.__doc__ or rule,
+            observe_mismatched_terminal_status_finish.__doc__ or rule,
             spx_command,
         )
         try:
@@ -213,10 +233,10 @@ def spx_verification_run_rejects_mismatched_terminal_status() -> bool:
                 run_token=run_token,
                 terminal_status=AuditTerminalStatus.APPROVED.value,
             )
-        except subprocess.CalledProcessError:
-            return True
+        except subprocess.CalledProcessError as rejection:
+            return rejection.returncode
 
-    return False
+    return None
 
 
 def audit_contract_rejects_language_specific_wrapper() -> bool:
@@ -565,12 +585,17 @@ def _source_plugin_names() -> tuple[str, ...]:
     )
 
 
-def _record_implementation_audit_finding(
+def _start_implementation_audit_run(
     repository: Path,
     rule: str,
-    message: str,
     spx_command: tuple[str, ...],
-) -> tuple[str, str, tuple[dict[str, object], ...], dict[str, object]]:
+) -> tuple[
+    str,
+    str,
+    Mapping[str, object],
+    tuple[ImplementationAuditVerificationProbe, ...],
+    tuple[dict[str, object], ...],
+]:
     language = _source_language()
     probes = implementation_audit_verification_probes(language)
     provenance = implementation_audit_provenance(
@@ -608,24 +633,63 @@ def _record_implementation_audit_finding(
         )
         for probe in probes
     )
-    finding_probe = probes[-1]
-    finding_report = _run_spx(
+    return scope, run_token, provenance, probes, scope_reports
+
+
+def _add_implementation_audit_finding(
+    repository: Path,
+    spx_command: tuple[str, ...],
+    scope: str,
+    *,
+    run_token: str,
+    probe: ImplementationAuditVerificationProbe,
+    rule: str,
+    message: str,
+    provenance: Mapping[str, object],
+) -> dict[str, object]:
+    return _run_spx(
         repository,
         spx_command,
         ("finding", "add"),
         scope,
         run_token=run_token,
         payload=implementation_audit_finding_payload(
-            finding_probe.language,
-            finding_probe.concern,
+            probe.language,
+            probe.concern,
             rule=rule,
-            subject_path=finding_probe.subject_path,
+            subject_path=probe.subject_path,
             message=message,
-            observed=finding_probe.subject_path,
-            expected=finding_probe.subject_path,
+            observed=probe.subject_path,
+            expected=probe.subject_path,
             producer_provenance=provenance,
         ),
-        idempotency_key=rule,
+        idempotency_key=implementation_audit_finding_key(
+            probe.language,
+            probe.concern,
+            subject_path=probe.subject_path,
+            rule=rule,
+        ),
+    )
+
+
+def _record_implementation_audit_finding(
+    repository: Path,
+    rule: str,
+    message: str,
+    spx_command: tuple[str, ...],
+) -> tuple[str, str, tuple[dict[str, object], ...], dict[str, object]]:
+    scope, run_token, provenance, probes, scope_reports = (
+        _start_implementation_audit_run(repository, rule, spx_command)
+    )
+    finding_report = _add_implementation_audit_finding(
+        repository,
+        spx_command,
+        scope,
+        run_token=run_token,
+        probe=probes[-1],
+        rule=rule,
+        message=message,
+        provenance=provenance,
     )
     return scope, run_token, scope_reports, finding_report
 

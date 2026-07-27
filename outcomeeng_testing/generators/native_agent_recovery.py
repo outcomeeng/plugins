@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
@@ -215,7 +216,7 @@ def activation_results(
 
 def pane_read_results(
     module: ModuleType,
-    bindings: list[dict[str, object]],
+    bindings: Sequence[Mapping[str, object]],
     *,
     failed_pane_id: str | None = None,
 ) -> list[dict[str, object]]:
