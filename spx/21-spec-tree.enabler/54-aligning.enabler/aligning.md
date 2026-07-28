@@ -14,6 +14,6 @@ CAN detect contradictions, gaps, and content misplacement before they reach impl
 
 ### Compliance
 
-- ALWAYS: check specs against all ancestor ADRs/PDRs — decision records win by hierarchy ([review])
-- ALWAYS: when checking a changeset, report a product spec, ADR, PDR, or ancestor spec change that lacks both aligned first affected lower specs and first-affected-node `PLAN.md` grounding, deriving the changed-file set through `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler` rather than ad hoc git diff logic ([review])
-- NEVER: weaken a spec to match code or tests — the declaration governs ([review])
+- ALWAYS: check specs against all ancestor ADRs/PDRs — decision records win by hierarchy ([audit])
+- ALWAYS: when checking a changeset, report a product spec, ADR, PDR, or ancestor spec change that lacks both aligned first affected lower specs and first-affected-node `PLAN.md` grounding, deriving the changed-file set through `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler` rather than ad hoc git diff logic ([audit])
+- NEVER: weaken a spec to match code or tests — the declaration governs ([audit])

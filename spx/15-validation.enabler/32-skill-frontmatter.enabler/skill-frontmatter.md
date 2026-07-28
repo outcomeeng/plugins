@@ -19,5 +19,5 @@ CAN commit skill files that both Anthropic's published validator and the install
 
 ### Compliance
 
-- NEVER: hardcode the Agent Skills open standard field list in the wrapper — the vendored `quick_validate.py` is the source of truth per [15-frontmatter-validation.adr.md](15-frontmatter-validation.adr.md) ([review])
-- NEVER: modify the vendored `quick_validate.py` in place — extensions live in the wrapper's marketplace extension allowlists per [15-frontmatter-validation.adr.md](15-frontmatter-validation.adr.md) ([review])
+- NEVER: hardcode the Agent Skills open standard field list in the wrapper — the vendored `quick_validate.py` is the source of truth per [15-frontmatter-validation.adr.md](15-frontmatter-validation.adr.md) ([audit])
+- NEVER: modify the vendored `quick_validate.py` in place — extensions live in the wrapper's marketplace extension allowlists per [15-frontmatter-validation.adr.md](15-frontmatter-validation.adr.md) ([audit])

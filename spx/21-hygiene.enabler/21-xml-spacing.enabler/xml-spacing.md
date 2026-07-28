@@ -21,4 +21,4 @@ CAN avoid formatting breakage caused by list items followed by closing tags
 
 ### Compliance
 
-- NEVER: modify content inside code fences — the hook respects fence boundaries ([review])
+- NEVER: modify content inside code fences — the hook respects fence boundaries ([audit])

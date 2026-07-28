@@ -10,5 +10,5 @@ The HDL plugin contains `/review-vhdl` (VHDL-2008 review with synthesizability a
 
 ### Compliance
 
-- ALWAYS: verify synthesizability in HDL reviews — simulation-only constructs that reach synthesis cause silent failures ([review])
-- NEVER: apply software engineering patterns (dependency injection, mocking) to HDL reviews — hardware design has fundamentally different verification patterns ([review])
+- ALWAYS: verify synthesizability in HDL reviews — simulation-only constructs that reach synthesis cause silent failures ([audit])
+- NEVER: apply software engineering patterns (dependency injection, mocking) to HDL reviews — hardware design has fundamentally different verification patterns ([audit])

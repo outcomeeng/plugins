@@ -18,6 +18,6 @@ CAN diagnose failed runs and act on them when the user explicitly requests actio
 
 ### Compliance
 
-- ALWAYS: a failure diagnosis relates the remote failure to the workflow-design surface — trigger, job, dependency, runner, cache, artifact, environment, permission, secret, validation command, or repository script — so the failure is framed architecturally rather than only mechanically ([review])
-- ALWAYS: a failure diagnosis names the local Spec Tree or repository command that verifies the same concern when the repository provides one — local-runnable equivalents make the failure reproducible without GitHub ([review])
+- ALWAYS: a failure diagnosis relates the remote failure to the workflow-design surface — trigger, job, dependency, runner, cache, artifact, environment, permission, secret, validation command, or repository script — so the failure is framed architecturally rather than only mechanically ([audit])
+- ALWAYS: a failure diagnosis names the local Spec Tree or repository command that verifies the same concern when the repository provides one — local-runnable equivalents make the failure reproducible without GitHub ([audit])
 - ALWAYS: in-progress PR-check follow-up guidance uses exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30` as one foreground command, with the bounded return condition named by the invoking workflow ([audit])

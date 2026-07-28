@@ -10,5 +10,5 @@ The frontend plugin contains `/design-frontend` for creating UI components and l
 
 ### Compliance
 
-- ALWAYS: prioritize accessibility and semantic HTML in generated interfaces ([review])
-- NEVER: produce generic template-like designs — interfaces are distinctive and purpose-built ([review])
+- ALWAYS: prioritize accessibility and semantic HTML in generated interfaces ([audit])
+- NEVER: produce generic template-like designs — interfaces are distinctive and purpose-built ([audit])

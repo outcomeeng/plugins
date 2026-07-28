@@ -8,5 +8,5 @@ CAN preserve source semantics while producing the Codex-native artifacts each pl
 
 ### Compliance
 
-- ALWAYS: every conversion child names its source artifact class, Codex target surface, and semantic caveats - conversion behavior is explicit per artifact class ([review])
-- ALWAYS: conversion output the Codex runtime reads is published as plugin tree content by the build, and the plugin manifest declares only the surfaces Codex resolves through the manifest ([review])
+- ALWAYS: every conversion child names its source artifact class, Codex target surface, and semantic caveats - conversion behavior is explicit per artifact class ([audit])
+- ALWAYS: conversion output the Codex runtime reads is published as plugin tree content by the build, and the plugin manifest declares only the surfaces Codex resolves through the manifest ([audit])

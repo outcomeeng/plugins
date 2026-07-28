@@ -10,6 +10,6 @@ The three children of this enabler — `21-python-architecture.enabler` (ADR con
 
 ### Compliance
 
-- ALWAYS: the three child enablers cover non-overlapping facets of Python standards: architecture decisions, test evidence rules, and code workflow rules — facet overlap forces standards to drift between sibling specs ([review])
-- ALWAYS: Python-specific standards live here, while marketplace-wide methodology (atemporal voice, ADR section structure, evidence mechanisms, and test-infrastructure semantics) lives at the spec-tree root or in cross-language decision records — duplication would force language-specific specs to restate methodology ([review])
-- NEVER: place execution-lane or methodology rules under this enabler — those are governed by product-level decisions and spec-tree methodology references; this enabler scopes only Python-specific concerns ([review])
+- ALWAYS: the three child enablers cover non-overlapping facets of Python standards: architecture decisions, test evidence rules, and code workflow rules — facet overlap forces standards to drift between sibling specs ([audit])
+- ALWAYS: Python-specific standards live here, while marketplace-wide methodology (atemporal voice, ADR section structure, evidence mechanisms, and test-infrastructure semantics) lives at the spec-tree root or in cross-language decision records — duplication would force language-specific specs to restate methodology ([audit])
+- NEVER: place execution-lane or methodology rules under this enabler — those are governed by product-level decisions and spec-tree methodology references; this enabler scopes only Python-specific concerns ([audit])

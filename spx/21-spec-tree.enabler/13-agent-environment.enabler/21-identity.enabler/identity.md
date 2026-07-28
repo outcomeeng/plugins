@@ -16,6 +16,6 @@ CAN scope work to the current agent without file-system heuristics or race condi
 
 ### Compliance
 
-- ALWAYS: resolve session identity from `$CLAUDE_SESSION_ID` (Claude Code) or `$CODEX_THREAD_ID` (Codex) — never infer identity from file modification timestamps, directory enumeration, or index files ([review])
-- ALWAYS: two concurrent sessions resolve distinct identities — the runtime assigns each session a unique id, and the hook writes what the payload supplies rather than generating uniqueness ([review])
-- ALWAYS: under Codex, session identity is the runtime-injected `$CODEX_THREAD_ID` — the Claude Code `SessionStart` hook does not run, and no marketplace code sets it ([review])
+- ALWAYS: resolve session identity from `$CLAUDE_SESSION_ID` (Claude Code) or `$CODEX_THREAD_ID` (Codex) — never infer identity from file modification timestamps, directory enumeration, or index files ([audit])
+- ALWAYS: two concurrent sessions resolve distinct identities — the runtime assigns each session a unique id, and the hook writes what the payload supplies rather than generating uniqueness ([audit])
+- ALWAYS: under Codex, session identity is the runtime-injected `$CODEX_THREAD_ID` — the Claude Code `SessionStart` hook does not run, and no marketplace code sets it ([audit])

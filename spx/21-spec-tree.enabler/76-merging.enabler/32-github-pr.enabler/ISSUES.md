@@ -5,8 +5,8 @@
 `github-pr.md` defines the eval coverage model for the argument,
 existing-changeset, clean-tree interview, and existing open-PR modes. The node
 does not carry co-located eval implementations for those cases, so the scenario
-assertions still rely on `[review]` evidence.
-`[review]` fits LLM-driven orchestration behavior that no finite automated test
+assertions rely on `[audit]` evidence.
+`[audit]` fits LLM-driven orchestration behavior that no finite automated test
 falsifies, but it leaves a structural regression (for example the skill body
 losing its `<mode_detection>` block) undetected by the deterministic gate.
 Packaging, frontmatter intent, and closeout semantics use `[audit]`; deterministic
