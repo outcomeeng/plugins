@@ -47,22 +47,38 @@ def test_persistent_installation_requires_selected_codex_home() -> None:
     assert CODEX_HOME_ENV in error
 
 
+SCOPE_BEARING_CLAUDE_OPERATIONS = {
+    Operation.MARKETPLACE_REMOVE,
+    Operation.MARKETPLACE_ADD,
+    Operation.PLUGIN_INSTALL,
+    Operation.PLUGIN_ENABLE,
+}
+SCOPELESS_CLAUDE_OPERATIONS = {
+    Operation.MARKETPLACE_REFRESH,
+    Operation.PLUGIN_LIST,
+}
+
+
 def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None:
     observation = observe_persistent_execution()
     plan = observation.report.plan
+    claude_commands = [
+        command for command in plan.commands if command.agent is Agent.CLAUDE
+    ]
 
     assert plan.mode is InstallationMode.PERSISTENT
+    assert {command.operation for command in claude_commands} <= (
+        SCOPE_BEARING_CLAUDE_OPERATIONS | SCOPELESS_CLAUDE_OPERATIONS
+    )
     assert all(
         "--scope" in command.argv and "project" in command.argv
-        for command in plan.commands
-        if command.agent is Agent.CLAUDE
-        and command.operation
-        in {
-            Operation.MARKETPLACE_REMOVE,
-            Operation.MARKETPLACE_ADD,
-            Operation.PLUGIN_INSTALL,
-            Operation.PLUGIN_ENABLE,
-        }
+        for command in claude_commands
+        if command.operation in SCOPE_BEARING_CLAUDE_OPERATIONS
+    )
+    assert all(
+        "--scope" not in command.argv
+        for command in claude_commands
+        if command.operation in SCOPELESS_CLAUDE_OPERATIONS
     )
     assert all(
         dict(command.environment)[CODEX_HOME_ENV] == str(plan.roots.codex_home)
