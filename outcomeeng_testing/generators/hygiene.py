@@ -29,6 +29,14 @@ class XmlSpacingWorkspaceCase:
     non_target_worktree_content: str
 
 
+@dataclass(frozen=True)
+class FencedMarkdownCase:
+    """Fenced markdown and its line-ending-normalized expectation."""
+
+    content: str
+    expected_content: str
+
+
 _SAFE_PATH_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789_-"
 _MARKDOWN_TEXT_ALPHABET = (
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-"
@@ -82,6 +90,40 @@ def markdown_contents() -> SearchStrategy[str]:
         ),
     )
     return st.lists(markdown_line, min_size=0, max_size=80).map("".join)
+
+
+def fenced_markdown_cases() -> SearchStrategy[FencedMarkdownCase]:
+    """Generate fenced markdown containing transformable pseudo-XML content."""
+    fence_marker = st.sampled_from(("```", "~~~", "````", "~~~~"))
+    text_fragment = st.text(
+        alphabet=_MARKDOWN_TEXT_ALPHABET,
+        min_size=1,
+        max_size=24,
+    )
+    tag_name = st.text(alphabet=_TAG_ALPHABET, min_size=1, max_size=12)
+    newline = st.sampled_from(("\n", "\r\n"))
+    return st.builds(
+        _fenced_markdown_case,
+        fence_marker,
+        text_fragment,
+        tag_name,
+        newline,
+    )
+
+
+def _fenced_markdown_case(
+    marker: str,
+    text: str,
+    tag: str,
+    line_end: str,
+) -> FencedMarkdownCase:
+    content = (
+        f"{marker}{line_end}- {text}{line_end}</{tag}>{line_end}{marker}{line_end}"
+    )
+    return FencedMarkdownCase(
+        content=content,
+        expected_content=content.replace("\r\n", "\n"),
+    )
 
 
 @st.composite
@@ -152,8 +194,10 @@ def xml_spacing_workspace_cases() -> SearchStrategy[XmlSpacingWorkspaceCase]:
 
 __all__ = [
     "CleanWorkspaceCase",
+    "FencedMarkdownCase",
     "XmlSpacingWorkspaceCase",
     "clean_workspace_cases",
+    "fenced_markdown_cases",
     "markdown_contents",
     "xml_spacing_workspace_cases",
 ]
