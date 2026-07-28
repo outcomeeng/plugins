@@ -1134,6 +1134,22 @@ def _compliance_fixture(
     return prepared, panes, bindings, plan, deliveries
 
 
+def _composed_resume_command(module: ModuleType, candidate: dict[str, object]) -> str:
+    """One resume command composed here from the source-owned tokens, independent of the builder."""
+    agent_type = module.AgentType(candidate[module.AGENT_TYPE_FIELD])
+    prefix = list(module.NATIVE_RESUME_PREFIXES[agent_type])
+    native_home = candidate.get(module.NATIVE_HOME_FIELD)
+    if agent_type is module.AgentType.CLAUDE:
+        return shlex.join([*prefix, cast(str, candidate[module.RESUME_LOCATOR_FIELD])])
+    tokens: list[str] = []
+    if agent_type is module.AgentType.CODEX and native_home is not None:
+        tokens += [
+            module.NATIVE_HOME_COMMAND,
+            f"{module.NATIVE_HOME_VARIABLES[agent_type]}={native_home}",
+        ]
+    return shlex.join([*tokens, *prefix, cast(str, candidate[module.SESSION_ID_FIELD])])
+
+
 def observe_native_launch_transport() -> NativeLaunchTransport:
     """Emit native launches for one recovery and derive each command from the prepared manifest."""
     module = _load()
@@ -1172,11 +1188,8 @@ def observe_native_launch_transport() -> NativeLaunchTransport:
     return NativeLaunchTransport(
         delivery_texts=texts,
         expected_resume_commands=[
-            module.native_resume_command(
-                module.prepared_candidate_from_item(
-                    candidates_by_original[delivery[module.ORIGINAL_PANE_ID_FIELD]],
-                    "preparedCandidate",
-                )
+            _composed_resume_command(
+                module, candidates_by_original[delivery[module.ORIGINAL_PANE_ID_FIELD]]
             )
             for delivery in deliveries
         ],
@@ -1187,12 +1200,11 @@ def observe_native_launch_transport() -> NativeLaunchTransport:
         claude_command_tail=shlex.split(claude_command)[-1],
         prepared_claude_locator=custom_candidates[0][module.RESUME_LOCATOR_FIELD],
         codex_command_head=shlex.split(codex_command)[:2],
-        expected_codex_head=list(
-            module.native_home_prefix(
-                module.AgentType.CODEX,
-                cast(str, custom_candidates[1][module.NATIVE_HOME_FIELD]),
-            )
-        ),
+        expected_codex_head=[
+            module.NATIVE_HOME_COMMAND,
+            f"{module.NATIVE_HOME_VARIABLES[module.AgentType.CODEX]}="
+            f"{custom_candidates[1][module.NATIVE_HOME_FIELD]}",
+        ],
     )
 
 
