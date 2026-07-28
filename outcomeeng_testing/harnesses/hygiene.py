@@ -47,9 +47,21 @@ class CleanWorkspace:
             and GIT_METADATA_DIR not in path.relative_to(self.root).parts
         }
 
-    def tracked_bytes(self) -> tuple[bytes, bytes]:
-        """Return tracked staged and unstaged worktree bytes."""
-        return self.staged_path.read_bytes(), self.unstaged_path.read_bytes()
+    def tracked_bytes(self) -> dict[Path, bytes]:
+        """Return every Git-tracked path's current worktree bytes."""
+        tracked = subprocess.run(
+            ("git", "ls-files", "-z"),
+            cwd=self.root,
+            check=True,
+            capture_output=True,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        ).stdout
+        paths = (
+            Path(encoded_path.decode("utf-8"))
+            for encoded_path in tracked.split(b"\0")
+            if encoded_path
+        )
+        return {path: (self.root / path).read_bytes() for path in paths}
 
     def untracked_bytes(self) -> tuple[bytes, ...]:
         """Return untracked, non-ignored worktree bytes."""
