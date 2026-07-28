@@ -1,8 +1,9 @@
 """Ambient-state and repository-config evidence for installation."""
 
-from outcomeeng.distribution.installation import CODEX_CONFIG_PATH
+from outcomeeng.distribution.installation import CODEX_CONFIG_PATH, Operation
 from outcomeeng_testing.harnesses.installation import (
     observe_codex_config_independence,
+    observe_failed_run_restore,
 )
 
 
@@ -26,3 +27,10 @@ def test_repository_codex_config_has_no_installation_semantics() -> None:
         for command in plan.commands
         for argument in command.argv
     )
+
+
+def test_failed_persistent_run_restores_the_committed_selection() -> None:
+    observation = observe_failed_run_restore(Operation.PLUGIN_ENABLE)
+
+    assert observation.settings_after == observation.settings_before
+    assert observation.attempted[-1].operation is observation.failed_operation

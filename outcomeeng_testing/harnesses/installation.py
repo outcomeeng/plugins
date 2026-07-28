@@ -372,6 +372,78 @@ def observe_planned_operations() -> tuple[Operation, ...]:
     )
 
 
+@dataclass(frozen=True)
+class RestoreObservation:
+    """Settings bytes around a persistent run that fails partway through."""
+
+    settings_before: bytes
+    settings_after: bytes
+    failed_operation: Operation
+    attempted: tuple[InstallationCommand, ...]
+
+
+@dataclass
+class SettingsMutatingRunner:
+    """Runner that writes plugin state like the agent CLI, then fails one command.
+
+    `/test` Stage 5 exception 1: a real mid-plan CLI failure after earlier
+    commands have already mutated the settings document cannot be produced
+    reliably against the real agent, and that partial-mutation state is
+    exactly what the restore has to undo.
+    """
+
+    settings: Path
+    failed_operation: Operation
+    failed_occurrence: int = 1
+    calls: list[InstallationCommand] = field(default_factory=list)
+    _seen: int = 0
+
+    def __call__(self, command: InstallationCommand) -> CommandResult:
+        self.calls.append(command)
+        if command.agent is Agent.CLAUDE and command.plugin is not None:
+            document = cast(
+                "dict[str, object]",
+                json.loads(self.settings.read_text(encoding="utf-8")),
+            )
+            enabled = cast(
+                "dict[str, object]", document.setdefault(CLAUDE_ENABLED_PLUGINS_FIELD, {})
+            )
+            enabled[f"{command.plugin}@{MARKETPLACE_NAME}"] = True
+            self.settings.write_text(json.dumps(document, indent=2), encoding="utf-8")
+        if command.operation is self.failed_operation:
+            self._seen += 1
+            if self._seen == self.failed_occurrence:
+                return CommandResult(command.argv, 1, "", command.operation.value)
+        stdout = ""
+        if command.operation is Operation.MARKETPLACE_INSPECT:
+            stdout = codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+        return CommandResult(command.argv, 0, stdout, "")
+
+
+def observe_failed_run_restore(operation: Operation) -> RestoreObservation:
+    """Fail a persistent run midway after it has already mutated settings."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
+        _copy_committed_project_settings(checkout, settings)
+        environment = _persistent_environment(temporary_root)
+        before = settings.read_bytes()
+        runner = SettingsMutatingRunner(settings=settings, failed_operation=operation)
+        try:
+            execute_persistent_installation(mirror, environment, runner)
+        except InstallationFailure:
+            return RestoreObservation(
+                settings_before=before,
+                settings_after=settings.read_bytes(),
+                failed_operation=operation,
+                attempted=tuple(runner.calls),
+            )
+    raise RuntimeError("persistent installation completed without the scripted failure")
+
+
 def observe_inspection_failure() -> FailureObservation:
     """Fail the persistent preflight's marketplace inspection before any plan."""
     checkout = repository_root()
@@ -955,6 +1027,7 @@ __all__ = [
     "observe_claude_user_collision",
     "observe_codex_config_independence",
     "observe_first_failure",
+    "observe_failed_run_restore",
     "observe_inspection_failure",
     "observe_missing_codex_home",
     "observe_persistent_execution",
