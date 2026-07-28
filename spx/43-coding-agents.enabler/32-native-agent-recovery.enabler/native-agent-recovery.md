@@ -6,6 +6,10 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 
 ## Assertions
 
+- Preparation records the exact native session that drives recovery, and a recovery entered by any other native session halts before its first mutation, naming the recorded driver
+- Recovery interrupted at any lifecycle step resumes from the durable manifest alone, continuing at the first step whose result that manifest does not already record, without undoing or repeating a step it does record
+- Repeating any recovery step whose result the manifest already records returns that recorded result and emits no further activation, native launch, pane input, or continuation delivery, however far an interrupted run advanced
+
 ### Mappings
 
 - Each exactly identified native session maps during prepare to one durable candidate containing its original pane, absolute worktree, agent type, complete native session identity, exact native resume locator, applicable native home, evidence, role, and secondary authorization; incomplete, duplicate, and mismatched entries map to a named non-mutating failure ([test](tests/test_native_agent_recovery.mapping.l1.py))

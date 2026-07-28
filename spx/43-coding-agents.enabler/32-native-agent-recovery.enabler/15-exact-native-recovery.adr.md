@@ -1,6 +1,6 @@
 # Exact Native Recovery
 
-Native-agent recovery uses a durable prepare manifest followed by visible exact-root Prowl activation, pane rebinding, serialized exact native-session launch, exact correlation verification, and separately submitted reassessment. The controller running the recovery attests the one pane it occupies, binding its own current-session candidate where the public agent roster cannot identify it. A source-owned native command registry selects `claude`, `codex`, or `pi` from the prepared agent type, exact resume locator, and applicable native home; recency selectors and Prowl workflow status never choose a recovery session. Native launch and continuation prose never share one transport.
+Native-agent recovery uses a durable prepare manifest followed by visible exact-root Prowl activation, pane rebinding, serialized exact native-session launch, exact correlation verification, and separately submitted reassessment. The controller running the recovery attests the one pane it occupies, binding its own current-session candidate where the public agent roster cannot identify it. The manifest names the one native session entitled to drive that recovery and is the sole resume state, so an interrupted run continues from what the manifest records rather than from the driving session's memory. A source-owned native command registry selects `claude`, `codex`, or `pi` from the prepared agent type, exact resume locator, and applicable native home; recency selectors and Prowl workflow status never choose a recovery session. Native launch and continuation prose never share one transport.
 
 ## Rationale
 
@@ -14,12 +14,18 @@ Prowl preserves sidebar worktree topology independently from instantiated termin
 - An exact native command contains only the prepared agent type, resume locator or complete session identity, and applicable native home; no continuation prose, Prowl status, or recency selector participates in launch or verification.
 - Activation opens only a prepared worktree and accepts only an exact-root result whose returned path and pane bind that target; no Git-worktree or filesystem enumeration creates recovery targets.
 - A controller-pane attestation binds at most one pane — the one its own occupant declares it runs in — to the single current-session candidate, and that pane is never activated or relaunched.
+- The prepared manifest names the one native session entitled to drive recovery; a recovery driven by any other session performs no mutation.
+- The manifest is recovery's only resume state, so each step is re-entrant against its own recorded result and a step the manifest records is never performed a second time.
 - Native launches sharing one home are serialized through input-ready state.
 - Reassessment planning requires one checked stable-screen context read for every verified pane, including the controller and already-correlated panes; one absent or failed read permits no continuation send.
 - Reassessment reaches only a verified non-controller session whose recovery destroyed something for it, through a separate checked send whose public input record proves trailing Enter submission exactly once per prepared manifest.
 - Explicit plans remain unfinished until their own acceptance scope is reconciled against delivered work; a separate useful result never absorbs them.
 
 ## Verification
+
+- ALWAYS: preparation records the driving session's exact native identity, and a recovery entered by any other native session halts before its first mutation naming the recorded driver
+- ALWAYS: an interrupted recovery resumes from the durable manifest at the first step whose result that manifest does not record, performing no step it already records
+- NEVER: a repeated recovery step emits a second activation, native launch, pane input, or continuation delivery for a result the manifest already records
 
 ### Testing
 
