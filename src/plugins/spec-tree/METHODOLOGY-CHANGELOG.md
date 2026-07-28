@@ -6,6 +6,8 @@ This file is not the `spec-tree` plugin's changelog. The plugin delivers the met
 
 An entry appears here when a change alters what a consumer can rely on, must do, or must know. A change that leaves the consumer contract untouched is excluded, whatever artifact it lived in.
 
+A release states a rule; a delivery begins enforcing it, and the two need not coincide. A rule can stand here for releases before any delivery reports a violation of it, so an artifact that passed yesterday can fail today against a rule that did not change. The plugin changelog records the version where enforcement started — read it to learn when a rule stated here began failing artifacts that previously passed.
+
 **Editions.** The major axis is the edition — the grammar an artifact is written against. Only an edition change can invalidate an existing artifact; a minor or patch release never can.
 
 Dates are the commits where this repository adopted each release.
