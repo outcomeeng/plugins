@@ -637,7 +637,11 @@ def observe_all_minor_triggering_changes_run() -> tuple[str, BumpOutcome]:
 
 
 def observe_single_changed_plugin_run() -> tuple[str, str, BumpOutcome]:
-    """Run bump where only one of two readable plugins has changes."""
+    """Run the default invocation where one of two readable plugins changed.
+
+    No segment is supplied, so the run resolves the segment it detects from
+    the change set rather than one the caller chose.
+    """
     foo_claude = manifest_relpath("foo", CLAUDE_MANIFEST)
     bar_claude = manifest_relpath("bar", CLAUDE_MANIFEST)
     foo_content = manifest_text("foo", "0.4.1")
@@ -660,7 +664,7 @@ def observe_single_changed_plugin_run() -> tuple[str, str, BumpOutcome]:
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
 
-    return foo_claude, "bar", run.capture()
+    return foo_claude, "bar", run.capture(segment=None)
 
 
 def observe_dual_manifest_plugin(
