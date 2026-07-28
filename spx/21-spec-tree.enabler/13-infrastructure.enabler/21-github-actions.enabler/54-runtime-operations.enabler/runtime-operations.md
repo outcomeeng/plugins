@@ -6,14 +6,11 @@ CAN diagnose failed runs and act on them when the user explicitly requests actio
 
 ## Assertions
 
-### Scenarios
-
-- Given a GitHub repository with workflow runs on the active branch, when the skill handles a status request, then the response names repository, branch, run id, workflow name, status, conclusion, and commit SHA before narrative ([test](tests/test_runtime_operations.scenario.l1.py))
-- Given a workflow run with conclusion `failure`, when the skill triages it, then `gh run view <run-id> --log-failed` runs before any full-log retrieval and the response surfaces failing job, failing step, and at least one error excerpt ([test](tests/test_runtime_operations.scenario.l1.py))
-- Given the active `gh` account lacks repository access, when the skill detects the failure on a TTY-attached session with authenticated accounts for the repository host, then it lists those host-scoped accounts and prompts for an account switch via `gh auth switch --hostname <host> -u <account>`; when no account is available or the session is non-TTY, it reports the active account and manual remediation commands without prompting ([test](tests/test_runtime_operations.scenario.l1.py))
-
 ### Compliance
 
+- ALWAYS: a status response names repository, branch, run id, workflow name, status, conclusion, and commit SHA before narrative ([audit])
+- ALWAYS: failure triage runs `gh run view <run-id> --log-failed` before any full-log retrieval and surfaces the failing job, failing step, and at least one error excerpt ([audit])
+- ALWAYS: when the active `gh` account lacks repository access, a TTY-attached session with authenticated accounts for the repository host lists those host-scoped accounts and prompts for an account switch via `gh auth switch --hostname <host> -u <account>`; when no account is available or the session is non-TTY, it reports the active account and manual remediation commands without prompting ([audit])
 - ALWAYS: run selection is evidence-based — every workflow summary names the user-provided identifier (run id, PR, branch, commit) or the default rule (active branch + HEAD) used to select the run ([audit])
 - ALWAYS: a failure diagnosis relates the remote failure to the workflow-design surface — trigger, job, dependency, runner, cache, artifact, environment, permission, secret, validation command, or repository script — so the failure is framed architecturally rather than only mechanically ([audit])
 - ALWAYS: a failure diagnosis names the local Spec Tree or repository command that verifies the same concern when the repository provides one — local-runnable equivalents make the failure reproducible without GitHub ([audit])
