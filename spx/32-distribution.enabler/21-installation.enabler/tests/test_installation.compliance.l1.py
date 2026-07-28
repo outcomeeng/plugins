@@ -10,9 +10,11 @@ from outcomeeng.distribution.installation import (
     STATE_ENV_NAMES,
 )
 from outcomeeng_testing.harnesses.installation import (
+    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_first_failure,
     observe_missing_codex_home,
     observe_persistent_execution,
+    observe_persistent_plan,
     observe_repository_plan,
 )
 
@@ -60,14 +62,21 @@ SCOPELESS_CLAUDE_OPERATIONS = {
 
 
 def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None:
-    observation = observe_persistent_execution()
-    plan = observation.report.plan
+    refreshing = observe_persistent_execution()
+    replacing = observe_persistent_plan(
+        claude_repository=NONCANONICAL_MARKETPLACE_SOURCE,
+        codex_source=NONCANONICAL_MARKETPLACE_SOURCE,
+    )
+    plans = (refreshing.report.plan, replacing.plan)
     claude_commands = [
-        command for command in plan.commands if command.agent is Agent.CLAUDE
+        command
+        for plan in plans
+        for command in plan.commands
+        if command.agent is Agent.CLAUDE
     ]
 
-    assert plan.mode is InstallationMode.PERSISTENT
-    assert {command.operation for command in claude_commands} <= (
+    assert all(plan.mode is InstallationMode.PERSISTENT for plan in plans)
+    assert {command.operation for command in claude_commands} == (
         SCOPE_BEARING_CLAUDE_OPERATIONS | SCOPELESS_CLAUDE_OPERATIONS
     )
     assert all(
@@ -82,10 +91,11 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     )
     assert all(
         dict(command.environment)[CODEX_HOME_ENV] == str(plan.roots.codex_home)
+        for plan in plans
         for command in plan.commands
         if command.agent is Agent.CODEX
     )
-    assert observation.attempted[1:] == plan.commands
+    assert refreshing.attempted[1:] == refreshing.report.plan.commands
 
 
 def test_first_agent_cli_failure_reports_the_operation_and_stops() -> None:
