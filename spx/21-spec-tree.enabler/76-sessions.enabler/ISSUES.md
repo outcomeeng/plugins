@@ -10,7 +10,7 @@ The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, 
 
 ## 2. The node carries sixty assertions against a seven-assertion decomposition signal
 
-`sessions.md` holds 48 Compliance assertions, 11 Scenarios, and 2 Mappings. `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md` treats more than roughly seven assertions as a signal requiring decomposition analysis, so a node at sixty is far past the point where that analysis is owed.
+`sessions.md` holds 47 Compliance assertions, 11 Scenarios, and 2 Mappings. `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md` treats more than roughly seven assertions as a signal requiring decomposition analysis, so a node at sixty is far past the point where that analysis is owed.
 
 The Compliance section spans several independently governable concerns that each have their own validation boundary: handoff persistence and the session-file lifecycle, claimed-session and continuation-thread resolution, pickup claim verification, and closeout reporting. Each could anchor its own child enabler.
 
