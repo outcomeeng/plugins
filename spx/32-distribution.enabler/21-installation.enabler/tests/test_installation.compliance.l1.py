@@ -98,6 +98,20 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     assert refreshing.attempted[1:] == refreshing.report.plan.commands
 
 
+def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
+    observation = observe_first_failure(Operation.LIFECYCLE_PLACE)
+
+    assert observation.failure is not None
+    assert observation.failure.command.agent is Agent.CODEX
+    assert observation.failure.command.operation is Operation.LIFECYCLE_PLACE
+    assert observation.failure.result.exit_code != 0
+    assert all(result.exit_code == 0 for result in observation.failure.completed)
+    assert observation.attempted[-1] == observation.failure.command
+    assert (
+        observation.attempted == observation.plan.commands[: len(observation.attempted)]
+    )
+
+
 def test_first_agent_cli_failure_reports_the_operation_and_stops() -> None:
     observation = observe_first_failure(Operation.PLUGIN_INSTALL)
 
