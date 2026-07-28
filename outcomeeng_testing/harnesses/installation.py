@@ -141,12 +141,24 @@ class VerificationRecipeObservation:
 
 
 @dataclass(frozen=True)
+class PluginListing:
+    """Plugin names one real agent CLI reports as installed and as enabled.
+
+    Installation and activation are separate observations: a plugin the scope
+    installs without activating appears in `installed` and not in `enabled`.
+    """
+
+    installed: frozenset[str]
+    enabled: frozenset[str]
+
+
+@dataclass(frozen=True)
 class RealInstallationObservation:
     """Real persistent and repeated isolated installation observations."""
 
     persistent_exit_code: int
-    persistent_claude_plugins: frozenset[str]
-    persistent_codex_plugins: frozenset[str]
+    persistent_claude_plugins: PluginListing
+    persistent_codex_plugins: PluginListing
     persistent_selection: frozenset[str]
     persistent_settings_before: bytes
     persistent_settings_after: bytes
@@ -156,10 +168,10 @@ class RealInstallationObservation:
     persistent_stderr: str
     first_exit_code: int
     second_exit_code: int
-    claude_plugins_first: frozenset[str]
-    claude_plugins_second: frozenset[str]
-    codex_plugins_first: frozenset[str]
-    codex_plugins_second: frozenset[str]
+    claude_plugins_first: PluginListing
+    claude_plugins_second: PluginListing
+    codex_plugins_first: PluginListing
+    codex_plugins_second: PluginListing
     claude_catalog: bytes
     codex_catalog: bytes
     claude_registration_target: str
@@ -679,11 +691,11 @@ def observe_real_installation() -> RealInstallationObservation:
         persistent_settings_after = persistent_settings.read_bytes()
     return RealInstallationObservation(
         persistent_exit_code=persistent.returncode,
-        persistent_claude_plugins=_listed_plugin_names(
+        persistent_claude_plugins=_listed_plugins(
             Agent.CLAUDE,
             persistent_claude.stdout,
         ),
-        persistent_codex_plugins=_listed_plugin_names(
+        persistent_codex_plugins=_listed_plugins(
             Agent.CODEX,
             persistent_codex.stdout,
         ),
@@ -698,10 +710,10 @@ def observe_real_installation() -> RealInstallationObservation:
         persistent_stderr=persistent.stderr,
         first_exit_code=first.returncode,
         second_exit_code=second.returncode,
-        claude_plugins_first=_listed_plugin_names(Agent.CLAUDE, claude_first.stdout),
-        claude_plugins_second=_listed_plugin_names(Agent.CLAUDE, claude_second.stdout),
-        codex_plugins_first=_listed_plugin_names(Agent.CODEX, codex_first.stdout),
-        codex_plugins_second=_listed_plugin_names(Agent.CODEX, codex_second.stdout),
+        claude_plugins_first=_listed_plugins(Agent.CLAUDE, claude_first.stdout),
+        claude_plugins_second=_listed_plugins(Agent.CLAUDE, claude_second.stdout),
+        codex_plugins_first=_listed_plugins(Agent.CODEX, codex_first.stdout),
+        codex_plugins_second=_listed_plugins(Agent.CODEX, codex_second.stdout),
         claude_catalog=claude_catalog,
         codex_catalog=codex_catalog,
         claude_registration_target=claude_target,
@@ -727,7 +739,7 @@ def observe_real_installation() -> RealInstallationObservation:
     )
 
 
-def _listed_plugin_names(agent: Agent, payload: str) -> frozenset[str]:
+def _listed_plugins(agent: Agent, payload: str) -> PluginListing:
     """Read installed and enabled plugin names from a real agent CLI listing."""
     try:
         document = json.loads(payload)
@@ -749,7 +761,8 @@ def _listed_plugin_names(agent: Agent, payload: str) -> frozenset[str]:
         else CODEX_PLUGIN_ENABLED_FIELD
     )
     marketplace_suffix = f"@{MARKETPLACE_NAME}"
-    names: set[str] = set()
+    installed: set[str] = set()
+    enabled_names: set[str] = set()
     for entry in entries:
         if not isinstance(entry, dict):
             raise RuntimeError(f"{agent.value} plugin listing contains a non-object")
@@ -759,9 +772,16 @@ def _listed_plugin_names(agent: Agent, payload: str) -> frozenset[str]:
             raise RuntimeError(
                 f"{agent.value} plugin listing entry lacks typed identity or state"
             )
-        if enabled and plugin_id.endswith(marketplace_suffix):
-            names.add(plugin_id.removesuffix(marketplace_suffix))
-    return frozenset(names)
+        if not plugin_id.endswith(marketplace_suffix):
+            continue
+        name = plugin_id.removesuffix(marketplace_suffix)
+        installed.add(name)
+        if enabled:
+            enabled_names.add(name)
+    return PluginListing(
+        installed=frozenset(installed),
+        enabled=frozenset(enabled_names),
+    )
 
 
 def _mirror_installation_inputs(source: Path, destination: Path) -> None:
