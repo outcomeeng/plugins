@@ -406,7 +406,8 @@ class SettingsMutatingRunner:
                 json.loads(self.settings.read_text(encoding="utf-8")),
             )
             enabled = cast(
-                "dict[str, object]", document.setdefault(CLAUDE_ENABLED_PLUGINS_FIELD, {})
+                "dict[str, object]",
+                document.setdefault(CLAUDE_ENABLED_PLUGINS_FIELD, {}),
             )
             enabled[f"{command.plugin}@{MARKETPLACE_NAME}"] = True
             self.settings.write_text(json.dumps(document, indent=2), encoding="utf-8")
