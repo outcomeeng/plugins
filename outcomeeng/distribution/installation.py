@@ -496,15 +496,18 @@ class DeclaredSelection:
     value: object
 
 
-def _declared_plugin_selection(settings: Path) -> DeclaredSelection | None:
-    """Read the plugin selection a checkout's project settings declare."""
-    document = _settings_document(settings)
-    if document is None:
-        return None
+def _selection_of(document: Mapping[str, object]) -> DeclaredSelection:
     return DeclaredSelection(
         present=CLAUDE_ENABLED_PLUGINS_FIELD in document,
         value=document.get(CLAUDE_ENABLED_PLUGINS_FIELD),
     )
+
+
+def _declared_plugin_selection(settings: Path) -> DeclaredSelection | None:
+    """Read the plugin selection a checkout's project settings declare."""
+    if not settings.exists():
+        return None
+    return _selection_of(_settings_document(settings))
 
 
 def _restore_plugin_selection(
@@ -512,30 +515,16 @@ def _restore_plugin_selection(
     declared: DeclaredSelection | None,
 ) -> None:
     """Re-apply a declared plugin selection, leaving the rest of the document."""
-    document = _settings_document(settings)
-    if declared is None or document is None:
+    if declared is None or not settings.exists():
         return
-    current = DeclaredSelection(
-        present=CLAUDE_ENABLED_PLUGINS_FIELD in document,
-        value=document.get(CLAUDE_ENABLED_PLUGINS_FIELD),
-    )
-    if current == declared:
+    document = _settings_document(settings)
+    if _selection_of(document) == declared:
         return
     if declared.present:
         document[CLAUDE_ENABLED_PLUGINS_FIELD] = declared.value
     else:
         document.pop(CLAUDE_ENABLED_PLUGINS_FIELD, None)
     settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
-
-
-def _settings_document(settings: Path) -> dict[str, object] | None:
-    """Read one project settings document, or nothing when it is unreadable."""
-    if not settings.exists():
-        return None
-    document = cast(object, json.loads(settings.read_text(encoding="utf-8")))
-    if not isinstance(document, dict):
-        return None
-    return cast("dict[str, object]", document)
 
 
 def _build_plan(
