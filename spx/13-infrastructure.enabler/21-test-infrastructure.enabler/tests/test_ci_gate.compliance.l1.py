@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from outcomeeng.validation import ACTIONLINT_ARGV, SHELLCHECK_ARGV
 from outcomeeng.validation.ci_gate import (
     CI_STEP_ENVIRONMENT_REQUIREMENTS,
     CI_TOOL_REQUIREMENTS,
@@ -50,6 +51,13 @@ def _inlined_gate_steps(workflow_path: Path | None = None) -> set[str]:
         for line in step.shell_lines
         if line in recipes
     }
+
+
+def test_gate_declares_the_workflow_and_shell_lint_steps() -> None:
+    argvs = observe_validation_step_argvs()
+
+    assert ACTIONLINT_ARGV in argvs
+    assert SHELLCHECK_ARGV in argvs
 
 
 def test_gate_workflow_never_inlines_a_gate_step() -> None:
