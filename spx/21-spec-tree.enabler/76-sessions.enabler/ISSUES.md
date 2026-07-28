@@ -8,14 +8,10 @@ The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, 
 
 **Resolution shape**: port claim reconciliation and the three-verdict resolution into the SPX CLI beside `spx session`, publish it, advance the floor, and reduce the shipped skill to its instruction with no script. Preserve the total verdict mapping across the move — every recorded claim resolves to exactly one verdict, and an unverifiable check stays distinguishable from a discrepancy. The port also carries the node-status lookup, which resolves the target node's record by tree-relative id inside the projection's node tree; a CLI-side implementation reads that record directly rather than re-deriving it from the CLI's own JSON output. Revisit when the capability publishes.
 
-## 2. The node carries sixty assertions against a seven-assertion decomposition signal
+## 2. This node's spec still carries the handoff and pickup-resumption concerns
 
-`sessions.md` holds 47 Compliance assertions, 11 Scenarios, and 2 Mappings. `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md` treats more than roughly seven assertions as a signal requiring decomposition analysis, so a node at sixty is far past the point where that analysis is owed.
+`sessions.md` holds 36 assertions after the first composition pass, against the roughly seven that `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md` treats as the signal requiring decomposition analysis.
 
-The Compliance section spans several independently governable concerns that each have their own validation boundary: handoff persistence and the session-file lifecycle, claimed-session and continuation-thread resolution, pickup claim verification, and closeout reporting. Each could anchor its own child enabler.
+The remaining concerns, their reserved child addresses, the ordering evidence placing them, and the destination of every one of the 36 assertions are recorded in `spx/21-spec-tree.enabler/76-sessions.enabler/PLAN.md`. That note carries the pending steps; this entry records only that the node is mid-composition, so a reader who loads the node knows its spec is not yet at its resting shape.
 
-**Why this is not folded into the changeset that surfaced it**: the resolution is `/decompose` analysis followed by `/refactor` tree surgery across the node, its two existing children, its co-located tests, and every full-path citation that names it — node-scale structural work whose ordering evidence and index assignment `/decompose` owns. The changeset that surfaced this adds one assertion governing closeout content; the oversize predates it and is independent of that concern, so folding the restructure in would replace a bounded content change with a subtree migration.
-
-**Resolution shape**: run `/decompose spx/21-spec-tree.enabler/76-sessions.enabler` to produce the ordering-evidence matrix and child boundaries, then apply the split through `/refactor`, preserving assertion semantics and moving each assertion to the child whose concern owns it. Gate with the spec auditor per child.
-
-**Evidence**: surfaced by the changeset reviewer on PR 494 (run `2026-07-28_18-06-07-731-0251e1d43e02`) as a `[architecture]` `DEBT` finding against `sessions.md:76`.
+**Evidence**: the oversize was surfaced by the changeset reviewer on PR 494 (run `2026-07-28_18-06-07-731-0251e1d43e02`) as an `[architecture]` `DEBT` finding. The first composition pass moved 24 assertions into `spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler` and `spx/21-spec-tree.enabler/76-sessions.enabler/28-pickup.enabler/30-claim-verification.enabler`.
