@@ -750,40 +750,93 @@ def observe_attested_controller_rejections() -> AttestedControllerRejections:
     )
 
 
-def verify_native_agent_recovery_properties() -> list[str]:
+@dataclass(frozen=True)
+class IdempotentRecovery:
+    """One generated roster's activation and recovery result when every candidate already correlates."""
+
+    ready_status: object
+    already_current_status: object
+    activation_status: object
+    activations: list[object]
+    recovery_status: object
+    deliveries: list[object]
+
+
+@dataclass(frozen=True)
+class UnsupportedEvidence:
+    """The status preparation raises for one generated evidence value outside the source contract."""
+
+    invalid_schema_status: object
+    prepare_status: object
+
+
+def _observe_idempotent_recovery(
+    module: ModuleType, roster: RecoveryRosterCase
+) -> IdempotentRecovery:
+    prepared = _prepared(module, roster)
+    panes, agents = _post_restart_rosters(module, roster, len(roster.original_pane_ids))
+    activation = module.plan_activation(prepared, panes, agents)
+    recovery = module.recover(
+        prepared,
+        cast(list[dict[str, object]], activation[module.BINDINGS_FIELD]),
+        panes,
+        agents,
+    )
+    return IdempotentRecovery(
+        ready_status=module.ResultStatus.READY,
+        already_current_status=module.ResultStatus.ALREADY_CURRENT,
+        activation_status=activation[module.STATUS_FIELD],
+        activations=cast(list[object], activation[module.ACTIVATIONS_FIELD]),
+        recovery_status=recovery[module.STATUS_FIELD],
+        deliveries=cast(list[object], recovery[module.DELIVERIES_FIELD]),
+    )
+
+
+def _observe_unsupported_evidence(
+    module: ModuleType, evidence: str
+) -> UnsupportedEvidence:
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    panes, agents = _pre_restart_rosters(module, roster)
+    candidates = recovery_candidates(module, roster)
+    correlations = identity_evidence(module, roster, roster.original_pane_ids)
+    candidates[0][module.EVIDENCE_FIELD] = evidence
+    correlations[0][module.SOURCE_FIELD] = evidence
+    return UnsupportedEvidence(
+        invalid_schema_status=module.ResultStatus.INVALID_SCHEMA,
+        prepare_status=_error_status(
+            module,
+            lambda: module.prepare(
+                roster.original_pane_ids, panes, agents, candidates, correlations
+            ),
+        ),
+    )
+
+
+def drive_idempotent_recovery_property(
+    check: Callable[[IdempotentRecovery], None],
+) -> None:
+    """Drive the repeated-recovery invariant over generated rosters under harness-owned replay settings."""
     module = _load()
-    failures: list[str] = []
 
     @seed(RECOVERY_PROPERTY_SEED)
     @settings(max_examples=RECOVERY_PROPERTY_EXAMPLES, deadline=None, print_blob=True)
     @example(roster=OPERATIONAL_RECOVERY_ROSTER)
     @given(roster=roster_cases())
-    def generated_idempotence(roster: RecoveryRosterCase) -> None:
-        prepared = _prepared(module, roster)
-        panes, agents = _post_restart_rosters(
-            module, roster, len(roster.original_pane_ids)
-        )
-        activation = module.plan_activation(prepared, panes, agents)
-        if activation[module.STATUS_FIELD] != module.ResultStatus.READY:
-            failures.append("fully correlated restart did not map to ready")
-        if activation[module.ACTIVATIONS_FIELD]:
-            failures.append("fully correlated restart produced activation")
-        recovery = module.recover(
-            prepared,
-            cast(list[dict[str, object]], activation[module.BINDINGS_FIELD]),
-            panes,
-            agents,
-        )
-        if recovery[module.STATUS_FIELD] != module.ResultStatus.ALREADY_CURRENT:
-            failures.append("fully correlated recovery was not idempotent")
-        if recovery[module.DELIVERIES_FIELD]:
-            failures.append("idempotent recovery produced delivery")
+    def property_case(roster: RecoveryRosterCase) -> None:
+        check(_observe_idempotent_recovery(module, roster))
 
     run_replayable_property(
-        generated_idempotence,
+        property_case,
         seed_value=RECOVERY_PROPERTY_SEED,
         replay_path=RECOVERY_PROPERTY_REPLAY_PATH,
     )
+
+
+def drive_unsupported_evidence_property(
+    check: Callable[[UnsupportedEvidence], None],
+) -> None:
+    """Drive the evidence-contract invariant over generated values under harness-owned replay settings."""
+    module = _load()
 
     @seed(RECOVERY_PROPERTY_SEED)
     @settings(max_examples=RECOVERY_PROPERTY_EXAMPLES, deadline=None, print_blob=True)
@@ -792,32 +845,14 @@ def verify_native_agent_recovery_properties() -> list[str]:
             tuple(source.value for source in module.EvidenceSource)
         )
     )
-    def generated_invalid_evidence(evidence: str) -> None:
-        roster = OPERATIONAL_RECOVERY_ROSTER
-        panes, agents = _pre_restart_rosters(module, roster)
-        candidates = recovery_candidates(module, roster)
-        correlations = identity_evidence(module, roster, roster.original_pane_ids)
-        candidates[0][module.EVIDENCE_FIELD] = evidence
-        correlations[0][module.SOURCE_FIELD] = evidence
-        status = _error_status(
-            module,
-            lambda: module.prepare(
-                roster.original_pane_ids,
-                panes,
-                agents,
-                candidates,
-                correlations,
-            ),
-        )
-        if status != module.ResultStatus.INVALID_SCHEMA:
-            failures.append("unsupported candidate evidence was accepted")
+    def property_case(evidence: str) -> None:
+        check(_observe_unsupported_evidence(module, evidence))
 
     run_replayable_property(
-        generated_invalid_evidence,
+        property_case,
         seed_value=RECOVERY_PROPERTY_SEED,
         replay_path=RECOVERY_PROPERTY_REPLAY_PATH,
     )
-    return failures
 
 
 def verify_native_agent_recovery_compliance() -> list[str]:
