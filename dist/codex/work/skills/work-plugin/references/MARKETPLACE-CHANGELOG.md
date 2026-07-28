@@ -18,7 +18,7 @@ The marketplace carries no version of its own — each plugin is versioned indep
 
 ### Breaking
 
-- **The `develop` plugin is renamed to `instructions`.** Every reference to `develop@outcomeeng` stops resolving. Re-install as `instructions@outcomeeng` and update any product-scoped `.claude/settings.json` or `.codex/config.toml` that names the old identity. Its skills — skill authoring, subagent authoring, and their audits — carry over unchanged.
+- **The `develop` plugin is renamed to `instructions`.** Every reference to `develop@outcomeeng` stops resolving. Re-install as `instructions@outcomeeng`: update any project-scoped `.claude/settings.json` naming the old identity for Claude Code, and re-install into the selected `$CODEX_HOME` for Codex. Its skills — skill authoring, subagent authoring, and their audits — carry over unchanged.
 
 ## 2026-05-26
 
@@ -30,7 +30,7 @@ The marketplace carries no version of its own — each plugin is versioned indep
 
 ### Added
 
-- **Codex harness support.** The marketplace publishes a second catalog alongside the Claude Code catalog, and shared plugins ship both manifests. Codex registration is user-scoped through `codex plugin marketplace add outcomeeng/plugins`, with per-product enablement committed in `.codex/config.toml`.
+- **Codex harness support.** The marketplace publishes a second catalog alongside the Claude Code catalog, and shared plugins ship both manifests. Codex registration and installation belong to the selected `$CODEX_HOME`, through `codex plugin marketplace add outcomeeng/plugins` and `codex plugin add`. A repository's own `.codex/config.toml` carries no plugin installation or enablement semantics.
 
 ## 2026-01-05
 
