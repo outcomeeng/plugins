@@ -72,10 +72,6 @@ secret is visible to `outcomeeng/plugins`, and the token account can bypass
 
 `_error_outcome` (in `outcomeeng_evals/suite.py`) replaces all of a case's trials with one synthetic `trial_index=0` failing trial when the worker raises. If trial 1 passed and trial 2 raised, the successful trial's evidence is lost from the report. A richer error outcome — successful trials kept, the error appended as the final trial — would preserve that evidence. Defer; today's runs use `trials_per_case = 1`, so the loss is moot until multi-trial parallel runs are common.
 
-## Drop `[review]` from the remaining methodology surfaces
-
-Every spec assertion now uses `[test]`, `[eval]`, or `[audit]`. Inline `/understand`, audit guidance, eval prompts, and any validator or lint rule that enumerates the lane set still recognize `[review]` as a legacy spelling. Remove that recognition so the methodology exposes only the three valid assertion tags. The eval-link validator (`outcomeeng/validation/eval_links.py` → `outcomeeng/validation/link_integrity.py`) resolves only the path-bearing `[test]` and `[eval]` links; `[audit]` remains pathless and is not resolved there.
-
 ## CI-trigger marker regex lacks line-start anchoring
 
 `outcomeeng_evals/ci_triggers.py` compiles its `# BEGIN eval-trigger-paths` block-matching regex without a `^` anchor or `re.MULTILINE`, so it can match the marker text mid-line, unlike the `^...$`-anchored router and shared-region matchers in the instruction-block module. `spx/local/generated-sources.toml` declares line-start matching for this marker family and notes the deviation; the declared rule governs attribution, per `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`.
