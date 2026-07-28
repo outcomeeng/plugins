@@ -100,7 +100,7 @@ The methodology-providing plugin declares the exact methodology release it provi
 
 Support ranges express compatibility with individually selected methodology releases. They do not express that one consumer repository contains artifacts from several releases.
 
-The exact methodology release selected by a consumer must fall within every enabled plugin's support range. An empty compatibility intersection is an invalid plugin set, and the report of an unsatisfied selection names the plugin whose range excludes it.
+The exact methodology release selected by a consumer must fall within every enabled plugin's support range. A repository in transition also names earlier editions in `migratingFrom`, and artifacts of those editions stay authorized until the inventory reaches zero — so every enabled plugin must additionally read every edition named there. A plugin that supports only the selected edition is an invalid member of a transitioning set however precisely it matches the selected version, because the migration invariants require readers to understand every edition the repository names. An empty compatibility intersection is an invalid plugin set, and the report of an unsatisfied selection names the plugin together with the selected version its range excludes or the named edition it cannot read.
 
 **Prereleases are named, never implied.** A release still in preparation carries a prerelease identifier such as `4.0.0-rc.1`. A stable range never implies support for a prerelease of any release it covers. A prerelease is usable only when the provider, every supporting plugin, and the consumer each name it explicitly.
 
@@ -170,7 +170,9 @@ During this state:
 
 ## Deprecation and removal
 
-A form deprecated in edition N is removed in edition N+1. The removal is not optional and does not wait for an unrelated reason for N+1 to exist.
+A form deprecated in edition N is removed from the edition N+1 grammar. No artifact of edition N+1 may carry it and no writer may produce it. The removal is not optional and does not wait for an unrelated reason for N+1 to exist.
+
+Removing a form from the grammar is not the same as removing its reader. Deprecation warns; it does not invalidate, so an edition-N artifact may legitimately carry a form deprecated in N. While a repository still names N in `migratingFrom`, readers keep interpreting that form for artifacts of edition N — otherwise the repository could not both hold authorized edition-N artifacts and satisfy the invariant that readers understand every edition it names. The reader retires when the transition completes and `migratingFrom` no longer names N. The adjacent-edition bound keeps that window finite, so the reader's life is bounded by the transition rather than by the maintainer's patience.
 
 This rule is stated separately from the transition-completion rule above and serves a different purpose. Completion describes when one repository has finished migrating. This rule bounds what the methodology and its delivery mechanisms must keep understanding.
 
