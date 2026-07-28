@@ -11,7 +11,7 @@ from tempfile import TemporaryDirectory
 
 from hypothesis import seed, settings
 
-from outcomeeng.hygiene.clean import GIT_METADATA_DIR, Runner
+from outcomeeng.hygiene.clean import GIT_IGNORE_FILE, GIT_METADATA_DIR, Runner
 from outcomeeng_testing.generators.hygiene import (
     CleanWorkspaceCase,
     XmlSpacingWorkspaceCase,
@@ -24,7 +24,6 @@ HYGIENE_EVIDENCE_REPLAY_PATH = "just test spx/21-hygiene.enabler/tests"
 SUBPROCESS_TIMEOUT_SECONDS = 10
 STAGED_MARKDOWN_FILENAME = "staged.md"
 UNSTAGED_MARKDOWN_FILENAME = "unstaged.md"
-GIT_IGNORE_FILENAME = ".gitignore"
 
 
 @dataclass(frozen=True)
@@ -137,7 +136,7 @@ def clean_workspace(case: CleanWorkspaceCase) -> Iterator[CleanWorkspace]:
         unstaged_path = root / UNSTAGED_MARKDOWN_FILENAME
         staged_path.write_bytes(case.staged_content)
         unstaged_path.write_bytes(case.unstaged_index_content)
-        (root / GIT_IGNORE_FILENAME).write_text(
+        (root / GIT_IGNORE_FILE).write_text(
             "".join(
                 [f"{name}\n" for name, _ in case.ignored_files]
                 + [
@@ -161,7 +160,7 @@ def clean_workspace(case: CleanWorkspaceCase) -> Iterator[CleanWorkspace]:
         _run_git(
             root,
             "add",
-            GIT_IGNORE_FILENAME,
+            GIT_IGNORE_FILE,
             STAGED_MARKDOWN_FILENAME,
             UNSTAGED_MARKDOWN_FILENAME,
         )
