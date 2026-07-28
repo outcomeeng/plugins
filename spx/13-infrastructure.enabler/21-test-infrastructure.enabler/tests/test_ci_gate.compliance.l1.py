@@ -89,6 +89,13 @@ def test_gate_workflow_provisions_the_declared_toolchain() -> None:
 def test_every_provisioned_tool_is_declared() -> None:
     observation = observe_ci_toolchain()
 
+    assert all(
+        any(
+            requirement.provision_fragment in reference
+            for requirement in CI_TOOL_REQUIREMENTS
+        )
+        for reference in observation.action_references
+    )
     assert {
         name
         for name in observation.job_environment
@@ -106,6 +113,34 @@ def test_every_provisioned_tool_is_declared() -> None:
         (requirement.step_name, requirement.environment_name)
         for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     }
+
+
+def test_missing_tool_provisioning_is_detected() -> None:
+    observation = observe_ci_toolchain(
+        gate_fixture_path("missing_tool_provisioning.yml")
+    )
+
+    assert any(
+        not any(
+            requirement.provision_fragment in surface
+            for surface in (*observation.action_references, *observation.run_commands)
+        )
+        for requirement in CI_TOOL_REQUIREMENTS
+    )
+    assert not any(
+        step_name == requirement.step_name
+        and requirement.environment_name in environment
+        for step_name, environment in observation.step_environments
+        for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
+    )
+
+
+def test_mismatched_python_version_is_detected() -> None:
+    observation = observe_gate_python_versions(
+        gate_fixture_path("mismatched_python_version.yml")
+    )
+
+    assert observation.workflow_version != observation.project_version
 
 
 def test_missing_gate_recipe_is_detected() -> None:

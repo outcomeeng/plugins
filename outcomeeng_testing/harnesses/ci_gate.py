@@ -135,14 +135,14 @@ def observe_validation_step_argvs() -> frozenset[tuple[str, ...]]:
     return frozenset(step.argv for step in VALIDATION_STEPS)
 
 
-def observe_ci_toolchain() -> CiToolchainObservation:
+def observe_ci_toolchain(
+    workflow_path: Path | None = None,
+) -> CiToolchainObservation:
     """Return the workflow surfaces that provision and authenticate gate tools."""
-    workflow_data = workflow()
-    env = cast("dict[str, str]", gate_job(workflow_data)["env"])
+    workflow_data = workflow(workflow_path)
+    env = cast("dict[str, str]", gate_job(workflow_data).get("env", {}))
     steps = gate_steps(workflow_data)
-    runs = tuple(
-        cast("str", step["run"]) for step in gate_steps(workflow_data) if "run" in step
-    )
+    runs = tuple(cast("str", step["run"]) for step in steps if "run" in step)
     return CiToolchainObservation(
         job_environment=frozenset(env),
         action_references=tuple(
@@ -159,10 +159,12 @@ def observe_ci_toolchain() -> CiToolchainObservation:
     )
 
 
-def observe_gate_python_versions() -> GatePythonObservation:
+def observe_gate_python_versions(
+    workflow_path: Path | None = None,
+) -> GatePythonObservation:
     """Return the workflow-provisioned and project-declared Python versions."""
     return GatePythonObservation(
-        workflow_version=setup_python_version(workflow()),
+        workflow_version=setup_python_version(workflow(workflow_path)),
         project_version=required_python_version(),
     )
 

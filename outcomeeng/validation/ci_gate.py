@@ -84,6 +84,7 @@ CI_TOOL_REQUIREMENTS: Final = (
         "spx --version",
     ),
     CiToolRequirement(None, "actions/checkout@", None),
+    CiToolRequirement(None, "actions/setup-python@", None),
 )
 CI_STEP_ENVIRONMENT_REQUIREMENTS: Final = (
     CiStepEnvironmentRequirement("Run quality gate", "GH_TOKEN"),
