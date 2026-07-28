@@ -13,11 +13,11 @@ not here.
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 from typing import Final
 
 import outcomeeng
+from outcomeeng_testing.harnesses.spec_tree import marketplace_tracked_files
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[4]
 
@@ -45,14 +45,7 @@ def _misplaced_test_infra(tracked: list[str]) -> list[str]:
 
 
 def _tracked_files() -> list[str]:
-    result = subprocess.run(
-        ["git", "ls-files"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return [line for line in result.stdout.splitlines() if line]
+    return marketplace_tracked_files(REPO_ROOT)
 
 
 class TestHomeIsPlacedAtRoot:

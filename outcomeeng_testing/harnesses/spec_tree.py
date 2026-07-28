@@ -33,6 +33,18 @@ def marketplace_root_for_spec_tree_root_test(test_file: str) -> Path:
     raise MarketplaceRootNotFoundError(msg)
 
 
+def marketplace_tracked_files(product_root: Path) -> list[str]:
+    """Return every repository-relative path git tracks in the checkout."""
+    result = subprocess.run(
+        ["git", "ls-files"],
+        cwd=product_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return [line for line in result.stdout.splitlines() if line]
+
+
 def marketplace_tracked_spx_node_directories(test_file: str) -> list[Path]:
     product_root = marketplace_root_for_spec_tree_root_test(test_file)
     result = subprocess.run(
