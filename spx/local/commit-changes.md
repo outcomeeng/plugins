@@ -91,7 +91,14 @@ The `bump*` recipes take two **positional** arguments — `base_ref` (default `o
 2. Run `just bump`, then `just build-skills`. `just bump` bumps every changed-but-unbumped plugin and SKIPS (with a diagnostic) any plugin already bumped on this branch — so re-running it after a later commit bumps a newly-changed plugin without disturbing the ones already set. A branch that changes only `spx/`, coordination notes, repository instructions, tests, validation config, or local overlays bumps nothing. Detection is structural (see **Segment auto-detection is structural** above): if the change is a major functional change or significant UX improvement per `## Version Management` but `just bump-dry` shows `patch`, re-run `just bump origin/main minor`.
 3. Stage the plugin source, the regenerated `dist/`, and the manifests `just bump` wrote, then commit them together via `/commit-changes`.
 4. During review, leave the version alone — follow-up commits that fix code, docs, specs, or review feedback do not bump again, and re-running `just bump` is a no-op for an already-bumped plugin.
-5. If review materially expands the PR (for example adds a skill, turning a `patch` into a `minor`), run `just bump origin/main minor` once to re-select the segment, then leave it fixed.
+5. If review materially changes the PR's class (for example adds or removes a skill or thin agent, turning a `patch` into a `minor`), re-select the segment by restoring that plugin's manifests to their base version first, then bumping once:
+
+   ```bash
+   git checkout <base_ref> -- src/plugins/<name>/.claude-plugin/plugin.json src/plugins/<name>/.codex-plugin/plugin.json
+   just bump <base_ref> <segment>
+   ```
+
+   `just bump` alone cannot re-select: it skips a plugin whose working-tree version is already ahead of the base, and an explicit `segment` does not override that skip. Restoring first leaves the branch carrying exactly one bump from the base at the corrected segment, which is what the skip protects. Then leave it fixed.
 6. After a rebase or retarget onto an advanced base, re-run `just bump-dry` against the new base to re-evaluate — do not bump merely because another review commit was added.
 
 When the PR merges, `main` receives the already-bumped version with no separate release commit.
@@ -116,6 +123,7 @@ just build-skills  # propagate the bumped version into dist/
 | Change                                  | Old   | New   | Reason                                                                               |
 | --------------------------------------- | ----- | ----- | ------------------------------------------------------------------------------------ |
 | Add an implementation-auditor agent     | 0.2.0 | 0.3.0 | New thin agent = MINOR                                                               |
+| Retire a thin agent                     | 0.3.0 | 0.4.0 | A lost thin agent is structural = MINOR                                              |
 | Add self-organizing handoff             | 0.3.0 | 0.4.0 | Major functional change = MINOR — not structural, pass `just bump origin/main minor` |
 | Fix typo in an installed skill          | 0.4.0 | 0.4.1 | Plugin-surface documentation patch                                                   |
 | Refactor pickup logic                   | 0.4.1 | 0.4.2 | Refactoring = PATCH                                                                  |
