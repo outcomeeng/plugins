@@ -22,7 +22,7 @@ Identified during the lean-template migration of the product-level decision reco
 
 The assertion tags are `[test]`, `[eval]`, and `[audit]`; `[review]` is not one of them, so every occurrence is an invalid tag to replace with `[audit]`. 33 spec files across `spx/` still carry `([review])` on assertions (for example `spx/15-validation.enabler/32-skill-frontmatter.enabler/skill-frontmatter.md` and `spx/18-plugin-build.enabler/54-conversion.enabler/conversion.md`). The migration has been applied node by node where other work already touched a node — the sessions enabler, `76-sessions.enabler/32-session-skill-invocation.enabler`, `21-spec-tree.enabler/18-context-loading.enabler`, and `21-spec-tree.enabler/65-apply.enabler` — so the spelling is mixed tree-wide with no single tracking location.
 
-**Resolution shape**: batch-migrate the remaining `([review])` occurrences to `([audit])` node by node — the text of each assertion is unchanged, only the tag spelling — gating each batch with the spec auditor. Once the tree carries no `[review]`, remove the legacy-spelling note from inline `/understand` `<verification_model>`.
+**Resolution shape**: batch-migrate the remaining `([review])` occurrences to `([audit])` node by node — the text of each assertion is unchanged, only the tag spelling — gating each batch with the spec auditor. The skill surfaces carry no legacy-spelling note to retire: inline `/understand` `<verification_model>` and `/audit-specs` name only the three valid tags, so a residual `([review])` is an invalid tag wherever an auditor meets one.
 
 ## Align Python and Rust test-standards subtrees to the semantic-binding foundation
 
