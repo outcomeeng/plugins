@@ -123,14 +123,14 @@ just build-skills  # propagate the bumped version into dist/
 | Change                                  | Old   | New   | Reason                                                                               |
 | --------------------------------------- | ----- | ----- | ------------------------------------------------------------------------------------ |
 | Add an implementation-auditor agent     | 0.2.0 | 0.3.0 | New thin agent = MINOR                                                               |
-| Retire a thin agent                     | 0.3.0 | 0.4.0 | A lost thin agent is structural = MINOR                                              |
 | Add self-organizing handoff             | 0.3.0 | 0.4.0 | Major functional change = MINOR — not structural, pass `just bump origin/main minor` |
 | Fix typo in an installed skill          | 0.4.0 | 0.4.1 | Plugin-surface documentation patch                                                   |
 | Refactor pickup logic                   | 0.4.1 | 0.4.2 | Refactoring = PATCH                                                                  |
 | Improve error messages                  | 0.4.2 | 0.4.3 | Small enhancement = PATCH                                                            |
 | Add `/design-frontend`                  | 0.4.3 | 0.5.0 | New skill = MINOR                                                                    |
-| Add `spx/.../PLAN.md`                   | 0.4.3 | 0.4.3 | Coordination note, no plugin surface                                                 |
-| Update `spx/.../ISSUES.md`              | 0.4.3 | 0.4.3 | Coordination note, no plugin surface                                                 |
-| Edit `spx/43-python.enabler/python.md`  | 0.4.3 | 0.4.3 | Spec-only, no plugin surface                                                         |
-| Edit `spx/local/commit-changes.md`      | 0.4.3 | 0.4.3 | Local workflow overlay, no plugin                                                    |
-| Edit `AGENTS.md` without plugin changes | 0.4.3 | 0.4.3 | Product instruction, no plugin                                                       |
+| Retire a thin agent                     | 0.5.0 | 0.6.0 | A lost thin agent is structural = MINOR                                              |
+| Add `spx/.../PLAN.md`                   | 0.6.0 | 0.6.0 | Coordination note, no plugin surface                                                 |
+| Update `spx/.../ISSUES.md`              | 0.6.0 | 0.6.0 | Coordination note, no plugin surface                                                 |
+| Edit `spx/43-python.enabler/python.md`  | 0.6.0 | 0.6.0 | Spec-only, no plugin surface                                                         |
+| Edit `spx/local/commit-changes.md`      | 0.6.0 | 0.6.0 | Local workflow overlay, no plugin                                                    |
+| Edit `AGENTS.md` without plugin changes | 0.6.0 | 0.6.0 | Product instruction, no plugin                                                       |
