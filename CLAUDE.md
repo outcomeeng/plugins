@@ -424,6 +424,8 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 - `.spx/` — gitignored operational files (sessions, audit state).
 - `.claude/settings.json` — product-scoped Claude Code plugin selection, committed for collaborators.
 - `.codex/config.toml` — repository Codex settings unrelated to plugin installation or enablement.
+- `CHANGELOG.md` — the pointer table naming this repository's three changelog lines, where each is authored, and how each ships. It carries no entries itself, because a changelog reaches its reader only from inside an installed plugin.
+- `PROPOSED.md` — the methodology release model: edition versus version, the `provides` / `supports` / `migratingFrom` grammar, and the changelog model the three lines implement.
 - `CLAUDE.md` (this file), `AGENTS.md` (Codex counterpart) — repo-level instruction surfaces.
 
 For the contents of any plugin or `spx/` subdirectory, run `ls` or read the catalog. The authored directory layout under each plugin follows the conventions in `src/plugins/instructions/skills/`.
