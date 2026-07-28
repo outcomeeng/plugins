@@ -21,19 +21,30 @@ import os
 import re
 import shlex
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Callable, Iterator, Sequence
+from contextlib import contextmanager
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
+from hypothesis import seed, settings
+
+from outcomeeng.validation.hook_contract import SESSION_START_EVENT
 from outcomeeng_testing.harnesses.spec_tree import (
     marketplace_root_for_spec_tree_root_test,
 )
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 # A shell variable name the harness may safely interpolate into a sourced script.
 _ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 _HOOKS_JSON = ("src", "plugins", "spec-tree", "hooks", "hooks.json")
-SESSION_START_EVENT = "SessionStart"
+HOOK_EVIDENCE_SEED = 20260728
+HOOK_EVIDENCE_EXAMPLES = 40
+HOOK_EVIDENCE_REPLAY_PATH = (
+    "just test "
+    "spx/21-spec-tree.enabler/13-agent-environment.enabler/21-identity.enabler/tests"
+)
 
 # The hook's environment kill switch (hooks.json): set to "1" to short-circuit the
 # hook to a valid empty result before it probes for or invokes spx.
@@ -62,6 +73,36 @@ _SESSION_START_ENV_EXCLUDES = {
 # The hook declares its own short timeout; the harness bounds the subprocess well
 # above it so a hung command surfaces as a harness failure rather than a wedge.
 _SUBPROCESS_TIMEOUT_S = 30
+
+
+def hook_generated_evidence(
+    evidence_run: Callable[[], None],
+) -> Callable[[], None]:
+    """Apply reproducible Hypothesis policy to agent-hook evidence."""
+    configured = seed(HOOK_EVIDENCE_SEED)(
+        settings(
+            max_examples=HOOK_EVIDENCE_EXAMPLES,
+            deadline=None,
+            print_blob=True,
+        )(evidence_run)
+    )
+
+    def run_evidence() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=HOOK_EVIDENCE_SEED,
+            replay_path=HOOK_EVIDENCE_REPLAY_PATH,
+        )
+
+    return run_evidence
+
+
+@contextmanager
+def session_start_workspace() -> Iterator[tuple[Path, Path]]:
+    """Yield an isolated project directory and its hook env-file path."""
+    with TemporaryDirectory() as directory:
+        project_dir = Path(directory)
+        yield project_dir, project_dir / "claude.env"
 
 
 def _hooks_config(test_file: str | None = None) -> dict[str, Any]:
@@ -233,15 +274,18 @@ def worktree_occupancy(project_dir: Path) -> list[dict[str, Any]]:
 __all__ = [
     "KILL_SWITCH_DISABLED",
     "KILL_SWITCH_ENV",
+    "HOOK_EVIDENCE_REPLAY_PATH",
     "SESSION_START_EVENT",
     "UNSET_ENV_VALUE",
     "WORKTREE_CLAIMED_ENV",
     "WORKTREE_CLAIM_PATH_ENV",
     "WORKTREE_CONTROLLING_PID_ENV",
     "has_worktree_claim_export",
+    "hook_generated_evidence",
     "init_session_worktree",
     "read_env_exports",
     "run_session_start",
+    "session_start_workspace",
     "session_start_command",
     "session_start_events",
     "worktree_claim_path_from_env",
