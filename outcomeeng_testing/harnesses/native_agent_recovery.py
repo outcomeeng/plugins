@@ -874,14 +874,17 @@ class IdempotentRecovery:
     activations: list[object]
     recovery_status: object
     deliveries: list[object]
+    repeated_reassessment_status: object
+    repeated_reassessment_deliveries: list[object]
 
 
 @dataclass(frozen=True)
 class UnsupportedEvidence:
-    """The status preparation raises for one generated evidence value outside the source contract."""
+    """The status preparation and verification raise for one generated out-of-contract evidence value."""
 
     invalid_schema_status: object
     prepare_status: object
+    verify_status: object
 
 
 def _observe_idempotent_recovery(
@@ -896,6 +899,30 @@ def _observe_idempotent_recovery(
         panes,
         agents,
     )
+    fixture = _verified_recovery(module, roster)
+    verified_bindings = cast(list[dict[str, object]], fixture["bindings"])
+    verified = cast(dict[str, object], fixture["verified"])
+    reads = cast(list[dict[str, object]], fixture["reads"])
+    reassessment = cast(
+        dict[str, object],
+        module.plan_reassessment(
+            cast(dict[str, object], fixture["prepared"]),
+            verified_bindings,
+            verified,
+            reads,
+            [],
+        ),
+    )
+    if reassessment[module.STATUS_FIELD] == module.ResultStatus.REASSESSMENT_READY:
+        durable = cast(dict[str, object], module.settle_recovery(reassessment, []))[
+            module.PREPARED_FIELD
+        ]
+    else:
+        durable = fixture["prepared"]
+    repeated = cast(
+        dict[str, object],
+        module.plan_reassessment(durable, verified_bindings, verified, reads),
+    )
     return IdempotentRecovery(
         ready_status=module.ResultStatus.READY,
         already_current_status=module.ResultStatus.ALREADY_CURRENT,
@@ -903,6 +930,10 @@ def _observe_idempotent_recovery(
         activations=cast(list[object], activation[module.ACTIVATIONS_FIELD]),
         recovery_status=recovery[module.STATUS_FIELD],
         deliveries=cast(list[object], recovery[module.DELIVERIES_FIELD]),
+        repeated_reassessment_status=repeated[module.STATUS_FIELD],
+        repeated_reassessment_deliveries=cast(
+            list[object], repeated[module.DELIVERIES_FIELD]
+        ),
     )
 
 
@@ -915,12 +946,27 @@ def _observe_unsupported_evidence(
     correlations = identity_evidence(module, roster, roster.original_pane_ids)
     candidates[0][module.EVIDENCE_FIELD] = evidence
     correlations[0][module.SOURCE_FIELD] = evidence
+    verified_fixture = _verified_recovery(module, roster)
+    verify_correlations = deepcopy(
+        cast(list[dict[str, object]], verified_fixture["correlations"])
+    )
+    verify_correlations[0][module.SOURCE_FIELD] = evidence
     return UnsupportedEvidence(
         invalid_schema_status=module.ResultStatus.INVALID_SCHEMA,
         prepare_status=_error_status(
             module,
             lambda: module.prepare(
                 roster.original_pane_ids, panes, agents, candidates, correlations
+            ),
+        ),
+        verify_status=_error_status(
+            module,
+            lambda: module.verify(
+                cast(dict[str, object], verified_fixture["prepared"]),
+                cast(list[dict[str, object]], verified_fixture["bindings"]),
+                cast(list[dict[str, object]], verified_fixture["panes"]),
+                cast(list[dict[str, object]], verified_fixture["agents"]),
+                verify_correlations,
             ),
         ),
     )
