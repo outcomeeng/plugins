@@ -462,10 +462,11 @@ def execute_persistent_installation(
     """Inspect selected persistent state, then reconcile and install it.
 
     The checkout's committed plugin selection is read before installing and
-    written back unconditionally afterwards, so a run that succeeds and a run
-    that fails partway both leave that file at the bytes they started from.
+    re-applied afterwards, on a successful run and on one that fails partway.
     Installing a plugin activates it in the scope, so the selection would
-    otherwise widen to the whole catalog.
+    otherwise widen to the whole catalog. Only the selection is re-applied:
+    the marketplace source the run reconciles lives in the same document and
+    must survive.
     """
     preflight = build_persistent_preflight(checkout, base_environment)
     inspection_result = _checked_result(
@@ -480,12 +481,61 @@ def execute_persistent_installation(
         )
     plan = build_persistent_installation_plan(preflight, inspection_result.stdout)
     settings = checkout / CLAUDE_PROJECT_SETTINGS_PATH
-    declared = settings.read_bytes() if settings.exists() else None
+    declared = _declared_plugin_selection(settings)
     try:
         return execute_installation(plan, runner, completed=(inspection_result,))
     finally:
-        if declared is not None:
-            settings.write_bytes(declared)
+        _restore_plugin_selection(settings, declared)
+
+
+@dataclass(frozen=True)
+class DeclaredSelection:
+    """A checkout's plugin selection, and whether the checkout declares one."""
+
+    present: bool
+    value: object
+
+
+def _declared_plugin_selection(settings: Path) -> DeclaredSelection | None:
+    """Read the plugin selection a checkout's project settings declare."""
+    document = _settings_document(settings)
+    if document is None:
+        return None
+    return DeclaredSelection(
+        present=CLAUDE_ENABLED_PLUGINS_FIELD in document,
+        value=document.get(CLAUDE_ENABLED_PLUGINS_FIELD),
+    )
+
+
+def _restore_plugin_selection(
+    settings: Path,
+    declared: DeclaredSelection | None,
+) -> None:
+    """Re-apply a declared plugin selection, leaving the rest of the document."""
+    document = _settings_document(settings)
+    if declared is None or document is None:
+        return
+    current = DeclaredSelection(
+        present=CLAUDE_ENABLED_PLUGINS_FIELD in document,
+        value=document.get(CLAUDE_ENABLED_PLUGINS_FIELD),
+    )
+    if current == declared:
+        return
+    if declared.present:
+        document[CLAUDE_ENABLED_PLUGINS_FIELD] = declared.value
+    else:
+        document.pop(CLAUDE_ENABLED_PLUGINS_FIELD, None)
+    settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+
+
+def _settings_document(settings: Path) -> dict[str, object] | None:
+    """Read one project settings document, or nothing when it is unreadable."""
+    if not settings.exists():
+        return None
+    document = cast(object, json.loads(settings.read_text(encoding="utf-8")))
+    if not isinstance(document, dict):
+        return None
+    return cast("dict[str, object]", document)
 
 
 def _build_plan(
@@ -1078,6 +1128,7 @@ __all__ = [
     "CLAUDE_PLUGIN_ENABLED_FIELD",
     "CLAUDE_PLUGIN_ID_FIELD",
     "CLAUDE_ENABLED_PLUGINS_FIELD",
+    "EXTRA_MARKETPLACES_FIELD",
     "CLAUDE_PROJECT_SETTINGS_PATH",
     "USER_SCOPE_COLLISION_DIAGNOSTIC",
     "CLAUDE_SOURCE_FIELD",
