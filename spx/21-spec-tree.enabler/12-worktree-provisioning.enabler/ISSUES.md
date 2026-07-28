@@ -21,3 +21,24 @@ gates the waiter and the instruction-block generator, tracked in
 **Resolution shape**: port layout classification and pool provisioning into the
 SPX CLI, publish it, advance the floor, and reduce the shipped skill to its
 instruction with no script. Revisit when the capability publishes.
+
+## Four universal Compliance assertions rest on scenario-typed evidence
+
+Four `### Compliance` assertions in `worktree-provisioning.md` state universal
+`ALWAYS` rules yet link `tests/test_worktree_provisioning.scenario.l1.py`: the
+origin-derived main-checkout name, the push of every local ref, the refusal on a
+non-gitignored `.spx/`, and the container-basename requirement. A universal is
+never a scenario — a scenario proves one case and cannot establish an
+always-true rule — so each needs `compliance` evidence exercising violating
+fixtures.
+
+The coupling itself is sound: the test-evidence audit traced every one of the
+four to test functions that reach the governing source. The defect is the
+declared evidence type, not the coverage.
+
+**Resolution shape**: add `tests/test_worktree_provisioning.compliance.l1.py`,
+move the violating-fixture tests that carry these four rules into it — the
+refusal and fail-fast cases plus the origin-URL derivation cases — and re-point
+the four assertion links. The scenario file keeps its genuinely existential
+cases. Route the work through `/test`, which owns assertion typing and level
+selection.
