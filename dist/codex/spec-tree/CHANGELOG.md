@@ -8,6 +8,6 @@ This plugin delivers the methodology but is versioned separately from it. What c
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
-## 0.85.4
+## 0.86.1
 
 The changelog begins at this release. Entries below record changes from this version forward.
