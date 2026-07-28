@@ -16,8 +16,6 @@ REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 GATE_WORKFLOW: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
 PROJECT_METADATA: Final = REPO_ROOT / "pyproject.toml"
 
-GATE_JOB: Final = GATE_JOB_NAME
-
 
 @dataclass(frozen=True)
 class CiToolchainObservation:
@@ -81,7 +79,7 @@ def workflow(workflow_path: Path | None = None) -> dict[str, Any]:
 
 
 def gate_job(workflow_data: dict[str, Any]) -> dict[str, Any]:
-    return cast("dict[str, Any]", workflow_data["jobs"][GATE_JOB])
+    return cast("dict[str, Any]", workflow_data["jobs"][GATE_JOB_NAME])
 
 
 def gate_steps(workflow_data: dict[str, Any]) -> list[dict[str, Any]]:
