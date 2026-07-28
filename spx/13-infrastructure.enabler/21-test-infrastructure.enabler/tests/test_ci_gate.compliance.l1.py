@@ -155,11 +155,13 @@ def test_missing_fail_fast_preamble_is_detected() -> None:
     )
 
 
-def test_soft_passed_step_shell_is_detected() -> None:
-    steps = observe_gate_steps(gate_fixture_path("soft_passed_step.yml"))
+def test_every_soft_pass_snippet_is_detected() -> None:
+    steps = observe_gate_steps(gate_fixture_path("soft_pass_snippets.yml"))
 
-    assert any(
-        snippet in step.run for step in steps for snippet in SOFT_PASS_SHELL_SNIPPETS
+    assert len(steps) == len(SOFT_PASS_SHELL_SNIPPETS)
+    assert all(
+        any(snippet in step.run for step in steps)
+        for snippet in SOFT_PASS_SHELL_SNIPPETS
     )
 
 
@@ -174,6 +176,7 @@ def test_trap_soft_passed_step_shell_is_detected() -> None:
     assert not any(
         snippet in step.run for step in steps for snippet in SOFT_PASS_SHELL_SNIPPETS
     )
+    assert any(len(step.shell_lines) > 1 for step in steps)
 
 
 def test_missing_pull_request_trigger_is_detected() -> None:

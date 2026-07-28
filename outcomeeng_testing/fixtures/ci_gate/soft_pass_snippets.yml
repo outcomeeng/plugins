@@ -1,0 +1,30 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Swallow the failure with or-true
+        run: just check-full || true
+      - name: Swallow the failure with or-noop
+        run: |
+          just check-full || :
+      - name: Swallow the failure with or-exit-zero
+        run: |
+          just check-full || exit 0
+      - name: Disable errexit before the gate
+        run: |
+          set +e
+          just check-full
+      - name: Force a zero exit after the gate
+        run: |
+          just check-full
+          exit 0
+      - name: Branch on a negated gate result
+        run: if ! just check-full; then echo "gate skipped"; fi
