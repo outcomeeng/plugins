@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
-
 from outcomeeng.hygiene import xml_spacing
+from outcomeeng_testing.harnesses.hygiene import markdown_file
 
 
 # =============================================================================
@@ -221,96 +219,54 @@ class TestFixFile:
     """End-to-end tests for file fixing."""
 
     def test_no_changes_needed(self) -> None:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write("# Header\n\nSome text\n")
-            f.flush()
-            path = Path(f.name)
-
-        try:
+        with markdown_file("# Header\n\nSome text\n") as path:
             changed = xml_spacing.fix_file(path)
             assert changed is False
-        finally:
-            path.unlink()
 
     def test_adds_blank_line_before_closing_tag_after_list(self) -> None:
         content = "- item 1\n- item 2\n</section>\n"
         expected = "- item 1\n- item 2\n\n</section>\n"
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write(content)
-            f.flush()
-            path = Path(f.name)
-
-        try:
+        with markdown_file(content) as path:
             changed = xml_spacing.fix_file(path)
             assert changed is True
             assert path.read_text() == expected
-        finally:
-            path.unlink()
 
     def test_unindents_closing_tag(self) -> None:
         content = "text\n  </section>\n"
         expected = "text\n</section>\n"
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write(content)
-            f.flush()
-            path = Path(f.name)
-
-        try:
+        with markdown_file(content) as path:
             changed = xml_spacing.fix_file(path)
             assert changed is True
             assert path.read_text() == expected
-        finally:
-            path.unlink()
 
     def test_preserves_content_inside_code_fence(self) -> None:
         content = "```\n- item\n</section>\n```\n"
         # Inside fence, no changes should be made
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write(content)
-            f.flush()
-            path = Path(f.name)
-
-        try:
+        with markdown_file(content) as path:
             changed = xml_spacing.fix_file(path)
             assert changed is False
             assert path.read_text() == content
-        finally:
-            path.unlink()
 
     def test_handles_nested_fences_correctly(self) -> None:
         # ~~~ inside ``` fence shouldn't close the fence
         content = "```\n~~~\n- item\n</tag>\n~~~\n```\n"
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write(content)
-            f.flush()
-            path = Path(f.name)
-
-        try:
+        with markdown_file(content) as path:
             changed = xml_spacing.fix_file(path)
             assert changed is False
             assert path.read_text() == content
-        finally:
-            path.unlink()
 
     def test_handles_multiple_closing_tags(self) -> None:
         content = "- item\n</section>\n- item2\n</section2>\n"
         expected = "- item\n\n</section>\n- item2\n\n</section2>\n"
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write(content)
-            f.flush()
-            path = Path(f.name)
-
-        try:
+        with markdown_file(content) as path:
             changed = xml_spacing.fix_file(path)
             assert changed is True
             assert path.read_text() == expected
-        finally:
-            path.unlink()
 
     def test_normalizes_windows_line_endings_to_unix(self) -> None:
         # read_text() normalizes \r\n to \n, which is appropriate for git hooks
@@ -318,30 +274,16 @@ class TestFixFile:
         # After normalization and fix, we get Unix line endings
         expected = "- item\n\n</section>\n"
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".md", delete=False, newline=""
-        ) as f:
-            f.write(content)
-            f.flush()
-            path = Path(f.name)
-
-        try:
+        with markdown_file(content) as path:
             changed = xml_spacing.fix_file(path)
             assert changed is True
             assert path.read_text() == expected
-        finally:
-            path.unlink()
 
     def test_idempotent(self) -> None:
         """Running fix_file twice produces the same output as running once."""
         content = "- item 1\n- item 2\n</section>\ntext\n  </closing>\n"
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            f.write(content)
-            f.flush()
-            path = Path(f.name)
-
-        try:
+        with markdown_file(content) as path:
             xml_spacing.fix_file(path)
             after_first = path.read_text()
 
@@ -349,5 +291,3 @@ class TestFixFile:
             after_second = path.read_text()
 
             assert after_first == after_second
-        finally:
-            path.unlink()

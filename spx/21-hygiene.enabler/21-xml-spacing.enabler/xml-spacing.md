@@ -18,7 +18,4 @@ CAN avoid formatting breakage caused by list items followed by closing tags
 ### Properties
 
 - Fixing is idempotent: running twice produces the same output as running once ([test](tests/test_xml_spacing.property.l1.py))
-
-### Compliance
-
-- NEVER: modify content inside code fences — the hook respects fence boundaries ([review])
+- Fixing preserves content inside code fences except for whole-file normalization of Windows line endings to Unix ([test](tests/test_xml_spacing.property.l1.py))

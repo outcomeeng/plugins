@@ -2,18 +2,18 @@
 
 ## Purpose
 
-Each decision-record compliance rule declares the minimal evidence type it requires, so a decision binds the kind of proof its downstream spec assertions must carry. This closes the interpretation gap where an author satisfies a rule with weak evidence and a reviewer argues it is insufficient — the decision states the floor.
+Each decision-record compliance rule declares the minimal evidence type it requires, so a decision binds the kind of proof its downstream spec assertions must carry. This closes the interpretation gap where an author satisfies a rule with weak evidence and an auditor argues it is insufficient — the decision states the floor.
 
 ## Change
 
-Every MUST/NEVER bullet in the ADR and PDR decision templates carries a single evidence-type tag in bracket form, replacing the current `([review])` / `([test])` tag:
+Every MUST/NEVER bullet in the ADR and PDR decision templates carries a single evidence-type tag in bracket form, replacing the current `([audit])` / `([test])` tag:
 
 `([scenario])`, `([mapping])`, `([conformance])`, `([property])`, or `([compliance])`
 
 - The evidence type is the **minimum**. The spec node enforcing the rule carries at least that evidence type and may add more (more cases, deeper levels, a second type).
 - The evidence type is chosen by invoking `/test` against the rule's claim shape — never hand-picked. The template instructs the author to route through `/test`.
 - The evidence-type tag is a claim-shape classification, not a test reference: it carries no path, so it does not violate live `/understand` `<artifact_placement>`, where decision records contain no `[test](path)` links. The path lives on the downstream spec assertion.
-- Evidence type and mechanism are distinct axes. The per-rule tag is one of the five **evidence types** above. The evidence **mechanism** (`[test]` / `[review]` / `[eval]`) is the downstream spec assertion's concern and never a per-rule tag — `([eval])` is not a decision-rule evidence type. The five-type set is therefore complete; a rule whose downstream enforcement runs through the eval lane still carries an evidence-type tag (typically `([compliance])`), and the `[eval]` mechanism attaches to the spec assertion that enforces it.
+- Evidence type and mechanism are distinct axes. The per-rule tag is one of the five **evidence types** above. The evidence **mechanism** (`[test]` / `[audit]` / `[eval]`) is the downstream spec assertion's concern and never a per-rule tag — `([eval])` is not a decision-rule evidence type. The five-type set is therefore complete; a rule whose downstream enforcement runs through the eval lane still carries an evidence-type tag (typically `([compliance])`), and the `[eval]` mechanism attaches to the spec assertion that enforces it.
 
 ## Files
 

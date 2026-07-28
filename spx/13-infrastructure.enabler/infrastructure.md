@@ -8,4 +8,4 @@ CAN rely on consistent support systems across the marketplace
 
 ### Compliance
 
-- ALWAYS: infrastructure child nodes describe reusable operational foundations rather than plugin-specific product behavior; the branch stays limited to support systems shared by marketplace workflows ([review])
+- ALWAYS: infrastructure child nodes describe reusable operational foundations rather than plugin-specific product behavior; the branch stays limited to support systems shared by marketplace workflows ([audit])

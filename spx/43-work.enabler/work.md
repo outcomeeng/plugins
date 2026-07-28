@@ -20,7 +20,7 @@ The work plugin contains `/draw-excalidraw` for creating Excalidraw-format diagr
 
 ### Compliance
 
-- ALWAYS: `/draw-excalidraw` output is valid Excalidraw JSON — diagrams are consumed by the Excalidraw renderer ([review])
-- ALWAYS: `/sanitize-powerpoint` presents audit findings to the user and gets per-fix approval before any edit — no auto-fix path exists ([review])
-- NEVER: `/sanitize-powerpoint` modifies a `.pptx` while PowerPoint holds the deck open — PowerPoint overwrites external edits from memory on its next save ([review])
-- NEVER: `/sanitize-powerpoint` edits only `docProps/app.xml` to remove a finding — PowerPoint regenerates that file from deck content on every save ([review])
+- ALWAYS: `/draw-excalidraw` output is valid Excalidraw JSON — diagrams are consumed by the Excalidraw renderer ([audit])
+- ALWAYS: `/sanitize-powerpoint` presents audit findings to the user and gets per-fix approval before any edit — no auto-fix path exists ([audit])
+- NEVER: `/sanitize-powerpoint` modifies a `.pptx` while PowerPoint holds the deck open — PowerPoint overwrites external edits from memory on its next save ([audit])
+- NEVER: `/sanitize-powerpoint` edits only `docProps/app.xml` to remove a finding — PowerPoint regenerates that file from deck content on every save ([audit])
