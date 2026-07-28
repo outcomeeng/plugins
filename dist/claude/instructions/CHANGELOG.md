@@ -8,6 +8,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ## 0.15.1
 
-The changelog begins at this release. Entries below record changes from this version forward.
+### Added
 
-Earlier history predates this line. This plugin was named `develop` until 2026-07-11; installations referencing `develop@outcomeeng` do not resolve.
+- **`help` names where the changelogs are.** The lifecycle skill's `help` verb reports this plugin's changelog and the marketplace changelog. Each is read from disk, without network access.
+
+This changelog begins here; earlier history predates the line. This plugin was named `develop` until 2026-07-11; installations referencing `develop@outcomeeng` do not resolve.

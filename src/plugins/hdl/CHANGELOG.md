@@ -8,4 +8,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ## 0.5.2
 
-The changelog begins at this release. Entries below record changes from this version forward.
+### Added
+
+- **`help` names where the changelogs are.** The lifecycle skill's `help` verb reports this plugin's changelog and the marketplace changelog. Each is read from disk, without network access.
+
+This changelog begins here; earlier history predates the line.

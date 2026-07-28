@@ -10,4 +10,13 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ## 0.86.1
 
-The changelog begins at this release. Entries below record changes from this version forward.
+### Changed
+
+- **`[review]` is no longer tolerated as a spelling of `[audit]`.** The foundation described it as the legacy spelling of the `[audit]` assertion tag. That description is gone: the assertion tags are `[test]`, `[eval]`, and `[audit]`, and review is an open-ended changeset gate that backs no assertion tag. An assertion still carrying `([review])` now reports an invalid tag under `/audit-specs`, and `/audit-tests` no longer lists it among the tags it skips. Migrate `([review])` to `([audit])` — the assertion text is unchanged, only the tag spelling.
+
+### Added
+
+- **`help` names where the changelogs are.** The lifecycle skill's `help` verb reports the marketplace, plugin, and methodology changelog paths. Each is read from disk, without network access.
+- **`METHODOLOGY-CHANGELOG.md` ships beside this file.** What changed in the **methodology** is recorded separately from what changed in this plugin, because a methodology release keeps its identity regardless of which plugin version delivers it.
+
+This changelog begins here; earlier history predates the line.
