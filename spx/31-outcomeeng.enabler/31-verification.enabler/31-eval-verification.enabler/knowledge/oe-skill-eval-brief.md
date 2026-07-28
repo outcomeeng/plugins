@@ -1,6 +1,18 @@
+---
+type: Archived Source
+description: Received build brief that seeded the eval-verification design — evaluation layers, no-skill baseline arms, contract semantics, and a prior-art survey. Titled by its own top-level heading, because the markdown validator reads a frontmatter `title` as a second document title.
+tags: [eval-verification, harness, contracts, research, source]
+timestamp: 2026-07-21T22:17:00+02:00
+origin: received outside the repository
+source_sha256: f6e0fdd5db55f290ddafa6e56a199ebb334a9b6f1339800bd92ea31b44be4f5f
+authority: none
+---
+
 # Outcome Engineering — Skill Evaluation Harness
 
 **Build brief for Claude Code.** Self-contained: assume no access to the conversation that produced it.
+
+> **Archival status:** Preserved as received apart from markdown formatting, so its bytes differ from the `source_sha256` above, which pins the original. Its imperative recommendations record the brief's proposal and carry no methodology authority; the decisions and specs in this subtree govern where they diverge from it.
 
 ---
 
