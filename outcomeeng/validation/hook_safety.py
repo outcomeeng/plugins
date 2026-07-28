@@ -36,6 +36,8 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Final
 
+from outcomeeng.validation.hook_contract import SESSION_START_EVENT
+
 # Events observational on EVERY runtime the marketplace ships a hook to. The same
 # hooks.json ships byte-identical to dist/claude and dist/codex, so an event is safe
 # only when it is non-blocking on both Claude Code and Codex. The set is the
@@ -45,7 +47,7 @@ from typing import Final
 # Adding an event requires confirming it is observational on every shipped runtime.
 SAFE_EVENTS: Final[frozenset[str]] = frozenset(
     {
-        "SessionStart",
+        SESSION_START_EVENT,
         "SubagentStart",
     }
 )
