@@ -14,11 +14,11 @@ CAN refresh every committed plugin in selected agent state and verify the same o
 - Given every plugin in the Claude Code and Codex marketplace catalogs, when the isolated installation harness installs the catalog, then each agent registers the invocation checkout and every catalog plugin is observable as installed and enabled through the corresponding real agent CLI. ([test](tests/test_repository_installation.scenario.l2.py))
 - Given an installed plugin that owns Codex agent definitions, when its lifecycle installation runs, then its generated definitions are placed in the invocation checkout's `.codex/agents/` namespace while definitions outside that plugin's ownership remain unchanged. ([test](tests/test_repository_installation.scenario.l2.py))
 - Given unchanged committed catalogs and checkout content, when isolated installation runs twice against the same disposable homes, then the second run succeeds with the same installed and placed state. ([test](tests/test_repository_installation.scenario.l2.py))
+- Given a persistent marketplace inspection that fails, when persistent installation runs, then it reports a failure naming that operation and attempts no plan operation. ([test](tests/test_repository_installation.scenario.l1.py))
 
 ### Mappings
 
 - Each marketplace, plugin, and lifecycle operation a repository-installation plan performs maps to a failure report naming that operation and its agent, with the attempted commands ending at that operation and no later operation performed. ([test](tests/test_repository_installation.mapping.l1.py))
-- A failing persistent marketplace inspection maps to a failure report naming that operation, with no plan operation attempted. ([test](tests/test_repository_installation.mapping.l1.py))
 
 ### Compliance
 
