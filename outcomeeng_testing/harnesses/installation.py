@@ -51,6 +51,7 @@ from outcomeeng.distribution.installation import (
     claude_marketplace_settings,
     codex_marketplace_listing_payload,
     codex_source_action,
+    execute_installation,
     execute_persistent_installation,
 )
 
@@ -97,19 +98,19 @@ class PersistentExecutionObservation:
 
 @dataclass(frozen=True)
 class FailureObservation:
-    """The attempted prefix and structured first failure."""
+    """The attempted prefix and the first failure, absent when none was raised."""
 
     plan: InstallationPlan
     attempted: tuple[InstallationCommand, ...]
-    failure: InstallationFailure
+    failure: InstallationFailure | None
 
 
 @dataclass(frozen=True)
 class CollisionObservation:
-    """A user-scope collision and the commands attempted before rejection."""
+    """A user-scope collision, absent when the run was not rejected."""
 
     settings_path: Path
-    error: str
+    error: str | None
     attempted: tuple[InstallationCommand, ...]
 
 
@@ -297,19 +298,20 @@ def observe_claude_user_collision() -> CollisionObservation:
             encoding="utf-8",
         )
         runner = RecordingRunner()
+        rejection: str | None = None
         try:
             execute_persistent_installation(mirror, environment, runner)
         except ValueError as error:
-            return CollisionObservation(
-                settings_path=settings_path,
-                error=str(error),
-                attempted=tuple(runner.calls),
-            )
-    raise RuntimeError("persistent installation accepted a user-scope collision")
+            rejection = str(error)
+        return CollisionObservation(
+            settings_path=settings_path,
+            error=rejection,
+            attempted=tuple(runner.calls),
+        )
 
 
-def observe_missing_codex_home() -> str:
-    """Expose rejection when persistent state has no selected Codex home."""
+def observe_missing_codex_home() -> str | None:
+    """Expose the rejection, if any, when no Codex home is selected."""
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
@@ -322,7 +324,7 @@ def observe_missing_codex_home() -> str:
             build_persistent_preflight(mirror, environment)
         except ValueError as error:
             return str(error)
-    raise RuntimeError("persistent installation accepted a missing CODEX_HOME")
+    return None
 
 
 def _installation_plans(temporary_root: Path) -> tuple[InstallationPlan, ...]:
@@ -374,12 +376,13 @@ def observe_planned_operations() -> tuple[Operation, ...]:
 
 @dataclass(frozen=True)
 class RestoreObservation:
-    """Settings bytes around a persistent run that fails partway through."""
+    """Settings bytes around a persistent run scripted to fail partway."""
 
     settings_before: bytes
     settings_after: bytes
     failed_operation: Operation
     attempted: tuple[InstallationCommand, ...]
+    failure: InstallationFailure | None
 
 
 @dataclass
@@ -433,16 +436,18 @@ def observe_failed_run_restore(operation: Operation) -> RestoreObservation:
         environment = _persistent_environment(temporary_root)
         before = settings.read_bytes()
         runner = SettingsMutatingRunner(settings=settings, failed_operation=operation)
+        failure: InstallationFailure | None = None
         try:
             execute_persistent_installation(mirror, environment, runner)
-        except InstallationFailure:
-            return RestoreObservation(
-                settings_before=before,
-                settings_after=settings.read_bytes(),
-                failed_operation=operation,
-                attempted=tuple(runner.calls),
-            )
-    raise RuntimeError("persistent installation completed without the scripted failure")
+        except InstallationFailure as raised:
+            failure = raised
+        return RestoreObservation(
+            settings_before=before,
+            settings_after=settings.read_bytes(),
+            failed_operation=operation,
+            attempted=tuple(runner.calls),
+            failure=failure,
+        )
 
 
 def observe_inspection_failure() -> FailureObservation:
@@ -455,24 +460,23 @@ def observe_inspection_failure() -> FailureObservation:
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         runner = RecordingRunner(failed_operation=Operation.MARKETPLACE_INSPECT)
+        failure: InstallationFailure | None = None
         try:
             execute_persistent_installation(mirror, environment, runner)
-        except InstallationFailure as failure:
-            return FailureObservation(
-                plan=build_persistent_installation_plan(
-                    build_persistent_preflight(mirror, environment),
-                    codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE),
-                ),
-                attempted=tuple(runner.calls),
-                failure=failure,
-            )
-    raise RuntimeError("persistent installation accepted a failed inspection")
+        except InstallationFailure as raised:
+            failure = raised
+        return FailureObservation(
+            plan=build_persistent_installation_plan(
+                build_persistent_preflight(mirror, environment),
+                codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE),
+            ),
+            attempted=tuple(runner.calls),
+            failure=failure,
+        )
 
 
 def observe_first_failure(operation: Operation) -> FailureObservation:
     """Fail the selected operation in the plan that performs it."""
-    from outcomeeng.distribution.installation import execute_installation
-
     with TemporaryDirectory() as temporary_directory:
         plans = _installation_plans(Path(temporary_directory))
         plan = next(
@@ -481,15 +485,16 @@ def observe_first_failure(operation: Operation) -> FailureObservation:
             if any(command.operation is operation for command in candidate.commands)
         )
         runner = RecordingRunner(failed_operation=operation)
+        failure: InstallationFailure | None = None
         try:
             execute_installation(plan, runner)
-        except InstallationFailure as failure:
-            return FailureObservation(
-                plan=plan,
-                attempted=tuple(runner.calls),
-                failure=failure,
-            )
-    raise RuntimeError("installation completed without the scripted failure")
+        except InstallationFailure as raised:
+            failure = raised
+        return FailureObservation(
+            plan=plan,
+            attempted=tuple(runner.calls),
+            failure=failure,
+        )
 
 
 def observe_codex_config_independence() -> ConfigObservation:
@@ -581,7 +586,12 @@ def observe_verification_recipe() -> VerificationRecipeObservation:
 
 
 def observe_real_installation() -> RealInstallationObservation:
-    """Run persistent and isolated installation with real agent CLIs."""
+    """Run persistent and isolated installation with real agent CLIs.
+
+    Both source actions are read from the pre-run agent state, so they are the
+    reconciliation each agent's run actually takes. Reading them afterwards
+    would report a canonical registration whichever action produced it.
+    """
     checkout = repository_root()
     _require_binaries(REQUIRED_BINARIES)
     with TemporaryDirectory() as temporary_directory:
@@ -596,10 +606,22 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mirror,
             selected_environment,
         )
+        _register_persistent_codex_marketplace(
+            persistent_mirror,
+            selected_environment,
+        )
         persistent_settings = persistent_mirror / CLAUDE_PROJECT_SETTINGS_PATH
         _copy_committed_project_settings(checkout, persistent_settings)
         persistent_selection = _declared_selection(persistent_settings)
         persistent_settings_before = persistent_settings.read_bytes()
+        persistent_preflight = build_persistent_preflight(
+            persistent_mirror,
+            selected_environment,
+        )
+        persistent_codex_marketplaces = _run_codex_marketplace_listing(
+            persistent_mirror,
+            selected_environment,
+        )
         persistent = _run_persistent_recipe(
             checkout,
             persistent_mirror,
@@ -612,14 +634,6 @@ def observe_real_installation() -> RealInstallationObservation:
         )
         persistent_codex = _run_listing(
             Agent.CODEX,
-            persistent_mirror,
-            selected_environment,
-        )
-        persistent_preflight = build_persistent_preflight(
-            persistent_mirror,
-            selected_environment,
-        )
-        persistent_codex_marketplaces = _run_codex_marketplace_listing(
             persistent_mirror,
             selected_environment,
         )
@@ -912,6 +926,32 @@ def _register_persistent_claude_marketplace(
     if result.returncode != 0:
         raise RuntimeError(
             "Claude project marketplace registration failed with exit "
+            f"{result.returncode}: {result.stderr}"
+        )
+
+
+def _register_persistent_codex_marketplace(
+    checkout: Path,
+    environment: Mapping[str, str],
+) -> None:
+    result = subprocess.run(
+        (
+            "codex",
+            "plugin",
+            "marketplace",
+            "add",
+            CANONICAL_CODEX_SOURCE,
+            "--json",
+        ),
+        cwd=checkout,
+        env=dict(environment),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Codex marketplace registration failed with exit "
             f"{result.returncode}: {result.stderr}"
         )
 

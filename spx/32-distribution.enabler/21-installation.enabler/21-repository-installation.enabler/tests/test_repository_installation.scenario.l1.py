@@ -14,6 +14,7 @@ from outcomeeng.distribution.installation import (
 )
 from outcomeeng_testing.harnesses.installation import (
     observe_claude_user_collision,
+    observe_inspection_failure,
     observe_persistent_execution,
     observe_persistent_plan,
     observe_verification_recipe,
@@ -100,9 +101,23 @@ def test_persistent_installation_replaces_noncanonical_sources() -> None:
     )
 
 
+def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> None:
+    observation = observe_inspection_failure()
+
+    assert observation.failure is not None
+    assert observation.failure.command.operation is Operation.MARKETPLACE_INSPECT
+    assert observation.failure.command.agent is not None
+    assert observation.failure.completed == ()
+    assert observation.attempted == (observation.failure.command,)
+    assert not any(
+        command in observation.attempted for command in observation.plan.commands
+    )
+
+
 def test_claude_user_scope_collision_stops_before_mutation() -> None:
     observation = observe_claude_user_collision()
 
+    assert observation.error is not None
     assert str(observation.settings_path) in observation.error
     assert USER_SCOPE_COLLISION_DIAGNOSTIC in observation.error
     assert observation.attempted == ()
