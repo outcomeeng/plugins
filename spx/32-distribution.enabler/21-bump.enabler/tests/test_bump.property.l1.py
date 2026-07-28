@@ -21,18 +21,22 @@ from outcomeeng_testing.harnesses.bump_mapping import run_segment_increment_prop
 
 
 def _plugins_declared_by_spec(paths: list[str]) -> frozenset[str]:
-    """Derive the declared plugin set from the spec's recognized-root rule."""
+    """Derive the declared plugin set from the spec's recognized-root rule.
+
+    The spec names a path's segments: a change under a recognized root belongs
+    to the plugin named by the segment that follows the root. Reading segments
+    keeps this oracle independent of the string arithmetic the source performs.
+    """
+    roots = [tuple(root.split("/")) for root in distribution_roots()]
     plugins: set[str] = set()
     for path in paths:
-        for root in distribution_roots():
-            prefix = f"{root}/"
-            if not path.startswith(prefix):
+        segments = tuple(path.split("/"))
+        for root in roots:
+            depth = len(root)
+            if segments[:depth] != root or len(segments) <= depth:
                 continue
-            rest = path[len(prefix) :]
-            next_slash = rest.find("/")
-            name = rest if next_slash == -1 else rest[:next_slash]
-            if name:
-                plugins.add(name)
+            if segments[depth]:
+                plugins.add(segments[depth])
             break
     return frozenset(plugins)
 
