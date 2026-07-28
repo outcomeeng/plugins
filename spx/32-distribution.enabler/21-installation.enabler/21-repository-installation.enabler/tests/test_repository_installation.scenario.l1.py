@@ -13,6 +13,7 @@ from outcomeeng.distribution.installation import (
     VERIFICATION_RECIPE_COMMAND,
 )
 from outcomeeng_testing.harnesses.installation import (
+    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_claude_user_collision,
     observe_inspection_failure,
     observe_persistent_execution,
@@ -75,8 +76,8 @@ def test_verification_recipe_aliases_the_exact_l2_evidence() -> None:
 
 def test_persistent_installation_replaces_noncanonical_sources() -> None:
     observation = observe_persistent_plan(
-        claude_repository="/tmp/local-marketplace",
-        codex_source="/tmp/local-marketplace",
+        claude_repository=NONCANONICAL_MARKETPLACE_SOURCE,
+        codex_source=NONCANONICAL_MARKETPLACE_SOURCE,
     )
 
     assert observation.preflight.claude_source_action is SourceAction.REPLACE

@@ -14,6 +14,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import cast
 
+from outcomeeng.distribution.build import (
+    PLACEMENT_MANIFEST_DIRECTORY_FIELD,
+    PLACEMENT_MANIFEST_FILENAME,
+    PLACEMENT_MANIFEST_PREFIX_FIELD,
+)
 from outcomeeng.distribution.installation import (
     Agent,
     CANONICAL_CODEX_SOURCE,
@@ -1009,12 +1014,14 @@ def _agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
 
 def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
     shipped: dict[str, bytes] = {}
-    manifests = (checkout / "dist/codex").glob("*/skills/*/agents/placement.json")
+    manifests = (checkout / "dist/codex").glob(
+        f"*/skills/*/agents/{PLACEMENT_MANIFEST_FILENAME}"
+    )
     for manifest in sorted(manifests):
         document = json.loads(manifest.read_text(encoding="utf-8"))
-        if document.get("directory") != str(CODEX_AGENTS_PATH):
+        if document.get(PLACEMENT_MANIFEST_DIRECTORY_FIELD) != str(CODEX_AGENTS_PATH):
             continue
-        prefix = str(document["prefix"])
+        prefix = str(document[PLACEMENT_MANIFEST_PREFIX_FIELD])
         for definition in sorted(manifest.parent.glob(f"{prefix}*")):
             if definition.name in shipped:
                 raise RuntimeError(
