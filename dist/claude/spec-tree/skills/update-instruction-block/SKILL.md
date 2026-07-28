@@ -12,7 +12,7 @@ Both root harness instruction files — `CLAUDE.md` and `AGENTS.md` — carry a 
 
 <dependencies>
 
-- Python 3.13 or 3.14 from a managed interpreter, matching the marketplace's shipped-script support window. The bundled script uses `StrEnum`, which is available throughout that declared window.
+- Python 3.13 or 3.14 from a managed interpreter, with 3.13 as the floor. The bundled script uses `StrEnum`, which is available throughout that window.
 
 </dependencies>
 
@@ -84,6 +84,18 @@ ambiguous (recency tie): commands
 ```
 
 After the operator selects `claude`, replace the complete `AGENTS.md` region body with the `CLAUDE.md` body through the runtime's file-editing tool. Run `--write` and the closing `--check`; no line from the prior `AGENTS.md` region is blended into the result.
+
+Whole-side replacement is what that last sentence rules out. Given these two `commands` bodies:
+
+```text
+CLAUDE.md                           AGENTS.md
+<!-- SPEC-TREE:shared commands -->  <!-- SPEC-TREE:shared commands -->
+- build: make all                   - build: make release
+- test: make check                  - lint: make lint
+<!-- /SPEC-TREE:shared commands --> <!-- /SPEC-TREE:shared commands -->
+```
+
+the winning side's body replaces the losing side's entirely, so both files end with `- build: make all` and `- test: make check`. A merged body carrying `- build: make all`, `- test: make check`, and `- lint: make lint` is the blend this skill never produces — the losing side's `lint` line is dropped, not preserved.
 
 </examples>
 

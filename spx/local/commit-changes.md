@@ -30,6 +30,7 @@ Plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
 
 - ✅ Adding new skills (e.g., new `/design-frontend` skill)
 - ✅ Adding new thin agents
+- ✅ Removing or renaming a skill or thin agent — structure is symmetric, so a loss counts like a gain
 - ✅ Major functional changes (e.g., atomic claim mechanism in `/pickup`)
 - ✅ Significant user experience improvements
 - 🎯 **Use sparingly** — only for substantial additions or changes
@@ -91,7 +92,14 @@ The `bump*` recipes take two **positional** arguments — `base_ref` (default `o
 2. Run `just bump`, then `just build-skills`. `just bump` bumps every changed-but-unbumped plugin and SKIPS (with a diagnostic) any plugin already bumped on this branch — so re-running it after a later commit bumps a newly-changed plugin without disturbing the ones already set. A branch that changes only `spx/`, coordination notes, repository instructions, tests, validation config, or local overlays bumps nothing. Detection is structural (see **Segment auto-detection is structural** above): if the change is a major functional change or significant UX improvement per `## Version Management` but `just bump-dry` shows `patch`, re-run `just bump origin/main minor`.
 3. Stage the plugin source, the regenerated `dist/`, and the manifests `just bump` wrote, then commit them together via `/commit-changes`.
 4. During review, leave the version alone — follow-up commits that fix code, docs, specs, or review feedback do not bump again, and re-running `just bump` is a no-op for an already-bumped plugin.
-5. If review materially expands the PR (for example adds a skill, turning a `patch` into a `minor`), run `just bump origin/main minor` once to re-select the segment, then leave it fixed.
+5. If review materially changes the PR's class (for example adds or removes a skill or thin agent, turning a `patch` into a `minor`), re-select the segment by restoring that plugin's manifests to their base version first, then bumping once:
+
+   ```bash
+   git checkout <base_ref> -- src/plugins/<name>/.claude-plugin/plugin.json src/plugins/<name>/.codex-plugin/plugin.json
+   just bump <base_ref> <segment>
+   ```
+
+   `just bump` alone cannot re-select: it skips a plugin whose working-tree version is already ahead of the base, and an explicit `segment` does not override that skip. Restoring first leaves the branch carrying exactly one bump from the base at the corrected segment, which is what the skip protects. Then leave it fixed.
 6. After a rebase or retarget onto an advanced base, re-run `just bump-dry` against the new base to re-evaluate — do not bump merely because another review commit was added.
 
 When the PR merges, `main` receives the already-bumped version with no separate release commit.
@@ -121,8 +129,9 @@ just build-skills  # propagate the bumped version into dist/
 | Refactor pickup logic                   | 0.4.1 | 0.4.2 | Refactoring = PATCH                                                                  |
 | Improve error messages                  | 0.4.2 | 0.4.3 | Small enhancement = PATCH                                                            |
 | Add `/design-frontend`                  | 0.4.3 | 0.5.0 | New skill = MINOR                                                                    |
-| Add `spx/.../PLAN.md`                   | 0.4.3 | 0.4.3 | Coordination note, no plugin surface                                                 |
-| Update `spx/.../ISSUES.md`              | 0.4.3 | 0.4.3 | Coordination note, no plugin surface                                                 |
-| Edit `spx/43-python.enabler/python.md`  | 0.4.3 | 0.4.3 | Spec-only, no plugin surface                                                         |
-| Edit `spx/local/commit-changes.md`      | 0.4.3 | 0.4.3 | Local workflow overlay, no plugin                                                    |
-| Edit `AGENTS.md` without plugin changes | 0.4.3 | 0.4.3 | Product instruction, no plugin                                                       |
+| Retire a thin agent                     | 0.5.0 | 0.6.0 | A lost thin agent is structural = MINOR                                              |
+| Add `spx/.../PLAN.md`                   | 0.6.0 | 0.6.0 | Coordination note, no plugin surface                                                 |
+| Update `spx/.../ISSUES.md`              | 0.6.0 | 0.6.0 | Coordination note, no plugin surface                                                 |
+| Edit `spx/43-python.enabler/python.md`  | 0.6.0 | 0.6.0 | Spec-only, no plugin surface                                                         |
+| Edit `spx/local/commit-changes.md`      | 0.6.0 | 0.6.0 | Local workflow overlay, no plugin                                                    |
+| Edit `AGENTS.md` without plugin changes | 0.6.0 | 0.6.0 | Product instruction, no plugin                                                       |

@@ -48,7 +48,7 @@ Higher-level truth may lead implementation. A coherent product spec, PDR, ADR, o
 
 - ALWAYS: align every first affected lower spec in the same changeset as a higher-level truth change.
 
-When a higher-level artifact changes, align every first affected lower spec in the same changeset. If tests or code remain, record the concrete next step and governing artifact in `PLAN.md` at the first affected lower node. Use `ISSUES.md` for known defects or contradictions. Use `spx/EXCLUDE` only when a node has specs and tests while implementation is absent; exclusion never resolves a conceptual disagreement or permits lower layers to contradict decisions.
+When a higher-level artifact changes, align every first affected lower spec in the same changeset. If tests or code remain, record the concrete next step and governing artifact in `PLAN.md` at the first affected lower node. Use `ISSUES.md` for known imperfections or contradictions. Use `spx/EXCLUDE` only when a node has specs and tests while implementation is absent; exclusion never resolves a conceptual disagreement or permits lower layers to contradict decisions.
 
 </decision_to_spec_alignment>
 
@@ -113,7 +113,7 @@ Specified and failing are valid states. They expose where lower layers must catc
 | Test file               | Proves one typed assertion class                   | Executable assertion evidence                        | Test runner                                  |
 | Test infrastructure     | Provides harnesses, generators, and inert fixtures | Governed production code outside `spx/` and `tests/` | Code, architecture, and test-evidence audits |
 | Enforcement             | Constrains source structure                        | Lint rules, AST selectors, and pattern matchers      | Tests against violating fixtures             |
-| `PLAN.md` / `ISSUES.md` | Coordinates pending work or known defects          | Stale-prone node-local context                       | Reconciliation on context load               |
+| `PLAN.md` / `ISSUES.md` | Coordinates pending work or known imperfections    | Stale-prone node-local context                       | Reconciliation on context load               |
 
 ADR versus PDR is decided by content. An ADR governs architecture invisible to the product's users; a PDR governs behavior those users observe. Tree position and numeric prefix determine a decision's reach, so broad or foundational reach never determines its type. Product users differ by product: test-infrastructure layout can be product behavior for a methodology and architecture for an application.
 
@@ -144,7 +144,7 @@ Enforcement rules are production validation code. Their `[test]` evidence runs t
 | Enforceable static constraint           | `[audit]`          | `[test]` on the enforcement rule                              |
 | Cross-cutting invariant                 | Child spec         | Ancestor spec                                                 |
 | Remaining work                          | Session file       | Node-local `PLAN.md`                                          |
-| Known unresolved defect                 | Session file       | Node-local `ISSUES.md`                                        |
+| Known unresolved imperfection           | Session file       | Node-local `ISSUES.md`                                        |
 | Pending work induced by higher truth    | Higher declaration | First affected lower node's `PLAN.md` after lower specs align |
 | Child enumeration                       | Parent spec        | Child specs and `/contextualize` output                       |
 | Harness, generator, or fixture behavior | Executed test file | Language-standard test-infrastructure location                |
@@ -370,9 +370,9 @@ When vocabulary overlaps another grammar, resolve verification vocabulary here f
 
 <recording>
 
-- ALWAYS: record every observed defect immediately with its evidence, governing workflow, handling, and classification.
+- ALWAYS: record every observed imperfection immediately with its evidence, governing workflow, handling, and classification.
 
-Record every observed defect in the current-turn ledger immediately: failing validation, broken link, stale reference, dead code, lint violation, missing evidence, inconsistent naming, misplaced file, wrong index, harmful warning, or any other incoherence. Each entry carries:
+Record every observed imperfection in the current-turn ledger immediately: failing validation, broken link, stale reference, dead code, lint violation, missing evidence, inconsistent naming, misplaced file, wrong index, harmful warning, or anything else that is not right. Each entry carries:
 
 - the exact imperfection;
 - the path, line, command output, or external state that exposed it;
@@ -385,9 +385,11 @@ Apply clear, local, low-risk corrections immediately. Surface a blocking decisio
 
 <no_origin_distinction>
 
-- NEVER: reduce responsibility for a defect because of its age, author, or originating change.
+- NEVER: reduce responsibility for an imperfection because of its age, author, or originating change.
 
-The ledger has no origin distinction. Age and authorship never reduce responsibility. Never dismiss a defect as inherited, already broken, or outside the current change merely because another change created it.
+The ledger has no origin distinction. Age and authorship never reduce responsibility. Never dismiss an imperfection as inherited, already broken, or outside the current change merely because another change created it.
+
+Never investigate origin to reach that judgment — no blame, file history, or authorship lookup. Claude's commits sign as the operator, so the lookup cannot separate Claude's earlier work from the operator's, and compaction has erased what Claude knew. Origin changes nothing about the fix.
 
 </no_origin_distinction>
 
@@ -395,9 +397,9 @@ The ledger has no origin distinction. Age and authorship never reduce responsibi
 
 - ALWAYS: fix debt that the current change causes, surfaces, or invalidates.
 
-Debt the current change causes, surfaces, or invalidates is fix-now wherever it lives. A change invalidates another file when it removes a symbol that file references, enforces a rule it violates, falsifies its guidance, or causes a gate, audit, or review to expose its defect. Location never licenses deferral.
+Debt the current change causes, surfaces, or invalidates is fix-now wherever it lives. A change invalidates another file when it removes a symbol that file references, enforces a rule it violates, falsifies its guidance, or causes a gate, audit, or review to expose its imperfection. Location never licenses deferral.
 
-Record and proceed only for work independent of the current change in a surface the change neither touches nor invalidates. Persist that work at the correct tier: decision/spec for durable truth, methodology for reusable workflow, `PLAN.md` for pending node work, and `ISSUES.md` for known node defects. Recording never ends an otherwise actionable session.
+Record and proceed only for work independent of the current change in a surface the change neither touches nor invalidates. Persist that work at the correct tier: decision/spec for durable truth, methodology for reusable workflow, `PLAN.md` for pending node work, and `ISSUES.md` for known node imperfections. Recording never ends an otherwise actionable session.
 
 </touched_file_debt>
 
@@ -440,7 +442,7 @@ The ledger is conversation-local. Fixed entries disappear. Unresolved entries pe
 Coordination notes are stale-prone inputs. Reconcile every loaded `PLAN.md` or `ISSUES.md` against current decisions, specs, evidence, implementation, and user intent before acting. They never declare product truth or cited governance.
 
 - `PLAN.md` carries concrete pending steps for its node, including lower-layer work induced by a higher declaration.
-- `ISSUES.md` carries known defects, contradictions, gaps, and untestable assertions.
+- `ISSUES.md` carries known imperfections, contradictions, gaps, and untestable assertions.
 - Session files remain operational state outside Git; they never replace node-local coordination.
 
 `spx/local/` holds product-specific overlays for coding, architecture, testing, and lifecycle skills. Enumerate overlays during context loading and read each only when its governing skill requires it. `spx/local/merging.md` is the optional lifecycle overlay read by `/merge` and `/contextualize`.

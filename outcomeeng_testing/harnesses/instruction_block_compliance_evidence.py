@@ -407,6 +407,17 @@ def _render_shipped_instruction_blocks(
     )
 
 
+def rendered_instruction_blocks(
+    enabled_languages: tuple[str, ...] = harness.TEMPLATE_LANGUAGES,
+) -> dict[str, str]:
+    """Expose the rendered harness routers keyed by agent harness.
+
+    An observation for a linked test that owns its own predicates; this returns
+    rendered content and never judges it.
+    """
+    return _render_shipped_instruction_blocks(enabled_languages)
+
+
 def _assert_codex_role_input_uses_runtime_capability() -> None:
     """Assert role-task submission renders through a discoverable runtime token."""
     authored = dist.AUTHORED_TEMPLATE_PATH.read_text(encoding="utf-8")
