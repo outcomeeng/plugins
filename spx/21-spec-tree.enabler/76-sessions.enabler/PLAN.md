@@ -30,13 +30,13 @@ Sibling pairs with no row above are independent peers at the same index. `15-ses
 
 ## Assertion destinations
 
-The 36 assertions remaining on `sessions.md` move as follows.
+The 35 assertions remaining on `sessions.md` move as follows.
 
 - `25-handoff.enabler/20-closure.enabler` — the harness command form for `spx session handoff` payload input; the linked-worktree detach sequence; the worktree-occupancy-claim preservation rule; the clean-and-pushed persistence precondition and its named bypass; the reflection read of `PLAN.md` and `ISSUES.md`; the closure precondition and its coordination-note blockers; the branch-ahead-of-base continuation rule; the node-less anchor option.
 - `25-handoff.enabler/40-continuation-disposition.enabler` — the search before adding a continuation; the never-mutate rule; runtime-identity verification before filing; the completed-deliverable-with-unrelated-note rule; closure-thread partitioning; the never-omit-for-unfinished-work rule; zero-handoff closure; both `--no-session` rules; the no-automation-passes-the-flag rule.
 - `25-handoff.enabler/60-session-document.enabler` — the `goal` and `next_step` frontmatter wording; repository-derived pointers; recorded external state; the never-a-retrospective rule.
 - `25-handoff.enabler/80-closeout-report.enabler` — the operator-useful closeout fields, and the session-mechanics block's operator-actionable content.
-- `28-pickup.enabler/60-resumption.enabler` — `/contextualize` target selection by priority; checkout currency before presenting session detail; the post-context evidence review; the five-way classification; the `owned_elsewhere` stop; the no-surprises proposal.
+- `28-pickup.enabler/60-resumption.enabler` — `/contextualize` target selection by priority; the post-context evidence review; the five-way classification; the `owned_elsewhere` stop; the no-surprises proposal. Checkout currency before presenting session detail already sits on `28-pickup.enabler` itself, because it constrains both children.
 
 Cross-cutting assertions stay on this node: the three compact-continuity rules, governed by `spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.pdr.md`.
 
@@ -47,7 +47,7 @@ Cross-cutting assertions stay on this node: the three compact-continuity rules, 
 ## Worklist
 
 1. Invoke `/understand`, then `/contextualize spx/21-spec-tree.enabler/76-sessions.enabler`.
-2. Create `25-handoff.enabler` and its four reserved children, moving the assertions named above out of `sessions.md`. Count assertions before and after; the total across this node and its descendants stays at 60.
+2. Create `25-handoff.enabler` and its four reserved children, moving the assertions named above out of `sessions.md`. Count assertions before and after; the total across this node and its descendants stays at 59.
 3. Create `28-pickup.enabler/60-resumption.enabler` and move its six assertions.
 4. Resolve decision placement for the three decision records through `/decompose`.
 5. Gate each written child with the spec auditor, then run the changeset review and ship through `/merge`.

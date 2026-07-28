@@ -8,4 +8,6 @@ Claim reconciliation and the resumption flow it feeds are governed by the childr
 
 ## Assertions
 
-The assertions specifying this concern live in the children.
+### Compliance
+
+- ALWAYS: `/pickup` brings the checkout current before presenting any session detail or coordination note, for every `git_ref` kind (feature branch, default branch, or commit SHA) and not only inside `/contextualize`, so no recorded claim is read against a stale checkout, per `spx/21-spec-tree.enabler/76-sessions.enabler/65-pickup-claim-verification.adr.md` ([audit])
