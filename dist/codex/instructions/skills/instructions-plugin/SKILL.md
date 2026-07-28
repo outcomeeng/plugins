@@ -115,7 +115,7 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 - Exactly one verb runs per invocation, defaulting to `help`.
 - `version` reads only the skill-directory-relative manifest path named above, never another copy on disk.
 - A reported marketplace date equals the topmost `##` heading in the marketplace changelog this plugin carries.
-- A methodology-changelog request from a plugin other than spec-tree resolves through `spec-tree-plugin`, never a guessed cross-plugin path, and reports the plugin's absence as normal when it is not installed.
+- A methodology-changelog request always resolves through the spec-tree plugin's own lifecycle skill, never a guessed cross-plugin path, and reports that plugin's absence as normal when it is not installed.
 - Placement and pruning happen through the bundled script, never by hand.
 - Every file written or removed carries this plugin's namespace prefix; no other file in the agent directory changes.
 - `check` writes nothing and reports drift.
