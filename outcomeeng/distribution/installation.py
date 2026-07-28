@@ -459,7 +459,14 @@ def execute_persistent_installation(
     base_environment: Mapping[str, str],
     runner: CommandRunner,
 ) -> InstallationReport:
-    """Inspect selected persistent state, then reconcile and install it."""
+    """Inspect selected persistent state, then reconcile and install it.
+
+    The checkout's committed plugin selection is read before installing and
+    written back unconditionally afterwards, so a run that succeeds and a run
+    that fails partway both leave that file at the bytes they started from.
+    Installing a plugin activates it in the scope, so the selection would
+    otherwise widen to the whole catalog.
+    """
     preflight = build_persistent_preflight(checkout, base_environment)
     inspection_result = _checked_result(
         preflight.codex_inspection,
