@@ -63,10 +63,13 @@ invocable. And a malformed dispatch that supplies no path has no defined stop,
 so the audit proceeds against whatever the context suggests.
 
 Required handling: declare the argument surface `audit-skill` actually takes —
-a multi-path bundle plus governing nodes and verification state, which
-`/skill-standards` `references/command-capabilities.md` shapes as `$ARGUMENTS`
-rather than a named positional — and add the no-target edge case its sibling
-already states.
+the changed skill-surface paths plus governing nodes and verification state —
+and add the no-target edge case its sibling already states. `/skill-standards`
+`references/command-capabilities.md` carries both candidate forms: `arguments`
+with a YAML name list for stable tokens, whose worked example is
+`audit-subagent`'s own `configured_agent_path`, and `$ARGUMENTS` for whole-string
+capture where multi-word intent must survive. Either choice also owes the
+`argument-hint` the reference requires of every skill that takes arguments.
 
 Source: `instructions:skill-auditor` findings `f-007` and `f-010`, severity
 `WARNING`, on the changeset merged as PR 488.
