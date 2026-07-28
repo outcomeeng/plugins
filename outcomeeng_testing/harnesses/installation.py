@@ -39,6 +39,7 @@ from outcomeeng.distribution.installation import (
     CODEX_PLUGIN_ID_FIELD,
     CODEX_SQLITE_HOME_ENV,
     CommandResult,
+    EXTRA_MARKETPLACES_FIELD,
     HOME_ENV,
     InstallationCommand,
     InstallationFailure,
@@ -413,7 +414,7 @@ class SettingsMutatingRunner:
     """
 
     settings: Path
-    failed_operation: Operation
+    failed_operation: Operation | None = None
     failed_occurrence: int = 1
     calls: list[InstallationCommand] = field(default_factory=list)
     _seen: int = 0
@@ -421,16 +422,22 @@ class SettingsMutatingRunner:
     def __call__(self, command: InstallationCommand) -> CommandResult:
         self.calls.append(command)
         if command.agent is Agent.CLAUDE and command.plugin is not None:
-            document = cast(
-                "dict[str, object]",
-                json.loads(self.settings.read_text(encoding="utf-8")),
-            )
+            document = self._document()
             enabled = cast(
                 "dict[str, object]",
                 document.setdefault(CLAUDE_ENABLED_PLUGINS_FIELD, {}),
             )
             enabled[f"{command.plugin}@{MARKETPLACE_NAME}"] = True
-            self.settings.write_text(json.dumps(document, indent=2), encoding="utf-8")
+            self._write(document)
+        if (
+            command.agent is Agent.CLAUDE
+            and command.operation is Operation.MARKETPLACE_ADD
+        ):
+            document = self._document()
+            document[EXTRA_MARKETPLACES_FIELD] = claude_marketplace_settings(
+                CANONICAL_MARKETPLACE_SOURCE
+            )[EXTRA_MARKETPLACES_FIELD]
+            self._write(document)
         if command.operation is self.failed_operation:
             self._seen += 1
             if self._seen == self.failed_occurrence:
@@ -439,6 +446,74 @@ class SettingsMutatingRunner:
         if command.operation is Operation.MARKETPLACE_INSPECT:
             stdout = codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
         return CommandResult(command.argv, 0, stdout, "")
+
+    def _document(self) -> dict[str, object]:
+        return cast(
+            "dict[str, object]",
+            json.loads(self.settings.read_text(encoding="utf-8")),
+        )
+
+    def _write(self, document: dict[str, object]) -> None:
+        self.settings.write_text(
+            json.dumps(document, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+
+@dataclass(frozen=True)
+class ReconciliationObservation:
+    """Selection and marketplace source around a reconciling persistent run."""
+
+    selection_before: object
+    selection_after: object
+    marketplace_before: object
+    marketplace_after: object
+    canonical_marketplace: object
+    source_action: SourceAction
+
+
+def observe_noncanonical_reconciliation() -> ReconciliationObservation:
+    """Run the persistent path from a checkout declaring a noncanonical source."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
+        _copy_committed_project_settings(checkout, settings)
+        document = cast(
+            "dict[str, object]",
+            json.loads(settings.read_text(encoding="utf-8")),
+        )
+        document[EXTRA_MARKETPLACES_FIELD] = claude_marketplace_settings(
+            NONCANONICAL_MARKETPLACE_SOURCE
+        )[EXTRA_MARKETPLACES_FIELD]
+        settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+        before = cast(
+            "dict[str, object]",
+            json.loads(settings.read_text(encoding="utf-8")),
+        )
+        environment = _persistent_environment(temporary_root)
+        preflight = build_persistent_preflight(mirror, environment)
+        execute_persistent_installation(
+            mirror,
+            environment,
+            SettingsMutatingRunner(settings=settings),
+        )
+        after = cast(
+            "dict[str, object]",
+            json.loads(settings.read_text(encoding="utf-8")),
+        )
+    return ReconciliationObservation(
+        selection_before=before.get(CLAUDE_ENABLED_PLUGINS_FIELD),
+        selection_after=after.get(CLAUDE_ENABLED_PLUGINS_FIELD),
+        marketplace_before=before.get(EXTRA_MARKETPLACES_FIELD),
+        marketplace_after=after.get(EXTRA_MARKETPLACES_FIELD),
+        canonical_marketplace=claude_marketplace_settings(CANONICAL_MARKETPLACE_SOURCE)[
+            EXTRA_MARKETPLACES_FIELD
+        ],
+        source_action=preflight.claude_source_action,
+    )
 
 
 def observe_failed_run_restore(operation: Operation) -> RestoreObservation:

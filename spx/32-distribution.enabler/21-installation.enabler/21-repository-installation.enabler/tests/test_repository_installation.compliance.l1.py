@@ -1,9 +1,14 @@
 """Ambient-state and repository-config evidence for installation."""
 
-from outcomeeng.distribution.installation import CODEX_CONFIG_PATH, Operation
+from outcomeeng.distribution.installation import (
+    CODEX_CONFIG_PATH,
+    Operation,
+    SourceAction,
+)
 from outcomeeng_testing.harnesses.installation import (
     observe_codex_config_independence,
     observe_failed_run_restore,
+    observe_noncanonical_reconciliation,
 )
 
 
@@ -27,6 +32,15 @@ def test_repository_codex_config_has_no_installation_semantics() -> None:
         for command in plan.commands
         for argument in command.argv
     )
+
+
+def test_restoring_the_selection_keeps_the_reconciled_marketplace_source() -> None:
+    observation = observe_noncanonical_reconciliation()
+
+    assert observation.source_action is SourceAction.REPLACE
+    assert observation.selection_after == observation.selection_before
+    assert observation.marketplace_before != observation.canonical_marketplace
+    assert observation.marketplace_after == observation.canonical_marketplace
 
 
 def test_failed_persistent_run_restores_the_committed_selection() -> None:
