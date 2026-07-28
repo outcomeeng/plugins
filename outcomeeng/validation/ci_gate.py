@@ -8,6 +8,8 @@ from typing import Final
 from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL
 
 GATE_JOB_NAME: Final = "check"
+PYTHON_SETUP_STEP_NAME: Final = "Set up Python"
+PINNED_VERSION_ENVIRONMENT_SUFFIX: Final = "_VERSION"
 GATE_PULL_REQUEST_EVENT: Final = "pull_request"
 GATE_PUSH_EVENT: Final = "push"
 GATE_PUSH_BRANCH: Final = "main"
@@ -99,6 +101,8 @@ __all__ = [
     "GATE_PUSH_EVENT",
     "GATE_RECIPE_COMMAND",
     "JUST_BINARY",
+    "PINNED_VERSION_ENVIRONMENT_SUFFIX",
+    "PYTHON_SETUP_STEP_NAME",
     "SOFT_PASS_SHELL_SNIPPETS",
     "TRAP_COMMAND_PREFIX",
     "CiStepEnvironmentRequirement",

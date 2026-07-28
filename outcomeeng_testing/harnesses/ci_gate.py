@@ -10,7 +10,7 @@ from typing import Any, Final, cast
 import yaml
 
 from outcomeeng.validation import VALIDATION_STEPS
-from outcomeeng.validation.ci_gate import GATE_JOB_NAME
+from outcomeeng.validation.ci_gate import GATE_JOB_NAME, PYTHON_SETUP_STEP_NAME
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 GATE_WORKFLOW: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
@@ -92,7 +92,7 @@ def setup_python_version(workflow_data: dict[str, Any]) -> str:
     setup_step = next(
         step
         for step in gate_steps(workflow_data)
-        if step.get("name") == "Set up Python"
+        if step.get("name") == PYTHON_SETUP_STEP_NAME
     )
     return cast("str", setup_step["with"]["python-version"])
 
