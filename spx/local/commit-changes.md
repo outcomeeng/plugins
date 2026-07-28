@@ -30,6 +30,7 @@ Plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
 
 - ✅ Adding new skills (e.g., new `/design-frontend` skill)
 - ✅ Adding new thin agents
+- ✅ Removing or renaming a skill or thin agent — structure is symmetric, so a loss counts like a gain
 - ✅ Major functional changes (e.g., atomic claim mechanism in `/pickup`)
 - ✅ Significant user experience improvements
 - 🎯 **Use sparingly** — only for substantial additions or changes
