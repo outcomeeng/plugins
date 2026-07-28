@@ -12,7 +12,7 @@ CAN scope work to the current agent without file-system heuristics or race condi
 
 ### Mappings
 
-- A `SessionStart` payload maps to the identity write: distinct session UUIDs map to distinct `$CLAUDE_SESSION_ID` writes, and a missing or empty `session_id` maps to no export ([test](tests/test_identity.mapping.l1.py))
+- A `SessionStart` payload's `session_id` state maps to the identity write: a present non-empty value maps to an exact `$CLAUDE_SESSION_ID` export, and a missing or empty value maps to no export ([test](tests/test_identity.mapping.l1.py))
 
 ### Compliance
 
