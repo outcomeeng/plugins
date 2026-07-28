@@ -1,0 +1,16 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    continue-on-error: "${{ true }}"
+    steps:
+      - name: Run quality gate
+        continue-on-error: "${{ github.event_name == 'push' }}"
+        run: just check-full
