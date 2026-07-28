@@ -3,6 +3,7 @@ from outcomeeng_testing.harnesses.native_agent_recovery import (
     observe_activation_request_mapping,
     observe_attested_controller_binding,
     observe_attested_controller_rejections,
+    observe_bound_pane_occupancy,
     observe_bound_resolution_mapping,
     observe_prepared_manifest_mapping,
     observe_reassessment_planning_mapping,
@@ -18,7 +19,6 @@ def test_exact_pre_restart_identity_maps_to_one_durable_candidate() -> None:
     assert observed.resume_locators == observed.expected_resume_locators
     assert observed.candidates_missing_native_home == []
     assert observed.non_public_hint_status == observed.prepared_status
-    assert observed.advisory_statuses == observed.expected_advisory_statuses
 
 
 def test_incomplete_or_duplicate_evidence_maps_to_non_mutating_failure() -> None:
@@ -75,6 +75,17 @@ def test_each_bound_candidate_maps_to_its_occupancy_resolution() -> None:
         [observed.resumed_status] * observed.unoccupied_count
     )
     assert observed.mismatched_occupant_status == observed.pane_occupied_status
+
+
+def test_a_bound_pane_another_session_holds_maps_to_non_mutating_failure() -> None:
+    observed = observe_bound_pane_occupancy()
+    assert observed.matching_status == observed.resumed_status
+    assert observed.mismatched_session_status == observed.pane_occupied_status
+    assert observed.mismatched_type_status == observed.pane_occupied_status
+    assert observed.duplicate_agent_status == observed.pane_occupied_status
+    assert observed.mismatched_session_targets == []
+    assert observed.mismatched_session_deliveries == []
+    assert observed.occupied_pane_ids == observed.held_pane_ids
 
 
 def test_one_worktree_admits_one_primary_and_authorized_secondaries() -> None:

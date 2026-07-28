@@ -8,7 +8,7 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 
 ### Mappings
 
-- Each exactly identified native session maps during prepare to one durable candidate containing its original pane, absolute worktree, agent type, complete native session identity, exact native resume locator, applicable native home, evidence, role, and secondary authorization; incomplete, duplicate, and mismatched entries map to a named non-mutating failure while every Prowl status maps to the same eligibility result ([test](tests/test_native_agent_recovery.mapping.l1.py))
+- Each exactly identified native session maps during prepare to one durable candidate containing its original pane, absolute worktree, agent type, complete native session identity, exact native resume locator, applicable native home, evidence, role, and secondary authorization; incomplete, duplicate, and mismatched entries map to a named non-mutating failure ([test](tests/test_native_agent_recovery.mapping.l1.py))
 - Each prepared candidate maps after restart to one exact existing pane or one source-owned Prowl activation request for its worktree; an absent pane binds only from an `exact-root` result whose returned path and pane identify that prepared target, never from blind worktree enumeration, while the single pane its own occupant attests binds that attestation's current-session candidate without activation or relaunch ([test](tests/test_native_agent_recovery.mapping.l1.py))
 - A controller-pane attestation maps to one binding for the single current-session candidate whose worktree, agent type, and native session the attested pane identifies, and to a named non-mutating failure when no current-session candidate exists, the attested pane is absent from the post-restart panes, that pane sits outside the candidate's worktree, or that pane reports more than one agent, another agent type, or another native session ([test](tests/test_native_agent_recovery.mapping.l1.py))
 - Each bound candidate maps to `resumed` when unoccupied, `already-correlated` when occupied by its exact agent type and session — or, on the attested controller pane alone, by its exact agent type under a roster entry carrying no session — or a named non-mutating failure when absent, duplicated, mismatched, or occupied by another process ([test](tests/test_native_agent_recovery.mapping.l1.py))
@@ -18,6 +18,7 @@ CAN resume the complete intended live set and its unsatisfied operator interacti
 ### Properties
 
 - Repeating recovery after every prepared candidate has one exact distinct post-restart correlation and every non-controller session is durably reassessed emits no activation, native command, or reassessment instruction ([test](tests/test_native_agent_recovery.property.l1.py))
+- Every Prowl status a live agent reports leaves recovery eligibility unchanged; the status is advisory and its vocabulary belongs to Prowl, so preparation accepts any non-empty status value without modelling the domain ([test](tests/test_native_agent_recovery.property.l1.py))
 - Preparation and verification reject every evidence value outside the source-owned process, native-status, current-session, exact-public-agent, and operator-confirmation contract ([test](tests/test_native_agent_recovery.property.l1.py))
 
 ### Compliance

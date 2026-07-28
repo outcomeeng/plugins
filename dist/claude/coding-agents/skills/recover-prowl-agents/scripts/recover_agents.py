@@ -149,6 +149,8 @@ POST_RESTART_EVIDENCE_SOURCES = frozenset(
     }
 )
 
+NATIVE_HOME_COMMAND = "env"
+NATIVE_HOME_VARIABLES: dict[AgentType, str] = {AgentType.CODEX: "CODEX_HOME"}
 NATIVE_RESUME_PREFIXES: dict[AgentType, tuple[str, ...]] = {
     AgentType.CLAUDE: ("claude", "--resume"),
     AgentType.CODEX: ("codex", "resume"),
@@ -1032,6 +1034,11 @@ def bind_activations(plan: object, result_items: object) -> dict[str, object]:
     }
 
 
+def native_home_prefix(agent_type: AgentType, native_home: str) -> tuple[str, ...]:
+    """The exact tokens that bind one native home to a resume command for this agent type."""
+    return (NATIVE_HOME_COMMAND, f"{NATIVE_HOME_VARIABLES[agent_type]}={native_home}")
+
+
 def native_resume_command(candidate: PreparedCandidate) -> str:
     prefix = NATIVE_RESUME_PREFIXES[candidate.agent_type]
     if candidate.agent_type is AgentType.CLAUDE:
@@ -1039,8 +1046,7 @@ def native_resume_command(candidate: PreparedCandidate) -> str:
     if candidate.agent_type is AgentType.CODEX and candidate.native_home is not None:
         return shlex.join(
             (
-                "env",
-                f"CODEX_HOME={candidate.native_home}",
+                *native_home_prefix(candidate.agent_type, candidate.native_home),
                 *prefix,
                 candidate.session_id,
             )

@@ -298,3 +298,12 @@ def invalid_recovery_evidence(
         min_size=1,
         max_size=16,
     ).filter(lambda evidence: evidence not in evidence_kinds)
+
+
+def advisory_prowl_statuses() -> SearchStrategy[str]:
+    """Any non-empty status string Prowl may report; the recovery script treats the domain as open."""
+    return st.text(
+        alphabet=st.characters(min_codepoint=33, max_codepoint=126),
+        min_size=1,
+        max_size=24,
+    )

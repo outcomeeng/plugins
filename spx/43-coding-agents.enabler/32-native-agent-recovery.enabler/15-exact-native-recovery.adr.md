@@ -23,11 +23,12 @@ Prowl preserves sidebar worktree topology independently from instantiated termin
 
 ### Testing
 
-- ALWAYS: preparation maps a complete pre-restart candidate set and exact identity and launch evidence to one durable versioned manifest, rejecting incomplete, duplicate, mismatched, and unauthorized candidates while treating every Prowl status as advisory ([mapping])
+- ALWAYS: preparation maps a complete pre-restart candidate set and exact identity and launch evidence to one durable versioned manifest, rejecting incomplete, duplicate, mismatched, and unauthorized candidates ([mapping])
 - ALWAYS: activation planning maps prepared worktrees to existing panes or source-owned exact-root Prowl activation operations, preserving every original-pane identity for post-restart binding and never enumerating filesystem worktrees ([mapping])
 - ALWAYS: recovery maps each exact agent type, session identity, resume locator, and applicable native home to its source-owned native resume command and one post-restart pane binding ([mapping])
 - ALWAYS: a controller-pane attestation maps to one binding for the single current-session candidate whose worktree, agent type, and native session the attested pane identifies, and every attestation failing that identification maps to a named non-mutating failure ([mapping])
 - ALWAYS: the complete verified binding set maps with one checked pane read per binding to reassessment planning; absent or failed reads map to zero delivery, while after the read barrier each verified non-controller candidate carrying a supplied destroyed fact maps to one separate delivery and every other maps to a recorded judged-intact identity ([mapping])
+- ALWAYS: any non-empty Prowl status a live agent reports leaves preparation eligibility unchanged; the vocabulary belongs to Prowl and no source models it ([property])
 - ALWAYS: repeated recovery with every candidate exactly correlated and reassessed emits no activation or delivery ([property])
 - ALWAYS: verification accepts only distinct bindings whose process-backed, native-status, current-session, or exact public-agent evidence matches the prepared worktree, agent type, and native session identity ([compliance])
 - NEVER: preparation, activation, launch, or verification accepts transcript recency, rollout recency, terminal presentation, a roster entry without exact session identity, or a latest-session selector as exact evidence ([compliance])

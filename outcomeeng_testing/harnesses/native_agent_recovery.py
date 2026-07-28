@@ -20,6 +20,7 @@ from outcomeeng_testing.generators.native_agent_recovery import (
     OPERATIONAL_RECOVERY_ROSTER,
     RecoveryRosterCase,
     activation_results,
+    advisory_prowl_statuses,
     identity_evidence,
     invalid_recovery_evidence,
     pane_read_results,
@@ -260,8 +261,6 @@ class PreparedManifestMapping:
     candidates_missing_native_home: list[object]
     non_public_hint_status: object
     conflicting_public_session_status: object
-    advisory_statuses: list[object]
-    expected_advisory_statuses: list[object]
     duplicate_session_status: object
     lone_secondary_status: object
     duplicate_controller_status: object
@@ -369,16 +368,6 @@ def observe_prepared_manifest_mapping() -> PreparedManifestMapping:
     panes, agents = _pre_restart_rosters(module, roster)
     candidates = recovery_candidates(module, roster)
     evidence = identity_evidence(module, roster, roster.original_pane_ids)
-    advisory_statuses: list[object] = []
-    for advisory in ("working", "idle", "blocked", "done", "unknown"):
-        advisory_agents = deepcopy(agents)
-        advisory_agents[0][module.STATUS_FIELD] = advisory
-        advisory_statuses.append(
-            module.prepare(
-                roster.original_pane_ids, panes, advisory_agents, candidates, evidence
-            )[module.STATUS_FIELD]
-        )
-
     duplicate_session_candidates = deepcopy(candidates)
     duplicate_session_candidates[1][module.SESSION_ID_FIELD] = (
         duplicate_session_candidates[0][module.SESSION_ID_FIELD]
@@ -421,8 +410,6 @@ def observe_prepared_manifest_mapping() -> PreparedManifestMapping:
                 identity_evidence(module, roster, roster.original_pane_ids),
             ),
         ),
-        advisory_statuses=advisory_statuses,
-        expected_advisory_statuses=[module.ResultStatus.PREPARED] * 5,
         duplicate_session_status=_error_status(
             module,
             lambda: module.prepare(
@@ -1200,10 +1187,12 @@ def observe_native_launch_transport() -> NativeLaunchTransport:
         claude_command_tail=shlex.split(claude_command)[-1],
         prepared_claude_locator=custom_candidates[0][module.RESUME_LOCATOR_FIELD],
         codex_command_head=shlex.split(codex_command)[:2],
-        expected_codex_head=[
-            "env",
-            f"CODEX_HOME={custom_candidates[1][module.NATIVE_HOME_FIELD]}",
-        ],
+        expected_codex_head=list(
+            module.native_home_prefix(
+                module.AgentType.CODEX,
+                cast(str, custom_candidates[1][module.NATIVE_HOME_FIELD]),
+            )
+        ),
     )
 
 
@@ -1632,4 +1621,104 @@ def observe_sessionless_roster_handling() -> SessionlessRosterHandling:
             for target in cast(list[dict[str, object]], recovered[module.TARGETS_FIELD])
             if target[module.ORIGINAL_PANE_ID_FIELD] == roster.original_pane_ids[0]
         ],
+    )
+
+
+@dataclass(frozen=True)
+class AdvisoryStatusEligibility:
+    """Preparation's result when one candidate's live agent reports one generated Prowl status."""
+
+    prepared_status: object
+    observed_status: object
+
+
+@dataclass(frozen=True)
+class BoundPaneOccupancy:
+    """Recovery driven from bindings supplied directly, against a bound pane another session holds."""
+
+    pane_occupied_status: object
+    resumed_status: object
+    matching_status: object
+    mismatched_session_status: object
+    mismatched_type_status: object
+    duplicate_agent_status: object
+    mismatched_session_targets: list[object]
+    mismatched_session_deliveries: list[object]
+    occupied_pane_ids: object
+    held_pane_ids: list[str]
+
+
+def _observe_advisory_status_eligibility(
+    module: ModuleType, status: str
+) -> AdvisoryStatusEligibility:
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    panes, agents = _pre_restart_rosters(module, roster)
+    agents[0][module.STATUS_FIELD] = status
+    return AdvisoryStatusEligibility(
+        prepared_status=module.ResultStatus.PREPARED,
+        observed_status=module.prepare(
+            roster.original_pane_ids,
+            panes,
+            agents,
+            recovery_candidates(module, roster),
+            identity_evidence(module, roster, roster.original_pane_ids),
+        )[module.STATUS_FIELD],
+    )
+
+
+def drive_advisory_status_property(
+    check: Callable[[AdvisoryStatusEligibility], None],
+) -> None:
+    """Drive the status-independence invariant over generated statuses under harness-owned replay settings."""
+    module = _load()
+
+    @seed(RECOVERY_PROPERTY_SEED)
+    @settings(max_examples=RECOVERY_PROPERTY_EXAMPLES, deadline=None, print_blob=True)
+    @given(status=advisory_prowl_statuses())
+    def property_case(status: str) -> None:
+        check(_observe_advisory_status_eligibility(module, status))
+
+    run_replayable_property(
+        property_case,
+        seed_value=RECOVERY_PROPERTY_SEED,
+        replay_path=RECOVERY_PROPERTY_REPLAY_PATH,
+    )
+
+
+def observe_bound_pane_occupancy() -> BoundPaneOccupancy:
+    """Recover from directly supplied bindings while one bound pane reports another occupant."""
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    prepared = _prepared(module, roster)
+    panes, agents = _post_restart_rosters(module, roster, len(roster.original_pane_ids))
+    bindings = _all_bindings(module, roster)
+    held_pane_id = roster.post_restart_pane_ids[0]
+
+    mismatched_session_agents = deepcopy(agents)
+    cast(dict[str, object], mismatched_session_agents[0][module.SESSION_FIELD])[
+        module.ID_FIELD
+    ] = roster.session_ids[1]
+    mismatched_type_agents = deepcopy(agents)
+    mismatched_type_agents[0][module.TYPE_FIELD] = roster.agent_types[1]
+    duplicate_agents = [*agents, deepcopy(agents[0])]
+
+    def recovered(items: list[dict[str, object]]) -> dict[str, object]:
+        return cast(dict[str, object], module.recover(prepared, bindings, panes, items))
+
+    mismatched_session = recovered(mismatched_session_agents)
+    return BoundPaneOccupancy(
+        pane_occupied_status=module.ResultStatus.PANE_OCCUPIED,
+        resumed_status=module.ResultStatus.ALREADY_CURRENT,
+        matching_status=recovered(agents)[module.STATUS_FIELD],
+        mismatched_session_status=mismatched_session[module.STATUS_FIELD],
+        mismatched_type_status=recovered(mismatched_type_agents)[module.STATUS_FIELD],
+        duplicate_agent_status=recovered(duplicate_agents)[module.STATUS_FIELD],
+        mismatched_session_targets=cast(
+            list[object], mismatched_session[module.TARGETS_FIELD]
+        ),
+        mismatched_session_deliveries=cast(
+            list[object], mismatched_session[module.DELIVERIES_FIELD]
+        ),
+        occupied_pane_ids=mismatched_session["occupiedPaneIds"],
+        held_pane_ids=[held_pane_id],
     )
