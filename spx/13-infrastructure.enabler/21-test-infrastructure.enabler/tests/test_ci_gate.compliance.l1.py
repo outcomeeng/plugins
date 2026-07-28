@@ -154,6 +154,19 @@ def test_soft_passed_step_shell_is_detected() -> None:
     )
 
 
+def test_trap_soft_passed_step_shell_is_detected() -> None:
+    steps = observe_gate_steps(gate_fixture_path("trap_soft_passed_step.yml"))
+
+    assert any(
+        line.startswith(TRAP_COMMAND_PREFIX)
+        for step in steps
+        for line in step.shell_lines
+    )
+    assert not any(
+        snippet in step.run for step in steps for snippet in SOFT_PASS_SHELL_SNIPPETS
+    )
+
+
 def test_missing_pull_request_trigger_is_detected() -> None:
     triggers = observe_gate_triggers(
         gate_fixture_path("missing_pull_request_trigger.yml")
