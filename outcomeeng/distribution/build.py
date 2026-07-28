@@ -121,6 +121,8 @@ TEMPLATES_DIR_NAME: Final = "templates"
 # from a plugin manifest.
 LIFECYCLE_TEMPLATE_NAME: Final = "plugin"
 PLACEMENT_MANIFEST_FILENAME: Final = "placement.json"
+PLACEMENT_MANIFEST_DIRECTORY_FIELD: Final = "directory"
+PLACEMENT_MANIFEST_PREFIX_FIELD: Final = "prefix"
 SHARED_FRAGMENT_FILENAME: Final = "fragment.md"
 
 
@@ -1267,7 +1269,10 @@ def _emit_placement_manifest(emission: PlannedEmission, *, dist_root: Path) -> N
     _write_text(
         destination,
         json.dumps(
-            {"directory": capability.checkout_directory, "prefix": f"{plugin}_"},
+            {
+                PLACEMENT_MANIFEST_DIRECTORY_FIELD: capability.checkout_directory,
+                PLACEMENT_MANIFEST_PREFIX_FIELD: f"{plugin}_",
+            },
             indent=2,
             sort_keys=True,
         )

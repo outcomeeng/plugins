@@ -29,8 +29,16 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     )
 
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
-    assert observation.persistent_claude_plugins == claude_plugins
-    assert observation.persistent_codex_plugins == codex_plugins
+    assert observation.persistent_claude_plugins.installed == claude_plugins
+    assert (
+        observation.persistent_claude_plugins.enabled
+        == observation.persistent_selection
+    )
+    assert observation.persistent_selection < claude_plugins
+    assert (
+        observation.persistent_settings_after == observation.persistent_settings_before
+    )
+    assert observation.persistent_codex_plugins.installed == codex_plugins
     assert observation.persistent_claude_source_action is SourceAction.REFRESH
     assert observation.persistent_codex_source_action is SourceAction.REFRESH
     assert observation.first_exit_code == 0, observation.first_stderr
@@ -38,13 +46,17 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     assert (
         observation.claude_registration_target == observation.codex_registration_target
     )
-    assert observation.claude_registration_target.endswith("/checkout")
+    assert observation.claude_registration_target == str(
+        observation.invocation_checkout
+    )
     state_root = observation.state_roots[0].parent
     assert all(root.is_relative_to(state_root) for root in observation.state_roots)
-    assert observation.claude_plugins_first == claude_plugins
-    assert observation.claude_plugins_second == claude_plugins
-    assert observation.codex_plugins_first == codex_plugins
-    assert observation.codex_plugins_second == codex_plugins
+    assert observation.claude_plugins_first.installed == claude_plugins
+    assert observation.claude_plugins_first.enabled == claude_plugins
+    assert observation.claude_plugins_second == observation.claude_plugins_first
+    assert observation.codex_plugins_first.installed == codex_plugins
+    assert observation.codex_plugins_first.enabled == codex_plugins
+    assert observation.codex_plugins_second == observation.codex_plugins_first
     assert set(observation.placed_first) == (
         set(observation.placed_initial) | set(observation.shipped_agents)
     )

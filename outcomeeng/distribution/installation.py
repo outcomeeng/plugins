@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Protocol, cast
 
 MARKETPLACE_NAME = "outcomeeng"
+USER_SCOPE_COLLISION_DIAGNOSTIC = "Claude Code user-scope marketplace collision"
 CANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins"
 CANONICAL_CODEX_SOURCE = "https://github.com/outcomeeng/plugins"
 CODEX_CATALOG_PATH = Path(".agents/plugins/marketplace.json")
@@ -69,6 +70,7 @@ CODEX_GIT_SOURCE_TYPE = "git"
 CODEX_LOCAL_SOURCE_TYPE = "local"
 CLAUDE_PLUGIN_ID_FIELD = "id"
 CLAUDE_PLUGIN_ENABLED_FIELD = "enabled"
+CLAUDE_ENABLED_PLUGINS_FIELD = "enabledPlugins"
 CODEX_PLUGIN_ENTRIES_FIELD = "installed"
 CODEX_PLUGIN_ID_FIELD = "pluginId"
 CODEX_PLUGIN_ENABLED_FIELD = "enabled"
@@ -245,38 +247,38 @@ class ClaudeInstallationAdapter:
         )
         for plugin in plugins:
             plugin_id = f"{plugin}@{MARKETPLACE_NAME}"
-            commands.extend(
-                (
-                    _command(
-                        self.agent,
-                        Operation.PLUGIN_INSTALL,
-                        plugin,
-                        (
-                            CLAUDE_EXECUTABLE,
-                            "plugin",
-                            "install",
-                            plugin_id,
-                            "--scope",
-                            scope,
-                        ),
-                        roots,
-                        environment,
+            commands.append(
+                _command(
+                    self.agent,
+                    Operation.PLUGIN_INSTALL,
+                    plugin,
+                    (
+                        CLAUDE_EXECUTABLE,
+                        "plugin",
+                        "install",
+                        plugin_id,
+                        "--scope",
+                        scope,
                     ),
-                    _command(
-                        self.agent,
-                        Operation.PLUGIN_ENABLE,
-                        plugin,
-                        (
-                            CLAUDE_EXECUTABLE,
-                            "plugin",
-                            "enable",
-                            plugin_id,
-                            "--scope",
-                            scope,
-                        ),
-                        roots,
-                        environment,
+                    roots,
+                    environment,
+                )
+            )
+            commands.append(
+                _command(
+                    self.agent,
+                    Operation.PLUGIN_ENABLE,
+                    plugin,
+                    (
+                        CLAUDE_EXECUTABLE,
+                        "plugin",
+                        "enable",
+                        plugin_id,
+                        "--scope",
+                        scope,
                     ),
+                    roots,
+                    environment,
                 )
             )
         commands.append(
@@ -410,7 +412,7 @@ def build_persistent_preflight(
     user_document = _settings_document(user_settings)
     if _marketplace_entry(user_document) is not None:
         raise ValueError(
-            "Claude Code user-scope marketplace collision: "
+            f"{USER_SCOPE_COLLISION_DIAGNOSTIC}: "
             f"{user_settings} declares `{MARKETPLACE_NAME}`; remove that user-scope "
             "registration before project-scoped installation"
         )
@@ -457,7 +459,15 @@ def execute_persistent_installation(
     base_environment: Mapping[str, str],
     runner: CommandRunner,
 ) -> InstallationReport:
-    """Inspect selected persistent state, then reconcile and install it."""
+    """Inspect selected persistent state, then reconcile and install it.
+
+    The checkout's committed plugin selection is read before installing and
+    re-applied afterwards, on a successful run and on one that fails partway.
+    Installing a plugin activates it in the scope, so the selection would
+    otherwise widen to the whole catalog. Only the selection is re-applied:
+    the marketplace source the run reconciles lives in the same document and
+    must survive.
+    """
     preflight = build_persistent_preflight(checkout, base_environment)
     inspection_result = _checked_result(
         preflight.codex_inspection,
@@ -470,7 +480,51 @@ def execute_persistent_installation(
             (),
         )
     plan = build_persistent_installation_plan(preflight, inspection_result.stdout)
-    return execute_installation(plan, runner, completed=(inspection_result,))
+    settings = checkout / CLAUDE_PROJECT_SETTINGS_PATH
+    declared = _declared_plugin_selection(settings)
+    try:
+        return execute_installation(plan, runner, completed=(inspection_result,))
+    finally:
+        _restore_plugin_selection(settings, declared)
+
+
+@dataclass(frozen=True)
+class DeclaredSelection:
+    """A checkout's plugin selection, and whether the checkout declares one."""
+
+    present: bool
+    value: object
+
+
+def _selection_of(document: Mapping[str, object]) -> DeclaredSelection:
+    return DeclaredSelection(
+        present=CLAUDE_ENABLED_PLUGINS_FIELD in document,
+        value=document.get(CLAUDE_ENABLED_PLUGINS_FIELD),
+    )
+
+
+def _declared_plugin_selection(settings: Path) -> DeclaredSelection | None:
+    """Read the plugin selection a checkout's project settings declare."""
+    if not settings.exists():
+        return None
+    return _selection_of(_settings_document(settings))
+
+
+def _restore_plugin_selection(
+    settings: Path,
+    declared: DeclaredSelection | None,
+) -> None:
+    """Re-apply a declared plugin selection, leaving the rest of the document."""
+    if declared is None or not settings.exists():
+        return
+    document = _settings_document(settings)
+    if _selection_of(document) == declared:
+        return
+    if declared.present:
+        document[CLAUDE_ENABLED_PLUGINS_FIELD] = declared.value
+    else:
+        document.pop(CLAUDE_ENABLED_PLUGINS_FIELD, None)
+    settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
 
 def _build_plan(
@@ -1062,7 +1116,10 @@ __all__ = [
     "CLAUDE_GITHUB_SOURCE_TYPE",
     "CLAUDE_PLUGIN_ENABLED_FIELD",
     "CLAUDE_PLUGIN_ID_FIELD",
+    "CLAUDE_ENABLED_PLUGINS_FIELD",
+    "EXTRA_MARKETPLACES_FIELD",
     "CLAUDE_PROJECT_SETTINGS_PATH",
+    "USER_SCOPE_COLLISION_DIAGNOSTIC",
     "CLAUDE_SOURCE_FIELD",
     "CODEX_AGENTS_PATH",
     "CODEX_CATALOG_PATH",

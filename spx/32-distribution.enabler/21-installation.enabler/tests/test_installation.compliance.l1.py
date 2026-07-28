@@ -10,9 +10,12 @@ from outcomeeng.distribution.installation import (
     STATE_ENV_NAMES,
 )
 from outcomeeng_testing.harnesses.installation import (
+    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_first_failure,
+    observe_inspection_failure,
     observe_missing_codex_home,
     observe_persistent_execution,
+    observe_persistent_plan,
     observe_repository_plan,
 )
 
@@ -43,37 +46,100 @@ def test_every_command_uses_the_explicit_checkout_and_agent_homes() -> None:
 def test_persistent_installation_requires_selected_codex_home() -> None:
     error = observe_missing_codex_home()
 
+    assert error is not None
     assert CODEX_HOME_ENV in error
 
 
-def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None:
-    observation = observe_persistent_execution()
-    plan = observation.report.plan
+SCOPE_BEARING_CLAUDE_OPERATIONS = {
+    Operation.MARKETPLACE_REMOVE,
+    Operation.MARKETPLACE_ADD,
+    Operation.PLUGIN_INSTALL,
+    Operation.PLUGIN_ENABLE,
+}
+SCOPELESS_CLAUDE_OPERATIONS = {
+    Operation.MARKETPLACE_REFRESH,
+    Operation.PLUGIN_LIST,
+}
 
-    assert plan.mode is InstallationMode.PERSISTENT
-    assert all(
-        "--scope" in command.argv and "project" in command.argv
+
+def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None:
+    refreshing = observe_persistent_execution()
+    replacing = observe_persistent_plan(
+        claude_repository=NONCANONICAL_MARKETPLACE_SOURCE,
+        codex_source=NONCANONICAL_MARKETPLACE_SOURCE,
+    )
+    plans = (refreshing.report.plan, replacing.plan)
+    claude_commands = [
+        command
+        for plan in plans
         for command in plan.commands
         if command.agent is Agent.CLAUDE
-        and command.operation
-        in {
-            Operation.MARKETPLACE_REMOVE,
-            Operation.MARKETPLACE_ADD,
-            Operation.PLUGIN_INSTALL,
-            Operation.PLUGIN_ENABLE,
-        }
+    ]
+
+    assert all(plan.mode is InstallationMode.PERSISTENT for plan in plans)
+    assert {command.operation for command in claude_commands} == (
+        SCOPE_BEARING_CLAUDE_OPERATIONS | SCOPELESS_CLAUDE_OPERATIONS
+    )
+    assert all(
+        "--scope" in command.argv and "project" in command.argv
+        for command in claude_commands
+        if command.operation in SCOPE_BEARING_CLAUDE_OPERATIONS
+    )
+    assert all(
+        "--scope" not in command.argv
+        for command in claude_commands
+        if command.operation in SCOPELESS_CLAUDE_OPERATIONS
     )
     assert all(
         dict(command.environment)[CODEX_HOME_ENV] == str(plan.roots.codex_home)
+        for plan in plans
         for command in plan.commands
         if command.agent is Agent.CODEX
     )
-    assert observation.attempted[1:] == plan.commands
+    assert refreshing.attempted[1:] == refreshing.report.plan.commands
+
+
+def test_an_enable_failure_stops_the_run_rather_than_reading_as_idempotent() -> None:
+    observation = observe_first_failure(Operation.PLUGIN_ENABLE)
+
+    assert observation.failure is not None
+    assert observation.failure.command.operation is Operation.PLUGIN_ENABLE
+    assert observation.failure.result.exit_code != 0
+    assert observation.attempted[-1] == observation.failure.command
+    assert (
+        observation.attempted == observation.plan.commands[: len(observation.attempted)]
+    )
+
+
+def test_a_failed_inspection_stops_before_any_planned_operation() -> None:
+    observation = observe_inspection_failure()
+
+    assert observation.failure is not None
+    assert observation.failure.command.operation is Operation.MARKETPLACE_INSPECT
+    assert observation.attempted == (observation.failure.command,)
+    assert not any(
+        command in observation.attempted for command in observation.plan.commands
+    )
+
+
+def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
+    observation = observe_first_failure(Operation.LIFECYCLE_PLACE)
+
+    assert observation.failure is not None
+    assert observation.failure.command.agent is Agent.CODEX
+    assert observation.failure.command.operation is Operation.LIFECYCLE_PLACE
+    assert observation.failure.result.exit_code != 0
+    assert all(result.exit_code == 0 for result in observation.failure.completed)
+    assert observation.attempted[-1] == observation.failure.command
+    assert (
+        observation.attempted == observation.plan.commands[: len(observation.attempted)]
+    )
 
 
 def test_first_agent_cli_failure_reports_the_operation_and_stops() -> None:
-    observation = observe_first_failure()
+    observation = observe_first_failure(Operation.PLUGIN_INSTALL)
 
+    assert observation.failure is not None
     assert observation.failure.command.agent is Agent.CLAUDE
     assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
     assert observation.failure.command.plugin is not None

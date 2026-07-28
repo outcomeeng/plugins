@@ -9,11 +9,13 @@ from outcomeeng.distribution.installation import (
     CANONICAL_MARKETPLACE_SOURCE,
     Operation,
     SourceAction,
+    USER_SCOPE_COLLISION_DIAGNOSTIC,
     VERIFICATION_RECIPE_COMMAND,
 )
 from outcomeeng_testing.harnesses.installation import (
+    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_claude_user_collision,
-    observe_first_failure,
+    observe_inspection_failure,
     observe_persistent_execution,
     observe_persistent_plan,
     observe_verification_recipe,
@@ -74,8 +76,8 @@ def test_verification_recipe_aliases_the_exact_l2_evidence() -> None:
 
 def test_persistent_installation_replaces_noncanonical_sources() -> None:
     observation = observe_persistent_plan(
-        claude_repository="/tmp/local-marketplace",
-        codex_source="/tmp/local-marketplace",
+        claude_repository=NONCANONICAL_MARKETPLACE_SOURCE,
+        codex_source=NONCANONICAL_MARKETPLACE_SOURCE,
     )
 
     assert observation.preflight.claude_source_action is SourceAction.REPLACE
@@ -100,20 +102,23 @@ def test_persistent_installation_replaces_noncanonical_sources() -> None:
     )
 
 
+def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> None:
+    observation = observe_inspection_failure()
+
+    assert observation.failure is not None
+    assert observation.failure.command.operation is Operation.MARKETPLACE_INSPECT
+    assert observation.failure.command.agent is not None
+    assert observation.failure.completed == ()
+    assert observation.attempted == (observation.failure.command,)
+    assert not any(
+        command in observation.attempted for command in observation.plan.commands
+    )
+
+
 def test_claude_user_scope_collision_stops_before_mutation() -> None:
     observation = observe_claude_user_collision()
 
+    assert observation.error is not None
     assert str(observation.settings_path) in observation.error
-    assert "user-scope marketplace collision" in observation.error
+    assert USER_SCOPE_COLLISION_DIAGNOSTIC in observation.error
     assert observation.attempted == ()
-
-
-def test_repository_installation_stops_after_the_first_failed_operation() -> None:
-    observation = observe_first_failure()
-
-    assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
-    assert observation.failure.command.agent is Agent.CLAUDE
-    assert observation.failure.command.plugin is not None
-    assert all(result.exit_code == 0 for result in observation.failure.completed)
-    assert observation.attempted[-1] == observation.failure.command
-    assert len(observation.attempted) < len(observation.plan.commands)

@@ -1,0 +1,17 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run quality gate
+        run: |
+          set -euo pipefail
+          trap 'echo "gate finished"; exit' EXIT
+          just check-full

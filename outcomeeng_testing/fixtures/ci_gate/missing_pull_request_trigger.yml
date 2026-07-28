@@ -1,0 +1,12 @@
+name: Quality Gate
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run quality gate
+        run: just check-full
