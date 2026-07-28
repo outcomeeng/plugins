@@ -166,7 +166,7 @@ NEVER delete todo or doing sessions. `--prune` only affects archive.
 </archive_claimed_sessions>
 
 <confirm>
-State a human-readable closeout first, then the session mechanics. The operator has not read the command output, changed files, rendered result, logs, or external records. A merge receipt or archive receipt alone is not enough.
+State a human-readable closeout first, then the `<session_mechanics>` block. The operator has not read the command output, changed files, rendered result, logs, or external records. A merge receipt or archive receipt alone is not enough.
 
 The closeout MUST include:
 
@@ -243,7 +243,7 @@ A thread that produced no session and has no existing owner gets no row. Its con
 
 <rejected_precondition_attestation>
 
-NEVER spend a session-mechanics row on a precondition the session CLI enforces, or on a prohibited action Claude did not take. This shape is the anti-pattern:
+NEVER spend a session-mechanics row on a precondition the session CLI enforces, or on compliance with a `NEVER` rule the skill never violates. This shape is the anti-pattern:
 
 ```text
 - Session-owned work was committed before closure
