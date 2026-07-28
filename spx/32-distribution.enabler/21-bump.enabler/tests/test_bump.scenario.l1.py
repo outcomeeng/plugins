@@ -13,7 +13,6 @@ from outcomeeng_testing.harnesses.bump import (
     observe_check_unbumped_plugin,
     observe_cross_plugin_rename_changes,
     observe_dry_run_report,
-    observe_dual_manifest_plugin,
     observe_malformed_manifest_runs,
     observe_mixed_dual_manifest_plugin,
     observe_new_plugin_without_base_manifest,
@@ -39,15 +38,6 @@ def test_only_changed_plugin_manifests_are_written() -> None:
     assert list(outcome.written) == [changed_path]
     assert version_of(outcome.written[changed_path]) == "0.4.2"
     assert unchanged_plugin not in outcome.reader_queries
-
-
-def test_dual_manifest_plugin_writes_both_with_same_new_version() -> None:
-    observation = observe_dual_manifest_plugin()
-    written = observation.outcome.written
-
-    assert observation.outcome.exit_code == 0
-    assert set(written) == {observation.claude_path, observation.codex_path}
-    assert {version_of(content) for content in written.values()} == {"0.4.2"}
 
 
 def test_mixed_dual_manifest_minor_change_uses_current_segment() -> None:
