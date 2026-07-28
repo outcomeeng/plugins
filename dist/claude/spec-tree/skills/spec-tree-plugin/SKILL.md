@@ -3,7 +3,7 @@ name: spec-tree-plugin
 description: >-
   ALWAYS invoke this skill to operate the spec-tree plugin's own lifecycle in a checkout — report its version, manage whatever checkout footprint this plugin owns on the running agent, and check that footprint. Invoke it when this plugin's agents are missing from a session. NEVER hand-copy a plugin's agent definitions into a checkout or hand-edit them once placed.
 argument-hint: "[help|version|init|upgrade|check]"
-allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py":*)
+allowed-tools: Read, Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py":*)
 ---
 
 <objective>
@@ -36,7 +36,7 @@ Select one verb from the invocation. `help` is the default when none is given.
 | Plugin      | what changed in this plugin                              | `${CLAUDE_SKILL_DIR}/../../CHANGELOG.md`                                                   |
 | Methodology | edition transitions, compatible extensions, deprecations | `${CLAUDE_SKILL_DIR}/../../METHODOLOGY-CHANGELOG.md`, shipped only in the spec-tree plugin |
 
-Every plugin installed from one marketplace snapshot carries the same marketplace line, because a plugin rename is unreadable from the renamed plugin once its old identity stops resolving. Plugins installed or refreshed at different times carry different snapshots, so this copy is current only as far as its newest entry — the topmost `##` heading, since entries run newest first. Report that date alongside the marketplace line so the reader can tell whether a later event falls outside this copy. The methodology path above resolves only from the spec-tree plugin's own skill directory; from any other plugin, reach it by invoking the spec-tree plugin's lifecycle skill. A checkout without that plugin has no methodology changelog to read, and that absence is normal rather than a fault.
+Every plugin installed from one marketplace snapshot carries the same marketplace line, because a plugin rename is unreadable from the renamed plugin once its old identity stops resolving. Plugins installed or refreshed at different times carry different snapshots, so this copy is current only as far as its newest entry — the topmost `##` heading, since entries run newest first. Report that date alongside the marketplace line so the reader can tell whether a later event falls outside this copy. The methodology path above resolves only from the spec-tree plugin's own skill directory; from any other plugin, reach it by invoking `spec-tree-plugin`, never by guessing a cross-plugin path. A checkout without that plugin has no methodology changelog to read, and that absence is normal rather than a fault.
 
 </changelogs>
 
@@ -88,6 +88,8 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 
 - Exactly one verb runs per invocation, defaulting to `help`.
 - `version` reads only the skill-directory-relative manifest path named above, never another copy on disk.
+- A reported marketplace date equals the topmost `##` heading in the marketplace changelog this plugin carries.
+- A methodology-changelog request from a plugin other than spec-tree resolves through `spec-tree-plugin`, never a guessed cross-plugin path, and reports the plugin's absence as normal when it is not installed.
 - Every footprint verb reports that the manifest delivers this plugin's agents, and writes nothing.
 
 </success_criteria>
