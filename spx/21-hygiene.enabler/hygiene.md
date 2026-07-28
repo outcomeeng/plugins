@@ -8,7 +8,10 @@ The `outcomeeng.hygiene` package collects operations whose purpose is to remove 
 
 ## Assertions
 
+### Properties
+
+- Every hygiene operation is idempotent — running it twice produces the same working-tree state as running it once ([test](tests/test_hygiene.property.l1.py))
+
 ### Compliance
 
-- ALWAYS: every hygiene operation is idempotent — running it twice produces the same working-tree state as running it once ([audit])
-- NEVER: modify tracked content the user has not staged — hygiene operations only touch their declared targets (markdown bytes for `xml-spacing`, gitignored paths for `clean`) ([audit])
+- NEVER: modify content outside an operation's declared targets — `xml-spacing` changes only supplied markdown paths, and `clean` removes only gitignored paths while preserving tracked bytes ([test](tests/test_hygiene.compliance.l1.py))
