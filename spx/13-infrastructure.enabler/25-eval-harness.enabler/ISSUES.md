@@ -72,9 +72,13 @@ secret is visible to `outcomeeng/plugins`, and the token account can bypass
 
 `_error_outcome` (in `outcomeeng_evals/suite.py`) replaces all of a case's trials with one synthetic `trial_index=0` failing trial when the worker raises. If trial 1 passed and trial 2 raised, the successful trial's evidence is lost from the report. A richer error outcome — successful trials kept, the error appended as the final trial — would preserve that evidence. Defer; today's runs use `trials_per_case = 1`, so the loss is moot until multi-trial parallel runs are common.
 
-## Drop `[review]` once the `[audit]` migration completes
+## Drop `[review]` from the remaining validator and lint surfaces
 
-`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` introduces the `[audit]` verification type (backed by the auditing type) and runs it alongside the legacy `[review]` tag during migration. This validator (`outcomeeng/validation/eval_links.py` → `outcomeeng/validation/link_integrity.py`) resolves only the path-bearing `[test]` and `[eval]` links; `[audit]` and `[review]` are pathless and not resolved here. Once every assertion carrying `[review]` is reclassified — to `[audit]` (agentic checklist evidence) or to a reviewing gate (no lane) — drop `[review]` from the recognized evidence tags in inline `/understand` `<assertion_model>` and `<verification_model>`, and any validator or lint rule that enumerates the lane set.
+`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` introduces the `[audit]` verification type (backed by the auditing type). This validator (`outcomeeng/validation/eval_links.py` → `outcomeeng/validation/link_integrity.py`) resolves only the path-bearing `[test]` and `[eval]` links; `[audit]` and `[review]` are pathless and not resolved here.
+
+The foundation side is done. Inline `/understand` `<assertion_model>` `<verification_types>` and `/audit-specs` name only `[test]`, `[eval]`, and `[audit]`, so a residual `([review])` reads as an invalid tag rather than a tolerated spelling. That removal deliberately landed ahead of the tree-wide reclassification: review backs no assertion tag and never did, so no valid artifact was invalidated by it. The resulting audit-forcing priority is recorded against the tree-wide migration entry in `spx/ISSUES.md`.
+
+**Resolution shape**: drop `[review]` from any validator or lint rule that still enumerates the lane set, and complete the tree-wide reclassification tracked in `spx/ISSUES.md`.
 
 ## CI-trigger marker regex lacks line-start anchoring
 
