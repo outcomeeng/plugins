@@ -24,7 +24,7 @@ The assertion tags are `[test]`, `[eval]`, and `[audit]`; `[review]` is not one 
 
 **Resolution shape**: batch-migrate the remaining `([review])` occurrences to `([audit])` node by node — the text of each assertion is unchanged, only the tag spelling — gating each batch with the spec auditor. The skill surfaces carry no legacy-spelling note to retire: inline `/understand` `<verification_model>` and `/audit-specs` name only the three valid tags, so a residual `([review])` is an invalid tag wherever an auditor meets one.
 
-**Priority**: the foundation once described `([review])` as a legacy spelling of `([audit])`, which let an auditor read a residual tag as valid. That description is gone, so the thirty-six files are now audit-forcing rather than dormant: a spec audit reaching one reports an invalid tag. This raises the migration's urgency without changing its shape or making any previously valid artifact invalid — an assertion carrying `([review])` was already debt, because review backs no assertion tag and never did.
+**Priority**: the foundation once described `([review])` as a legacy spelling of `([audit])`, which let an auditor read a residual tag as valid. That description is gone, so the files counted above are now audit-forcing rather than dormant: a spec audit reaching one reports an invalid tag. This raises the migration's urgency without changing its shape or making any previously valid artifact invalid — an assertion carrying `([review])` was already debt, because review backs no assertion tag and never did.
 
 ## Align Python and Rust test-standards subtrees to the semantic-binding foundation
 
