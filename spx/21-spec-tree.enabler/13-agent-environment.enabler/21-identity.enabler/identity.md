@@ -10,9 +10,13 @@ CAN scope work to the current agent without file-system heuristics or race condi
 
 - Given a Claude Code session starts, when the `SessionStart` hook fires, then `$CLAUDE_SESSION_ID` is written to the harness env file as the session UUID so every subsequent Bash tool call in that session reads it ([test](tests/test_identity.scenario.l1.py))
 
+### Properties
+
+- Every UUID-form `session_id` in a `SessionStart` payload is exported exactly as `$CLAUDE_SESSION_ID` ([test](tests/test_identity.property.l1.py))
+
 ### Mappings
 
-- A `SessionStart` payload's `session_id` state maps to the identity write: a present non-empty value maps to an exact `$CLAUDE_SESSION_ID` export, and a missing or empty value maps to no export ([test](tests/test_identity.mapping.l1.py))
+- A `SessionStart` payload with a missing or empty `session_id` maps to no `$CLAUDE_SESSION_ID` export ([test](tests/test_identity.mapping.l1.py))
 
 ### Compliance
 
