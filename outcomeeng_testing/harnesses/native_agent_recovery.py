@@ -246,25 +246,105 @@ def _error_status(module: ModuleType, action: Callable[[], object]) -> object:
     return None
 
 
-def verify_native_agent_recovery_mappings() -> list[str]:
+@dataclass(frozen=True)
+class PreparedManifestMapping:
+    """Preparation results for exact, hinted, conflicting, advisory, and unauthorized rosters."""
+
+    prepared_status: object
+    invalid_target_status: object
+    exact_status: object
+    candidate_count: int
+    expected_candidate_count: int
+    resume_locators: list[object]
+    expected_resume_locators: list[str]
+    candidates_missing_native_home: list[object]
+    non_public_hint_status: object
+    conflicting_public_session_status: object
+    advisory_statuses: list[object]
+    expected_advisory_statuses: list[object]
+    duplicate_session_status: object
+    lone_secondary_status: object
+    duplicate_controller_status: object
+
+
+@dataclass(frozen=True)
+class ActivationRequestMapping:
+    """Activation planning for a partly correlated restart, and the operations it requests."""
+
+    binding_count: int
+    expected_binding_count: int
+    activation_count: int
+    expected_activation_count: int
+    activation_operations: list[object]
+    expected_activation_operations: list[object]
+
+
+@dataclass(frozen=True)
+class ActivationBindingMapping:
+    """Binding checked activation results that are exact, non-exact, and partly failed."""
+
+    ready_status: object
+    invalid_target_status: object
+    command_failed_status: object
+    bound_count: int
+    expected_bound_count: int
+    existing_target_status: object
+    new_root_status: object
+    mixed_status: object
+    mixed_result_count: int
+    expected_mixed_result_count: int
+    mixed_binding_count: int
+    expected_mixed_binding_count: int
+
+
+@dataclass(frozen=True)
+class BoundResolutionMapping:
+    """The resolution each bound candidate maps to, and the status a mismatched occupant maps to."""
+
+    already_correlated_status: object
+    resumed_status: object
+    pane_occupied_status: object
+    occupied_resolutions: list[object]
+    unoccupied_resolutions: list[object]
+    correlated_count: int
+    unoccupied_count: int
+    mismatched_occupant_status: object
+
+
+@dataclass(frozen=True)
+class WorktreeRoleMapping:
+    """Preparation and activation for two candidates sharing one worktree."""
+
+    invalid_target_status: object
+    two_primaries_status: object
+    authorized_secondary_operations: list[object]
+    expected_secondary_operations: list[object]
+
+
+@dataclass(frozen=True)
+class ReassessmentPlanningMapping:
+    """Reassessment planning under an incomplete barrier, a failed read, and supplied destroyed facts."""
+
+    invalid_schema_status: object
+    command_failed_status: object
+    incomplete_barrier_status: object
+    failed_read_status: object
+    failed_read_deliveries: list[object]
+    delivery_count: int
+    supplied_fact_count: int
+    judged_intact_sessions: object
+    expected_judged_intact_sessions: list[str]
+    deliveries_to_judged_intact: list[object]
+
+
+def observe_prepared_manifest_mapping() -> PreparedManifestMapping:
+    """Prepare one roster exactly, then with each evidence, status, and role variation it rejects."""
     module = _load()
-    failures: list[str] = []
     roster = OPERATIONAL_RECOVERY_ROSTER
     prepared = _prepared(module, roster)
-    if prepared[module.STATUS_FIELD] != module.ResultStatus.PREPARED:
-        failures.append("valid pre-restart evidence did not map to prepared")
     prepared_candidates = cast(
         list[dict[str, object]], prepared[module.CANDIDATES_FIELD]
     )
-    if len(prepared_candidates) != len(roster.original_pane_ids):
-        failures.append("prepared manifest omitted candidates")
-    for candidate, session_id in zip(
-        prepared_candidates, roster.session_ids, strict=True
-    ):
-        if candidate[module.RESUME_LOCATOR_FIELD] != session_id:
-            failures.append("prepared manifest omitted the exact resume locator")
-        if module.NATIVE_HOME_FIELD not in candidate:
-            failures.append("prepared manifest omitted the native home field")
 
     hinted_panes, hinted_agents = _pre_restart_rosters(module, roster)
     cast(dict[str, object], hinted_agents[0][module.SESSION_FIELD])[module.ID_FIELD] = (
@@ -277,8 +357,6 @@ def verify_native_agent_recovery_mappings() -> list[str]:
         recovery_candidates(module, roster),
         identity_evidence(module, roster, roster.original_pane_ids),
     )
-    if hinted_prepared[module.STATUS_FIELD] != module.ResultStatus.PREPARED:
-        failures.append("non-public evidence was overridden by a public session hint")
 
     public_index = tuple(module.EvidenceSource).index(
         module.EvidenceSource.PUBLIC_AGENT
@@ -287,174 +365,27 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     cast(dict[str, object], public_hint_agents[public_index][module.SESSION_FIELD])[
         module.ID_FIELD
     ] = roster.session_ids[public_index - 1]
-    public_hint_status = _error_status(
-        module,
-        lambda: module.prepare(
-            roster.original_pane_ids,
-            hinted_panes,
-            public_hint_agents,
-            recovery_candidates(module, roster),
-            identity_evidence(module, roster, roster.original_pane_ids),
-        ),
-    )
-    if public_hint_status != module.ResultStatus.INVALID_TARGET:
-        failures.append("public-agent evidence accepted a conflicting public session")
-
-    current_panes, current_agents = _post_restart_rosters(
-        module, roster, roster.correlated_count
-    )
-    activation = module.plan_activation(prepared, current_panes, current_agents)
-    bindings = cast(list[dict[str, object]], activation[module.BINDINGS_FIELD])
-    activations = cast(list[dict[str, object]], activation[module.ACTIVATIONS_FIELD])
-    if len(bindings) != roster.correlated_count:
-        failures.append("exact post-restart agents did not bind as existing")
-    if len(activations) != len(roster.original_pane_ids) - roster.correlated_count:
-        failures.append("missing worktrees did not map to activation requests")
-    if any(
-        action[module.OPERATION_FIELD] != module.ACTIVATION_OPEN_OPERATION
-        for action in activations
-    ):
-        failures.append("unique absent worktree did not map to open")
-
-    bound = module.bind_activations(
-        activation,
-        activation_results(
-            module,
-            activations,
-            roster.post_restart_pane_ids[roster.correlated_count :],
-        ),
-    )
-    all_bindings = cast(list[dict[str, object]], bound[module.BINDINGS_FIELD])
-    if len(all_bindings) != len(roster.original_pane_ids):
-        failures.append("checked activation results did not bind every candidate")
-
-    existing_target_results = activation_results(
-        module,
-        activations,
-        roster.post_restart_pane_ids[roster.correlated_count :],
-    )
-    existing_target_transport = cast(
-        dict[str, object], existing_target_results[0][module.TRANSPORT_FIELD]
-    )
-    existing_target_response = cast(
-        dict[str, object], existing_target_transport[module.RESPONSE_FIELD]
-    )
-    existing_target_data = cast(
-        dict[str, object], existing_target_response[module.DATA_FIELD]
-    )
-    existing_target_data[module.CREATED_TAB_FIELD] = False
-    existing_target_bound = module.bind_activations(activation, existing_target_results)
-    if existing_target_bound[module.STATUS_FIELD] != module.ResultStatus.READY:
-        failures.append("exact existing activation target required an extra pane")
-
-    non_exact_results = activation_results(
-        module,
-        activations,
-        roster.post_restart_pane_ids[roster.correlated_count :],
-    )
-    non_exact_transport = cast(
-        dict[str, object], non_exact_results[0][module.TRANSPORT_FIELD]
-    )
-    non_exact_response = cast(
-        dict[str, object], non_exact_transport[module.RESPONSE_FIELD]
-    )
-    non_exact_data = cast(dict[str, object], non_exact_response[module.DATA_FIELD])
-    non_exact_data[module.RESOLUTION_FIELD] = "new-root"
-    non_exact_status = _error_status(
-        module,
-        lambda: module.bind_activations(activation, non_exact_results),
-    )
-    if non_exact_status != module.ResultStatus.INVALID_TARGET:
-        failures.append("new-root activation was accepted for a prepared worktree")
-
-    mixed_results = activation_results(
-        module,
-        activations,
-        roster.post_restart_pane_ids[roster.correlated_count :],
-    )
-    failed_transport = cast(dict[str, object], mixed_results[0][module.TRANSPORT_FIELD])
-    failed_transport[module.STATUS_FIELD] = module.TRANSPORT_COMMAND_FAILED_STATUS
-    failed_transport[module.COMMAND_EXIT_CODE_FIELD] = 1
-    failed_transport[module.DETAIL_FIELD] = "activation failed"
-    failed_transport.pop(module.RESPONSE_FIELD)
-    mixed_bound = module.bind_activations(activation, mixed_results)
-    if mixed_bound[module.STATUS_FIELD] != module.ResultStatus.COMMAND_FAILED:
-        failures.append("mixed activation results did not preserve command failure")
-    if len(cast(list[object], mixed_bound[module.ACTIVATION_RESULTS_FIELD])) != len(
-        activations
-    ):
-        failures.append("mixed activation results omitted checked transports")
-    if (
-        len(cast(list[object], mixed_bound[module.BINDINGS_FIELD]))
-        != len(roster.original_pane_ids) - 1
-    ):
-        failures.append("mixed activation results omitted later successful bindings")
-
-    all_panes, _ = _post_restart_rosters(module, roster, len(roster.original_pane_ids))
-    recovery = module.recover(prepared, all_bindings, all_panes, current_agents)
-    targets = cast(list[dict[str, object]], recovery[module.TARGETS_FIELD])
-    statuses = {
-        cast(str, target[module.ORIGINAL_PANE_ID_FIELD]): target[module.STATUS_FIELD]
-        for target in targets
-    }
-    for original_pane_id in roster.original_pane_ids[: roster.correlated_count]:
-        if statuses[original_pane_id] != module.Resolution.ALREADY_CORRELATED:
-            failures.append("exact occupied pane did not map to already-correlated")
-    for original_pane_id in roster.original_pane_ids[roster.correlated_count :]:
-        if statuses[original_pane_id] != module.Resolution.RESUMED:
-            failures.append("unoccupied bound pane did not map to resumed")
 
     panes, agents = _pre_restart_rosters(module, roster)
     candidates = recovery_candidates(module, roster)
     evidence = identity_evidence(module, roster, roster.original_pane_ids)
-    for advisory_status in ("working", "idle", "blocked", "done", "unknown"):
+    advisory_statuses: list[object] = []
+    for advisory in ("working", "idle", "blocked", "done", "unknown"):
         advisory_agents = deepcopy(agents)
-        advisory_agents[0][module.STATUS_FIELD] = advisory_status
-        advisory_result = module.prepare(
-            roster.original_pane_ids,
-            panes,
-            advisory_agents,
-            candidates,
-            evidence,
+        advisory_agents[0][module.STATUS_FIELD] = advisory
+        advisory_statuses.append(
+            module.prepare(
+                roster.original_pane_ids, panes, advisory_agents, candidates, evidence
+            )[module.STATUS_FIELD]
         )
-        if advisory_result[module.STATUS_FIELD] != module.ResultStatus.PREPARED:
-            failures.append(
-                f"advisory Prowl status {advisory_status} changed recovery eligibility"
-            )
 
     duplicate_session_candidates = deepcopy(candidates)
     duplicate_session_candidates[1][module.SESSION_ID_FIELD] = (
         duplicate_session_candidates[0][module.SESSION_ID_FIELD]
     )
-    duplicate_session_status = _error_status(
-        module,
-        lambda: module.prepare(
-            roster.original_pane_ids,
-            panes,
-            _pre_restart_rosters(module, roster)[1],
-            duplicate_session_candidates,
-            evidence,
-        ),
-    )
-    if duplicate_session_status != module.ResultStatus.INVALID_TARGET:
-        failures.append("duplicate native session identity was prepared")
-
     lone_secondary = deepcopy(candidates)
     lone_secondary[1][module.ROLE_FIELD] = module.RecoveryRole.SECONDARY
     lone_secondary[1][module.SECONDARY_AUTHORIZED_FIELD] = True
-    lone_secondary_status = _error_status(
-        module,
-        lambda: module.prepare(
-            roster.original_pane_ids,
-            panes,
-            _pre_restart_rosters(module, roster)[1],
-            lone_secondary,
-            evidence,
-        ),
-    )
-    if lone_secondary_status != module.ResultStatus.INVALID_TARGET:
-        failures.append("lone secondary candidate was prepared")
-
     duplicate_controller_candidates = deepcopy(candidates)
     duplicate_controller_evidence = deepcopy(evidence)
     duplicate_controller_candidates[1][module.EVIDENCE_FIELD] = (
@@ -463,19 +394,209 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     duplicate_controller_evidence[1][module.SOURCE_FIELD] = (
         module.EvidenceSource.CURRENT_SESSION
     )
-    duplicate_controller_status = _error_status(
-        module,
-        lambda: module.prepare(
-            roster.original_pane_ids,
-            panes,
-            _pre_restart_rosters(module, roster)[1],
-            duplicate_controller_candidates,
-            duplicate_controller_evidence,
+
+    return PreparedManifestMapping(
+        prepared_status=module.ResultStatus.PREPARED,
+        invalid_target_status=module.ResultStatus.INVALID_TARGET,
+        exact_status=prepared[module.STATUS_FIELD],
+        candidate_count=len(prepared_candidates),
+        expected_candidate_count=len(roster.original_pane_ids),
+        resume_locators=[
+            candidate[module.RESUME_LOCATOR_FIELD] for candidate in prepared_candidates
+        ],
+        expected_resume_locators=list(roster.session_ids),
+        candidates_missing_native_home=[
+            candidate
+            for candidate in prepared_candidates
+            if module.NATIVE_HOME_FIELD not in candidate
+        ],
+        non_public_hint_status=hinted_prepared[module.STATUS_FIELD],
+        conflicting_public_session_status=_error_status(
+            module,
+            lambda: module.prepare(
+                roster.original_pane_ids,
+                hinted_panes,
+                public_hint_agents,
+                recovery_candidates(module, roster),
+                identity_evidence(module, roster, roster.original_pane_ids),
+            ),
+        ),
+        advisory_statuses=advisory_statuses,
+        expected_advisory_statuses=[module.ResultStatus.PREPARED] * 5,
+        duplicate_session_status=_error_status(
+            module,
+            lambda: module.prepare(
+                roster.original_pane_ids,
+                panes,
+                _pre_restart_rosters(module, roster)[1],
+                duplicate_session_candidates,
+                evidence,
+            ),
+        ),
+        lone_secondary_status=_error_status(
+            module,
+            lambda: module.prepare(
+                roster.original_pane_ids,
+                panes,
+                _pre_restart_rosters(module, roster)[1],
+                lone_secondary,
+                evidence,
+            ),
+        ),
+        duplicate_controller_status=_error_status(
+            module,
+            lambda: module.prepare(
+                roster.original_pane_ids,
+                panes,
+                _pre_restart_rosters(module, roster)[1],
+                duplicate_controller_candidates,
+                duplicate_controller_evidence,
+            ),
         ),
     )
-    if duplicate_controller_status != module.ResultStatus.INVALID_TARGET:
-        failures.append("multiple current-session controllers were prepared")
 
+
+def _partly_correlated_activation(
+    module: ModuleType, roster: RecoveryRosterCase
+) -> tuple[dict[str, object], dict[str, object], list[dict[str, object]]]:
+    """A prepared roster whose first candidates already occupy panes and whose rest are absent."""
+    prepared = _prepared(module, roster)
+    current_panes, current_agents = _post_restart_rosters(
+        module, roster, roster.correlated_count
+    )
+    activation = cast(
+        dict[str, object],
+        module.plan_activation(prepared, current_panes, current_agents),
+    )
+    return prepared, activation, current_agents
+
+
+def observe_activation_request_mapping() -> ActivationRequestMapping:
+    """Plan activation for a restart in which only some prepared worktrees carry a live pane."""
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    _, activation, _ = _partly_correlated_activation(module, roster)
+    activations = cast(list[dict[str, object]], activation[module.ACTIVATIONS_FIELD])
+    absent_count = len(roster.original_pane_ids) - roster.correlated_count
+    return ActivationRequestMapping(
+        binding_count=len(cast(list[object], activation[module.BINDINGS_FIELD])),
+        expected_binding_count=roster.correlated_count,
+        activation_count=len(activations),
+        expected_activation_count=absent_count,
+        activation_operations=[
+            action[module.OPERATION_FIELD] for action in activations
+        ],
+        expected_activation_operations=[module.ACTIVATION_OPEN_OPERATION]
+        * absent_count,
+    )
+
+
+def observe_activation_binding_mapping() -> ActivationBindingMapping:
+    """Bind activation results that are exact, resolved to a new root, and partly command-failed."""
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    _, activation, _ = _partly_correlated_activation(module, roster)
+    activations = cast(list[dict[str, object]], activation[module.ACTIVATIONS_FIELD])
+    opened_pane_ids = roster.post_restart_pane_ids[roster.correlated_count :]
+
+    def results() -> list[dict[str, object]]:
+        return activation_results(module, activations, opened_pane_ids)
+
+    def response_data(result: dict[str, object]) -> dict[str, object]:
+        transport = cast(dict[str, object], result[module.TRANSPORT_FIELD])
+        response = cast(dict[str, object], transport[module.RESPONSE_FIELD])
+        return cast(dict[str, object], response[module.DATA_FIELD])
+
+    bound = cast(dict[str, object], module.bind_activations(activation, results()))
+    existing_target_results = results()
+    response_data(existing_target_results[0])[module.CREATED_TAB_FIELD] = False
+    non_exact_results = results()
+    response_data(non_exact_results[0])[module.RESOLUTION_FIELD] = "new-root"
+    mixed_results = results()
+    failed_transport = cast(dict[str, object], mixed_results[0][module.TRANSPORT_FIELD])
+    failed_transport[module.STATUS_FIELD] = module.TRANSPORT_COMMAND_FAILED_STATUS
+    failed_transport[module.COMMAND_EXIT_CODE_FIELD] = 1
+    failed_transport[module.DETAIL_FIELD] = "activation failed"
+    failed_transport.pop(module.RESPONSE_FIELD)
+    mixed_bound = cast(
+        dict[str, object], module.bind_activations(activation, mixed_results)
+    )
+    return ActivationBindingMapping(
+        ready_status=module.ResultStatus.READY,
+        invalid_target_status=module.ResultStatus.INVALID_TARGET,
+        command_failed_status=module.ResultStatus.COMMAND_FAILED,
+        bound_count=len(cast(list[object], bound[module.BINDINGS_FIELD])),
+        expected_bound_count=len(roster.original_pane_ids),
+        existing_target_status=cast(
+            dict[str, object],
+            module.bind_activations(activation, existing_target_results),
+        )[module.STATUS_FIELD],
+        new_root_status=_error_status(
+            module, lambda: module.bind_activations(activation, non_exact_results)
+        ),
+        mixed_status=mixed_bound[module.STATUS_FIELD],
+        mixed_result_count=len(
+            cast(list[object], mixed_bound[module.ACTIVATION_RESULTS_FIELD])
+        ),
+        expected_mixed_result_count=len(activations),
+        mixed_binding_count=len(cast(list[object], mixed_bound[module.BINDINGS_FIELD])),
+        expected_mixed_binding_count=len(roster.original_pane_ids) - 1,
+    )
+
+
+def observe_bound_resolution_mapping() -> BoundResolutionMapping:
+    """Recover a fully bound roster, and plan activation against a pane another session occupies."""
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    prepared, activation, current_agents = _partly_correlated_activation(module, roster)
+    bound = module.bind_activations(
+        activation,
+        activation_results(
+            module,
+            cast(list[dict[str, object]], activation[module.ACTIVATIONS_FIELD]),
+            roster.post_restart_pane_ids[roster.correlated_count :],
+        ),
+    )
+    all_panes, _ = _post_restart_rosters(module, roster, len(roster.original_pane_ids))
+    recovery = module.recover(
+        prepared,
+        cast(list[dict[str, object]], bound[module.BINDINGS_FIELD]),
+        all_panes,
+        current_agents,
+    )
+    resolutions = {
+        cast(str, target[module.ORIGINAL_PANE_ID_FIELD]): target[module.STATUS_FIELD]
+        for target in cast(list[dict[str, object]], recovery[module.TARGETS_FIELD])
+    }
+    occupied_panes, occupied_agents = _post_restart_rosters(module, roster, 1)
+    cast(dict[str, object], occupied_agents[0][module.SESSION_FIELD])[
+        module.ID_FIELD
+    ] = roster.session_ids[1]
+    return BoundResolutionMapping(
+        already_correlated_status=module.Resolution.ALREADY_CORRELATED,
+        resumed_status=module.Resolution.RESUMED,
+        pane_occupied_status=module.ResultStatus.PANE_OCCUPIED,
+        occupied_resolutions=[
+            resolutions[pane_id]
+            for pane_id in roster.original_pane_ids[: roster.correlated_count]
+        ],
+        unoccupied_resolutions=[
+            resolutions[pane_id]
+            for pane_id in roster.original_pane_ids[roster.correlated_count :]
+        ],
+        correlated_count=roster.correlated_count,
+        unoccupied_count=len(roster.original_pane_ids) - roster.correlated_count,
+        mismatched_occupant_status=cast(
+            dict[str, object],
+            module.plan_activation(prepared, occupied_panes, occupied_agents),
+        )[module.STATUS_FIELD],
+    )
+
+
+def observe_worktree_role_mapping() -> WorktreeRoleMapping:
+    """Prepare two candidates in one worktree, as two primaries and as a primary with a secondary."""
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
     shared_panes, shared_agents = _pre_restart_rosters(module, roster)
     shared_candidates = recovery_candidates(module, roster)
     shared_evidence = identity_evidence(module, roster, roster.original_pane_ids)
@@ -486,7 +607,7 @@ def verify_native_agent_recovery_mappings() -> list[str]:
         ] = shared_path
     shared_candidates[1][module.WORKTREE_PATH_FIELD] = shared_path
     shared_evidence[1][module.WORKTREE_PATH_FIELD] = shared_path
-    duplicate_primary_status = _error_status(
+    two_primaries_status = _error_status(
         module,
         lambda: module.prepare(
             roster.original_pane_ids,
@@ -496,8 +617,6 @@ def verify_native_agent_recovery_mappings() -> list[str]:
             shared_evidence,
         ),
     )
-    if duplicate_primary_status != module.ResultStatus.INVALID_TARGET:
-        failures.append("same-worktree primary candidates were prepared")
     shared_candidates[1][module.ROLE_FIELD] = module.RecoveryRole.SECONDARY
     shared_candidates[1][module.SECONDARY_AUTHORIZED_FIELD] = True
     reconciled = module.prepare(
@@ -508,72 +627,67 @@ def verify_native_agent_recovery_mappings() -> list[str]:
         shared_evidence,
     )
     shared_activation = module.plan_activation(reconciled, [], [])
-    operations = [
-        action[module.OPERATION_FIELD]
-        for action in cast(
-            list[dict[str, object]], shared_activation[module.ACTIVATIONS_FIELD]
-        )[:2]
-    ]
-    if operations != [
-        module.ACTIVATION_OPEN_OPERATION,
-        module.ACTIVATION_TAB_CREATE_OPERATION,
-    ]:
-        failures.append("authorized secondary did not map to open then tab-create")
+    return WorktreeRoleMapping(
+        invalid_target_status=module.ResultStatus.INVALID_TARGET,
+        two_primaries_status=two_primaries_status,
+        authorized_secondary_operations=[
+            action[module.OPERATION_FIELD]
+            for action in cast(
+                list[dict[str, object]], shared_activation[module.ACTIVATIONS_FIELD]
+            )[:2]
+        ],
+        expected_secondary_operations=[
+            module.ACTIVATION_OPEN_OPERATION,
+            module.ACTIVATION_TAB_CREATE_OPERATION,
+        ],
+    )
 
-    occupied_panes, occupied_agents = _post_restart_rosters(module, roster, 1)
-    cast(dict[str, object], occupied_agents[0][module.SESSION_FIELD])[
-        module.ID_FIELD
-    ] = roster.session_ids[1]
-    occupied = module.plan_activation(prepared, occupied_panes, occupied_agents)
-    if occupied[module.STATUS_FIELD] != module.ResultStatus.PANE_OCCUPIED:
-        failures.append("mismatched occupied pane did not block activation")
 
+def observe_reassessment_planning_mapping() -> ReassessmentPlanningMapping:
+    """Plan reassessment from a verified binding set under each pane-read and destroyed-fact shape."""
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
     fixture = _verified_recovery(module, roster)
-    reassess_prepared = cast(dict[str, object], fixture["prepared"])
-    reassess_bindings = cast(list[dict[str, object]], fixture["bindings"])
+    prepared = cast(dict[str, object], fixture["prepared"])
+    bindings = cast(list[dict[str, object]], fixture["bindings"])
     verified = cast(dict[str, object], fixture["verified"])
     reads = cast(list[dict[str, object]], fixture["reads"])
-
-    incomplete_barrier = _error_status(
-        module,
-        lambda: module.plan_reassessment(
-            reassess_prepared, reassess_bindings, verified, reads[:-1]
-        ),
-    )
-    if incomplete_barrier != module.ResultStatus.INVALID_SCHEMA:
-        failures.append("incomplete pane-read barrier mapped to reassessment planning")
-    blocked = module.plan_reassessment(
-        reassess_prepared,
-        reassess_bindings,
-        verified,
-        pane_read_results(
-            module, reassess_bindings, failed_pane_id=roster.post_restart_pane_ids[0]
-        ),
-    )
-    if blocked[module.STATUS_FIELD] != module.ResultStatus.COMMAND_FAILED:
-        failures.append("failed pane read did not map to blocked reassessment")
-    if blocked[module.DELIVERIES_FIELD]:
-        failures.append("failed pane read mapped to partial continuation delivery")
-
     _, intact_session, restored = _continuation_plan(module, roster, fixture)
-    reassessment = module.plan_reassessment(
-        reassess_prepared, reassess_bindings, verified, reads, restored
+    blocked = cast(
+        dict[str, object],
+        module.plan_reassessment(
+            prepared,
+            bindings,
+            verified,
+            pane_read_results(
+                module, bindings, failed_pane_id=roster.post_restart_pane_ids[0]
+            ),
+        ),
     )
-    reassessment_deliveries = cast(
-        list[dict[str, object]], reassessment[module.DELIVERIES_FIELD]
+    reassessment = cast(
+        dict[str, object],
+        module.plan_reassessment(prepared, bindings, verified, reads, restored),
     )
-    if len(reassessment_deliveries) != len(restored):
-        failures.append("supplied destroyed facts did not map one-to-one to deliveries")
-    if cast(list[str], reassessment[module.NO_CONTINUATION_SESSION_IDS_FIELD]) != [
-        intact_session
-    ]:
-        failures.append("a candidate without a destroyed fact did not map to intact")
-    if any(
-        delivery[module.SESSION_ID_FIELD] == intact_session
-        for delivery in reassessment_deliveries
-    ):
-        failures.append("a judged-intact candidate mapped to a delivery")
-    return failures
+    deliveries = cast(list[dict[str, object]], reassessment[module.DELIVERIES_FIELD])
+    return ReassessmentPlanningMapping(
+        invalid_schema_status=module.ResultStatus.INVALID_SCHEMA,
+        command_failed_status=module.ResultStatus.COMMAND_FAILED,
+        incomplete_barrier_status=_error_status(
+            module,
+            lambda: module.plan_reassessment(prepared, bindings, verified, reads[:-1]),
+        ),
+        failed_read_status=blocked[module.STATUS_FIELD],
+        failed_read_deliveries=cast(list[object], blocked[module.DELIVERIES_FIELD]),
+        delivery_count=len(deliveries),
+        supplied_fact_count=len(restored),
+        judged_intact_sessions=reassessment[module.NO_CONTINUATION_SESSION_IDS_FIELD],
+        expected_judged_intact_sessions=[intact_session],
+        deliveries_to_judged_intact=[
+            delivery
+            for delivery in deliveries
+            if delivery[module.SESSION_ID_FIELD] == intact_session
+        ],
+    )
 
 
 @dataclass(frozen=True)
