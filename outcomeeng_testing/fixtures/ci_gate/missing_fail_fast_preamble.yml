@@ -1,0 +1,16 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run quality gate
+        run: |
+          echo "starting the gate"
+          just check-full

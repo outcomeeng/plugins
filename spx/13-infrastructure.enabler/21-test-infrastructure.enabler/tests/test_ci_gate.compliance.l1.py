@@ -7,7 +7,7 @@ from pathlib import Path
 from outcomeeng.validation.ci_gate import (
     CI_STEP_ENVIRONMENT_REQUIREMENTS,
     CI_TOOL_REQUIREMENTS,
-    CONTINUE_ON_ERROR_DISABLED,
+    CONTINUE_ON_ERROR_TRUTHY,
     FAIL_FAST_PREAMBLE,
     GATE_PULL_REQUEST_EVENT,
     GATE_PUSH_BRANCH,
@@ -93,7 +93,7 @@ def test_gate_workflow_python_matches_project_metadata() -> None:
 
 def test_gate_workflow_has_no_soft_passed_step() -> None:
     for step in observe_gate_steps():
-        assert step.continue_on_error == CONTINUE_ON_ERROR_DISABLED
+        assert step.continue_on_error not in CONTINUE_ON_ERROR_TRUTHY
         assert not step.has_condition
         if len(step.shell_lines) > 1:
             assert step.shell_lines[0] == FAIL_FAST_PREAMBLE
@@ -107,7 +107,7 @@ def test_gate_job_runs_unconditionally() -> None:
     observation = observe_gate_job()
 
     assert not observation.has_condition
-    assert observation.continue_on_error == CONTINUE_ON_ERROR_DISABLED
+    assert observation.continue_on_error not in CONTINUE_ON_ERROR_TRUTHY
 
 
 def test_conforming_fixture_satisfies_every_gate_rule() -> None:
@@ -120,7 +120,7 @@ def test_conforming_fixture_satisfies_every_gate_rule() -> None:
     assert not observe_gate_job(workflow_path).has_condition
     for step in observe_gate_steps(workflow_path):
         assert not step.has_condition
-        assert step.continue_on_error == CONTINUE_ON_ERROR_DISABLED
+        assert step.continue_on_error not in CONTINUE_ON_ERROR_TRUTHY
         assert not any(snippet in step.run for snippet in SOFT_PASS_SHELL_SNIPPETS)
 
 
@@ -131,7 +131,7 @@ def test_job_level_condition_is_detected() -> None:
 def test_job_level_continue_on_error_is_detected() -> None:
     observation = observe_gate_job(gate_fixture_path("job_level_continue_on_error.yml"))
 
-    assert observation.continue_on_error != CONTINUE_ON_ERROR_DISABLED
+    assert observation.continue_on_error in CONTINUE_ON_ERROR_TRUTHY
 
 
 def test_step_level_condition_is_detected() -> None:
@@ -143,7 +143,16 @@ def test_step_level_condition_is_detected() -> None:
 def test_step_level_continue_on_error_is_detected() -> None:
     steps = observe_gate_steps(gate_fixture_path("step_level_continue_on_error.yml"))
 
-    assert any(step.continue_on_error != CONTINUE_ON_ERROR_DISABLED for step in steps)
+    assert any(step.continue_on_error in CONTINUE_ON_ERROR_TRUTHY for step in steps)
+
+
+def test_missing_fail_fast_preamble_is_detected() -> None:
+    steps = observe_gate_steps(gate_fixture_path("missing_fail_fast_preamble.yml"))
+
+    assert any(
+        len(step.shell_lines) > 1 and step.shell_lines[0] != FAIL_FAST_PREAMBLE
+        for step in steps
+    )
 
 
 def test_soft_passed_step_shell_is_detected() -> None:
