@@ -13,7 +13,7 @@ Before any proposal, print a plain-text header naming every thread disposition p
 
 ```text
 Continuation threads:
-- <thread-id>: <new handoff | no handoff (no reader) | existing owner <session-id>>
+- <thread-id>: <new session | no session (nothing to continue) | existing owner <session-id>>
 Sessions to archive after closure: <id-1>, <id-2>, ...
 Archived sessions to delete after closure: <archive-id-1>, <archive-id-2>, ... | none
 ```

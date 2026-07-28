@@ -166,7 +166,7 @@ NEVER delete todo or doing sessions. `--prune` only affects archive.
 </archive_claimed_sessions>
 
 <confirm>
-State a human-readable closeout first, then the session mechanics. The operator has not read the command output, changed files, rendered result, logs, or external records. A merge receipt or archive receipt alone is not enough.
+State a human-readable closeout first, then the `<session_mechanics>` block. The operator has not read the command output, changed files, rendered result, logs, or external records. A merge receipt or archive receipt alone is not enough.
 
 The closeout MUST include:
 
@@ -231,13 +231,31 @@ Why it fails: the label is filled with lifecycle evidence rather than the payloa
 
 </rejected_misclassified_product_outcome>
 
-Put session mechanics only after the product summary:
+<session_mechanics>
 
-- Continuation threads: one row per thread with "new handoff <id>", "no handoff (no continuation reader needed)", or "existing owner <session-id>"
+Put session mechanics only after the product summary. Report the state the operator can act on. The complete per-thread disposition proof stays in the `<RESOLVED_CONTINUATION_THREADS>` and `<RESOLVED_ARTIFACT_PARTITIONS>` markers, which already carry every thread and every candidate id, so the prose repeats none of it.
+
+- **Continue with**: one row per session document this closure created, giving the full session id as the runnable `spx session pickup <session-id>` and naming what that session continues. Add a row for a thread an existing session already owns, carrying that owner's full session id. Omit the whole field when the closure created no session and no existing session owns a thread.
+- **Queue changes**: every session id this closure archived, and every archived id deleted under an approved `--prune`. Name each one so the operator sees exactly which documents left the active queue. No command restores an archived or deleted session — `spx session release` returns a session from `doing/` to `todo/` and reaches neither — so the row states the mutation and promises no reversal.
+- **Branch released**: the work branch this closure stepped off, now unoccupied so another worktree or agent can claim it. The worktree keeps its live occupancy claim, so the worktree root is never reported as freed.
+
+A thread that produced no session and has no existing owner gets no row. Its continuation is absent, so it gives the operator nothing to do, and the disposition marker already records it.
+
+<rejected_precondition_attestation>
+
+NEVER spend a session-mechanics row on a precondition the session CLI enforces, or on compliance with a `NEVER` rule the skill never violates. This shape is the anti-pattern:
+
+```text
 - Session-owned work was committed before closure
-- Every session id archived from the resolved claimed-session set and selected artifact partition
-- Checkout state: the releasing context has stepped off the handed-off branch and is detached at the current `origin/<default-branch>` tip, so the branch is unoccupied
-- Worktree occupancy claim preserved for the live process; session-store cleanup used `spx session archive` only for the closure's claimed sessions and selected same-conversation artifacts
+- Checkout state: detached at the current origin/<default-branch> tip
+- Worktree occupancy claim preserved for the live process
+```
+
+Why it fails: `spx session handoff` refuses a linked worktree that is not clean and detached at the `origin/<default-branch>` tip, so a written session document already proves the first two, and preserving the live occupancy claim is a `NEVER` rule Claude does not violate. Each row attests a guarantee the same context both follows and reports, leaves the operator nothing to act on, and crowds out the rows that carry something. Report the branch that is now unoccupied rather than the checkout state that released it.
+
+</rejected_precondition_attestation>
+
+</session_mechanics>
 
 </confirm>
 
@@ -254,7 +272,7 @@ Put session mechanics only after the product summary:
 - `<incorporated_sessions>` section present in the canonical continuation when a fresh handoff is written and the claimed-session set or superseded same-conversation artifact set is non-empty.
 - Every claimed session archived — none left in `todo/` or `doing/`.
 - Every mid-session artifact this conversation created is reconciled: a fresh session replaces it when continuation remains, and superseded artifacts are archived.
-- Confirmation output names every thread disposition and the archived ids.
+- Every thread disposition and candidate id is recorded in the `<RESOLVED_CONTINUATION_THREADS>` and `<RESOLVED_ARTIFACT_PARTITIONS>` markers, and the confirmation's session-mechanics block carries only operator-actionable rows — created and existing-owner session ids, queue mutations, and the released branch — with no row for a thread whose continuation is absent, no row attesting a CLI-enforced precondition, and no row reporting the worktree root as freed.
 - Default-branch merge closeout includes the branch-state closeout record fields from `/merging-standards` `<branch_state_closeout>` or an explicitly preserved record from the merge transport.
 - Merge lifecycle final output includes `Remaining Branches` grouped under **Deleted locally**, **Deleted remotely**, **Retained, with reason**, and **Needs operator decision, with exact evidence**.
 - Confirmation output never uses a top-level `Delivered state` receipt as a substitute for the product-first closeout fields.
