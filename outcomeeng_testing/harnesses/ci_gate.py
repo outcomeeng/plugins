@@ -10,7 +10,7 @@ from typing import Any, Final, cast
 import yaml
 
 from outcomeeng.validation import VALIDATION_STEPS
-from outcomeeng.validation.ci_gate import CONTINUE_ON_ERROR_DISABLED, GATE_JOB_NAME
+from outcomeeng.validation.ci_gate import GATE_JOB_NAME
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 GATE_WORKFLOW: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
@@ -44,7 +44,7 @@ class GateStepObservation:
     name: str
     run: str
     shell_lines: tuple[str, ...]
-    continue_on_error: str
+    continue_on_error: str | None
     has_condition: bool
 
 
@@ -53,7 +53,7 @@ class GateJobObservation:
     """The gate job's own condition and soft-pass surface."""
 
     has_condition: bool
-    continue_on_error: str
+    continue_on_error: str | None
 
 
 @dataclass(frozen=True)
@@ -179,9 +179,7 @@ def observe_gate_steps(
                 name=cast("str", step.get("name", "")),
                 run=run,
                 shell_lines=tuple(shell_lines(run)),
-                continue_on_error=cast(
-                    "str", step.get("continue-on-error", CONTINUE_ON_ERROR_DISABLED)
-                ),
+                continue_on_error=cast("str | None", step.get("continue-on-error")),
                 has_condition="if" in step,
             )
         )
@@ -193,7 +191,5 @@ def observe_gate_job(workflow_path: Path | None = None) -> GateJobObservation:
     job = gate_job(workflow(workflow_path))
     return GateJobObservation(
         has_condition="if" in job,
-        continue_on_error=cast(
-            "str", job.get("continue-on-error", CONTINUE_ON_ERROR_DISABLED)
-        ),
+        continue_on_error=cast("str | None", job.get("continue-on-error")),
     )
