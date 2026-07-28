@@ -22,9 +22,10 @@ from outcomeeng_testing.harnesses.hygiene import (
 
 @hygiene_generated_evidence
 @given(case=clean_workspace_cases())
-def test_clean_preserves_tracked_bytes(case: CleanWorkspaceCase) -> None:
+def test_clean_removes_only_ignored_paths(case: CleanWorkspaceCase) -> None:
     with clean_workspace(case) as workspace:
         tracked_before = workspace.tracked_bytes()
+        untracked_before = workspace.untracked_bytes()
 
         exit_code = clean(
             runner=SubprocessRunner(workspace.root),
@@ -34,6 +35,8 @@ def test_clean_preserves_tracked_bytes(case: CleanWorkspaceCase) -> None:
 
         assert exit_code == SUCCESS_EXIT_CODE
         assert workspace.tracked_bytes() == tracked_before
+        assert workspace.untracked_bytes() == untracked_before
+        assert all(not path.exists() for path in workspace.ignored_paths)
 
 
 @hygiene_generated_evidence

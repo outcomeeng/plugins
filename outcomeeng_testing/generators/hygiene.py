@@ -16,6 +16,7 @@ class CleanWorkspaceCase:
     unstaged_index_content: bytes
     unstaged_worktree_content: bytes
     ignored_files: tuple[tuple[str, bytes], ...]
+    untracked_files: tuple[tuple[str, bytes], ...]
 
 
 @dataclass(frozen=True)
@@ -82,25 +83,29 @@ def markdown_contents() -> SearchStrategy[str]:
     return st.lists(markdown_line, min_size=0, max_size=80).map("".join)
 
 
-def clean_workspace_cases() -> SearchStrategy[CleanWorkspaceCase]:
+@st.composite
+def clean_workspace_cases(draw: st.DrawFn) -> CleanWorkspaceCase:
     """Generate worktree states with tracked and gitignored content."""
     ignored_name = st.text(
         alphabet=_SAFE_PATH_ALPHABET,
         min_size=1,
         max_size=16,
     ).filter(lambda value: value not in {".", ".."})
-    ignored_file = st.tuples(ignored_name, st.binary(max_size=64))
-    return st.builds(
-        CleanWorkspaceCase,
-        staged_content=st.binary(max_size=64),
-        unstaged_index_content=st.binary(max_size=64),
-        unstaged_worktree_content=st.binary(max_size=64),
-        ignored_files=st.lists(
-            ignored_file,
-            min_size=1,
-            max_size=4,
+    file_entries = draw(
+        st.lists(
+            st.tuples(ignored_name, st.binary(max_size=64)),
+            min_size=2,
+            max_size=6,
             unique_by=lambda entry: entry[0],
-        ).map(tuple),
+        )
+    )
+    split_index = draw(st.integers(min_value=1, max_value=len(file_entries) - 1))
+    return CleanWorkspaceCase(
+        staged_content=draw(st.binary(max_size=64)),
+        unstaged_index_content=draw(st.binary(max_size=64)),
+        unstaged_worktree_content=draw(st.binary(max_size=64)),
+        ignored_files=tuple(file_entries[:split_index]),
+        untracked_files=tuple(file_entries[split_index:]),
     )
 
 

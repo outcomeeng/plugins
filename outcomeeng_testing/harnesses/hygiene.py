@@ -35,6 +35,8 @@ class CleanWorkspace:
     active_python_prefix: Path
     staged_path: Path
     unstaged_path: Path
+    ignored_paths: tuple[Path, ...]
+    untracked_paths: tuple[Path, ...]
 
     def snapshot(self) -> dict[Path, bytes]:
         """Return observable non-metadata worktree bytes."""
@@ -48,6 +50,10 @@ class CleanWorkspace:
     def tracked_bytes(self) -> tuple[bytes, bytes]:
         """Return tracked staged and unstaged worktree bytes."""
         return self.staged_path.read_bytes(), self.unstaged_path.read_bytes()
+
+    def untracked_bytes(self) -> tuple[bytes, ...]:
+        """Return untracked, non-ignored worktree bytes."""
+        return tuple(path.read_bytes() for path in self.untracked_paths)
 
 
 @dataclass(frozen=True)
@@ -125,6 +131,8 @@ def clean_workspace(case: CleanWorkspaceCase) -> Iterator[CleanWorkspace]:
         )
         for name, content in case.ignored_files:
             (root / name).write_bytes(content)
+        for name, content in case.untracked_files:
+            (root / name).write_bytes(content)
         _run_git(root, "init")
         _run_git(
             root,
@@ -139,6 +147,8 @@ def clean_workspace(case: CleanWorkspaceCase) -> Iterator[CleanWorkspace]:
             active_python_prefix=active_python_prefix,
             staged_path=staged_path,
             unstaged_path=unstaged_path,
+            ignored_paths=tuple(root / name for name, _ in case.ignored_files),
+            untracked_paths=tuple(root / name for name, _ in case.untracked_files),
         )
 
 
