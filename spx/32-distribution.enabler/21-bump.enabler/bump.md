@@ -11,7 +11,6 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under th
 ### Scenarios
 
 - Given a working tree with changes under `src/plugins/foo/**` and no changes under `src/plugins/bar/**` since `base_ref`, when bump runs, then only `foo`'s manifests are written ([test](tests/test_bump.scenario.l1.py))
-- Given a plugin owns both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` and has changes since `base_ref`, when bump runs, then both manifests are written with the same new version ([test](tests/test_bump.scenario.l1.py))
 - Given the default invocation, when bump runs against a changed plugin at version `0.4.1`, then the manifest version is written as `0.4.2` ([test](tests/test_bump.scenario.l1.py))
 - Given `--segment minor`, when bump runs against a changed plugin at version `0.4.1`, then the manifest version is written as `0.5.0` ([test](tests/test_bump.scenario.l1.py))
 - Given `--segment major`, when bump runs against a changed plugin at version `0.4.1`, then the manifest version is written as `1.0.0` ([test](tests/test_bump.scenario.l1.py))
@@ -24,8 +23,6 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under th
 - Given a changed plugin manifest contains malformed JSON or no parseable string version, when bump runs, then it exits non-zero with a diagnostic naming the manifest and no manifest is written ([test](tests/test_bump.scenario.l1.py))
 - Given a changed plugin whose working-tree version is below its `base_ref` version after base advancement, when bump runs, then it writes the next version from the base version rather than preserving a downgrade ([test](tests/test_bump.scenario.l1.py))
 - Given no explicit `--segment` and a changed plugin whose changes add a new `skills/{slug}/SKILL.md`, when bump runs, then that plugin's version is incremented at the `minor` segment ([test](tests/test_bump.scenario.l1.py))
-- Given no explicit `--segment` and a changed plugin whose only changes are modifications of existing files, when bump runs, then that plugin's version is incremented at the `patch` segment ([test](tests/test_bump.scenario.l1.py))
-- Given explicit `--segment patch` and a changed plugin whose auto-detection would yield `minor`, when bump runs, then that plugin's version is written at the `patch` segment and a stderr warning names the plugin and its detected segment ([test](tests/test_bump.scenario.l1.py))
 - Given a working tree with an untracked, non-ignored new skill under a recognized distribution-surface root alongside a tracked modification, when change detection runs, then the untracked file is reported `Added` and the modification `Modified` — an uncommitted distribution-surface addition is detected, not missed ([test](tests/test_bump.scenario.l1.py))
 
 ### Mappings
