@@ -623,6 +623,133 @@ def observe_wholly_intact_settlement() -> WhollyIntactSettlement:
     )
 
 
+@dataclass(frozen=True)
+class AttestedControllerBinding:
+    """Observations from planning and recovering while the controller attests its own pane."""
+
+    ready_status: object
+    pane_occupied_status: object
+    already_correlated_status: object
+    attested_pane_id: str
+    unattested_activation_status: object
+    attested_activation_status: object
+    attested_bound_pane_ids: list[object]
+    attested_controller_resolutions: list[object]
+
+
+@dataclass(frozen=True)
+class AttestedControllerRejections:
+    """The status each attestation that fails to identify the controller candidate raises."""
+
+    invalid_target_status: object
+    absent_current_session_status: object
+    absent_pane_status: object
+    foreign_worktree_status: object
+    multiple_agents_status: object
+    foreign_agent_type_status: object
+    foreign_session_status: object
+
+
+def _attested_controller_fixture(
+    module: ModuleType, roster: RecoveryRosterCase
+) -> tuple[dict[str, object], list[dict[str, object]], list[dict[str, object]], str]:
+    """A prepared recovery whose controller pane reports its agent type under no native session."""
+    prepared = _prepared(module, roster)
+    panes, agents = _post_restart_rosters(module, roster, len(roster.original_pane_ids))
+    del agents[0][module.SESSION_FIELD]
+    return prepared, panes, agents, roster.post_restart_pane_ids[0]
+
+
+def observe_attested_controller_binding() -> AttestedControllerBinding:
+    """Plan activation and recovery for a controller whose own pane reports no native session."""
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    prepared, panes, agents, attestation = _attested_controller_fixture(module, roster)
+    controller_original_pane_id = roster.original_pane_ids[0]
+
+    unattested = module.plan_activation(prepared, panes, agents)
+    attested = module.plan_activation(prepared, panes, agents, attestation)
+    attested_bindings = cast(list[dict[str, object]], attested[module.BINDINGS_FIELD])
+    recovered = module.recover(prepared, attested_bindings, panes, agents, attestation)
+    return AttestedControllerBinding(
+        ready_status=module.ResultStatus.READY,
+        pane_occupied_status=module.ResultStatus.PANE_OCCUPIED,
+        already_correlated_status=module.Resolution.ALREADY_CORRELATED,
+        attested_pane_id=attestation,
+        unattested_activation_status=unattested[module.STATUS_FIELD],
+        attested_activation_status=attested[module.STATUS_FIELD],
+        attested_bound_pane_ids=[
+            binding[module.PANE_ID_FIELD]
+            for binding in attested_bindings
+            if binding[module.ORIGINAL_PANE_ID_FIELD] == controller_original_pane_id
+        ],
+        attested_controller_resolutions=[
+            target[module.STATUS_FIELD]
+            for target in cast(list[dict[str, object]], recovered[module.TARGETS_FIELD])
+            if target[module.ORIGINAL_PANE_ID_FIELD] == controller_original_pane_id
+        ],
+    )
+
+
+def observe_attested_controller_rejections() -> AttestedControllerRejections:
+    """Attest a pane that fails each way an attestation can fail to identify the controller."""
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    prepared, panes, agents, attestation = _attested_controller_fixture(module, roster)
+
+    without_controller = deepcopy(prepared)
+    cast(list[dict[str, object]], without_controller[module.CANDIDATES_FIELD])[0][
+        module.EVIDENCE_FIELD
+    ] = module.EvidenceSource.NATIVE_STATUS
+    foreign_type_agents = deepcopy(agents)
+    foreign_type_agents[0][module.TYPE_FIELD] = roster.agent_types[1]
+    foreign_session_agents = deepcopy(agents)
+    foreign_session_agents[0][module.SESSION_FIELD] = {
+        module.ID_FIELD: roster.session_ids[1]
+    }
+    crowded_agents = [*agents, deepcopy(agents[0])]
+
+    return AttestedControllerRejections(
+        invalid_target_status=module.ResultStatus.INVALID_TARGET,
+        absent_current_session_status=_error_status(
+            module,
+            lambda: module.plan_activation(
+                without_controller, panes, agents, attestation
+            ),
+        ),
+        absent_pane_status=_error_status(
+            module,
+            lambda: module.plan_activation(
+                prepared, panes, agents, roster.unknown_pane_id
+            ),
+        ),
+        foreign_worktree_status=_error_status(
+            module,
+            lambda: module.plan_activation(
+                prepared, panes, agents, roster.post_restart_pane_ids[1]
+            ),
+        ),
+        multiple_agents_status=_error_status(
+            module,
+            lambda: module.plan_activation(
+                prepared, panes, crowded_agents, attestation
+            ),
+        ),
+        foreign_agent_type_status=_error_status(
+            module,
+            lambda: module.plan_activation(
+                prepared, panes, foreign_type_agents, attestation
+            ),
+        ),
+        foreign_session_status=_error_status(
+            module,
+            lambda: module.plan_activation(
+                prepared, panes, foreign_session_agents, attestation
+            ),
+        ),
+    )
+
+
 def verify_native_agent_recovery_properties() -> list[str]:
     module = _load()
     failures: list[str] = []
