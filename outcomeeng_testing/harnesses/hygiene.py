@@ -138,11 +138,23 @@ def clean_workspace(case: CleanWorkspaceCase) -> Iterator[CleanWorkspace]:
         staged_path.write_bytes(case.staged_content)
         unstaged_path.write_bytes(case.unstaged_index_content)
         (root / GIT_IGNORE_FILENAME).write_text(
-            "".join(f"{name}\n" for name, _ in case.ignored_files),
+            "".join(
+                [f"{name}\n" for name, _ in case.ignored_files]
+                + [
+                    f"{directory_name}/\n"
+                    for directory_name, _, _ in case.ignored_directories
+                ]
+            ),
             encoding="utf-8",
         )
         for name, content in case.ignored_files:
             (root / name).write_bytes(content)
+        ignored_directory_artifacts = []
+        for directory_name, artifact_path, content in case.ignored_directories:
+            artifact = root / directory_name / artifact_path
+            artifact.parent.mkdir(parents=True, exist_ok=True)
+            artifact.write_bytes(content)
+            ignored_directory_artifacts.append(artifact)
         for name, content in case.untracked_files:
             (root / name).write_bytes(content)
         _run_git(root, "init")
@@ -159,7 +171,14 @@ def clean_workspace(case: CleanWorkspaceCase) -> Iterator[CleanWorkspace]:
             active_python_prefix=active_python_prefix,
             staged_path=staged_path,
             unstaged_path=unstaged_path,
-            ignored_paths=tuple(root / name for name, _ in case.ignored_files),
+            ignored_paths=(
+                *(root / name for name, _ in case.ignored_files),
+                *(
+                    root / directory_name
+                    for directory_name, _, _ in case.ignored_directories
+                ),
+                *ignored_directory_artifacts,
+            ),
             untracked_paths=tuple(root / name for name, _ in case.untracked_files),
         )
 

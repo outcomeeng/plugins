@@ -16,6 +16,7 @@ class CleanWorkspaceCase:
     unstaged_index_content: bytes
     unstaged_worktree_content: bytes
     ignored_files: tuple[tuple[str, bytes], ...]
+    ignored_directories: tuple[tuple[str, str, bytes], ...]
     untracked_files: tuple[tuple[str, bytes], ...]
 
 
@@ -86,26 +87,47 @@ def markdown_contents() -> SearchStrategy[str]:
 @st.composite
 def clean_workspace_cases(draw: st.DrawFn) -> CleanWorkspaceCase:
     """Generate worktree states with tracked and gitignored content."""
-    ignored_name = st.text(
+    path_component = st.text(
         alphabet=_SAFE_PATH_ALPHABET,
         min_size=1,
         max_size=16,
     ).filter(lambda value: value not in {".", ".."})
-    file_entries = draw(
-        st.lists(
-            st.tuples(ignored_name, st.binary(max_size=64)),
-            min_size=2,
-            max_size=6,
-            unique_by=lambda entry: entry[0],
+    top_level_names = draw(
+        st.lists(path_component, min_size=3, max_size=9, unique=True)
+    )
+    ignored_file_count = draw(
+        st.integers(min_value=1, max_value=len(top_level_names) - 2)
+    )
+    ignored_directory_count = draw(
+        st.integers(
+            min_value=1,
+            max_value=len(top_level_names) - ignored_file_count - 1,
         )
     )
-    split_index = draw(st.integers(min_value=1, max_value=len(file_entries) - 1))
+    ignored_file_names = top_level_names[:ignored_file_count]
+    ignored_directory_names = top_level_names[
+        ignored_file_count : ignored_file_count + ignored_directory_count
+    ]
+    untracked_names = top_level_names[ignored_file_count + ignored_directory_count :]
+    nested_artifact = st.tuples(
+        st.lists(path_component, min_size=1, max_size=3).map("/".join),
+        st.binary(max_size=64),
+    )
     return CleanWorkspaceCase(
         staged_content=draw(st.binary(max_size=64)),
         unstaged_index_content=draw(st.binary(max_size=64)),
         unstaged_worktree_content=draw(st.binary(max_size=64)),
-        ignored_files=tuple(file_entries[:split_index]),
-        untracked_files=tuple(file_entries[split_index:]),
+        ignored_files=tuple(
+            (name, draw(st.binary(max_size=64))) for name in ignored_file_names
+        ),
+        ignored_directories=tuple(
+            (name, artifact_path, content)
+            for name in ignored_directory_names
+            for artifact_path, content in (draw(nested_artifact),)
+        ),
+        untracked_files=tuple(
+            (name, draw(st.binary(max_size=64))) for name in untracked_names
+        ),
     )
 
 
