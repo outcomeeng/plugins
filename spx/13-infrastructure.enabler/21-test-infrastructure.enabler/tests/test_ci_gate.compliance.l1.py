@@ -13,6 +13,7 @@ from outcomeeng.validation.ci_gate import (
     GATE_PUSH_BRANCH,
     GATE_PUSH_EVENT,
     GATE_RECIPE_COMMAND,
+    PINNED_VERSION_ENVIRONMENT_SUFFIX,
     SOFT_PASS_SHELL_SNIPPETS,
     TRAP_COMMAND_PREFIX,
 )
@@ -83,6 +84,34 @@ def test_gate_workflow_provisions_the_declared_toolchain() -> None:
             and requirement.environment_name in environment
             for step_name, environment in observation.step_environments
         )
+
+
+def test_every_provisioned_tool_is_declared() -> None:
+    observation = observe_ci_toolchain()
+
+    assert {
+        name
+        for name in observation.job_environment
+        if name.endswith(PINNED_VERSION_ENVIRONMENT_SUFFIX)
+    } == {
+        requirement.version_environment
+        for requirement in CI_TOOL_REQUIREMENTS
+        if requirement.version_environment is not None
+    }
+    assert {
+        (step_name, name)
+        for step_name, environment in observation.step_environments
+        for name in environment
+    } == {
+        (requirement.step_name, requirement.environment_name)
+        for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
+    }
+
+
+def test_missing_gate_recipe_is_detected() -> None:
+    commands = observe_gate_run_commands(gate_fixture_path("missing_gate_recipe.yml"))
+
+    assert GATE_RECIPE_COMMAND not in commands
 
 
 def test_gate_workflow_python_matches_project_metadata() -> None:
