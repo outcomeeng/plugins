@@ -3,7 +3,7 @@ name: spec-tree-plugin
 description: >-
   ALWAYS invoke this skill to operate the spec-tree plugin's own lifecycle in a checkout — report its version, manage whatever checkout footprint this plugin owns on the running agent, and check that footprint. Invoke it when this plugin's agents are missing from a session. NEVER hand-copy a plugin's agent definitions into a checkout or hand-edit them once placed.
 argument-hint: "[help|version|init|upgrade|check]"
-allowed-tools: Read, Skill, Bash(python3 "${SKILL_DIR}/scripts/place_agents.py":*)
+allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/place_agents.py":*)
 ---
 
 <objective>
