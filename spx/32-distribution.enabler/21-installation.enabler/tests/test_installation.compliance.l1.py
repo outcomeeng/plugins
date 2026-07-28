@@ -12,6 +12,7 @@ from outcomeeng.distribution.installation import (
 from outcomeeng_testing.harnesses.installation import (
     NONCANONICAL_MARKETPLACE_SOURCE,
     observe_first_failure,
+    observe_inspection_failure,
     observe_missing_codex_home,
     observe_persistent_execution,
     observe_persistent_plan,
@@ -96,6 +97,29 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         if command.agent is Agent.CODEX
     )
     assert refreshing.attempted[1:] == refreshing.report.plan.commands
+
+
+def test_an_enable_failure_stops_the_run_rather_than_reading_as_idempotent() -> None:
+    observation = observe_first_failure(Operation.PLUGIN_ENABLE)
+
+    assert observation.failure is not None
+    assert observation.failure.command.operation is Operation.PLUGIN_ENABLE
+    assert observation.failure.result.exit_code != 0
+    assert observation.attempted[-1] == observation.failure.command
+    assert (
+        observation.attempted == observation.plan.commands[: len(observation.attempted)]
+    )
+
+
+def test_a_failed_inspection_stops_before_any_planned_operation() -> None:
+    observation = observe_inspection_failure()
+
+    assert observation.failure is not None
+    assert observation.failure.command.operation is Operation.MARKETPLACE_INSPECT
+    assert observation.attempted == (observation.failure.command,)
+    assert not any(
+        command in observation.attempted for command in observation.plan.commands
+    )
 
 
 def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
