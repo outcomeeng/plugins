@@ -245,7 +245,7 @@ Choose the verification type first:
 | evaluate | `[eval](path)` | deterministic score over a producer's structured output | LLM-driven behavior emits a parseable verdict scored against cases and a threshold. |
 | audit    | `[audit]`      | agentic                                                 | A semantic constraint has no structural verdict to score.                           |
 
-`[review]` is the legacy spelling of the `[audit]` assertion tag. Review itself is an open-ended changeset gate and backs no assertion tag.
+Review is an open-ended changeset gate and backs no assertion tag.
 
 </verification_types>
 

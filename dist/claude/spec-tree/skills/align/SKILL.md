@@ -162,7 +162,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 <failure_modes>
 
-**Evidence specialization reported as duplication.** Claude reported child `[test]` rules over concrete workflow-observability helpers as duplicates of marketplace-wide ancestor `[review]` rules. The finding collapsed deterministic falsification at a narrow code surface into semantic judgment at a broad scope, so removing the child rules would have weakened the evidence chain. Compare both content and evidence mechanism before reporting duplication: same-content and same-evidence repetition is misplaced, while child `[test]` concretizing ancestor `[audit]` or legacy `[review]` is valid specialization.
+**Evidence specialization reported as duplication.** Claude reported child `[test]` rules over concrete workflow-observability helpers as duplicates of marketplace-wide ancestor semantic-evidence rules. The finding collapsed deterministic falsification at a narrow code surface into semantic judgment at a broad scope, so removing the child rules would have weakened the evidence chain. Compare both content and evidence mechanism before reporting duplication: same-content and same-evidence repetition is misplaced, while child `[test]` concretizing ancestor `[audit]` is valid specialization.
 
 </failure_modes>
 

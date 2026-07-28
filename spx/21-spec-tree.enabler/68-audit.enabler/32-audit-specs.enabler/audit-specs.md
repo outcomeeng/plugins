@@ -12,7 +12,7 @@ Three properties checked in order:
 
 1. **Section structure** — the node opens with its kind statement (an enabler's `PROVIDES … SO THAT … CAN …` or an outcome's `WE BELIEVE THAT … WILL … CONTRIBUTING TO …`) and carries an `## Assertions` section; claim-shape headings group assertions by quantifier and form independently of each assertion's verification-type tag
 2. **Atemporal voice** — the node states product truth, never history
-3. **Per-assertion tag validity, evidence-type fit, and coupling fitness** — every assertion carries exactly one verification-type tag (`[test]`, `[eval]`, or `[audit]`; `[review]` is the legacy spelling of `[audit]`); a `[test]` assertion's assertion type fits the claim's quantifier (a universal is never `scenario`); and a claim whose subject is authored prose or documentation content — text the product authors and maintains in a document, not executable behavior — never carries `[test]`
+3. **Per-assertion tag validity, evidence-type fit, and coupling fitness** — every assertion carries exactly one verification-type tag (`[test]`, `[eval]`, or `[audit]`); a `[test]` assertion's assertion type fits the claim's quantifier (a universal is never `scenario`); and a claim whose subject is authored prose or documentation content — text the product authors and maintains in a document, not executable behavior — never carries `[test]`
 
 ## Per-assertion Tag Fitness Model
 
