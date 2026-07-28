@@ -25,7 +25,7 @@ def test_repository_codex_config_has_no_installation_semantics() -> None:
         observation.persistent_before.codex_plugins
         == observation.persistent_after.codex_plugins
     )
-    assert observation.config_bytes
+    assert observation.config_observed == observation.config_written
     assert all(
         str(CODEX_CONFIG_PATH) not in argument
         for plan in (observation.after, observation.persistent_after)

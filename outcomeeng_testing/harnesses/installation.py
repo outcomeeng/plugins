@@ -69,6 +69,7 @@ _REAL_JUST_ENV = "OUTCOMEENG_REAL_JUST"
 
 
 NONCANONICAL_MARKETPLACE_SOURCE = "/tmp/local-marketplace"
+REPOSITORY_CODEX_CONFIG = b"[plugins]\nenabled = false\n"
 
 
 @dataclass(frozen=True)
@@ -128,7 +129,8 @@ class ConfigObservation:
     after: InstallationPlan
     persistent_before: InstallationPlan
     persistent_after: InstallationPlan
-    config_bytes: bytes
+    config_written: bytes
+    config_observed: bytes
 
 
 @dataclass(frozen=True)
@@ -605,18 +607,19 @@ def observe_codex_config_independence() -> ConfigObservation:
         ).plan
         config = mirror / CODEX_CONFIG_PATH
         config.parent.mkdir(parents=True, exist_ok=True)
-        config.write_text("[plugins]\nenabled = false\n", encoding="utf-8")
+        config.write_bytes(REPOSITORY_CODEX_CONFIG)
         after = build_isolated_installation_plan(mirror, state, os.environ)
         persistent_after = execute_persistent_installation(
             mirror, environment, RecordingRunner()
         ).plan
-        config_bytes = config.read_bytes()
+        config_observed = config.read_bytes()
     return ConfigObservation(
         before=before,
         after=after,
         persistent_before=persistent_before,
         persistent_after=persistent_after,
-        config_bytes=config_bytes,
+        config_written=REPOSITORY_CODEX_CONFIG,
+        config_observed=config_observed,
     )
 
 
