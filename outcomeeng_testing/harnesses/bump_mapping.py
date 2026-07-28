@@ -1,17 +1,12 @@
-"""Harness-owned mapping evidence for bump segment classification.
+"""Harness-owned observations for bump segment-increment evidence.
 
-Covers the segment-increment and auto-detection mapping assertions:
+Exposes the segment-increment domain — PATCH increments the third semver
+component; MINOR increments the second and resets the third to 0; MAJOR
+increments the first and resets the second and third to 0 — against the
+`Version` source contract directly, not through the `bump()` orchestration.
 
-- The segment-increment semantics: PATCH increments the third semver
-  component; MINOR increments the second and resets the third to 0;
-  MAJOR increments the first and resets the second and third to 0.
-- The auto-detection (file-status, path-pattern) → segment mapping:
-  `A`/`C`/`D`/`R` on `skills/<slug>/SKILL.md`, `agents/<slug>.md`,
-  or `{.claude,.codex}-plugin/plugin.json` yields
-  `MINOR`; everything else yields `PATCH`.
-
-Evidence is exercised against the `Version` and `auto_segment` source
-contracts directly, not through the `bump()` orchestration.
+The auto-detection (file-status, path-pattern) → segment mapping is exercised
+by its linked test against `auto_segment` directly and needs no harness.
 """
 
 from __future__ import annotations
