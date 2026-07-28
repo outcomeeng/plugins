@@ -13,6 +13,7 @@ from outcomeeng_testing.generators.hygiene import (
     xml_spacing_workspace_cases,
 )
 from outcomeeng_testing.harnesses.hygiene import (
+    HYGIENE_EVIDENCE_REPLAY_PATH,
     SubprocessRunner,
     clean_workspace,
     hygiene_generated_evidence,
@@ -20,7 +21,7 @@ from outcomeeng_testing.harnesses.hygiene import (
 )
 
 
-@hygiene_generated_evidence
+@hygiene_generated_evidence(replay_path=HYGIENE_EVIDENCE_REPLAY_PATH)
 @given(case=clean_workspace_cases())
 def test_clean_removes_only_ignored_paths(case: CleanWorkspaceCase) -> None:
     with clean_workspace(case) as workspace:
@@ -39,7 +40,7 @@ def test_clean_removes_only_ignored_paths(case: CleanWorkspaceCase) -> None:
         assert all(not path.exists() for path in workspace.ignored_paths)
 
 
-@hygiene_generated_evidence
+@hygiene_generated_evidence(replay_path=HYGIENE_EVIDENCE_REPLAY_PATH)
 @given(case=xml_spacing_workspace_cases())
 def test_xml_spacing_preserves_non_target_bytes(
     case: XmlSpacingWorkspaceCase,

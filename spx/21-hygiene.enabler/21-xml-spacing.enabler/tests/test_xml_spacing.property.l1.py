@@ -11,12 +11,13 @@ from outcomeeng_testing.generators.hygiene import (
     markdown_contents,
 )
 from outcomeeng_testing.harnesses.hygiene import (
+    XML_SPACING_EVIDENCE_REPLAY_PATH,
     hygiene_generated_evidence,
     markdown_file,
 )
 
 
-@hygiene_generated_evidence
+@hygiene_generated_evidence(replay_path=XML_SPACING_EVIDENCE_REPLAY_PATH)
 @given(content=markdown_contents())
 def test_fix_file_is_idempotent_for_generated_markdown(content: str) -> None:
     with markdown_file(content) as path:
@@ -28,7 +29,7 @@ def test_fix_file_is_idempotent_for_generated_markdown(content: str) -> None:
         assert path.read_bytes() == after_first
 
 
-@hygiene_generated_evidence
+@hygiene_generated_evidence(replay_path=XML_SPACING_EVIDENCE_REPLAY_PATH)
 @given(case=fenced_markdown_cases())
 def test_fix_file_preserves_generated_fenced_content(
     case: FencedMarkdownCase,

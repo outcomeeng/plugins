@@ -12,6 +12,7 @@ from outcomeeng_testing.generators.hygiene import (
     markdown_contents,
 )
 from outcomeeng_testing.harnesses.hygiene import (
+    HYGIENE_EVIDENCE_REPLAY_PATH,
     SubprocessRunner,
     clean_workspace,
     hygiene_generated_evidence,
@@ -19,7 +20,7 @@ from outcomeeng_testing.harnesses.hygiene import (
 )
 
 
-@hygiene_generated_evidence
+@hygiene_generated_evidence(replay_path=HYGIENE_EVIDENCE_REPLAY_PATH)
 @given(content=markdown_contents())
 def test_xml_spacing_is_idempotent(content: str) -> None:
     with markdown_file(content) as path:
@@ -31,7 +32,7 @@ def test_xml_spacing_is_idempotent(content: str) -> None:
         assert path.read_bytes() == first_result
 
 
-@hygiene_generated_evidence
+@hygiene_generated_evidence(replay_path=HYGIENE_EVIDENCE_REPLAY_PATH)
 @given(case=clean_workspace_cases())
 def test_clean_is_idempotent(case: CleanWorkspaceCase) -> None:
     with clean_workspace(case) as workspace:

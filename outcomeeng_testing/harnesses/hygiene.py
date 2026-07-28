@@ -21,6 +21,9 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 HYGIENE_EVIDENCE_SEED = 20260728
 HYGIENE_EVIDENCE_EXAMPLES = 40
 HYGIENE_EVIDENCE_REPLAY_PATH = "just test spx/21-hygiene.enabler/tests"
+XML_SPACING_EVIDENCE_REPLAY_PATH = (
+    "just test spx/21-hygiene.enabler/21-xml-spacing.enabler/tests"
+)
 SUBPROCESS_TIMEOUT_SECONDS = 10
 STAGED_MARKDOWN_FILENAME = "staged.md"
 UNSTAGED_MARKDOWN_FILENAME = "unstaged.md"
@@ -93,25 +96,29 @@ class SubprocessRunner:
 
 
 def hygiene_generated_evidence(
-    evidence_run: Callable[[], None],
-) -> Callable[[], None]:
-    """Apply reproducible Hypothesis policy to generated hygiene evidence."""
-    configured = seed(HYGIENE_EVIDENCE_SEED)(
-        settings(
-            max_examples=HYGIENE_EVIDENCE_EXAMPLES,
-            deadline=None,
-            print_blob=True,
-        )(evidence_run)
-    )
+    *, replay_path: str
+) -> Callable[[Callable[[], None]], Callable[[], None]]:
+    """Apply reproducible Hypothesis policy with a governed replay command."""
 
-    def run_evidence() -> None:
-        run_replayable_property(
-            configured,
-            seed_value=HYGIENE_EVIDENCE_SEED,
-            replay_path=HYGIENE_EVIDENCE_REPLAY_PATH,
+    def configure(evidence_run: Callable[[], None]) -> Callable[[], None]:
+        configured = seed(HYGIENE_EVIDENCE_SEED)(
+            settings(
+                max_examples=HYGIENE_EVIDENCE_EXAMPLES,
+                deadline=None,
+                print_blob=True,
+            )(evidence_run)
         )
 
-    return run_evidence
+        def run_evidence() -> None:
+            run_replayable_property(
+                configured,
+                seed_value=HYGIENE_EVIDENCE_SEED,
+                replay_path=replay_path,
+            )
+
+        return run_evidence
+
+    return configure
 
 
 @contextmanager
@@ -224,6 +231,8 @@ __all__ = [
     "CleanWorkspace",
     "SubprocessRunner",
     "XmlSpacingWorkspace",
+    "HYGIENE_EVIDENCE_REPLAY_PATH",
+    "XML_SPACING_EVIDENCE_REPLAY_PATH",
     "clean_workspace",
     "hygiene_generated_evidence",
     "markdown_file",
