@@ -12,7 +12,7 @@ The {{! plugin_name !}} plugin's consumer-side footprint reported, placed, or re
 
 <verbs>
 
-Select one verb from the invocation. `help` is the default when none is given.
+Read `$ARGUMENTS`, trim it, and match it against the table below. One verb runs per invocation; `help` is the default when `$ARGUMENTS` is empty. Text matching no row is an error naming the five verbs, never a guessed match.
 
 | Verb      | Result                                                                               |
 | --------- | ------------------------------------------------------------------------------------ |
