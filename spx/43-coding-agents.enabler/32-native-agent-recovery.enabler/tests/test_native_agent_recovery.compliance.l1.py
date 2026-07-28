@@ -1,4 +1,5 @@
 from outcomeeng_testing.harnesses.native_agent_recovery import (
+    observe_activation_compliance,
     observe_continuation_boundary,
     observe_correlation_verification,
     observe_launch_settlement,
@@ -7,6 +8,7 @@ from outcomeeng_testing.harnesses.native_agent_recovery import (
     observe_path_identity,
     observe_prepare_command_line,
     observe_reassessment_settlement,
+    observe_sessionless_roster_handling,
 )
 
 
@@ -14,6 +16,36 @@ def test_prepare_emits_a_versioned_durable_manifest() -> None:
     observed = observe_prepare_command_line()
     assert observed.exit_code == 0
     assert observed.rendered_status == observed.prepared_status
+    assert observed.rendered_schema_version == observed.source_schema_version
+    assert observed.rendered_pane_ids == observed.expected_pane_ids
+    assert observed.rendered_worktree_paths == observed.expected_worktree_paths
+    assert observed.rendered_agent_types == observed.expected_agent_types
+    assert observed.rendered_session_ids == observed.expected_session_ids
+    assert observed.rendered_resume_locators == observed.expected_session_ids
+    assert observed.rendered_evidence == observed.expected_evidence
+    assert observed.rendered_roles == observed.expected_roles
+    assert observed.rendered_secondary_authorizations == [False] * len(
+        observed.expected_pane_ids
+    )
+    assert (
+        observed.rendered_reassessed_session_ids
+        == observed.expected_reassessed_session_ids
+    )
+    assert observed.candidates_missing_native_home == []
+
+
+def test_absent_panes_activate_only_through_exact_root_open() -> None:
+    observed = observe_activation_compliance()
+    assert observed.requested_operations == observed.expected_operations
+    assert observed.requested_worktree_paths == observed.prepared_worktree_paths
+    assert observed.bound_pane_ids == observed.activation_returned_pane_ids
+    assert observed.non_exact_root_status == observed.invalid_target_status
+
+
+def test_a_sessionless_roster_entry_correlates_only_the_attested_pane() -> None:
+    observed = observe_sessionless_roster_handling()
+    assert observed.unattested_status == observed.pane_occupied_status
+    assert observed.attested_resolutions == [observed.already_correlated_status]
 
 
 def test_native_launch_carries_only_the_exact_resume_command() -> None:

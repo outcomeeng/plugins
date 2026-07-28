@@ -1057,11 +1057,30 @@ class PathIdentity:
 
 @dataclass(frozen=True)
 class PrepareCommandLine:
-    """The prepare CLI's exit code and rendered manifest status."""
+    """The prepare CLI's exit code, rendered manifest status, version, and preserved candidate fields."""
 
     exit_code: int
     rendered_status: object
     prepared_status: object
+    rendered_schema_version: object
+    source_schema_version: object
+    rendered_pane_ids: list[object]
+    rendered_worktree_paths: list[object]
+    rendered_agent_types: list[object]
+    rendered_session_ids: list[object]
+    rendered_resume_locators: list[object]
+    rendered_evidence: list[object]
+    rendered_roles: list[object]
+    rendered_secondary_authorizations: list[object]
+    rendered_reassessed_session_ids: object
+    expected_reassessed_session_ids: list[str]
+    expected_pane_ids: list[str]
+    expected_worktree_paths: list[str]
+    expected_agent_types: list[str]
+    expected_session_ids: list[str]
+    expected_evidence: list[object]
+    expected_roles: list[object]
+    candidates_missing_native_home: list[object]
 
 
 def _compliance_fixture(
@@ -1409,8 +1428,162 @@ def observe_prepare_command_line() -> PrepareCommandLine:
         ),
         stdout=stdout,
     )
+    rendered = json.loads(stdout.getvalue())
+    rendered_candidates = cast(
+        list[dict[str, object]], rendered[module.CANDIDATES_FIELD]
+    )
+
+    def field(name: str) -> list[object]:
+        return [candidate[name] for candidate in rendered_candidates]
+
     return PrepareCommandLine(
         exit_code=cast(int, exit_code),
-        rendered_status=json.loads(stdout.getvalue())[module.STATUS_FIELD],
+        rendered_status=rendered[module.STATUS_FIELD],
         prepared_status=module.ResultStatus.PREPARED,
+        rendered_schema_version=rendered[module.SCHEMA_VERSION_FIELD],
+        source_schema_version=module.SCHEMA_VERSION,
+        rendered_pane_ids=field(module.ORIGINAL_PANE_ID_FIELD),
+        rendered_worktree_paths=field(module.WORKTREE_PATH_FIELD),
+        rendered_agent_types=field(module.AGENT_TYPE_FIELD),
+        rendered_session_ids=field(module.SESSION_ID_FIELD),
+        rendered_resume_locators=field(module.RESUME_LOCATOR_FIELD),
+        rendered_evidence=field(module.EVIDENCE_FIELD),
+        rendered_roles=field(module.ROLE_FIELD),
+        rendered_secondary_authorizations=field(module.SECONDARY_AUTHORIZED_FIELD),
+        rendered_reassessed_session_ids=rendered[module.REASSESSED_SESSION_IDS_FIELD],
+        expected_reassessed_session_ids=[
+            cast(str, candidate[module.SESSION_ID_FIELD])
+            for candidate in recovery_candidates(module, roster)
+            if candidate[module.EVIDENCE_FIELD] is module.EvidenceSource.CURRENT_SESSION
+        ],
+        expected_pane_ids=list(roster.original_pane_ids),
+        expected_worktree_paths=[str(path) for path in roster.worktree_paths],
+        expected_agent_types=list(roster.agent_types),
+        expected_session_ids=list(roster.session_ids),
+        expected_evidence=[
+            candidate[module.EVIDENCE_FIELD]
+            for candidate in recovery_candidates(module, roster)
+        ],
+        expected_roles=[module.RecoveryRole.PRIMARY] * len(roster.original_pane_ids),
+        candidates_missing_native_home=[
+            candidate
+            for candidate in rendered_candidates
+            if module.NATIVE_HOME_FIELD not in candidate
+        ],
+    )
+
+
+@dataclass(frozen=True)
+class ActivationCompliance:
+    """Activation of absent panes: the operations requested, their targets, and the results accepted."""
+
+    invalid_target_status: object
+    open_operation: object
+    requested_operations: list[object]
+    expected_operations: list[object]
+    requested_worktree_paths: list[object]
+    prepared_worktree_paths: list[str]
+    bound_pane_ids: list[object]
+    activation_returned_pane_ids: list[str]
+    non_exact_root_status: object
+
+
+@dataclass(frozen=True)
+class SessionlessRosterHandling:
+    """What a roster entry carrying no session decides on an unattested pane and on the attested one."""
+
+    pane_occupied_status: object
+    already_correlated_status: object
+    unattested_status: object
+    attested_resolutions: list[object]
+
+
+def observe_activation_compliance() -> ActivationCompliance:
+    """Request activation for every absent prepared worktree and bind the results it returns."""
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    prepared, activation, _ = _partly_correlated_activation(module, roster)
+    activations = cast(list[dict[str, object]], activation[module.ACTIVATIONS_FIELD])
+    opened_pane_ids = roster.post_restart_pane_ids[roster.correlated_count :]
+    bound = cast(
+        dict[str, object],
+        module.bind_activations(
+            activation, activation_results(module, activations, opened_pane_ids)
+        ),
+    )
+    bound_bindings = cast(list[dict[str, object]], bound[module.BINDINGS_FIELD])
+    absent_original_pane_ids = set(roster.original_pane_ids[roster.correlated_count :])
+    non_exact_results = activation_results(module, activations, opened_pane_ids)
+    non_exact_transport = cast(
+        dict[str, object], non_exact_results[0][module.TRANSPORT_FIELD]
+    )
+    non_exact_response = cast(
+        dict[str, object], non_exact_transport[module.RESPONSE_FIELD]
+    )
+    cast(dict[str, object], non_exact_response[module.DATA_FIELD])[
+        module.RESOLUTION_FIELD
+    ] = "new-root"
+    prepared_paths = {
+        cast(str, candidate[module.ORIGINAL_PANE_ID_FIELD]): cast(
+            str, candidate[module.WORKTREE_PATH_FIELD]
+        )
+        for candidate in cast(
+            list[dict[str, object]], prepared[module.CANDIDATES_FIELD]
+        )
+    }
+    return ActivationCompliance(
+        invalid_target_status=module.ResultStatus.INVALID_TARGET,
+        open_operation=module.ACTIVATION_OPEN_OPERATION,
+        requested_operations=[action[module.OPERATION_FIELD] for action in activations],
+        expected_operations=[module.ACTIVATION_OPEN_OPERATION] * len(activations),
+        requested_worktree_paths=[
+            action[module.WORKTREE_PATH_FIELD] for action in activations
+        ],
+        prepared_worktree_paths=[
+            prepared_paths[cast(str, action[module.ORIGINAL_PANE_ID_FIELD])]
+            for action in activations
+        ],
+        bound_pane_ids=[
+            binding[module.PANE_ID_FIELD]
+            for binding in bound_bindings
+            if binding[module.ORIGINAL_PANE_ID_FIELD] in absent_original_pane_ids
+        ],
+        activation_returned_pane_ids=list(opened_pane_ids),
+        non_exact_root_status=_error_status(
+            module, lambda: module.bind_activations(activation, non_exact_results)
+        ),
+    )
+
+
+def observe_sessionless_roster_handling() -> SessionlessRosterHandling:
+    """Offer the same sessionless roster entry to an unattested recovery and to an attested one."""
+    module = _load()
+    roster = OPERATIONAL_RECOVERY_ROSTER
+    prepared, panes, agents, attestation = _attested_controller_fixture(module, roster)
+    unattested = cast(
+        dict[str, object], module.plan_activation(prepared, panes, agents)
+    )
+    attested = cast(
+        dict[str, object],
+        module.plan_activation(prepared, panes, agents, attestation),
+    )
+    recovered = cast(
+        dict[str, object],
+        module.recover(
+            prepared,
+            cast(list[dict[str, object]], attested[module.BINDINGS_FIELD]),
+            panes,
+            agents,
+            attestation,
+        ),
+    )
+    return SessionlessRosterHandling(
+        pane_occupied_status=module.ResultStatus.PANE_OCCUPIED,
+        already_correlated_status=module.Resolution.ALREADY_CORRELATED,
+        unattested_status=unattested[module.STATUS_FIELD],
+        attested_resolutions=[
+            target[module.STATUS_FIELD]
+            for target in cast(list[dict[str, object]], recovered[module.TARGETS_FIELD])
+            if target[module.ORIGINAL_PANE_ID_FIELD] == roster.original_pane_ids[0]
+        ],
     )
