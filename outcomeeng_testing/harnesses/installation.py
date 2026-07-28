@@ -68,8 +68,13 @@ _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 _REAL_JUST_ENV = "OUTCOMEENG_REAL_JUST"
 
 
-NONCANONICAL_MARKETPLACE_SOURCE = "/tmp/local-marketplace"
-REPOSITORY_CODEX_CONFIG = b"[plugins]\nenabled = false\n"
+NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
+PLUGIN_DISABLING_CODEX_CONFIG = b"[plugins]\nenabled = false\n"
+
+
+def _settings_json(path: Path) -> dict[str, object]:
+    """Read a JSON settings document from disk."""
+    return cast("dict[str, object]", json.loads(path.read_text(encoding="utf-8")))
 
 
 @dataclass(frozen=True)
@@ -450,10 +455,7 @@ class SettingsMutatingRunner:
         return CommandResult(command.argv, 0, stdout, "")
 
     def _document(self) -> dict[str, object]:
-        return cast(
-            "dict[str, object]",
-            json.loads(self.settings.read_text(encoding="utf-8")),
-        )
+        return _settings_json(self.settings)
 
     def _write(self, document: dict[str, object]) -> None:
         self.settings.write_text(
@@ -483,18 +485,12 @@ def observe_noncanonical_reconciliation() -> ReconciliationObservation:
         _mirror_installation_inputs(checkout, mirror)
         settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         _copy_committed_project_settings(checkout, settings)
-        document = cast(
-            "dict[str, object]",
-            json.loads(settings.read_text(encoding="utf-8")),
-        )
+        document = _settings_json(settings)
         document[EXTRA_MARKETPLACES_FIELD] = claude_marketplace_settings(
             NONCANONICAL_MARKETPLACE_SOURCE
         )[EXTRA_MARKETPLACES_FIELD]
         settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
-        before = cast(
-            "dict[str, object]",
-            json.loads(settings.read_text(encoding="utf-8")),
-        )
+        before = _settings_json(settings)
         environment = _persistent_environment(temporary_root)
         preflight = build_persistent_preflight(mirror, environment)
         execute_persistent_installation(
@@ -502,10 +498,7 @@ def observe_noncanonical_reconciliation() -> ReconciliationObservation:
             environment,
             SettingsMutatingRunner(settings=settings),
         )
-        after = cast(
-            "dict[str, object]",
-            json.loads(settings.read_text(encoding="utf-8")),
-        )
+        after = _settings_json(settings)
     return ReconciliationObservation(
         selection_before=before.get(CLAUDE_ENABLED_PLUGINS_FIELD),
         selection_after=after.get(CLAUDE_ENABLED_PLUGINS_FIELD),
@@ -607,7 +600,7 @@ def observe_codex_config_independence() -> ConfigObservation:
         ).plan
         config = mirror / CODEX_CONFIG_PATH
         config.parent.mkdir(parents=True, exist_ok=True)
-        config.write_bytes(REPOSITORY_CODEX_CONFIG)
+        config.write_bytes(PLUGIN_DISABLING_CODEX_CONFIG)
         after = build_isolated_installation_plan(mirror, state, os.environ)
         persistent_after = execute_persistent_installation(
             mirror, environment, RecordingRunner()
@@ -618,7 +611,7 @@ def observe_codex_config_independence() -> ConfigObservation:
         after=after,
         persistent_before=persistent_before,
         persistent_after=persistent_after,
-        config_written=REPOSITORY_CODEX_CONFIG,
+        config_written=PLUGIN_DISABLING_CODEX_CONFIG,
         config_observed=config_observed,
     )
 
@@ -817,8 +810,8 @@ def observe_real_installation() -> RealInstallationObservation:
     )
 
 
-def _listed_plugins(agent: Agent, payload: str) -> PluginListing:
-    """Read installed and enabled plugin names from a real agent CLI listing."""
+def _listing_entries(agent: Agent, payload: str) -> list[object]:
+    """Read the plugin entry array from a real agent CLI listing."""
     try:
         document = json.loads(payload)
     except json.JSONDecodeError as error:
@@ -830,26 +823,32 @@ def _listed_plugins(agent: Agent, payload: str) -> PluginListing:
         entries = document.get(CODEX_PLUGIN_ENTRIES_FIELD)
     if not isinstance(entries, list):
         raise RuntimeError(f"{agent.value} plugin listing must contain an array")
-    plugin_id_field = (
-        CLAUDE_PLUGIN_ID_FIELD if agent is Agent.CLAUDE else CODEX_PLUGIN_ID_FIELD
+    return entries
+
+
+def _listed_identity(agent: Agent, entry: object) -> tuple[str, bool]:
+    """Read one listing entry's plugin identifier and enabled state."""
+    if not isinstance(entry, dict):
+        raise RuntimeError(f"{agent.value} plugin listing contains a non-object")
+    claude = agent is Agent.CLAUDE
+    plugin_id = entry.get(CLAUDE_PLUGIN_ID_FIELD if claude else CODEX_PLUGIN_ID_FIELD)
+    enabled = entry.get(
+        CLAUDE_PLUGIN_ENABLED_FIELD if claude else CODEX_PLUGIN_ENABLED_FIELD
     )
-    plugin_enabled_field = (
-        CLAUDE_PLUGIN_ENABLED_FIELD
-        if agent is Agent.CLAUDE
-        else CODEX_PLUGIN_ENABLED_FIELD
-    )
+    if not isinstance(plugin_id, str) or not isinstance(enabled, bool):
+        raise RuntimeError(
+            f"{agent.value} plugin listing entry lacks typed identity or state"
+        )
+    return plugin_id, enabled
+
+
+def _listed_plugins(agent: Agent, payload: str) -> PluginListing:
+    """Read installed and enabled plugin names from a real agent CLI listing."""
     marketplace_suffix = f"@{MARKETPLACE_NAME}"
     installed: set[str] = set()
     enabled_names: set[str] = set()
-    for entry in entries:
-        if not isinstance(entry, dict):
-            raise RuntimeError(f"{agent.value} plugin listing contains a non-object")
-        plugin_id = entry.get(plugin_id_field)
-        enabled = entry.get(plugin_enabled_field)
-        if not isinstance(plugin_id, str) or not isinstance(enabled, bool):
-            raise RuntimeError(
-                f"{agent.value} plugin listing entry lacks typed identity or state"
-            )
+    for entry in _listing_entries(agent, payload):
+        plugin_id, enabled = _listed_identity(agent, entry)
         if not plugin_id.endswith(marketplace_suffix):
             continue
         name = plugin_id.removesuffix(marketplace_suffix)
@@ -885,9 +884,7 @@ def _copy_committed_project_settings(checkout: Path, destination: Path) -> None:
 
 def _declared_selection(settings: Path) -> frozenset[str]:
     """Read the plugin names a project settings document declares enabled."""
-    document = cast(
-        "dict[str, object]", json.loads(settings.read_text(encoding="utf-8"))
-    )
+    document = _settings_json(settings)
     enabled = document.get(CLAUDE_ENABLED_PLUGINS_FIELD)
     if not isinstance(enabled, dict):
         raise RuntimeError(f"{settings} declares no plugin selection")
