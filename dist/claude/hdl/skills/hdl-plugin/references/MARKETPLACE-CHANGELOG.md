@@ -4,7 +4,7 @@ Events that no single plugin owns: an agent harness gained or dropped, a plugin 
 
 This file is identical in every installed Outcome Engineering plugin. It ships in all of them because a marketplace event has to stay readable whatever subset of plugins a repository installs — a plugin rename is unreadable from the renamed plugin, whose old identity no longer resolves.
 
-Two other changelog lines run on their own clocks. What changed in a **plugin** is in that plugin's own `CHANGELOG.md`. What changed in the **methodology** is in `METHODOLOGY-CHANGELOG.md`, which ships with the spec-tree plugin that provides it.
+One other changelog line runs on its own clock: what changed in a **plugin** is in that plugin's own `CHANGELOG.md`. What changed in the **methodology** is in neither — a repository declares the methodology version it follows in `spx.config.yaml`.
 
 The marketplace carries no version of its own — each plugin is versioned independently — so entries here are dated rather than numbered.
 

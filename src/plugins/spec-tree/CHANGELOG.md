@@ -4,9 +4,19 @@ Spec Tree methodology skills and agents: `/understand`, `/contextualize`, `/auth
 
 What changed in **this plugin**, for a consumer repository. An entry appears when a change alters what a consumer can rely on, must do, or must know.
 
-This plugin delivers the methodology but is versioned separately from it. What changed in the **methodology** is in `METHODOLOGY-CHANGELOG.md` beside this file — a methodology release keeps its identity regardless of which plugin version delivers it.
+This plugin operationalizes the methodology and is versioned separately from it, so an entry here says what these skills now do, never what the methodology says. A repository declares the methodology version it follows in `spx.config.yaml`.
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
+
+## 0.88.0
+
+### Removed
+
+- **`METHODOLOGY-CHANGELOG.md` no longer ships.** It recorded methodology releases by version number, edition label, and date. The methodology names its versions rather than numbering them, so those entries identified nothing that exists. A repository declares the methodology version it follows in its own `spx.config.yaml`, and `spx` reads and enforces that declaration.
+
+### Changed
+
+- **A methodology-changelog request is directed to `spx.config.yaml`.** No installed plugin carries a methodology changelog, and the lifecycle skill no longer offers one. `help` directs the reader to that declaration and the source it names. The skill's `Skill` tool grant is withdrawn with it — it existed only to reach this plugin's copy from another plugin.
 
 ## 0.87.2
 
@@ -24,13 +34,12 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **`[review]` is no longer tolerated as a spelling of `[audit]`.** The foundation described it as the legacy spelling of the `[audit]` assertion tag. That description is gone: the assertion tags are `[test]`, `[eval]`, and `[audit]`, and review is an open-ended changeset gate that backs no assertion tag. An assertion still carrying `([review])` now reports an invalid tag under `/audit-specs`, and `/audit-tests` no longer lists it among the tags it skips. Migrate `([review])` to `([audit])` — the assertion text is unchanged, only the tag spelling.
+- **`[review]` is no longer tolerated as a spelling of `[audit]`.** The foundation described it as the legacy spelling of the `[audit]` assertion tag. That description is gone: the assertion tags are `[test]`, `[eval]`, and `[audit]`. An assertion still carrying `([review])` now reports an invalid tag under `/audit-specs`, and `/audit-tests` no longer lists it among the tags it skips. Migrate `([review])` to `([audit])` — the assertion text is unchanged, only the tag spelling.
 
-  This enforces a rule methodology 3.1.0 already states rather than introducing one, so no artifact that was valid becomes invalid: review has backed no assertion tag since that release, and the tolerance was a delivery lag behind it. A spec carrying `([review])` was already outside the tag vocabulary; from this version an audit reaching one says so. `METHODOLOGY-CHANGELOG.md` records the rule; this line records where enforcement begins.
+  The tolerance was this plugin's own. An assertion carrying `([review])` is migration debt against the methodology version a repository declares, and resolving it to `([audit])` never made that artifact valid.
 
 ### Added
 
-- **`help` names where the changelogs are.** The lifecycle skill's `help` verb reports the marketplace, plugin, and methodology changelog paths. Each is read from disk, without network access.
-- **`METHODOLOGY-CHANGELOG.md` ships beside this file.** What changed in the **methodology** is recorded separately from what changed in this plugin, because a methodology release keeps its identity regardless of which plugin version delivers it.
+- **`help` names where the changelogs are.** The lifecycle skill's `help` verb reports this plugin's changelog and the marketplace changelog. Each is read from disk, without network access.
 
 This changelog begins here; earlier history predates the line.
