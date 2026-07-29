@@ -18,7 +18,7 @@ The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, 
 Transport selected: GitHub PR, because the classification has 2 changed files and 2 non-coordination-note files. I'm delegating to /manage-github-pr, which owns branch creation, commit, PR opening, checks, review, and merge.
 ```
 
-The status is technically traceable to the transport-selection policy in `spx/21-spec-tree.enabler/76-merging.enabler/merging.md`, but it is the wrong operator surface. It leaks count-level classifier implementation detail, over-narrates delegation, and reads as a handoff rather than a lifecycle step the merge skill continues to own. A future merging-skill change should adjust the `/merge` transport-selection wording and eval expectations so the message names the selected transport and the policy reason at the user-facing level: coordination-note-only changes use direct-push, overlay-declared transport wins, otherwise GitHub PR. The message should avoid raw changed-file counts unless the count is itself the decision boundary the operator needs to inspect.
+The status is technically traceable to the transport-selection policy in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, but it is the wrong operator surface. It leaks count-level classifier implementation detail, over-narrates delegation, and reads as a handoff rather than a lifecycle step the merge skill continues to own. A future merging-skill change should adjust the `/merge` transport-selection wording and eval expectations so the message names the selected transport and the policy reason at the user-facing level: coordination-note-only changes use direct-push, overlay-declared transport wins, otherwise GitHub PR. The message should avoid raw changed-file counts unless the count is itself the decision boundary the operator needs to inspect.
 
 ## Generated instruction-block lifecycle vocabulary window
 
@@ -52,7 +52,7 @@ the producing merge lifecycle behavior:
   after the producer changes.
 
 Revisit condition: run `/apply` on
-`spx/21-spec-tree.enabler/76-merging.enabler` to convert
+`spx/21-spec-tree.enabler/76-merge.enabler` to convert
 `evals/local-completion-boundary` and `evals/transport-selection` to
 producer-coupled evals, or reclassify/remove the `[eval]` assertions they no
 longer support. Rerun `eval-evidence-auditor` over the repaired eval artifacts.

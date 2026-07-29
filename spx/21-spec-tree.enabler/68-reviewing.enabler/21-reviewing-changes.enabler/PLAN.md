@@ -70,6 +70,6 @@ Objective: merge the review prompt single-source cleanup without carrying the lo
 
 Reconstruct the preserved review-journal and result-contract work from current `origin/main` as one review-owned merge cycle only when the patch has one observable result: the review skill records grounded findings in a sealed journal and returns one raw run token through source-owned evidence infrastructure.
 
-The extraction includes this node's spec, review prompt, journal runner and result contracts, co-located tests and evals, and the smallest review-specific harness or generator changes they require. Eval-harness capabilities that can merge independently remain in `spx/13-infrastructure.enabler/25-eval-harness.enabler/PLAN.md`; merge policy that consumes the token remains in `spx/21-spec-tree.enabler/76-merging.enabler/PLAN.md`.
+The extraction includes this node's spec, review prompt, journal runner and result contracts, co-located tests and evals, and the smallest review-specific harness or generator changes they require. Eval-harness capabilities that can merge independently remain in `spx/13-infrastructure.enabler/25-eval-harness.enabler/PLAN.md`; merge policy that consumes the token remains in `spx/21-spec-tree.enabler/76-merge.enabler/PLAN.md`.
 
 **Revisit condition:** replace this section with the extracted branch and PR identity after focused tests, evidence audits, and rollback analysis establish one review-owned cluster.

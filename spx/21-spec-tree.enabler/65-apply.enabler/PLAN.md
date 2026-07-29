@@ -17,7 +17,7 @@ Run one independently mergeable cycle at a time. Load the target node's plan bef
 3. `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/PLAN.md`
 4. `spx/21-spec-tree.enabler/68-audit.enabler/PLAN.md`
 5. `spx/43-typescript.enabler/25-typescript-standards.enabler/29-typescript-code.enabler/PLAN.md`
-6. `spx/21-spec-tree.enabler/76-merging.enabler/PLAN.md`
+6. `spx/21-spec-tree.enabler/76-merge.enabler/PLAN.md`
 
 ## Apply-local procedure
 

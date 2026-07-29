@@ -38,7 +38,7 @@ SELECTED_GATE_WORKFLOW_PATH = "scripts/check.sh"
 # arbitrary representatives of a glob domain and own their own values.
 SELECTED_GATE_EVAL_WORKFLOW_PATH = EVAL_TRIGGER_WORKFLOW
 SELECTED_GATE_EVAL_DEFINITION_PATH = (
-    "spx/21-spec-tree.enabler/76-merging.enabler/evals/transport-selection/eval.toml"
+    "spx/21-spec-tree.enabler/76-merge.enabler/evals/transport-selection/eval.toml"
 )
 SELECTED_GATE_CHECK_WORKFLOW_PATH = CHECK_WORKFLOW_PATH
 SELECTED_GATE_FULL_GATE_PATH = PYPROJECT_PATH

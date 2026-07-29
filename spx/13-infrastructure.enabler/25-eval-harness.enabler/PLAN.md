@@ -41,7 +41,7 @@ the `OUTCOMEENG_EVAL_STORE` PAT.
 
 The root merge-gate policy probes moved out of LLM evals and into
 deterministic mapping tests at
-`spx/21-spec-tree.enabler/76-merging.enabler/tests/test_merge_gate_policy.mapping.l1.py`.
+`spx/21-spec-tree.enabler/76-merge.enabler/tests/test_merge_gate_policy.mapping.l1.py`.
 The CI eval workflow now covers the authored PR management,
 PR opening, review-changes, and TypeScript test-ownership evals directly.
 
@@ -87,7 +87,7 @@ in `spx/12-shipped-scripting.adr.md`.
 
 - **Workflow**: `.github/workflows/spec-tree-evals.yml`
 - **Runner contract**: `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md:18`
-- **Gate-policy tests**: `spx/21-spec-tree.enabler/76-merging.enabler/tests/test_merge_gate_policy.mapping.l1.py`
+- **Gate-policy tests**: `spx/21-spec-tree.enabler/76-merge.enabler/tests/test_merge_gate_policy.mapping.l1.py`
 - **PR-authority PDR**: `spx/15-merging.pdr.md`
 - **Launch-in-CI + configurable-surface reference**: `outcomeeng/gh-actions` `spec-tree-review.yml`
 - **Prompt-caching decision**: `spx/13-infrastructure.enabler/25-eval-harness.enabler/15-prompt-caching.adr.md`
