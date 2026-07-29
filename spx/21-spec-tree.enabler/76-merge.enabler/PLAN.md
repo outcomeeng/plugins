@@ -32,7 +32,7 @@ The readiness gates become:
 - Absence of `PREVIEW`, `DEPLOY`, or `RELEASE` declarations means a no-op phase, never a blocker.
 - Generic shipped plugin content stays portable: no marketplace commands, Vercel-specific assumptions, repo-local paths, or single-consumer verification policy.
 - A consumer's release action is that consumer's own overlay declaration, never shared methodology.
-- `spx/21-spec-tree.enabler/76-merging.enabler/15-merging.pdr.md` does not exist; the governing decision is the product-level `spx/15-merging.pdr.md`. Keep it there unless a later decomposition has a concrete reason to split it.
+- `spx/21-spec-tree.enabler/76-merge.enabler/15-merging.pdr.md` does not exist; the governing decision is the product-level `spx/15-merging.pdr.md`. Keep it there unless a later decomposition has a concrete reason to split it.
 
 ### First Observable Slice
 
@@ -54,11 +54,11 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
    - Replace `PRODUCTION_READINESS` with `DEPLOYMENT_READINESS` and `RELEASE_READINESS`.
    - Preserve `MERGE_READINESS`, the finding-disposition policy, transport neutrality, assigned-worktree discipline, no time-based settle, and pre-mutation confirmation as an overlay touch-point rather than a gate.
    - Align first affected specs in the same changeset:
-     - `spx/21-spec-tree.enabler/76-merging.enabler/merging.md`
-     - `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/github-pr.md`
-     - `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/32-opening-pr.enabler/opening-pr.md`
-     - `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/54-managing-pr.enabler/managing-pr.md`
-     - `spx/21-spec-tree.enabler/76-merging.enabler/32-direct-push.enabler/direct-push.md`
+     - `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`
+     - `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/github-pr.md`
+     - `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/32-opening-pr.enabler/opening-pr.md`
+     - `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/54-managing-pr.enabler/managing-pr.md`
+     - `spx/21-spec-tree.enabler/76-merge.enabler/32-direct-push.enabler/direct-push.md`
    - Record any lower-layer implementation left outside the PR in this `PLAN.md`, tied to the exact affected node.
    - Verification: `spx validation markdown`, `spx spec status --format json`, and the focused tests or evals whose assertions change.
 
@@ -112,17 +112,17 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
 ### Surfaces Known to Change
 
 - `spx/15-merging.pdr.md`
-- `spx/21-spec-tree.enabler/76-merging.enabler/merging.md`
-- `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/github-pr.md`
-- `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/32-opening-pr.enabler/opening-pr.md`
-- `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/54-managing-pr.enabler/managing-pr.md`
-- `spx/21-spec-tree.enabler/76-merging.enabler/32-direct-push.enabler/direct-push.md`
+- `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`
+- `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/github-pr.md`
+- `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/32-opening-pr.enabler/opening-pr.md`
+- `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/54-managing-pr.enabler/managing-pr.md`
+- `spx/21-spec-tree.enabler/76-merge.enabler/32-direct-push.enabler/direct-push.md`
 - `src/plugins/spec-tree/skills/merging-standards/SKILL.md`
 - `src/plugins/spec-tree/skills/merge/SKILL.md`
 - `src/plugins/spec-tree/skills/open-pr/SKILL.md`
 - `src/plugins/spec-tree/skills/manage-github-pr/SKILL.md`
 - `src/plugins/spec-tree/skills/manage-pr/SKILL.md`
-- lifecycle eval prompts, cases, histories, and tests under `spx/21-spec-tree.enabler/76-merging.enabler/`
+- lifecycle eval prompts, cases, histories, and tests under `spx/21-spec-tree.enabler/76-merge.enabler/`
 
 ### Naming Guardrails
 

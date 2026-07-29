@@ -3,7 +3,7 @@
      before sending the prompt to the model.
 
      Probe scope: the eval verifies /merge's transport selection and
-     delegation from spx/21-spec-tree.enabler/76-merging.enabler/merging.md
+     delegation from spx/21-spec-tree.enabler/76-merge.enabler/merge.md
      and spx/15-merging.pdr.md — given the changeset classification counts
      and the spx/local/merging.md overlay, which transport /merge selects,
      why, where it delegates, and whether it presents a pre-mutation

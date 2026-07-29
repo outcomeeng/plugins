@@ -25,13 +25,22 @@ elif git rev-parse --verify --quiet "refs/heads/$branch_from_pr" >/dev/null; the
   local_branch_sha=$(git rev-parse "refs/heads/$branch_from_pr")
   if git merge-base --is-ancestor "$local_branch_sha" "origin/$base_from_pr"; then
     git branch -d "$branch_from_pr"
+  elif cherry_output=$(git cherry "origin/$base_from_pr" "$local_branch_sha") && ! printf '%s\n' "$cherry_output" | grep -q '^+'; then
+    # A rebase merge rewrites commit identities one-to-one, so ancestry fails while
+    # every branch patch exists upstream; a git cherry that succeeds and reports no
+    # `+` commit proves patch equivalence, and `git branch -D` is required because
+    # `-d` re-checks ancestry. A failed git cherry proves nothing and falls through
+    # to retention, as does a multi-commit squash, which collapses its patches into
+    # one upstream commit that no per-commit patch-id matches.
+    git branch -D "$branch_from_pr"
   else
-    echo "Local branch kept: branch=$branch_from_pr tip=$local_branch_sha reason=not-ancestor-of-origin/$base_from_pr"
+    echo "Local branch kept: branch=$branch_from_pr tip=$local_branch_sha reason=not-proven-merged-by-ancestry-or-patch-equivalence-to-origin/$base_from_pr"
+    git cherry -v --abbrev=40 "origin/$base_from_pr" "$local_branch_sha" || true
   fi
 fi
 git status --porcelain
 ```
 
-Merge while the branch is checked out, then detach, run post-cleanup checks, remove the remote ref when present, and delete the local branch only when unoccupied and fully merged by ancestry. Retain every branch that fails those predicates and report its exact evidence.
+Merge while the branch is checked out, then detach, run post-cleanup checks, remove the remote ref when present, and delete the local branch only when unoccupied and fully merged — its tip an ancestor of the fetched base, or every branch commit patch-equivalent to an upstream commit, the state a rebase merge or single-commit squash leaves behind. A multi-commit squash collapses its patches into one upstream commit that no per-commit patch-id matches, so that branch fails the proof, and a `git cherry` invocation that itself fails proves nothing. Retain every branch whose proof fails or cannot run and report its exact evidence, including the `git cherry` output naming each unmatched commit.
 
 </merge_cleanup>

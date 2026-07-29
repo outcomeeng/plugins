@@ -2,6 +2,10 @@
 The shared merge-lifecycle vocabulary of concepts, predicates, gates, commands, tokens, and closeout records.
 </objective>
 
+<contents>
+Top-level sections in this reference, in order: `<repo_local_overlay>`, `<overlay_safety_checks>`, `<delivered_value_boundary>`, `<close_phase>`, `<branch_state_closeout>`, `<local_deterministic_scope>`, `<assigned_cwd_worktree_discipline>`, `<occupancy_preflight>`, `<branch_hygiene>`, `<branch_topology>`, `<push_semantics>`, `<base_sync>`, `<local_review_invocation>`, `<local_review_process_exception>`, `<authority_gates>`, `<merge_cleanup>`, `<pr_check_wait>`, `<review_inspection>`, `<review_classification>`, `<auditor_verdicts>`, `<action_tokens>`, `<self_reference>`, `<failure_modes>`, `<success_criteria>`.
+</contents>
+
 <repo_local_overlay>
 When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization; a local overlay supplements skill behavior and does not declare product truth.
 
@@ -59,7 +63,7 @@ The closeout record includes:
 - Merged branch name.
 - Whether the remote branch still exists.
 - Whether the local branch still exists.
-- Whether the local branch is fully merged into `origin/<base>`.
+- Whether the local branch is fully merged into `origin/<base>`, by ancestry or by patch equivalence.
 - Whether any live worktree checks out the local branch.
 - Whether any preservation branch was created.
 - For each preservation branch, whether its commits are exact ancestors of `origin/<base>`.
@@ -72,7 +76,7 @@ Use full branch names and full commit SHAs. Do not abbreviate identity values in
 Safe cleanup policy:
 
 - If the remote feature branch exists after merge, delete it through the merge lifecycle's approved deletion command.
-- If the local feature branch exists, its remote ref is absent, no live worktree checks it out, and its tip is an ancestor of `origin/<base>`, delete it with `git branch -d <branch>` regardless of upstream configuration.
+- If the local feature branch exists, its remote ref is absent, no live worktree checks it out, and its work is fully upstream — its tip an ancestor of `origin/<base>`, or every branch commit patch-equivalent to an `origin/<base>` commit (`git cherry -v --abbrev=40 origin/<base> <branch>` reports no `+` commit, the state a rebase merge or single-commit squash leaves behind; a multi-commit squash collapses its patches into one upstream commit that no per-commit patch-id matches, so that branch stays retained with its evidence) — delete it regardless of upstream configuration: `git branch -d <branch>` on the ancestry path, `git branch -D <branch>` on the patch-equivalence path, because `-d` itself re-checks ancestry and refuses a rebase-merged branch.
 - If a preservation branch has no remote and all substantive commits are present on `origin/<base>` by ancestry or patch equivalence, report it as safe to delete and delete it unless the branch name or operator instruction marks it as retained evidence.
 - Never delete a branch checked out in another live worktree. Report the exact worktree path and branch instead.
 - Never delete a branch whose commits are neither ancestors nor patch-equivalent to `origin/<base>`. Report the unmatched full SHAs and keep the branch.
@@ -454,17 +458,22 @@ Before emitting a merge lifecycle action token, apply the action-token reference
 **Failure 1: Claude required gone-upstream tracking for local cleanup.**
 What happened: Claude retained a safely merged local branch because it had no upstream configuration.
 Why it failed: Upstream configuration is optional metadata and does not establish branch safety.
-How to avoid: Apply `<branch_state_closeout>` using remote-ref absence, worktree occupancy, and ancestry.
+How to avoid: Apply `<branch_state_closeout>` using remote-ref absence, worktree occupancy, and ancestry or patch equivalence.
 
 **Failure 2: Claude force-deleted the local branch before proving safety.**
 What happened: Claude deleted the branch without proving its commits were present on the base.
 Why it failed: The branch could contain commits absent from the base.
-How to avoid: Follow the merge-cleanup reference loaded directly from the top-level `<reference_index>`: remove the remote ref first, prove the local tip is an ancestor, and use `git branch -d`.
+How to avoid: Follow the merge-cleanup reference loaded directly from the top-level `<reference_index>`: remove the remote ref first, prove the branch fully upstream — tip ancestry, or a `git cherry` run reporting no `+` commit — and delete only on that proof: `git branch -d` on ancestry, `git branch -D` only after the patch-equivalence proof.
 
 **Failure 3: Claude let `gh pr merge` clean up the branch.**
 What happened: Claude delegated local cleanup to the host CLI.
 Why it failed: Host or CLI behavior can switch onto a base held by another worktree and fail after merging.
 How to avoid: Pass `--delete-branch=false`, then run the explicit cleanup sequence.
+
+**Failure 4: Claude read a failed proof command as a passed proof.**
+What happened: Claude gated a force-delete on `[ -z "$(git cherry ... | grep '^+')" ]`, and a `git cherry` invocation that failed outright produced empty output that satisfied the test.
+Why it failed: An empty-string test on a command substitution cannot distinguish "the command succeeded and matched nothing" from "the command failed and printed nothing," so a proof that never ran authorized a destructive action.
+How to avoid: Gate any git-state proof on the proving command's own exit status (capture its output in one step, test its success with `&&`), and route every failed proof to the safe retention outcome.
 
 </failure_modes>
 

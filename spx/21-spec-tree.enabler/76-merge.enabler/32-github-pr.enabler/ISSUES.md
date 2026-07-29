@@ -13,7 +13,7 @@ Packaging, frontmatter intent, and closeout semantics use `[audit]`; determinist
 tests do not parse skill Markdown as a proxy for LLM-driven orchestration behavior.
 
 The eval lane can add scenarios mirroring the gate evals under
-`spx/21-spec-tree.enabler/76-merging.enabler`:
+`spx/21-spec-tree.enabler/76-merge.enabler`:
 
 - Add an `evals/<mode-slug>/` directory per mode with `eval.toml`,
   `cases.jsonl`, and `prompt.md` exercising mode detection from arguments
