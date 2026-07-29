@@ -6,6 +6,8 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 
 `spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler` owns the `.spx/sessions/` store and the `spx session` command contract every other concern consumes. `spx/21-spec-tree.enabler/76-sessions.enabler/25-handoff.enabler` owns closing a session; `spx/21-spec-tree.enabler/76-sessions.enabler/28-pickup.enabler` owns resuming one. The assertions below are the compaction contract, which is cross-cutting: it governs every session concern rather than any one of them.
 
+Whether an `spx session` command may run before the `SPEC_TREE_FOUNDATION` marker is live is declared at `spx/21-spec-tree.enabler/18-context-loading.enabler`, which states that exemption over `spx session`, `spx worktree status`, `spx diagnose`, and no-patch Git together. No node under this one restates it.
+
 ## Assertions
 
 ### Compliance
