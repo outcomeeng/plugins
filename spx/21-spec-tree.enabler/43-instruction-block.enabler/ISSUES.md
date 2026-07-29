@@ -1,16 +1,14 @@
 # Issues: Instruction Block
 
-## `/update-instruction-block` Step 3 and Step 5 read as prose where they enumerate cases
+## `/update-instruction-block` Step 5 reads as one paragraph over six topologies
 
 Step 5 of `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md` verifies six distinct first-encounter topologies — an established surface with a valid region, the bootstrap span mapping, one file missing, both files missing, a delegating body adopted, and tracked-versus-untracked recoverability — in one unbroken paragraph. An operator scanning it after a run parses the whole block to find the branch matching their topology. Step 3's ambiguity reports already use the per-branch bullet shape this section wants.
 
-Step 3's ambiguity catalog has the same shape: five report kinds — recency tie, one-sided, malformed, delegating, dirty — each a paragraph-length bullet, though all five share one structure (detection condition, recommendation when evidence is inconclusive, apply mechanism). A nested list or table over that shared structure reads faster than five paragraphs and lowers the chance one case's remedy is read onto another during a live reconcile.
-
 `<examples>` covers stale-router regeneration, delegation adoption, and a recency tie. The one-file-missing seeding topology that Step 4 and Step 5 both name carries no worked example.
 
-**Resolution shape**: restructure Step 5's verification into one bullet per topology, give Step 3's five report kinds a nested detection/recommendation/apply structure, and add a fourth example showing a repository with only one root instruction file present, its seeded counterpart, and the resulting region wrap.
+**Resolution shape**: restructure Step 5's verification into one bullet per topology, mirroring the nested detection/recommendation/apply shape Step 3's five report kinds now carry, and add a further example showing a repository with only one root instruction file present, its seeded counterpart, and the resulting region wrap.
 
-**Why it is large**: the restructure rewords all six topology branches and all five ambiguity bullets, not the clauses a delegation change appends, and the missing example is for a topology no delegation change touches. Both are editorial passes over the whole skill body whose surface is the file's structure rather than any one behavior, and each invalidates the skill-authoring gate for the entire surface — best taken in one pass gated by `skill-auditor` rather than folded into an unrelated behavior change.
+**Why it is large**: the restructure rewords all six topology branches, not the clauses a delegation change appends, and the missing example is for a topology no delegation change touches. Step 3's five ambiguity bullets are no longer part of this entry: a change edited one of them, which exhausted their deferral, and all five were restructured in that changeset. Both are editorial passes over the whole skill body whose surface is the file's structure rather than any one behavior, and each invalidates the skill-authoring gate for the entire surface — best taken in one pass gated by `skill-auditor` rather than folded into an unrelated behavior change.
 
 **Evidence**: surfaced by `instructions:audit-skills` on the changeset that added delegating-root-file adoption, as `worth-improving` findings on an otherwise approved surface. The same audit's two other findings are resolved in that changeset: the three stop conditions carry explicit `GATE` labels, and the two success criteria that asked for a confirmation now name the diff that decides them.
 
