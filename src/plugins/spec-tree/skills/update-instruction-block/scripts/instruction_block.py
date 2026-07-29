@@ -33,8 +33,9 @@ a surface already current; the initial topologies (one file present, a symlinked
 delegating file, mutual delegation, two identical files, two near-identical files above and below
 the 80% span threshold, two independent files); delegation candidacy on both sides of each fact it
 reads (a body naming the other root file within the bound, exactly at it, and one character past
-it, and a body naming no other root file); a write that carries no operator answer and one that
-carries ``--adopt``; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
+it, and a body naming no other root file); a write that carries no operator answer, one that
+carries ``--adopt``, and one whose ``--adopt`` names a pointer body and is refused; a reconcile
+reporting a pointer body; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
 and an operator tie break; a dirty root file; and the CLI rejections (missing or non-directory repo root, missing or directory template, a
 template without ``template_version``, a symlink escaping the repository, an unsupported language
 token, a duplicate flag). The executable cases live in the governing node's ``tests/`` directory.
