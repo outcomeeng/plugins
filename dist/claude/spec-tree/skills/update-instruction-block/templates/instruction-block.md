@@ -1,5 +1,5 @@
 ---
-template_version: "0.34.0"
+template_version: "0.35.0"
 template_source: spec-tree
 ---
 
@@ -167,6 +167,12 @@ The configured verifier and reviewer roles this router names are pre-authorized.
 - **NEVER** dispatch a sub-agent this router does not name merely because it is discovered, available, or plausibly useful.
 - **NEVER** run a verification skill — audit or review — in the main conversation; the separate context is what keeps the verdict free of that conversation's bias.
 - **ALWAYS** treat the gate as blocked when a named role cannot be dispatched or does not return: finish the deterministic verification, then report the exact dispatch attempted and how it failed.
+
+### Agent identity in generated artifacts
+
+**NEVER** name the agent or its runtime in an operational artifact — a branch name, commit message, pull-request title or body, review comment, or authorship marker written into a product file. Describe the work, never who performed it. Exact filesystem paths, package and tool names, quoted command output, and operator-supplied text keep their required spelling.
+
+**ALWAYS** confine that ban to operational artifacts. Instruction content that documents agent behavior names the agent as its subject by design; stripping that subject out of authored guidance to satisfy this rule misapplies it rather than complying with it.
 
 ### Operator questions
 

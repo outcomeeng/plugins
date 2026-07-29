@@ -2,7 +2,7 @@
 
 ## Absorb the personal project-instruction file into the block
 
-`~/Code/.claude/CLAUDE.md` (the operator's project-level instruction file, outside this repository) is to be deleted. Its sections were reviewed one by one against the router block and the `/understand` foundation, and each was dispositioned. This entry records those decisions so the migration can be executed as its own changeset.
+The operator's project-level instruction file, outside this repository, is deleted. Its sections were reviewed one by one against the router block and the `/understand` foundation, and each was dispositioned. Every retained rule therefore exists nowhere until it lands in the home recorded below.
 
 Three sections need no action: `<recording>`, `<no_origin_distinction>`, and `<touched_file_debt>` are already carried by the foundation's `<imperfection_protocol>`, whose wording is broader — debt the change causes, surfaces, or invalidates is fix-now wherever it lives — and which additionally carries `<expense_ceiling>`.
 
@@ -10,12 +10,12 @@ Three sections need no action: `<recording>`, `<no_origin_distinction>`, and `<t
 
 | Section                           | Placement                                | Shape                                                                                                                                          |
 | --------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<self_reference_policy>`         | near Autonomy Boundary                   | operational artifacts never name the agent identity; the authored-skill-content exception stated explicitly in the same rule                   |
+| `<self_reference_policy>` — done  | Autonomy Boundary                        | landed as `### Agent identity in generated artifacts`; both product-content citations now name that rule                                       |
 | `<skill_failure_no_substitution>` | stop trigger under When to Invoke Skills | a failed invocation is diagnosed and reported, never substituted by reading the skill file, pre-compaction context, or memory                  |
 | `<actionable_waits>`              | bullets under `### Operator questions`   | a blocked report carries the exact command, what it does, what stays blocked, and an offer — restated in full on every check                   |
 | `<findings_vs_expected_state>`    | classification half only                 | classify an observation before calling it a finding; expected state is never a finding. The Known/Likely/Investigate/Fix vocabulary is dropped |
 
-The `<self_reference_policy>` placement also resolves a dangling citation: the product's root instruction file references that section by name while the router carries no such rule, so deleting the personal file without this move breaks the reference.
+That first row is applied. The deletion left both root files citing a rule that existed nowhere and the ban itself unenforced, so it was fixed by the changeset that observed it rather than deferred. The three remaining rows are cited by nothing, so their absence is quiet — they are simply unenforced until their own pass runs.
 
 ### Into `/wait-for-load`
 
