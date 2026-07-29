@@ -37,8 +37,6 @@ Read `$ARGUMENTS`, trim it, and match it against the table below. One verb runs 
 
 Every plugin installed from one marketplace snapshot carries the same marketplace line, because a plugin rename is unreadable from the renamed plugin once its old identity stops resolving. Plugins installed or refreshed at different times carry different snapshots, so this copy is current only as far as its newest entry — the topmost `##` heading, since entries run newest first. Report that date alongside the marketplace line so the reader can tell whether a later event falls outside this copy.
 
-No installed plugin carries a methodology changelog. A repository declares the methodology version it follows in its own `spx.config.yaml`; direct a reader asking what changed in the methodology to that declaration and the source it names.
-
 </changelogs>
 
 <version_reporting>
@@ -116,7 +114,6 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 - Exactly one verb runs per invocation, defaulting to `help`.
 - `version` reads only the skill-directory-relative manifest path named above, never another copy on disk.
 - A reported marketplace date equals the topmost `##` heading in the marketplace changelog this plugin carries.
-- A methodology-changelog request is directed to the repository's own `spx.config.yaml` declaration and the source it names, never answered from a plugin changelog.
 - Placement and pruning happen through the bundled script, never by hand.
 - Every file written or removed carries this plugin's namespace prefix; no other file in the agent directory changes.
 - `check` writes nothing and reports drift.

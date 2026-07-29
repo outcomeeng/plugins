@@ -4,19 +4,18 @@ Spec Tree methodology skills and agents: `/understand`, `/contextualize`, `/auth
 
 What changed in **this plugin**, for a consumer repository. An entry appears when a change alters what a consumer can rely on, must do, or must know.
 
-This plugin operationalizes the methodology and is versioned separately from it, so an entry here says what these skills now do, never what the methodology says. A repository declares the methodology version it follows in `spx.config.yaml`.
-
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
 ## 0.88.0
 
 ### Removed
 
-- **`METHODOLOGY-CHANGELOG.md` no longer ships.** It recorded methodology releases by version number, edition label, and date. The methodology names its versions rather than numbering them, so those entries identified nothing that exists. A repository declares the methodology version it follows in its own `spx.config.yaml`, which `spx` resolves against an installed methodology source.
+- `METHODOLOGY-CHANGELOG.md`
+- `Skill` from the lifecycle skill's `allowed-tools`
 
 ### Changed
 
-- **A methodology-changelog request is directed to `spx.config.yaml`.** No installed plugin carries a methodology changelog, and the lifecycle skill no longer offers one. `help` directs the reader to that declaration and the source it names. The skill's `Skill` tool grant is withdrawn with it — it existed only to reach this plugin's copy from another plugin.
+- `help` reports two changelogs instead of three
 
 ## 0.87.2
 

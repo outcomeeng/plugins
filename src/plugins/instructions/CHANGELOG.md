@@ -8,9 +8,9 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ## 0.17.0
 
-### Changed
+### Removed
 
-- **A methodology-changelog request is directed to `spx.config.yaml`.** No installed plugin carries a methodology changelog, and the lifecycle skill no longer offers one. A repository declares the methodology version it follows in its own `spx.config.yaml`; `help` directs the reader to that declaration and the source it names.
+- `Skill` from the lifecycle skill's `allowed-tools`
 
 ## 0.16.0
 
