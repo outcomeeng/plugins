@@ -12,7 +12,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Removed
 
-- **`METHODOLOGY-CHANGELOG.md` no longer ships.** It recorded methodology releases by version number, edition label, and date. The methodology names its versions rather than numbering them, so those entries identified nothing that exists. A repository declares the methodology version it follows in its own `spx.config.yaml`, and `spx` reads and enforces that declaration.
+- **`METHODOLOGY-CHANGELOG.md` no longer ships.** It recorded methodology releases by version number, edition label, and date. The methodology names its versions rather than numbering them, so those entries identified nothing that exists. A repository declares the methodology version it follows in its own `spx.config.yaml`, which `spx` resolves against an installed methodology source.
 
 ### Changed
 
