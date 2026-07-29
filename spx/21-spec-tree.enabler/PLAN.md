@@ -32,7 +32,7 @@ This work is **blocked on the `spx` CLI** adopting the claim-and-reproduction mo
 Product specs (`/contextualize` the node, then edit):
 
 - `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` — work queue derives from `spx spec status` (specified nodes), not the `spx/EXCLUDE` fallback.
-- `spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md` — continuation/closure signal: "a `spx/EXCLUDE` entry" → "a `specified` node".
+- `spx/21-spec-tree.enabler/76-sessions.enabler/25-handoff.enabler/20-closure.enabler/closure.md` — continuation/closure signal: "a `spx/EXCLUDE` entry" → "a `specified` node".
 - `spx/15-validation.enabler/32-reference-portability.enabler/reference-portability.md` — drop `spx/EXCLUDE` from the universal-path example set once the file is removed.
 
 Authored skills + methodology under `src/plugins/` (run `instructions:skill-auditor` after):
