@@ -494,23 +494,6 @@ def scenario_evidence_contract() -> tuple[str, ...]:
     )
 
 
-def mapping_evidence_contract() -> tuple[str, ...]:
-    """Return the independent case manifest required by mapping evidence."""
-    module = load_instruction_block_module()
-    return (
-        *(f"duplicate-flag[{option}]" for option in module.CLI_OPTION_NAMES),
-        *(
-            f"extension[{extension}]"
-            for extension in sorted(module.LANGUAGE_BY_EXTENSION)
-        ),
-        *(f"language-block[{language}]" for language in TEMPLATE_LANGUAGES),
-        "detected-language-set",
-        "router-state-report",
-        "shared-region-state-report",
-        "span-ratio-wrap-decision",
-    )
-
-
 def property_evidence_contract() -> tuple[str, ...]:
     """Return the independent case manifest required by property evidence."""
     return (

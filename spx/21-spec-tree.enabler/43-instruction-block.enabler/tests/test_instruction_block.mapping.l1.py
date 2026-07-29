@@ -77,11 +77,78 @@ def _topology_cases() -> tuple[_TopologyCase, ...]:
     )
 
 
-def test_instruction_block_mapping_evidence() -> None:
-    assert (
-        evidence.mapping_evidence_run().executed
-        == evidence.mapping_evidence_declarations()
+def test_repeated_cli_flag_maps_to_its_rejection() -> None:
+    for option in MODULE.CLI_OPTION_NAMES:
+        observed = evidence.observe_duplicate_cli_flag(option)
+        assert observed.detected == option, option
+        assert observed.exit_code == 2, option
+        assert observed.stderr == f"{MODULE.DUPLICATE_FLAG_ERROR_PREFIX}{option}", (
+            option
+        )
+
+
+def test_test_file_extension_maps_to_its_language() -> None:
+    for extension, language in sorted(MODULE.LANGUAGE_BY_EXTENSION.items()):
+        assert evidence.observe_extension_language(extension) == (language, language), (
+            extension
+        )
+
+
+def test_detected_language_set_is_the_mapped_extensions(
+    tmp_path: pathlib.Path,
+) -> None:
+    detected, mapped = evidence.observe_detected_language_set(tmp_path / "spx")
+    assert detected == mapped
+
+
+def test_language_block_appears_exactly_when_the_language_is_enabled() -> None:
+    for language in harness.TEMPLATE_LANGUAGES:
+        observed = evidence.observe_language_block(language)
+        assert observed.heading in observed.enabled, language
+        assert observed.heading not in observed.disabled, language
+
+
+def test_router_block_state_maps_to_its_check_report(tmp_path: pathlib.Path) -> None:
+    current = MODULE.InstructionStatus.CURRENT.value
+    absent = MODULE.InstructionStatus.ABSENT.value
+    stale = MODULE.InstructionStatus.STALE.value
+    assert evidence.observe_check_router_states(tmp_path) == {
+        "current": (0, current),
+        "absent": (0, absent),
+        "version-behind": (0, stale),
+        "language-set-differs": (0, stale),
+    }
+
+
+def test_shared_region_state_maps_to_its_check_report(tmp_path: pathlib.Path) -> None:
+    current = MODULE.InstructionStatus.CURRENT.value
+    stale = MODULE.InstructionStatus.STALE.value
+    assert evidence.observe_check_shared_region_states(tmp_path) == {
+        "byte-identical": (0, current),
+        "diverged": (0, stale),
+        "one-sided": (0, stale),
+    }
+
+
+def test_span_ratio_maps_to_the_wrap_decision() -> None:
+    identical = evidence.observe_span_ratio(
+        harness.ROOT_SHARED_BODY, harness.ROOT_SHARED_BODY
     )
+    assert identical.span == harness.ROOT_SHARED_BODY
+    assert identical.ratio > MODULE.BOOTSTRAP_SHARED_THRESHOLD
+    assert all(regions for regions in identical.wrapped_regions)
+
+    near = evidence.observe_span_ratio(
+        harness.ROOT_NEAR_IDENTICAL_CLAUDE, harness.ROOT_NEAR_IDENTICAL_CODEX
+    )
+    assert near.span == harness.ROOT_NEAR_IDENTICAL_SHARED
+    assert near.ratio > MODULE.BOOTSTRAP_SHARED_THRESHOLD
+
+    divergent = evidence.observe_span_ratio(
+        harness.ROOT_CLAUDE_BODY, harness.ROOT_AGENTS_BODY
+    )
+    assert divergent.ratio <= MODULE.BOOTSTRAP_SHARED_THRESHOLD
+    assert not any(regions for regions in divergent.wrapped_regions)
 
 
 def test_root_topology_maps_to_bootstrap_outcome(tmp_path: pathlib.Path) -> None:
