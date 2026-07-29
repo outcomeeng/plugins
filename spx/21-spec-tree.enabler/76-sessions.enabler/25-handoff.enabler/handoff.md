@@ -10,4 +10,4 @@ Closure, continuation disposition, document shape, and the operator closeout are
 
 ### Compliance
 
-- ALWAYS: the `/handoff` skill presents `spx session handoff` payload input by supported harness environment — quoted heredoc for interactive Claude Code and Codex sessions, and one physical `printf '%s\n' ... | spx session handoff` line for programmatic runners that require single-line commands — per `spx/15-agent-tools.pdr.md` ([audit])
+- NEVER: `/handoff` removes the runtime worktree occupancy claim; handoff creates fresh session documents when a continuation reader is needed, archives superseded same-conversation artifacts after the fresh document is verified, and steps off the Git branch when required, while the live worktree claim remains present until a later claim replaces it or liveness marks it free ([audit])
