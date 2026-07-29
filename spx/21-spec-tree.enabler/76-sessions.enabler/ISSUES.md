@@ -17,3 +17,13 @@ Same content, same evidence mechanism, two nodes: duplication under `/understand
 **Why this is not resolved in the changeset that surfaced it**: that changeset is a decomposition, and `spx/21-spec-tree.enabler/54-refactoring.enabler/refactoring.md` forbids changing assertion semantics during tree surgery. Deleting the assertion was attempted there and correctly rejected by the changeset review as an assertion dropped mid-refactor. Removing a declaration is a content change owing its own spec-audit justification, not a side effect of moving files.
 
 **Resolution shape**: delete the assertion from `spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler/session-store.md` in a changeset whose only subject is that removal, confirming first that `spx/21-spec-tree.enabler/18-context-loading.enabler` remains the declaring node and that no consumer loses the rule from its context.
+
+## 3. The checkout-currency assertion cites a decision that does not state the rule
+
+`spx/21-spec-tree.enabler/76-sessions.enabler/28-pickup.enabler/pickup.md` asserts that `/pickup` brings the checkout current for every `git_ref` kind before presenting session detail, citing `spx/21-spec-tree.enabler/76-sessions.enabler/28-pickup.enabler/20-claim-verification.adr.md`. That decision covers the reconciliation script's mechanics — frontmatter sourcing, the injected runner, the verdict vocabulary, read-only-ness — and states no rule about bringing a checkout current or about `git_ref` kinds.
+
+`spx/21-spec-tree.enabler/76-sessions.enabler/13-handoff-persistence.adr.md` does state it: "`/pickup` fetches and checks out the branch `git_ref` names ... reading in place when `git_ref` is the default branch or a commit SHA."
+
+**Why this is not resolved in the changeset that surfaced it**: that changeset is a decomposition. `spx/21-spec-tree.enabler/54-refactoring.enabler/refactoring.md` forbids changing assertion semantics during tree surgery, and an assertion's governing-decision citation is part of its meaning. The corrected citation was written there and the changeset review rejected it as a semantic change mid-refactor, consistently with the same review rejecting a deleted assertion in the same changeset.
+
+**Resolution shape**: repoint the citation to `spx/21-spec-tree.enabler/76-sessions.enabler/13-handoff-persistence.adr.md` in a changeset whose subject is that correction, confirming the decision still reaches this node from index 13.
