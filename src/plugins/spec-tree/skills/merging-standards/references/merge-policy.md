@@ -2,6 +2,10 @@
 The shared merge-lifecycle vocabulary of concepts, predicates, gates, commands, tokens, and closeout records.
 </objective>
 
+<contents>
+Top-level sections in this reference, in order: `<repo_local_overlay>`, `<overlay_safety_checks>`, `<delivered_value_boundary>`, `<close_phase>`, `<branch_state_closeout>`, `<local_deterministic_scope>`, `<assigned_cwd_worktree_discipline>`, `<occupancy_preflight>`, `<branch_hygiene>`, `<branch_topology>`, `<push_semantics>`, `<base_sync>`, `<local_review_invocation>`, `<local_review_process_exception>`, `<authority_gates>`, `<merge_cleanup>`, `<pr_check_wait>`, `<review_inspection>`, `<review_classification>`, `<auditor_verdicts>`, `<action_tokens>`, `<self_reference>`, `<failure_modes>`, `<success_criteria>`.
+</contents>
+
 <repo_local_overlay>
 When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization; a local overlay supplements skill behavior and does not declare product truth.
 
