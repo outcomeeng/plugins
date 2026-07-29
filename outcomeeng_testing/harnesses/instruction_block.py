@@ -454,46 +454,6 @@ HARNESS_CODEX = _GENERATED_CASES.harness_codex
 TEMPLATE_HARNESSES = _GENERATED_CASES.template_harnesses
 
 
-def scenario_evidence_contract() -> tuple[str, ...]:
-    """Return the independent case manifest required by scenario evidence."""
-    return (
-        "both_files_identical_except_harness_spans",
-        "cli_check_marks_router_not_first_as_stale",
-        "cli_check_reports_absent_when_one_file_missing",
-        "cli_check_treats_language_order_as_set",
-        "cli_detects_languages_from_test_extensions",
-        "cli_reconcile_from_applies_operator_tie_break",
-        "cli_reconcile_reports_no_change_when_regions_agree",
-        "cli_reconcile_requires_repo_root",
-        "cli_rejects_directory_template",
-        "cli_rejects_missing_repo_root",
-        "cli_rejects_missing_template",
-        "cli_rejects_non_directory_repo_root",
-        "cli_rejects_root_symlink_escaping_repo",
-        "cli_rejects_spx_symlink_during_language_detection",
-        "cli_rejects_template_without_frontmatter_version",
-        "cli_write_without_repo_root_exits",
-        "diverged_shared_region_reconciles_to_more_recent_side",
-        "newer_template_adds_section_preserving_shared_region",
-        "one_sided_shared_region_is_reported_ambiguous",
-        "quoted_router_closing_marker_after_block_is_preserved",
-        "quoted_router_marker_in_prose_is_preserved",
-        "quoted_shared_fence_in_prose_is_not_a_region",
-        "recency_tie_is_reported_ambiguous",
-        "reconcile_makes_no_change_to_a_dirty_file",
-        "reconcile_replaces_losing_region_whole_without_blending",
-        "reconcile_reports_malformed_fence_as_ambiguous",
-        "reconcile_skips_a_malformed_duplicate_name",
-        "reconcile_uses_region_recency_not_whole_file_recency",
-        "region_line_range_covers_content_lines_only",
-        "router_marker_format",
-        "template_symlink_is_rejected",
-        "unparseable_version_is_stale",
-        "write_preserves_shared_region_and_independent_prose",
-        "write_produces_both_files_language_and_harness_filtered",
-    )
-
-
 def property_evidence_contract() -> tuple[str, ...]:
     """Return the independent case manifest required by property evidence."""
     return (
