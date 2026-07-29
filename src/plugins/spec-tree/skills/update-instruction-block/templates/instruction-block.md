@@ -1,5 +1,5 @@
 ---
-template_version: "0.33.1"
+template_version: "0.34.0"
 template_source: spec-tree
 ---
 
@@ -167,6 +167,23 @@ The configured verifier and reviewer roles this router names are pre-authorized.
 - **NEVER** dispatch a sub-agent this router does not name merely because it is discovered, available, or plausibly useful.
 - **NEVER** run a verification skill — audit or review — in the main conversation; the separate context is what keeps the verdict free of that conversation's bias.
 - **ALWAYS** treat the gate as blocked when a named role cannot be dispatched or does not return: finish the deterministic verification, then report the exact dispatch attempted and how it failed.
+
+### Operator questions
+
+<!-- harness:claude -->
+
+Raise an operator question through {{! tool('ask_user', 'claude') !}}, never as prose the operator has to answer in free text. Reserve it for an answer that changes what happens next and that no loaded skill, decision, spec, or command output settles — a product-intent conflict a rebase cannot decide, a blocked expense ceiling, or a resolution the evidence leaves genuinely open. Name the exact blocked action, what each option does, and a pause-and-inspect choice.
+
+<!-- /harness:claude -->
+
+<!-- harness:codex -->
+
+Raise an operator question through {{! tool('ask_user', 'codex') !}}, never as prose the operator has to answer in free text. Reserve it for an answer that changes what happens next and that no loaded skill, decision, spec, or command output settles — a product-intent conflict a rebase cannot decide, a blocked expense ceiling, or a resolution the evidence leaves genuinely open. Name the exact blocked action, what each option does, and a pause-and-inspect choice.
+
+<!-- /harness:codex -->
+
+- **ALWAYS** finish every action that does not depend on the answer first, so the question is the only thing outstanding when it is asked.
+- **NEVER** raise one to confirm work already authorized, to report progress, or to choose an option the loaded truth already decides.
 
 ## Mutation Status Updates
 
