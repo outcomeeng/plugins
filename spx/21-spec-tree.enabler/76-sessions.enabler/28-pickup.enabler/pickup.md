@@ -4,7 +4,7 @@ PROVIDES the resumption side of session continuity — reconciling a session doc
 SO THAT an agent claiming a session written by another context
 CAN act on what the repository supports now rather than on what was true when the session was written
 
-Claim reconciliation and the resumption flow it feeds are governed by the children below. `spx/21-spec-tree.enabler/76-sessions.enabler/65-pickup-claim-verification.adr.md` decides the reconciliation mechanism.
+Claim reconciliation and the resumption flow it feeds are governed by the children below. `spx/21-spec-tree.enabler/76-sessions.enabler/28-pickup.enabler/20-claim-verification.adr.md` decides the reconciliation mechanism.
 
 ## Assertions
 
