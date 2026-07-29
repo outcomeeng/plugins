@@ -29,8 +29,8 @@ elif git rev-parse --verify --quiet "refs/heads/$branch_from_pr" >/dev/null; the
     # A rebase merge rewrites commit identities one-to-one, so ancestry fails while
     # every branch patch exists upstream; git cherry with no `+` commit proves patch
     # equivalence, and `git branch -D` is required because `-d` re-checks ancestry.
-    # A multi-commit squash collapses its patches into one upstream commit no
-    # per-commit patch-id matches, so that branch falls through to retention.
+    # A multi-commit squash collapses its patches into one upstream commit that
+    # no per-commit patch-id matches, so that branch falls through to retention.
     git branch -D "$branch_from_pr"
   else
     echo "Local branch kept: branch=$branch_from_pr tip=$local_branch_sha reason=not-merged-by-ancestry-or-patch-equivalence-to-origin/$base_from_pr"
