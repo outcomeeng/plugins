@@ -799,6 +799,34 @@ def test_an_answer_naming_a_pointer_body_is_refused(tmp_path: pathlib.Path) -> N
         assert (repo / filename).read_text(encoding="utf-8") == seeds[filename]
 
 
+def test_an_answer_that_would_discard_a_content_bearing_body_is_refused(
+    tmp_path: pathlib.Path,
+) -> None:
+    for topology in (
+        harness.root_instruction_topology_separate,
+        harness.root_instruction_topology_identical,
+    ):
+        repo = tmp_path / topology.__name__ / "repo"
+        seeds = harness.materialize_root_instruction_topology(repo, topology())
+        template = harness.write_template(
+            tmp_path / topology.__name__, harness.NEW_VERSION
+        )
+
+        exit_code = harness.run_generator_write_primary(
+            repo, template, adopt_harness="codex"
+        )
+
+        # No body here was ever reported as a pointer, so no answer authorizes replacing one.
+        # Adoption discards a whole body: applying it where the discarded side states something
+        # of its own destroys instructions the operator was never asked about.
+        assert exit_code == 2, topology.__name__
+        for filename in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+            assert (repo / filename).read_text(encoding="utf-8") == seeds[filename], (
+                topology.__name__,
+                filename,
+            )
+
+
 def test_a_pointer_beside_a_malformed_fence_is_never_reported(
     tmp_path: pathlib.Path,
 ) -> None:

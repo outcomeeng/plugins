@@ -34,7 +34,8 @@ delegating file, mutual delegation, two identical files, two near-identical file
 the 80% span threshold, two independent files); delegation candidacy on both sides of each fact it
 reads (a body naming the other root file within the bound, exactly at it, and one character past
 it, and a body naming no other root file); a write that carries no operator answer, one that
-carries ``--adopt``, and one whose ``--adopt`` names a pointer body and is refused; a reconcile
+carries ``--adopt``, one whose ``--adopt`` names a pointer body and is refused, and one whose
+``--adopt`` would discard a content-bearing body and is refused; a reconcile
 reporting a pointer body; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
 and an operator tie break; a dirty root file; and the CLI rejections (missing or non-directory repo root, missing or directory template, a
 template without ``template_version``, a symlink escaping the repository, an unsupported language
@@ -813,8 +814,11 @@ def adopt_delegated_body(
 ) -> dict[str, str]:
     """Give every harness the body of ``adopt_harness``, the side the operator kept.
 
-    The operator names the content-bearing side after reading both files; this applies that
-    choice. Pure: a mapping of bodies and a harness name in, a mapping of bodies out.
+    An answer is only meaningful where a body was reported as a pointer, so both sides are
+    checked. The named side must not be a pointer, or adoption installs a body sending the
+    reader to a file carrying that same pointer. Every other side must *be* one, because
+    adoption discards it: overwriting a body that states something of its own destroys
+    instructions no report ever offered up. Pure: bodies and a harness name in, bodies out.
     """
     kept = bodies_by_harness[adopt_harness]
     others = [name for name in bodies_by_harness if name != adopt_harness]
@@ -822,12 +826,23 @@ def adopt_delegated_body(
         is_delegation_candidate(kept, AGENT_HARNESS_INSTRUCTION_FILENAMES[other])
         for other in others
     ):
-        # The named side points at the other. Adopting it would install a body that sends the
-        # reader to a file now carrying that same pointer, and the surface would read as current.
         raise CliInputError(
             f"--adopt {adopt_harness} names a body that only points at the other root "
             "instruction file; no side carries content to adopt, so write the intended "
             "instructions into one file first"
+        )
+    kept_filename = AGENT_HARNESS_INSTRUCTION_FILENAMES[adopt_harness]
+    discarded = [
+        AGENT_HARNESS_INSTRUCTION_FILENAMES[other]
+        for other in others
+        if not is_delegation_candidate(bodies_by_harness[other], kept_filename)
+    ]
+    if discarded:
+        raise CliInputError(
+            f"--adopt {adopt_harness} would discard the body of "
+            f"{', '.join(sorted(discarded))}, which carries content of its own rather than a "
+            "pointer at another root instruction file; adoption replaces a whole body, so no "
+            "answer authorizes it"
         )
     return {harness: kept for harness in bodies_by_harness}
 
