@@ -470,6 +470,11 @@ What happened: Claude delegated local cleanup to the host CLI.
 Why it failed: Host or CLI behavior can switch onto a base held by another worktree and fail after merging.
 How to avoid: Pass `--delete-branch=false`, then run the explicit cleanup sequence.
 
+**Failure 4: Claude read a failed proof command as a passed proof.**
+What happened: Claude gated a force-delete on `[ -z "$(git cherry ... | grep '^+')" ]`, and a `git cherry` invocation that failed outright produced empty output that satisfied the test.
+Why it failed: An empty-string test on a command substitution cannot distinguish "the command succeeded and matched nothing" from "the command failed and printed nothing," so a proof that never ran authorized a destructive action.
+How to avoid: Gate any git-state proof on the proving command's own exit status (capture its output in one step, test its success with `&&`), and route every failed proof to the safe retention outcome.
+
 </failure_modes>
 
 <success_criteria>
