@@ -1,3 +1,6 @@
+methodology:
+  source: outcomeeng/methodology
+  version: 4.0.0
 validation:
   paths:
     exclude:
