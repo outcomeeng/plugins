@@ -27,3 +27,13 @@ Same content, same evidence mechanism, two nodes: duplication under `/understand
 **Why this is not resolved in the changeset that surfaced it**: that changeset is a decomposition. `spx/21-spec-tree.enabler/54-refactoring.enabler/refactoring.md` forbids changing assertion semantics during tree surgery, and an assertion's governing-decision citation is part of its meaning. The corrected citation was written there and the changeset review rejected it as a semantic change mid-refactor, consistently with the same review rejecting a deleted assertion in the same changeset.
 
 **Resolution shape**: repoint the citation to `spx/21-spec-tree.enabler/76-sessions.enabler/13-handoff-persistence.adr.md` in a changeset whose subject is that correction, confirming the decision still reaches this node from index 13.
+
+## 4. The session-store node's first Scenario overclaims relative to its test
+
+`spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler/session-store.md` opens with a Scenario whose Given/When encodes the `/handoff` skill's own trigger judgment — that continuation is impossible, and that the skill ran without `--no-session`. Its linked test, `tests/test_sessions.scenario.l1.py`, drives the CLI directly with a generated payload: it constructs no continuation-impossible condition and never varies `--no-session` as a discriminating input. What the test establishes is narrower than what the assertion claims.
+
+The trigger judgment itself is separately asserted in `spx/21-spec-tree.enabler/76-sessions.enabler/25-handoff.enabler/20-closure.enabler`, whose closure precondition owns exactly that decision, so restating it here also duplicates a rule the tree declares elsewhere.
+
+**Why this is not resolved in the changeset that surfaced it**: that changeset is a decomposition. A narrowed Scenario was written there and the changeset review rejected it as an assertion whose subject changed mid-refactor, consistently with the same review rejecting a deleted assertion and a repointed citation in the same changeset. `spx/21-spec-tree.enabler/54-refactoring.enabler/refactoring.md` moves structure, not meaning.
+
+**Resolution shape**: narrow the Scenario to the CLI behavior its test establishes — a payload naming tree state and an active node path yields a document in `.spx/sessions/todo/` carrying that path — in a changeset whose subject is that correction, confirming the closure precondition still carries the trigger judgment.

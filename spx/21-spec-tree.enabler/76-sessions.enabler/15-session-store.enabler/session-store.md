@@ -8,7 +8,7 @@ CAN create, claim, release, and read session documents through one published con
 
 ### Scenarios
 
-- Given a session payload naming the current tree state and an active node path, when `spx session handoff` runs, then a session document carrying that node path is created in `.spx/sessions/todo/` ([test](tests/test_sessions.scenario.l1.py))
+- Given continuation by the agent is impossible because the user halted the work, context is exhausted, or an external blocker prevents the next action, when `/handoff` runs without `--no-session`, then a session document is created in `.spx/sessions/todo/` with the current tree state and active node path ([test](tests/test_sessions.scenario.l1.py))
 - Given a session document in `.spx/sessions/todo/`, when `/pickup` runs, then the session is moved to `.spx/sessions/doing/` and its content is emitted to stdout for context loading ([test](tests/test_sessions.scenario.l1.py))
 - Given one or more session documents in `.spx/sessions/doing/`, when `spx session release` runs with their IDs, then each session is moved back to `.spx/sessions/todo/` without modifying its content ([test](tests/test_sessions.scenario.l1.py))
 - Given coordination-note content is included in the session payload, when the session document is created, then that content appears verbatim in the stored session file ([test](tests/test_sessions.scenario.l1.py))
