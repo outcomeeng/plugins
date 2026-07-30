@@ -87,6 +87,7 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 
 - Exactly one verb runs per invocation, defaulting to `help`.
 - `version` reads only the skill-directory-relative manifest path named above, never another copy on disk.
+- `help` names exactly the changelog lines `<changelogs>` lists, at the paths given there, and no other line.
 - A reported marketplace date equals the topmost `##` heading in the marketplace changelog this plugin carries.
 - Every footprint verb reports that the manifest delivers this plugin's agents, and writes nothing.
 
