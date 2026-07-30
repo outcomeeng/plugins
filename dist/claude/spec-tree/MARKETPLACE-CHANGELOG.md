@@ -24,7 +24,7 @@ The marketplace carries no version of its own — each plugin is versioned indep
 
 ### Changed
 
-- **Plugins ship from generated runtime trees.** Authored sources live under `src/plugins/`; the installed trees are generated from them. A plugin now carries exactly what its target harness can read.
+- **Plugins ship from generated runtime trees.** A plugin now carries exactly what its target harness can read, rather than one shared layout serving both.
 
 ## 2026-04-20
 
