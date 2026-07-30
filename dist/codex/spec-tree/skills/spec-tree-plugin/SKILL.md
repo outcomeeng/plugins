@@ -28,14 +28,16 @@ Read `$ARGUMENTS`, trim it, and match it against the table below. One verb runs 
 
 <changelogs>
 
-`help` names where a reader answers "what changed for me, and what must I now do?". Each line runs on its own clock, and both ship inside every installed plugin. Both are read from disk, without network access. Read one only when the reader asks what changed; never read both by default.
+`help` names where a reader answers "what changed for me, and what must I now do?", reading from disk without network access.
 
-| Line        | Records                                                  | Path                                               |
-| ----------- | -------------------------------------------------------- | -------------------------------------------------- |
-| Marketplace | events no single plugin owns: harnesses, plugins renamed | `${SKILL_DIR}/references/MARKETPLACE-CHANGELOG.md` |
-| Plugin      | what changed in this plugin                              | `${SKILL_DIR}/../../CHANGELOG.md`                  |
+This plugin carries two changelogs, each on its own clock. Read one only when the reader asks what changed; never read both by default.
 
-Every plugin installed from one marketplace snapshot carries the same marketplace line, because a plugin rename is unreadable from the renamed plugin once its old identity stops resolving. Plugins installed or refreshed at different times carry different snapshots, so this copy is current only as far as its newest entry — the topmost `##` heading, since entries run newest first. Report that date alongside the marketplace line so the reader can tell whether a later event falls outside this copy.
+| Line        | Records                                                  | Path                                          |
+| ----------- | -------------------------------------------------------- | --------------------------------------------- |
+| Marketplace | events no single plugin owns: harnesses, plugins renamed | `${SKILL_DIR}/../../MARKETPLACE-CHANGELOG.md` |
+| Plugin      | what changed in this plugin                              | `${SKILL_DIR}/../../CHANGELOG.md`             |
+
+The marketplace line records events no single plugin owns, so it ships here rather than in each plugin separately. It is current only as far as its newest entry — the topmost `##` heading, since entries run newest first. Report that date alongside it so the reader can tell whether a later event falls outside this copy.
 
 </changelogs>
 
@@ -114,7 +116,7 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 - Exactly one verb runs per invocation, defaulting to `help`.
 - `version` reads only the skill-directory-relative manifest path named above, never another copy on disk.
 - `help` names exactly the changelog lines `<changelogs>` lists, at the paths given there, and no other line.
-- A reported marketplace date equals the topmost `##` heading in the marketplace changelog this plugin carries.
+  - A reported marketplace date equals the topmost `##` heading in this plugin's marketplace changelog.
 - Placement and pruning happen through the bundled script, never by hand.
 - Every file written or removed carries this plugin's namespace prefix; no other file in the agent directory changes.
 - `check` writes nothing and reports drift.

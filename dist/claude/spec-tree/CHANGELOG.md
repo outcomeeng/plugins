@@ -8,6 +8,10 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ## 0.88.0
 
+### Added
+
+- `MARKETPLACE-CHANGELOG.md`, previously shipped in every plugin
+
 ### Removed
 
 - `METHODOLOGY-CHANGELOG.md`

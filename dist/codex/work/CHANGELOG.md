@@ -11,6 +11,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 ### Removed
 
 - `Skill` from the lifecycle skill's `allowed-tools`
+- `MARKETPLACE-CHANGELOG.md`; it ships with the spec-tree plugin
 
 ## 0.7.0
 
