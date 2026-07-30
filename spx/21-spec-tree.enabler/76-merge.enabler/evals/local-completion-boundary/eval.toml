@@ -9,6 +9,7 @@ owned_paths = [
   "spx/21-spec-tree.enabler/spec-tree.md",
   "spx/21-spec-tree.enabler/76-merge.enabler/merge.md",
   "spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md",
+  "spx/21-spec-tree.enabler/76-sessions.enabler/25-handoff.enabler/20-closure.enabler/closure.md",
   "spx/21-spec-tree.enabler/76-merge.enabler/evals/local-completion-boundary/**",
   "src/plugins/spec-tree/skills/handoff/**",
   "src/plugins/spec-tree/skills/understand/**",

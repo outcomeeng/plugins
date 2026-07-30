@@ -8,14 +8,32 @@ The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, 
 
 **Resolution shape**: port claim reconciliation and the three-verdict resolution into the SPX CLI beside `spx session`, publish it, advance the floor, and reduce the shipped skill to its instruction with no script. Preserve the total verdict mapping across the move — every recorded claim resolves to exactly one verdict, and an unverifiable check stays distinguishable from a discrepancy. The port also carries the node-status lookup, which resolves the target node's record by tree-relative id inside the projection's node tree; a CLI-side implementation reads that record directly rather than re-deriving it from the CLI's own JSON output. Revisit when the capability publishes.
 
-## 2. The node carries sixty assertions against a seven-assertion decomposition signal
+## 2. The foundation-marker exemption is stated twice
 
-`sessions.md` holds 47 Compliance assertions, 11 Scenarios, and 2 Mappings. `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md` treats more than roughly seven assertions as a signal requiring decomposition analysis, so a node at sixty is far past the point where that analysis is owed.
+`spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler/session-store.md` asserts that an operator's explicit `spx session` request runs as operational-state management without a live `SPEC_TREE_FOUNDATION` marker. `spx/21-spec-tree.enabler/18-context-loading.enabler/context-loading.md` asserts the same exemption over a wider command set — `spx session`, `spx worktree status`, `spx diagnose`, and no-patch Git status, history, and topology — with the same `[audit]` evidence mechanism.
 
-The Compliance section spans several independently governable concerns that each have their own validation boundary: handoff persistence and the session-file lifecycle, claimed-session and continuation-thread resolution, pickup claim verification, and closeout reporting. Each could anchor its own child enabler.
+Same content, same evidence mechanism, two nodes: duplication under `/understand` `<common_misplacements>`, which reserves specialization for a child rule that concretizes an ancestor rule against a narrower source surface. This one narrows nothing the wider rule does not already cover.
 
-**Why this is not folded into the changeset that surfaced it**: the resolution is `/decompose` analysis followed by `/refactor` tree surgery across the node, its two existing children, its co-located tests, and every full-path citation that names it — node-scale structural work whose ordering evidence and index assignment `/decompose` owns. The changeset that surfaced this adds one assertion governing closeout content; the oversize predates it and is independent of that concern, so folding the restructure in would replace a bounded content change with a subtree migration.
+**Why this is not resolved in the changeset that surfaced it**: that changeset is a decomposition, and `spx/21-spec-tree.enabler/54-refactoring.enabler/refactoring.md` forbids changing assertion semantics during tree surgery. Deleting the assertion was attempted there and correctly rejected by the changeset review as an assertion dropped mid-refactor. Removing a declaration is a content change owing its own spec-audit justification, not a side effect of moving files.
 
-**Resolution shape**: run `/decompose spx/21-spec-tree.enabler/76-sessions.enabler` to produce the ordering-evidence matrix and child boundaries, then apply the split through `/refactor`, preserving assertion semantics and moving each assertion to the child whose concern owns it. Gate with the spec auditor per child.
+**Resolution shape**: delete the assertion from `spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler/session-store.md` in a changeset whose only subject is that removal, confirming first that `spx/21-spec-tree.enabler/18-context-loading.enabler` remains the declaring node and that no consumer loses the rule from its context.
 
-**Evidence**: surfaced by the changeset reviewer on PR 494 (run `2026-07-28_18-06-07-731-0251e1d43e02`) as a `[architecture]` `DEBT` finding against `sessions.md:76`.
+## 3. The checkout-currency assertion cites a decision that does not state the rule
+
+`spx/21-spec-tree.enabler/76-sessions.enabler/28-pickup.enabler/pickup.md` asserts that `/pickup` brings the checkout current for every `git_ref` kind before presenting session detail, citing `spx/21-spec-tree.enabler/76-sessions.enabler/28-pickup.enabler/20-claim-verification.adr.md`. That decision covers the reconciliation script's mechanics — frontmatter sourcing, the injected runner, the verdict vocabulary, read-only-ness — and states no rule about bringing a checkout current or about `git_ref` kinds.
+
+`spx/21-spec-tree.enabler/76-sessions.enabler/13-handoff-persistence.adr.md` does state it: "`/pickup` fetches and checks out the branch `git_ref` names ... reading in place when `git_ref` is the default branch or a commit SHA."
+
+**Why this is not resolved in the changeset that surfaced it**: that changeset is a decomposition. `spx/21-spec-tree.enabler/54-refactoring.enabler/refactoring.md` forbids changing assertion semantics during tree surgery, and an assertion's governing-decision citation is part of its meaning. The corrected citation was written there and the changeset review rejected it as a semantic change mid-refactor, consistently with the same review rejecting a deleted assertion in the same changeset.
+
+**Resolution shape**: repoint the citation to `spx/21-spec-tree.enabler/76-sessions.enabler/13-handoff-persistence.adr.md` in a changeset whose subject is that correction, confirming the decision still reaches this node from index 13.
+
+## 4. The session-store node's first Scenario overclaims relative to its test
+
+`spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler/session-store.md` opens with a Scenario whose Given/When encodes the `/handoff` skill's own trigger judgment — that continuation is impossible, and that the skill ran without `--no-session`. Its linked test, `tests/test_sessions.scenario.l1.py`, drives the CLI directly with a generated payload: it constructs no continuation-impossible condition and never varies `--no-session` as a discriminating input. What the test establishes is narrower than what the assertion claims.
+
+The trigger judgment itself is separately asserted in `spx/21-spec-tree.enabler/76-sessions.enabler/25-handoff.enabler/20-closure.enabler`, whose closure precondition owns exactly that decision, so restating it here also duplicates a rule the tree declares elsewhere.
+
+**Why this is not resolved in the changeset that surfaced it**: that changeset is a decomposition. A narrowed Scenario was written there and the changeset review rejected it as an assertion whose subject changed mid-refactor, consistently with the same review rejecting a deleted assertion and a repointed citation in the same changeset. `spx/21-spec-tree.enabler/54-refactoring.enabler/refactoring.md` moves structure, not meaning.
+
+**Resolution shape**: narrow the Scenario to the CLI behavior its test establishes — a payload naming tree state and an active node path yields a document in `.spx/sessions/todo/` carrying that path — in a changeset whose subject is that correction, confirming the closure precondition still carries the trigger judgment.
