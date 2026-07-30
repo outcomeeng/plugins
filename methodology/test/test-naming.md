@@ -61,7 +61,7 @@ Example:
 
 ## Orthogonality Rule
 
-Runner, level, and evidence mode are separate.
+Runner, level, and assertion type are separate.
 
 - A runner does not imply a level
 - A level does not imply a runner
