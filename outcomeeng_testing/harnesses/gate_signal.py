@@ -40,11 +40,15 @@ def _process_group_command(pid_path: Path, signal_path: Path) -> tuple[str, ...]
         "import time\n"
         f"pid_marker = pathlib.Path({str(pid_path)!r})\n"
         f"signal_marker = pathlib.Path({str(signal_path)!r})\n"
+        "def announce(marker, value):\n"
+        "    staged = marker.with_name(marker.name + '.staged')\n"
+        "    staged.write_text(value, encoding='utf-8')\n"
+        "    os.replace(staged, marker)\n"
         "def handle_term(signum, _frame):\n"
-        "    signal_marker.write_text(str(signum), encoding='utf-8')\n"
+        "    announce(signal_marker, str(signum))\n"
         "    raise SystemExit(0)\n"
         "signal.signal(signal.SIGTERM, handle_term)\n"
-        "pid_marker.write_text(str(os.getpid()), encoding='utf-8')\n"
+        "announce(pid_marker, str(os.getpid()))\n"
         f"time.sleep({CONTROLLED_CHILD_SLEEP_SECONDS})\n"
     )
     return (
@@ -136,7 +140,7 @@ def _read_grandchild_pid(pid_path: Path) -> int:
     while time.monotonic() < deadline:
         try:
             return int(pid_path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
+        except (FileNotFoundError, ValueError):
             time.sleep(GROUP_MARKER_POLL_SECONDS)
     raise AssertionError("child did not announce grandchild PID in time")
 
@@ -146,7 +150,7 @@ def _assert_grandchild_received_group_signal(signal_path: Path) -> None:
     while time.monotonic() < deadline:
         try:
             delivered_signal = int(signal_path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
+        except (FileNotFoundError, ValueError):
             time.sleep(GROUP_MARKER_POLL_SECONDS)
             continue
         assert delivered_signal == int(signal.SIGTERM)
