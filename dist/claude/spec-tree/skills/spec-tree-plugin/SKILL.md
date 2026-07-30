@@ -28,15 +28,16 @@ Read `$ARGUMENTS`, trim it, and match it against the table below. One verb runs 
 
 <changelogs>
 
-`help` names where a reader answers "what changed for me, and what must I now do?". Each line runs on its own clock. The marketplace and plugin lines ship inside every installed plugin; the methodology line ships only where its providing plugin is installed. Whichever are present are read from disk, without network access. Read one only when the reader asks what changed; never read all three by default.
+`help` names where a reader answers "what changed for me, and what must I now do?", reading from disk without network access.
 
-| Line        | Records                                                  | Path                                                                                       |
-| ----------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Marketplace | events no single plugin owns: harnesses, plugins renamed | `${CLAUDE_SKILL_DIR}/references/MARKETPLACE-CHANGELOG.md`                                  |
-| Plugin      | what changed in this plugin                              | `${CLAUDE_SKILL_DIR}/../../CHANGELOG.md`                                                   |
-| Methodology | edition transitions, compatible extensions, deprecations | `${CLAUDE_SKILL_DIR}/../../METHODOLOGY-CHANGELOG.md`, shipped only in the spec-tree plugin |
+This plugin carries two changelogs, each on its own clock. Read one only when the reader asks what changed; never read both by default.
 
-Every plugin installed from one marketplace snapshot carries the same marketplace line, because a plugin rename is unreadable from the renamed plugin once its old identity stops resolving. Plugins installed or refreshed at different times carry different snapshots, so this copy is current only as far as its newest entry — the topmost `##` heading, since entries run newest first. Report that date alongside the marketplace line so the reader can tell whether a later event falls outside this copy. The methodology path above resolves only from the spec-tree plugin's own skill directory; from any other plugin, reach it by invoking the spec-tree plugin's own lifecycle skill, never by guessing a cross-plugin path. That invocation is this skill's only use of the `Skill` tool, which is why the frontmatter grants it everywhere except the spec-tree plugin's own copy — a second call site added here needs that condition revisited. A checkout without that plugin has no methodology changelog to read, and that absence is normal rather than a fault.
+| Line        | Records                                                  | Path                                                 |
+| ----------- | -------------------------------------------------------- | ---------------------------------------------------- |
+| Marketplace | events no single plugin owns: harnesses, plugins renamed | `${CLAUDE_SKILL_DIR}/../../MARKETPLACE-CHANGELOG.md` |
+| Plugin      | what changed in this plugin                              | `${CLAUDE_SKILL_DIR}/../../CHANGELOG.md`             |
+
+The marketplace line records events no single plugin owns, so it ships here rather than in each plugin separately. It is current only as far as its newest entry — the topmost `##` heading, since entries run newest first. Report that date alongside it so the reader can tell whether a later event falls outside this copy.
 
 </changelogs>
 
@@ -88,8 +89,8 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 
 - Exactly one verb runs per invocation, defaulting to `help`.
 - `version` reads only the skill-directory-relative manifest path named above, never another copy on disk.
-- A reported marketplace date equals the topmost `##` heading in the marketplace changelog this plugin carries.
-- A methodology-changelog request always resolves through the spec-tree plugin's own lifecycle skill, never a guessed cross-plugin path, and reports that plugin's absence as normal when it is not installed.
+- `help` names exactly the changelog lines `<changelogs>` lists, at the paths given there, and no other line.
+  - A reported marketplace date equals the topmost `##` heading in this plugin's marketplace changelog.
 - Every footprint verb reports that the manifest delivers this plugin's agents, and writes nothing.
 
 </success_criteria>

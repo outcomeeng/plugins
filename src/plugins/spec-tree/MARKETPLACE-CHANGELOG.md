@@ -2,9 +2,9 @@
 
 Events that no single plugin owns: an agent harness gained or dropped, a plugin added, removed, or renamed, a floor that moves across plugins.
 
-This file is identical in every installed Outcome Engineering plugin. It ships in all of them because a marketplace event has to stay readable whatever subset of plugins a repository installs — a plugin rename is unreadable from the renamed plugin, whose old identity no longer resolves.
+This file ships with the spec-tree plugin, which carries the methodology every other plugin operationalizes.
 
-Two other changelog lines run on their own clocks. What changed in a **plugin** is in that plugin's own `CHANGELOG.md`. What changed in the **methodology** is in `METHODOLOGY-CHANGELOG.md`, which ships with the spec-tree plugin that provides it.
+One other changelog line runs on its own clock: what changed in a **plugin** is in that plugin's own `CHANGELOG.md`.
 
 The marketplace carries no version of its own — each plugin is versioned independently — so entries here are dated rather than numbered.
 
@@ -24,7 +24,7 @@ The marketplace carries no version of its own — each plugin is versioned indep
 
 ### Changed
 
-- **Plugins ship from generated runtime trees.** Authored sources live under `src/plugins/`; the installed trees are generated from them. A plugin now carries exactly what its target harness can read.
+- **Plugins ship from generated runtime trees.** A plugin now carries exactly what its target harness can read, rather than one shared layout serving both.
 
 ## 2026-04-20
 

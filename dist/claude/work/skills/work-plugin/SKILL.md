@@ -3,7 +3,7 @@ name: work-plugin
 description: >-
   ALWAYS invoke this skill to operate the work plugin's own lifecycle in a checkout — report its version, manage whatever checkout footprint this plugin owns on the running agent, and check that footprint. Invoke it when this plugin's agents are missing from a session. NEVER hand-copy a plugin's agent definitions into a checkout or hand-edit them once placed.
 argument-hint: "[help|version|init|upgrade|check]"
-allowed-tools: Read, Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py":*)
+allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py":*)
 ---
 
 <objective>
@@ -28,15 +28,15 @@ Read `$ARGUMENTS`, trim it, and match it against the table below. One verb runs 
 
 <changelogs>
 
-`help` names where a reader answers "what changed for me, and what must I now do?". Each line runs on its own clock. The marketplace and plugin lines ship inside every installed plugin; the methodology line ships only where its providing plugin is installed. Whichever are present are read from disk, without network access. Read one only when the reader asks what changed; never read all three by default.
+`help` names where a reader answers "what changed for me, and what must I now do?", reading from disk without network access.
 
-| Line        | Records                                                  | Path                                                                                       |
-| ----------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Marketplace | events no single plugin owns: harnesses, plugins renamed | `${CLAUDE_SKILL_DIR}/references/MARKETPLACE-CHANGELOG.md`                                  |
-| Plugin      | what changed in this plugin                              | `${CLAUDE_SKILL_DIR}/../../CHANGELOG.md`                                                   |
-| Methodology | edition transitions, compatible extensions, deprecations | `${CLAUDE_SKILL_DIR}/../../METHODOLOGY-CHANGELOG.md`, shipped only in the spec-tree plugin |
+This plugin carries one changelog, its own:
 
-Every plugin installed from one marketplace snapshot carries the same marketplace line, because a plugin rename is unreadable from the renamed plugin once its old identity stops resolving. Plugins installed or refreshed at different times carry different snapshots, so this copy is current only as far as its newest entry — the topmost `##` heading, since entries run newest first. Report that date alongside the marketplace line so the reader can tell whether a later event falls outside this copy. The methodology path above resolves only from the spec-tree plugin's own skill directory; from any other plugin, reach it by invoking the spec-tree plugin's own lifecycle skill, never by guessing a cross-plugin path. That invocation is this skill's only use of the `Skill` tool, which is why the frontmatter grants it everywhere except the spec-tree plugin's own copy — a second call site added here needs that condition revisited. A checkout without that plugin has no methodology changelog to read, and that absence is normal rather than a fault.
+| Line   | Records                     | Path                                     |
+| ------ | --------------------------- | ---------------------------------------- |
+| Plugin | what changed in this plugin | `${CLAUDE_SKILL_DIR}/../../CHANGELOG.md` |
+
+Events no single plugin owns — a harness gained or dropped, a plugin added, removed, or renamed — are recorded once in the marketplace changelog, which ships with the plugin that carries the methodology rather than in every plugin. This plugin has no copy of it.
 
 </changelogs>
 
@@ -88,8 +88,8 @@ A marketplace source tree and a cache snapshot both carry a manifest, and they d
 
 - Exactly one verb runs per invocation, defaulting to `help`.
 - `version` reads only the skill-directory-relative manifest path named above, never another copy on disk.
-- A reported marketplace date equals the topmost `##` heading in the marketplace changelog this plugin carries.
-- A methodology-changelog request always resolves through the spec-tree plugin's own lifecycle skill, never a guessed cross-plugin path, and reports that plugin's absence as normal when it is not installed.
+- `help` names exactly the changelog lines `<changelogs>` lists, at the paths given there, and no other line.
+  - A marketplace-event question reports that this plugin carries no marketplace changelog, naming no path for one.
 - Every footprint verb reports that the manifest delivers this plugin's agents, and writes nothing.
 
 </success_criteria>

@@ -6,6 +6,13 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.7.0
+
+### Removed
+
+- `Skill` from the lifecycle skill's `allowed-tools`
+- `MARKETPLACE-CHANGELOG.md`; it ships with the spec-tree plugin
+
 ## 0.6.0
 
 ### Added
