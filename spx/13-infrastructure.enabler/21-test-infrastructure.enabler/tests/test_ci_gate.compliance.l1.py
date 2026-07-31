@@ -14,6 +14,7 @@ from outcomeeng.validation.ci_gate import (
     GATE_PUSH_BRANCH,
     GATE_PUSH_EVENT,
     GATE_RECIPE_COMMAND,
+    MAXIMUM_JOB_TIMEOUT_MINUTES,
     PINNED_VERSION_ENVIRONMENT_SUFFIX,
     SOFT_PASS_SHELL_SNIPPETS,
     TRAP_COMMAND_PREFIX,
@@ -27,6 +28,7 @@ from outcomeeng_testing.harnesses.ci_gate import (
     observe_gate_steps,
     observe_gate_triggers,
     observe_validation_step_argvs,
+    observe_workflow_jobs,
 )
 
 
@@ -182,6 +184,26 @@ def test_gate_job_runs_unconditionally() -> None:
     assert observation.continue_on_error in CONTINUE_ON_ERROR_FALSY
 
 
+def test_every_repository_defined_workflow_job_declares_a_timeout() -> None:
+    for observation in observe_workflow_jobs():
+        if observation.calls_reusable_workflow:
+            continue
+        assert observation.timeout_minutes is not None
+        assert 0 < int(observation.timeout_minutes) <= MAXIMUM_JOB_TIMEOUT_MINUTES
+
+
+def test_reusable_workflow_callers_declare_no_timeout() -> None:
+    callers = [
+        observation
+        for observation in observe_workflow_jobs()
+        if observation.calls_reusable_workflow
+    ]
+
+    assert callers
+    for observation in callers:
+        assert observation.timeout_minutes is None
+
+
 def test_conforming_fixture_satisfies_every_gate_rule() -> None:
     workflow_path = gate_fixture_path("conforming_gate.yml")
     triggers = observe_gate_triggers(workflow_path)
@@ -193,6 +215,8 @@ def test_conforming_fixture_satisfies_every_gate_rule() -> None:
 
     assert not job.has_condition
     assert job.continue_on_error in CONTINUE_ON_ERROR_FALSY
+    assert job.timeout_minutes is not None
+    assert 0 < int(job.timeout_minutes) <= MAXIMUM_JOB_TIMEOUT_MINUTES
     for step in observe_gate_steps(workflow_path):
         assert not step.has_condition
         assert step.continue_on_error in CONTINUE_ON_ERROR_FALSY
@@ -201,6 +225,12 @@ def test_conforming_fixture_satisfies_every_gate_rule() -> None:
 
 def test_job_level_condition_is_detected() -> None:
     assert observe_gate_job(gate_fixture_path("job_level_condition.yml")).has_condition
+
+
+def test_unbounded_gate_job_is_detected() -> None:
+    unbounded = observe_gate_job(gate_fixture_path("unbounded_gate_job.yml"))
+
+    assert unbounded.timeout_minutes is None
 
 
 def test_job_level_continue_on_error_is_detected() -> None:

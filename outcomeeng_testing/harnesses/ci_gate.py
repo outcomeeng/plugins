@@ -10,10 +10,16 @@ from typing import Any, Final, cast
 import yaml
 
 from outcomeeng.validation import VALIDATION_STEPS
-from outcomeeng.validation.ci_gate import GATE_JOB_NAME, PYTHON_SETUP_STEP_NAME
+from outcomeeng.validation.ci_gate import (
+    GATE_JOB_NAME,
+    JOB_TIMEOUT_KEY,
+    PYTHON_SETUP_STEP_NAME,
+    REUSABLE_WORKFLOW_CALL_KEY,
+)
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
-GATE_WORKFLOW: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
+WORKFLOW_DIRECTORY: Final = REPO_ROOT / ".github" / "workflows"
+GATE_WORKFLOW: Final = WORKFLOW_DIRECTORY / "check.yml"
 PROJECT_METADATA: Final = REPO_ROOT / "pyproject.toml"
 
 
@@ -48,10 +54,21 @@ class GateStepObservation:
 
 @dataclass(frozen=True)
 class GateJobObservation:
-    """The gate job's own condition and soft-pass surface."""
+    """The gate job's own condition, soft-pass, and completion-bound surface."""
 
     has_condition: bool
     continue_on_error: str | None
+    timeout_minutes: str | None
+
+
+@dataclass(frozen=True)
+class WorkflowJobObservation:
+    """One workflow job's identity, call kind, and declared completion bound."""
+
+    workflow: str
+    job: str
+    calls_reusable_workflow: bool
+    timeout_minutes: str | None
 
 
 @dataclass(frozen=True)
@@ -187,9 +204,30 @@ def observe_gate_steps(
 
 
 def observe_gate_job(workflow_path: Path | None = None) -> GateJobObservation:
-    """Return the gate job's own condition and soft-pass surface."""
+    """Return the gate job's own condition, soft-pass, and completion bound."""
     job = gate_job(workflow(workflow_path))
     return GateJobObservation(
         has_condition="if" in job,
         continue_on_error=cast("str | None", job.get("continue-on-error")),
+        timeout_minutes=cast("str | None", job.get(JOB_TIMEOUT_KEY)),
     )
+
+
+def observe_workflow_jobs(
+    workflow_directory: Path | None = None,
+) -> tuple[WorkflowJobObservation, ...]:
+    """Return every job this repository declares in its own workflow files."""
+    directory = WORKFLOW_DIRECTORY if workflow_directory is None else workflow_directory
+    observations: list[WorkflowJobObservation] = []
+    for path in sorted(directory.glob("*.yml")):
+        jobs = cast("dict[str, Any]", workflow(path).get("jobs") or {})
+        observations.extend(
+            WorkflowJobObservation(
+                workflow=path.name,
+                job=job_id,
+                calls_reusable_workflow=REUSABLE_WORKFLOW_CALL_KEY in job,
+                timeout_minutes=cast("str | None", job.get(JOB_TIMEOUT_KEY)),
+            )
+            for job_id, job in jobs.items()
+        )
+    return tuple(observations)
