@@ -12,6 +12,8 @@ from typing import Final
 import yaml
 from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
+from outcomeeng_testing.harnesses.ci_gate import workflow_paths
+
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOWS_DIR: Final = REPO_ROOT / ".github" / "workflows"
 RENOVATE_CONFIG: Final = REPO_ROOT / "renovate.json"
@@ -279,4 +281,4 @@ def _marked_beta(lines: list[str], line_number: int) -> bool:
 
 
 def _workflow_paths() -> tuple[Path, ...]:
-    return tuple(sorted([*WORKFLOWS_DIR.glob("*.yml"), *WORKFLOWS_DIR.glob("*.yaml")]))
+    return workflow_paths(WORKFLOWS_DIR)

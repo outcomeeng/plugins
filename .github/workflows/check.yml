@@ -19,6 +19,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       # Pinned tool versions; Renovate advances these via the customManager
       # regex in renovate.json (each line carries a `# renovate:` annotation).

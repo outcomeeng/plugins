@@ -89,12 +89,19 @@ CI_TOOL_REQUIREMENTS: Final = (
 CI_STEP_ENVIRONMENT_REQUIREMENTS: Final = (
     CiStepEnvironmentRequirement("Run quality gate", "GH_TOKEN"),
 )
+MAXIMUM_JOB_TIMEOUT_MINUTES: Final = 30
+REUSABLE_WORKFLOW_CALL_KEY: Final = "uses"
+JOB_TIMEOUT_KEY: Final = "timeout-minutes"
+WORKFLOW_FILE_GLOBS: Final = ("*.yml", "*.yaml")
 
 
 __all__ = [
     "CI_STEP_ENVIRONMENT_REQUIREMENTS",
     "CI_TOOL_REQUIREMENTS",
     "CONTINUE_ON_ERROR_FALSY",
+    "JOB_TIMEOUT_KEY",
+    "MAXIMUM_JOB_TIMEOUT_MINUTES",
+    "REUSABLE_WORKFLOW_CALL_KEY",
     "FAIL_FAST_PREAMBLE",
     "GATE_JOB_NAME",
     "GATE_PULL_REQUEST_EVENT",
@@ -106,6 +113,7 @@ __all__ = [
     "PYTHON_SETUP_STEP_NAME",
     "SOFT_PASS_SHELL_SNIPPETS",
     "TRAP_COMMAND_PREFIX",
+    "WORKFLOW_FILE_GLOBS",
     "CiStepEnvironmentRequirement",
     "CiToolRequirement",
 ]

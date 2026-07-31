@@ -1,0 +1,16 @@
+name: Violating Bounds
+
+on:
+  pull_request:
+
+jobs:
+  over_bound:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Run quality gate
+        run: just check-full
+
+  caller_with_bound:
+    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@main
+    timeout-minutes: 30
