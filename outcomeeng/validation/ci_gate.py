@@ -92,6 +92,7 @@ CI_STEP_ENVIRONMENT_REQUIREMENTS: Final = (
 MAXIMUM_JOB_TIMEOUT_MINUTES: Final = 30
 REUSABLE_WORKFLOW_CALL_KEY: Final = "uses"
 JOB_TIMEOUT_KEY: Final = "timeout-minutes"
+WORKFLOW_FILE_GLOBS: Final = ("*.yml", "*.yaml")
 
 
 __all__ = [
@@ -112,6 +113,7 @@ __all__ = [
     "PYTHON_SETUP_STEP_NAME",
     "SOFT_PASS_SHELL_SNIPPETS",
     "TRAP_COMMAND_PREFIX",
+    "WORKFLOW_FILE_GLOBS",
     "CiStepEnvironmentRequirement",
     "CiToolRequirement",
 ]

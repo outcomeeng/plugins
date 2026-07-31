@@ -1,0 +1,11 @@
+name: Yaml Extension Probe
+
+on:
+  pull_request:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run quality gate
+        run: just check-full

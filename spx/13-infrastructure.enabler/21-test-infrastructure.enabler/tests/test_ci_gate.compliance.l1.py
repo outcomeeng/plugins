@@ -233,6 +233,14 @@ def test_unbounded_gate_job_is_detected() -> None:
     assert unbounded.timeout_minutes is None
 
 
+def test_yaml_suffixed_workflow_jobs_are_observed() -> None:
+    observations = observe_workflow_jobs(gate_fixture_path("yaml_extension_workflows"))
+
+    assert [(each.workflow, each.timeout_minutes) for each in observations] == [
+        ("unbounded.yaml", None)
+    ]
+
+
 def test_job_level_continue_on_error_is_detected() -> None:
     observation = observe_gate_job(gate_fixture_path("job_level_continue_on_error.yml"))
 

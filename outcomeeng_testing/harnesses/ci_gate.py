@@ -15,11 +15,22 @@ from outcomeeng.validation.ci_gate import (
     JOB_TIMEOUT_KEY,
     PYTHON_SETUP_STEP_NAME,
     REUSABLE_WORKFLOW_CALL_KEY,
+    WORKFLOW_FILE_GLOBS,
 )
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_DIRECTORY: Final = REPO_ROOT / ".github" / "workflows"
 GATE_WORKFLOW: Final = WORKFLOW_DIRECTORY / "check.yml"
+
+
+def workflow_paths(directory: Path | None = None) -> tuple[Path, ...]:
+    """Return every workflow file in a directory, across both YAML extensions."""
+    source = WORKFLOW_DIRECTORY if directory is None else directory
+    return tuple(
+        sorted(path for glob in WORKFLOW_FILE_GLOBS for path in source.glob(glob))
+    )
+
+
 PROJECT_METADATA: Final = REPO_ROOT / "pyproject.toml"
 
 
@@ -219,7 +230,7 @@ def observe_workflow_jobs(
     """Return every job this repository declares in its own workflow files."""
     directory = WORKFLOW_DIRECTORY if workflow_directory is None else workflow_directory
     observations: list[WorkflowJobObservation] = []
-    for path in sorted(directory.glob("*.yml")):
+    for path in workflow_paths(directory):
         jobs = cast("dict[str, Any]", workflow(path).get("jobs") or {})
         observations.extend(
             WorkflowJobObservation(
