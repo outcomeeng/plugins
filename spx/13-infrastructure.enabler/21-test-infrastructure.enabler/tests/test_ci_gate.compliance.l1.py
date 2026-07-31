@@ -241,6 +241,27 @@ def test_yaml_suffixed_workflow_jobs_are_observed() -> None:
     ]
 
 
+def test_timeout_above_the_maximum_is_detected() -> None:
+    over_bound = next(
+        each
+        for each in observe_workflow_jobs(gate_fixture_path("violating_bounds"))
+        if not each.calls_reusable_workflow
+    )
+
+    assert over_bound.timeout_minutes is not None
+    assert int(over_bound.timeout_minutes) > MAXIMUM_JOB_TIMEOUT_MINUTES
+
+
+def test_reusable_caller_declaring_a_timeout_is_detected() -> None:
+    caller = next(
+        each
+        for each in observe_workflow_jobs(gate_fixture_path("violating_bounds"))
+        if each.calls_reusable_workflow
+    )
+
+    assert caller.timeout_minutes is not None
+
+
 def test_job_level_continue_on_error_is_detected() -> None:
     observation = observe_gate_job(gate_fixture_path("job_level_continue_on_error.yml"))
 
