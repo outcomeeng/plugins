@@ -15,6 +15,13 @@ shipped content.  ``${TMPDIR:-/tmp}`` is therefore a violation rather than a
 portable idiom: ``mktemp`` already resolves an unset ``TMPDIR`` correctly, so
 spelling the fallback only reintroduces the literal this rule removes.
 
+One content genuinely has to spell a prohibited path: the rule prohibiting
+it.  A line carrying the ``ALLOW_MARKER`` build comment is exempt, and the
+build strips that comment before the content ships, so the marker never
+reaches a consumer.  The exemption is per line rather than per file, so a
+standard states the rule on one line while every other line in the same file
+stays enforced.
+
 Scratch-directory provenance is governed by
 ``spx/13-plugin-and-runtime-conventions.adr.md``; this validator is the
 deterministic enforcement of that decision over shipped content.
@@ -59,6 +66,15 @@ PORTABLE_SCRATCH_SOURCES: Final = (
     "TemporaryDirectory()",
 )
 
+# The one content that must spell a prohibited path is the rule prohibiting it:
+# a standard naming the tokens an author may not write, and an audit row naming
+# what to flag.  Such a line carries this build comment, which the build strips
+# before the content ships, so the marker is authoring metadata a consumer never
+# sees.  The exemption is per line and never per file, so a marked line states
+# the rule while an unmarked line in the same file is still enforced, and every
+# use is greppable for review.
+ALLOW_MARKER: Final = "{!# scratch-path-allow #!}"
+
 # A fixed temporary path in shipped content.  The leading lookbehind anchors
 # each absolute root at a path-segment boundary so a longer path that merely
 # ends in the same characters (``/opt/tmp``, ``xyz/tmp``) does not match, while
@@ -85,10 +101,11 @@ class Violation:
 
 
 def find_fixed_temporary_paths(text: str) -> list[tuple[int, str]]:
-    """Return ``(line, reference)`` for each fixed temporary path in ``text``."""
+    """Return ``(line, reference)`` for each unexempted fixed temporary path."""
     return [
         (lineno, match.group(0))
         for lineno, line in enumerate(text.splitlines(), start=1)
+        if ALLOW_MARKER not in line
         for match in _FIXED_TEMPORARY_PATH.finditer(line)
     ]
 

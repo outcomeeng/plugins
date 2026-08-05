@@ -13,6 +13,7 @@ from outcomeeng.distribution.contracts import Target
 from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
 from outcomeeng_testing.harnesses.source_and_templating import (
     bare_conditional_renders_per_target,
+    build_comment_is_stripped_without_other_jinja_tokens,
     implementation_is_ready,
     include_uses_fragment_file_contract,
     jinja_environment_uses_custom_delimiters,
@@ -81,6 +82,10 @@ def test_require_skill_renders_inline() -> None:
 
 def test_bare_conditional_block_renders_per_target() -> None:
     assert bare_conditional_renders_per_target()
+
+
+def test_build_comment_is_stripped_without_other_jinja_tokens() -> None:
+    assert build_comment_is_stripped_without_other_jinja_tokens()
 
 
 def test_skill_dir_escape_survives_jinja_pass() -> None:

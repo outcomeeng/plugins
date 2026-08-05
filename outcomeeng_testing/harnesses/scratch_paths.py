@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.contracts import SKILL_FILENAME
 from outcomeeng.validation.scratch_paths import (
+    ALLOW_MARKER,
     find_fixed_temporary_paths,
     format_violation,
     main,
@@ -60,3 +61,16 @@ def every_portable_scratch_category_is_accepted() -> bool:
         not find_fixed_temporary_paths(reference)
         for reference in portable_scratch_sources()
     )
+
+
+def allow_marker_exempts_only_its_own_line() -> bool:
+    """Exercise the marker's per-line scope against a two-line subject.
+
+    A marked line and an unmarked line carry the same prohibited path, so a
+    marker whose scope leaked to the file would drop the unmarked violation
+    and a marker with no effect would keep the marked one.
+    """
+    violation = fixed_temporary_paths()[0]
+    marked = f"{violation} {ALLOW_MARKER}"
+    found = find_fixed_temporary_paths("\n".join((marked, violation)))
+    return [lineno for lineno, _ in found] == [2]
