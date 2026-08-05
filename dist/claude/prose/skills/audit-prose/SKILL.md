@@ -1,64 +1,74 @@
 ---
 name: audit-prose
 description: >-
-  ALWAYS invoke this skill when auditing reader-facing documents such as public docs, web pages, and product messages for outside readers like developers and customers.
-  NEVER invoke for chat responses to the user (no matter how long), operational prose like code comments, commit messages, or agent-facing instructions like SKILL.md.
+  Prose audit methodology — judges human-facing text against the base anti-pattern catalog and the detected kind's standards layer, emitting a structured verdict whose findings carry pattern, category, quote, rewrite, and kind.
 model: sonnet
-allowed-tools: Read, Glob, Grep, Bash, Skill
+allowed-tools: Read, Glob, Grep, Skill
 ---
 
 Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
 
-A list of formulaic, machine-generated, or lazy-writing patterns found in reader-facing prose, each flagged with a concrete rewrite.
+A structured verdict on human-facing text — `APPROVED`, or `REJECTED` with findings carrying pattern, category, quote, rewrite, and detected kind.
 
 </objective>
 
-<essential_principles>
+<constraints>
 
-Six categories of patterns to detect. Each is detailed with examples in the reference file.
+- NEVER modify the document under review — this audit produces a verdict only.
+- NEVER flag a pattern the resolved kind's overrides explicitly permit — the overrides are the catalog's decision, not an oversight.
+- NEVER excuse a base-catalog match as "single use" or "it works here" — every match outside an override is a finding.
+- NEVER guess an ambiguous kind — report the ambiguity in the verdict and audit the plausible kinds' shared rules only.
 
-**Word choice** -- Significance adverbs ("quietly", "deeply"), authenticity adverbs ("genuinely", "truly", "actually"), overused vocabulary ("delve", "leverage", "robust", "genuine"), ornate nouns ("tapestry", "landscape", "paradigm"), pompous verbs ("serves as", "stands as").
-
-**Sentence structure** -- Negative parallelism ("It's not X -- it's Y"), stacked negations ("Not X. Not Y. Just Z."), rhetorical self-answers ("The result? Devastating."), anaphora abuse, tricolon stacking, filler transitions ("It's worth noting"), tacked-on significance ("highlighting its importance"), false ranges, gerund fragment litanies, tautological definitions ("An irreversible change does not revert"), redundant paired examples.
-
-**Paragraph structure** -- Strings of punchy fragments as standalone paragraphs, listicles disguised as prose ("The first... The second... The third...").
-
-**Tone** -- False-suspense transitions ("Here's the kicker"), unnecessary metaphors ("Think of it as..."), hypothetical openers ("Imagine a world where..."), performed vulnerability, asserting clarity ("The truth is simple"), grandiose stakes inflation, teacher-student condescension ("Let's break this down"), vague attributions ("Experts argue"), invented concept labels ("the supervision paradox").
-
-**Formatting** -- Em-dash overuse, bold-first bullets, unicode decoration.
-
-**Composition** -- Fractal summaries, dead metaphors, historical analogy stacking, one-point dilution, content duplication, signposted conclusions, dismissive optimism ("Despite its challenges...").
-
-</essential_principles>
+</constraints>
 
 <workflow>
 
-1. Read `/prose-standards` for the anti-pattern catalog
-2. Read the text to review
-3. Flag each violation with the specific pattern name and category
-4. Suggest concrete rewrites -- don't just say "avoid X", show the fix
-5. Summarize: total violations found, most frequent category, overall assessment
+1. Read the text under audit — whatever the dispatch names, pastes, or points to.
+
+2. Classify it through `/prose-standards` `<kind_detection>` — pre-loaded above. A document whose parts differ in kind receives per-part classification; each finding names its part's kind.
+
+3. Invoke the resolved kind's composed audit skill via the Skill tool: `prose:audit-copy`, `prose:audit-interface`, `prose:audit-docs`, or `prose:audit-internal-docs`. That skill loads the kind's standards and sweeps its categories; collect its findings.
+
+4. Emit the structured verdict in the `<verdict_format>` shape as the final message — no prose outside the JSON object.
 
 </workflow>
 
+<verdict_format>
+
+```json
+{
+  "schema_version": 1,
+  "skill": "audit-prose",
+  "overall": "APPROVED",
+  "kinds": ["copy"],
+  "findings": [],
+  "summary": { "violations": 0, "most_frequent_category": null }
+}
+```
+
+- `overall` is `REJECTED` when at least one finding exists; `APPROVED` means zero findings.
+- Each finding carries `kind`, `pattern` (the catalog anti-pattern name), `category` (its catalog section), `quote` (the offending text verbatim), and `rewrite` (fixed text ready to accept).
+- `kinds` lists every kind the classification resolved, in document order.
+- A sentence carrying multiple co-occurring patterns produces one finding naming every pattern present, listed before single-pattern findings.
+- When ownership routes the document away, `overall` is `REJECTED` with a single finding whose `pattern` is `governed-elsewhere` naming the governing workflow.
+
+</verdict_format>
+
 <success_criteria>
 
-Review is complete when:
-
-- Every flagged violation names the specific pattern and category
-- Every flag includes a concrete rewrite, not just a label
-- The summary gives a count, identifies the most frequent category, and assesses overall quality
-- Zero tolerance -- every pattern match is flagged as a violation, never excused as "single use" or "it works here"
-- Co-occurring patterns in a single sentence are the highest-priority flags
+- The final message is exactly the `<verdict_format>` JSON object.
+- Every finding carries all five fields, and the rewrite shows fixed text rather than an instruction.
+- `summary.violations` equals the findings count, and `most_frequent_category` is the category those findings carry most often.
+- Kind overrides produced no false-positive findings.
 
 </success_criteria>
 
-<reference_index>
+<failure_modes>
 
-| Skill              | When to Read              |
-| ------------------ | ------------------------- |
-| `/prose-standards` | Always -- before auditing |
+**A caller check survived a description-only fix.**
 
-</reference_index>
+Claude removed dispatch language from this skill's description to satisfy the audit-description standard, but left a dispatch gate in the body and a dispatch-tool grant in the frontmatter — the same caller-coupling defect in two other places. A skill never detects, constrains, or branches on the context that invokes it; context placement and dispatch policy belong to the caller. When removing caller coupling, check the description, the frontmatter grants, and the body together — the pattern recurs across all three surfaces.
+
+</failure_modes>

@@ -28,6 +28,7 @@ SKILLS_SUBDIR_NAME: Final = "skills"
 AGENTS_SUBDIR_NAME: Final = "agents"
 SCRIPTS_SUBDIR_NAME: Final = "scripts"
 HOOKS_SUBDIR_NAME: Final = "hooks"
+OUTPUT_STYLES_SUBDIR_NAME: Final = "output-styles"
 CLAUDE_PLUGIN_SUBDIR_NAME: Final = ".claude-plugin"
 CODEX_PLUGIN_SUBDIR_NAME: Final = ".codex-plugin"
 CODEX_PLUGIN_MANIFEST: Final = Path(CODEX_PLUGIN_SUBDIR_NAME) / "plugin.json"
@@ -51,6 +52,7 @@ PLUGIN_SUBDIRS: Final = frozenset(
         AGENTS_SUBDIR_NAME,
         SCRIPTS_SUBDIR_NAME,
         HOOKS_SUBDIR_NAME,
+        OUTPUT_STYLES_SUBDIR_NAME,
         CLAUDE_PLUGIN_SUBDIR_NAME,
         CODEX_PLUGIN_SUBDIR_NAME,
     }

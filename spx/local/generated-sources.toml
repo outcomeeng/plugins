@@ -16,6 +16,7 @@
 outputs = ["dist/claude/**", "dist/codex/**"]
 sources = [
   "src/plugins/**",
+  "src/_shared/**",
   "src/templates/**",
   "dprint.jsonc",
   "outcomeeng/validation/spx_version.py",
