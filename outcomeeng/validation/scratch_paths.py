@@ -47,11 +47,16 @@ from typing import Final
 # Absolute temporary roots a consumer's harness never declares for a session.
 # ``/private/var/tmp`` and ``/private/tmp`` are the macOS firmlink spellings of
 # ``/var/tmp`` and ``/tmp``; a shipped path is fixed under either spelling.
+# Each entry is a value this module forbids, never a directory it opens. The
+# publicly-writable-directory rule reads them as write targets, which inverts
+# the module's purpose, so each is suppressed with that reason rather than
+# spelled indirectly — obfuscating a literal to satisfy a scanner would hide
+# the prohibition list from the reader it exists for.
 ABSOLUTE_TEMPORARY_ROOTS: Final = (
-    "/tmp",
-    "/var/tmp",
-    "/private/tmp",
-    "/private/var/tmp",
+    "/tmp",  # NOSONAR S5443 - forbidden value, never a write target
+    "/var/tmp",  # NOSONAR S5443 - forbidden value, never a write target
+    "/private/tmp",  # NOSONAR S5443 - forbidden value, never a write target
+    "/private/var/tmp",  # NOSONAR S5443 - forbidden value, never a write target
 )
 
 # Home-relative temporary roots, in the two spellings shipped content uses.
@@ -111,7 +116,14 @@ def find_fixed_temporary_paths(text: str) -> list[tuple[int, str]]:
 
 
 def scan_file(path: Path) -> list[Violation]:
-    """Return one violation per fixed temporary path in ``path``."""
+    """Return one violation per fixed temporary path in ``path``.
+
+    The caller supplies the path: the gate step enumerates the authored roots,
+    and a test supplies its own temporary file. The read is the whole contract
+    — this module opens nothing else, writes nothing, and reports only the
+    lines it was asked to scan.
+    """
+    # NOSONAR S8707 - caller-enumerated path, read-only, no write or exec path
     text = path.read_text(encoding="utf-8")
     return [
         Violation(path=path, line=lineno, reference=reference)
