@@ -141,11 +141,15 @@ def _reference_files() -> tuple[str, ...]:
     )
 
 
-def runtime_token_files() -> tuple[str, ...]:
-    # Authored source the build renders or inlines: plugin content, the shared
-    # fragments plugin files include, and the per-plugin templates that fan out
-    # into every plugin's generated tree. A raw runtime token in any of them
-    # ships into a generated target, so all three are enforced.
+def _authored_text_files() -> tuple[str, ...]:
+    """Return every authored text file the build renders or inlines.
+
+    Plugin content, the shared fragments plugin files include, and the
+    per-plugin templates that fan out into every plugin's generated tree.
+    Content in any of the three reaches a generated target, so every rule
+    enforcing a property of shipped content reads this one set — declared here
+    once so a new root or suffix cannot reach one rule and miss another.
+    """
     roots = (
         _REPO_ROOT / "src" / "plugins",
         _REPO_ROOT / "src" / "_shared",
@@ -160,28 +164,17 @@ def runtime_token_files() -> tuple[str, ...]:
             if path.is_file() and path.suffix in TEXT_FILE_SUFFIXES
         )
     )
+
+
+def runtime_token_files() -> tuple[str, ...]:
+    # A raw runtime token in authored content ships into a generated target.
+    return _authored_text_files()
 
 
 def scratch_path_files() -> tuple[str, ...]:
-    # The same authored roots the runtime-token rule enforces, and for the same
-    # reason: a fixed temporary path in plugin content, a shared fragment, or a
-    # per-plugin template renders into every generated target and ships to the
-    # consumer, where it collides across concurrent runs and writes outside the
-    # session boundary.
-    roots = (
-        _REPO_ROOT / "src" / "plugins",
-        _REPO_ROOT / "src" / "_shared",
-        _REPO_ROOT / "src" / "templates",
-    )
-    return tuple(
-        sorted(
-            str(path)
-            for root in roots
-            if root.is_dir()
-            for path in root.rglob("*")
-            if path.is_file() and path.suffix in TEXT_FILE_SUFFIXES
-        )
-    )
+    # A fixed temporary path in authored content ships to the consumer, where it
+    # collides across concurrent runs and writes outside the session boundary.
+    return _authored_text_files()
 
 
 PREFLIGHT_STEPS: Final = (

@@ -66,12 +66,27 @@ def observe_portable_scan() -> ScanObservation:
     return _observe("\n".join(portable_scratch_sources()))
 
 
-def observe_allow_marker_lines() -> tuple[int, ...]:
-    """Return the reported line numbers for a marked line above an identical bare one.
+@dataclass(frozen=True)
+class MarkerObservation:
+    """Which line carried the marker, which did not, and what was reported."""
 
-    Both lines carry the same prohibited path, so a marker whose scope leaked to
-    the file reports nothing and a marker with no effect reports both.
+    marked_line: int
+    unmarked_line: int
+    reported_lines: tuple[int, ...]
+
+
+def observe_allow_marker_lines() -> MarkerObservation:
+    """Observe a marked line above an identical bare one carrying the same path.
+
+    A marker whose scope leaked to the file reports neither line; a marker with
+    no effect reports both. Each line number is named in the result, so the test
+    never infers the layout from this function's construction order.
     """
     violation = fixed_temporary_paths()[0]
-    subject = "\n".join((f"{violation} {ALLOW_MARKER}", violation))
-    return tuple(lineno for lineno, _ in find_fixed_temporary_paths(subject))
+    lines = (f"{violation} {ALLOW_MARKER}", violation)
+    reported = find_fixed_temporary_paths("\n".join(lines))
+    return MarkerObservation(
+        marked_line=1,
+        unmarked_line=2,
+        reported_lines=tuple(lineno for lineno, _ in reported),
+    )
