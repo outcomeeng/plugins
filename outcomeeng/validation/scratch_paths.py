@@ -123,8 +123,7 @@ def scan_file(path: Path) -> list[Violation]:
     — this module opens nothing else, writes nothing, and reports only the
     lines it was asked to scan.
     """
-    # NOSONAR S8707 - caller-enumerated path, read-only, no write or exec path
-    text = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")  # NOSONAR S8707 - read-only
     return [
         Violation(path=path, line=lineno, reference=reference)
         for lineno, reference in find_fixed_temporary_paths(text)
