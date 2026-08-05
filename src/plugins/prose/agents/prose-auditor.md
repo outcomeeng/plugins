@@ -24,7 +24,7 @@ Run prose audits in this already-dispatched, isolated verifier context. Invoke t
 
 <workflow>
 
-1. Read the caller's text, paths, or document references.
+1. Read the caller's text, paths, or document references. If no target is supplied, report the missing input instead of auditing.
 2. Invoke `prose:audit-prose` on them unchanged.
 3. Relay the structured verdict verbatim as the final message.
 

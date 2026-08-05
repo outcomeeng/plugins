@@ -8,17 +8,17 @@ allowed-tools: Read, Glob, Grep, Skill
 
 {!% require_skill 'prose:prose-standards' %!}
 
-<objective>
-
-A structured verdict on human-facing text — `APPROVED`, or `REJECTED` with findings carrying pattern, category, quote, rewrite, and detected kind.
-
-</objective>
-
 <dispatch_gate>
 
 STOP if this skill is running in the main conversation. The verdict is valid only from an isolated verifier context: dispatch the `prose-auditor` agent with the text or paths to audit and apply its final message. Producing the verdict in the authoring conversation reintroduces the bias the dispatched context removes.
 
 </dispatch_gate>
+
+<objective>
+
+A structured verdict on human-facing text — `APPROVED`, or `REJECTED` with findings carrying pattern, category, quote, rewrite, and detected kind.
+
+</objective>
 
 <constraints>
 

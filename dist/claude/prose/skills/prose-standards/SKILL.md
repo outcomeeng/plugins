@@ -118,7 +118,7 @@ Avoid: "when the leader goes on vacation or moves to a different role", "in meet
 
 Avoid: "He published this. Openly. In a book. As a priest.", "These weren't just products. And the software side matched. Then it professionalised. But I adapted."
 
-**Listicle in a trench coat** -- If you're writing a list, write a list. Don't disguise it as prose by wrapping each item in a paragraph beginning "The first...", "The second...", "The third...".
+**Listicle in a trench coat** -- When writing a list, write a list. Don't disguise it as prose by wrapping each item in a paragraph beginning "The first...", "The second...", "The third...".
 
 Avoid: "The first wall is the absence of a free, scoped API... The second wall is the lack of delegated access... The third wall is the absence of scoped permissions..."
 
@@ -144,13 +144,13 @@ Avoid: "And yes, I'm openly in love with the platform model", "This is not a ran
 
 Avoid: "The reality is simpler and less flattering", "History is unambiguous on this point"
 
-**Grandiose stakes inflation** -- Don't inflate the significance of every argument to world-historical scale. Match the stakes of your claims to what you're actually demonstrating.
+**Grandiose stakes inflation** -- Don't inflate the significance of every argument to world-historical scale. Match the stakes of each claim to what the text demonstrates.
 
 Avoid: "This will fundamentally reshape how we think about everything.", "will define the next era of computing"
 
 **"Let's break this down"** -- Don't adopt a teacher-student tone with a reader who hasn't asked for it. Cut "Let's break this down", "Let's unpack this", "Let's explore", and "Let's dive in".
 
-**Vague attributions** -- Don't cite unnamed authorities. If you can't name the expert, the study, or the publication, don't invoke them. Don't inflate one source into "several publications" or one person's view into a widely held consensus.
+**Vague attributions** -- Don't cite unnamed authorities. Without a name for the expert, the study, or the publication, don't invoke them. Don't inflate one source into "several publications" or one person's view into a widely held consensus.
 
 Avoid: "Experts argue that this approach has significant drawbacks.", "Industry reports suggest that adoption is accelerating."
 
