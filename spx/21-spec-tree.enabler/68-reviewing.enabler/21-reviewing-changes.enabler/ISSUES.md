@@ -123,4 +123,16 @@ The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, 
 
 **Resolution shape**: port the runner, the result schema, the journal adapter, and diff computation into the SPX CLI, publish it, advance the floor, and reduce the shipped skill to its instruction with no scripts. Entry 3 above already routes review-finding validation to that boundary, and the projection scripts extract with it per `spx/21-spec-tree.enabler/16-verification.enabler/18-journal-projection.enabler/ISSUES.md`, so the four move as one surface rather than piecemeal. Revisit when the capability publishes.
 
+## 10. Review judges a mandated architectural seam without the decision that mandates it
+
+A review of a shipped-script changeset raised the injected `Runner` Protocol in `src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py` as unexercised surface, and offered two remedies: delete the seam, or add an ADR rule mandating it plus a test injecting a controlled `Runner`. Both are blocked by decisions above the node under review. `spx/12-shipped-scripting.adr.md` requires the seam (`shipped Python that invokes external tools accepts a dependency-injected runner implementing a Protocol at the orchestration boundary`), as does `spx/13-plugin-and-runtime-conventions.adr.md`; the same shipped-scripting decision permits a controlled runner only under `/test` Stage 5 exception 1 or 2, and git is an L1 real dependency that Stage 4 terminates on, so no exception opens. A node-level ADR rule restating a product-level one is misplacement besides.
+
+The reviewer resolves scope from the changed-file set, and neither product-level decision appears in a diff confined to one skill, so the mandate is invisible from the scope alone. Every shipped script in the marketplace carries this seam, so the false positive recurs on each one and costs a reviewer round to refute each time.
+
+**Resolution shape**: give the review scope derivation the governing decisions for the changed paths — the same ancestor-and-cited-decision read-set `/contextualize` derives — so a mandated architectural seam is judged against the decision that mandates it rather than against the diff alone.
+
+**Why it is separate**: the fix changes what context a review run loads, which belongs to this node's scope derivation and its eventual SPX extraction (entry 9), not to any changeset that happens to ship a script carrying the seam.
+
+**Evidence**: run `2026-08-05_13-13-52-179-c96364b3dc5f`, one debt finding on an otherwise approved review, dropped as unbacked after `/test` routing and the two decisions above.
+
 Revisit entries 5 and 6 when review moves from `spx journal --type review` to `spx verification run`. Exercise the migration with an in-progress inspection before seal, repeated inspection of one file, restored prior-run context, and a final projection whose unique covered-unit count equals the changeset scope.
