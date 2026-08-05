@@ -9,8 +9,9 @@ Exposes resource and execution infrastructure for generated cases:
   canonical template, plus harness-accessed inert whole-document fixtures for root bodies,
   shared-region examples, and line-boundary examples.
 - ``canonical_router_spacing_observations``. Renders the canonical template for every
-  source-owned harness and every subset of its declared languages, returning observations whose
-  marker-to-body invariant the typed mapping file asserts.
+  source-owned harness and every subset of its declared languages, returning each rendering
+  beside the marker that opens it; the typed mapping file reads the marker-to-body spacing off
+  that rendering and owns what the spacing must be.
 - ``for_all_unsupported_language_overrides``. Searches unsupported language tokens with
   replayable property-run settings and passes each observation to the typed property's invariant.
 
@@ -120,11 +121,16 @@ class BootstrapOutcome:
 
 @dataclass(frozen=True)
 class RouterSpacingObservation:
-    """One source-owned harness/language rendering observed by mapping evidence."""
+    """One source-owned harness/language rendering observed by mapping evidence.
 
-    marker_and_separator: str
+    The observation carries the opening marker the case is identified by and the rendered
+    block. It carries no expected spacing: how many blank lines separate the two is the
+    assertion's own claim, and recomposing it here from the separator ``render`` used would
+    move the expectation whenever the separator did.
+    """
+
+    marker: str
     rendered: str
-    unexpected_additional_separator: str
 
 
 @dataclass(frozen=True)
@@ -559,8 +565,6 @@ def canonical_router_spacing_observations() -> tuple[RouterSpacingObservation, .
         template = read_canonical_template(agent_harness)
         version = module.parse_template_version(template)
         for enabled_languages in _language_subsets(languages):
-            marker = module.router_marker(version, enabled_languages)
-            separator = f"{marker}{module.ROUTER_BODY_SEPARATOR}"
             rendered = module.render(
                 template,
                 enabled_languages,
@@ -569,9 +573,8 @@ def canonical_router_spacing_observations() -> tuple[RouterSpacingObservation, .
             )
             observations.append(
                 RouterSpacingObservation(
-                    marker_and_separator=separator,
+                    marker=module.router_marker(version, enabled_languages),
                     rendered=rendered,
-                    unexpected_additional_separator=module.ROUTER_BODY_SEPARATOR[:1],
                 )
             )
     return tuple(observations)
