@@ -427,8 +427,29 @@ def skill_dir_escape_survives_jinja_pass() -> bool:
     return all(_skill_dir_escape_survives(case) for case in source_scenarios())
 
 
-def build_comment_is_stripped_without_other_jinja_tokens() -> bool:
-    return all(_build_comment_is_stripped(case) for case in source_scenarios())
+def observe_build_comment_outputs(
+    case: SourceScenario,
+) -> dict[str, tuple[str, str]]:
+    """Return each target's rendered body plus the comment that body carried.
+
+    The body carries no variable token and no control block, which is the shape
+    the render pass short-circuits on.
+    """
+    comment = f"{COMMENT_DELIMITER_START} {case.scope}-marker {COMMENT_DELIMITER_END}"
+    body = f"---\nname: {case.skill}\n---\n\n{case.fragment_body} {comment}\n"
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        builder = SrcTreeBuilder(root)
+        builder.add_plugin(case.plugin, skills={case.skill: body})
+        build(builder.src_root, root / "dist")
+        reader = DistTreeReader(root)
+        return {
+            target.value: (
+                reader.read_skill_body(case.plugin, case.skill, target=target),
+                comment,
+            )
+            for target in Target
+        }
 
 
 def raw_directive_ships_literally() -> bool:
@@ -679,30 +700,6 @@ def _skill_dir_escape_survives(case: SourceScenario) -> bool:
             in reader.read_skill_body(case.plugin, case.skill, target=target)
             and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
             not in reader.read_skill_body(case.plugin, case.skill, target=target)
-            for target in Target
-        )
-
-
-def _build_comment_is_stripped(case: SourceScenario) -> bool:
-    """Drive a body whose only build token is a comment through the real build.
-
-    The render pass short-circuits on a body carrying no variable token and no
-    control block, so a comment in such a body reached the consumer verbatim.
-    The body below carries exactly that shape.
-    """
-    comment = f"{COMMENT_DELIMITER_START} {case.scope}-marker {COMMENT_DELIMITER_END}"
-    body = f"---\nname: {case.skill}\n---\n\n{case.fragment_body} {comment}\n"
-    with TemporaryDirectory() as tmp:
-        root = Path(tmp)
-        builder = SrcTreeBuilder(root)
-        builder.add_plugin(case.plugin, skills={case.skill: body})
-        build(builder.src_root, root / "dist")
-        reader = DistTreeReader(root)
-        return all(
-            COMMENT_DELIMITER_START
-            not in reader.read_skill_body(case.plugin, case.skill, target=target)
-            and case.fragment_body
-            in reader.read_skill_body(case.plugin, case.skill, target=target)
             for target in Target
         )
 
