@@ -511,12 +511,15 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 
 <!-- /lang:rust -->
 
+<!-- langs:present -->
+
 ---
 
 ## Test Naming Convention
 
 Test level is encoded in the filename. The `{evidence}` segment is chosen by `/test` routing from the assertion type: `scenario`, `mapping`, `conformance`, `property`, or `compliance`. Universal assertions use `mapping`, `conformance`, `property`, or `compliance`; a universal is never `scenario`. This instruction block renders only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker; `/update-instruction-block` re-renders from the installed template when the methodology advances.
 
+<!-- /langs:present -->
 <!-- lang:typescript -->
 
 ### TypeScript

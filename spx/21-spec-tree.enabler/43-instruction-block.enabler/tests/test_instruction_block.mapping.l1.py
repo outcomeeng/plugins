@@ -204,6 +204,18 @@ def test_root_topology_maps_to_bootstrap_outcome(tmp_path: pathlib.Path) -> None
                     cursor = found + len(line)
 
 
+def test_enabled_language_set_maps_to_presence_of_the_gated_section() -> None:
+    observations = harness.canonical_language_presence_observations()
+
+    assert any(o.languages for o in observations)
+    assert any(not o.languages for o in observations)
+    for observation in observations:
+        # The section introduces per-language tables and carries none of its own, so it belongs
+        # in the render exactly when some language block survives to follow it.
+        present = observation.gated_section in observation.rendered
+        assert present == bool(observation.languages), observation.languages
+
+
 def test_root_body_shape_maps_to_delegation_candidacy() -> None:
     verdicts = {
         case.name: MODULE.is_delegation_candidate(case.body, case.other_filename)

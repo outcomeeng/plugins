@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.88.2
+
+### Fixed
+
+- **A project with no test files yet no longer receives an empty test-naming section.** The router's `## Test Naming Convention` heading and its preamble introduce per-language filename tables, but carried no per-language block of their own, so a project whose spec tree holds no test file — every project before its first test — rendered the heading and the preamble above nothing. The section is now gated on at least one enabled language and is omitted whole when none is. A project that already has test files sees no change.
+
 ## 0.88.1
 
 ### Added

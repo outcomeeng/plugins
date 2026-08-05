@@ -12,6 +12,9 @@ Exposes resource and execution infrastructure for generated cases:
   source-owned harness and every subset of its declared languages, returning each rendering
   beside the marker that opens it; the typed mapping file reads the marker-to-body spacing off
   that rendering and owns what the spacing must be.
+- ``canonical_language_presence_observations``. Renders every declared language subset beside
+  the template text the source-owned presence markers wrap, so the typed mapping file judges
+  whether that section belongs in a render without restating its heading.
 - ``for_all_unsupported_language_overrides``. Searches unsupported language tokens with
   replayable property-run settings and passes each observation to the typed property's invariant.
 
@@ -613,6 +616,55 @@ def canonical_router_spacing_observations() -> tuple[RouterSpacingObservation, .
                 )
             )
     return tuple(observations)
+
+
+@dataclass(frozen=True)
+class LanguagePresenceObservation:
+    """One enabled-language subset, its rendered block, and the presence-gated section text.
+
+    ``gated_section`` is read out of the canonical template between the source-owned presence
+    markers, so the linked test compares the render against the template's own text rather than
+    against a heading restated in the test.
+    """
+
+    languages: tuple[str, ...]
+    rendered: str
+    gated_section: str
+
+
+def presence_gated_template_section() -> str:
+    """Return the canonical template text the source-owned presence markers wrap."""
+    module = load_instruction_block_module()
+    opening = (
+        f"<!-- {module.LANGUAGE_PRESENCE_MARKER}:{module.LANGUAGE_PRESENCE_NAME} -->"
+    )
+    closing = (
+        f"<!-- /{module.LANGUAGE_PRESENCE_MARKER}:{module.LANGUAGE_PRESENCE_NAME} -->"
+    )
+    lines = read_canonical_template(HARNESS_CLAUDE).splitlines(keepends=True)
+    start = next(i for i, line in enumerate(lines) if line.strip() == opening)
+    end = next(i for i, line in enumerate(lines) if line.strip() == closing)
+    return "".join(lines[start + 1 : end]).strip()
+
+
+def canonical_language_presence_observations() -> tuple[
+    LanguagePresenceObservation, ...
+]:
+    """Observe the render of every declared language subset beside the presence-gated section."""
+    module = load_instruction_block_module()
+    template = read_canonical_template(HARNESS_CLAUDE)
+    version = module.parse_template_version(template)
+    gated = presence_gated_template_section()
+    return tuple(
+        LanguagePresenceObservation(
+            languages=subset,
+            rendered=cast(
+                str, module.render(template, subset, version, HARNESS_CLAUDE)
+            ),
+            gated_section=gated,
+        )
+        for subset in template_language_subsets()
+    )
 
 
 def canonical_router_spacing_declarations() -> tuple[str, ...]:
