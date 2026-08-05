@@ -117,7 +117,7 @@ Per-section context. When sections of the doc cover separate concerns, the first
 </positive_patterns>
 
 <success_criteria>
-The catalog itself is sound when every rule in `<inherited_rules>`, `<overrides>`, and `<additional_rules>` carries its name and rule text, and every override and additional rule carries a worked Avoid/Prefer pair.
+The catalog itself is sound when every rule in `<inherited_rules>`, `<overrides>`, and `<additional_rules>` carries its name and rule text, and every override and every example-bearing additional rule carries at least one worked example.
 
 Before declaring a doc finished, check:
 
