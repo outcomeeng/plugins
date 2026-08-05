@@ -521,7 +521,9 @@ def render(
     """Render one agent harness's router block from the template and enabled languages.
 
     Language-conditional blocks render only for enabled languages and harness-conditional
-    blocks only for ``harness``; nothing else is substituted, so brace-delimited illustration
+    blocks only for ``harness``; a ``langs:present`` block, wrapping text that introduces
+    per-language content while carrying none of its own, is dropped whole when no language is
+    enabled. Nothing else is substituted, so brace-delimited illustration
     tokens pass through unchanged. The opening marker records the version and language list
     inline, so a later update reads both back from the marker without separate metadata lines.
     """
