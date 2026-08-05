@@ -127,6 +127,17 @@ IDENTITY_FIELDS = (
     REPOSITORY_FIELD,
 )
 IDENTITY_INPUT_FIELDS = frozenset((*IDENTITY_FIELDS, RUN_FIELD))
+# The keys a delegation request may carry over stdin. `schemaVersion` and `kind`
+# are owned by the envelope builder, so a caller never supplies them.
+DELEGATION_CLI_FIELDS = frozenset(
+    {
+        SENDER_FIELD,
+        RECIPIENT_FIELD,
+        SUBJECT_FIELD,
+        INSTRUCTION_FIELD,
+        COORDINATION_REFERENCE_FIELD,
+    }
+)
 DELEGATION_REQUEST_FIELDS = frozenset(
     {
         SCHEMA_VERSION_FIELD,
@@ -1189,6 +1200,16 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _delegation_from_cli(value: dict[str, object]) -> dict[str, object]:
+    # Reading each field by name would ignore every other key, so a caller that
+    # invents one sends a delegation missing the data it believed it supplied.
+    # The envelope builder owns schemaVersion and kind, so they are not accepted
+    # here; every remaining key must be one this function actually forwards.
+    unexpected = sorted(set(value) - DELEGATION_CLI_FIELDS)
+    if unexpected:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            "Delegation request carries unsupported fields: " + ", ".join(unexpected),
+        )
     return delegation_request(
         sender=value.get(SENDER_FIELD),
         recipient=value.get(RECIPIENT_FIELD),

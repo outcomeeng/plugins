@@ -31,9 +31,29 @@ A selector is exactly one of `target`, `worktree`, `tab`, or `pane`. Preserve it
 
 </operation_surface>
 
+<operator_target_resolution>
+
+An operator names a target by where the work lives — a worktree path, a repository directory, the working directory of the agent they mean, or a phrase describing it ("the agent in the frontend checkout", "my other window"). An operator never supplies a pane UUID, and a reply that asks for one has misread the request.
+
+Resolve an operator-named target to a pane before operating:
+
+1. Run `agents`. Its typed identity projection is the one source that carries each pane's complete worktree and repository, so it is what a path match reads. `list` inventories instantiated panes and never establishes a per-pane worktree or repository here; treating its payload as that inventory would match against a field this surface does not promise.
+2. Match the operator's phrasing against those worktree and repository paths. A path the operator gives may be a subdirectory of the worktree root, so match by containment, not string equality.
+3. Operate on the matched pane's complete UUID.
+
+A target that is not a coding-agent pane is outside what `agents` returns, so no path match is available for it. Say that the operator's target is not among the agent panes and name the ones that are, rather than falling back to an inventory that carries no worktree to match.
+
+Absent from `agents` is not the same as absent from Prowl. A worktree Prowl already knows but has never entered has no pane to match yet and stays reachable through an explicitly authorized `open` request, which takes a path rather than a selector; that is the lazy activation `<failure_modes>` describes. Distinguish it from a target Prowl has no relationship with at all before reporting the operator's target as unavailable.
+
+Report the target back to the operator the way they named it — the worktree or directory — while using the pane UUID internally. Echoing a UUID to an operator who named a directory forces them to verify a value they never supplied.
+
+When the inventory holds no match, say which worktrees are present rather than asking the operator to supply an identifier they do not have. When more than one pane matches, name the candidates by worktree and branch and ask which one; never guess by focus, position, or title.
+
+</operator_target_resolution>
+
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one low-level operation, one delegation request, or one terminal handback. When it is empty, require a concrete operation before running the adapter.
+1. Interpret `$ARGUMENTS` as one low-level operation, one delegation request, or one terminal handback. When it is empty, require a concrete operation before running the adapter. When a selector or delegation participant is named by worktree, repository, or working directory rather than a pane UUID — the form an operator uses — resolve it per `<operator_target_resolution>` before building the request.
 2. For `list`, `agents`, `read`, or `send`, build this source-owned request shape and set only arguments the operation accepts:
 
 ```json
@@ -85,10 +105,12 @@ printf '%s\n' '{"schemaVersion":1,"operation":"agents","arguments":{}}' | python
     "run": "<complete-run-id-when-present>"
   },
   "subject": "<bounded subject>",
-  "instruction": "<complete bounded request>",
+  "instruction": "<complete bounded request, ending with the return path per <handback_delivery>>",
   "coordinationReference": null
 }
 ```
+
+The envelope already carries the return address: `sender.pane` is the sender's own complete pane, and the recipient reads it from the delegation it receives. Nothing else needs a field. What the recipient cannot infer is the exact command that reaches that pane and the environment conditions that break it, so the `instruction` ends by naming both per `<handback_delivery>`. The sender cannot poll for completion, so the recipient is the only party that can close the loop; an instruction that omits the handback is a request the sender can never learn the answer to.
 
 The result carries the complete source-owned `delegation` envelope. Preserve it for the terminal handback; transport success is not acceptance or completion.
 7. The recipient submits exactly one terminal result to `handback`, carrying the original `delegation`, one `kind`, and one supported result form:
@@ -102,6 +124,28 @@ A complete inline result uses `inlineResult`. A durable result uses `resultRefer
 8. Return the complete terminal result to the delegating workflow. Do not poll the recipient, add acceptance or progress phases, or infer completion from pane output.
 
 </workflow>
+
+<handback_delivery>
+
+Completion travels by push, never by pull. The sender's environment blocks polling loops by design, so a sender that "checks later" has no later to check in — it reads once, sees nothing, and moves on while the finished result sits on disk. The recipient closes the loop or nobody does.
+
+**A durable result separates payload from signal.** The file carries the payload; one line sent into the sender's pane carries the signal. Write the file first, then send. `resultReference` names the complete absolute path and `projection` carries the bounded summary, so the sender knows what landed without opening it.
+
+**The recipient delivers the handback by sending one line into the return address's pane**, using the `send` operation with normal trailing-Enter behavior. That send lands as a turn in the sender's session, which is what makes it a signal rather than a message the sender must go looking for. A `noEnter` send prefills the sender's editor and signals nothing.
+
+**The sender states the handback at delegation time**, not after, by ending the `instruction` with two things the recipient cannot infer from the envelope: the exact command that reaches `sender.pane`, and the `<environment_traps>` conditions that break it. A recipient that discovers those traps by hitting them has already spent the turn the delegation was meant to buy. The pane itself needs no restating — it already travels as `sender.pane`.
+
+</handback_delivery>
+
+<environment_traps>
+
+Two environment conditions silently break a handback. Name both in the delegation's return address rather than leaving the recipient to find them.
+
+**The CLI may not be on `PATH`.** A recipient whose shell cannot resolve the command reads the failure as "the environment is unavailable" and abandons the handback. The executable bundled inside the application resolves when `PATH` does not, so the return address carries the command form that works in the recipient's environment rather than a bare command name.
+
+**A non-default socket may belong to a different instance.** When the socket is overridden, the CLI talks to whichever instance owns that socket — which can be another agent's verification harness holding no real panes rather than the operator's live application. An empty or unrecognizable pane inventory is that condition, not an absent recipient. Confirm the inventory contains the expected panes before concluding a target is gone, and use the same socket value for every command in the exchange.
+
+</environment_traps>
 
 <constraints>
 
@@ -117,7 +161,7 @@ A complete inline result uses `inlineResult`. A durable result uses `resultRefer
 
 <testing>
 
-Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Cover every operation mapping, public JSON success and failure, exact participant projection, mutation rejection before command construction, delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch.
+Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Cover every operation mapping, public JSON success and failure, exact participant projection, mutation rejection before command construction, delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch. Delegation coverage includes that `sender.pane` survives the envelope into the recipient's handback intact, since the recipient reads its return path from that field alone; an unknown top-level key in a delegation request is rejected rather than silently dropped, so a caller inventing a field learns it is unsupported instead of sending a delegation the recipient cannot answer.
 
 </testing>
 
@@ -129,6 +173,12 @@ Before release, import the bundled module with controlled `CommandRunner` implem
 
 **A visible worktree was absent from `list`.** Claude inferred missing Prowl topology because a sidebar row had no listed pane. The row was known but not entered; `open` returned `resolution: exact-root`, `created_tab: true`, and the first pane UUID. Treat `list` as the terminal inventory and use authorized `open` for visible lazy activation.
 
+**A delegation had no return path, so the operator became the message bus.** Claude asked a recipient to write a file, then had no signal that it had. Polling loops are blocked in the environment, so Claude read the pane once, saw nothing, and moved on — while a complete result sat on disk. The operator ended up carrying the answer between the two agents by hand. The delegation carried no return address, so the recipient could not push and the sender could not pull. Send the sender's own pane id, the exact handback command, and `<environment_traps>` in the delegation itself, and require the recipient to send one line on completion per `<handback_delivery>`.
+
+**A single read was mistaken for a terminal answer.** Claude treated one empty pane read as evidence the recipient had produced nothing, when it proved only that nothing was on screen at that instant. A read establishes the pane's state at the moment it ran and never establishes that a delegation is incomplete. Completion arrives as the recipient's handback; its absence is an open delegation, not a negative result.
+
+**An overridden socket was read as an empty environment.** Claude pointed the CLI at a non-default socket, saw an inventory with none of the expected panes, and concluded the recipient was gone. The socket belonged to a different instance — a verification harness, not the operator's live application. Confirm the inventory contains the expected panes before concluding a target is absent, per `<environment_traps>`.
+
 </failure_modes>
 
 <success_criteria>
@@ -136,6 +186,9 @@ Before release, import the bundled module with controlled `CommandRunner` implem
 - A successful public operation is mechanically established only when the bundled script exits zero and emits `schemaVersion: 1`, `status: "succeeded"`, `commandExitCode: 0`, and a public `response` object without exposing Prowl command grammar.
 - Every positively identified Prowl participant retains complete public identities verbatim.
 - Every delegation preserves its initiating coordination reference through exactly one completed, failed, rejected, or unavailable terminal handback.
+- Every delegation's `instruction` ends with the exact command reaching `sender.pane` and the `<environment_traps>` conditions, so the recipient can push completion without discovering the environment first; the pane itself is read from the envelope, never restated as a separate field.
+- A durable handback writes its file before sending, and the notification reaches the sender's pane as a submitted turn rather than editor prefill.
+- An operator-named target is resolved from the worktree or directory the operator supplied and reported back in those terms, never as a pane UUID the operator must verify.
 - Terminal results carry complete inline content or an exact durable reference with a bounded projection.
 - Unauthorized focus, key, creation, closure, and open requests fail before Prowl runs.
 - Lazy activation is established by an authorized `open` result carrying `resolution: exact-root`, `created_tab: true`, and the complete returned pane identity.
