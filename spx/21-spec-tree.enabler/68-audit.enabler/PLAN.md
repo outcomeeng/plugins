@@ -10,6 +10,14 @@ skills only; they do not ship language-specific auditor agents.
 
 ## Remaining slices
 
+- Add a violating/passing fixture pair for the wrapper-surface language
+  boundary: `check_wrapper_surface` accepts an artifact-type auditor sharing
+  its owning plugin's name (a craft plugin's `{plugin}-auditor`) while still
+  rejecting every per-programming-language wrapper filename. The predicate
+  narrowed to `implementation_languages` (plugins shipping `code-{lang}`);
+  the acceptance side currently has only the live repository surface as
+  evidence.
+
 - Add executable agent/eval coverage for representative implementation-auditor
   runs over one-language, multi-language, and unsupported-file scopes once the
   agentic runner can be exercised deterministically.

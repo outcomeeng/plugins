@@ -192,12 +192,11 @@ def check_wrapper_surface(surface: Path) -> list[str]:
         for path, (_plugin, stem) in owners.items()
         if f"{stem}{MARKDOWN_FILE_SUFFIX}" in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES
     )
-    language_names = frozenset(
-        (
-            *implementation_languages(surface),
-            *(plugin for _path, (plugin, _stem) in owners.items()),
-        )
-    )
+    # A language is a plugin that ships a code-{lang} skill. An agent-owning
+    # plugin name alone is not a language: an artifact-type auditor may share
+    # its owning plugin's name, and only per-programming-language wrappers are
+    # forbidden.
+    language_names = frozenset(implementation_languages(surface))
     errors.extend(
         f"{path}: language-specific auditor exists"
         for path, (_plugin, stem) in owners.items()
