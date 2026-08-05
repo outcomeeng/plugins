@@ -8,10 +8,6 @@ from outcomeeng_testing.harnesses import instruction_block_scenario_evidence as 
 MODULE = harness.load_instruction_block_module()
 
 
-def _template(tmp_path: pathlib.Path) -> pathlib.Path:
-    return harness.write_template(tmp_path, harness.NEW_VERSION)
-
-
 def test_write_produces_both_files_language_and_harness_filtered(
     tmp_path: pathlib.Path,
 ) -> None:
@@ -928,7 +924,7 @@ def test_symlinked_root_file_becomes_regular_file(tmp_path: pathlib.Path) -> Non
     (repo / harness.INSTRUCTION_CLAUDE).symlink_to(harness.INSTRUCTION_AGENTS)
     assert (repo / harness.INSTRUCTION_CLAUDE).is_symlink()
 
-    harness.run_generator_write_primary(repo, _template(tmp_path))
+    harness.run_generator_write_primary(repo, evidence.scenario_template(tmp_path))
 
     assert not (repo / harness.INSTRUCTION_CLAUDE).is_symlink()
     assert (repo / harness.INSTRUCTION_CLAUDE).is_file()
@@ -949,7 +945,7 @@ def test_markerless_generated_body_is_replaced(tmp_path: pathlib.Path) -> None:
     )
     repo = harness.seed_both_root_files(tmp_path / "repo", retired)
 
-    harness.run_generator_write_primary(repo, _template(tmp_path))
+    harness.run_generator_write_primary(repo, evidence.scenario_template(tmp_path))
 
     result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
     assert "retired generated body" not in result
@@ -974,7 +970,7 @@ def test_retired_marker_block_reported_stale_and_replaced(
         == "stale"
     )
 
-    harness.run_generator_write_primary(repo, _template(tmp_path))
+    harness.run_generator_write_primary(repo, evidence.scenario_template(tmp_path))
 
     result = claude.read_text(encoding="utf-8")
     assert open_marker not in result
@@ -987,7 +983,7 @@ def test_blank_run_in_independent_content_preserved(tmp_path: pathlib.Path) -> N
         tmp_path / "repo", "# Product\n\nfirst\n\n\n\nsecond\n"
     )
 
-    harness.run_generator_write_primary(repo, _template(tmp_path))
+    harness.run_generator_write_primary(repo, evidence.scenario_template(tmp_path))
 
     result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
     assert "first\n\n\n\nsecond" in result
