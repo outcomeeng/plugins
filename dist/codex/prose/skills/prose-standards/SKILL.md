@@ -48,7 +48,7 @@ Boundary consequences:
 
 Avoid: "quietly orchestrating workflows, decisions, and interactions", "the one that quietly suffocates everything else", "a quiet intelligence behind it"
 
-**Authenticity adverbs** ("genuinely", "truly", "actually") -- Don't use "genuinely", "truly", "actually", "really", or "essentially" to assert that something is real or authentic. If the rest of the sentence demonstrates the quality, the adverb is redundant. If it doesn't, the adverb is a substitute for showing it. Either way, cut it. The adjective form "genuine" is equally contaminated -- use "real" or "specific" when you need a qualifier, or drop the qualifier entirely.
+**Authenticity adverbs** ("genuinely", "truly", "actually") -- Don't use "genuinely", "truly", "actually", "really", or "essentially" to assert that something is real or authentic. If the rest of the sentence demonstrates the quality, the adverb is redundant. If it doesn't, the adverb is a substitute for showing it. Either way, cut it. The adjective form "genuine" is equally contaminated -- use "real" or "specific" when a qualifier is needed, or drop the qualifier entirely.
 
 Avoid: "a genuinely transformative experience", "This is a genuine concern", "users who truly need this feature", "what actually matters here", "This essentially means that..."
 
@@ -98,7 +98,7 @@ Avoid: "contributing to the region's rich cultural heritage", "underscoring its 
 
 Avoid: "From innovation to implementation to cultural transformation.", "From the singularity of the Big Bang to the grand cosmic web."
 
-**Gerund fragment litany** -- Don't follow a claim with a stream of verbless gerund fragments -- standalone sentences with no grammatical subject. If you've made the point, move on.
+**Gerund fragment litany** -- Don't follow a claim with a stream of verbless gerund fragments -- standalone sentences with no grammatical subject. Once the point is made, move on.
 
 Avoid: "Fixing small bugs. Writing straightforward features. Implementing well-defined tickets."
 
@@ -140,7 +140,7 @@ Avoid: "Imagine a world where every tool you use -- your calendar, your inbox, y
 
 Avoid: "And yes, I'm openly in love with the platform model", "This is not a rant; it's a diagnosis"
 
-**"The truth is simple"** -- Don't assert that a point is obvious, clear, or simple -- prove it. Telling the reader your point is clear is a signal it isn't.
+**"The truth is simple"** -- Don't assert that a point is obvious, clear, or simple -- prove it. Telling the reader the point is clear is a signal it isn't.
 
 Avoid: "The reality is simpler and less flattering", "History is unambiguous on this point"
 
@@ -164,7 +164,7 @@ Avoid: "Experts argue that this approach has significant drawbacks.", "Industry 
 
 Avoid: "The problem -- and this is the part nobody talks about -- is systemic.", "Not recklessly, not completely -- but enough -- enough to matter."
 
-**Bold-first bullets** -- Don't begin every bullet with a bolded phrase. If you need bullets, let the content carry the list -- not typographic decoration.
+**Bold-first bullets** -- Don't begin every bullet with a bolded phrase. When bullets are needed, let the content carry the list -- not typographic decoration.
 
 Avoid: "**Security**: Environment-based configuration with...", "**Performance**: Lazy loading of expensive resources..."
 
@@ -174,7 +174,7 @@ Avoid: "**Security**: Environment-based configuration with...", "**Performance**
 
 <composition>
 
-**Fractal summaries** -- Don't summarize every section before and after writing it. Don't restate at the document level what you just said at the section level.
+**Fractal summaries** -- Don't summarize every section before and after writing it. Don't restate at the document level what the section level just said.
 
 Avoid: "In this section, we'll explore... [3000 words later] ...as we've seen in this section.", "And so we return to where we began."
 
@@ -186,9 +186,9 @@ Avoid: "The ecosystem needs ecosystems to build ecosystem value.", Walls and doo
 
 Avoid: "Apple didn't build Uber. Facebook didn't build Spotify. Stripe didn't build Shopify. AWS didn't build Airbnb."
 
-**One-point dilution** -- Don't restate a single argument in ten different ways across thousands of words. If you've made the point, move forward or stop.
+**One-point dilution** -- Don't restate a single argument in ten different ways across thousands of words. Once the point is made, move forward or stop.
 
-**Content duplication** -- Don't repeat entire sections or paragraphs verbatim within the same piece. Read back what you've written before continuing.
+**Content duplication** -- Don't repeat entire sections or paragraphs verbatim within the same piece. Read back what was written before continuing.
 
 **The signposted conclusion** -- Don't announce the conclusion. End the piece -- don't label the ending. Cut "In conclusion", "To sum up", and "In summary".
 
