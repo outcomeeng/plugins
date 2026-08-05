@@ -9,8 +9,9 @@ Exposes resource and execution infrastructure for generated cases:
   canonical template, plus harness-accessed inert whole-document fixtures for root bodies,
   shared-region examples, and line-boundary examples.
 - ``canonical_router_spacing_observations``. Renders the canonical template for every
-  source-owned harness and every subset of its declared languages, returning observations whose
-  marker-to-body invariant the typed mapping file asserts.
+  source-owned harness and every subset of its declared languages, returning each rendering
+  beside the marker that opens it; the typed mapping file reads the marker-to-body spacing off
+  that rendering and owns what the spacing must be.
 - ``for_all_unsupported_language_overrides``. Searches unsupported language tokens with
   replayable property-run settings and passes each observation to the typed property's invariant.
 
@@ -39,9 +40,13 @@ from hypothesis import given, seed, settings
 from outcomeeng.distribution import instruction_block as distribution
 from outcomeeng_testing.generators.instruction_block import (
     BootstrapThresholdRelation,
+    DelegationCandidateCase,
     InstructionBlockCases,
     build_macro as generate_build_macro,
     build_template as generate_template,
+    adopted_body_heading as generate_adopted_body_heading,
+    delegating_root_body as generate_delegating_root_body,
+    delegation_candidate_cases as generate_delegation_candidate_cases,
     harness_line as generate_harness_line,
     instruction_block_cases,
     unsupported_language_tokens,
@@ -106,12 +111,33 @@ class EvidenceRun:
 
 
 @dataclass(frozen=True)
-class RouterSpacingObservation:
-    """One source-owned harness/language rendering observed by mapping evidence."""
+class BootstrapOutcome:
+    """The seed bodies and both written root documents observed after one bootstrap write.
 
-    marker_and_separator: str
+    ``seeds`` carries an entry only for a root instruction file the topology placed, so a
+    one-file topology reports one seed and the linked test reads which side the generator
+    created for itself. ``repo`` exposes the written paths, so the test can observe file kind
+    as well as content.
+    """
+
+    seeds: dict[str, str]
+    claude: str
+    agents: str
+    repo: pathlib.Path
+
+
+@dataclass(frozen=True)
+class RouterSpacingObservation:
+    """One source-owned harness/language rendering observed by mapping evidence.
+
+    The observation carries the opening marker the case is identified by and the rendered
+    block. It carries no expected spacing: how many blank lines separate the two is the
+    assertion's own claim, and recomposing it here from the separator ``render`` used would
+    move the expectation whenever the separator did.
+    """
+
+    marker: str
     rendered: str
-    unexpected_additional_separator: str
 
 
 @dataclass(frozen=True)
@@ -137,6 +163,63 @@ def root_instruction_topology_only_agents() -> RootInstructionTopology:
     cases = generated_cases()
     return RootInstructionTopology(
         files={cases.instruction_agents: ROOT_AGENTS_BODY}, symlinks={}
+    )
+
+
+def root_instruction_topology_delegating() -> RootInstructionTopology:
+    """Return a root topology whose Claude file only points at the content-bearing Codex file."""
+    cases = generated_cases()
+    return RootInstructionTopology(
+        files={
+            cases.instruction_claude: generate_delegating_root_body(
+                cases.instruction_agents,
+                generate_adopted_body_heading(ROOT_AGENTS_BODY),
+            ),
+            cases.instruction_agents: ROOT_AGENTS_BODY,
+        },
+        symlinks={},
+    )
+
+
+def root_instruction_topology_reverse_delegating() -> RootInstructionTopology:
+    """Return a root topology whose Codex file only points at the content-bearing Claude file.
+
+    The mirror of ``root_instruction_topology_delegating``. Adoption is direction-agnostic, so the
+    two directions are separate members of the topology domain rather than one member observed
+    twice.
+    """
+    cases = generated_cases()
+    return RootInstructionTopology(
+        files={
+            cases.instruction_claude: ROOT_CLAUDE_BODY,
+            cases.instruction_agents: generate_delegating_root_body(
+                cases.instruction_claude,
+                generate_adopted_body_heading(ROOT_CLAUDE_BODY),
+            ),
+        },
+        symlinks={},
+    )
+
+
+def root_instruction_topology_mutual_delegation() -> RootInstructionTopology:
+    """Return a root topology whose two files point at each other and carry no content.
+
+    Both stubs carry one identical heading, as two stubs for one product would: neither side has a
+    content-bearing body to take a title from, so inventing a different title for each would make
+    the fixture less like the situation it stands for, not more.
+    """
+    cases = generated_cases()
+    shared_heading = generate_adopted_body_heading(ROOT_SHARED_BODY)
+    return RootInstructionTopology(
+        files={
+            cases.instruction_claude: generate_delegating_root_body(
+                cases.instruction_agents, shared_heading
+            ),
+            cases.instruction_agents: generate_delegating_root_body(
+                cases.instruction_claude, shared_heading
+            ),
+        },
+        symlinks={},
     )
 
 
@@ -242,6 +325,34 @@ def materialize_root_instruction_topology(
     for name, body in seeds.items():
         _replace_path_with_text(root / name, body)
     return seeds
+
+
+def materialize_declared_root_topology(
+    root: pathlib.Path, topology: RootInstructionTopology
+) -> dict[str, str]:
+    """Create ``topology`` under ``root`` exactly as declared and return the bodies placed.
+
+    A root instruction file the topology omits stays absent, and a symlink stays a symlink, so
+    the generator meets the topology the case names instead of a pair this harness already
+    resolved on its behalf. The returned mapping carries an entry only for a file the topology
+    placed; a symlinked entry carries the body reachable through the link.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    for name, body in topology.files.items():
+        _replace_path_with_text(root / name, body)
+    for name, target in topology.symlinks.items():
+        link_path = root / name
+        if link_path.exists() or link_path.is_symlink():
+            link_path.unlink()
+        link_path.symlink_to(target)
+
+    cases = generated_cases()
+    placed: dict[str, str] = {}
+    for instruction_name in (cases.instruction_claude, cases.instruction_agents):
+        placed_body = _seed_body(root, instruction_name, None)
+        if placed_body is not None:
+            placed[instruction_name] = placed_body
+    return placed
 
 
 def symlinked_instruction_topology_materializes_as_regular_files() -> bool:
@@ -384,83 +495,6 @@ HARNESS_CODEX = _GENERATED_CASES.harness_codex
 TEMPLATE_HARNESSES = _GENERATED_CASES.template_harnesses
 
 
-def scenario_evidence_contract() -> tuple[str, ...]:
-    """Return the independent case manifest required by scenario evidence."""
-    return (
-        "blank_run_in_independent_content_preserved",
-        "bootstrap_finds_whole_line_block_over_longer_straddling_match",
-        "bootstrap_preserves_lines_when_common_span_ends_mid_line",
-        "bootstrap_refuses_a_malformed_seed_fence",
-        "bootstrap_snaps_span_to_line_boundaries_in_both_files",
-        "both_files_identical_except_harness_spans",
-        "cli_check_marks_router_not_first_as_stale",
-        "cli_check_reports_absent_when_one_file_missing",
-        "cli_check_treats_language_order_as_set",
-        "cli_detects_languages_from_test_extensions",
-        "cli_reconcile_from_applies_operator_tie_break",
-        "cli_reconcile_reports_no_change_when_regions_agree",
-        "cli_reconcile_requires_repo_root",
-        "cli_rejects_directory_template",
-        "cli_rejects_missing_repo_root",
-        "cli_rejects_missing_template",
-        "cli_rejects_non_directory_repo_root",
-        "cli_rejects_root_symlink_escaping_repo",
-        "cli_rejects_spx_symlink_during_language_detection",
-        "cli_rejects_template_without_frontmatter_version",
-        "cli_write_without_repo_root_exits",
-        "diverged_shared_region_reconciles_to_more_recent_side",
-        "duplicate_shared_region_name_is_malformed",
-        "legacy_marker_block_reported_stale_and_replaced",
-        "malformed_shared_fence_is_reported_stale",
-        "markerless_generated_body_is_replaced",
-        "newer_template_adds_section_preserving_shared_region",
-        "one_sided_shared_region_is_reported_ambiguous",
-        "quoted_router_closing_marker_after_block_is_preserved",
-        "quoted_router_marker_in_prose_is_preserved",
-        "quoted_shared_fence_in_prose_is_not_a_region",
-        "recency_tie_is_reported_ambiguous",
-        "reconcile_makes_no_change_to_a_dirty_file",
-        "reconcile_replaces_losing_region_whole_without_blending",
-        "reconcile_reports_malformed_fence_as_ambiguous",
-        "reconcile_skips_a_malformed_duplicate_name",
-        "reconcile_uses_region_recency_not_whole_file_recency",
-        "region_line_range_covers_content_lines_only",
-        "router_marker_format",
-        "symlinked_root_file_becomes_regular_file",
-        "template_symlink_is_rejected",
-        "unparseable_version_is_stale",
-        "write_preserves_shared_region_and_independent_prose",
-        "write_produces_both_files_language_and_harness_filtered",
-    )
-
-
-def mapping_evidence_contract() -> tuple[str, ...]:
-    """Return the independent case manifest required by mapping evidence."""
-    module = load_instruction_block_module()
-    topology_factories = (
-        root_instruction_topology_only_claude,
-        root_instruction_topology_only_agents,
-        root_instruction_topology_symlinked,
-        root_instruction_topology_identical,
-        root_instruction_topology_legacy_managed,
-        root_instruction_topology_near_identical,
-        root_instruction_topology_separate,
-    )
-    return (
-        *(f"duplicate-flag[{option}]" for option in module.CLI_OPTION_NAMES),
-        *(
-            f"extension[{extension}]"
-            for extension in sorted(module.LANGUAGE_BY_EXTENSION)
-        ),
-        *(f"language-block[{language}]" for language in TEMPLATE_LANGUAGES),
-        "detected-language-set",
-        "router-state-report",
-        "shared-region-state-report",
-        *(f"topology[{factory.__name__}]" for factory in topology_factories),
-        "span-ratio-wrap-decision",
-    )
-
-
 def property_evidence_contract() -> tuple[str, ...]:
     """Return the independent case manifest required by property evidence."""
     return (
@@ -566,8 +600,6 @@ def canonical_router_spacing_observations() -> tuple[RouterSpacingObservation, .
         template = read_canonical_template(agent_harness)
         version = module.parse_template_version(template)
         for enabled_languages in _language_subsets(languages):
-            marker = module.router_marker(version, enabled_languages)
-            separator = f"{marker}{module.ROUTER_BODY_SEPARATOR}"
             rendered = module.render(
                 template,
                 enabled_languages,
@@ -576,9 +608,8 @@ def canonical_router_spacing_observations() -> tuple[RouterSpacingObservation, .
             )
             observations.append(
                 RouterSpacingObservation(
-                    marker_and_separator=separator,
+                    marker=module.router_marker(version, enabled_languages),
                     rendered=rendered,
-                    unexpected_additional_separator=module.ROUTER_BODY_SEPARATOR[:1],
                 )
             )
     return tuple(observations)
@@ -594,21 +625,6 @@ def canonical_router_spacing_declarations() -> tuple[str, ...]:
         )
         for enabled_languages in _language_subsets(languages)
     )
-
-
-def canonical_router_spacing_evidence_run() -> EvidenceRun:
-    """Assert every router-spacing mapping behind one harness entrypoint."""
-    declared = canonical_router_spacing_declarations()
-    executed: list[str] = []
-    for name, observation in zip(
-        declared, canonical_router_spacing_observations(), strict=True
-    ):
-        assert observation.rendered.startswith(observation.marker_and_separator)
-        assert not observation.rendered.removeprefix(
-            observation.marker_and_separator
-        ).startswith(observation.unexpected_additional_separator)
-        executed.append(name)
-    return EvidenceRun(declared=declared, executed=tuple(executed))
 
 
 def for_all_unsupported_language_overrides(
@@ -641,27 +657,6 @@ def for_all_unsupported_language_overrides(
         generated_assertion,
         replay_path=LANGUAGE_OVERRIDE_PROPERTY_REPLAY_PATH,
     )
-
-
-def unsupported_language_override_declarations() -> tuple[str, ...]:
-    """Return the property identity covered by generated unsupported tokens."""
-    return ("unsupported-language-overrides",)
-
-
-def unsupported_language_override_evidence_run() -> EvidenceRun:
-    """Assert the unsupported-language property behind one harness entrypoint."""
-
-    def assert_rejected(observation: LanguageOverrideObservation) -> None:
-        assert observation.returncode != 0
-        assert observation.token in observation.stderr
-        assert all(
-            language in observation.stderr
-            for language in observation.supported_languages
-        )
-
-    for_all_unsupported_language_overrides(assert_rejected)
-    declared = unsupported_language_override_declarations()
-    return EvidenceRun(declared=declared, executed=declared)
 
 
 def extract_markdown_section(document: str, heading: str) -> str:
@@ -725,13 +720,17 @@ def run_generator_write(
     template_path: pathlib.Path,
     *,
     languages: str,
+    adopt_harness: str | None = None,
 ) -> int:
     """Run the generator CLI's ``--write`` over ``repo_root`` and return its exit code.
 
     Centralizes the CLI-invocation setup the render-model tests share, since harness code —
-    not test bodies — owns shared execution scaffolding. The dynamically loaded module types
-    ``main`` as ``Any``; the CLI contract returns an exit code, so the result is cast to ``int``.
+    not test bodies — owns shared execution scaffolding. ``adopt_harness`` passes an operator
+    answer through ``--adopt``; omitting it is the default run, which adopts no body. The
+    dynamically loaded module types ``main`` as ``Any``; the CLI contract returns an exit code, so
+    the result is cast to ``int``.
     """
+    adopt_option = [] if adopt_harness is None else [f"--adopt={adopt_harness}"]
     return cast(
         int,
         module.main(
@@ -742,13 +741,16 @@ def run_generator_write(
                 str(repo_root),
                 f"--languages={languages}",
                 "--write",
+                *adopt_option,
             ]
         ),
     )
 
 
 def run_generator_write_primary(
-    repo_root: pathlib.Path, template_path: pathlib.Path
+    repo_root: pathlib.Path,
+    template_path: pathlib.Path,
+    adopt_harness: str | None = None,
 ) -> int:
     """Run the generator ``--write`` over ``repo_root`` with the harness's primary language.
 
@@ -761,6 +763,95 @@ def run_generator_write_primary(
         repo_root,
         template_path,
         languages=cases.lang_primary,
+        adopt_harness=adopt_harness,
+    )
+
+
+def run_generator_adopt_without_write(
+    repo_root: pathlib.Path, template_path: pathlib.Path, adopt_harness: str
+) -> tuple[int, str]:
+    """Run the generator with an operator answer and no ``--write``; return exit code and stderr.
+
+    Stdout is captured and discarded so a render that reaches it stays out of the test report.
+    The harness owns the invocation; the linked test decides what the exit code and stderr mean.
+    """
+    cases = generated_cases()
+    errors = io.StringIO()
+    with redirect_stdout(io.StringIO()), redirect_stderr(errors):
+        result = cast(
+            int,
+            load_instruction_block_module().main(
+                [
+                    "--template",
+                    str(template_path),
+                    "--repo-root",
+                    str(repo_root),
+                    f"--languages={cases.lang_primary}",
+                    f"--adopt={adopt_harness}",
+                ]
+            ),
+        )
+    return result, errors.getvalue()
+
+
+def seed_both_root_files(repo_root: pathlib.Path, body: str) -> pathlib.Path:
+    """Create ``repo_root`` and write ``body`` as both root instruction files.
+
+    The scenario tests that start from one identical seed share this setup, and temporary product
+    scaffolding is the harness's to own rather than each test file's.
+    """
+    repo_root.mkdir(parents=True, exist_ok=True)
+    for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        (repo_root / filename).write_text(body, encoding="utf-8")
+    return repo_root
+
+
+def retired_managed_block_tokens() -> tuple[str, ...]:
+    """Return the source-owned markers and metadata prefixes a retired managed block carries."""
+    module = load_instruction_block_module()
+    return tuple(
+        marker for pair in module.LEGACY_MANAGED_BLOCK_MARKERS for marker in pair
+    ) + (
+        module.MANAGED_TEMPLATE_VERSION_PREFIX,
+        module.MANAGED_TEMPLATE_SOURCE_PREFIX,
+        module.MANAGED_LANGUAGES_PREFIX,
+    )
+
+
+def delegation_candidate_cases() -> tuple[DelegationCandidateCase, ...]:
+    """Return the generated candidate shapes over the source-owned Codex filename and size bound."""
+    cases = generated_cases()
+    module = load_instruction_block_module()
+    return generate_delegation_candidate_cases(
+        cases.instruction_agents,
+        ROOT_AGENTS_BODY,
+        module.DELEGATION_STUB_MAX_CHARACTERS,
+    )
+
+
+def observe_bootstrap_outcome(
+    tmp_path: pathlib.Path,
+    topology_factory: Callable[[], RootInstructionTopology],
+    adopt_harness: str | None = None,
+) -> BootstrapOutcome:
+    """Materialize a root topology, run the real generator write, and read both root documents.
+
+    Owns the temporary repository, the rendered template, and the generator invocation, and
+    returns the seed bodies alongside the two written documents. It applies no predicate — the
+    linked test decides what the observed documents mean.
+
+    The topology reaches the generator exactly as declared, so an absent side and a symlinked
+    side are resolved by the generator under test rather than by this harness.
+    """
+    repo = tmp_path / "repo"
+    seeds = materialize_declared_root_topology(repo, topology_factory())
+    template = write_template(tmp_path, NEW_VERSION)
+    run_generator_write_primary(repo, template, adopt_harness)
+    return BootstrapOutcome(
+        seeds=seeds,
+        claude=(repo / INSTRUCTION_CLAUDE).read_text(encoding="utf-8"),
+        agents=(repo / INSTRUCTION_AGENTS).read_text(encoding="utf-8"),
+        repo=repo,
     )
 
 
@@ -789,6 +880,29 @@ def run_generator_check(
             ),
         )
     return result, output.getvalue().strip()
+
+
+def run_generator_reconcile(
+    repo_root: pathlib.Path, template_path: pathlib.Path
+) -> tuple[int, str]:
+    """Run the real ``--reconcile`` surface and return its exit code and stderr report."""
+    errors = io.StringIO()
+    cases = generated_cases()
+    with redirect_stderr(errors):
+        result = cast(
+            int,
+            load_instruction_block_module().main(
+                [
+                    "--template",
+                    str(template_path),
+                    "--repo-root",
+                    str(repo_root),
+                    f"--languages={cases.lang_primary}",
+                    "--reconcile",
+                ]
+            ),
+        )
+    return result, errors.getvalue()
 
 
 def root_document_with_shared_region(

@@ -1,5 +1,5 @@
 ---
-template_version: "0.33.0"
+template_version: "0.35.0"
 template_source: spec-tree
 ---
 
@@ -167,6 +167,29 @@ The configured verifier and reviewer roles this router names are pre-authorized.
 - **NEVER** dispatch a sub-agent this router does not name merely because it is discovered, available, or plausibly useful.
 - **NEVER** run a verification skill — audit or review — in the main conversation; the separate context is what keeps the verdict free of that conversation's bias.
 - **ALWAYS** treat the gate as blocked when a named role cannot be dispatched or does not return: finish the deterministic verification, then report the exact dispatch attempted and how it failed.
+
+### Agent identity in generated artifacts
+
+**NEVER** name the agent or its runtime in an operational artifact — a branch name, commit message, pull-request title or body, review comment, or authorship marker written into a product file. Describe the work, never who performed it. Exact filesystem paths, package and tool names, quoted command output, and operator-supplied text keep their required spelling.
+
+**ALWAYS** confine that ban to operational artifacts. Instruction content that documents agent behavior names the agent as its subject by design; stripping that subject out of authored guidance to satisfy this rule misapplies it rather than complying with it.
+
+### Operator questions
+
+<!-- harness:claude -->
+
+Raise an operator question through AskUserQuestion, never as prose the operator has to answer in free text. Reserve it for an answer that changes what happens next and that no loaded skill, decision, spec, or command output settles — a product-intent conflict a rebase cannot decide, a blocked expense ceiling, or a resolution the evidence leaves genuinely open. Name the exact blocked action, what each option does, and a pause-and-inspect choice.
+
+<!-- /harness:claude -->
+
+<!-- harness:codex -->
+
+Raise an operator question through request_user_input, never as prose the operator has to answer in free text. Reserve it for an answer that changes what happens next and that no loaded skill, decision, spec, or command output settles — a product-intent conflict a rebase cannot decide, a blocked expense ceiling, or a resolution the evidence leaves genuinely open. Name the exact blocked action, what each option does, and a pause-and-inspect choice.
+
+<!-- /harness:codex -->
+
+- **ALWAYS** finish every action that does not depend on the answer first, so the question is the only thing outstanding when it is asked.
+- **NEVER** raise one to confirm work already authorized, to report progress, or to choose an option the loaded truth already decides.
 
 ## Mutation Status Updates
 
@@ -478,7 +501,7 @@ Use this shape for one subagent audit. When several custom-agent configurations 
 | "Diagnose the spx environment"                          | `/diagnose`            | —                       |
 | "File a follow-up in a dependency queue"                | `/issue`               | —                       |
 
-Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically:
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
 
 <!-- lang:python -->
 

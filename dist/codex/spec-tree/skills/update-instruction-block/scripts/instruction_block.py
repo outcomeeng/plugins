@@ -27,6 +27,21 @@ extensions, replaces symlinked root instruction files with regular files, remove
 ``spx/`` instruction files, reads committed git state for the recency reconcile, and writes both
 root files.
 
+Tested with: a stale router below the installed version; a router whose recorded languages differ
+from the detected set; a retired marker block and a markerless generated body; an absent surface;
+a surface already current; the initial topologies (one file present, a symlinked file, a
+delegating file, mutual delegation, two identical files, two near-identical files above and below
+the 80% span threshold, two independent files); delegation candidacy on both sides of each fact it
+reads (a body naming the other root file within the bound, exactly at it, and one character past
+it, and a body naming no other root file); a write that carries no operator answer, one that
+carries ``--adopt``, one whose ``--adopt`` names a pointer body and is refused, one whose
+``--adopt`` would discard a content-bearing body and is refused, one whose ``--adopt`` arrives
+after the bootstrap pass has closed and is refused, and an ``--adopt`` with no ``--write`` to
+apply it; a reconcile reporting a pointer body; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
+and an operator tie break; a dirty root file; and the CLI rejections (missing or non-directory repo root, missing or directory template, a
+template without ``template_version``, a symlink escaping the repository, an unsupported language
+token, a duplicate flag). The executable cases live in the governing node's ``tests/`` directory.
+
 """
 
 from __future__ import annotations
@@ -39,11 +54,16 @@ import subprocess
 import sys
 from collections.abc import Iterable
 from collections.abc import Mapping
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Protocol
 
 FRONTMATTER_DELIMITER = "---"
 TEMPLATE_VERSION_KEY = "template_version"
+# The stable prefix of the missing-version failure; the CLI appends the offending template path
+# and the remedy, so a caller matching on the prefix stays coupled to the condition, not the
+# advice.
 MISSING_TEMPLATE_VERSION_ERROR = "error: template has no template_version"
 DUPLICATE_FLAG_ERROR_PREFIX = "error: duplicate flag: "
 TEMPLATE_SOURCE_KEY = "template_source"
@@ -57,6 +77,7 @@ CLI_OPTION_NAMES = (
     "--write",
     "--reconcile",
     "--from",
+    "--adopt",
     "--languages",
 )
 UNRESOLVED_BUILD_TEMPLATE_TOKENS = (
@@ -120,6 +141,13 @@ BOOTSTRAP_SHARED_REGION_NAME = "root"
 # The bootstrap pass wraps one shared region only when the biggest contiguous identical span
 # covers more than this fraction of the larger file.
 BOOTSTRAP_SHARED_THRESHOLD = 0.8
+# A root instruction file that only points at the other one is absolutely small — a title and a
+# sentence or two — however large the file it points at. The bound is therefore a character count,
+# not a ratio: measured against the other file, a 400-line body would read as a stub whenever the
+# body opposite it ran to 4000 lines. The bound only decides when to ask the operator, never what
+# the answer is, so it is set well above a real stub rather than tuned to exclude borderline
+# bodies; a body that clears it costs one question, never its content.
+DELEGATION_STUB_MAX_CHARACTERS = 500
 
 # Each agent harness reads its own instruction filename from the product root.
 AGENT_HARNESS_INSTRUCTION_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
@@ -724,6 +752,102 @@ def _wrap_shared_at(text: str, start: int, end: int, name: str) -> str:
     return "\n\n".join(part for part in (before, fenced, after) if part) + "\n"
 
 
+def is_delegation_candidate(body: str, other_filename: str) -> bool:
+    """Report whether ``body`` is small enough to be nothing but a pointer at ``other_filename``.
+
+    Two facts about the file decide this, and neither is a reading of its prose: the body names
+    the other root instruction file, and its text stays under
+    :data:`DELEGATION_STUB_MAX_CHARACTERS`. Whether a sentence naming the other file *also*
+    carries an instruction of its own is a question about English, not about the file, and no
+    pattern over the text answers it — "see the other file for commands and run the migration
+    first" and "see the other file for commands, packages, and conventions" differ by meaning
+    alone. Adoption replaces the whole body, so guessing wrong costs the file its instructions.
+    This therefore reports a *candidate* the operator resolves, never a verdict.
+    Pure: two strings in, a bool out.
+    """
+    # Naming the other file already implies a non-empty body, so the size bound is the only
+    # further condition.
+    return (
+        other_filename in body and len(body.strip()) <= DELEGATION_STUB_MAX_CHARACTERS
+    )
+
+
+def delegation_candidates(bodies_by_harness: Mapping[str, str]) -> tuple[str, ...]:
+    """Return the harnesses whose body may be a pointer at the other root instruction file.
+
+    Both sides can qualify: two stubs naming each other carry no content for either to adopt, and
+    the operator resolves that standoff by writing a body rather than choosing a side. Pure: a
+    mapping of bodies in, harness names out.
+    """
+    candidates = []
+    for harness, body in sorted(bodies_by_harness.items()):
+        others = [name for name in bodies_by_harness if name != harness]
+        if any(
+            is_delegation_candidate(body, AGENT_HARNESS_INSTRUCTION_FILENAMES[other])
+            for other in others
+        ):
+            candidates.append(harness)
+    return tuple(candidates)
+
+
+def is_first_encounter(body_claude: str, body_codex: str) -> bool:
+    """Report whether the bootstrap pass may still arrange these two bodies.
+
+    A surface is a first encounter while neither body carries a valid shared region and neither
+    carries a malformed fence. A malformed fence (an open marker with no matching close, or a
+    duplicated name) makes ``parse_shared_regions`` read the body as region-free, so a bootstrap
+    would wrap the dangling marker verbatim into a new region and bury it in a permanently stuck
+    stale state; an ambiguous seed is refused rather than guessed at, and ``--check`` and the drift
+    gate surface it as stale instead.
+
+    Every step that only a first encounter may take reads this one function, so the reported
+    remedy and the write that applies it can never disagree about whether the pass is open.
+    Pure: two strings in, a bool out.
+    """
+    return not any(
+        malformed_shared_regions(body) or parse_shared_regions(body)
+        for body in (body_claude, body_codex)
+    )
+
+
+def adopt_delegated_body(
+    bodies_by_harness: Mapping[str, str], adopt_harness: str
+) -> dict[str, str]:
+    """Give every harness the body of ``adopt_harness``, the side the operator kept.
+
+    An answer is only meaningful where a body was reported as a pointer, so both sides are
+    checked. The named side must not be a pointer, or adoption installs a body sending the
+    reader to a file carrying that same pointer. Every other side must *be* one, because
+    adoption discards it: overwriting a body that states something of its own destroys
+    instructions no report ever offered up. Pure: bodies and a harness name in, bodies out.
+    """
+    kept = bodies_by_harness[adopt_harness]
+    others = [name for name in bodies_by_harness if name != adopt_harness]
+    if any(
+        is_delegation_candidate(kept, AGENT_HARNESS_INSTRUCTION_FILENAMES[other])
+        for other in others
+    ):
+        raise CliInputError(
+            f"--adopt {adopt_harness} names a body that only points at the other root "
+            "instruction file; no side carries content to adopt, so write the intended "
+            "instructions into one file first"
+        )
+    kept_filename = AGENT_HARNESS_INSTRUCTION_FILENAMES[adopt_harness]
+    discarded = [
+        AGENT_HARNESS_INSTRUCTION_FILENAMES[other]
+        for other in others
+        if not is_delegation_candidate(bodies_by_harness[other], kept_filename)
+    ]
+    if discarded:
+        raise CliInputError(
+            f"--adopt {adopt_harness} would discard the body of "
+            f"{', '.join(sorted(discarded))}, which carries content of its own rather than a "
+            "pointer at another root instruction file; adoption replaces a whole body, so no "
+            "answer authorizes it"
+        )
+    return {harness: kept for harness in bodies_by_harness}
+
+
 def bootstrap_wrap(
     text_a: str,
     text_b: str,
@@ -796,7 +920,9 @@ def _product_owned_root_document(document: str) -> str:
 
 
 def build_root_instruction_documents(
-    seeds: Mapping[str, str], blocks_by_harness: Mapping[str, str]
+    seeds: Mapping[str, str],
+    blocks_by_harness: Mapping[str, str],
+    adopt_harness: str | None = None,
 ) -> dict[str, str]:
     """Compose each harness's root document: router block first, then product content.
 
@@ -805,26 +931,32 @@ def build_root_instruction_documents(
     carries a shared region — the biggest contiguous identical span is wrapped as one shared
     region per :func:`bootstrap_wrap`; once a shared region exists, the bodies are left as the
     operator arranged them. The per-harness router block is then prepended to each.
+
+    ``adopt_harness`` carries an operator decision and defaults to none. A body that merely looks
+    like a pointer at the other root instruction file is never adopted here: the reconcile reports
+    it as an ambiguity, and only the operator's answer arrives as ``adopt_harness``. Composing a
+    document never destroys a body on its own reading of that body.
+
+    Adoption belongs to the bootstrap pass, so an answer that arrives after that pass has closed
+    is refused rather than dropped. Passing over it would write both files, exit zero, and leave
+    the operator reading a success that answered nothing.
     """
     body_claude = _strip_managed_block(_product_owned_root_document(seeds["claude"]))
     body_codex = _strip_managed_block(_product_owned_root_document(seeds["codex"]))
 
-    # A malformed shared fence (an open marker with no matching close, or a duplicated name) makes
-    # `parse_shared_regions` read the body as region-free, which would make the bootstrap wrap the
-    # dangling marker verbatim into a new region and bury it — a permanently stuck stale state the
-    # ADR forbids ("refuses the ambiguous cases"). Refuse the bootstrap and leave the fence as
-    # independent content, which `--check` and the drift gate already surface as stale for the
-    # update skill to reconcile.
-    malformed = malformed_shared_regions(body_claude) or malformed_shared_regions(
-        body_codex
-    )
-    first_encounter = (
-        not malformed
-        and not parse_shared_regions(body_claude)
-        and not parse_shared_regions(body_codex)
-    )
-    if first_encounter:
+    if is_first_encounter(body_claude, body_codex):
+        if adopt_harness is not None:
+            adopted = adopt_delegated_body(
+                {"claude": body_claude, "codex": body_codex}, adopt_harness
+            )
+            body_claude, body_codex = adopted["claude"], adopted["codex"]
         body_claude, body_codex = bootstrap_wrap(body_claude, body_codex)
+    elif adopt_harness is not None:
+        raise CliInputError(
+            f"--adopt {adopt_harness} applies only to a first encounter, and a root instruction "
+            "file already carries a shared region or a malformed shared fence; no delegation is "
+            "open for this answer to resolve"
+        )
 
     return {
         "claude": prepend_router_block(blocks_by_harness["claude"], body_claude),
@@ -997,11 +1129,15 @@ def instruction_status(
 
 
 def write_root_instruction_files(
-    repo_root: pathlib.Path, blocks_by_harness: Mapping[str, str]
+    repo_root: pathlib.Path,
+    blocks_by_harness: Mapping[str, str],
+    adopt_harness: str | None = None,
 ) -> None:
     """Insert router blocks and bootstrap shared regions, replacing symlinks with files."""
     seeds = _root_seed_documents(repo_root)
-    documents = build_root_instruction_documents(seeds, blocks_by_harness)
+    documents = build_root_instruction_documents(
+        seeds, blocks_by_harness, adopt_harness
+    )
     for harness, filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.items():
         _replace_path_with_text(_repo_child(repo_root, filename), documents[harness])
 
@@ -1029,26 +1165,70 @@ class ReconcileReport:
     tie: tuple[str, ...] = ()
     one_sided: tuple[str, ...] = ()
     malformed: tuple[str, ...] = ()
+    delegating: tuple[str, ...] = ()
 
     @property
     def ambiguous(self) -> bool:
         """Whether any region needs the update skill's judgment rather than a deterministic write."""
-        return bool(self.dirty or self.tie or self.one_sided or self.malformed)
+        return bool(
+            self.dirty
+            or self.tie
+            or self.one_sided
+            or self.malformed
+            or self.delegating
+        )
 
 
-def _git(repo_root: pathlib.Path, *args: str) -> subprocess.CompletedProcess[str]:
-    """Run a git command in ``repo_root``, capturing output; never raising on non-zero exit."""
+class Runner(Protocol):
+    """Execute one git command through an injectable process boundary."""
+
+    def __call__(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: pathlib.Path,
+        capture_output: bool,
+        text: bool,
+        check: bool,
+    ) -> subprocess.CompletedProcess[str]: ...
+
+
+def _subprocess_runner(
+    argv: Sequence[str],
+    *,
+    cwd: pathlib.Path,
+    capture_output: bool,
+    text: bool,
+    check: bool,
+) -> subprocess.CompletedProcess[str]:
+    """The default runner: the one place this script reaches a real process."""
     return subprocess.run(  # noqa: S603
-        ["git", "-C", str(repo_root), *args],
+        argv,
+        cwd=cwd,
+        capture_output=capture_output,
+        text=text,
+        check=check,
+    )
+
+
+def _git(
+    repo_root: pathlib.Path, *args: str, runner: Runner = _subprocess_runner
+) -> subprocess.CompletedProcess[str]:
+    """Run a git command in ``repo_root``, capturing output; never raising on non-zero exit."""
+    return runner(
+        ["git", *args],
+        cwd=repo_root,
         capture_output=True,
         text=True,
         check=False,
     )
 
 
-def _working_tree_dirty(repo_root: pathlib.Path, filename: str) -> bool:
+def _working_tree_dirty(
+    repo_root: pathlib.Path, filename: str, *, runner: Runner = _subprocess_runner
+) -> bool:
     """Report whether ``filename`` carries uncommitted working-tree changes."""
-    proc = _git(repo_root, "status", "--porcelain", "--", filename)
+    proc = _git(repo_root, "status", "--porcelain", "--", filename, runner=runner)
     return bool(proc.stdout.strip())
 
 
@@ -1081,7 +1261,12 @@ def _region_line_range(text: str, name: str) -> tuple[int, int] | None:
 
 
 def _region_committed_timestamp(
-    repo_root: pathlib.Path, filename: str, text: str, name: str
+    repo_root: pathlib.Path,
+    filename: str,
+    text: str,
+    name: str,
+    *,
+    runner: Runner = _subprocess_runner,
 ) -> int | None:
     """Return the committer timestamp of the last commit that touched the region's lines, or None.
 
@@ -1102,6 +1287,7 @@ def _region_committed_timestamp(
         "--no-patch",
         "--format=%ct",
         f"-L{start_line},{end_line}:{filename}",
+        runner=runner,
     )
     output = proc.stdout.strip()
     if proc.returncode != 0 or not output:
@@ -1113,7 +1299,12 @@ def _region_committed_timestamp(
 
 
 def _region_recency_winner(
-    repo_root: pathlib.Path, name: str, text_a: str, text_b: str
+    repo_root: pathlib.Path,
+    name: str,
+    text_a: str,
+    text_b: str,
+    *,
+    runner: Runner = _subprocess_runner,
 ) -> str | None:
     """Return the harness whose shared region was committed more recently, or None.
 
@@ -1122,10 +1313,18 @@ def _region_recency_winner(
     deterministic reconcile guesses.
     """
     claude = _region_committed_timestamp(
-        repo_root, AGENT_HARNESS_INSTRUCTION_FILENAMES["claude"], text_a, name
+        repo_root,
+        AGENT_HARNESS_INSTRUCTION_FILENAMES["claude"],
+        text_a,
+        name,
+        runner=runner,
     )
     codex = _region_committed_timestamp(
-        repo_root, AGENT_HARNESS_INSTRUCTION_FILENAMES["codex"], text_b, name
+        repo_root,
+        AGENT_HARNESS_INSTRUCTION_FILENAMES["codex"],
+        text_b,
+        name,
+        runner=runner,
     )
     if claude is None or codex is None or claude == codex:
         return None
@@ -1133,7 +1332,10 @@ def _region_recency_winner(
 
 
 def reconcile_root_shared_regions(
-    repo_root: pathlib.Path, forced_winner: str | None = None
+    repo_root: pathlib.Path,
+    forced_winner: str | None = None,
+    *,
+    runner: Runner = _subprocess_runner,
 ) -> ReconcileReport:
     """Reconcile diverged shared regions across the two root files by git recency.
 
@@ -1149,7 +1351,7 @@ def reconcile_root_shared_regions(
     dirty = tuple(
         filename
         for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values()
-        if _working_tree_dirty(repo_root, filename)
+        if _working_tree_dirty(repo_root, filename, runner=runner)
     )
     if dirty:
         return ReconcileReport(dirty=dirty)
@@ -1176,8 +1378,11 @@ def reconcile_root_shared_regions(
         for name in diverged_shared_regions(text_a, text_b)
         if name not in malformed_set
     )
+    delegating = unresolved_delegation(repo_root)
     if not diverged:
-        return ReconcileReport(one_sided=one_sided, malformed=malformed)
+        return ReconcileReport(
+            one_sided=one_sided, malformed=malformed, delegating=delegating
+        )
 
     # Recency and the winning body read the committed originals (line ranges match git history),
     # while the writes accumulate on text_a / text_b; reconciling one region shifts another's line
@@ -1188,7 +1393,9 @@ def reconcile_root_shared_regions(
         winner = (
             forced_winner
             if forced_winner is not None
-            else _region_recency_winner(repo_root, name, original_a, original_b)
+            else _region_recency_winner(
+                repo_root, name, original_a, original_b, runner=runner
+            )
         )
         if winner is None:
             tie.append(name)
@@ -1215,6 +1422,29 @@ def reconcile_root_shared_regions(
         tie=tuple(tie),
         one_sided=one_sided,
         malformed=malformed,
+        delegating=delegating,
+    )
+
+
+def unresolved_delegation(repo_root: pathlib.Path) -> tuple[str, ...]:
+    """CLI-edge helper: return the root instruction files that may be a pointer at the other.
+
+    Only a first encounter can adopt a body, so a candidate outside that state is not reported —
+    reporting one there would name a remedy the write would decline to apply. The state test is
+    :func:`is_first_encounter` and the candidate test is :func:`delegation_candidates`.
+    """
+    texts = _read_both_root_texts(repo_root)
+    if texts is None:
+        return ()
+    bodies = {
+        harness: _strip_managed_block(_product_owned_root_document(text))
+        for harness, text in zip(("claude", "codex"), texts, strict=True)
+    }
+    if not is_first_encounter(bodies["claude"], bodies["codex"]):
+        return ()
+    return tuple(
+        AGENT_HARNESS_INSTRUCTION_FILENAMES[harness]
+        for harness in delegation_candidates(bodies)
     )
 
 
@@ -1285,10 +1515,22 @@ def main(argv: list[str] | None = None) -> int:
         help="With --reconcile, apply this harness's diverged region bodies (operator tie break) instead of git recency.",
     )
     parser.add_argument(
+        "--adopt",
+        dest="adopt_harness",
+        choices=tuple(AGENT_HARNESS_INSTRUCTION_FILENAMES),
+        help="With --write, give both root files this harness's body (operator answer to a reported delegation candidate).",
+    )
+    parser.add_argument(
         "--languages",
         help="Comma-separated enabled languages; detected from spx/**/tests/ extensions when omitted.",
     )
     args = parser.parse_args(raw_argv)
+
+    if args.adopt_harness is not None and not args.write:
+        # Only the write applies an adoption. Rendering to stdout, checking, or reconciling with
+        # an answer attached would report success while discarding it.
+        print("error: --adopt requires --write", file=sys.stderr)
+        return 2
 
     try:
         template_path = _validated_template_path(args.template)
@@ -1298,7 +1540,11 @@ def main(argv: list[str] | None = None) -> int:
     template_text = template_path.read_text(encoding="utf-8")
     installed = parse_template_frontmatter_version(template_text)
     if installed is None:
-        print(MISSING_TEMPLATE_VERSION_ERROR, file=sys.stderr)
+        print(
+            f"{MISSING_TEMPLATE_VERSION_ERROR}: add a dotted-numeric "
+            f"{TEMPLATE_VERSION_KEY} to the frontmatter of {template_path}",
+            file=sys.stderr,
+        )
         return 2
 
     try:
@@ -1353,6 +1599,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ambiguous (one-sided): {name}", file=sys.stderr)
         for name in report.malformed:
             print(f"malformed: {name}", file=sys.stderr)
+        for filename in report.delegating:
+            print(f"ambiguous (delegating): {filename}", file=sys.stderr)
         for name in report.reconciled:
             print(f"reconciled: {name}")
         return 1 if report.ambiguous else 0
@@ -1371,9 +1619,11 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values()
             }
-            if shared_region_drift(repo_root):
+            if shared_region_drift(repo_root) or unresolved_delegation(repo_root):
                 # A diverged or one-sided shared region is drift the reconcile resolves; report
-                # it as stale so the gate does not pass over it.
+                # it as stale so the gate does not pass over it. An unresolved delegation
+                # candidate is the same: the routers alone can be current while one body still
+                # waits on the operator's answer, and reporting current there would strand it.
                 statuses.add(InstructionStatus.STALE)
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)
@@ -1400,7 +1650,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.write and repo_root is not None:
         try:
-            write_root_instruction_files(repo_root, rendered)
+            write_root_instruction_files(repo_root, rendered, args.adopt_harness)
             remove_obsolete_spx_instruction_files(repo_root)
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)

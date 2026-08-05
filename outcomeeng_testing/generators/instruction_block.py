@@ -70,6 +70,89 @@ class RootContentPair:
     content_b: str
 
 
+@dataclass(frozen=True)
+class DelegationCandidateCase:
+    """One named root-instruction-body shape in the delegation-candidate domain."""
+
+    name: str
+    body: str
+    other_filename: str
+
+
+def delegating_root_body(other_filename: str, heading: str) -> str:
+    """Return a root instruction body that only points the reader at ``other_filename``.
+
+    A real delegating stub carries the same title as the file it points at, so the pointer is
+    composed under ``heading`` — the adopted body's own heading — rather than a title this module
+    invents. Both the filename and the heading are owned elsewhere.
+    """
+    return (
+        f"{heading}\n"
+        "\n"
+        f"See [{other_filename}]({other_filename}) for build and test commands, "
+        "architecture, packages, and testing conventions.\n"
+    )
+
+
+def adopted_body_heading(content_body: str) -> str:
+    """Return the first ATX heading line of ``content_body``."""
+    return next(line for line in content_body.splitlines() if line.startswith("#"))
+
+
+def delegation_candidate_cases(
+    other_filename: str, content_body: str, max_characters: int
+) -> tuple[DelegationCandidateCase, ...]:
+    """Return the root-body shapes the delegation-candidate mapping ranges over.
+
+    Candidacy turns on two facts about the file and nothing else: whether the body names
+    ``other_filename``, and whether its text stays within ``max_characters``. The shapes therefore
+    cover naming the other file well inside the bound, naming it at the bound exactly, naming it
+    one character past the bound, and not naming it at all. Whether a body that names the other
+    file *also* carries an instruction of its own is deliberately absent from this domain: no
+    property of the text decides it, so the operator does. Every parameter is owned elsewhere.
+    """
+    heading = adopted_body_heading(content_body)
+    pointer = delegating_root_body(other_filename, heading)
+
+    def padded_to(size: int) -> str:
+        """Return a body naming ``other_filename`` whose stripped text is exactly ``size`` long.
+
+        Padding follows the pointer on its own line, so the separating newline counts toward the
+        size the bound measures. One size is therefore unreachable — a single character past the
+        bare pointer would need that newline and nothing after it — and asking for it raises
+        rather than returning a body of the wrong length.
+        """
+        bare = len(pointer.strip())
+        if size == bare:
+            return pointer
+        padding = size - bare - len("\n")
+        if padding < 1:
+            raise ValueError(
+                f"no body naming {other_filename} has exactly {size} characters"
+            )
+        body = pointer + "x" * padding
+        if len(body.strip()) != size:
+            raise ValueError(
+                f"padded body is {len(body.strip())} characters, not {size}"
+            )
+        return body
+
+    def case(name: str, body: str) -> DelegationCandidateCase:
+        return DelegationCandidateCase(
+            name=name, body=body, other_filename=other_filename
+        )
+
+    return (
+        case("names-the-other-file-well-inside-the-bound", pointer),
+        case("names-the-other-file-at-the-bound", padded_to(max_characters)),
+        case(
+            "names-the-other-file-one-character-past-the-bound",
+            padded_to(max_characters + 1),
+        ),
+        case("omits-the-other-file", content_body),
+    )
+
+
 def _prior_dotted_version(version: str) -> str:
     """Return a dotted-numeric version strictly below ``version``."""
     parts = [int(part) for part in version.split(".")]

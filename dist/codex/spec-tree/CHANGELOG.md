@@ -6,6 +6,20 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.88.1
+
+### Added
+
+- **A root instruction file that only points at the other one is detected and resolved by answer, not by guess.** A repository whose `AGENTS.md` says little more than "see the other root instruction file" previously read as divergence: the two bodies shared almost nothing, so nothing was wrapped as a `shared` region and each file kept its own harness's router under a pointer to the other file's differently rendered one — sending a reader to the wrong harness's instructions. `/update-instruction-block` now reports such a file as a delegation candidate and holds the surface `stale` until the operator names the side both files take. Candidacy is decided from two facts about the file — the body names the other root instruction file, and its text stays within an absolute character bound — never from a reading of what the prose means, because adoption replaces a whole body and a wrong guess costs that file its instructions.
+
+- **`--adopt {claude|codex}` applies that answer.** It requires `--write`, and it refuses four answers it cannot apply, each exiting nonzero and leaving both root files untouched: naming a side whose own body is a pointer, discarding a body carrying content of its own, arriving after the bootstrap pass has closed, and arriving with no write to apply it.
+
+### Changed
+
+- **The router block gained two sections, so they land in both root instruction files on the next run.** `### Agent identity in generated artifacts` bans naming the agent or its runtime in an operational artifact — a branch name, commit message, pull-request title or body, review comment, or authorship marker — while explicitly exempting instruction content that documents agent behavior as its subject. `### Operator questions` requires an operator question to go through the harness's structured-question tool rather than free-text prose, and reserves it for an answer that changes what happens next.
+
+- **The five ambiguity reports read the same way.** Each now carries the same Detected/Recommend/Apply shape instead of five differing prose forms.
+
 ## 0.88.0
 
 ### Added
