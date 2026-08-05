@@ -37,9 +37,11 @@ An operator names a target by where the work lives — a worktree path, a reposi
 
 Resolve an operator-named target to a pane before operating:
 
-1. Run `agents` (or `list` when the target need not be an agent) to get the complete inventory with each pane's worktree and repository.
+1. Run `agents`. Its typed identity projection is the one source that carries each pane's complete worktree and repository, so it is what a path match reads. `list` inventories instantiated panes and never establishes a per-pane worktree or repository here; treating its payload as that inventory would match against a field this surface does not promise.
 2. Match the operator's phrasing against those worktree and repository paths. A path the operator gives may be a subdirectory of the worktree root, so match by containment, not string equality.
 3. Operate on the matched pane's complete UUID.
+
+A target that is not a coding-agent pane is outside what `agents` returns, so no path match is available for it. Say that the operator's target is not among the agent panes and name the ones that are, rather than falling back to an inventory that carries no worktree to match.
 
 Report the target back to the operator the way they named it — the worktree or directory — while using the pane UUID internally. Echoing a UUID to an operator who named a directory forces them to verify a value they never supplied.
 
