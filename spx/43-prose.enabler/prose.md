@@ -16,11 +16,13 @@ The plugin ships a rendered output style named `prose` whose voice rules and the
 
 ## Assertions
 
-- ALWAYS: `/author-prose` and `/audit-prose` are the plugin's only harness-matched skills — every per-kind author, standards, and audit skill declares itself composed-only and is reached through a router, never matched directly
-- ALWAYS: both routers classify text through the ordered kind-detection procedure — ownership, audience, function, unit, then copy — with first match deciding, so every text resolves to exactly one kind
-- ALWAYS: text the detection procedure leaves ambiguous is resolved by asking the user to select a kind from the taxonomy — never by guessing and never by inventing a style outside it
-- ALWAYS: an `/audit-prose` verdict is produced only in a dispatched verifier context through the `prose-auditor` agent, and its final message is the structured verdict — overall `APPROVED` or `REJECTED` with findings carrying pattern, category, quote, rewrite, and detected kind
-- ALWAYS: every kind's standards skill derives from the shared `/prose-standards` catalog — inherited rules condensed to names, explicit overrides, and kind-specific rules — so kinds differ in register and composition, never in voice
-- ALWAYS: the shipped `prose` output style and the interface kind's voice rules render from one authored canon — never a hand-authored second canon
-- NEVER: a repository- or domain-governed artifact — a spec, decision record, `SKILL.md`, coordination note, or agent guide — is authored or audited through the prose surface; ownership outranks every later detection test
-- NEVER: a chat response to the user routes through the prose surface — the rendered output style governs chat voice
+### Compliance
+
+- ALWAYS: `/author-prose` and `/audit-prose` are the plugin's only harness-matched skills — every per-kind author, standards, and audit skill declares itself composed-only and is reached through a router, never matched directly ([audit])
+- ALWAYS: both routers classify text through the ordered kind-detection procedure — ownership, audience, function, unit, then copy — with first match deciding, so every text resolves to exactly one kind ([audit])
+- ALWAYS: text the detection procedure leaves ambiguous is resolved by asking the user to select a kind from the taxonomy — never by guessing and never by inventing a style outside it ([audit])
+- ALWAYS: an `/audit-prose` verdict is produced only in a dispatched verifier context through the `prose-auditor` agent, and its final message is the structured verdict — overall `APPROVED` or `REJECTED` with findings carrying pattern, category, quote, rewrite, and detected kind ([audit])
+- ALWAYS: every kind's standards skill derives from the shared `/prose-standards` catalog — inherited rules condensed to names, explicit overrides, and kind-specific rules — so kinds differ in register and composition, never in voice ([audit])
+- ALWAYS: the shipped `prose` output style and the interface kind's voice rules render from one authored canon — never a hand-authored second canon ([audit])
+- NEVER: a repository- or domain-governed artifact — a spec, decision record, `SKILL.md`, coordination note, or agent guide — is authored or audited through the prose surface; ownership outranks every later detection test ([audit])
+- NEVER: a chat response to the user routes through the prose surface — the rendered output style governs chat voice ([audit])
