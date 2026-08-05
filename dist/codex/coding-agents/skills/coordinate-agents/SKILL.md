@@ -17,7 +17,7 @@ Use only explicit SPX facts, public runtime projections, checked command results
 
 <workflow>
 
-1. Identify every participant with complete agent, pane, worktree, branch, repository, and applicable run identities.
+1. Identify every participant with complete agent, pane, worktree, branch, repository, and applicable run identities. An operator names a participant by worktree, repository, or working directory rather than by pane UUID; resolve that naming to a complete identity through `/operate-prowl`'s operator-target resolution, and report participants back to the operator in the terms they used.
 2. Classify the relationship from authoritative evidence:
    - `ownership-overlap`: paths, concerns, or an external mutation overlap.
    - `dependency-handoff`: one workflow has a checked fact another consumes.
@@ -61,6 +61,7 @@ Use these branch-owned payloads:
 
 - A checked path or concern overlap produces an `ownership-proposal` with one `overlap=<path-or-concern>` fact per overlapping item; its boundary remains proposed until a matching accepted acknowledgement arrives.
 - A dependency handoff sends `kind: "fact"` with checked facts and `request: null`, not another workflow's continuation instructions.
+- A dependency handoff that asks another workflow to *produce* something carries the requester's own complete pane and the exact command that reaches it, so the producer can send one line back on completion. The requester cannot poll — polling loops are blocked by design — so a request with no return path is one the requester can never learn the answer to, and the operator ends up relaying it by hand. When the produced artifact is a file, the file carries the payload and the message carries only the signal and the complete path.
 - A delegated mutation begins with an `ownership-proposal` whose `mutationTarget` contains the recipient's exact pane UUID, worktree path, branch, repository, full HEAD SHA, and status. The recipient performs no mutation until it returns both a matching `acknowledgement` with `accepted: true` and a `mutation-state` message with the same coordination reference and an `observedState` containing its exact worktree, branch, repository, full HEAD SHA, and status.
 - When delegated-mutation evidence has no `observedState`, emit one ownership proposal carrying the exact target and request the state report.
 - Treat `acceptedAcknowledgement` as authoritative only when its kind is `acknowledgement`, `accepted` is true, its coordination reference equals the active proposal reference, its sender is the target participant, and its recipient is the coordinating participant. When observed state exists but acknowledgement evidence is missing, rejected, or mismatched, emit `status: "coordination-needed"`, `reason: "ownership-overlap"`, and no message.
@@ -83,6 +84,8 @@ Use these branch-owned payloads:
 - NEVER combine blockers whose authoritative external-condition keys differ.
 - NEVER authorize a delegated mutation before exact target/state verification, or authorize editing, staging, stashing, checkout, reset, or commit in a sibling worktree.
 - NEVER send directly; delivery belongs to `/message-agents`.
+- NEVER wait on another workflow by polling its pane, re-reading it on a timer, or treating one empty read as evidence it produced nothing. A read establishes that pane's state at the instant it ran, never that a request is unanswered.
+- NEVER leave the operator to carry a result between two workflows. When a request needs an answer, the request itself carries the return path.
 
 </constraints>
 

@@ -12,7 +12,7 @@ A source-owned coordination envelope delivered through `/operate-prowl` to one c
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one JSON message request containing `toPane`, `kind`, `subject`, `facts`, and any applicable coordination fields. When required data is absent or the target is ambiguous, stop and name the missing or ambiguous fields before discovery or delivery; never invent message data.
+1. Interpret `$ARGUMENTS` as one JSON message request containing `toPane`, `kind`, `subject`, `facts`, and any applicable coordination fields. When required data is absent or the target is ambiguous, stop and name the missing or ambiguous fields before discovery or delivery; never invent message data. When the recipient is named by worktree, repository, or working directory rather than a pane UUID — the form an operator uses — resolve it through `/operate-prowl`'s operator-target resolution before building the request.
 2. Invoke `/operate-prowl` for the `agents` operation. Require `status: "succeeded"`; stop with its exact status and detail otherwise.
 3. Pass the public agent array and the active `PROWL_PANE_ID` or `PROWL_WORKTREE_PATH` environment evidence to the bundled script's `discover` operation over stdin. The script returns one complete caller and all complete targets.
 4. Require `status: "prowl-pane"`, one complete caller identity, and one target selected by its complete `pane` UUID. Stop with the exact status and detail on `unsupported-terminal`, `caller-ambiguous`, or `invalid-schema`; NEVER select by title, focus, position, or prose.
@@ -77,6 +77,10 @@ Before release, exercise `discover_callers`, `coordination_reference`, `build_en
 **Transport success was inferred from an exit code alone.** Claude passed `delivered: true` and `commandExitCode: 0` without the checked `/operate-prowl` result, so downstream output claimed delivery with no transport evidence to inspect. The exit code establishes only one field of the environment result. Pass the complete checked `send` result under `transport`; the bundled script rejects delivered status when any required field is absent or inconsistent.
 
 **Continuation prose remained in the editor.** Claude treated a successful immediate-return send as a submitted turn even though the operator could still see editable text. Require `response.data.input.trailing_enter_sent: true`; a prefill or absent submission field is a delivery failure.
+
+**A request was sent with no way for the answer to come back.** Claude asked a recipient to produce a result and sent no return path, then had no signal when the recipient finished. Polling is blocked by design, so the sender read the recipient's pane once, saw nothing, and moved on while the finished result sat on disk — leaving the operator to carry it between the two agents. A message that asks for something carries the sender's own complete pane and the exact command that reaches it, so the recipient can send one line back on completion.
+
+**A pane UUID was requested from the operator.** Claude asked which pane to send to, when the operator had already named the target the only way they can — by worktree or working directory. Resolve the operator's naming against the live inventory and report the target back in the same terms.
 
 </failure_modes>
 
