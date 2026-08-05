@@ -6,7 +6,7 @@ Apply the complete coordination producer below to the supplied authoritative evi
 name: coordinate-agents
 description: >-
   ALWAYS invoke this skill when coding agents in separate worktrees may overlap, depend on each other, share an external blocker, or need ownership coordination.
-allowed-tools: Read, Skill
+allowed-tools: Skill
 ---
 
 <objective>
@@ -49,7 +49,9 @@ For a shared blocker, replace `operatorAction: null` with this complete object:
 }
 ```
 
-Preserve every input participant in the verdict's `participants` array, dropping none — including a participant the classified relationship does not involve. An operator-named target resolved in step 1 joins that array as a complete identity, because it is a party to the coordination; resolution adds, never replaces. The array therefore holds exactly the input participants plus any resolved target, and never a participant no evidence names. Each message carries every field in the source-owned message contract: complete `toPane` UUID, `kind`, `subject`, `facts`, `request`, `coordinationReference`, `mutationTarget`, `observedState`, and `accepted`. `facts` is always an array of strings, including branches with exactly one fact. Use null for every field that does not apply. `kind` MUST be exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. Omit or set `coordinationReference` to null for initiating proposals and facts so `/message-agents` creates a UUID; every response kind preserves the active proposal UUID. Only an `acknowledgement` carries boolean `accepted`; every other kind carries `accepted: null`.
+Preserve every input participant in the verdict's `participants` array, dropping none — including a participant the classified relationship does not involve. An operator-named target resolved in step 1 joins that array as a complete identity, because it is a party to the coordination; resolution adds, never replaces. The array therefore holds exactly the input participants plus any resolved target, and never a participant no evidence names.
+
+Each message carries every field in the source-owned message contract: complete `toPane` UUID, `kind`, `subject`, `facts`, `request`, `coordinationReference`, `mutationTarget`, `observedState`, and `accepted`. `facts` is always an array of strings, including branches with exactly one fact. Use null for every field that does not apply. `kind` MUST be exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. Omit or set `coordinationReference` to null for initiating proposals and facts so `/message-agents` creates a UUID; every response kind preserves the active proposal UUID. Only an `acknowledgement` carries boolean `accepted`; every other kind carries `accepted: null`.
 
 Use these branch-owned payloads:
 
