@@ -333,6 +333,7 @@ A well-configured custom agent has:
 - Every sandbox and tool capability mapped to at least one workflow step, with no workflow step requiring an undeclared capability
 - A post-skill invocation record produced from the handoff: `spawn_agent` uses the configured name as `agent_type` and returns an `agent_id`; `wait_agent` preserves that exact identifier and reaches `completed`; the completed final message contains every field or section declared by the output expectations; `close_agent` then closes the completed thread
 
+- A destination inside the invocation checkout, or — for a user-scope path — an operator confirmation naming the absolute destination, obtained before the write per `<scope_boundary>`
 - A description that states both what the custom agent does and when to invoke it
 - A model identifier accepted by the target harness and consistent with the configuration's stated capability, cost, and reproducibility requirements
 - The target-specific invocation check rerun after every configuration edit as a post-skill step outside this skill's restricted execution

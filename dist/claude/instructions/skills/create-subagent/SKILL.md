@@ -340,6 +340,7 @@ A well-configured subagent has:
 - Every declared tool mapped to at least one workflow step, with no workflow step requiring an undeclared tool
 - A post-skill Agent-tool invocation record produced from the handoff, using the configured name as `subagent_type` and reaching `completed`; its final message contains every field or section declared by the output expectations
 
+- A destination inside the invocation checkout, or — for a user-scope path — an operator confirmation naming the absolute destination, obtained before the write per `<scope_boundary>`
 - A description that states both what the subagent does and when to invoke it
 - A model identifier accepted by the target harness and consistent with the configuration's stated capability, cost, and reproducibility requirements
 - The target-specific invocation check rerun after every configuration edit as a post-skill step outside this skill's restricted execution

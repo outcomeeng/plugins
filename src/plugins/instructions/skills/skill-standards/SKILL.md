@@ -506,6 +506,8 @@ A consumer's harness declares which directories a session may touch: the working
 
 **A write outside the invocation checkout is confirmed before it happens, not resolved and taken.** A home-directory configuration path, another repository's checkout, or any location the operator did not name in the request needs confirmation that states the absolute destination. Being able to resolve a path is not authorization to write to it, and one confirmation covers one write — the next asks again. Prefer the in-checkout location whenever both exist, because a write there is reviewable in that repository's history.
 
+One content may name a prohibited path: the rule prohibiting it. A standard listing the spellings an author may not write, or an audit row naming what to flag, states the rule rather than breaking it. Judge the surrounding intent — a path a skill presents as prohibited is not a violation, and a path a skill presents as a step to follow is one regardless of how it is fenced.
+
 **A permission prompt is a result, not an obstacle.** When a tool layer declines a path, that decline is the boundary working. Never document a way around it — a shell redirect standing in for a refused tool write, a broader permission substituted for a narrow one, a path rewritten to dodge a check. Name a path inside the boundary instead. A skill that teaches evasion converts one operator's approval into every future session's bypass.
 
 </path_boundary>
