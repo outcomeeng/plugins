@@ -9,6 +9,7 @@ nothing here.
 from __future__ import annotations
 
 import pathlib
+from typing import cast
 
 from outcomeeng_testing.harnesses import instruction_block as harness
 
@@ -64,7 +65,11 @@ def diverge_region_and_commit(
 
 
 def region_body(repo: pathlib.Path, filename: str) -> str:
-    """Return ``filename``'s current shared-region body."""
-    return MODULE.parse_shared_regions((repo / filename).read_text(encoding="utf-8"))[
-        harness.SHARED_REGION_NAME
-    ]
+    """Return ``filename``'s current shared-region body.
+
+    The dynamically loaded module types its returns as ``Any``; the CLI contract makes a
+    region body a string, so the result is cast at this edge as the other loaded-module
+    calls in these harnesses are.
+    """
+    regions = MODULE.parse_shared_regions((repo / filename).read_text(encoding="utf-8"))
+    return cast(str, regions[harness.SHARED_REGION_NAME])
