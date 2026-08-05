@@ -501,8 +501,11 @@ Use this shape for one subagent audit. When several custom-agent configurations 
 | "Diagnose the spx environment"                          | `/diagnose`            | —                       |
 | "File a follow-up in a dependency queue"                | `/issue`               | —                       |
 
+<!-- langs:present -->
+
 Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
 
+<!-- /langs:present -->
 <!-- lang:python -->
 
 | User Says...            | Skill (composed)             | Composing agent          |

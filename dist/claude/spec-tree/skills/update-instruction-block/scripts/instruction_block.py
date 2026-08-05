@@ -37,7 +37,8 @@ it, and a body naming no other root file); a write that carries no operator answ
 carries ``--adopt``, one whose ``--adopt`` names a pointer body and is refused, one whose
 ``--adopt`` would discard a content-bearing body and is refused, one whose ``--adopt`` arrives
 after the bootstrap pass has closed and is refused, and an ``--adopt`` with no ``--write`` to
-apply it; a reconcile reporting a pointer body; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
+apply it; a reconcile reporting a pointer body; every section gated on language presence, rendered with no
+language enabled and with each non-empty subset of the declared languages; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
 and an operator tie break; a dirty root file; and the CLI rejections (missing or non-directory repo root, missing or directory template, a
 template without ``template_version``, a symlink escaping the repository, an unsupported language
 token, a duplicate flag). The executable cases live in the governing node's ``tests/`` directory.

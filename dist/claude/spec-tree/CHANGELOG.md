@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Fixed
 
-- **A project with no test files yet no longer receives an empty test-naming section.** The router's `## Test Naming Convention` heading and its preamble introduce per-language filename tables, but carried no per-language block of their own, so a project whose spec tree holds no test file — every project before its first test — rendered the heading and the preamble above nothing. The section is now gated on at least one enabled language and is omitted whole when none is. A project that already has test files sees no change.
+- **A project with no test files yet no longer receives empty per-language sections.** Two spans of the router introduce per-language content while carrying no per-language block of their own: the `## Test Naming Convention` heading with its preamble, and the paragraph introducing the composed per-language audit-skill tables. A project whose spec tree holds no test file — every project before its first test — rendered both above nothing, since the same render dropped every table they announce. Both are now gated on at least one enabled language and omitted whole when none is. A project that already has test files sees no change.
 
 ## 0.88.1
 
