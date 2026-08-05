@@ -2,7 +2,7 @@
 name: author-prose
 description: >-
   ALWAYS invoke this skill when writing or editing any text for human readers — documents, web pages, articles, product docs, UI text, error messages, notifications, emails, READMEs, release notes, marketing copy, and internal team pages. NEVER invoke for chat responses to the user (no matter how long), code comments, commit messages, or agent-facing instructions like SKILL.md.
-allowed-tools: Read, Edit, Write, Glob, Grep, Skill
+allowed-tools: Read, Edit, Write, Glob, Grep, Skill,{!% if target == 'claude' %!} Agent{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}}{!% endif %!}
 ---
 
 {!% require_skill 'prose:prose-standards' %!}

@@ -2,7 +2,7 @@
 name: audit-docs
 user-invocable: false
 description: >-
-  Docs audit methodology — sweeps documentation against the base catalog and the simplified ASD-STE100 structural rules — composed by audit-prose for the docs kind. Reached only through the dispatched prose-auditor agent, never the main conversation.
+  Docs audit methodology — judges documentation against the base anti-pattern catalog and the simplified ASD-STE100 structural rules, checking every cap by count and producing findings that carry pattern, category, quote, and rewrite.
 model: sonnet
 allowed-tools: Read, Glob, Grep, Skill
 ---

@@ -2,7 +2,7 @@
 name: audit-internal-docs
 user-invocable: false
 description: >-
-  Internal-doc audit methodology — sweeps workspace documents against the base catalog, the internal-doc overrides, and the internal-doc rules — composed by audit-prose for the internal-docs kind. Reached only through the dispatched prose-auditor agent, never the main conversation.
+  Internal-doc audit methodology — judges workspace documents against the base anti-pattern catalog, the internal-doc overrides, and the internal-doc formatting and structure rules, producing findings that carry pattern, category, quote, and rewrite.
 model: sonnet
 allowed-tools: Read, Glob, Grep, Skill
 ---

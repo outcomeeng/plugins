@@ -1,9 +1,9 @@
 ---
 name: audit-prose
 description: >-
-  Prose audit methodology preloaded by the prose-auditor agent. Dispatch prose-auditor to audit human-facing text; the main conversation reaches this audit only through that agent.
+  Prose audit methodology — judges human-facing text against the base anti-pattern catalog and the detected kind's standards layer, emitting a structured verdict whose findings carry pattern, category, quote, rewrite, and kind.
 model: sonnet
-allowed-tools: Read, Glob, Grep, Skill
+allowed-tools: Read, Glob, Grep, Skill, Agent
 ---
 
 Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
