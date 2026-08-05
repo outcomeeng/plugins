@@ -29,13 +29,13 @@ Two modules — `outcomeeng_testing/harnesses/instruction_block_{property,compli
 
 The pattern is confined to this node; no other node in the tree uses it, and no decision records it as an accepted shape. `outcomeeng_testing/harnesses/property_evidence.py` is not part of this issue — it owns replayable property-run configuration, which is legitimate harness ownership.
 
-**Remaining scope**: the property and compliance evidence modules and their linked test files. The scenario and mapping modules are migrated and are not part of this entry.
+**Remaining scope**: the property and compliance evidence modules and their linked test files. The scenario and mapping modules are migrated and are not part of this entry, and neither are the two runs the shared harness `outcomeeng_testing/harnesses/instruction_block.py` held — router spacing and the unsupported-language override — whose predicates now stand in `tests/test_router_spacing.mapping.l1.py` and `tests/test_language_override.property.l1.py`.
 
 **Resolution shape**: move each remaining `_assert_*` body into its linked test file as a named test function, reduce the evidence modules to observation and resource providers returning the documents, exit codes, and parsed regions the tests judge, and delete the declared/executed case-name bookkeeping once no test depends on it.
 
 **Why it is separate**: the two remaining modules and their linked property and compliance test files are untouched by the changesets that migrated the scenario and mapping halves, so their predicates move on their own evidence, gated by `test-evidence-auditor` in one pass.
 
-**Evidence**: surfaced while adding delegating-stub evidence for the bootstrap render model, then confirmed by `test-evidence-auditor`. Every scenario and mapping predicate now stands in `tests/test_instruction_block.scenario.l1.py` and `tests/test_instruction_block.mapping.l1.py`, and the declared/executed case-name bookkeeping those two modules used is deleted. The node carries both shapes until the property and compliance modules follow.
+**Evidence**: surfaced while adding delegating-stub evidence for the bootstrap render model, then confirmed by `test-evidence-auditor`, which rejected the shared harness's router-spacing run on the same grounds in a later pass. Every scenario and mapping predicate now stands in `tests/test_instruction_block.scenario.l1.py` and `tests/test_instruction_block.mapping.l1.py`, and the declared/executed case-name bookkeeping those two modules used is deleted. The node carries both shapes until the property and compliance modules follow.
 
 ## Generator migration awaits a published SPX CLI capability
 
