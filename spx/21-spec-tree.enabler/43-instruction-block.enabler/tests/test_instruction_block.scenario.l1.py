@@ -827,6 +827,52 @@ def test_an_answer_that_would_discard_a_content_bearing_body_is_refused(
             )
 
 
+def test_an_answer_arriving_after_the_bootstrap_pass_is_refused(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = tmp_path / "repo"
+    harness.materialize_root_instruction_topology(
+        repo, harness.root_instruction_topology_identical()
+    )
+    template = harness.write_template(tmp_path, harness.NEW_VERSION)
+    harness.run_generator_write_primary(repo, template)
+    established = {
+        filename: (repo / filename).read_text(encoding="utf-8")
+        for filename in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS)
+    }
+
+    exit_code = harness.run_generator_write_primary(
+        repo, template, adopt_harness="claude"
+    )
+
+    # Only the bootstrap pass adopts, and that first write closed it. Writing both files and
+    # exiting zero here would report success for an answer nothing applied.
+    assert exit_code == 2
+    for filename, document in established.items():
+        assert (repo / filename).read_text(encoding="utf-8") == document, filename
+
+
+def test_an_answer_with_no_write_to_apply_it_is_refused(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = tmp_path / "repo"
+    seeds = harness.materialize_root_instruction_topology(
+        repo, harness.root_instruction_topology_delegating()
+    )
+    template = harness.write_template(tmp_path, harness.NEW_VERSION)
+
+    exit_code, errors = harness.run_generator_adopt_without_write(
+        repo, template, "codex"
+    )
+
+    # The answer resolves a real pending delegation here, so silence would be the worst case:
+    # the operator would read a clean render and believe the pointer was resolved.
+    assert exit_code == 2
+    assert "--adopt requires --write" in errors
+    for filename, document in seeds.items():
+        assert (repo / filename).read_text(encoding="utf-8") == document, filename
+
+
 def test_a_pointer_beside_a_malformed_fence_is_never_reported(
     tmp_path: pathlib.Path,
 ) -> None:
@@ -843,8 +889,13 @@ def test_a_pointer_beside_a_malformed_fence_is_never_reported(
 
     assert MODULE.unresolved_delegation(repo) == ()
 
-    harness.run_generator_write_primary(repo, template, adopt_harness="codex")
+    exit_code = harness.run_generator_write_primary(
+        repo, template, adopt_harness="codex"
+    )
 
+    # The report offers no remedy here, and an answer supplied anyway is refused rather than
+    # passed over — the two agree, so the pointer body stands.
+    assert exit_code == 2
     claude = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
     assert topology.files[harness.INSTRUCTION_CLAUDE].strip() in claude
 

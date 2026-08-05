@@ -34,9 +34,10 @@ delegating file, mutual delegation, two identical files, two near-identical file
 the 80% span threshold, two independent files); delegation candidacy on both sides of each fact it
 reads (a body naming the other root file within the bound, exactly at it, and one character past
 it, and a body naming no other root file); a write that carries no operator answer, one that
-carries ``--adopt``, one whose ``--adopt`` names a pointer body and is refused, and one whose
-``--adopt`` would discard a content-bearing body and is refused; a reconcile
-reporting a pointer body; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
+carries ``--adopt``, one whose ``--adopt`` names a pointer body and is refused, one whose
+``--adopt`` would discard a content-bearing body and is refused, one whose ``--adopt`` arrives
+after the bootstrap pass has closed and is refused, and an ``--adopt`` with no ``--write`` to
+apply it; a reconcile reporting a pointer body; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
 and an operator tie break; a dirty root file; and the CLI rejections (missing or non-directory repo root, missing or directory template, a
 template without ``template_version``, a symlink escaping the repository, an unsupported language
 token, a duplicate flag). The executable cases live in the governing node's ``tests/`` directory.
@@ -935,6 +936,10 @@ def build_root_instruction_documents(
     like a pointer at the other root instruction file is never adopted here: the reconcile reports
     it as an ambiguity, and only the operator's answer arrives as ``adopt_harness``. Composing a
     document never destroys a body on its own reading of that body.
+
+    Adoption belongs to the bootstrap pass, so an answer that arrives after that pass has closed
+    is refused rather than dropped. Passing over it would write both files, exit zero, and leave
+    the operator reading a success that answered nothing.
     """
     body_claude = _strip_managed_block(_product_owned_root_document(seeds["claude"]))
     body_codex = _strip_managed_block(_product_owned_root_document(seeds["codex"]))
@@ -946,6 +951,12 @@ def build_root_instruction_documents(
             )
             body_claude, body_codex = adopted["claude"], adopted["codex"]
         body_claude, body_codex = bootstrap_wrap(body_claude, body_codex)
+    elif adopt_harness is not None:
+        raise CliInputError(
+            f"--adopt {adopt_harness} applies only to a first encounter, and a root instruction "
+            "file already carries a shared region or a malformed shared fence; no delegation is "
+            "open for this answer to resolve"
+        )
 
     return {
         "claude": prepend_router_block(blocks_by_harness["claude"], body_claude),
@@ -1514,6 +1525,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Comma-separated enabled languages; detected from spx/**/tests/ extensions when omitted.",
     )
     args = parser.parse_args(raw_argv)
+
+    if args.adopt_harness is not None and not args.write:
+        # Only the write applies an adoption. Rendering to stdout, checking, or reconciling with
+        # an answer attached would report success while discarding it.
+        print("error: --adopt requires --write", file=sys.stderr)
+        return 2
 
     try:
         template_path = _validated_template_path(args.template)

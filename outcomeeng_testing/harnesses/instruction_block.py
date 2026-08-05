@@ -765,6 +765,33 @@ def run_generator_write_primary(
     )
 
 
+def run_generator_adopt_without_write(
+    repo_root: pathlib.Path, template_path: pathlib.Path, adopt_harness: str
+) -> tuple[int, str]:
+    """Run the generator with an operator answer and no ``--write``; return exit code and stderr.
+
+    Stdout is captured and discarded so a render that reaches it stays out of the test report.
+    The harness owns the invocation; the linked test decides what the exit code and stderr mean.
+    """
+    cases = generated_cases()
+    errors = io.StringIO()
+    with redirect_stdout(io.StringIO()), redirect_stderr(errors):
+        result = cast(
+            int,
+            load_instruction_block_module().main(
+                [
+                    "--template",
+                    str(template_path),
+                    "--repo-root",
+                    str(repo_root),
+                    f"--languages={cases.lang_primary}",
+                    f"--adopt={adopt_harness}",
+                ]
+            ),
+        )
+    return result, errors.getvalue()
+
+
 def seed_both_root_files(repo_root: pathlib.Path, body: str) -> pathlib.Path:
     """Create ``repo_root`` and write ``body`` as both root instruction files.
 
