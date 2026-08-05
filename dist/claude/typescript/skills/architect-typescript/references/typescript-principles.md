@@ -51,7 +51,7 @@ export async function buildHugo(
 import { execa } from "execa";
 
 export async function buildHugo(siteDir: string): Promise<BuildResult> {
-  await execa("hugo", ["--destination", "/tmp/build"]); // Hidden dependency
+  await execa("hugo", ["--destination", "public"]); // Hidden dependency
 }
 ```
 

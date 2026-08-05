@@ -29,7 +29,7 @@ Run these steps in order. Steps 2 and 6 use the bundled scripts in `<scripts>`.
 
 3. **Present and scope.** Show the user the findings grouped by dimension. Mechanical fixes (layout `type`, font redirect) and judgment fixes (color mapping, layout renames) are different — surface the judgment ones explicitly. Use `request_user_input` to get per-dimension or per-finding approval. Fix only what the user approves.
 
-4. **Extract.** Unzip the deck into a temporary working directory **outside any git repository** (e.g. under `/tmp`). Never extract into the deck's own folder.
+4. **Extract.** Create the working directory with `mktemp -d` so it is unique per invocation and lands in the session's temporary directory, **outside any git repository**. Never extract into the deck's own folder, and never name a fixed temporary path — concurrent runs collide on one. Remove the directory on every exit path, including failure.
 
 5. **Apply approved fixes.** Edit the extracted XML part by part, following `${SKILL_DIR}/references/audit-and-fix.md`. Handle one dimension at a time, and track every changed part.
 
@@ -126,7 +126,7 @@ A sanitizing run is complete when:
 - [ ] The repaired deck passes `pptx_repack.py` verification (ZIP integrity, XML well-formedness); any member-count change matches the trim scope approved in step 3.
 - [ ] The original deck was backed up before the swap.
 - [ ] A re-run of `pptx_audit.py` on the live file confirms the approved findings are resolved and no new finding appeared.
-- [ ] The temporary working directory is the only scratch artifact; the deck's folder holds only the deck and its backup.
+- [ ] The working directory came from `mktemp -d`, was removed on exit, and was the only scratch artifact; the deck's folder holds only the deck and its backup.
 
 </success_criteria>
 

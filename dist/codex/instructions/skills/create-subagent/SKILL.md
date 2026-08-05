@@ -16,7 +16,7 @@ A custom agent configured for an isolated, focused role — its developer instru
 
 <workflow>
 
-1. Create a standalone TOML file under `.codex/agents/` for product scope or `~/.codex/agents/` for user scope.
+1. Create a standalone TOML file under `.codex/agents/` for product scope, the default. User scope (`~/.codex/agents/`) requires the operator confirmation `<scope_boundary>` defines.
 2. Define the custom agent:
    - **name**: unique identifier Codex uses when spawning or referring to this agent
    - **description**: human-facing guidance for when Codex should use this agent
@@ -46,6 +46,16 @@ Priority order:
 </codex_storage_locations>
 
 Product-scope custom agents override user-scope when names conflict.
+
+<scope_boundary>
+
+Product scope is inside the checkout Claude was invoked in; a write there is part of the requested work and is reviewable in that repository's history. User scope is not: `~/.codex/agents/` and `~/.claude/agents/` sit outside the checkout, apply to every project on the machine, and are covered by no repository's review.
+
+Default to product scope. Choose user scope only when the operator asks for a custom agent available across projects, and obtain confirmation naming the absolute destination path before the write. Being able to resolve a home-directory path is not authorization to write to it, and one approval covers one file — a second user-scope write asks again.
+
+Never widen an approved product-scope write to user scope because the custom agent "seems generally useful"; that judgment belongs to the operator who owns the machine.
+
+</scope_boundary>
 </file_structure>
 
 <configuration>
@@ -267,7 +277,7 @@ Use `/agent` to switch between active agent threads and inspect running custom a
 </using_agents_command>
 
 <manual_editing>
-Edit custom agent files directly:
+Edit custom agent files directly. A user-scope path below is outside the checkout, so editing one requires the confirmation `<scope_boundary>` defines — for an edit or a delete as much as for a create:
 
 - Product: `.codex/agents/agent-name.toml`
 - User: `~/.codex/agents/agent-name.toml`

@@ -342,3 +342,15 @@ Read `${SKILL_DIR}/references/platform-constraints.md` before using multi-backti
 Skills that ship `scripts/` must validate inputs with verbose, deterministic, actionable error messages and test every script before inclusion. The full validation-message and script-testing rules live in `${SKILL_DIR}/references/script-standards.md`. Read it before authoring a skill that bundles scripts.
 
 </script_standards>
+
+<path_boundary>
+
+A consumer's harness declares which directories a session may touch: the working directory, any additional working directories, the plugin's own files, and a scratch location. A skill instructs Claude, so every path a skill names becomes a path Claude writes — a skill that names a path outside that set directs the write out of the boundary the operator approved.
+
+**Scratch storage comes from a unique-per-invocation source, never a named path.** Use `mktemp -d` or `mktemp -t` in shell and `tempfile.mkdtemp` or `TemporaryDirectory` in Python. Each derives a unique directory from the environment's own temporary root, so no skill ever needs to spell a temporary path. Never write `/tmp`, `/var/tmp`, `/private/var/tmp`, `~/tmp`, or a `${TMPDIR:-/tmp}` fallback: a fixed path is identical across concurrent invocations, so two runs of the same skill overwrite each other, and it sits outside the declared set. `mktemp` already resolves an unset `TMPDIR`, so the fallback spelling buys nothing and reintroduces the literal. Whichever step creates a scratch directory removes it on every exit path, including failure.
+
+**A write outside the invocation checkout is confirmed before it happens, not resolved and taken.** A home-directory configuration path, another repository's checkout, or any location the operator did not name in the request needs confirmation that states the absolute destination. Being able to resolve a path is not authorization to write to it, and one confirmation covers one write — the next asks again. Prefer the in-checkout location whenever both exist, because a write there is reviewable in that repository's history.
+
+**A permission prompt is a result, not an obstacle.** When a tool layer declines a path, that decline is the boundary working. Never document a way around it — a shell redirect standing in for a refused tool write, a broader permission substituted for a narrow one, a path rewritten to dodge a check. Name a path inside the boundary instead. A skill that teaches evasion converts one operator's approval into every future session's bypass.
+
+</path_boundary>
