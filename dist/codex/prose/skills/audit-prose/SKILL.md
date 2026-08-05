@@ -3,16 +3,10 @@ name: audit-prose
 description: >-
   Prose audit methodology — judges human-facing text against the base anti-pattern catalog and the detected kind's standards layer, emitting a structured verdict whose findings carry pattern, category, quote, rewrite, and kind.
 model: sonnet
-allowed-tools: Read, Glob, Grep, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent
+allowed-tools: Read, Glob, Grep, Skill
 ---
 
 Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-<dispatch_gate>
-
-STOP if this skill is running in the main conversation. The verdict is valid only from an isolated verifier context: dispatch the `prose-auditor` agent with the text or paths to audit and apply its final message. Producing the verdict in the authoring conversation reintroduces the bias the dispatched context removes.
-
-</dispatch_gate>
 
 <objective>
 
@@ -70,3 +64,11 @@ A structured verdict on human-facing text — `APPROVED`, or `REJECTED` with fin
 - Kind overrides produced no false-positive findings.
 
 </success_criteria>
+
+<failure_modes>
+
+**A caller check survived a description-only fix.**
+
+Claude removed dispatch language from this skill's description to satisfy the audit-description standard, but left a dispatch gate in the body and a dispatch-tool grant in the frontmatter — the same caller-coupling defect in two other places. A skill never detects, constrains, or branches on the context that invokes it; context placement and dispatch policy belong to the caller. When removing caller coupling, check the description, the frontmatter grants, and the body together — the pattern recurs across all three surfaces.
+
+</failure_modes>
