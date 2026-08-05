@@ -1,5 +1,5 @@
 ---
-name: internal-doc-standards
+name: internal-docs-standards
 user-invocable: false
 description: >-
   Catalog of anti-patterns and positive patterns for internal team documents (Notion pages, runbooks, scorecards, hiring rubrics, internal policies, competency models, team decision records, design specs). Reference skill loaded by the composed internal-doc skills, not invoked directly. Reached through author-prose and the dispatched prose-auditor agent for the internal-docs kind.
@@ -17,7 +17,7 @@ This is a reference skill. Composing internal-doc skills load these standards ex
 <scope>
 USE this catalog for internal team docs that live in the workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content. Decision records and design specs belong here only as workspace-native documents that no repository or domain workflow already governs.
 
-DO NOT use this catalog for repository-governed engineering artifacts. `AGENTS.md`, spec-tree specs, ADRs, PDRs, `PLAN.md`, `ISSUES.md`, and `SKILL.md` carry dedicated domain workflows that own their structure, voice, and required sections. Follow the governing repository skill and apply its conventions. This catalog states no authoring rules for those artifacts and never substitutes for that workflow.
+DO NOT use this catalog for repository-governed engineering artifacts. `CLAUDE.md`, spec-tree specs, ADRs, PDRs, `PLAN.md`, `ISSUES.md`, and `SKILL.md` carry dedicated domain workflows that own their structure, voice, and required sections. Follow the governing repository skill and apply its conventions. This catalog states no authoring rules for those artifacts and never substitutes for that workflow.
 
 DO NOT use this catalog for external-facing prose. For READMEs published to GitHub, blog posts, web copy, customer-facing release notes, marketing material, or other prose written for strangers, use `/prose-standards` instead.
 

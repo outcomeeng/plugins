@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-The interface kind's standards layer over `/prose-standards` — inherited rules, the fragment override, and the writing rules for text that functions as part of a surface. The shipped `prose` output style renders from this layer.
+The interface kind's standards layer over `/prose-standards` — inherited rules, the fragment override, and the writing rules for text that functions as part of a surface.
 </objective>
 
 <reference_note>

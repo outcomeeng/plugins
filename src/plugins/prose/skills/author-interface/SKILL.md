@@ -1,5 +1,6 @@
 ---
 name: author-interface
+user-invocable: false
 description: >-
   Interface authoring guidance — app chrome, UI text, product messages, notifications, and email templates — composed by author-prose for the interface kind. Reached only through author-prose, never matched directly.
 allowed-tools: Read, Edit, Write, Glob, Grep, Skill

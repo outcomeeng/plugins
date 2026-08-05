@@ -6,4 +6,4 @@
 
 ## Reference-skill `<success_criteria>` prove a downstream document, not the catalog (RESOLVED)
 
-**Resolved across the standards pair and the new kind layers.** `prose-standards` and `internal-doc-standards` each carry a catalog-soundness criterion beside the document-facing checklist, and the new `copy-standards`, `interface-standards`, and `docs-standards` shipped with one from the start.
+**Resolved across the standards pair and the new kind layers.** `prose-standards` and `internal-docs-standards` each carry a catalog-soundness criterion beside the document-facing checklist, and the new `copy-standards`, `interface-standards`, and `docs-standards` shipped with one from the start.

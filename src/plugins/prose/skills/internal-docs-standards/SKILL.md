@@ -1,5 +1,5 @@
 ---
-name: internal-doc-standards
+name: internal-docs-standards
 user-invocable: false
 description: >-
   Catalog of anti-patterns and positive patterns for internal team documents (Notion pages, runbooks, scorecards, hiring rubrics, internal policies, competency models, team decision records, design specs). Reference skill loaded by the composed internal-doc skills, not invoked directly. Reached through author-prose and the dispatched prose-auditor agent for the internal-docs kind.

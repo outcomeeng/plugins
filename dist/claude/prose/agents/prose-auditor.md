@@ -29,3 +29,7 @@ Run prose audits in this already-dispatched, isolated verifier context. Invoke t
 3. Relay the structured verdict verbatim as the final message.
 
 </workflow>
+
+<success_criteria>
+Complete when the final message is byte-identical to the JSON verdict `prose:audit-prose` produced, with no added or omitted text.
+</success_criteria>

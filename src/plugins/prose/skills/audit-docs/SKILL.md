@@ -1,5 +1,6 @@
 ---
 name: audit-docs
+user-invocable: false
 description: >-
   Docs audit methodology — sweeps documentation against the base catalog and the simplified ASD-STE100 structural rules — composed by audit-prose for the docs kind. Reached only through the dispatched prose-auditor agent, never the main conversation.
 model: sonnet
@@ -22,13 +23,13 @@ Findings on documentation — each carrying pattern, category, quote, and rewrit
 
 </constraints>
 
-<workflow>
+<audit_workflow>
 
 1. Sweep the `/docs-standards` `<additional_rules>` sentence by sentence: word counts against the 20/25 caps, one instruction per sentence, active voice, simple tenses, verbal "-ing" clauses, should/would/may/might, condition ordering, noun clusters over three, paragraphs over six sentences, dropped articles, term-to-concept mapping across the set.
 2. Sweep the base categories against the full `/prose-standards` descriptions, applying the numbered-step override.
 3. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence with co-occurring patterns yields one finding naming every pattern present.
 
-</workflow>
+</audit_workflow>
 
 <success_criteria>
 

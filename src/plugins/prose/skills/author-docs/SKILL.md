@@ -1,5 +1,6 @@
 ---
 name: author-docs
+user-invocable: false
 description: >-
   Docs authoring guidance — tutorials, how-tos, reference, and conceptual guides in simplified ASD-STE100 — composed by author-prose for the docs kind. Reached only through author-prose, never matched directly.
 allowed-tools: Read, Edit, Write, Glob, Grep, Skill

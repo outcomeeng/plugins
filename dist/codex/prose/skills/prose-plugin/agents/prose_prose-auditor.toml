@@ -24,6 +24,10 @@ Run prose audits in this already-dispatched, isolated verifier context. Invoke t
 
 </workflow>
 
+<success_criteria>
+Complete when the final message is byte-identical to the JSON verdict `prose:audit-prose` produced, with no added or omitted text.
+</success_criteria>
+
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `prose:audit-prose`.
 

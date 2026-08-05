@@ -31,7 +31,7 @@
     {
       "name": "prose",
       "source": "./dist/claude/prose",
-      "description": "Prose craft for external prose (/write-prose, /audit-prose) and internal team docs (/write-internal-docs, /audit-internal-docs)"
+      "description": "Prose craft through one routed surface (/author-prose, /audit-prose) over per-kind style layers: copy, interface, docs, internal docs"
     },
     {
       "name": "spec-tree",

@@ -1,12 +1,13 @@
 ---
 name: audit-internal-docs
+user-invocable: false
 description: >-
   Internal-doc audit methodology — sweeps workspace documents against the base catalog, the internal-doc overrides, and the internal-doc rules — composed by audit-prose for the internal-docs kind. Reached only through the dispatched prose-auditor agent, never the main conversation.
 model: sonnet
 allowed-tools: Read, Glob, Grep, Skill
 ---
 
-{!% require_skill 'prose:internal-doc-standards' %!}
+{!% require_skill 'prose:internal-docs-standards' %!}
 
 <objective>
 
@@ -23,7 +24,7 @@ Findings on an internal team document — each carrying pattern, category, quote
 
 <what_to_check>
 
-Sweep every category below. `/internal-doc-standards` carries the rule text and the examples; this list names the categories so no section goes unswept.
+Sweep every category below. `/internal-docs-standards` carries the rule text and the examples; this list names the categories so no section goes unswept.
 
 Inherited categories, from that catalog's `<inherited_rules>`: word choice, sentence structure, paragraph structure, tone, composition, formatting.
 
@@ -36,7 +37,7 @@ Overrides, from its `<overrides>`: parens that aid clarity, bold table-cell labe
 <workflow>
 
 1. Sweep the inherited categories against the full `/prose-standards` descriptions, applying the internal-doc overrides.
-2. Sweep the internal-doc categories from `<what_to_check>` against `/internal-doc-standards`.
+2. Sweep the internal-doc categories from `<what_to_check>` against `/internal-docs-standards`.
 3. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence carrying co-occurring patterns yields one finding naming every pattern present, listed before single-pattern findings.
 
 </workflow>

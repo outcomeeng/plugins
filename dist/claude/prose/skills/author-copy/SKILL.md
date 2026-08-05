@@ -1,5 +1,6 @@
 ---
 name: author-copy
+user-invocable: false
 description: >-
   Copy authoring guidance — essays, articles, and other self-contained pieces — composed by author-prose for the copy kind. Reached only through author-prose, never matched directly.
 allowed-tools: Read, Edit, Write, Glob, Grep, Skill

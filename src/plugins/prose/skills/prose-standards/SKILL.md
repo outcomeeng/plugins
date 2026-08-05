@@ -25,7 +25,7 @@ This is a reference skill. Composing prose skills load these patterns explicitly
 One ordered procedure classifies any text into exactly one kind. `/author-prose` and `/audit-prose` execute it; first match decides.
 
 1. **Ownership.** A repository or domain workflow governs the artifact — a spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide? Stop and route to that workflow. The prose surface never touches it.
-2. **Audience.** The reader is a team colleague and the document lives in a workspace? Kind: **internal-docs** -> `/internal-doc-standards`.
+2. **Audience.** The reader is a team colleague and the document lives in a workspace? Kind: **internal-docs** -> `/internal-docs-standards`.
 3. **Function.** The text explains or instructs the use of a product — tutorial, how-to, reference, conceptual guide? Kind: **docs** -> `/docs-standards`.
 4. **Unit.** The text is a fragment embedded in a designed surface — app chrome, button, label, empty state, error message, tooltip, notification or email template, short web-page section? Kind: **interface** -> `/interface-standards`.
 5. **Otherwise.** The text is a self-contained piece read start to finish. Kind: **copy** -> `/copy-standards`.

@@ -9,7 +9,7 @@ Invoke the `prose:prose-standards` skill before proceeding. If that skill is una
 
 <objective>
 
-Human-facing text written through the kind's composed author skill — classified by the detection procedure, drafted against the kind's standards, and handed to a `prose-auditor` pass.
+Human-facing text drafted against its kind's standards and approved by a `prose-auditor` pass.
 
 </objective>
 

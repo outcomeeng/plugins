@@ -1,5 +1,6 @@
 ---
 name: audit-interface
+user-invocable: false
 description: >-
   Interface audit methodology — sweeps surface text against the base catalog, the fragment and consistency overrides, and the interface rules — composed by audit-prose for the interface kind. Reached only through the dispatched prose-auditor agent, never the main conversation.
 model: sonnet
@@ -21,13 +22,13 @@ Findings on surface text — each carrying pattern, category, quote, and rewrite
 
 </constraints>
 
-<workflow>
+<audit_workflow>
 
 1. Sweep the base categories against the full `/prose-standards` descriptions, applying the two overrides: fragments pass for surface elements (not for body text inside them), and repetition passes across parallel elements (not within one element's prose).
 2. Sweep the `/interface-standards` `<additional_rules>` per element type: action-led buttons and links, sentence case, brevity caps, one term per concept across the surface, error what-happened/what-next pairing, orienting empty states, consequence-naming confirmations, filler words.
 3. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence or element with co-occurring patterns yields one finding naming every pattern present.
 
-</workflow>
+</audit_workflow>
 
 <success_criteria>
 

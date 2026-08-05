@@ -1,11 +1,12 @@
 ---
 name: author-internal-docs
+user-invocable: false
 description: >-
   Internal-doc authoring guidance — Notion pages, runbooks, scorecards, policies, onboarding guides, and workspace decision records — composed by author-prose for the internal-docs kind. Reached only through author-prose, never matched directly.
 allowed-tools: Read, Edit, Write, Glob, Grep, Skill
 ---
 
-Invoke the `prose:internal-doc-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `prose:internal-docs-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
 
@@ -17,7 +18,7 @@ Internal team documents that are scannable, decisive, and durable.
 
 A colleague returning to a hiring scorecard for the third time doesn't want to re-read the introduction. They want to find their section in five seconds. Bold key terms, tables, definition lists, and inline cross-references are worth the visual weight because they accelerate that retrieval, and the same patterns read as noise in prose a stranger meets once.
 
-The `/internal-doc-standards` catalog encodes the calibration: inherited rules for what is unambiguously bad writing, overrides for what the base catalog forbids that internal docs need.
+The `/internal-docs-standards` catalog encodes the calibration: inherited rules for what is unambiguously bad writing, overrides for what the base catalog forbids that internal docs need.
 
 </why_internal_docs_are_different>
 
@@ -31,7 +32,7 @@ The `/internal-doc-standards` catalog encodes the calibration: inherited rules f
 
 4. Apply the positive patterns: scannable headings, concrete examples, decisive language, action labels, cross-links to canonical sources.
 
-5. Apply the formatting overrides where they help. `/internal-doc-standards` `<overrides>` carries them with worked examples; each one relaxes a base rule that internal docs need back.
+5. Apply the formatting overrides where they help. `/internal-docs-standards` `<overrides>` carries them with worked examples; each one relaxes a base rule that internal docs need back.
 
 </workflow>
 
