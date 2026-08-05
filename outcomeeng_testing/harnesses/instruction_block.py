@@ -112,11 +112,18 @@ class EvidenceRun:
 
 @dataclass(frozen=True)
 class BootstrapOutcome:
-    """The seed bodies and both written root documents observed after one bootstrap write."""
+    """The seed bodies and both written root documents observed after one bootstrap write.
+
+    ``seeds`` carries an entry only for a root instruction file the topology placed, so a
+    one-file topology reports one seed and the linked test reads which side the generator
+    created for itself. ``repo`` exposes the written paths, so the test can observe file kind
+    as well as content.
+    """
 
     seeds: dict[str, str]
     claude: str
     agents: str
+    repo: pathlib.Path
 
 
 @dataclass(frozen=True)
@@ -318,6 +325,34 @@ def materialize_root_instruction_topology(
     for name, body in seeds.items():
         _replace_path_with_text(root / name, body)
     return seeds
+
+
+def materialize_declared_root_topology(
+    root: pathlib.Path, topology: RootInstructionTopology
+) -> dict[str, str]:
+    """Create ``topology`` under ``root`` exactly as declared and return the bodies placed.
+
+    A root instruction file the topology omits stays absent, and a symlink stays a symlink, so
+    the generator meets the topology the case names instead of a pair this harness already
+    resolved on its behalf. The returned mapping carries an entry only for a file the topology
+    placed; a symlinked entry carries the body reachable through the link.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    for name, body in topology.files.items():
+        _replace_path_with_text(root / name, body)
+    for name, target in topology.symlinks.items():
+        link_path = root / name
+        if link_path.exists() or link_path.is_symlink():
+            link_path.unlink()
+        link_path.symlink_to(target)
+
+    cases = generated_cases()
+    placed: dict[str, str] = {}
+    for instruction_name in (cases.instruction_claude, cases.instruction_agents):
+        placed_body = _seed_body(root, instruction_name, None)
+        if placed_body is not None:
+            placed[instruction_name] = placed_body
+    return placed
 
 
 def symlinked_instruction_topology_materializes_as_regular_files() -> bool:
@@ -804,15 +839,19 @@ def observe_bootstrap_outcome(
     Owns the temporary repository, the rendered template, and the generator invocation, and
     returns the seed bodies alongside the two written documents. It applies no predicate — the
     linked test decides what the observed documents mean.
+
+    The topology reaches the generator exactly as declared, so an absent side and a symlinked
+    side are resolved by the generator under test rather than by this harness.
     """
     repo = tmp_path / "repo"
-    seeds = materialize_root_instruction_topology(repo, topology_factory())
+    seeds = materialize_declared_root_topology(repo, topology_factory())
     template = write_template(tmp_path, NEW_VERSION)
     run_generator_write_primary(repo, template, adopt_harness)
     return BootstrapOutcome(
         seeds=seeds,
         claude=(repo / INSTRUCTION_CLAUDE).read_text(encoding="utf-8"),
         agents=(repo / INSTRUCTION_AGENTS).read_text(encoding="utf-8"),
+        repo=repo,
     )
 
 

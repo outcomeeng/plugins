@@ -175,23 +175,33 @@ def test_root_topology_maps_to_bootstrap_outcome(tmp_path: pathlib.Path) -> None
                 if filename == harness.INSTRUCTION_CLAUDE
                 else harness.INSTRUCTION_CLAUDE
             )
-            other_lines = set(outcome.seeds[other].splitlines())
+            # Every topology ends at two regular files, whichever side the generator had to
+            # create for itself or convert from a symlink.
+            assert (outcome.repo / filename).is_file(), (case.name, filename)
+            assert not (outcome.repo / filename).is_symlink(), (case.name, filename)
+            assert document.startswith(MODULE.ROUTER_MARKER_PREFIX), case.name
+            for token in case.removed_tokens:
+                assert token not in document, case.name
+
+            own_seed = outcome.seeds.get(filename)
+            if own_seed is None:
+                # The topology placed no body here, so this side is the generator's own work
+                # and the region assertion above already states what it must carry.
+                continue
+            other_lines = set(outcome.seeds.get(other, "").splitlines())
             own_lines = [
                 line
-                for line in outcome.seeds[filename].splitlines()
+                for line in own_seed.splitlines()
                 if line.strip() and line not in other_lines
             ]
             if case.expected_region_body is None:
-                assert outcome.seeds[filename].strip() in document, case.name
+                assert own_seed.strip() in document, case.name
             else:
                 cursor = 0
                 for line in own_lines:
                     found = document.find(line, cursor)
                     assert found >= 0, (case.name, line)
                     cursor = found + len(line)
-            assert document.startswith(MODULE.ROUTER_MARKER_PREFIX), case.name
-            for token in case.removed_tokens:
-                assert token not in document, case.name
 
 
 def test_root_body_shape_maps_to_delegation_candidacy() -> None:
