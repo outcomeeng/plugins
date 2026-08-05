@@ -49,7 +49,7 @@ When the inventory holds no match, say which worktrees are present rather than a
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one low-level operation, one delegation request, or one terminal handback. When it is empty, require a concrete operation before running the adapter.
+1. Interpret `$ARGUMENTS` as one low-level operation, one delegation request, or one terminal handback. When it is empty, require a concrete operation before running the adapter. When a selector or delegation participant is named by worktree, repository, or working directory rather than a pane UUID — the form an operator uses — resolve it per `<operator_target_resolution>` before building the request.
 2. For `list`, `agents`, `read`, or `send`, build this source-owned request shape and set only arguments the operation accepts:
 
 ```json
@@ -101,16 +101,12 @@ printf '%s\n' '{"schemaVersion":1,"operation":"agents","arguments":{}}' | python
     "run": "<complete-run-id-when-present>"
   },
   "subject": "<bounded subject>",
-  "instruction": "<complete bounded request>",
-  "returnAddress": {
-    "pane": "<sender's own complete pane id>",
-    "handbackCommand": "<exact command the recipient runs to notify the sender>"
-  },
+  "instruction": "<complete bounded request, ending with the return path per <handback_delivery>>",
   "coordinationReference": null
 }
 ```
 
-`returnAddress` is required. The sender cannot poll for completion, so the recipient is the only party that can close the loop — and it can only do that when the delegation itself carries the sender's own complete pane id and the exact command to reach it. A delegation without a return address is a request the sender can never learn the answer to.
+The envelope already carries the return address: `sender.pane` is the sender's own complete pane, and the recipient reads it from the delegation it receives. Nothing else needs a field. What the recipient cannot infer is the exact command that reaches that pane and the environment conditions that break it, so the `instruction` ends by naming both per `<handback_delivery>`. The sender cannot poll for completion, so the recipient is the only party that can close the loop; an instruction that omits the handback is a request the sender can never learn the answer to.
 
 The result carries the complete source-owned `delegation` envelope. Preserve it for the terminal handback; transport success is not acceptance or completion.
 7. The recipient submits exactly one terminal result to `handback`, carrying the original `delegation`, one `kind`, and one supported result form:
@@ -133,7 +129,7 @@ Completion travels by push, never by pull. The sender's environment blocks polli
 
 **The recipient delivers the handback by sending one line into the return address's pane**, using the `send` operation with normal trailing-Enter behavior. That send lands as a turn in the sender's session, which is what makes it a signal rather than a message the sender must go looking for. A `noEnter` send prefills the sender's editor and signals nothing.
 
-**The sender states the return address at delegation time**, not after. Along with its own pane id and the exact command, the sender names the environment traps in `<environment_traps>` — a recipient that discovers those traps by hitting them has already spent the turn the delegation was meant to buy.
+**The sender states the handback at delegation time**, not after, by ending the `instruction` with two things the recipient cannot infer from the envelope: the exact command that reaches `sender.pane`, and the `<environment_traps>` conditions that break it. A recipient that discovers those traps by hitting them has already spent the turn the delegation was meant to buy. The pane itself needs no restating — it already travels as `sender.pane`.
 
 </handback_delivery>
 
@@ -161,7 +157,7 @@ Two environment conditions silently break a handback. Name both in the delegatio
 
 <testing>
 
-Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Cover every operation mapping, public JSON success and failure, exact participant projection, mutation rejection before command construction, delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch.
+Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Cover every operation mapping, public JSON success and failure, exact participant projection, mutation rejection before command construction, delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch. Delegation coverage includes that `sender.pane` survives the envelope into the recipient's handback intact, since the recipient reads its return path from that field alone; an unknown top-level key in a delegation request is rejected rather than silently dropped, so a caller inventing a field learns it is unsupported instead of sending a delegation the recipient cannot answer.
 
 </testing>
 
@@ -186,7 +182,7 @@ Before release, import the bundled module with controlled `CommandRunner` implem
 - A successful public operation is mechanically established only when the bundled script exits zero and emits `schemaVersion: 1`, `status: "succeeded"`, `commandExitCode: 0`, and a public `response` object without exposing Prowl command grammar.
 - Every positively identified Prowl participant retains complete public identities verbatim.
 - Every delegation preserves its initiating coordination reference through exactly one completed, failed, rejected, or unavailable terminal handback.
-- Every delegation carries a return address with the sender's own complete pane id, the exact handback command, and the `<environment_traps>` conditions, so the recipient can push completion without discovering the environment first.
+- Every delegation's `instruction` ends with the exact command reaching `sender.pane` and the `<environment_traps>` conditions, so the recipient can push completion without discovering the environment first; the pane itself is read from the envelope, never restated as a separate field.
 - A durable handback writes its file before sending, and the notification reaches the sender's pane as a submitted turn rather than editor prefill.
 - An operator-named target is resolved from the worktree or directory the operator supplied and reported back in those terms, never as a pane UUID the operator must verify.
 - Terminal results carry complete inline content or an exact durable reference with a bounded projection.

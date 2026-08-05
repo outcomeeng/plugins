@@ -71,6 +71,48 @@ class RecordingRunner:
         return self.results.pop(0)
 
 
+def observe_delegation_cli_fields(extra_key: str | None) -> str | None:
+    """Submit a delegation request over the CLI path and report the outcome.
+
+    Returns None when the request is accepted, or the error detail when the
+    adapter rejects it. The caller owns the pass/fail predicate.
+    """
+    module = _load()
+    sender = agent_identity(module, 0)
+    recipient = agent_identity(module, 1)
+    request: dict[str, object] = {
+        "sender": sender,
+        "recipient": recipient,
+        "subject": "bounded subject",
+        "instruction": "bounded instruction",
+        "coordinationReference": None,
+    }
+    if extra_key is not None:
+        request[extra_key] = {"pane": sender["pane"]}
+    try:
+        module._delegation_from_cli(request)
+    except module.ProwlEnvironmentError as error:
+        return str(error)
+    return None
+
+
+def observe_delegation_sender_pane() -> tuple[str, str]:
+    """Return the submitted sender pane and the pane the envelope carries."""
+    module = _load()
+    sender = agent_identity(module, 0)
+    envelope = module._delegation_from_cli(
+        {
+            "sender": sender,
+            "recipient": agent_identity(module, 1),
+            "subject": "bounded subject",
+            "instruction": "bounded instruction",
+            "coordinationReference": None,
+        }
+    )
+    carried = cast(dict[str, object], envelope["sender"])
+    return sender["pane"], cast(str, carried["pane"])
+
+
 def _load() -> ModuleType:
     spec = importlib.util.spec_from_file_location(
         "coding_agents_prowl_environment", PROWL_ENVIRONMENT_PATH
