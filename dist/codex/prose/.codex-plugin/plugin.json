@@ -1,7 +1,7 @@
 {
   "name": "prose",
-  "version": "0.8.0",
-  "description": "Prose craft for external prose (/write-prose, /audit-prose) and internal team docs (/write-internal-docs, /audit-internal-docs)",
+  "version": "0.9.0",
+  "description": "Prose craft through one routed surface (/author-prose, /audit-prose) over per-kind style layers: copy, interface, docs, internal docs",
   "author": {
     "name": "Simon Heimlicher",
     "url": "https://github.com/outcomeeng"

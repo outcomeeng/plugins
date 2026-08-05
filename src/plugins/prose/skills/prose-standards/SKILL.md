@@ -7,16 +7,40 @@ allowed-tools: Read
 ---
 
 <objective>
-The catalog of 30+ prose anti-patterns across 6 categories.
+The catalog of 30+ prose anti-patterns across 6 categories, plus the ordered kind-detection procedure the prose routers execute.
 </objective>
 
 <success_criteria>
 Prose follows these standards when no anti-pattern in this catalog survives in it — word choice, sentence structure, paragraph structure, tone, formatting, and composition each evaluated against the prose rather than assumed clean, and every match either rewritten to carry the same meaning without the pattern or kept for a reason the prose itself makes evident.
+
+The catalog itself is sound when every anti-pattern entry carries a name, the rule, and at least one worked avoid-example, and the kind-detection procedure's five tests are ordered, exhaustive, and mutually exclusive at first match.
 </success_criteria>
 
 <reference_note>
 This is a reference skill. Composing prose skills load these patterns explicitly before writing or reviewing. It is not a standalone workflow.
 </reference_note>
+
+<kind_detection>
+
+One ordered procedure classifies any text into exactly one kind. `/author-prose` and `/audit-prose` execute it; first match decides.
+
+1. **Ownership.** A repository or domain workflow governs the artifact — a spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide? Stop and route to that workflow. The prose surface never touches it.
+2. **Audience.** The reader is a team colleague and the document lives in a workspace? Kind: **internal-docs** -> `/internal-doc-standards`.
+3. **Function.** The text explains or instructs the use of a product — tutorial, how-to, reference, conceptual guide? Kind: **docs** -> `/docs-standards`.
+4. **Unit.** The text is a fragment embedded in a designed surface — app chrome, button, label, empty state, error message, tooltip, notification or email template, short web-page section? Kind: **interface** -> `/interface-standards`.
+5. **Otherwise.** The text is a self-contained piece read start to finish. Kind: **copy** -> `/copy-standards`.
+
+Chat responses to the user are excluded from the prose surface entirely.
+
+Boundary consequences:
+
+- A web page routes by unit: its chrome and section fragments are interface; an article rendered on it is copy.
+- Documentation wins over unit: an error-message reference page is docs; the error message itself, in product, is interface.
+- Marketing splits the same way: long-form is copy; headlines, CTAs, and feature blurbs are interface.
+- A document whose parts differ in kind receives each part's own layer, and audit findings name the kind per finding.
+- Text the procedure leaves ambiguous is resolved by asking the user to select a kind from this list — never by guessing, never by inventing a style outside it.
+
+</kind_detection>
 
 <word_choice>
 
