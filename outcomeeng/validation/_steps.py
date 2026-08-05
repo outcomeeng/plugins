@@ -162,6 +162,28 @@ def runtime_token_files() -> tuple[str, ...]:
     )
 
 
+def scratch_path_files() -> tuple[str, ...]:
+    # The same authored roots the runtime-token rule enforces, and for the same
+    # reason: a fixed temporary path in plugin content, a shared fragment, or a
+    # per-plugin template renders into every generated target and ships to the
+    # consumer, where it collides across concurrent runs and writes outside the
+    # session boundary.
+    roots = (
+        _REPO_ROOT / "src" / "plugins",
+        _REPO_ROOT / "src" / "_shared",
+        _REPO_ROOT / "src" / "templates",
+    )
+    return tuple(
+        sorted(
+            str(path)
+            for root in roots
+            if root.is_dir()
+            for path in root.rglob("*")
+            if path.is_file() and path.suffix in TEXT_FILE_SUFFIXES
+        )
+    )
+
+
 PREFLIGHT_STEPS: Final = (
     Step(label="preflight-uv-import", argv=UV_IMPORT_PREFLIGHT_ARGV),
 )
@@ -225,6 +247,17 @@ VALIDATION_STEPS: Final = (
             "-m",
             "outcomeeng.validation.runtime_tokens",
             *runtime_token_files(),
+        ),
+    ),
+    Step(
+        label="scratch-paths",
+        argv=(
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "outcomeeng.validation.scratch_paths",
+            *scratch_path_files(),
         ),
     ),
     Step(

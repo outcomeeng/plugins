@@ -76,6 +76,7 @@ SKILL_STEP_LABELS: Final = (
     "skill-injection",
     "reference-portability",
     "runtime-token",
+    "scratch-paths",
     "hook-safety",
     "foundation-manifest",
     "docs-check",
