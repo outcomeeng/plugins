@@ -43,6 +43,8 @@ Resolve an operator-named target to a pane before operating:
 
 A target that is not a coding-agent pane is outside what `agents` returns, so no path match is available for it. Say that the operator's target is not among the agent panes and name the ones that are, rather than falling back to an inventory that carries no worktree to match.
 
+Absent from `agents` is not the same as absent from Prowl. A worktree Prowl already knows but has never entered has no pane to match yet and stays reachable through an explicitly authorized `open` request, which takes a path rather than a selector; that is the lazy activation `<failure_modes>` describes. Distinguish it from a target Prowl has no relationship with at all before reporting the operator's target as unavailable.
+
 Report the target back to the operator the way they named it — the worktree or directory — while using the pane UUID internally. Echoing a UUID to an operator who named a directory forces them to verify a value they never supplied.
 
 When the inventory holds no match, say which worktrees are present rather than asking the operator to supply an identifier they do not have. When more than one pane matches, name the candidates by worktree and branch and ask which one; never guess by focus, position, or title.
