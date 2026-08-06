@@ -3,6 +3,7 @@ name: sanitize-powerpoint
 description: >-
   ALWAYS invoke this skill when sanitizing, cleaning up, auditing, or aligning a PowerPoint (.pptx) deck — slide-master and layout structure, layout type attributes, stray fonts, non-theme colors, or layout naming. NEVER hand-edit pptx XML without this skill.
 argument-hint: "[path/to/deck.pptx]"
+allowed-tools: Read, Write, Edit, Bash(ls:*), Bash(mktemp -d:*), Bash(unzip:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/pptx_audit.py":*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/pptx_repack.py":*), AskUserQuestion
 ---
 
 <objective>
@@ -23,7 +24,7 @@ Five rules govern every run. Violating any of them corrupts a deck or silently d
 <workflow>
 Run these steps in order. Steps 2 and 6 use the bundled scripts in `<scripts>`.
 
-1. **Locate and guard.** Resolve the `.pptx` path the user named. Check for a sibling `~$<name>.pptx` lock file (`ls` the directory). If present, STOP — PowerPoint has the deck open; ask the user to close it before continuing.
+1. **Locate and guard.** Resolve the `.pptx` path from `$ARGUMENTS`; when it is empty, resolve the path the user named in conversation. Check for a sibling `~$<name>.pptx` lock file (`ls` the directory). If present, STOP — PowerPoint has the deck open; ask the user to close it before continuing.
 
 2. **Audit.** Run `pptx_audit.py` on the deck. It reads the package read-only and reports findings across the six dimensions in `<audit_dimensions>`. Read the full report.
 
