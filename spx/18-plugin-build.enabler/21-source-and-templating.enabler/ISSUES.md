@@ -29,3 +29,21 @@ The `<changelogs>` section of `src/templates/plugin/SKILL.md` needs both at once
 **Resolution shape**: record the exception in `/skill-standards` `<skill_organization>` — a composition target fixed to one plugin, inside a body that fans out to every plugin, is named descriptively when the exact identifier is deterministically derivable from a documented naming convention. The fix lives in the `instructions` plugin's standards skill, outside the templating surface this node owns.
 
 **Evidence**: raised as `worth-improving` by the skill auditor, which judged the conflict genuine and the descriptive form the correct practical answer.
+
+## Most compliance evidence keeps its predicate in the harness
+
+`tests/test_source_and_templating.compliance.l1.py` states most of its assertions as `assert <harness_call>()`, where the harness function in `outcomeeng_testing/harnesses/source_and_templating.py` embeds the comparison and returns a bare `bool`. `well_formed_source_tree_builds`, `malformed_source_tree_is_rejected`, `ordinary_plugin_root_file_is_accepted`, `unrecognized_plugin_subdirectories_are_rejected`, `shared_topic_without_fragment_is_rejected`, `shared_topic_references_travel_with_fragment`, `include_uses_fragment_file_contract`, `jinja_environment_uses_custom_delimiters`, the five `require_skill_*` predicates, `bare_conditional_renders_per_target`, and `skill_dir_escape_survives_jinja_pass` each decide the verdict inside the harness. A reader of the linked test cannot see which condition failed, and the harness owns evidence the test file is supposed to own.
+
+These back the assertions at `source-and-templating.md` lines 21 and 24 through 29 and 31. The one assertion at line 30 is the counter-example already in the file: `test_build_comment_is_stripped_without_other_jinja_tokens` holds three named predicates and consumes `observe_build_comment_outputs`, which returns each target's rendered body and the comment it carried rather than a verdict.
+
+**Resolution shape**: convert each harness predicate to an observation function returning the values its comparison consumes, and move the comparison into the linked test, one assertion at a time. The line-30 pair is the shape to copy. Re-run the test-evidence audit per assertion rather than per file, because the conversions are independent.
+
+**Evidence**: raised as ten `REJECT` findings by the test-evidence auditor against the path-boundary changeset. That changeset is purely additive here — it added the line-30 assertion, its test, and `observe_build_comment_outputs`, and modified no existing test or harness function — so the defect predates it and spans eight assertions it does not govern. Recorded rather than carried because converting another node's evidence architecture is its own slice with its own audit gate. An earlier run of the same auditor over the same content returned `APPROVED`, so treat the verdict as a prompt to inspect the predicate seam rather than as a settled count.
+
+## The no-single-plugin rule is proved only against conforming bodies
+
+`test_per_plugin_template_body_names_no_single_plugin` scans the real committed template bodies under `CANONICAL_SOURCE_ROOT` and asserts its forbidden-identity regex matches none of them. No case constructs a body that does hardcode a plugin slug, so the regex's detection capability is never exercised: a pattern that matched nothing would pass the same way. A compliance assertion earns its evidence from a violating case.
+
+**Resolution shape**: add a violating body to the parametrized domain and assert the regex reports it, keeping the conforming scan as the second half. This also gives the entry above — the one recording that the same test matches path-shaped and skill-identity-shaped occurrences but not a quoted value in a condition — a place to prove which shapes are detected.
+
+**Evidence**: raised as a `REJECT` finding by the test-evidence auditor against the path-boundary changeset, which neither authored this assertion nor edited this test.
