@@ -141,8 +141,8 @@ Directly read /merging-standards `merge-cleanup.md` from its `<reference_index>`
 Select the merge command only after the mutation-point guard returns `MERGE_READY:<head-sha>`:
 
 - Use the overlay's declared merge command when one exists.
-- Use the universal default from /merging-standards `<merge_cleanup>` when the overlay is silent: selected merge flag `--rebase`, explicit delete-branch flag `--delete-branch=false`, and worktree-safe manual branch deletion.
-- Never select merge commit (`--merge`) or squash (`--squash`) from the gate alone; those flags require an overlay declaration.
+- Use the universal default from /merging-standards `<merge_cleanup>` when the overlay is silent: selected merge flag `--merge`, explicit delete-branch flag `--delete-branch=false`, and worktree-safe manual branch deletion.
+- Never select rebase (`--rebase`) or squash (`--squash`) from the gate alone; those flags require an overlay declaration.
 
 </step>
 

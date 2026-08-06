@@ -2,12 +2,12 @@
 
 Once `MERGE_READINESS` authorizes the merge and the mutation-point guard has produced `MERGE_READY:<head-sha>`, merge and clean up only in the assigned worktree. Never detach, clean, or delete a branch in a worktree a live agent holds.
 
-Run every overlay-declared preflight check before the merge command and every post-cleanup check after detaching and before branch deletion. Use the overlay's merge flag; the default is `--rebase`. Always pass `--delete-branch=false` so branch cleanup remains explicit and worktree-safe.
+Run every overlay-declared preflight check before the merge command and every post-cleanup check after detaching and before branch deletion. Use the overlay's merge flag; the default is `--merge`. A merge commit keeps every branch commit reachable, so the merged tip is a true ancestor of the base and `git branch -d` alone proves the branch deletable; the rebase and squash opt-ins rewrite commit identities and reach deletion only through the patch-equivalence fallback below. Always pass `--delete-branch=false` so branch cleanup remains explicit and worktree-safe.
 
 ```bash
 base_from_pr=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
 branch_from_pr=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
-gh pr merge <pr-number> <overlay-merge-flag-or---rebase> --delete-branch=false
+gh pr merge <pr-number> <overlay-merge-flag-or---merge> --delete-branch=false
 git fetch origin "$base_from_pr"
 git switch --detach "origin/$base_from_pr"
 # Run every post-cleanup check declared by spx/local/merging.md here; continue only when all pass.
@@ -61,11 +61,27 @@ if git rev-parse --verify --quiet "refs/heads/$branch_from_pr" >/dev/null; then
     git cherry -v --abbrev=40 "origin/$base_from_pr" "$local_branch_sha" || true
   fi
 fi
+# The merged commit is on origin, but any worktree holding the base branch still
+# sits at the pre-merge commit. Git permits a branch in at most one worktree, so
+# the worktree attached to the base branch is unique when it exists at all.
+main_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$base_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
+if [ -z "$main_worktree" ]; then
+  echo "Main checkout fast-forward skipped: reason=no-worktree-holds-$base_from_pr"
+elif [ -n "$(git -C "$main_worktree" status --porcelain)" ]; then
+  echo "Main checkout fast-forward skipped: path=$main_worktree reason=uncommitted-work"
+  git -C "$main_worktree" status --porcelain
+elif git -C "$main_worktree" merge --ff-only "origin/$base_from_pr"; then
+  echo "Main checkout fast-forwarded: path=$main_worktree base=origin/$base_from_pr"
+else
+  echo "Main checkout fast-forward skipped: path=$main_worktree reason=not-fast-forwardable"
+fi
 git status --porcelain
 ```
 
 Merge while the branch is checked out, then detach, run post-cleanup checks, and establish occupancy before removing any ref. Occupancy has two proofs and both precede deletion: `git worktree list` names a worktree holding the branch, and `git status` in every worktree sitting at the branch tip proves no uncommitted work would be lost. A worktree detached at the tip carries no `branch` line, so the worktree-list check alone misses it, and `git branch --merged` hides its uncommitted work — status is the only proof. Both checks run before `git push origin --delete`, because a removed remote ref cannot be restored from a retained local branch alone. Only then remove the remote ref when present, and delete the local branch when unoccupied and fully merged — its tip an ancestor of the fetched base, or every branch commit patch-equivalent to an upstream commit, the state a rebase merge or single-commit squash leaves behind. A multi-commit squash collapses its patches into one upstream commit that no per-commit patch-id matches, so that branch fails the proof, and a `git cherry` invocation that itself fails proves nothing. Retain every branch whose proof fails or cannot run and report its exact evidence, including the `git cherry` output naming each unmatched commit.
 
 The tip check matches a worktree by commit alone, so a worktree parked at that same commit for an unrelated reason — one detached at the base right after a fast-forward merge, where base and branch tip are the same commit — reads as holding this branch's work. The match errs toward retention and never toward deletion, so the cost is a branch kept and reported with another worktree's status rather than uncommitted work lost.
+
+Cleanup ends by bringing the base branch's own checkout current. The merge advanced the base on origin, so every worktree that resolves against the local base branch — sibling worktrees, external tooling, a later session's context load — reads a stale commit until that checkout moves. Git permits a branch to be checked out in at most one worktree, so the worktree attached to the base branch identifies that checkout uniquely with no configuration, no naming convention, and no separate inventory; a layout that keeps no worktree on the base branch simply produces no match. The refresh is `merge --ff-only` in place, never a checkout of the base branch somewhere else and never a reset: a fast-forward moves the branch pointer only when the local branch is already an ancestor of the merged tip, so a checkout carrying its own unmerged commits is reported rather than rewritten. Uncommitted work in that checkout also stops the refresh, because a fast-forward would carry those changes onto a different commit. Each skipped case names its reason and leaves the checkout exactly as found — a stale base checkout is a reported condition, never a reason to force, stash, or switch branches on another worktree's behalf.
 
 </merge_cleanup>
