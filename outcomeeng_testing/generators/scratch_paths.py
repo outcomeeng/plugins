@@ -64,5 +64,7 @@ def portable_scratch_sources() -> tuple[str, ...]:
         f"{scenario.plugin}_tmp/{scenario.skill}",
         "tmp_path",
         "tempfile::tempdir()?",
+        # The doubled slash after a URL scheme names a host, not a path root.
+        f"https://tmp.{scenario.plugin}.example.com/{scenario.skill}",
     )
     return (*unique_per_invocation, *environment_root, *near_misses)

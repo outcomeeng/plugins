@@ -96,10 +96,13 @@ ALLOW_MARKER: Final = "{!# scratch-path-allow #!}"
 # A fixed temporary path in shipped content.  The leading lookbehind anchors
 # each absolute root at a path-segment boundary so a longer path that merely
 # ends in the same characters (``/opt/tmp``, ``xyz/tmp``) does not match, while
-# a quoted or interpolated occurrence (``"${TMPDIR:-/tmp}"``) does.  The
+# a quoted or interpolated occurrence (``"${TMPDIR:-/tmp}"``) does.  A preceding
+# slash is excluded with the word characters, so the doubled slash after a URL
+# scheme does not anchor a root: ``http://tmp.example.com`` names a host rather
+# than a filesystem path, and no filesystem path doubles that separator.  The
 # trailing boundary keeps ``/tmpfs`` and ``/tmp_build`` out.
 _FIXED_TEMPORARY_PATH: Final[re.Pattern[str]] = re.compile(
-    r"(?<![\w.~$])"
+    r"(?<![\w.~$/])"
     r"(?:"
     r"/private/var/tmp|/private/tmp|/var/tmp|/tmp"
     r"|~/tmp|\$HOME/tmp|\$\{HOME\}/tmp"
