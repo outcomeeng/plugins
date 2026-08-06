@@ -277,6 +277,12 @@ Don't over-engineer simple skills. Don't under-specify complex ones.
 
 When a foundation skill requires the same material on every fresh invocation, inline that canonical material and govern the total eager payload instead of the SKILL.md line count. The exception requires the same material on every invocation, removal of mandatory secondary reads, separate conditional detail, internal consistency, improved effectiveness, and a rendered payload of at most 40,000 Unicode code points measured by every audit. Never use it to inline optional detail or avoid routing.
 
+This skill invokes the exception for itself. An author needs its structure table, its command-capability rules, and its path boundary on one invocation, and each of its six references carries conditional detail rather than a mandatory read. Measure the rendered skill rather than this source, because the source carries both target branches inline and neither branch ships whole. The Claude payload is the larger of the two:
+
+```bash
+python3 -c "from pathlib import Path; print(len(Path('dist/claude/instructions/skills/skill-standards/SKILL.md').read_text(encoding='utf-8')))"
+```
+
 </eager_foundation_exception>
 
 <progressive_disclosure>
