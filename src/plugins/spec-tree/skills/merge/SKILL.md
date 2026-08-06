@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge.
   NEVER select a merge transport or drive a changeset to the default branch on origin without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(git -C * merge --ff-only:*), Bash(grep:*), Bash(head:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/classify_changeset.py":*), Bash(echo:*), Read
+allowed-tools: Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(grep:*), Bash(head:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/classify_changeset.py":*), Bash(echo:*), Read
 ---
 
 <objective>
