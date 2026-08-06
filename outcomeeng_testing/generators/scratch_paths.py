@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from outcomeeng.validation.scratch_paths import (
     ABSOLUTE_TEMPORARY_ROOTS,
+    ENVIRONMENT_TEMPORARY_ROOTS,
     HOME_TEMPORARY_ROOTS,
     PORTABLE_SCRATCH_SOURCES,
 )
@@ -28,6 +29,13 @@ def fixed_temporary_paths() -> tuple[str, ...]:
     # uses most, and neither is preceded by whitespace.
     redirect_target = f"2>{ABSOLUTE_TEMPORARY_ROOTS[0]}/{scenario.skill}.err"
     flag_value = f"--destination={ABSOLUTE_TEMPORARY_ROOTS[0]}/{scenario.outer_topic}"
+    # A fixed segment under the environment's own root resolves to one path for
+    # every invocation in that environment, so it collides exactly as the same
+    # segment under an absolute root does.
+    environment_root_child = tuple(
+        f'socket="{root}/{scenario.plugin}.sock"'
+        for root in ENVIRONMENT_TEMPORARY_ROOTS
+    )
     return (
         *bare_roots,
         *absolute_with_child,
@@ -35,6 +43,7 @@ def fixed_temporary_paths() -> tuple[str, ...]:
         expansion_fallback,
         redirect_target,
         flag_value,
+        *environment_root_child,
     )
 
 
@@ -44,11 +53,9 @@ def portable_scratch_sources() -> tuple[str, ...]:
     unique_per_invocation = tuple(
         f"{source} for {scenario.skill}" for source in PORTABLE_SCRATCH_SOURCES
     )
-    environment_root = (
-        '"${TMPDIR}"',
-        "$TMPDIR",
-        f'socket="${{TMPDIR}}/{scenario.plugin}.sock"',
-    )
+    # The root itself, and nothing appended to it: the root resolves per
+    # environment, so naming it collides with nothing.
+    environment_root = tuple(f'dir="{root}"' for root in ENVIRONMENT_TEMPORARY_ROOTS)
     # Paths whose final segment merely ends in the prohibited token, and
     # identifiers that contain it, are not fixed temporary paths.
     near_misses = (

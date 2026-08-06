@@ -15,6 +15,14 @@ shipped content.  ``${TMPDIR:-/tmp}`` is therefore a violation rather than a
 portable idiom: ``mktemp`` already resolves an unset ``TMPDIR`` correctly, so
 spelling the fallback only reintroduces the literal this rule removes.
 
+Naming the environment's temporary root by variable is portable, because the
+root it resolves to varies by environment.  Naming a child of that root is not:
+every invocation in one environment resolves the same root, so ``$TMPDIR`` plus
+a fixed segment collides exactly as ``/tmp`` plus that segment does.  Moving a
+fixed name from one root to the other relocates the collision rather than
+removing it, so a named child of ``$TMPDIR`` is a violation while the bare
+variable passes.
+
 One content genuinely has to spell a prohibited path: the rule prohibiting
 it.  A line carrying the ``ALLOW_MARKER`` build comment is exempt, and the
 build strips that comment before the content ships, so the marker never
@@ -62,6 +70,11 @@ ABSOLUTE_TEMPORARY_ROOTS: Final = (
 # Home-relative temporary roots, in the two spellings shipped content uses.
 HOME_TEMPORARY_ROOTS: Final = ("~/tmp", "$HOME/tmp", "${HOME}/tmp")
 
+# The environment's own temporary root, in the two spellings shipped content
+# uses.  Naming the root is portable because it resolves per environment; a
+# named child of it is not, because every invocation resolves the same child.
+ENVIRONMENT_TEMPORARY_ROOTS: Final = ("$TMPDIR", "${TMPDIR}")
+
 # The unique-per-invocation sources that replace every fixed path above.
 PORTABLE_SCRATCH_SOURCES: Final = (
     "mktemp -d",
@@ -95,6 +108,17 @@ _FIXED_TEMPORARY_PATH: Final[re.Pattern[str]] = re.compile(
     r"[\w./-]*"
 )
 
+# A named child of the environment's temporary root.  The root itself varies by
+# environment, so naming it is portable; naming a child of it is not, because
+# every invocation in that environment resolves the same root and therefore the
+# same child.  ``${TMPDIR}/agent.sock`` collides exactly as ``/tmp/agent.sock``
+# does, and moving a fixed name from one root to the other relocates the
+# collision rather than removing it.  The bare variable stays passing, so the
+# alternation requires a following segment.
+_ENVIRONMENT_ROOT_CHILD: Final[re.Pattern[str]] = re.compile(
+    r"(?<![\w.~$])\$(?:TMPDIR|\{TMPDIR\})/[\w.-]+[\w./-]*"
+)
+
 
 @dataclass(frozen=True)
 class Violation:
@@ -111,7 +135,8 @@ def find_fixed_temporary_paths(text: str) -> list[tuple[int, str]]:
         (lineno, match.group(0))
         for lineno, line in enumerate(text.splitlines(), start=1)
         if ALLOW_MARKER not in line
-        for match in _FIXED_TEMPORARY_PATH.finditer(line)
+        for pattern in (_FIXED_TEMPORARY_PATH, _ENVIRONMENT_ROOT_CHILD)
+        for match in pattern.finditer(line)
     ]
 
 
