@@ -77,12 +77,10 @@ The merge advanced the base on origin while the checkout that holds the base bra
 Identifying it is `spx`'s job, never a ref scan: the pool diagnosis reports the one valid main checkout, and the same reading carries the health predicates that make it safe to name. Occupancy is a separate reading, because a clean working tree never proves a checkout is free.
 
 1. Run `spx diagnose --format json` and read the `worktree-pool` record. Continue only when exactly one such record exists, its `verdict` is `compliant`, `readings.mainCheckoutBranchRead` is `true`, `readings.mainCheckoutBranch` equals `readings.defaultBranch`, and `readings.mainCheckoutPath` is a non-empty absolute path that differs from the assigned worktree root. Any other reading — including a layout with no pool and therefore no such record — skips the refresh with `reason=no-main-checkout`.
-2. Run `spx worktree status --all --format json` and read the entry for that checkout. Continue only when its `status` is `free`. A `running` status skips with `reason=held-by-live-session`, naming the reported session; a checkout another session holds is never mutated on its behalf, exactly as a worktree holding the feature branch is never cleaned above.
-3. Confirm that checkout reports no uncommitted work, and skip with `reason=uncommitted-work` when it does — a fast-forward would carry those changes onto a different commit.
+2. Run `spx worktree status --format json <main-checkout-path>`, passing the resolved path so the reading names that one checkout rather than requiring a match across an inventory. Continue only when its `status` is `free`. A `running` status skips with `reason=held-by-live-session`, naming the reported session; a checkout another session holds is never mutated on its behalf, exactly as a worktree holding the feature branch is never cleaned above.
+3. Run `git -C <main-checkout-path> status --porcelain` and continue only when it prints nothing. Any output skips with `reason=uncommitted-work` — a fast-forward would carry those changes onto a different commit. Neither `spx` reading answers this, so it is a separate command.
 4. Fast-forward it in place with `git -C <main-checkout-path> merge --ff-only origin/<base>`. A fast-forward advances the branch pointer only when the local branch is already an ancestor of the merged tip, so a checkout carrying its own unmerged commits fails the command and is reported with `reason=not-fast-forwardable` rather than rewritten.
 
 Every skipped case names its reason and leaves the checkout exactly as found. A stale base checkout is a reported condition, never a reason to force, reset, stash, or check the base branch out anywhere else.
 
 </base_checkout_refresh>
-
-</merge_cleanup>
