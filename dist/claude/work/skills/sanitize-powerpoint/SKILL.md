@@ -83,6 +83,14 @@ Both scripts are standard-library Python 3.13+ — no third-party dependencies, 
 The audit script never writes. The repack script writes only its named output file.
 </scripts>
 
+<shell_scope>
+This skill declares no `allowed-tools`, so every command reaches the harness for per-call approval. The omission is deliberate, not an oversight.
+
+Step 4 creates the working directory with `mktemp -d` and step 6's checklist proves it was removed on exit. That removal targets a path chosen at run time, and no grant pattern binds to one. The patterns that would cover it — a bare `rm -rf` grant, or a `${TMPDIR}` wildcard — authorize approval-free removal of paths this run never created, which is the overbroad grant the skill standard forbids. Naming every other command while omitting the removal would state a contract this workflow's own mandate breaks.
+
+Do not add a partial list to close the gap. `spx/43-work.enabler/ISSUES.md` records the three shapes that could carry a real contract.
+</shell_scope>
+
 <failure_modes>
 Failures from real usage. Each one cost a wrong diagnosis or a lost edit.
 
