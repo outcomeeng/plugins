@@ -678,12 +678,16 @@ def _render_jinja(
     runtime_token_registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
 ) -> str:
     """Evaluate custom-delimiter Jinja variables and control blocks."""
-    # Run the Jinja pass when a variable token ({{! !}}) or a Jinja control block
-    # ({!% if %!}) survives directive expansion — bare conditionals carry no
-    # variable token but still need evaluation.
+    # Run the Jinja pass when a variable token ({{! !}}), a Jinja control block
+    # ({!% if %!}), or a build comment ({!# #!}) survives directive expansion —
+    # bare conditionals carry no variable token but still need evaluation, and a
+    # build comment is authoring metadata that must not reach a consumer even in
+    # a file carrying no other token. The skill-directory rewrite escape shares
+    # the comment syntax and is protected across the render below.
     if (
         VARIABLE_DELIMITER_START not in template
         and BLOCK_DELIMITER_START not in template
+        and COMMENT_DELIMITER_START not in template
     ):
         return template
     # The skill-directory rewrite escape shares the {!# #!} syntax Jinja treats as

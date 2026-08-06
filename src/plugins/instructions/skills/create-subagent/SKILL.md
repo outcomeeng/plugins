@@ -16,7 +16,7 @@ A {{! term('configured_agent') !}} configured for an isolated, focused role — 
 {!% if target == 'codex' %!}
 <workflow>
 
-1. Create a standalone TOML file under `.codex/agents/` for product scope or `~/.codex/agents/` for user scope.
+1. Create a standalone TOML file under `.codex/agents/` for product scope, the default. User scope (`~/.codex/agents/`) requires the operator confirmation `<scope_boundary>` defines.
 2. Define the custom agent:
    - **name**: unique identifier Codex uses when spawning or referring to this agent
    - **description**: human-facing guidance for when Codex should use this agent
@@ -33,7 +33,7 @@ A {{! term('configured_agent') !}} configured for an isolated, focused role — 
 
 1. Run `/agents` command
 2. Select "Create New Agent"
-3. Choose product-scope (`.claude/agents/`) or user-scope (`~/.claude/agents/`)
+3. Choose product scope (`.claude/agents/`), the default. User scope (`~/.claude/agents/`) requires the operator confirmation `<scope_boundary>` defines.
 4. Define the {{! term('configured_agent') !}}:
    - **name**: lowercase-with-hyphens
    - **description**: When should this {{! term('configured_agent') !}} be used?
@@ -78,6 +78,16 @@ Priority order:
 {!% endif %!}
 
 Product-scope {{! term('configured_agents') !}} override user-scope when names conflict.
+
+<scope_boundary>
+
+Product scope is inside the checkout Claude was invoked in; a write there is part of the requested work and is reviewable in that repository's history. User scope is not: `~/.codex/agents/` and `~/.claude/agents/` sit outside the checkout, apply to every project on the machine, and are covered by no repository's review.
+
+Default to product scope. Choose user scope only when the operator asks for a {{! term('configured_agent') !}} available across projects, and obtain confirmation naming the absolute destination path before the write. Being able to resolve a home-directory path is not authorization to write to it, and one approval covers one file — a second user-scope write asks again.
+
+Never widen an approved product-scope write to user scope because the {{! term('configured_agent') !}} "seems generally useful"; that judgment belongs to the operator who owns the machine.
+
+</scope_boundary>
 </file_structure>
 
 <configuration>
@@ -393,7 +403,7 @@ Run `/agents` for an interactive interface to:
 </using_agents_command>
 
 <manual_editing>
-Edit {{! term('configured_agent_files') !}} directly:
+Edit {{! term('configured_agent_files') !}} directly. A user-scope path below is outside the checkout, so editing one requires the confirmation `<scope_boundary>` defines — for an edit or a delete as much as for a create:
 
 {!% if target == 'codex' %!}
 
@@ -466,6 +476,7 @@ A well-configured {{! term('configured_agent') !}} has:
 - Every declared tool mapped to at least one workflow step, with no workflow step requiring an undeclared tool
 - A post-skill Agent-tool invocation record produced from the handoff, using the configured name as `subagent_type` and reaching `completed`; its final message contains every field or section declared by the output expectations
   {!% endif %!}
+- A destination inside the invocation checkout, or — for a user-scope path — an operator confirmation naming the absolute destination, obtained before the write per `<scope_boundary>`
 - A description that states both what the {{! term('configured_agent') !}} does and when to invoke it
 - A model identifier accepted by the target harness and consistent with the configuration's stated capability, cost, and reproducibility requirements
 - The target-specific invocation check rerun after every configuration edit as a post-skill step outside this skill's restricted execution

@@ -27,6 +27,7 @@ CAN locate sources predictably and express shared-content includes uniformly.
 - ALWAYS: the Jinja2 environment uses custom delimiters `{!% %!}` and `{{! !}}` for template parsing — collision-free with skill content that literally contains standard Jinja2 syntax ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: `{!% require_skill 'plugin:skill' %!}` expands to identical coding-agent-neutral invocation text in both targets — full sister-skill content stays in its own skill ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: a per-runtime conditional block carrying no variable token still renders per target — the render pass evaluates a surviving `{!% if %!}` control block rather than shipping it verbatim ([test](tests/test_source_and_templating.compliance.l1.py))
+- ALWAYS: a build comment is stripped from every target's output even when the body carries no other build token — the render pass short-circuits on a body carrying no variable token and no control block, where an unstripped comment ships to the consumer as authoring metadata ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: the skill-directory rewrite escape directive survives the render pass intact even when the body triggers Jinja — the escape shares Jinja's comment syntax but reaches per-target path rewriting unstripped ([test](tests/test_source_and_templating.compliance.l1.py))
 
 ### Properties

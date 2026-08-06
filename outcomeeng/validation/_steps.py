@@ -141,11 +141,15 @@ def _reference_files() -> tuple[str, ...]:
     )
 
 
-def runtime_token_files() -> tuple[str, ...]:
-    # Authored source the build renders or inlines: plugin content, the shared
-    # fragments plugin files include, and the per-plugin templates that fan out
-    # into every plugin's generated tree. A raw runtime token in any of them
-    # ships into a generated target, so all three are enforced.
+def _authored_text_files() -> tuple[str, ...]:
+    """Return every authored text file the build renders or inlines.
+
+    Plugin content, the shared fragments plugin files include, and the
+    per-plugin templates that fan out into every plugin's generated tree.
+    Content in any of the three reaches a generated target, so every rule
+    enforcing a property of shipped content reads this one set — declared here
+    once so a new root or suffix cannot reach one rule and miss another.
+    """
     roots = (
         _REPO_ROOT / "src" / "plugins",
         _REPO_ROOT / "src" / "_shared",
@@ -160,6 +164,17 @@ def runtime_token_files() -> tuple[str, ...]:
             if path.is_file() and path.suffix in TEXT_FILE_SUFFIXES
         )
     )
+
+
+def runtime_token_files() -> tuple[str, ...]:
+    # A raw runtime token in authored content ships into a generated target.
+    return _authored_text_files()
+
+
+def scratch_path_files() -> tuple[str, ...]:
+    # A fixed temporary path in authored content ships to the consumer, where it
+    # collides across concurrent runs and writes outside the session boundary.
+    return _authored_text_files()
 
 
 PREFLIGHT_STEPS: Final = (
@@ -225,6 +240,17 @@ VALIDATION_STEPS: Final = (
             "-m",
             "outcomeeng.validation.runtime_tokens",
             *runtime_token_files(),
+        ),
+    ),
+    Step(
+        label="scratch-paths",
+        argv=(
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "outcomeeng.validation.scratch_paths",
+            *scratch_path_files(),
         ),
     ),
     Step(

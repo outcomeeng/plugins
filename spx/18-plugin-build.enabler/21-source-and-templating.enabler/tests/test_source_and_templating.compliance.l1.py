@@ -3,18 +3,26 @@
 import re
 from collections import Counter
 
+import pytest
+
 from outcomeeng.distribution.build import (
+    COMMENT_DELIMITER_START,
     EmissionAction,
     plan_emissions,
     plugin_names,
     template_source_files,
 )
 from outcomeeng.distribution.contracts import Target
+from outcomeeng_testing.generators.source_and_templating import (
+    SourceScenario,
+    source_scenarios,
+)
 from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
 from outcomeeng_testing.harnesses.source_and_templating import (
     bare_conditional_renders_per_target,
     implementation_is_ready,
     include_uses_fragment_file_contract,
+    observe_build_comment_outputs,
     jinja_environment_uses_custom_delimiters,
     malformed_source_tree_is_rejected,
     ordinary_plugin_root_file_is_accepted,
@@ -81,6 +89,22 @@ def test_require_skill_renders_inline() -> None:
 
 def test_bare_conditional_block_renders_per_target() -> None:
     assert bare_conditional_renders_per_target()
+
+
+@pytest.mark.parametrize("case", source_scenarios(), ids=lambda c: c.skill)
+def test_build_comment_is_stripped_without_other_jinja_tokens(
+    case: SourceScenario,
+) -> None:
+    for target, (rendered, comment) in observe_build_comment_outputs(case).items():
+        assert comment not in rendered, (
+            f"{target} shipped the build comment {comment!r}"
+        )
+        assert COMMENT_DELIMITER_START not in rendered, (
+            f"{target} shipped a comment delimiter: {rendered!r}"
+        )
+        assert case.fragment_body in rendered, (
+            f"{target} lost the surrounding body {case.fragment_body!r}"
+        )
 
 
 def test_skill_dir_escape_survives_jinja_pass() -> None:

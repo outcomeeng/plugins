@@ -11,6 +11,32 @@ gh pr merge <pr-number> <overlay-merge-flag-or---rebase> --delete-branch=false
 git fetch origin "$base_from_pr"
 git switch --detach "origin/$base_from_pr"
 # Run every post-cleanup check declared by spx/local/merging.md here; continue only when all pass.
+# Occupancy is established BEFORE any ref is removed, because a deleted remote ref
+# cannot be restored from a retained local branch alone.
+held_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$branch_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
+if [ -n "$held_worktree" ]; then
+  echo "Branch kept: path=$held_worktree branch=$branch_from_pr reason=held-by-live-worktree"
+  exit 0
+fi
+# A worktree DETACHED at the branch tip holds no `branch` line, so the check above
+# misses it while its uncommitted work still derives from this branch. `git branch
+# --merged` hides that work too, so status is the only proof it is safe to delete.
+if branch_tip=$(git rev-parse --verify --quiet "refs/heads/$branch_from_pr"); then
+  dirty_at_tip=$(git worktree list --porcelain | awk '/^worktree /{print substr($0,10)}' \
+    | while IFS= read -r wt_path; do
+        [ "$(git -C "$wt_path" rev-parse HEAD 2>/dev/null)" = "$branch_tip" ] || continue
+        [ -n "$(git -C "$wt_path" status --porcelain 2>/dev/null)" ] || continue
+        printf '%s\n' "$wt_path"
+      done)
+  if [ -n "$dirty_at_tip" ]; then
+    echo "Branch kept: branch=$branch_from_pr reason=uncommitted-work-at-branch-tip"
+    printf '%s\n' "$dirty_at_tip" | while IFS= read -r wt_path; do
+      echo "  worktree=$wt_path"
+      git -C "$wt_path" status --porcelain
+    done
+    exit 0
+  fi
+fi
 remote_branch_status=0
 git ls-remote --exit-code --heads origin "$branch_from_pr" >/dev/null || remote_branch_status=$?
 case "$remote_branch_status" in
@@ -18,10 +44,7 @@ case "$remote_branch_status" in
   2) ;;
   *) exit "$remote_branch_status" ;;
 esac
-held_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$branch_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
-if [ -n "$held_worktree" ]; then
-  echo "Local branch kept: path=$held_worktree branch=$branch_from_pr"
-elif git rev-parse --verify --quiet "refs/heads/$branch_from_pr" >/dev/null; then
+if git rev-parse --verify --quiet "refs/heads/$branch_from_pr" >/dev/null; then
   local_branch_sha=$(git rev-parse "refs/heads/$branch_from_pr")
   if git merge-base --is-ancestor "$local_branch_sha" "origin/$base_from_pr"; then
     git branch -d "$branch_from_pr"
@@ -41,6 +64,8 @@ fi
 git status --porcelain
 ```
 
-Merge while the branch is checked out, then detach, run post-cleanup checks, remove the remote ref when present, and delete the local branch only when unoccupied and fully merged — its tip an ancestor of the fetched base, or every branch commit patch-equivalent to an upstream commit, the state a rebase merge or single-commit squash leaves behind. A multi-commit squash collapses its patches into one upstream commit that no per-commit patch-id matches, so that branch fails the proof, and a `git cherry` invocation that itself fails proves nothing. Retain every branch whose proof fails or cannot run and report its exact evidence, including the `git cherry` output naming each unmatched commit.
+Merge while the branch is checked out, then detach, run post-cleanup checks, and establish occupancy before removing any ref. Occupancy has two proofs and both precede deletion: `git worktree list` names a worktree holding the branch, and `git status` in every worktree sitting at the branch tip proves no uncommitted work would be lost. A worktree detached at the tip carries no `branch` line, so the worktree-list check alone misses it, and `git branch --merged` hides its uncommitted work — status is the only proof. Both checks run before `git push origin --delete`, because a removed remote ref cannot be restored from a retained local branch alone. Only then remove the remote ref when present, and delete the local branch when unoccupied and fully merged — its tip an ancestor of the fetched base, or every branch commit patch-equivalent to an upstream commit, the state a rebase merge or single-commit squash leaves behind. A multi-commit squash collapses its patches into one upstream commit that no per-commit patch-id matches, so that branch fails the proof, and a `git cherry` invocation that itself fails proves nothing. Retain every branch whose proof fails or cannot run and report its exact evidence, including the `git cherry` output naming each unmatched commit.
+
+The tip check matches a worktree by commit alone, so a worktree parked at that same commit for an unrelated reason — one detached at the base right after a fast-forward merge, where base and branch tip are the same commit — reads as holding this branch's work. The match errs toward retention and never toward deletion, so the cost is a branch kept and reported with another worktree's status rather than uncommitted work lost.
 
 </merge_cleanup>

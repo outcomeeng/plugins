@@ -3,7 +3,7 @@ name: issue
 description: >-
   ALWAYS invoke this skill when filing a follow-up into a spec-tree dependency's own session queue — for observations about the spec-tree plugin, the spx CLI, or another spec-tree dependency needing a change. NEVER edit a spec-tree dependency's installed source directly to record a needed fix; capture it as a handoff in that dependency's queue with this skill.
 argument-hint: "[target-dir-or-dependency]"
-allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(printenv CODEX_THREAD_ID), Bash(printenv CLAUDE_SESSION_ID), Bash(spx --version:*), Bash(spx session show:*), Bash(spx -C:* session handoff*), Bash(spx -C:* session show*), Bash(git status:*), Bash(git rev-parse --path-format=absolute --git-common-dir), Bash(git remote get-url origin), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --path-format=absolute --git-common-dir), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(git -C:* remote get-url origin), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(printenv CODEX_THREAD_ID), Bash(printenv CLAUDE_SESSION_ID), Bash(spx --version:*), Bash(spx session show:*), Bash(spx -C:* session handoff*), Bash(spx -C:* session show*), Bash(git status:*), Bash(git rev-parse --path-format=absolute --git-common-dir), Bash(git remote get-url origin), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --path-format=absolute --git-common-dir), Bash(git -C:* rev-parse --show-toplevel), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(git -C:* remote get-url origin), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
 ---
 
 <context>
@@ -131,7 +131,16 @@ If the target checkout is detached or its current branch does not exist on origi
 
 **Step 5 — Snapshot the invoking repository.** Before filing, capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository. This is the before-state for the tracked-worktree mutation check.
 
-**Step 6 — File the follow-up.** Resolve the current runtime identity verbatim (`printenv CODEX_THREAD_ID` in Codex; `printenv CLAUDE_SESSION_ID` in Claude Code) and STOP when it is empty. Run `spx -C <target-dir> session handoff`, passing the JSON header line then the body on stdin:
+**Step 6 — GATE: Confirm the target, then file the follow-up.** The handoff writes into a repository the operator did not name in this turn, resolved from a marketplace registration rather than supplied as a path. Resolving a path is not authorization to write to it, so obtain confirmation through `AskUserQuestion` before the first mutating command, presenting:
+
+- the **absolute** `<target-dir>` verbatim, as `git -C <target-dir> rev-parse --show-toplevel` reports it;
+- that repository's normalized origin identity from step 1;
+- the resolved `git_ref` and the follow-up's `goal`;
+- two options — file the follow-up into that repository, or stop for inspection.
+
+Skip the confirmation only when `$ARGUMENTS` named the target checkout directly and step 1 already confirmed it; a target reached by marketplace resolution always asks. STOP on anything but explicit approval, leaving both repositories unchanged.
+
+Then resolve the current runtime identity verbatim (`printenv CODEX_THREAD_ID` in Codex; `printenv CLAUDE_SESSION_ID` in Claude Code) and STOP when it is empty. Run `spx -C <target-dir> session handoff`, passing the JSON header line then the body on stdin:
 
 ```bash
 spx -C <target-dir> session handoff <<'EOF'
@@ -197,6 +206,7 @@ How to avoid: Resolve the target dependency branch first, verify `refs/remotes/o
 - [ ] The invoking and target absolute git common directories differ.
 - [ ] The invoking and target normalized origin repository identities differ.
 - [ ] `git -C <target-dir> rev-parse --verify refs/remotes/origin/<branch>` succeeded for the stored `git_ref`.
+- [ ] Every target not named directly by `$ARGUMENTS` as a checkout path — whether marketplace-resolved or resolved from the invoking repository's configuration — was approved by the operator through the step 6 confirmation, which named the absolute target root verbatim, before any `spx -C <target-dir>` mutation ran.
 - [ ] `spx -C <target-dir> session show --json <HANDOFF_ID>` found the created handoff in the target queue and reported the expected `git_ref`, `specs: []`, `files: []`, runtime `agent_session_id`, and non-empty `created_at`.
 - [ ] The observation body contains no dependency node address, decision index, or assertion type.
 - [ ] `spx session show --json <HANDOFF_ID>` reports the target handoff id absent from the invoking repository, while its `git status --porcelain=v1 --untracked-files=all` output matches the pre-handoff snapshot byte-for-byte.

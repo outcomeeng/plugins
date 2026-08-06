@@ -186,6 +186,12 @@ Don't over-engineer simple skills. Don't under-specify complex ones.
 
 When a foundation skill requires the same material on every fresh invocation, inline that canonical material and govern the total eager payload instead of the SKILL.md line count. The exception requires the same material on every invocation, removal of mandatory secondary reads, separate conditional detail, internal consistency, improved effectiveness, and a rendered payload of at most 40,000 Unicode code points measured by every audit. Never use it to inline optional detail or avoid routing.
 
+This skill invokes the exception for itself. An author needs its structure table, its command-capability rules, and its path boundary on one invocation, and each of its six references carries conditional detail rather than a mandatory read. Measure the skill as installed, which is the payload an invocation loads:
+
+```bash
+python3 -c "from pathlib import Path; print(len(Path('${SKILL_DIR}/SKILL.md').read_text(encoding='utf-8')))"
+```
+
 </eager_foundation_exception>
 
 <progressive_disclosure>
@@ -342,3 +348,17 @@ Read `${SKILL_DIR}/references/platform-constraints.md` before using multi-backti
 Skills that ship `scripts/` must validate inputs with verbose, deterministic, actionable error messages and test every script before inclusion. The full validation-message and script-testing rules live in `${SKILL_DIR}/references/script-standards.md`. Read it before authoring a skill that bundles scripts.
 
 </script_standards>
+
+<path_boundary>
+
+A consumer's harness declares which directories a session may touch: the working directory, any additional working directories, the plugin's own files, and a scratch location. A skill instructs Claude, so every path a skill names becomes a path Claude writes — a skill that names a path outside that set directs the write out of the boundary the operator approved.
+
+**Scratch storage comes from a unique-per-invocation source, never a named path.** Use `mktemp -d` or `mktemp -t` in shell and `tempfile.mkdtemp` or `TemporaryDirectory` in Python. Each derives a unique directory from the environment's own temporary root, so no skill ever needs to spell a temporary path. Never write `/tmp`, `/var/tmp`, `/private/tmp`, `/private/var/tmp`, `~/tmp`, `$HOME/tmp`, `${HOME}/tmp`, or a `${TMPDIR:-/tmp}` fallback: a fixed path is identical across concurrent invocations, so two runs of the same skill overwrite each other, and it sits outside the declared set. `mktemp` already resolves an unset `TMPDIR`, so the fallback spelling buys nothing and reintroduces the literal. Naming the environment's root by variable is portable, but appending a segment to it is not — every invocation in one environment resolves the same root, so `$TMPDIR/agent.sock` collides exactly as `/tmp/agent.sock` does, and moving a fixed name between the two roots relocates the collision instead of removing it. Whichever step creates a scratch directory removes it on every exit path, including failure.
+
+**A write outside the invocation checkout is confirmed before it happens, not resolved and taken.** A home-directory configuration path, another repository's checkout, or any location the operator did not name in the request needs confirmation that states the absolute destination. Being able to resolve a path is not authorization to write to it, and one confirmation covers one write — the next asks again. Prefer the in-checkout location whenever both exist, because a write there is reviewable in that repository's history.
+
+One content may name a prohibited path: the rule prohibiting it. A standard listing the spellings an author may not write, or an audit row naming what to flag, states the rule rather than breaking it. Judge the surrounding intent — a path a skill presents as prohibited is not a violation, and a path a skill presents as a step to follow is one regardless of how it is fenced.
+
+**A permission prompt is a result, not an obstacle.** When a tool layer declines a path, that decline is the boundary working. Never document a way around it — a shell redirect standing in for a refused tool write, a broader permission substituted for a narrow one, a path rewritten to dodge a check. Name a path inside the boundary instead. A skill that teaches evasion converts one operator's approval into every future session's bypass.
+
+</path_boundary>

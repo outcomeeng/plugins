@@ -75,10 +75,11 @@ Use full branch names and full commit SHAs. Do not abbreviate identity values in
 
 Safe cleanup policy:
 
-- If the remote feature branch exists after merge, delete it through the merge lifecycle's approved deletion command.
+- Establish occupancy before removing any ref, remote or local. `git worktree list` names a worktree holding the branch; `git status` in every worktree sitting at the branch tip proves no uncommitted work would be lost. A worktree detached at the tip carries no `branch` line, so the worktree-list check alone misses it, and `git branch --merged` hides its uncommitted work. Both proofs precede deletion, because a removed remote ref cannot be restored from a retained local branch alone.
+- If the remote feature branch exists after merge and both occupancy proofs hold, delete it through the merge lifecycle's approved deletion command.
 - If the local feature branch exists, its remote ref is absent, no live worktree checks it out, and its work is fully upstream — its tip an ancestor of `origin/<base>`, or every branch commit patch-equivalent to an `origin/<base>` commit (`git cherry -v --abbrev=40 origin/<base> <branch>` reports no `+` commit, the state a rebase merge or single-commit squash leaves behind; a multi-commit squash collapses its patches into one upstream commit that no per-commit patch-id matches, so that branch stays retained with its evidence) — delete it regardless of upstream configuration: `git branch -d <branch>` on the ancestry path, `git branch -D <branch>` on the patch-equivalence path, because `-d` itself re-checks ancestry and refuses a rebase-merged branch.
 - If a preservation branch has no remote and all substantive commits are present on `origin/<base>` by ancestry or patch equivalence, report it as safe to delete and delete it unless the branch name or operator instruction marks it as retained evidence.
-- Never delete a branch checked out in another live worktree. Report the exact worktree path and branch instead.
+- Never delete a branch checked out in another live worktree, or one whose tip a worktree sits at with uncommitted work. Report the exact worktree path, branch, and status output instead.
 - Never delete a branch whose commits are neither ancestors nor patch-equivalent to `origin/<base>`. Report the unmatched full SHAs and keep the branch.
 
 Use git state observations rather than memory for every record field. The patch-equivalence observation is `git cherry -v --abbrev=40 origin/<base> <branch>`.
@@ -102,7 +103,7 @@ Local deterministic verification is the author-side validation and testing predi
 
 CI owns full-repository deterministic regression detection. The author still owns all verification types locally: validate, test, evaluate, review, and audit run before publication, but local validate/test/evaluate are scoped while review/audit inspect the changeset and the touched node(s).
 
-Run long or verbose deterministic commands with complete stdout/stderr redirected to a temporary log path, then inspect the summary, exit status, and failing sections. Do not stream passing-test logs through the session transcript. Keep the log path only when a failure requires later inspection; a passing run needs the command, exit code, and concise summary.
+Run long or verbose deterministic commands with complete stdout/stderr redirected to a log file inside a `mktemp -d` directory, then inspect the summary, exit status, and failing sections. Do not stream passing-test logs through the session transcript. Remove the directory once inspected, on a passing run and a failing one alike — carry a failure's exit status and failing sections into the report rather than leaving the directory behind for them. A passing run reports the command, exit code, and concise summary.
 
 </local_deterministic_scope>
 

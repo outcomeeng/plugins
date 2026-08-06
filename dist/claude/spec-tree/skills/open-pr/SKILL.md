@@ -3,7 +3,7 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and the first management pass. Invoked by exact name as a composed lifecycle protocol.
-allowed-tools: Read, Glob, Grep, Agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(printf:*), Skill
+allowed-tools: Read, Glob, Grep, Agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git remote get-url origin), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch --show-current), Bash(git push -u origin HEAD:refs/heads/*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(printf:*), Skill
 ---
 
 <objective>
@@ -24,7 +24,29 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 **Step 0 — Load references.** Invoke /merging-standards (shared vocabulary) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
 
-**Step 1 — GATE: Pre-flight.** Run `spx worktree status` from the assigned root and require a fresh passing /merging-standards `<occupancy_preflight>` before any checkout-sensitive mutation. Run every overlay-declared preflight check per `<overlay_safety_checks>`, then run `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this step before the push even when an earlier lifecycle entry already ran a preflight before branch or commit work; the later check guards the checkout state at publication time.
+**Step 1 — GATE: Pre-flight.** Run `spx worktree status` from the assigned root and require a fresh passing /merging-standards `<occupancy_preflight>` before any checkout-sensitive mutation. Run `<repository_target_gate>`, every overlay-declared preflight check per `<overlay_safety_checks>`, then `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this step before the push even when an earlier lifecycle entry already ran a preflight before branch or commit work; the later check guards the checkout state at publication time.
+
+<repository_target_gate>
+
+`gh pr create` names no repository, so it opens the PR against whatever `gh` resolves as the base — and for a fork `gh` resolves that to the **parent**, not to the repository the branch was pushed to. A flow that never resolves the target can therefore publish a branch to one repository and open a PR against a different organization's. Resolve both repositories and the operator's access class before the push, never after:
+
+```bash
+pr_target=$(gh repo view --json isFork,parent,nameWithOwner --jq 'if .isFork then .parent.nameWithOwner else .nameWithOwner end')
+push_target=$(gh repo view "$(git remote get-url origin)" --json nameWithOwner --jq '.nameWithOwner')
+access=$(gh repo view "$pr_target" --json viewerPermission --jq '.viewerPermission')
+printf 'pr_target=%s push_target=%s access=%s\n' "$pr_target" "$push_target" "$access"
+```
+
+Every condition below must hold, each reported with the exact resolved values:
+
+- `access` is `ADMIN`, `MAINTAIN`, or `WRITE`. `READ`, `NONE`, or an empty result STOPS the flow — a pull request is never opened against a repository the operator does not control.
+- `pr_target` equals `push_target`. A difference means the checkout is a fork and `gh` has resolved the base to the upstream. STOP, name both repositories, and return the decision to the operator; never open the PR against an upstream on the strength of a resolved default.
+
+`pr_target` reads `isFork` and `parent` rather than `nameWithOwner` alone, because `gh repo view` with no argument reports the checkout's own repository — for a fork, the fork. `push_target` resolves the same repository through the `origin` URL, so comparing the two bare names returns equal for every checkout, fork included, and the gate the comparison implements would pass without ever examining the case it exists to catch. Selecting the parent when `isFork` is true makes `pr_target` the repository `gh pr create` will actually open against.
+
+Access class comes from `viewerPermission` alone. A remote URL, the authenticated account name, or a successful push proves nothing about it: the operator owns repositories across several organizations, and neither `git remote` nor the account identity reports the permission that governs this one.
+
+</repository_target_gate>
 
 **Step 2 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails.
 
@@ -32,7 +54,7 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 **Step 3 — GATE: Evaluate `VERIFICATION_READINESS`.** Per /merging-standards `<authority_gates>`, the PR opens ready only when `VERIFICATION_READINESS` holds — all predicates below.
 
-*(a) Deterministic verification.* Run the project's local deterministic verification per /merging-standards `<local_deterministic_scope>` — validation and testing for the touched scope, escalating only when the overlay or risk evidence requires a wider local run. Capture verbose stdout/stderr in a temporary log path and inspect only the exit status, summary, and failing sections. It must report success; fix failures and re-run until green.
+*(a) Deterministic verification.* Run the project's local deterministic verification per /merging-standards `<local_deterministic_scope>` — validation and testing for the touched scope, escalating only when the overlay or risk evidence requires a wider local run. Capture verbose stdout/stderr in a log file inside a `mktemp -d` directory, inspect only the exit status, summary, and failing sections, and remove the directory once inspected, on success and on failure alike. It must report success; fix failures and re-run until green.
 
 *(b) Evidence-auditor predicates.* Dispatch every evidence auditor /merging-standards `<authority_gates>` requires for the diff: `test-evidence-auditor` for changed `[test]` assertions, linked tests, or imported test-infrastructure artifacts; `eval-evidence-auditor` for changed `[eval]` assertions, eval artifacts, or producer artifacts for eval-backed assertions. Handle rejected, failing, or unknown verdicts per /merging-standards `<auditor_verdicts>`, re-running deterministic verification and the relevant auditor until the evidence predicate is clean.
 
@@ -92,7 +114,7 @@ Flag rationale:
 
 - No `--draft` — the PR opens ready per /merging-standards `<authority_gates>`; `VERIFICATION_READINESS` (Step 3) is the gate that earns the open, and opening ready fires every CI review (Codex and the CI review) at once. A stacked PR is the one exception — pass `--draft` only when `<branch_topology>` holds it draft until its base merges.
 - `--title` and `--body-file -` — explicit title plus body-from-stdin; matches /commit-changes conventions without writing to disk.
-- `--head` — the feature branch; prevents gh from prompting for fork/push targets.
+- `--head` — the feature branch, stated explicitly so the head ref never depends on gh's inference. It suppresses gh's fork/push-target prompt, which is safe only because `<repository_target_gate>` has already resolved and checked both repositories; without that gate the suppressed prompt would hide a cross-repository target rather than settle it.
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
 - `GIT_TERMINAL_PROMPT=0` — disables git credential prompts. (gh detects non-TTY stdin/stdout and skips its own prompts automatically; no `GH_*` env var is needed.)
 
@@ -191,6 +213,7 @@ The narrow Bash grants in frontmatter authorize approval-free execution. Run req
 The opening flow has succeeded when:
 
 - /merging-standards and /commit-changes are loaded before the flow begins, `merge-policy.md` is read directly from /merging-standards `<reference_index>` before any tagged policy section is used, and a fresh `spx worktree status` reading passes `<occupancy_preflight>` before checkout-sensitive mutation.
+- `<repository_target_gate>` passed before push: `pr_target` and `push_target` were resolved and equal, and `viewerPermission` on `pr_target` returned `ADMIN`, `MAINTAIN`, or `WRITE`. All three values appear verbatim in the report.
 - /merging-standards `<branch_hygiene>` and `<branch_topology>` gates pass before push.
 - `VERIFICATION_READINESS` held before the PR opened: local deterministic verification passed on the diff that will be pushed, every required evidence-auditor predicate passed, and the local review converged — every valid finding that belongs was applied, any valid finding too large to belong was split out (recorded in the relevant node's `ISSUES.md` / `PLAN.md`), and unbacked findings were dropped. Severity did not gate; validity and the before-open phase did.
 - Push uses the explicit destination ref form from /merging-standards `<push_semantics>`.

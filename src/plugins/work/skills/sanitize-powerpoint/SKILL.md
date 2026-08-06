@@ -23,13 +23,13 @@ Five rules govern every run. Violating any of them corrupts a deck or silently d
 <workflow>
 Run these steps in order. Steps 2 and 6 use the bundled scripts in `<scripts>`.
 
-1. **Locate and guard.** Resolve the `.pptx` path the user named. Check for a sibling `~$<name>.pptx` lock file (`ls` the directory). If present, STOP — PowerPoint has the deck open; ask the user to close it before continuing.
+1. **Locate and guard.** Resolve the `.pptx` path from `$ARGUMENTS`; when it is empty, resolve the path the user named in conversation. Check for a sibling `~$<name>.pptx` lock file (`ls` the directory). If present, STOP — PowerPoint has the deck open; ask the user to close it before continuing.
 
 2. **Audit.** Run `pptx_audit.py` on the deck. It reads the package read-only and reports findings across the six dimensions in `<audit_dimensions>`. Read the full report.
 
 3. **Present and scope.** Show the user the findings grouped by dimension. Mechanical fixes (layout `type`, font redirect) and judgment fixes (color mapping, layout renames) are different — surface the judgment ones explicitly. Use `{{! tool('ask_user') !}}` to get per-dimension or per-finding approval. Fix only what the user approves.
 
-4. **Extract.** Unzip the deck into a temporary working directory **outside any git repository** (e.g. under `/tmp`). Never extract into the deck's own folder.
+4. **Extract.** Create the working directory with `mktemp -d` so it is unique per invocation and lands in the session's temporary directory, **outside any git repository**. Never extract into the deck's own folder, and never name a fixed temporary path — concurrent runs collide on one. Remove the directory on every exit path, including failure.
 
 5. **Apply approved fixes.** Edit the extracted XML part by part, following `${CLAUDE_SKILL_DIR}/references/audit-and-fix.md`. Handle one dimension at a time, and track every changed part.
 
@@ -83,6 +83,14 @@ Both scripts are standard-library Python 3.13+ — no third-party dependencies, 
 The audit script never writes. The repack script writes only its named output file.
 </scripts>
 
+<shell_scope>
+This skill declares no `allowed-tools`, so every command reaches the harness for per-call approval. The omission is deliberate, not an oversight.
+
+Step 4 creates the working directory with `mktemp -d` and step 6's checklist proves it was removed on exit. That removal targets a path chosen at run time, and no grant pattern binds to one. The patterns that would cover it — a bare `rm -rf` grant, or a `${TMPDIR}` wildcard — authorize approval-free removal of paths this run never created, which is the overbroad grant the skill standard forbids. Naming every other command while omitting the removal would state a contract this workflow's own mandate breaks.
+
+Do not add a partial list to close the gap. A real contract needs one of three changes first: give `mktemp` a template under a fixed prefix that a grant can match, move the working directory's lifetime into one of the bundled scripts so no shell removal exists to grant, or keep the removal approval-gated and say so beside the declared commands.
+</shell_scope>
+
 <failure_modes>
 Failures from real usage. Each one cost a wrong diagnosis or a lost edit.
 
@@ -126,7 +134,7 @@ A sanitizing run is complete when:
 - [ ] The repaired deck passes `pptx_repack.py` verification (ZIP integrity, XML well-formedness); any member-count change matches the trim scope approved in step 3.
 - [ ] The original deck was backed up before the swap.
 - [ ] A re-run of `pptx_audit.py` on the live file confirms the approved findings are resolved and no new finding appeared.
-- [ ] The temporary working directory is the only scratch artifact; the deck's folder holds only the deck and its backup.
+- [ ] The working directory came from `mktemp -d`, was removed on exit, and was the only scratch artifact; the deck's folder holds only the deck and its backup.
 
 </success_criteria>
 
