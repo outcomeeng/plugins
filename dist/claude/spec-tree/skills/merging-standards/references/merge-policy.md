@@ -70,6 +70,7 @@ The closeout record includes:
 - For each non-ancestor preservation branch, `git cherry -v --abbrev=40 origin/<base> <branch>` output as patch-equivalence evidence.
 - Final worktree state: clean or dirty, branch or detached, and current full HEAD SHA.
 - Release-source worktree state when a declared release or marketplace refresh used a separate source worktree: path, branch, full HEAD SHA, clean or dirty, and sync status.
+- Base-checkout refresh result from `<base_checkout_refresh>`: the checkout's full path and its new full HEAD SHA when fast-forwarded, or the named skip reason when not. Every transport records it, because every transport applies the refresh.
 
 Use full branch names and full commit SHAs. Do not abbreviate identity values in the record, in commands, or in the final closeout.
 
