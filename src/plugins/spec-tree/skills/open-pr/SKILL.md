@@ -31,7 +31,7 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 `gh pr create` names no repository, so it opens the PR against whatever `gh` resolves as the base — and for a fork `gh` resolves that to the **parent**, not to the repository the branch was pushed to. A flow that never resolves the target can therefore publish a branch to one repository and open a PR against a different organization's. Resolve both repositories and the operator's access class before the push, never after:
 
 ```bash
-pr_target=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+pr_target=$(gh repo view --json isFork,parent,nameWithOwner --jq 'if .isFork then .parent.nameWithOwner else .nameWithOwner end')
 push_target=$(gh repo view "$(git remote get-url origin)" --json nameWithOwner --jq '.nameWithOwner')
 access=$(gh repo view "$pr_target" --json viewerPermission --jq '.viewerPermission')
 printf 'pr_target=%s push_target=%s access=%s\n' "$pr_target" "$push_target" "$access"
@@ -41,6 +41,8 @@ Every condition below must hold, each reported with the exact resolved values:
 
 - `access` is `ADMIN`, `MAINTAIN`, or `WRITE`. `READ`, `NONE`, or an empty result STOPS the flow — a pull request is never opened against a repository the operator does not control.
 - `pr_target` equals `push_target`. A difference means the checkout is a fork and `gh` has resolved the base to the upstream. STOP, name both repositories, and return the decision to the operator; never open the PR against an upstream on the strength of a resolved default.
+
+`pr_target` reads `isFork` and `parent` rather than `nameWithOwner` alone, because `gh repo view` with no argument reports the checkout's own repository — for a fork, the fork. `push_target` resolves the same repository through the `origin` URL, so comparing the two bare names returns equal for every checkout, fork included, and the gate the comparison implements would pass without ever examining the case it exists to catch. Selecting the parent when `isFork` is true makes `pr_target` the repository `gh pr create` will actually open against.
 
 Access class comes from `viewerPermission` alone. A remote URL, the authenticated account name, or a successful push proves nothing about it: the operator owns repositories across several organizations, and neither `git remote` nor the account identity reports the permission that governs this one.
 
