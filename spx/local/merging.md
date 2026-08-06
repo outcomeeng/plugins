@@ -77,7 +77,7 @@ A prior local review is reusable across a clean rebase only when the branch patc
 
 ## Release installation
 
-After the merge and feature-worktree cleanup place the assigned checkout at `origin/main`, refresh the selected persistent Claude Code project and Codex home from that checkout:
+After the merge and cleaning up the assigned worktree, switch it to `origin/main` (detached; never check out `main` anywhere other than the main checkout). Then refresh the selected persistent Claude Code project and Codex home from that checkout:
 
 ```bash
 just install-marketplace
