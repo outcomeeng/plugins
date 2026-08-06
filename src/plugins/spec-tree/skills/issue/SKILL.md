@@ -210,7 +210,7 @@ How to avoid: Resolve the target dependency branch first, verify `refs/remotes/o
 - [ ] The invoking and target absolute git common directories differ.
 - [ ] The invoking and target normalized origin repository identities differ.
 - [ ] `git -C <target-dir> rev-parse --verify refs/remotes/origin/<branch>` succeeded for the stored `git_ref`.
-- [ ] Every target `$ARGUMENTS` did not name directly as a checkout path — a marketplace-resolved target, and one resolved from the invoking repository's configuration — was approved by the operator through the step 6 confirmation, which named the absolute target root verbatim, before any `spx -C <target-dir>` mutation ran.
+- [ ] Every target not named directly by `$ARGUMENTS` as a checkout path — whether marketplace-resolved or resolved from the invoking repository's configuration — was approved by the operator through the step 6 confirmation, which named the absolute target root verbatim, before any `spx -C <target-dir>` mutation ran.
 - [ ] `spx -C <target-dir> session show --json <HANDOFF_ID>` found the created handoff in the target queue and reported the expected `git_ref`, `specs: []`, `files: []`, runtime `agent_session_id`, and non-empty `created_at`.
 - [ ] The observation body contains no dependency node address, decision index, or assertion type.
 - [ ] `spx session show --json <HANDOFF_ID>` reports the target handoff id absent from the invoking repository, while its `git status --porcelain=v1 --untracked-files=all` output matches the pre-handoff snapshot byte-for-byte.
