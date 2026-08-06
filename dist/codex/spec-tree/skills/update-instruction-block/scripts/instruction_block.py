@@ -37,7 +37,8 @@ it, and a body naming no other root file); a write that carries no operator answ
 carries ``--adopt``, one whose ``--adopt`` names a pointer body and is refused, one whose
 ``--adopt`` would discard a content-bearing body and is refused, one whose ``--adopt`` arrives
 after the bootstrap pass has closed and is refused, and an ``--adopt`` with no ``--write`` to
-apply it; a reconcile reporting a pointer body; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
+apply it; a reconcile reporting a pointer body; every section gated on language presence, rendered with no
+language enabled and with each non-empty subset of the declared languages; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
 and an operator tie break; a dirty root file; and the CLI rejections (missing or non-directory repo root, missing or directory template, a
 template without ``template_version``, a symlink escaping the repository, an unsupported language
 token, a duplicate flag). The executable cases live in the governing node's ``tests/`` directory.
@@ -97,6 +98,11 @@ ROUTER_MARKER_PREFIX = "<!-- SPEC-TREE v"
 ROUTER_BLOCK_END = "<!-- /SPEC-TREE -->"
 ROUTER_LANGS_KEY = "langs:"
 ROUTER_BODY_SEPARATOR = "\n\n"
+# The conditional marker gating a section that introduces per-language content but carries no
+# per-language block itself. Named apart from the per-language `lang` marker so its value is
+# never mistaken for a language name by the template's declared-language scan.
+LANGUAGE_PRESENCE_MARKER = "langs"
+LANGUAGE_PRESENCE_NAME = "present"
 # Anchored to a full fence line (``re.MULTILINE``) so an inline marker example in product prose
 # never opens the block: the shipped instruction block teaches the literal marker, so a consumer
 # may quote it in prose, and an unanchored match would replace from that quote through the real
@@ -446,6 +452,22 @@ def _filter_languages(body: str, languages: tuple[str, ...]) -> str:
     return _filter_conditional_blocks(body, "lang", set(languages))
 
 
+def _filter_language_presence(body: str, languages: tuple[str, ...]) -> str:
+    """Keep each ``langs:present`` block when any language is enabled; drop it when none is.
+
+    A section that introduces per-language content carries no per-language block of its own, so
+    with no language enabled it would render as a heading and a preamble promising tables that
+    the same render just dropped. Wrapping that surrounding text in ``langs:present`` removes
+    the whole section instead of leaving it dangling. The marker is ``langs``, distinct from the
+    per-language ``lang`` marker, so it never reads as a language name.
+    """
+    return _filter_conditional_blocks(
+        body,
+        LANGUAGE_PRESENCE_MARKER,
+        {LANGUAGE_PRESENCE_NAME} if languages else set(),
+    )
+
+
 def template_languages(template_text: str) -> tuple[str, ...]:
     """Return the languages declared by opening ``lang:NAME`` template markers."""
     _, body = _split_frontmatter(template_text)
@@ -499,7 +521,9 @@ def render(
     """Render one agent harness's router block from the template and enabled languages.
 
     Language-conditional blocks render only for enabled languages and harness-conditional
-    blocks only for ``harness``; nothing else is substituted, so brace-delimited illustration
+    blocks only for ``harness``; a ``langs:present`` block, wrapping text that introduces
+    per-language content while carrying none of its own, is dropped whole when no language is
+    enabled. Nothing else is substituted, so brace-delimited illustration
     tokens pass through unchanged. The opening marker records the version and language list
     inline, so a later update reads both back from the marker without separate metadata lines.
     """
@@ -507,7 +531,8 @@ def render(
     languages = normalize_languages(languages)
     _, template_body = _split_frontmatter(template_text)
 
-    body = _filter_languages(template_body, languages)
+    body = _filter_language_presence(template_body, languages)
+    body = _filter_languages(body, languages)
     body = _filter_harness(body, harness)
     body = _BLANK_RUN.sub("\n\n", body)
     body = body.lstrip("\n")
