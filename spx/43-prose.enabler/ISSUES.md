@@ -17,7 +17,7 @@ changeset (sealed review run `2026-08-05_21-08-16-860-5bf3b83599ce`, PR #501).
 
 ## `audit-prose` emits no structured verdict, so its behavior is not gradeable (RESOLVED)
 
-**Resolved by the router-pair surface.** `audit-prose` declares a machine-readable verdict — `schema_version`, `skill`, `overall: APPROVED | REJECTED`, `findings[]` carrying `kind`, `pattern`, `category`, `quote`, `rewrite`, and a `summary` — produced only through the dispatched `prose-auditor` agent. The former `audit-internal-docs` prose-flag surface is now a composed finding producer feeding that verdict. Eval evidence grading the contract belongs to the separate eval-surface repair effort.
+**Resolved by the router-pair surface.** `audit-prose` declares a machine-readable verdict — `schema_version`, `skill`, `overall: APPROVED | REJECTED`, `findings[]` carrying `kind`, `pattern`, `category`, `quote`, `rewrite`, and a `summary` — produced only through the dispatched `prose-auditor` agent. The former `audit-internal-docs` prose-flag surface is now a composed finding producer feeding that verdict.
 
 ## Reference-skill `<success_criteria>` prove a downstream document, not the catalog (RESOLVED)
 
