@@ -61,20 +61,6 @@ if git rev-parse --verify --quiet "refs/heads/$branch_from_pr" >/dev/null; then
     git cherry -v --abbrev=40 "origin/$base_from_pr" "$local_branch_sha" || true
   fi
 fi
-# The merged commit is on origin, but any worktree holding the base branch still
-# sits at the pre-merge commit. Git permits a branch in at most one worktree, so
-# the worktree attached to the base branch is unique when it exists at all.
-main_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$base_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
-if [ -z "$main_worktree" ]; then
-  echo "Main checkout fast-forward skipped: reason=no-worktree-holds-$base_from_pr"
-elif [ -n "$(git -C "$main_worktree" status --porcelain)" ]; then
-  echo "Main checkout fast-forward skipped: path=$main_worktree reason=uncommitted-work"
-  git -C "$main_worktree" status --porcelain
-elif git -C "$main_worktree" merge --ff-only "origin/$base_from_pr"; then
-  echo "Main checkout fast-forwarded: path=$main_worktree base=origin/$base_from_pr"
-else
-  echo "Main checkout fast-forward skipped: path=$main_worktree reason=not-fast-forwardable"
-fi
 git status --porcelain
 ```
 
@@ -82,6 +68,21 @@ Merge while the branch is checked out, then detach, run post-cleanup checks, and
 
 The tip check matches a worktree by commit alone, so a worktree parked at that same commit for an unrelated reason — one detached at the base right after a fast-forward merge, where base and branch tip are the same commit — reads as holding this branch's work. The match errs toward retention and never toward deletion, so the cost is a branch kept and reported with another worktree's status rather than uncommitted work lost.
 
-Cleanup ends by bringing the base branch's own checkout current. The merge advanced the base on origin, so every worktree that resolves against the local base branch — sibling worktrees, external tooling, a later session's context load — reads a stale commit until that checkout moves. Git permits a branch to be checked out in at most one worktree, so the worktree attached to the base branch identifies that checkout uniquely with no configuration, no naming convention, and no separate inventory; a layout that keeps no worktree on the base branch simply produces no match. The refresh is `merge --ff-only` in place, never a checkout of the base branch somewhere else and never a reset: a fast-forward moves the branch pointer only when the local branch is already an ancestor of the merged tip, so a checkout carrying its own unmerged commits is reported rather than rewritten. Uncommitted work in that checkout also stops the refresh, because a fast-forward would carry those changes onto a different commit. Each skipped case names its reason and leaves the checkout exactly as found — a stale base checkout is a reported condition, never a reason to force, stash, or switch branches on another worktree's behalf.
+</merge_cleanup>
+
+<base_checkout_refresh>
+
+The merge advanced the base on origin while the checkout that holds the base branch stayed at the pre-merge commit, so every worktree, tool, and later context load that resolves against it reads a stale commit. Cleanup closes by bringing that one checkout current.
+
+Identifying it is `spx`'s job, never a ref scan: the pool diagnosis reports the one valid main checkout, and the same reading carries the health predicates that make it safe to name. Occupancy is a separate reading, because a clean working tree never proves a checkout is free.
+
+1. Run `spx diagnose --format json` and read the `worktree-pool` record. Continue only when exactly one such record exists, its `verdict` is `compliant`, `readings.mainCheckoutBranchRead` is `true`, `readings.mainCheckoutBranch` equals `readings.defaultBranch`, and `readings.mainCheckoutPath` is a non-empty absolute path that differs from the assigned worktree root. Any other reading — including a layout with no pool and therefore no such record — skips the refresh with `reason=no-main-checkout`.
+2. Run `spx worktree status --all --format json` and read the entry for that checkout. Continue only when its `status` is `free`. A `running` status skips with `reason=held-by-live-session`, naming the reported session; a checkout another session holds is never mutated on its behalf, exactly as a worktree holding the feature branch is never cleaned above.
+3. Confirm that checkout reports no uncommitted work, and skip with `reason=uncommitted-work` when it does — a fast-forward would carry those changes onto a different commit.
+4. Fast-forward it in place with `git -C <main-checkout-path> merge --ff-only origin/<base>`. A fast-forward advances the branch pointer only when the local branch is already an ancestor of the merged tip, so a checkout carrying its own unmerged commits fails the command and is reported with `reason=not-fast-forwardable` rather than rewritten.
+
+Every skipped case names its reason and leaves the checkout exactly as found. A stale base checkout is a reported condition, never a reason to force, reset, stash, or check the base branch out anywhere else.
+
+</base_checkout_refresh>
 
 </merge_cleanup>
