@@ -1,8 +1,23 @@
 # Issues: Prose Plugin
 
+## `prose.md` exceeds the assertion-count decompose guidance
+
+`spx/43-prose.enabler/prose.md` carries 8 assertions in one `### Compliance`
+subsection, above the >7 guidance that triggers decomposition. The assertions
+cluster into two separable concerns: router and composition-surface shape
+(assertions 1, 5, 6, 7) versus kind-detection and audit-verdict behavior
+(assertions 2, 3, 4, 8).
+
+**Resolution shape**: a `/decompose` pass on `spx/43-prose.enabler` splitting
+the two concerns into child enablers, or an explicit re-scope that keeps the
+node within the guidance.
+
+**Evidence.** Surfaced by the changes reviewer on the prose router-surface
+changeset (sealed review run `2026-08-05_21-08-16-860-5bf3b83599ce`, PR #501).
+
 ## `audit-prose` emits no structured verdict, so its behavior is not gradeable (RESOLVED)
 
-**Resolved by the router-pair surface.** `audit-prose` declares a machine-readable verdict — `schema_version`, `skill`, `overall: APPROVED | REJECTED`, `findings[]` carrying `kind`, `pattern`, `category`, `quote`, `rewrite`, and a `summary` — produced only through the dispatched `prose-auditor` agent. The former `audit-internal-docs` prose-flag surface is now a composed finding producer feeding that verdict. Eval evidence grading the contract is the recorded follow-up in `spx/43-prose.enabler/PLAN.md`.
+**Resolved by the router-pair surface.** `audit-prose` declares a machine-readable verdict — `schema_version`, `skill`, `overall: APPROVED | REJECTED`, `findings[]` carrying `kind`, `pattern`, `category`, `quote`, `rewrite`, and a `summary` — produced only through the dispatched `prose-auditor` agent. The former `audit-internal-docs` prose-flag surface is now a composed finding producer feeding that verdict. Eval evidence grading the contract belongs to the separate eval-surface repair effort.
 
 ## Reference-skill `<success_criteria>` prove a downstream document, not the catalog (RESOLVED)
 
