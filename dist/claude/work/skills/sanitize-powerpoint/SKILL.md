@@ -88,7 +88,7 @@ This skill declares no `allowed-tools`, so every command reaches the harness for
 
 Step 4 creates the working directory with `mktemp -d` and step 6's checklist proves it was removed on exit. That removal targets a path chosen at run time, and no grant pattern binds to one. The patterns that would cover it — a bare `rm -rf` grant, or a `${TMPDIR}` wildcard — authorize approval-free removal of paths this run never created, which is the overbroad grant the skill standard forbids. Naming every other command while omitting the removal would state a contract this workflow's own mandate breaks.
 
-Do not add a partial list to close the gap. `spx/43-work.enabler/ISSUES.md` records the three shapes that could carry a real contract.
+Do not add a partial list to close the gap. A real contract needs one of three changes first: give `mktemp` a template under a fixed prefix that a grant can match, move the working directory's lifetime into one of the bundled scripts so no shell removal exists to grant, or keep the removal approval-gated and say so beside the declared commands.
 </shell_scope>
 
 <failure_modes>
