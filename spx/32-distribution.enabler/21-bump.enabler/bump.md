@@ -28,6 +28,7 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under th
 ### Mappings
 
 - Auto-detection maps each `(file-status, path-pattern)` pair to a segment within any recognized distribution-surface root: an `A`/`C`/`D`/`R` change to `skills/{slug}/SKILL.md`, `agents/{slug}.md`, or `{.claude,.codex}-plugin/plugin.json` yields `minor`; every other path or any `M` change yields `patch` ([test](tests/test_bump.mapping.l1.py))
+- Each file status maps to the plugins one change attributes to: an `R` change attributes both its destination and its source plugin, and every other status attributes its destination plugin alone — a `C` change leaves its source untouched at `base_ref` ([test](tests/test_bump.mapping.l1.py))
 
 ### Properties
 

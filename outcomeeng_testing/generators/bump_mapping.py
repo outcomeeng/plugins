@@ -202,6 +202,30 @@ def mixed_minor_triggering_changes() -> tuple[ChangedPath, ...]:
     )
 
 
+def change_attribution_cases() -> tuple[tuple[ChangedPath, frozenset[str]], ...]:
+    """Every `FileStatus`, paired with the plugins that change attributes to.
+
+    The destination sits in `foo` and any source in `bar`, so an attribution
+    that reaches the source path is visible as `bar` appearing in the result.
+    """
+    destination = distribution_relpath(
+        SOURCE_PLUGINS_DIR, "foo", f"{SKILLS_SUBDIR_NAME}/new-skill/{SKILL_FILENAME}"
+    )
+    source = distribution_relpath(
+        SOURCE_PLUGINS_DIR, "bar", f"{SKILLS_SUBDIR_NAME}/old-skill/{SKILL_FILENAME}"
+    )
+    return (
+        (ChangedPath(FileStatus.ADDED, destination), frozenset({"foo"})),
+        (ChangedPath(FileStatus.MODIFIED, destination), frozenset({"foo"})),
+        (ChangedPath(FileStatus.DELETED, destination), frozenset({"foo"})),
+        (ChangedPath(FileStatus.COPIED, destination, source), frozenset({"foo"})),
+        (
+            ChangedPath(FileStatus.RENAMED, destination, source),
+            frozenset({"foo", "bar"}),
+        ),
+    )
+
+
 def patch_only_changes() -> tuple[ChangedPath, ...]:
     return (
         ChangedPath(

@@ -515,7 +515,7 @@ def _real_change_probe(
     )
     changes: dict[str, list[ChangedPath]] = {}
     for parsed_change in (*tracked, *untracked):
-        plugins = _plugins_from_changed_path(parsed_change)
+        plugins = plugins_from_change(parsed_change)
         if not plugins:
             continue
         for plugin in plugins:
@@ -523,12 +523,24 @@ def _real_change_probe(
     return {plugin: tuple(paths) for plugin, paths in changes.items()}
 
 
-def _plugins_from_changed_path(change: ChangedPath) -> frozenset[str]:
+def plugins_from_change(change: ChangedPath) -> frozenset[str]:
+    """Plugins one change alters, from its destination and its source path.
+
+    A rename alters both plugins: its source path is gone at the destination's
+    expense. A copy alters only the destination, because the source is
+    byte-identical at `base_ref` and nothing under its prefix changed. Copy
+    detection reports a copy whenever a new file resembles an existing one, and
+    the build emits near-identical per-plugin lifecycle files, so attributing a
+    copy's source would bump every plugin a new plugin's generated files
+    happen to resemble.
+    """
     plugins: set[str] = set()
     if plugin := _plugin_from_changed_path(change.path):
         plugins.add(plugin)
-    if change.old_path is not None and (
-        plugin := _plugin_from_changed_path(change.old_path)
+    if (
+        change.status is FileStatus.RENAMED
+        and change.old_path is not None
+        and (plugin := _plugin_from_changed_path(change.old_path))
     ):
         plugins.add(plugin)
     return frozenset(plugins)
@@ -653,6 +665,7 @@ __all__ = [
     "bump",
     "changed_plugins_from_diff",
     "main",
+    "plugins_from_change",
 ]
 
 
