@@ -6,13 +6,15 @@ CAN refresh every committed plugin in selected agent state and verify the same o
 
 ## Assertions
 
+- Given an installed plugin that owns Codex agent definitions, when persistent installation runs, then its generated definitions are placed in the selected `CODEX_HOME` agents directory beside the plugin content the same run installs, while definitions outside that plugin's ownership remain unchanged, per `spx/12-marketplace-state.adr.md`
+
 ### Scenarios
 
 - Given canonical project configuration and an active `CODEX_HOME`, when `just install-marketplace` runs, then Claude Code refreshes project-scoped `outcomeeng/plugins`, Codex refreshes `outcomeeng/plugins` in that selected home, every committed catalog plugin is installed, and the project's committed plugin selection stays active with its settings file byte-identical. ([test](tests/test_repository_installation.scenario.l2.py))
 - Given a user-scoped Claude Code `outcomeeng` marketplace registration, when persistent installation starts, then it reports the colliding settings path and performs no state-changing operation. ([test](tests/test_repository_installation.scenario.l1.py))
 - Given `just verify-marketplace-installation`, when the recipe runs, then it executes the repository-installation L2 evidence in disposable homes through the repository test command. ([test](tests/test_repository_installation.scenario.l1.py))
 - Given every plugin in the Claude Code and Codex marketplace catalogs, when the isolated installation harness installs the catalog, then each agent registers the invocation checkout and every catalog plugin is observable as installed and enabled through the corresponding real agent CLI. ([test](tests/test_repository_installation.scenario.l2.py))
-- Given an installed plugin that owns Codex agent definitions, when its lifecycle installation runs, then its generated definitions are placed in the invocation checkout's `.codex/agents/` namespace while definitions outside that plugin's ownership remain unchanged. ([test](tests/test_repository_installation.scenario.l2.py))
+- Given a repository that opts into committed delivery through a plugin's lifecycle skill, when that opt-in placement runs, then the plugin's generated definitions are placed in the invocation checkout's `.codex/agents/` namespace while definitions outside that plugin's ownership remain unchanged, per `spx/12-marketplace-state.adr.md`. ([test](tests/test_repository_installation.scenario.l2.py))
 - Given unchanged committed catalogs and checkout content, when isolated installation runs twice against the same disposable homes, then the second run succeeds with the same installed and placed state. ([test](tests/test_repository_installation.scenario.l2.py))
 - Given a persistent marketplace inspection that fails, when persistent installation runs, then it reports a failure naming that operation and attempts no plan operation. ([test](tests/test_repository_installation.scenario.l1.py))
 
