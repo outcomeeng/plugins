@@ -37,14 +37,16 @@ Pending implementation, in dependency order:
    selected home — catalog state the home itself carries after a marketplace
    refresh, needing neither repository catalog access nor an installed-plugin
    heuristic — so definitions the marketplace placed for a plugin since removed
-   or renamed in `.agents/plugins/marketplace.json` are pruned on any consumer
-   refresh, and a catalog removal does not strand stale home definitions. The
-   consumer-side caller is the entry point itself: every invocation of any
-   plugin's shipped entry point runs that plugin's namespace-bounded placement
-   and then the marketplace-scope reconciliation pass, so the lifecycle-skill
-   invocation item 3 names is the portable aggregate caller, and
-   `outcomeeng/distribution/installation.py` drives the same shipped operation
-   in bulk. The same slice removes
+   or renamed in `.agents/plugins/marketplace.json` are pruned on the next
+   shipped-operation run. No shipped surface can intercept the agent CLI's own
+   marketplace or plugin refresh commands, and `spx/15-hook-safety.pdr.md` bars
+   subprocess-bearing hooks, so the reconciliation rides every entry-point
+   invocation instead of a refresh event: any plugin's placement run, any
+   missing-role repair, and the maintainers' bulk installation each run their
+   namespace-bounded placement and then the marketplace-scope reconciliation
+   pass. A removed plugin's definitions therefore persist only until the next
+   such invocation, inert and bounded by the ownership record, never
+   indefinitely. The same slice removes
    the automatic checkout `LIFECYCLE_PLACE` step from installation runs — checkout
    materialization holds only where the checkout carries the plugin's invoked
    skill content — and updates the release documentation in `spx/local/merging.md` that
