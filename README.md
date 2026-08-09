@@ -135,8 +135,8 @@ codex plugin marketplace upgrade outcomeeng
 Repository maintainers can verify both catalogs with
 `just verify-marketplace-installation`. The command installs every catalog plugin
 through the real Claude Code and Codex CLIs in disposable homes, then runs Codex
-agent placement against the invocation checkout. It leaves persistent plugin state
-unchanged.
+checkout materialization against the invocation checkout. It leaves persistent
+plugin state unchanged.
 
 After merged distribution changes, `just install-marketplace` refreshes the
 project-scoped Claude Code marketplace and the selected `$CODEX_HOME` from the

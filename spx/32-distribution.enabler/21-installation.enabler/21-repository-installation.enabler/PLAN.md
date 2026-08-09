@@ -35,9 +35,12 @@ Pending implementation, in dependency order:
    — over the whole ownership set. The reconciler identifies stale definitions
    against the marketplace's current plugin set, resolved without repository
    catalog access or an installed-plugin heuristic: the build embeds a catalog
-   snapshot in each plugin's shipped runtime tree, refreshed with every plugin
-   release, and the reconciler reads the newest snapshot across the home's
-   installed plugins — so definitions the marketplace placed for a plugin since removed
+   snapshot in each plugin's shipped runtime tree, and because the snapshot is
+   a build product of the committed catalog, a catalog-membership change
+   regenerates every plugin's embedded snapshot — the release that ships a
+   removal or rename ships current snapshots to every surviving plugin — and
+   the reconciler reads the newest snapshot across the home's installed
+   plugins — so definitions the marketplace placed for a plugin since removed
    or renamed in `.agents/plugins/marketplace.json` are pruned on the next
    shipped-operation run. No shipped surface can intercept the agent CLI's own
    marketplace or plugin refresh commands, and `spx/15-hook-safety.pdr.md` bars
