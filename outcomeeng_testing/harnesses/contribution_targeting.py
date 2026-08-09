@@ -18,9 +18,18 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
-from typing import Protocol
+from typing import Final, Protocol
+
+from hypothesis import given, seed, settings
+
+from outcomeeng_testing.generators.contribution_targeting import (
+    fork_states,
+    unrecognized_permissions,
+)
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = (
@@ -143,3 +152,38 @@ def resolve_with(responses: Responses) -> tuple[ResolutionLike, RecordingRunner]
     runner = RecordingRunner(responses)
     resolution: ResolutionLike = load_resolver().resolve(runner)
     return resolution, runner
+
+
+TARGETING_PROPERTY_EXAMPLES: Final = 100
+TARGETING_PROPERTY_SEED: Final = 20260809
+TARGETING_PROPERTY_REPLAY_PATH: Final = (
+    "just test spx/43-contribute.enabler/21-targeting.enabler/tests/"
+    "test_target_resolution.property.l1.py"
+)
+
+
+def run_unrecognized_permission_property(check: Callable[[bool, str], None]) -> None:
+    """Drive `check` over fork states and permissions outside both buckets."""
+    resolver = load_resolver()
+    recognized: frozenset[str] = (
+        resolver.CONTROLLED_PERMISSIONS | resolver.CONTRIBUTOR_PERMISSIONS
+    )
+
+    @seed(TARGETING_PROPERTY_SEED)
+    @settings(
+        max_examples=TARGETING_PROPERTY_EXAMPLES,
+        deadline=None,
+        print_blob=True,
+    )
+    @given(
+        is_fork=fork_states(),
+        permission=unrecognized_permissions(recognized),
+    )
+    def run(is_fork: bool, permission: str) -> None:
+        check(is_fork, permission)
+
+    run_replayable_property(
+        run,
+        seed_value=TARGETING_PROPERTY_SEED,
+        replay_path=TARGETING_PROPERTY_REPLAY_PATH,
+    )

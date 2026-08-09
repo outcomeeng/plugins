@@ -4,6 +4,7 @@ import pytest
 
 from outcomeeng.distribution.installation import (
     CANONICAL_MARKETPLACE_SOURCE,
+    MARKETPLACE_NAME,
     PLUGIN_OPERATIONS,
     UNPUBLISHED_PLUGIN_FRAGMENT,
     Operation,
@@ -89,7 +90,10 @@ def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
         source=source,
         operation=operation,
         plugin=plugin if carries_plugin else None,
-        stderr=f"Error: plugin `{plugin}` was {UNPUBLISHED_PLUGIN_FRAGMENT} `outcomeeng`",
+        stderr=(
+            f"Error: plugin `{plugin}` was "
+            f"{UNPUBLISHED_PLUGIN_FRAGMENT} `{MARKETPLACE_NAME}`"
+        ),
     )
 
     if pending:

@@ -16,6 +16,10 @@ A contribution needs a head repository the operator can push to. When no fork of
 
 - The observed fork state, resolved parent, and `viewerPermission` value map to exactly one classification — a controlled base, a parent contribution, an absent-fork target, or a blocked target ([test](tests/test_target_resolution.mapping.l1.py))
 
+### Properties
+
+- Every `viewerPermission` value outside the permission sets the resolver names blocks the target, under either fork state — the reported permission is an open string, so a value the platform adds later resolves without the resolver changing ([test](tests/test_target_resolution.property.l1.py))
+
 ### Compliance
 
 - ALWAYS: every write to the base repository names it explicitly, because a command that omits the repository publishes wherever `gh` resolves the default ([audit])
