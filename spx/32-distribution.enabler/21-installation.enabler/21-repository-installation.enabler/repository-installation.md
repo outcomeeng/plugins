@@ -6,8 +6,6 @@ CAN refresh every committed plugin in selected agent state and verify the same o
 
 ## Assertions
 
-- Given an installed plugin that owns Codex agent definitions, when persistent installation runs, then its generated definitions are placed in the selected `CODEX_HOME` agents directory beside the plugin content the same run installs, while definitions outside that plugin's ownership remain unchanged, per `spx/12-marketplace-state.adr.md`
-
 ### Scenarios
 
 - Given canonical project configuration and an active `CODEX_HOME`, when `just install-marketplace` runs, then Claude Code refreshes project-scoped `outcomeeng/plugins`, Codex refreshes `outcomeeng/plugins` in that selected home, every committed catalog plugin is installed, and the project's committed plugin selection stays active with its settings file byte-identical. ([test](tests/test_repository_installation.scenario.l2.py))

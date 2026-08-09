@@ -15,10 +15,15 @@ Pending implementation, in dependency order:
    The retired manifest-tracked install model (removed by commit
    `63fea7b7bc65d1c4b520bb09e0fe98ab5d06ccba`) is not restored; placement reuses the
    namespace-prefix model the lifecycle placement already uses.
-2. L2 evidence — extend the isolated installation harness to observe home-directory
-   agent placement for the new untagged assertion in
-   `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md`,
-   routed through `/verify`.
+2. Home-placement declaration and L2 evidence — the implementation changeset adds
+   the home-placement scenario to
+   `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md`
+   (persistent installation places a plugin's generated definitions in the selected
+   `CODEX_HOME` agents directory beside the plugin content the same run installs,
+   foreign definitions untouched), routed through `/verify`, and extends the
+   isolated installation harness to observe home-directory placement. Until then
+   the declaration lives as the `([compliance])` rule in
+   `spx/12-marketplace-state.adr.md`.
 3. Generated plugin lifecycle skills — the checkout-materialization verb becomes an
    explicit opt-in; the default repair path for a missing agent role refreshes the
    selected agent home.

@@ -23,12 +23,9 @@ Agent definitions are placed in the agent home because an agent whose plugin man
 
 ## Verification
 
-- ALWAYS: for an agent whose plugin manifest cannot declare agents, that plugin's agent definitions ship inside the plugin's own declared skill surface and persistent installation places them in the selected agent home's agent directory — no manifest path delivers them
-- ALWAYS: a checkout's agent directory receives a plugin's agent definitions only through that plugin's lifecycle skill's explicit opt-in — never as a required step of installation or of any generated instruction surface
-- NEVER: a generated instruction surface directs an agent session to commit agent definitions into a checkout — a missing agent role is repaired by refreshing the selected agent home
-
 ### Testing
 
+- ALWAYS: for an agent whose plugin manifest cannot declare agents, that plugin's agent definitions ship inside the plugin's own declared skill surface and persistent installation places them in the selected agent home's agent directory — no manifest path delivers them ([compliance])
 - ALWAYS: a plugin's lifecycle skill places and prunes only within the namespace its own plugin owns, leaving agent definitions authored by the developer or provided by another plugin untouched ([compliance])
 - NEVER: a plugin's agent definitions ship through a directory the plugin manifest does not declare — an undeclared surface reaching the consumer is incidental, not contractual ([compliance])
 
@@ -41,3 +38,8 @@ Agent definitions are placed in the agent home because an agent whose plugin man
 - NEVER: installation reads or writes repository `.codex/config.toml` to install or enable Codex plugins — effective Codex plugin state belongs to the selected `CODEX_HOME` ([compliance])
 - ALWAYS: marketplace-install diagnosis derives expected plugin state from the checkout's committed per-agent marketplace catalogs rather than from a plugin catalog embedded in shipped diagnostic output ([compliance])
 - ALWAYS: install completeness — every catalog plugin installed and enabled for every agent the checkout registers — is verified by an isolated installation harness that provisions each registered agent in disposable homes and mutates no persistent state ([compliance])
+
+### Audit
+
+- ALWAYS: a checkout's agent directory receives a plugin's agent definitions only through that plugin's lifecycle skill's explicit opt-in — never as a required step of installation or of any generated instruction surface ([audit])
+- NEVER: a generated instruction surface directs an agent session to commit agent definitions into a checkout — a missing agent role is repaired by refreshing the selected agent home ([audit])
