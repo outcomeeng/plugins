@@ -6,11 +6,17 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
-## 0.88.6
+## 0.88.7
 
 ### Removed
 
 - **Branch cleanup no longer advances the checkout that holds the base branch.** 0.88.4 added a step that fast-forwarded that checkout after every merge, on every transport. It was the wrong home: the base checkout predates the changeset and outlives it, while cleanup removes only what the lifecycle created, and reaching it meant writing outside the assigned worktree — which the merge lifecycle otherwise never does. Advancing a base checkout is environment maintenance, so a repository that wants it declares it as its own release action in `spx/local/merging.md`, where `RELEASE_READINESS` already governs consumer-visible refresh. A repository that declared no release action loses nothing; one that wants the behavior gains a declaration it controls. The branch-state closeout record drops its base-checkout-refresh field with the step.
+
+## 0.88.6
+
+### Changed
+
+- **The router's file-reading rule states the designated context per file class.** The previous wording — read named files yourself, never use subagents to read files named by the user or referenced by skills — read as forbidding a configured auditor from inspecting the very files its role task names, and a consumer reviewer rejected an auditor's path-reading on that literal reading. The rule now separates the classes it always meant: a file the user names is read in the main conversation, a file this conversation authored is verified by a configured verifier or reviewer in an independent context, and subagents may locate files while the main conversation reads what it needs in full.
 
 ## 0.88.5
 
