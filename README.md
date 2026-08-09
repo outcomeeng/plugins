@@ -230,6 +230,19 @@ Coding-agent environments and coordination: /operate-prowl, /message-agents, /co
 | Skill | `/operate-prowl`        | A workflow needs a public Prowl operation or a correlated delegation handback between Prowl coding agents                                                  |
 | Skill | `/recover-prowl-agents` | Preparing for or recovering coding-agent sessions after a Prowl restart                                                                                    |
 
+### contribute
+
+Contributions to repositories you do not control: /open-parent-pr, /manage-parent-pr, /open-parent-issue, /manage-parent-issue, /sync-fork
+
+| Type  | Name                      | Purpose                                                                                                                                   |
+| ----- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/contribution-standards` | Contribution standards for changes and reports sent to a repository the operator does not control                                         |
+| Skill | `/manage-parent-issue`    | Continuing an open issue in a repository the operator does not control                                                                    |
+| Skill | `/manage-parent-pr`       | Continuing an open pull request against a repository the operator does not control                                                        |
+| Skill | `/open-parent-issue`      | Filing an issue in a repository the operator does not control — a fork's parent, or any base whose permission is READ or NONE             |
+| Skill | `/open-parent-pr`         | Opening a pull request against a repository the operator does not control — a fork's parent, or any base whose permission is READ or NONE |
+| Skill | `/sync-fork`              | Bringing a fork's default branch current with the repository it was forked from                                                           |
+
 ### frontend
 
 Frontend design: /design-frontend skill

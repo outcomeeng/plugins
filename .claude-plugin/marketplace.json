@@ -57,6 +57,11 @@
       "name": "rust",
       "source": "./dist/claude/rust",
       "description": "Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /audit-rust-architecture, /architect-rust, rust-simplifier agent"
+    },
+    {
+      "name": "contribute",
+      "source": "./dist/claude/contribute",
+      "description": "Contributions to repositories you do not control: /open-parent-pr, /manage-parent-pr, /open-parent-issue, /manage-parent-issue, /sync-fork"
     }
   ]
 }

@@ -1,0 +1,68 @@
+---
+name: sync-fork
+description: >-
+  ALWAYS invoke this skill when bringing a fork's default branch current with the repository it was forked from.
+  NEVER sync a fork with a force push or a hard reset.
+allowed-tools: Read, Skill, Bash(python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh repo view:*), Bash(gh repo sync:*), Bash(gh api:*), Bash(git fetch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git log:*), Bash(git branch:*)
+---
+
+<objective>
+The fork's default branch current with its parent's default branch, or the divergence that prevents it named commit by commit.
+</objective>
+
+<workflow>
+
+**Step 1 — Load the standards.** Invoke `/contribution-standards` through the runtime's skill-composition surface for the base and parent vocabulary.
+
+**Step 2 — GATE: Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>`. Only `parent-contribution` continues — it is the classification that reports both a head repository and the parent it was forked from. `fork-absent` has nothing to sync, `controlled` describes a repository that is not a fork of another party's, and `blocked` stops with the resolver's `detail` verbatim.
+
+**Step 3 — Read the two default branches.**
+
+```bash
+head_default=$(gh repo view "$head" --json defaultBranchRef --jq '.defaultBranchRef.name')
+base_default=$(gh repo view "$base" --json defaultBranchRef --jq '.defaultBranchRef.name')
+```
+
+**Step 4 — GATE: Establish behind versus diverged.** Fetch both refs and count commits on each side:
+
+```bash
+git fetch origin "$head_default"
+git fetch "$base_remote" "$base_default"
+git rev-list --left-right --count "origin/${head_default}...${base_remote}/${base_default}"
+```
+
+The left count is commits the fork's default branch carries that the parent does not. When it is zero the fork is behind and Step 5 syncs it. When it is greater than zero the fork's default branch is **diverged**: someone committed there, and syncing would discard that work.
+
+A diverged default branch stops the flow. Report each commit on the left side with its subject and author, and the branch or pull request that could preserve it. Never resolve divergence by discarding.
+
+**Step 5 — Sync.**
+
+```bash
+gh repo sync "$head" --source "$base" --branch "$base_default"
+```
+
+NEVER pass `--force`. The flag exists to make the fork's default branch match the parent's by discarding whatever the fork carries, which is the outcome Step 4 stops for.
+
+**Step 6 — Report.** State the head repository, the parent, the branch synced, and the commit count the sync advanced. When Step 4 found divergence, state that instead and leave both repositories untouched.
+
+</workflow>
+
+<constraints>
+
+- MUST resolve the parent through the bundled resolver, never from a remote named `upstream` — a remote name is a local label that identifies no repository.
+- MUST classify behind versus diverged before syncing.
+- NEVER pass `--force` to `gh repo sync`.
+- NEVER resolve divergence by discarding commits; report them and stop.
+- NEVER treat a stale fork default branch as a blocker for opening a contribution — a contribution branch is cut from the base repository's default branch.
+
+</constraints>
+
+<success_criteria>
+
+- The resolver returned `parent-contribution`, and `base` and `head` appear verbatim.
+- Behind and diverged were distinguished by commit count before any mutation.
+- A behind fork's default branch matches its parent's, and the advanced commit count is reported.
+- A diverged fork's default branch is untouched, with every commit unique to it named by subject and author.
+- No force flag and no reset appears in any executed command.
+
+</success_criteria>
