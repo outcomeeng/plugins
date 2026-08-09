@@ -1,14 +1,16 @@
-"""Harness for the contribute plugin's target resolver.
+"""Harness mediating the contribute plugin's shipped target resolver.
 
-Loads the shipped script from its authored location and drives it with a
-controlled command runner. Injection is sanctioned here because the subject is
-an external-tool interaction protocol and its failure modes: the resolver's whole
-job is reading `gh`'s JSON correctly and refusing to classify when it cannot, and
-neither a real GitHub API nor a real repository can produce an unrecognized
-permission value or an authenticated-but-unreadable base on demand.
+Loads the script from its authored location and offers a controlled command
+runner in place of the GitHub CLI. Injection is sanctioned here because the
+subject is an external-tool interaction protocol and its failure modes: the
+resolver's whole job is reading `gh`'s JSON correctly and refusing to classify
+when it cannot, and neither a real GitHub API nor a real repository can produce
+an unrecognized permission value or an authenticated-but-unreadable base on
+demand.
 
-The runner records every command, so a regression that reached for `git remote`,
-the authenticated account, or any other signal fails a test rather than shipping.
+This harness owns mediation only — script loading, the runner, and the shapes of
+`gh`'s responses. Every case, expectation, and comparison belongs to the test
+files that link the assertions.
 """
 
 from __future__ import annotations
@@ -99,7 +101,8 @@ class RecordingRunner:
         return result
 
 
-def _checkout(is_fork: bool) -> tuple[int, str, str]:
+def checkout_response(is_fork: bool) -> tuple[int, str, str]:
+    """What `gh repo view --json isFork,parent,nameWithOwner` reports for a checkout."""
     payload: dict[str, object] = {
         "isFork": is_fork,
         "nameWithOwner": FORK if is_fork else PARENT,
@@ -108,13 +111,25 @@ def _checkout(is_fork: bool) -> tuple[int, str, str]:
     return (0, json.dumps(payload), "")
 
 
-def _permission(base: str, value: str | None) -> Responses:
+def orphan_fork_response() -> tuple[int, str, str]:
+    """A checkout `gh` reports as a fork while reporting no parent for it."""
+    payload = {"isFork": True, "nameWithOwner": FORK, "parent": None}
+    return (0, json.dumps(payload), "")
+
+
+def permission_key(base: str) -> tuple[str, ...]:
+    """The command that reads the operator's permission on a base repository."""
+    return ("gh", "repo", "view", base, "--json", "viewerPermission")
+
+
+def permission_response(value: str | None) -> tuple[int, str, str]:
+    """What the permission read reports; `None` omits the field entirely."""
     payload = {} if value is None else {"viewerPermission": value}
-    key: tuple[str, ...] = ("gh", "repo", "view", base, "--json", "viewerPermission")
-    return {key: (0, json.dumps(payload), "")}
+    return (0, json.dumps(payload), "")
 
 
-def _account_lookups() -> Responses:
+def account_lookups() -> Responses:
+    """The account and organization reads the fork-absent path makes."""
     user_key: tuple[str, ...] = ("gh", "api", "user")
     orgs_key: tuple[str, ...] = ("gh", "api", "user/orgs")
     return {
@@ -123,110 +138,8 @@ def _account_lookups() -> Responses:
     }
 
 
-def _resolve(responses: Responses) -> tuple[ResolutionLike, RecordingRunner]:
+def resolve_with(responses: Responses) -> tuple[ResolutionLike, RecordingRunner]:
+    """Run the shipped resolver against controlled `gh` responses."""
     runner = RecordingRunner(responses)
     resolution: ResolutionLike = load_resolver().resolve(runner)
     return resolution, runner
-
-
-def verify_target_classification_mappings() -> list[str]:
-    """Every observed fork state and permission maps to exactly one classification."""
-    cases: list[tuple[bool, str, str]] = [
-        (False, "ADMIN", "controlled"),
-        (False, "MAINTAIN", "controlled"),
-        (False, "WRITE", "controlled"),
-        (True, "ADMIN", "controlled"),
-        (True, "READ", "parent-contribution"),
-        (True, "NONE", "parent-contribution"),
-        (False, "READ", "fork-absent"),
-        (False, "NONE", "fork-absent"),
-        (False, "TRIAGE", "blocked"),
-        (True, "TRIAGE", "blocked"),
-    ]
-    mismatches: list[str] = []
-    for is_fork, permission, expected in cases:
-        responses: Responses = {CHECKOUT_VIEW: _checkout(is_fork)}
-        responses.update(_permission(PARENT, permission))
-        responses.update(_account_lookups())
-        resolution, _ = _resolve(responses)
-        if resolution.classification != expected:
-            mismatches.append(
-                f"isFork={is_fork} viewerPermission={permission}: "
-                f"expected {expected}, got {resolution.classification}"
-            )
-    return mismatches
-
-
-def verify_permission_never_inferred() -> list[str]:
-    """No signal other than viewerPermission on the resolved base yields a permission class."""
-    violations: list[str] = []
-
-    unreadable: Responses = {CHECKOUT_VIEW: _checkout(True)}
-    unreadable.update(_permission(PARENT, None))
-    resolution, runner = _resolve(unreadable)
-    if resolution.classification != "blocked":
-        violations.append(
-            "an absent viewerPermission produced "
-            f"{resolution.classification!r} rather than blocked"
-        )
-    if resolution.permission is not None:
-        violations.append(
-            f"an absent viewerPermission produced permission {resolution.permission!r}"
-        )
-    non_gh = [command for command in runner.commands if command[:1] != ("gh",)]
-    if non_gh:
-        violations.append(f"the resolver reached beyond gh for permission: {non_gh}")
-
-    permission_key: tuple[str, ...] = (
-        "gh",
-        "repo",
-        "view",
-        PARENT,
-        "--json",
-        "viewerPermission",
-    )
-    failing_view: Responses = {
-        CHECKOUT_VIEW: _checkout(True),
-        permission_key: (1, "", "HTTP 404: Not Found"),
-    }
-    resolution, _ = _resolve(failing_view)
-    if resolution.classification != "blocked":
-        violations.append(
-            "a failed permission read produced "
-            f"{resolution.classification!r} rather than blocked"
-        )
-    if "HTTP 404: Not Found" not in resolution.detail:
-        violations.append("a failed permission read dropped the gh error from detail")
-
-    unavailable: Responses = {CHECKOUT_VIEW: (127, "", "gh: command not found")}
-    resolution, runner = _resolve(unavailable)
-    if resolution.classification != "blocked":
-        violations.append(
-            "an unavailable gh produced "
-            f"{resolution.classification!r} rather than blocked"
-        )
-    if len(runner.commands) != 1:
-        violations.append(
-            f"an unavailable gh did not stop at the first command: {runner.commands}"
-        )
-
-    orphan_fork: Responses = {
-        CHECKOUT_VIEW: (
-            0,
-            json.dumps({"isFork": True, "nameWithOwner": FORK, "parent": None}),
-            "",
-        )
-    }
-    resolution, _ = _resolve(orphan_fork)
-    if resolution.classification != "blocked":
-        violations.append(
-            "a fork with no parent produced "
-            f"{resolution.classification!r} rather than blocked"
-        )
-
-    if not hasattr(load_resolver(), "CommandRunner"):
-        violations.append(
-            "the resolver exposes no CommandRunner protocol to inject through"
-        )
-
-    return violations

@@ -13,7 +13,9 @@ One issue open in a repository the operator does not control, carrying an observ
 
 <workflow>
 
-**Step 1 — Load the standards.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
+**Step 1 — Load the standards and read the invocation input.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
+
+`$ARGUMENTS`, when non-empty, is the observation this report is built around: it supplies Step 3's distinguishing search terms, Step 4's claim to gather evidence for, and Step 5's one-sentence summary. When it is empty, ask the operator what was observed before Step 3, because a report has no subject without it.
 
 **Step 2 — GATE: Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>`. Report `base` and `permission` verbatim.
 
@@ -22,7 +24,7 @@ An issue needs no head repository, so both `parent-contribution` and `fork-absen
 **Step 3 — Search before filing.** Search the base repository for an existing issue describing the same observation:
 
 ```bash
-gh search issues --repo "$base" --state all "<distinguishing terms>"
+gh search issues --repo "<base>" --state all "<distinguishing terms>"
 ```
 
 An existing issue takes a comment through `/manage-parent-issue`, not a duplicate. Report what the search returned.

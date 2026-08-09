@@ -43,7 +43,9 @@ Every skill in this plugin resolves its target before its first write, by runnin
 python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py"
 ```
 
-It prints one JSON object carrying `base`, `head`, `permission`, `classification`, and `fork`. Read the classification and act on it:
+It prints one JSON object carrying `base`, `head`, `permission`, `classification`, and `fork`. Run it once per invocation; every later command in that invocation substitutes the resolved values **literally**, written in this plugin's skills as `<base>`, `<head>`, and `<base-default-branch>` placeholders. Never carry a resolved value in a shell variable across steps — a variable no step assigns silently expands to nothing, and a command that names the empty string still runs.
+
+Read the classification and act on it:
 
 | `classification`      | Meaning                                                             | Action                                                                               |
 | --------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |

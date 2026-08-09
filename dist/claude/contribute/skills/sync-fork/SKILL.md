@@ -3,7 +3,7 @@ name: sync-fork
 description: >-
   ALWAYS invoke this skill when bringing a fork's default branch current with the repository it was forked from.
   NEVER sync a fork with a force push or a hard reset.
-allowed-tools: Read, Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh repo view:*), Bash(gh repo sync:*), Bash(gh api:*), Bash(git fetch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git log:*), Bash(git branch:*)
+allowed-tools: Read, Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh repo view:*), Bash(gh repo sync:*), Bash(git fetch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git log:*), Bash(git branch:*)
 ---
 
 <objective>
@@ -16,19 +16,19 @@ The fork's default branch current with its parent's default branch, or the diver
 
 **Step 2 — GATE: Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>`. Only `parent-contribution` continues — it is the classification that reports both a head repository and the parent it was forked from. `fork-absent` has nothing to sync, `controlled` describes a repository that is not a fork of another party's, and `blocked` stops with the resolver's `detail` verbatim.
 
-**Step 3 — Read the two default branches.**
+**Step 3 — Read the two default branches.** Substitute the resolved values literally per `/contribution-standards` `<resolution>`:
 
 ```bash
-head_default=$(gh repo view "$head" --json defaultBranchRef --jq '.defaultBranchRef.name')
-base_default=$(gh repo view "$base" --json defaultBranchRef --jq '.defaultBranchRef.name')
+gh repo view "<head>" --json defaultBranchRef --jq '.defaultBranchRef.name'
+gh repo view "<base>" --json defaultBranchRef --jq '.defaultBranchRef.name'
 ```
 
-**Step 4 — GATE: Establish behind versus diverged.** Fetch both refs and count commits on each side:
+**Step 4 — GATE: Establish behind versus diverged.** Fetch the base default branch by URL, so the count never depends on a remote name the checkout may not carry, then count commits on each side:
 
 ```bash
-git fetch origin "$head_default"
-git fetch "$base_remote" "$base_default"
-git rev-list --left-right --count "origin/${head_default}...${base_remote}/${base_default}"
+git fetch origin "<head-default-branch>"
+git fetch "https://github.com/<base>.git" "<base-default-branch>"
+git rev-list --left-right --count "origin/<head-default-branch>...FETCH_HEAD"
 ```
 
 The left count is commits the fork's default branch carries that the parent does not. When it is zero the fork is behind and Step 5 syncs it. When it is greater than zero the fork's default branch is **diverged**: someone committed there, and syncing would discard that work.
@@ -38,7 +38,7 @@ A diverged default branch stops the flow. Report each commit on the left side wi
 **Step 5 — Sync.**
 
 ```bash
-gh repo sync "$head" --source "$base" --branch "$base_default"
+gh repo sync "<head>" --source "<base>" --branch "<base-default-branch>"
 ```
 
 NEVER pass `--force`. The flag exists to make the fork's default branch match the parent's by discarding whatever the fork carries, which is the outcome Step 4 stops for.

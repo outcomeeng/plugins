@@ -3,7 +3,7 @@ name: manage-parent-issue
 description: >-
   ALWAYS invoke this skill when continuing an open issue in a repository the operator does not control — answering a maintainer, adding evidence, or reporting the thread's current state.
 argument-hint: "[issue number or URL]"
-allowed-tools: Read, Glob, Grep, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, Bash(python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api:*), Bash(git rev-parse:*), Bash(git log:*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, Bash(python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(git rev-parse:*), Bash(git log:*), Bash(printf:*)
 ---
 
 <objective>
@@ -12,14 +12,16 @@ The open issue's current thread read once, the maintainer's question answered wi
 
 <workflow>
 
-**Step 1 — Load the standards.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
+**Step 1 — Load the standards and resolve the issue.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
+
+`$ARGUMENTS` is an issue number or URL. Resolve it to a number before any read: a bare number is the number; a URL's trailing path segment is the number, and its `owner/name` segments must equal the `base` Step 2 resolves — a mismatch stops the flow rather than being reconciled. An empty `$ARGUMENTS` stops the flow, because this skill continues an identified thread and never picks one.
 
 **Step 2 — Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>`. `parent-contribution` and `fork-absent` both continue — a thread needs no head repository. `controlled` and `blocked` stop, reporting the classification and `detail` verbatim.
 
 **Step 3 — Read the thread once.**
 
 ```bash
-gh issue view "$number" --repo "$base" --json state,title,body,comments,labels,url
+gh issue view "<number>" --repo "<base>" --json state,title,body,comments,labels,url
 ```
 
 Read it one time and report `state` and the last maintainer comment verbatim. `/contribution-standards` forbids polling, watching, and sleeping on the artifact; a maintainer answers on their own schedule.
@@ -31,7 +33,7 @@ When the answer requires a condition that cannot be reproduced in the real surfa
 **Step 5 — GATE: Review the reply, then post it.** Draft per `<reply_shape>` and review — the prose plugin's `prose-auditor` agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such.
 
 ```bash
-printf '%s\n' '<line>' '<line>' | gh issue comment "$number" --repo "$base" --body-file -
+printf '%s\n' '<line>' '<line>' | gh issue comment "<number>" --repo "<base>" --body-file -
 ```
 
 **Step 6 — Close only what the operator opened.** An issue the operator filed may be closed once resolved, and closing it is a new outward action requiring authorization in that turn. An issue anyone else filed is the maintainer's to close.

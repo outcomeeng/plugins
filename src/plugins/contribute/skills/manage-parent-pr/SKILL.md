@@ -3,7 +3,7 @@ name: manage-parent-pr
 description: >-
   ALWAYS invoke this skill when continuing an open pull request against a repository the operator does not control — answering review, publishing a revision, or reporting its current state.
 argument-hint: "[pull request number or URL]"
-allowed-tools: Read, Glob, Grep, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Bash(python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api:*), Bash(git fetch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git push origin HEAD:refs/heads/*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Bash(python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(git fetch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git push origin HEAD:refs/heads/*), Bash(printf:*)
 ---
 
 <objective>
@@ -12,14 +12,16 @@ The open pull request's current state read once, every valid review finding answ
 
 <workflow>
 
-**Step 1 — Load the standards.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
+**Step 1 — Load the standards and resolve the pull request.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
+
+`$ARGUMENTS` is a pull-request number or URL. Resolve it to a number before any read: a bare number is the number; a URL's trailing path segment is the number, and its `owner/name` segments must equal the `base` Step 2 resolves — a mismatch stops the flow rather than being reconciled. When `$ARGUMENTS` is empty, resolve the pull request for the current branch with `gh pr list --repo "<base>" --head "$(git branch --show-current)" --json number`, and stop when that returns none.
 
 **Step 2 — Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>`. A classification other than `parent-contribution` means this pull request does not belong to this flow; stop and report the classification and `detail` verbatim.
 
-**Step 3 — Read current state once.**
+**Step 3 — Read current state once.** Substitute the resolved values literally per `/contribution-standards` `<resolution>`:
 
 ```bash
-gh pr view "$number" --repo "$base" --json state,isDraft,reviewDecision,mergeStateStatus,statusCheckRollup,comments,reviews,headRefName,url
+gh pr view "<number>" --repo "<base>" --json state,isDraft,reviewDecision,mergeStateStatus,statusCheckRollup,comments,reviews,headRefName,url
 ```
 
 Read review threads through the API when line-anchored comments matter. Read the state one time — a maintainer answers on their own schedule, and `/contribution-standards` forbids polling, watching, and sleeping on the artifact.
@@ -39,7 +41,7 @@ The push updates the open pull request in place and needs no fresh authorization
 **Step 6 — GATE: Review the reply, then post it.** Draft the comment per `<reply_shape>` and review it per `/contribution-standards` `<invariants>` "Outward-facing text is permanent" — the prose plugin's `prose-auditor` agent where installed, `<outward_text>` unassisted where not.
 
 ```bash
-printf '%s\n' '<line>' '<line>' | gh pr comment "$number" --repo "$base" --body-file -
+printf '%s\n' '<line>' '<line>' | gh pr comment "<number>" --repo "<base>" --body-file -
 ```
 
 That comment is the re-request. Requesting a reviewer is a maintainer-side action; `gh pr edit --add-reviewer` fails on a base the operator does not control, and the failure is the expected path.

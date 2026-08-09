@@ -13,7 +13,9 @@ One pull request open against a repository the operator does not control, carryi
 
 <workflow>
 
-**Step 1 — Load the standards.** Invoke `/contribution-standards` through the runtime's skill-composition surface. Its `<invariants>` govern every step below; this workflow adds ordering and the pull-request specifics.
+**Step 1 — Load the standards and read the invocation input.** Invoke `/contribution-standards` through the runtime's skill-composition surface. Its `<invariants>` govern every step below; this workflow adds ordering and the pull-request specifics.
+
+`$ARGUMENTS`, when non-empty, is the one-sentence description of the change used in Step 3's authorization and in the Step 8 body. When it is empty, derive that sentence from the branch name and `git diff <base-default-branch>...HEAD`.
 
 **Step 2 — GATE: Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>` and act on its `classification`. Report `base`, `head`, and `permission` verbatim. `controlled`, `fork-absent`, and `blocked` each stop here — `controlled` belongs to a controlled-repository pull-request flow, and the other two stop per the standards. Only `parent-contribution` continues.
 
@@ -21,15 +23,15 @@ One pull request open against a repository the operator does not control, carryi
 
 The authorization covers this pull request and its later revisions. It does not carry to a second pull request, an issue, or a comment on an unrelated thread.
 
-**Step 4 — Cut the branch from the base default branch.**
+**Step 4 — Cut the branch from the base default branch.** Fetch it by URL so the step never depends on a remote name the checkout may not carry:
 
 ```bash
-git fetch origin
-base_default=$(gh repo view "$base" --json defaultBranchRef --jq '.defaultBranchRef.name')
-git fetch "$base_remote" "$base_default"
+gh repo view "<base>" --json defaultBranchRef --jq '.defaultBranchRef.name'
+git fetch "https://github.com/<base>.git" "<base-default-branch>"
+git switch -c "<branch>" FETCH_HEAD
 ```
 
-Branch from that fetched ref, never from the head repository's default branch. When the checkout carries no remote for the base repository, add the change onto a branch cut from the fetched base ref rather than rewriting remotes.
+Branch from `FETCH_HEAD`, never from the head repository's default branch, which is behind by however long since the last sync.
 
 **Step 5 — Conform to the base repository's conventions.** Before writing code, read what that repository declares: its contributing guide, the READMEs governing any fixture or test-data directory the change touches, metadata schemas, the documents a change of this kind updates, and the commit-message style of recent history. Shape the change to those conventions.
 
@@ -101,7 +103,7 @@ The body states what the change does, what verification ran, and what it answers
 
 A defect fix adds a **Root cause** paragraph and carries the evidence `/contribution-standards` requires: tool versions, the base commit observed against, the command that produced the observation, and a negative control.
 
-The body explains why; the diff already shows what. Never name the agent or its runtime anywhere in the title, body, or commits.
+The body explains why; the diff already shows what. Never name Claude or its runtime anywhere in the title, body, or commits.
 
 </title_and_body>
 
