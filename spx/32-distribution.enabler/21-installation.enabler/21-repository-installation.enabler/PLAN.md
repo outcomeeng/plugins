@@ -58,9 +58,11 @@ Pending implementation, in dependency order:
    script with `--checkout .` and gate CI on checkout output, and it aligns
    `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/agents.md`
    — whose placement compliance rules bound pruning by slug prefix alone —
-   with the decision's marketplace-scoped ownership-record and
-   foreign-collision assertions and their evidence, so the placement node
-   cannot stay passing on prefix-only behavior the shared home forbids. The
+   with the decision's marketplace-scoped ownership-record,
+   foreign-collision, and scope-split detection assertions and their evidence,
+   so the placement node cannot stay passing on prefix-only behavior the
+   shared home forbids or on placement that refreshes around a shadowing
+   checkout definition. The
    same slice ships the decision's scope-split fault
    detection as a preflight: the split check runs before any marketplace or
    plugin mutation in a run, so no refresh advances the home skills while a
@@ -73,7 +75,12 @@ Pending implementation, in dependency order:
    files are the first detected instance: their removal lands inside this
    slice, after home delivery is in place, because removing them earlier would
    leave Codex sessions without those roles while nothing yet populates
-   `$CODEX_HOME/agents/`.
+   `$CODEX_HOME/agents/`. Detection is per invocation checkout by design: a
+   foreign checkout's committed copy shadows only that repository's own
+   sessions and surfaces through this same preflight when any shipped
+   operation runs there, so every affected repository self-detects on its next
+   operation, and no shipped operation inspects a checkout it was not invoked
+   in.
 2. Home-placement declaration and L2 evidence — the implementation changeset adds
    the home-placement scenario to
    `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md`
