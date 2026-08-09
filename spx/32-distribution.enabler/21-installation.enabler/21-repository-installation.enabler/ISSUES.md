@@ -35,8 +35,10 @@ The margin narrows as the source grows. The suite passed repeatedly earlier the 
 
 Both real **install** messages were observed while adding the `contribute` plugin, against a canonical marketplace that did not yet publish it:
 
-- Claude Code: `Failed to install plugin "contribute@outcomeeng": Plugin "contribute" not found in marketplace "outcomeeng".`
-- Codex: `Error: plugin`contribute`was not found in marketplace`outcomeeng``
+```text
+Claude Code: Failed to install plugin "contribute@outcomeeng": Plugin "contribute" not found in marketplace "outcomeeng".
+Codex:       Error: plugin `contribute` was not found in marketplace `outcomeeng`
+```
 
 Both contain the fragment, so the install path is real. Neither **enable** message was ever observed: the Claude plan issues install then enable per plugin, and the first observation run stopped at the Codex install before any enable ran. The fragment also carries no per-agent prefix, unlike `CLAUDE_ALREADY_INSTALLED_FRAGMENT`, so one unverified wording spans two CLIs.
 
