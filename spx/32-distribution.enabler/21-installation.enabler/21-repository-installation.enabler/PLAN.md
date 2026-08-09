@@ -46,7 +46,17 @@ Pending implementation, in dependency order:
    materialization holds only where the checkout carries the plugin's invoked
    skill content — and updates the release documentation in `spx/local/merging.md` that
    describes the run, the third stale instruction surface beside the two templates
-   the later items name. The same slice ships the decision's scope-split fault
+   the later items name. Repointing the entry point also retires the checkout
+   output the repository declares generated: the same slice updates the
+   `.codex/agents/**` relation in `spx/local/generated-sources.toml` and the
+   `place-agents` / `place-agents-check` Justfile recipes that invoke the
+   script with `--checkout .` and gate CI on checkout output, and it aligns
+   `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/agents.md`
+   — whose placement compliance rules bound pruning by slug prefix alone —
+   with the decision's marketplace-scoped ownership-record and
+   foreign-collision assertions and their evidence, so the placement node
+   cannot stay passing on prefix-only behavior the shared home forbids. The
+   same slice ships the decision's scope-split fault
    detection as a preflight: the split check runs before any marketplace or
    plugin mutation in a run, so no refresh advances the home skills while a
    committed definition still shadows them. Plugin-owned definitions committed
@@ -92,6 +102,11 @@ Pending implementation, in dependency order:
    `spx/12-marketplace-state.adr.md` until the gate ships.
 4. The managed instruction-block template's Codex agent-init instruction — rewritten
    to the home-refresh-and-reload repair path with no commit guidance, recorded in
-   `spx/21-spec-tree.enabler/43-instruction-block.enabler/ISSUES.md`.
+   `spx/21-spec-tree.enabler/43-instruction-block.enabler/ISSUES.md`. The same
+   slice declares that behavior in the owning spec: `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md`
+   gains the assertion, with its evidence, that the rendered router's agent-repair
+   guidance names the home-refresh-and-reload path and carries no
+   commit-directing guidance, so the node cannot stay passing while a rendered
+   router contradicts `spx/12-marketplace-state.adr.md`.
 5. Smoke evidence that Codex discovers user-scope agents from `$CODEX_HOME/agents/`
    in tool-backed sessions, through the disposable-home harness.
