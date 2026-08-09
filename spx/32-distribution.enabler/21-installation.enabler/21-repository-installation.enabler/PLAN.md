@@ -41,7 +41,12 @@ Pending implementation, in dependency order:
    ownership-aware migration for definitions a consumer committed under the
    retired required-placement router guidance: detect plugin-owned checkout
    definitions the repository did not opt into and direct their removal, so a
-   stale committed copy cannot shadow the refreshed home copy. The same slice adds the opt-in gating evidence for this
+   stale committed copy cannot shadow the refreshed home copy. The same slice
+   rewrites the commit-directing Codex guidance in the authored lifecycle-skill
+   template `src/templates/plugin/SKILL.md` ("durable checkout configuration …
+   Commit them"), which renders into every plugin's `<plugin>-plugin` skill;
+   with the managed instruction-block template in the next item, these are the
+   two generated instruction surfaces carrying that guidance. The same slice adds the opt-in gating evidence for this
    node's checkout-placement scenario; the scenario's trigger-neutral wording is
    evidenced today by the placement-mechanics test, while the trigger policy lives
    in `spx/12-marketplace-state.adr.md` until the gate ships.
