@@ -25,8 +25,8 @@ Pending implementation, in dependency order:
    `.agents/plugins/marketplace.json` are pruned by the same ownership record, so a
    catalog removal does not strand stale home definitions. The same slice removes
    the automatic checkout `LIFECYCLE_PLACE` step from installation runs — checkout
-   placement holds only where the checkout carries the plugin's invoked skill
-   content — and updates the release documentation in `spx/local/merging.md` that
+   materialization holds only where the checkout carries the plugin's invoked
+   skill content — and updates the release documentation in `spx/local/merging.md` that
    describes the run, the third stale instruction surface beside the two templates
    the later items name. The same slice ships the decision's scope-split fault
    detection: plugin-owned definitions committed in a checkout whose invoked
@@ -63,7 +63,8 @@ Pending implementation, in dependency order:
    Commit them"), which renders into every plugin's `<plugin>-plugin` skill;
    with the managed instruction-block template in the next item, these are the
    two generated instruction surfaces carrying that guidance. The same slice adds
-   the co-location gating evidence for this node's checkout-placement scenario;
+   the co-location gating evidence for this node's checkout-materialization
+   scenario;
    the scenario's trigger-neutral wording is evidenced today by the
    placement-mechanics test, while the trigger policy lives in
    `spx/12-marketplace-state.adr.md` until the gate ships.
