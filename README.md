@@ -278,7 +278,7 @@ Prose craft through one routed surface (/author-prose, /audit-prose) over per-ki
 | Skill | `/interface-standards`     | Standards for the interface kind — text fragments embedded in a designed surface: app chrome, buttons, labels, empty states, error messages, tooltips, notifications, email templates, short web-page sections |
 | Skill | `/internal-docs-standards` | Catalog of anti-patterns and positive patterns for internal team documents (Notion pages, runbooks, scorecards, hiring rubrics, internal policies, competency models, team decision records, design specs)     |
 | Skill | `/prose-standards`         | Prose anti-patterns enforced across all skills                                                                                                                                                                 |
-| Agent | `prose-auditor`            | Auditing human-facing text                                                                                                                                                                                     |
+| Agent | `prose-auditor`            | Auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance                                            |
 
 ### python
 
