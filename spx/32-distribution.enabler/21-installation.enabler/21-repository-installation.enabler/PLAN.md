@@ -37,11 +37,14 @@ Pending implementation, in dependency order:
    selected home — catalog state the home itself carries after a marketplace
    refresh, needing neither repository catalog access nor an installed-plugin
    heuristic — so definitions the marketplace placed for a plugin since removed
-   or renamed in `.agents/plugins/marketplace.json` are pruned by the
-   reconciliation any consumer refresh runs after placement, and a catalog
-   removal does not strand stale home definitions;
-   `outcomeeng/distribution/installation.py` drives the same reconciliation in
-   bulk. The same slice removes
+   or renamed in `.agents/plugins/marketplace.json` are pruned on any consumer
+   refresh, and a catalog removal does not strand stale home definitions. The
+   consumer-side caller is the entry point itself: every invocation of any
+   plugin's shipped entry point runs that plugin's namespace-bounded placement
+   and then the marketplace-scope reconciliation pass, so the lifecycle-skill
+   invocation item 3 names is the portable aggregate caller, and
+   `outcomeeng/distribution/installation.py` drives the same shipped operation
+   in bulk. The same slice removes
    the automatic checkout `LIFECYCLE_PLACE` step from installation runs — checkout
    materialization holds only where the checkout carries the plugin's invoked
    skill content — and updates the release documentation in `spx/local/merging.md` that
