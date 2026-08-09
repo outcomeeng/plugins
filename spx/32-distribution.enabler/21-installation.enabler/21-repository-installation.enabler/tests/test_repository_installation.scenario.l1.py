@@ -13,6 +13,7 @@ from outcomeeng.distribution.installation import (
     VERIFICATION_RECIPE_COMMAND,
 )
 from outcomeeng_testing.harnesses.installation import (
+    committed_catalog_plugin_names,
     observe_unpublished_plugin,
     NONCANONICAL_MARKETPLACE_SOURCE,
     observe_claude_user_collision,
@@ -126,28 +127,32 @@ def test_claude_user_scope_collision_stops_before_mutation() -> None:
 
 
 def test_persistent_installation_reports_an_unpublished_plugin_and_completes() -> None:
+    absent = sorted(committed_catalog_plugin_names())[0]
+
     observation = observe_unpublished_plugin(
-        isolated=False, unpublished=frozenset({"contribute"})
+        isolated=False, unpublished=frozenset({absent})
     )
 
     assert observation.failure is None
     assert observation.report is not None
-    assert observation.report.pending_publication == ("contribute",)
+    assert observation.report.pending_publication == (absent,)
     installed = {
         call.plugin
         for call in observation.calls
         if call.operation is Operation.PLUGIN_INSTALL
     }
-    assert "contribute" in installed
+    assert absent in installed
     assert len(installed) > 1
 
 
 def test_isolated_installation_treats_an_absent_plugin_as_terminal() -> None:
+    absent = sorted(committed_catalog_plugin_names())[0]
+
     observation = observe_unpublished_plugin(
-        isolated=True, unpublished=frozenset({"contribute"})
+        isolated=True, unpublished=frozenset({absent})
     )
 
     assert observation.report is None
     assert observation.failure is not None
-    assert observation.failure.command.plugin == "contribute"
+    assert observation.failure.command.plugin == absent
     assert observation.failure.command.operation is Operation.PLUGIN_INSTALL

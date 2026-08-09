@@ -58,6 +58,7 @@ from outcomeeng.distribution.installation import (
     build_persistent_preflight,
     claude_marketplace_settings,
     codex_marketplace_listing_payload,
+    catalog_plugin_names,
     codex_source_action,
     execute_installation,
     execute_persistent_installation,
@@ -225,6 +226,10 @@ class RecordingRunner:
             stdout=stdout,
             stderr=command.operation.value if exit_code else "",
         )
+
+
+BASE_REF_BRANCH = "main"
+BASE_REF = "origin/main"
 
 
 def repository_root() -> Path:
@@ -1272,18 +1277,55 @@ def canonical_catalog_plugin_names() -> frozenset[str]:
     under test. A missing base ref raises rather than reporting an empty set,
     because an empty oracle would make every pending claim vacuously true.
     """
+    root = repository_root()
     names: set[str] = set()
     for path in (CLAUDE_CATALOG_PATH, CODEX_CATALOG_PATH):
-        result = subprocess.run(
-            ("git", "show", f"origin/main:{path}"),
-            cwd=repository_root(),
+        names.update(_base_ref_catalog_names(root, path))
+    return frozenset(names)
+
+
+def _base_ref_catalog_names(root: Path, path: str) -> set[str]:
+    """Read one catalog at the base ref, fetching that ref when absent.
+
+    A shallow checkout has no `origin/main`, which is how the governing CI job
+    checks out. Fetching the ref keeps the oracle available there rather than
+    turning an absent ref into an unrelated failure of every assertion this
+    test carries.
+    """
+    for fetch_first in (False, True):
+        if fetch_first:
+            fetched = subprocess.run(
+                ("git", "fetch", "--depth=1", "origin", BASE_REF_BRANCH),
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if fetched.returncode != 0:
+                raise RuntimeError(
+                    f"cannot read the canonical catalog: fetching "
+                    f"{BASE_REF_BRANCH} failed with {fetched.stderr.strip()}"
+                )
+        shown = subprocess.run(
+            ("git", "show", f"{BASE_REF}:{path}"),
+            cwd=root,
             capture_output=True,
             text=True,
-            check=True,
+            check=False,
         )
-        document = json.loads(result.stdout)
-        names.update(
-            entry[CATALOG_PLUGIN_NAME_FIELD]
-            for entry in document[CATALOG_PLUGINS_FIELD]
-        )
+        if shown.returncode == 0:
+            document = json.loads(shown.stdout)
+            return {
+                entry[CATALOG_PLUGIN_NAME_FIELD]
+                for entry in document[CATALOG_PLUGINS_FIELD]
+            }
+    raise RuntimeError(f"cannot read {path} at {BASE_REF}: {shown.stderr.strip()}")
+
+
+def committed_catalog_plugin_names() -> frozenset[str]:
+    """Plugins this checkout's own committed catalogs declare."""
+    root = repository_root()
+    names: set[str] = set()
+    for path in (CLAUDE_CATALOG_PATH, CODEX_CATALOG_PATH):
+        names.update(catalog_plugin_names(root / path))
     return frozenset(names)
