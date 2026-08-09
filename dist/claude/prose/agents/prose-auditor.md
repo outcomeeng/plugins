@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke when auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance.
 tools: Read, Glob, Grep, Skill
 model: "opus"
-sandbox_mode: read-only
+
 skills:
   - prose:audit-prose
 ---
@@ -25,7 +25,7 @@ Run prose audits in this already-dispatched, isolated verifier context. Invoke t
 
 <workflow>
 
-1. Read the caller's text, paths, or document references. If no target is supplied, report the missing input instead of auditing.
+1. Read the caller's text, paths, or document references, and any kind the dispatch declares for them. If no target is supplied, report the missing input instead of auditing.
 2. Invoke `prose:audit-prose` on them unchanged.
 3. Relay the structured verdict verbatim as the final message.
 
