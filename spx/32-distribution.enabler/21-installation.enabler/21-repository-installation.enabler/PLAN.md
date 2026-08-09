@@ -22,7 +22,11 @@ Pending implementation, in dependency order:
    marketplace's whole ownership set, not only current catalog plugins: definitions
    the marketplace placed for a plugin since removed or renamed in
    `.agents/plugins/marketplace.json` are pruned by the same ownership record, so a
-   catalog removal does not strand stale home definitions.
+   catalog removal does not strand stale home definitions. The same slice removes
+   the automatic checkout `LIFECYCLE_PLACE` step from installation runs — checkout
+   placement moves behind the owning lifecycle skill's opt-in — and updates the
+   release documentation in `spx/local/merging.md` that describes the run, the
+   third stale instruction surface beside the two templates the later items name.
 2. Home-placement declaration and L2 evidence — the implementation changeset adds
    the home-placement scenario to
    `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md`
