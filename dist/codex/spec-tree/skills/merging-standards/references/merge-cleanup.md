@@ -68,21 +68,6 @@ Merge while the branch is checked out, then detach, run post-cleanup checks, and
 
 The tip check matches a worktree by commit alone, so a worktree parked at that same commit for an unrelated reason — one detached at the base right after a fast-forward merge, where base and branch tip are the same commit — reads as holding this branch's work. The match errs toward retention and never toward deletion, so the cost is a branch kept and reported with another worktree's status rather than uncommitted work lost.
 
+The merge advances the base on origin while the checkout that holds the base branch stays at the pre-merge commit. That checkout belongs to the environment rather than to the changeset, so bringing it current is the environment mutation `DEPLOY` governs, declared by a project in its overlay, never a step of this cleanup. Cleanup removes what the lifecycle created, and every ref it mutates is mutated from the assigned worktree — the `git -C` inspections above read other worktrees to prove a deletion is safe and mutate nothing.
+
 </merge_cleanup>
-
-<base_checkout_refresh>
-
-The merge advanced the base on origin while the checkout that holds the base branch stayed at the pre-merge commit, so every worktree, tool, and later context load that resolves against it reads a stale commit. Cleanup closes by bringing that one checkout current.
-
-Identifying it is `spx`'s job, never a ref scan: the pool diagnosis reports the one valid main checkout, and the same reading carries the health predicates that make it safe to name. Occupancy is a separate reading, because a clean working tree never proves a checkout is free.
-
-1. Run `spx diagnose --format json` and read the `worktree-pool` record. Continue only when exactly one such record exists, its `verdict` is `compliant`, `readings.mainCheckoutBranchRead` is `true`, `readings.mainCheckoutBranch` equals `readings.defaultBranch`, and `readings.mainCheckoutPath` is a non-empty absolute path that differs from the assigned worktree root. Any other reading — including a layout with no pool and therefore no such record — skips the refresh with `reason=no-main-checkout`.
-2. Run `spx worktree status --format json <main-checkout-path>`, passing the resolved path so the reading names that one checkout rather than requiring a match across an inventory. Continue only when its `status` is `free`. A `running` status skips with `reason=held-by-live-session`, naming the reported session; a checkout another session holds is never mutated on its behalf, exactly as a worktree holding the feature branch is never cleaned above.
-3. Run `git -C <main-checkout-path> status --porcelain` and continue only when it prints nothing. Any output skips with `reason=uncommitted-work` — a fast-forward would carry those changes onto a different commit. Neither `spx` reading answers this, so it is a separate command.
-4. Fast-forward it in place with `git -C <main-checkout-path> merge --ff-only origin/<base>`. A fast-forward advances the branch pointer only when the local branch is already an ancestor of the merged tip, so a checkout carrying its own unmerged commits fails the command and is reported with `reason=not-fast-forwardable` rather than rewritten.
-
-Step 4 writes to a path outside the assigned worktree, and no skill's `allowed-tools` pre-authorizes it. That omission is deliberate. A harness declares the working directory a session may act in, and a write outside it is the operator's decision to approve, once per write — pre-clearing a write whose path is resolved at run time would convert that decision into a blanket grant over any path `spx` happens to report, because no pattern can name the one intended checkout in portable skill content. The refresh therefore surfaces its own approval prompt in a harness that enforces the boundary, and the prompt names the exact checkout being advanced. Never add a grant to suppress it, and never restate the command in a form built to match a broader existing pattern. Step 3's `status --porcelain` reads that same path and needs no such approval; it sits beside Step 4 because it guards it, not because a read carries the same weight as a write.
-
-Every skipped case names its reason and leaves the checkout exactly as found. A stale base checkout is a reported condition, never a reason to force, reset, stash, or check the base branch out anywhere else.
-
-</base_checkout_refresh>

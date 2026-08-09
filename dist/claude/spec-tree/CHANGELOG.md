@@ -6,6 +6,26 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+A version missing below shipped without an entry. Read the gap as an absent entry, never as an absent release.
+
+An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
+
+## 0.88.7
+
+### Removed
+
+- **Branch cleanup no longer advances the checkout that holds the base branch.** 0.88.4 added a step that fast-forwarded that checkout after every merge, on every transport. It was the wrong home: the base checkout predates the changeset and outlives it, while cleanup removes only what the lifecycle created, and reaching it meant writing outside the assigned worktree — which the merge lifecycle otherwise never does. Advancing a base checkout mutates local environment state and publishes nothing, which is the boundary `DEPLOY` sits on, so it becomes a deploy action a repository declares in `spx/local/merging.md` under `DEPLOYMENT_READINESS`. The branch-state closeout record drops its base-checkout-refresh field with the step.
+
+  **Migration.** From 0.88.4 through 0.88.6 this ran for every repository on every transport, with nothing to declare. It now runs only where a repository declares it, and `DEPLOY` is a no-op where none is declared — so a base checkout that was being advanced automatically will stay at its pre-merge commit, as it did before 0.88.4. A repository that wants the behavior declares it as a deploy action; one that never relied on it needs no change.
+
+## 0.88.4
+
+Recorded by 0.88.7, which reverses this release's base-checkout refresh. Shipped in commit `dbd7b429cdc3744f7288553d1be8a4e91b76ab40`.
+
+### Changed
+
+- **The default merge strategy is a merge commit.** `gh pr merge` defaults to `--merge` rather than `--rebase`; `--rebase` and `--squash` remain available through the overlay's merge-flag declaration. A merge commit keeps every branch commit reachable, so the merged tip is a true ancestor of the base and `git branch -d` alone proves the branch deletable. The rewriting strategies reach that proof only through the patch-equivalence fallback, which a multi-commit squash fails outright. A repository that declares its own merge flag sees no change.
+
 ## 0.88.2
 
 ### Fixed

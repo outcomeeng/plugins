@@ -3,7 +3,7 @@ The shared merge-lifecycle vocabulary of concepts, predicates, gates, commands, 
 </objective>
 
 <contents>
-Top-level sections in this reference, in order: `<repo_local_overlay>`, `<overlay_safety_checks>`, `<delivered_value_boundary>`, `<close_phase>`, `<branch_state_closeout>`, `<local_deterministic_scope>`, `<assigned_cwd_worktree_discipline>`, `<occupancy_preflight>`, `<branch_hygiene>`, `<branch_topology>`, `<push_semantics>`, `<base_sync>`, `<local_review_invocation>`, `<local_review_process_exception>`, `<authority_gates>`, `<merge_cleanup>`, `<base_checkout_refresh>`, `<pr_check_wait>`, `<review_inspection>`, `<review_classification>`, `<auditor_verdicts>`, `<action_tokens>`, `<self_reference>`, `<failure_modes>`, `<success_criteria>`.
+Top-level sections in this reference, in order: `<repo_local_overlay>`, `<overlay_safety_checks>`, `<delivered_value_boundary>`, `<close_phase>`, `<branch_state_closeout>`, `<local_deterministic_scope>`, `<assigned_cwd_worktree_discipline>`, `<occupancy_preflight>`, `<branch_hygiene>`, `<branch_topology>`, `<push_semantics>`, `<base_sync>`, `<local_review_invocation>`, `<local_review_process_exception>`, `<authority_gates>`, `<merge_cleanup>`, `<pr_check_wait>`, `<review_inspection>`, `<review_classification>`, `<auditor_verdicts>`, `<action_tokens>`, `<self_reference>`, `<failure_modes>`, `<success_criteria>`.
 </contents>
 
 <repo_local_overlay>
@@ -70,7 +70,6 @@ The closeout record includes:
 - For each non-ancestor preservation branch, `git cherry -v --abbrev=40 origin/<base> <branch>` output as patch-equivalence evidence.
 - Final worktree state: clean or dirty, branch or detached, and current full HEAD SHA.
 - Release-source worktree state when a declared release or marketplace refresh used a separate source worktree: path, branch, full HEAD SHA, clean or dirty, and sync status.
-- Base-checkout refresh result from `<base_checkout_refresh>`: the checkout's full path and its new full HEAD SHA when fast-forwarded, or the named skip reason when not. Every transport records it, because every transport applies the refresh.
 
 Use full branch names and full commit SHAs. Do not abbreviate identity values in the record, in commands, or in the final closeout.
 
@@ -345,11 +344,6 @@ Immediately before the merge mutation, apply the merge-cleanup reference loaded 
 
 </merge_cleanup>
 
-<base_checkout_refresh>
-Once the changeset reaches the default branch on origin — by merge or by direct push — and before any declared deploy or release action, apply the `<base_checkout_refresh>` section of that same merge-cleanup reference. `spx` identifies the one valid main checkout and its occupancy; the refresh is a fast-forward in place, and every skip names its reason.
-
-</base_checkout_refresh>
-
 <pr_check_wait>
 
 Waiting for PR checks or the current-head CI review uses exactly one foreground command:
@@ -508,7 +502,7 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - Every overlay-declared preflight runs before the lifecycle entry's first checkout-sensitive mutation, direct-push repeats it before default-branch publication, and a failed check preserves its output and stops mutation.
 - Every detach-based cleanup runs overlay-declared post-cleanup checks before branch deletion, session persistence, deploy, release, or closeout; failure preserves the detached checkout and stops remaining mutation.
 - Merge runs via merge commit followed by the worktree-safe manual branch deletion in `<merge_cleanup>` (`gh pr merge --merge --delete-branch=false`, then detach this worktree onto the refreshed base and delete the local and remote branches separately) unless the overlay declares a different command or opts into inline `--delete-branch` — rebase and squash are overlay opt-ins (overlay rationale documents the choice for human reviewers; Claude does not enforce it), not Claude's choice from the gate alone.
-- Every transport applies `<base_checkout_refresh>` once the changeset reaches the default branch on origin and before any declared deploy or release action: `spx` identifies the one valid main checkout and reports its occupancy, and the refresh is `merge --ff-only` in place. An absent or non-compliant pool reading, a checkout a live session holds, uncommitted work there, or a non-fast-forwardable state each skips with a named reason and leaves that checkout as found; the base branch is never checked out elsewhere, reset, or force-advanced to refresh it.
+- Every git mutation *this policy performs* stays inside the assigned worktree; `<merge_cleanup>`'s read-only inspections of other worktrees are how deletion safety is proven and are not mutations. A project's declared deploy or release action is the project's own and may reach beyond the assigned worktree under its own gate — advancing another checkout that holds the base branch is that kind of maintenance, never a step this policy performs.
 - The lifecycle runs from the determined changeset autonomously when the overlay declares no pre-mutation confirmation; when the overlay opts in, the structured-question plan presentation precedes the first mutating action and Claude waits for confirmation.
 - Each pass that does not fire an autonomous action emits exactly one token from `<action_tokens>`, except a base-sync conflict, which stops with `/sync-base`'s structured conflict report and active rebase state.
 - No `<self_reference>` violation appears in any artifact.
