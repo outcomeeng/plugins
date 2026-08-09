@@ -42,4 +42,4 @@ Agent definitions are placed in the agent home because an agent whose plugin man
 ### Audit
 
 - ALWAYS: a checkout's agent directory receives a plugin's agent definitions only through that plugin's lifecycle skill's explicit opt-in — never as a required step of installation or of any generated instruction surface ([audit])
-- NEVER: a generated instruction surface directs an agent session to commit agent definitions into a checkout — a missing agent role is repaired by refreshing the selected agent home ([audit])
+- NEVER: a generated instruction surface directs an agent session to commit agent definitions into a checkout — a missing agent role is repaired by refreshing the selected agent home and then reloading the harness plugin index or starting a new session, because a running session retains already-loaded plugin content ([audit])

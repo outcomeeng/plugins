@@ -43,12 +43,13 @@ Pending implementation, in dependency order:
    `spx/12-marketplace-state.adr.md`.
 4. Generated plugin lifecycle skills — the checkout-materialization verb becomes an
    explicit opt-in; the default repair path for a missing agent role refreshes the
-   selected agent home. The same slice adds the opt-in gating evidence for this
+   selected agent home and then reloads the harness plugin index or starts a new
+   session, because a running session retains already-loaded plugin content. The same slice adds the opt-in gating evidence for this
    node's checkout-placement scenario; the scenario's trigger-neutral wording is
    evidenced today by the placement-mechanics test, while the trigger policy lives
    in `spx/12-marketplace-state.adr.md` until the gate ships.
 5. The managed instruction-block template's Codex agent-init instruction — rewritten
-   to the home-refresh repair path with no commit guidance, recorded in
+   to the home-refresh-and-reload repair path with no commit guidance, recorded in
    `spx/21-spec-tree.enabler/43-instruction-block.enabler/ISSUES.md`.
 6. Smoke evidence that Codex discovers user-scope agents from `$CODEX_HOME/agents/`
    in tool-backed sessions, through the disposable-home harness.
