@@ -39,6 +39,27 @@ implementation-audit idempotency-key changeset, which audited the scenario
 assertion and named the same defect class in the other two functions of that
 file.
 
+## `check_wrapper_surface` acceptance boundary has no fixture evidence
+
+`outcomeeng/validation/audit_artifacts.py` `check_wrapper_surface` scopes its
+`language_names` predicate to `implementation_languages(surface)` so that an
+artifact-type auditor sharing its owning plugin's name — a craft plugin's
+`{plugin}-auditor`, such as `prose-auditor` — passes while every
+per-programming-language wrapper filename stays rejected. The rejection side is
+fixture-backed (`audit_contract_rejects_language_specific_wrapper`,
+`audit_contract_rejects_unrecognized_language_specific_wrapper`); the acceptance
+side is evidenced only by the live repository surface passing after
+`prose-auditor` was added.
+
+**Resolution shape**: add a violating/passing fixture pair to
+`outcomeeng_testing/harnesses/audit_verification_run_contract.py` — violating: a
+genuine per-programming-language wrapper such as `python-auditor`; passing: a
+non-language plugin's `{plugin}-auditor` colliding by name — and assert both
+through `check_wrapper_surface`.
+
+**Evidence.** Surfaced by the changes reviewer on the prose router-surface
+changeset (sealed review run `2026-08-05_21-08-16-860-5bf3b83599ce`, PR #501).
+
 ## `audit-implementation` documents contracts without one worked run
 
 `src/plugins/spec-tree/skills/audit-implementation/SKILL.md` documents the

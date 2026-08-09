@@ -1,5 +1,13 @@
 # Issues: Instruction Block
 
+## The Codex agent-init instruction scopes no changeset for the configs it commits
+
+Observed in a consumer repository: `author-prose` required a `prose-auditor` dispatch, the role was unavailable, and the router's Codex section — "If a plugin's agents are missing, run that plugin's `/<plugin>-plugin init` … The definitions it places are durable checkout configuration: commit them" — led the session to commit `.codex/agents/prose_prose-auditor.toml` plus two `.gitignore` exceptions into an open, unrelated methodology PR, then to strip them back out after operator challenge. Two template rules made the recovery ambiguous. The init instruction says commit the placed definitions but scopes neither the changeset that carries them nor the authorization check that precedes placement. The Codex "Read named files yourself" rule ("Never use subagents to read … files named by the user") literally forbids what every configured auditor role-task contract requires, and a reviewer in that repository initially rejected the prose-auditor's path-reading on that basis before the specific contracts were read as clarifying the general rule. The craft-auditor role-contract clause resolves the authorization gap; these two remain open.
+
+**Resolution shape**: operator interview first — the operator has directed that the resolution be interviewed before authoring. The candidate template pass then (a) scopes the init instruction's commit guidance so placed agent definitions land as their own checkout-configuration changeset, never folded into an open unrelated PR, and (b) narrows the named-file rule so a configured auditor role inspecting the files its role task names is outside it.
+
+**Evidence.** Consumer-session transcript quoted by the operator (2026-08-09); that repository's commit `968e91f5a5d31ae6e8b2742536ac2990795c4d3f`, later removed from its PR.
+
 ## `/update-instruction-block` Step 5 reads as one paragraph over six topologies
 
 Step 5 of `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md` verifies six distinct first-encounter topologies — an established surface with a valid region, the bootstrap span mapping, one file missing, both files missing, a delegating body adopted, and tracked-versus-untracked recoverability — in one unbroken paragraph. An operator scanning it after a run parses the whole block to find the branch matching their topology. Step 3's ambiguity reports already use the per-branch bullet shape this section wants.
