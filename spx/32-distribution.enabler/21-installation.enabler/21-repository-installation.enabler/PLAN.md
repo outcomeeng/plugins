@@ -64,9 +64,11 @@ Pending implementation, in dependency order:
    shared home forbids or on placement that refreshes around a shadowing
    checkout definition. The
    same slice ships the decision's scope-split fault
-   detection as a preflight: the split check runs before any marketplace or
-   plugin mutation in a run, so no refresh advances the home skills while a
-   committed definition still shadows them. Plugin-owned definitions committed
+   detection as a preflight beside the home ownership and collision
+   validation: both run before any marketplace or plugin mutation in a run, so
+   no refresh advances the home skills while a committed definition still
+   shadows them, and no run advances skills whose agent placement it will then
+   reject over a foreign collision. Plugin-owned definitions committed
    in a checkout whose invoked skills live in the selected agent home —
    including definitions placed under the retired required-placement router
    guidance — are reported as the fault with their directed repair, removal of
