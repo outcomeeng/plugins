@@ -44,7 +44,13 @@ Pending implementation, in dependency order:
 4. Generated plugin lifecycle skills — the checkout-materialization verb becomes an
    explicit opt-in; the default repair path for a missing agent role refreshes the
    selected agent home and then reloads the harness plugin index or starts a new
-   session, because a running session retains already-loaded plugin content. The same slice adds the opt-in gating evidence for this
+   session, because a running session retains already-loaded plugin content.
+   Because a checkout's product-scope agent definitions shadow the user-scope
+   copies in the selected agent home, the same slice gives the lifecycle skill an
+   ownership-aware migration for definitions a consumer committed under the
+   retired required-placement router guidance: detect plugin-owned checkout
+   definitions the repository did not opt into and direct their removal, so a
+   stale committed copy cannot shadow the refreshed home copy. The same slice adds the opt-in gating evidence for this
    node's checkout-placement scenario; the scenario's trigger-neutral wording is
    evidenced today by the placement-mechanics test, while the trigger policy lives
    in `spx/12-marketplace-state.adr.md` until the gate ships.
