@@ -36,10 +36,11 @@ Pending implementation, in dependency order:
    against the marketplace's current plugin set, resolved without repository
    catalog access or an installed-plugin heuristic: the build embeds a catalog
    snapshot in each plugin's shipped runtime tree, stamped with a monotonic
-   catalog revision — the committed catalog's commit timestamp at build time —
-   so snapshots from different releases order totally: the reconciler selects
-   the highest stamp across the home's installed plugins, and equal stamps are
-   the same catalog state. Because the snapshot is a build product of the
+   catalog revision the build derives deterministically from committed catalog
+   state — the slice selects the mechanism, since the pre-commit regeneration
+   runs before the enclosing commit exists — so snapshots from different
+   releases order totally: the reconciler selects the highest stamp across the
+   home's installed plugins, and equal stamps are the same catalog state. Because the snapshot is a build product of the
    committed catalog, a catalog-membership change regenerates every plugin's
    embedded snapshot — the release that ships a removal or rename ships
    current snapshots to every surviving plugin — and
@@ -51,15 +52,16 @@ Pending implementation, in dependency order:
    split — until a current catalog plugin's installation delivers a fresh
    snapshot or the maintainers' bulk flow runs — so definitions the marketplace placed for a plugin since removed
    or renamed in `.agents/plugins/marketplace.json` are pruned on the next
-   shipped-operation run. No shipped surface can intercept the agent CLI's own
-   marketplace or plugin refresh commands, and `spx/15-hook-safety.pdr.md` bars
-   subprocess-bearing hooks, so the reconciliation rides every entry-point
-   invocation instead of a refresh event: any plugin's placement run, any
-   missing-role repair, and the maintainers' bulk installation each run their
-   namespace-bounded placement and then the marketplace-scope reconciliation
-   pass. A removed plugin's definitions therefore persist only until the next
-   such invocation, inert and bounded by the ownership record, never
-   indefinitely. The same slice removes
+   shipped-operation run that carries a current snapshot, subject to that
+   no-current-plugin bound. No shipped surface can intercept the agent CLI's
+   own marketplace or plugin refresh commands, and `spx/15-hook-safety.pdr.md`
+   bars subprocess-bearing hooks, so the reconciliation rides every
+   entry-point invocation instead of a refresh event: any plugin's placement
+   run, any missing-role repair, and the maintainers' bulk installation each
+   run their namespace-bounded placement and then the marketplace-scope
+   reconciliation pass. A removed plugin's definitions therefore persist, inert
+   and bounded by the ownership record, until the next such invocation with a
+   current snapshot. The same slice removes
    the automatic checkout `LIFECYCLE_PLACE` step from installation runs — checkout
    materialization holds only where the checkout carries the plugin's invoked
    skill content — and updates the release documentation in `spx/local/merging.md` that
