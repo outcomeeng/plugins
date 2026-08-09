@@ -26,9 +26,10 @@ Pending implementation, in dependency order:
    `spx/12-marketplace-state.adr.md`.
 3. Generated plugin lifecycle skills — the checkout-materialization verb becomes an
    explicit opt-in; the default repair path for a missing agent role refreshes the
-   selected agent home. The same slice reframes this node's checkout-placement
-   scenario to the opt-in path and extends its evidence, since until the gate
-   lands the linked test proves unconditional lifecycle placement.
+   selected agent home. The same slice adds the opt-in gating evidence for this
+   node's checkout-placement scenario; the scenario's trigger-neutral wording is
+   evidenced today by the placement-mechanics test, while the trigger policy lives
+   in `spx/12-marketplace-state.adr.md` until the gate ships.
 4. The managed instruction-block template's Codex agent-init instruction — rewritten
    to the home-refresh repair path with no commit guidance, recorded in
    `spx/21-spec-tree.enabler/43-instruction-block.enabler/ISSUES.md`.
