@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when filing an issue in a repository the operator does not control — a fork's parent, or any base whose permission is READ or NONE.
   NEVER open an issue against such a repository without this skill.
 argument-hint: "[what was observed]"
-allowed-tools: Read, Glob, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh issue create:*), Bash(gh search issues:*), Bash(git log:*), Bash(printf:*)
+allowed-tools: Read, Glob, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(gh issue create:*), Bash(gh search issues:*), Bash(git log:*), Bash(printf:*)
 ---
 
 <objective>

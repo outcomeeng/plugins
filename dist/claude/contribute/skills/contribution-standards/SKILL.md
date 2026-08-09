@@ -37,11 +37,13 @@ Use GitHub's vocabulary, not git's.
 
 <resolution>
 
-Every skill in this plugin resolves its target before its first write, by running the bundled resolver from its own skill directory:
+Every skill in this plugin resolves its target before its first write, by running its own bundled entrypoint:
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py"
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py"
 ```
+
+Each skill carries that entrypoint, and the entrypoint loads this skill's resolver by a path resolved relative to its own file. A skill therefore names only its own directory in its grants, so this skill's name and script layout stay out of five permission strings and a move breaks loudly at load rather than silently degrading to a permission prompt.
 
 It prints one JSON object carrying `base`, `head`, `permission`, `classification`, and `fork`. Run it once per invocation. Every value any step resolves — from this resolver or from that step's own lookup — is substituted **literally** into later commands, written in this plugin's skills as a `<placeholder>`. Never carry a resolved value in a shell variable across steps: shell state does not persist between commands here, so a variable no step assigns silently expands to nothing and the command that names the empty string still runs. Within one command block a value the block itself resolves may be captured in a variable, because those lines share one shell; a value the block has not yet produced is resolved in an earlier block.
 

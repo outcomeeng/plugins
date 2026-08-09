@@ -254,6 +254,17 @@ VALIDATION_STEPS: Final = (
         ),
     ),
     Step(
+        label="grant-locality",
+        argv=(
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "outcomeeng.validation.grant_locality",
+            *_skill_files(),
+        ),
+    ),
+    Step(
         label="hook-safety",
         argv=HOOK_SAFETY_ARGV,
     ),
