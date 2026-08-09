@@ -20,6 +20,7 @@ Agent definitions are placed in the agent home because an agent whose plugin man
 - Isolated verification resolves every agent state path beneath caller-selected disposable homes.
 - Persistent installation leaves the checkout's committed plugin selection unchanged.
 - Agent definitions installation delivers land in the selected agent home's agent directory; a checkout's agent directory changes only through the owning plugin lifecycle skill's explicit opt-in.
+- Agent-home placement prunes or overwrites only definitions under the marketplace's recorded ownership; a colliding file outside that ownership is reported and left untouched.
 
 ## Verification
 
@@ -27,6 +28,7 @@ Agent definitions are placed in the agent home because an agent whose plugin man
 
 - ALWAYS: for an agent whose plugin manifest cannot declare agents, that plugin's agent definitions ship inside the plugin's own declared skill surface and persistent installation places them in the selected agent home's agent directory — no manifest path delivers them ([compliance])
 - ALWAYS: a plugin's lifecycle skill places and prunes only within the namespace its own plugin owns, leaving agent definitions authored by the developer or provided by another plugin untouched ([compliance])
+- ALWAYS: agent-home placement establishes marketplace-scoped ownership — an ownership record or content marker, never a filename prefix alone — before any prune or overwrite in the shared agent home, reporting a colliding foreign file and leaving it untouched ([compliance])
 - NEVER: a plugin's agent definitions ship through a directory the plugin manifest does not declare — an undeclared surface reaching the consumer is incidental, not contractual ([compliance])
 
 - ALWAYS: persistent installation reconciles Claude Code's project scope and the selected `CODEX_HOME` to the canonical GitHub marketplace `outcomeeng/plugins`, then installs every plugin declared by each agent's committed catalog ([compliance])

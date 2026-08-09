@@ -27,6 +27,12 @@ Pending implementation, in dependency order:
    placement moves behind the owning lifecycle skill's opt-in — and updates the
    release documentation in `spx/local/merging.md` that describes the run, the
    third stale instruction surface beside the two templates the later items name.
+   Because a checkout's product-scope definitions shadow the user-scope copies in
+   the selected agent home, the same slice also ships the ownership-aware checkout
+   migration: detect plugin-owned checkout definitions the repository did not opt
+   into — definitions placed under the retired required-placement router guidance
+   — and direct their removal, so no intermediate release leaves a stale committed
+   copy shadowing the refreshed home copy.
 2. Home-placement declaration and L2 evidence — the implementation changeset adds
    the home-placement scenario to
    `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md`
@@ -39,13 +45,9 @@ Pending implementation, in dependency order:
 3. Generated plugin lifecycle skills — the checkout-materialization verb becomes an
    explicit opt-in; the default repair path for a missing agent role refreshes the
    selected agent home and then reloads the harness plugin index or starts a new
-   session, because a running session retains already-loaded plugin content.
-   Because a checkout's product-scope agent definitions shadow the user-scope
-   copies in the selected agent home, the same slice gives the lifecycle skill an
-   ownership-aware migration for definitions a consumer committed under the
-   retired required-placement router guidance: detect plugin-owned checkout
-   definitions the repository did not opt into and direct their removal, so a
-   stale committed copy cannot shadow the refreshed home copy. The same slice
+   session, because a running session retains already-loaded plugin content. The
+   checkout-shadow migration ships earlier, with the home-delivery slice above.
+   The same slice
    rewrites the commit-directing Codex guidance in the authored lifecycle-skill
    template `src/templates/plugin/SKILL.md` ("durable checkout configuration …
    Commit them"), which renders into every plugin's `<plugin>-plugin` skill;
