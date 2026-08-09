@@ -15,7 +15,7 @@ One pull request open against a repository the operator does not control, carryi
 
 **Step 1 — Load the standards and read the invocation input.** Invoke `/contribution-standards` through the runtime's skill-composition surface. Its `<invariants>` govern every step below; this workflow adds ordering and the pull-request specifics.
 
-`$ARGUMENTS`, when non-empty, is the one-sentence description of the change used in Step 3's authorization and in the Step 8 body. When it is empty, derive that sentence from the branch name and `git diff <base-default-branch>...HEAD`.
+`$ARGUMENTS`, when non-empty, is the one-sentence description of the change used in Step 3's authorization and in the Step 8 body. When it is empty, derive that sentence from the branch name and its own commit subjects (`git log --format=%s origin/HEAD..HEAD`), which needs nothing a later step resolves.
 
 **Step 2 — GATE: Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>` and act on its `classification`. Report `base`, `head`, and `permission` verbatim. `controlled`, `fork-absent`, and `blocked` each stop here — `controlled` belongs to a controlled-repository pull-request flow, and the other two stop per the standards. Only `parent-contribution` continues.
 
@@ -27,6 +27,11 @@ The authorization covers this pull request and its later revisions. It does not 
 
 ```bash
 gh repo view "<base>" --json defaultBranchRef --jq '.defaultBranchRef.name'
+```
+
+Read that name, then fetch and branch in a second block:
+
+```bash
 git fetch "https://github.com/<base>.git" "<base-default-branch>"
 git switch -c "<branch>" FETCH_HEAD
 ```

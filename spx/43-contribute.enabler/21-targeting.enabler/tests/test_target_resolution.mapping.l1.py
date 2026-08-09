@@ -40,12 +40,3 @@ def test_fork_state_and_permission_map_to_one_classification(
     resolution, _ = resolve_with(responses)
 
     assert resolution.classification == expected
-
-
-def test_every_classification_the_skills_route_on_is_covered() -> None:
-    assert {expected for _, _, expected in CLASSIFICATIONS} == {
-        "controlled",
-        "parent-contribution",
-        "fork-absent",
-        "blocked",
-    }

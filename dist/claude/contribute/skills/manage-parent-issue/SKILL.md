@@ -14,9 +14,11 @@ The open issue's current thread read once, the maintainer's question answered wi
 
 **Step 1 — Load the standards and resolve the issue.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
 
-`$ARGUMENTS` is an issue number or URL. Resolve it to a number before any read: a bare number is the number; a URL's trailing path segment is the number, and its `owner/name` segments must equal the `base` Step 2 resolves — a mismatch stops the flow rather than being reconciled. An empty `$ARGUMENTS` stops the flow, because this skill continues an identified thread and never picks one.
+`$ARGUMENTS` is an issue number or URL. A bare number is the number; a URL's trailing path segment is the number. An empty `$ARGUMENTS` stops the flow, because this skill continues an identified thread and never picks one. The URL check needs the resolved base, so Step 2 settles it.
 
-**Step 2 — Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>`. `parent-contribution` and `fork-absent` both continue — a thread needs no head repository. `controlled` and `blocked` stop, reporting the classification and `detail` verbatim.
+**Step 2 — Resolve the target, then check the number.** Run the resolver named in `/contribution-standards` `<resolution>`. `parent-contribution` and `fork-absent` both continue — a thread needs no head repository. `controlled` and `blocked` stop, reporting the classification and `detail` verbatim.
+
+With `base` resolved, a URL's `owner/name` segments must equal it; a mismatch stops the flow rather than being reconciled.
 
 **Step 3 — Read the thread once.**
 

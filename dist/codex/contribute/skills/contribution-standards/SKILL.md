@@ -43,7 +43,7 @@ Every skill in this plugin resolves its target before its first write, by runnin
 python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py"
 ```
 
-It prints one JSON object carrying `base`, `head`, `permission`, `classification`, and `fork`. Run it once per invocation; every later command in that invocation substitutes the resolved values **literally**, written in this plugin's skills as `<base>`, `<head>`, and `<base-default-branch>` placeholders. Never carry a resolved value in a shell variable across steps — a variable no step assigns silently expands to nothing, and a command that names the empty string still runs.
+It prints one JSON object carrying `base`, `head`, `permission`, `classification`, and `fork`. Run it once per invocation. Every value any step resolves — from this resolver or from that step's own lookup — is substituted **literally** into later commands, written in this plugin's skills as a `<placeholder>`. Never carry a resolved value in a shell variable across steps: shell state does not persist between commands here, so a variable no step assigns silently expands to nothing and the command that names the empty string still runs. Within one command block a value the block itself resolves may be captured in a variable, because those lines share one shell; a value the block has not yet produced is resolved in an earlier block.
 
 Read the classification and act on it:
 

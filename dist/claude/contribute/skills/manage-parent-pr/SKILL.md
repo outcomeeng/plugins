@@ -14,9 +14,15 @@ The open pull request's current state read once, every valid review finding answ
 
 **Step 1 — Load the standards and resolve the pull request.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
 
-`$ARGUMENTS` is a pull-request number or URL. Resolve it to a number before any read: a bare number is the number; a URL's trailing path segment is the number, and its `owner/name` segments must equal the `base` Step 2 resolves — a mismatch stops the flow rather than being reconciled. When `$ARGUMENTS` is empty, resolve the pull request for the current branch with `gh pr list --repo "<base>" --head "$(git branch --show-current)" --json number`, and stop when that returns none.
+`$ARGUMENTS` is a pull-request number or URL. A bare number is the number; a URL's trailing path segment is the number. Both the URL check and the empty-input lookup need the resolved base, so Step 2 settles them.
 
-**Step 2 — Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>`. A classification other than `parent-contribution` means this pull request does not belong to this flow; stop and report the classification and `detail` verbatim.
+**Step 2 — Resolve the target, then the pull request.** Run the resolver named in `/contribution-standards` `<resolution>`. A classification other than `parent-contribution` means this pull request does not belong to this flow; stop and report the classification and `detail` verbatim.
+
+With `base` resolved, settle the number. A URL's `owner/name` segments must equal that `base`; a mismatch stops the flow rather than being reconciled. When `$ARGUMENTS` is empty, look the pull request up for the current branch and stop when none exists:
+
+```bash
+gh pr list --repo "<base>" --head "<current-branch>" --json number
+```
 
 **Step 3 — Read current state once.** Substitute the resolved values literally per `/contribution-standards` `<resolution>`:
 
