@@ -2,7 +2,7 @@
 name: author-internal-docs
 user-invocable: false
 description: >-
-  Internal-doc authoring guidance — Notion pages, runbooks, scorecards, policies, onboarding guides, and workspace decision records — composed by author-prose for the internal-docs kind. Reached only through author-prose, never matched directly.
+  Internal-doc authoring guidance — Notion pages, runbooks, scorecards, policies, onboarding guides, and team decision records — composed by author-prose for the internal-docs kind. Reached only through author-prose, never matched directly.
 allowed-tools: Read, Edit, Write, Glob, Grep, Skill
 ---
 
@@ -24,9 +24,9 @@ The `/internal-docs-standards` catalog encodes the calibration: inherited rules 
 
 <workflow>
 
-1. Identify the document type — process documentation, workspace-native decision record, workspace-native design spec, reference page, competency model, scorecard, onboarding guide, status page. Each type has its own conventions in `<doc_type_conventions>`.
+1. Identify the document type — process documentation, ungoverned team decision record, ungoverned design spec, reference page, competency model, scorecard, onboarding guide, status page. Each type has its own conventions in `<doc_type_conventions>`.
 
-2. Identify canonical homes. For each concept the document will reference, locate its canonical home in the workspace. Plan inline hyperlinks to those homes; don't restate canonical content.
+2. Identify canonical homes. For each concept the document will reference, locate its canonical home — a workspace page or a repository document. Plan inline hyperlinks to those homes; don't restate canonical content.
 
 3. Draft lead-first. Open with the substantive lead sentence — not metadata, not boilerplate. Scaffold the rest of the document below the lead.
 
@@ -38,9 +38,9 @@ The `/internal-docs-standards` catalog encodes the calibration: inherited rules 
 
 <doc_type_conventions>
 
-Workspace-native decision records. Lead with the decision in one sentence. Then context, options considered, reasoning, consequences. Decisive language throughout; the doc encodes a decision that's been made. These conventions cover only decision records no repository or domain workflow governs — kind detection routed a governed ADR or PDR away before this skill loaded.
+Ungoverned team decision records. Lead with the decision in one sentence. Then context, options considered, reasoning, consequences. Decisive language throughout; the doc encodes a decision that's been made. These conventions cover only decision records no repository or domain workflow governs — kind detection routed a governed ADR or PDR away before this skill loaded.
 
-Workspace-native design specs. Lead with what the design produces and for whom. Then the constraints it works within, the shape of the approach, and the open questions.
+Ungoverned design specs. Lead with what the design produces and for whom. Then the constraints it works within, the shape of the approach, and the open questions.
 
 Hiring rubrics and scorecards. Lead with what the rubric measures. Then the scoring scale, then the items grouped by category. Each item has a behavioral indicator and a source; scoring guidance is concrete (1 means X, 2 means Y).
 
@@ -62,6 +62,6 @@ Headings are sentence case with no end punctuation, and don't repeat the parent 
 
 Every key term a reader might scan for is bolded on first introduction, and every acronym is defined on first introduction and reused at least twice.
 
-Every concept with a canonical home in the workspace is hyperlinked to that home inline; metadata lives in document properties or a small structured callout.
+Every concept with a canonical home — a workspace page or a repository document — is hyperlinked to that home inline; metadata lives in document properties or a small structured callout.
 
 </success_criteria>

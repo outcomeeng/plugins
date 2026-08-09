@@ -3,7 +3,7 @@ name: audit-copy
 user-invocable: false
 description: >-
   Copy audit methodology — judges self-contained pieces against the base anti-pattern catalog and the copy composition layer, producing findings that carry pattern, category, quote, and rewrite.
-model: sonnet
+model: "opus"
 allowed-tools: Read, Glob, Grep, Skill
 ---
 

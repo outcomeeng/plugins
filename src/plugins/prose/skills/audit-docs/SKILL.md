@@ -3,7 +3,7 @@ name: audit-docs
 user-invocable: false
 description: >-
   Docs audit methodology — judges documentation against the base anti-pattern catalog and the simplified ASD-STE100 structural rules, checking every cap by count and producing findings that carry pattern, category, quote, and rewrite.
-model: sonnet
+model: "{{! term('configured_agent_craft_model') !}}"
 allowed-tools: Read, Glob, Grep, Skill
 ---
 

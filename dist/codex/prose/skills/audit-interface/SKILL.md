@@ -3,7 +3,7 @@ name: audit-interface
 user-invocable: false
 description: >-
   Interface audit methodology — judges surface text against the base anti-pattern catalog, the fragment and consistency overrides, and the per-element interface rules, producing findings that carry pattern, category, quote, and rewrite.
-model: sonnet
+model: "gpt-5.5"
 allowed-tools: Read, Glob, Grep, Skill
 ---
 

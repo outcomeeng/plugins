@@ -6,11 +6,11 @@ The kind-detection and style-adherence evals for the prose surface remain unwrit
 
 ## `prose.md` exceeds the assertion-count decompose guidance
 
-`spx/43-prose.enabler/prose.md` carries 8 assertions in one `### Compliance`
+`spx/43-prose.enabler/prose.md` carries 9 assertions in one `### Compliance`
 subsection, above the >7 guidance that triggers decomposition. The assertions
 cluster into two separable concerns: router and composition-surface shape
 (assertions 1, 5, 6, 7) versus kind-detection and audit-verdict behavior
-(assertions 2, 3, 4, 8).
+(assertions 2, 3, 4, 8, and 9 — the operational-prose exclusion).
 
 **Resolution shape**: a `/decompose` pass on `spx/43-prose.enabler` splitting
 the two concerns into child enablers, or an explicit re-scope that keeps the

@@ -25,12 +25,12 @@ This is a reference skill. Composing prose skills load these patterns explicitly
 One ordered procedure classifies any text into exactly one kind. `/author-prose` and `/audit-prose` execute it; first match decides.
 
 1. **Ownership.** A repository or domain workflow governs the artifact — a spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide? Stop and route to that workflow. The prose surface never touches it.
-2. **Audience.** The reader is a team colleague and the document lives in a workspace? Kind: **internal-docs** -> `/internal-docs-standards`.
+2. **Audience.** The reader is a team colleague with working context — one who skims and may return to a specific section later, wherever the team keeps it — a workspace tool or a repository? Kind: **internal-docs** -> `/internal-docs-standards`.
 3. **Function.** The text explains or instructs the use of a product — tutorial, how-to, reference, conceptual guide? Kind: **docs** -> `/docs-standards`.
 4. **Unit.** The text is a fragment embedded in a designed surface — app chrome, button, label, empty state, error message, tooltip, notification or email template, short web-page section? Kind: **interface** -> `/interface-standards`.
 5. **Otherwise.** The text is a self-contained piece read start to finish. Kind: **copy** -> `/copy-standards`.
 
-Chat responses to the user are excluded from the prose surface entirely.
+Chat responses to the user are excluded from the prose surface entirely. Operational prose — a code comment, a commit message, an agent-facing instruction — is excluded the same way; the workflow that owns it governs it.
 
 Boundary consequences:
 
@@ -38,7 +38,7 @@ Boundary consequences:
 - Documentation wins over unit: an error-message reference page is docs; the error message itself, in product, is interface.
 - Marketing splits the same way: long-form is copy; headlines, CTAs, and feature blurbs are interface.
 - A document whose parts differ in kind receives each part's own layer, and audit findings name the kind per finding.
-- Text the procedure leaves ambiguous is resolved by asking the user to select a kind from this list — never by guessing, never by inventing a style outside it.
+- Text the procedure leaves ambiguous is resolved by the interactive caller asking the user to select a kind from this list — never by guessing, never by inventing a style outside it. A dispatched audit honors a dispatch-declared kind only for text this procedure leaves ambiguous — ownership outranks a declared kind; when the dispatch declares none, the ambiguity is reported in the verdict and the plausible kinds' shared rules are audited.
 
 </kind_detection>
 

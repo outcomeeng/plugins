@@ -15,7 +15,7 @@ This is a reference skill. Composing internal-doc skills load these standards ex
 </reference_note>
 
 <scope>
-USE this catalog for internal team docs that live in the workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content. Decision records and design specs belong here only as workspace-native documents that no repository or domain workflow already governs.
+USE this catalog for internal team docs wherever the team keeps them — a workspace tool or a repository: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content. Decision records and design specs belong here only as team documents that no repository or domain workflow already governs.
 
 DO NOT use this catalog for repository-governed engineering artifacts. `AGENTS.md`, spec-tree specs, ADRs, PDRs, `PLAN.md`, `ISSUES.md`, and `SKILL.md` carry dedicated domain workflows that own their structure, voice, and required sections. Follow the governing repository skill and apply its conventions. This catalog states no authoring rules for those artifacts and never substitutes for that workflow.
 
@@ -81,13 +81,13 @@ Avoid: "*Do not* skip this step." Prefer: "A *blank-paper exercise* asks the can
 
 Acronyms are defined on first introduction and reused. Define an acronym with the parenthesis form on first use. Reuse it at least twice afterward, or spell out the full phrase throughout instead. Single-use acronyms add cognitive load without saving space.
 
-Cross-references go inline as hyperlinks. When the doc mentions a concept that has a canonical home in the workspace, link to that home inline on first mention. Don't duplicate the canonical content; link and summarize only what's relevant.
+Cross-references go inline as hyperlinks. When the doc mentions a concept that has a canonical home — a workspace page or a repository document — link to that home inline on first mention. Don't duplicate the canonical content; link and summarize only what's relevant.
 
 Avoid: "Our levelling framework defines four dimensions (see the Recruiting section for details)." Prefer: "Our [levelling framework](link) defines four dimensions."
 
 Use a "Sources" or "References" section only for repeat citations. When the doc cites the same external source multiple times, or when the citation needs structured fields (author, year, page), collect those citations at the bottom. A "References" section is not a substitute for inline hyperlinks; it's a complement when the inline form would force the same long URL to repeat or when the citation carries metadata the inline link can't.
 
-Avoid: a "References" section listing the three workspace pages the doc already links inline. Prefer: a "Sources" section when one paper is cited in four places, or when the citation carries author, year, and page.
+Avoid: a "References" section listing the three canonical homes the doc already links inline. Prefer: a "Sources" section when one paper is cited in four places, or when the citation carries author, year, and page.
 
 Lists pick the right shape for the content. Numbered lists when order matters or items will be referenced by number ("see step 3"). Bulleted lists when items are parallel and order is incidental. Definition lists, with a short label on the left and an explanation on the right, when each item is identified by a short name and described by a longer body. Definition lists are the recommended alternative to bold-first bullet lists, which the inherited rules forbid as a default pattern.
 
