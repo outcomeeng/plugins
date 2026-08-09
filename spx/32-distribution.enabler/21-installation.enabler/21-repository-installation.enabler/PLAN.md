@@ -128,7 +128,14 @@ Pending implementation, in dependency order:
    `spx/12-marketplace-state.adr.md` until the gate ships.
 4. The managed instruction-block template's Codex agent-init instruction — rewritten
    to the home-refresh-and-reload repair path with no commit guidance, recorded in
-   `spx/21-spec-tree.enabler/43-instruction-block.enabler/ISSUES.md`. The same
+   `spx/21-spec-tree.enabler/43-instruction-block.enabler/ISSUES.md`. The
+   rewritten guidance also carries the scope-split recognition into every
+   consumer session: a rendered router that finds committed plugin-owned agent
+   definitions whose invoked skills are home-installed names them as the
+   decision's scope-split fault and directs the repair at instruction-load
+   time, so a repository whose shadow arose from a refresh elsewhere surfaces
+   the fault on its next session rather than waiting for a placement run
+   there. The same
    slice declares that behavior in the owning spec: `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md`
    gains the assertion, with its evidence, that the rendered router's agent-repair
    guidance names the home-refresh-and-reload path and carries no
