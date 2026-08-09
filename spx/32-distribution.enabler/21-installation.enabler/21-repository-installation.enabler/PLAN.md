@@ -33,10 +33,11 @@ Pending implementation, in dependency order:
    namespace, while the reconciliation pass acts under the marketplace's
    recorded ownership — the authority the decision grants agent-home placement
    — over the whole ownership set. The reconciler identifies stale definitions
-   against the refreshed marketplace registration's current plugin set in the
-   selected home — catalog state the home itself carries after a marketplace
-   refresh, needing neither repository catalog access nor an installed-plugin
-   heuristic — so definitions the marketplace placed for a plugin since removed
+   against the marketplace's current plugin set, resolved without repository
+   catalog access or an installed-plugin heuristic: the build embeds a catalog
+   snapshot in each plugin's shipped runtime tree, refreshed with every plugin
+   release, and the reconciler reads the newest snapshot across the home's
+   installed plugins — so definitions the marketplace placed for a plugin since removed
    or renamed in `.agents/plugins/marketplace.json` are pruned on the next
    shipped-operation run. No shipped surface can intercept the agent CLI's own
    marketplace or plugin refresh commands, and `spx/15-hook-safety.pdr.md` bars
@@ -135,7 +136,11 @@ Pending implementation, in dependency order:
    decision's scope-split fault and directs the repair at instruction-load
    time, so a repository whose shadow arose from a refresh elsewhere surfaces
    the fault on its next session rather than waiting for a placement run
-   there. The same
+   there. Until this item ships, the live rendered routers — including this
+   repository's `AGENTS.md` agent-init line — still direct sessions to commit
+   placed definitions, the behavior the decision's NEVER rule forbids, so any
+   session hitting a missing agent role before then can reproduce the original
+   incident; the decision supersedes that guidance throughout the window. The same
    slice declares that behavior in the owning spec: `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md`
    gains the assertion, with its evidence, that the rendered router's agent-repair
    guidance names the home-refresh-and-reload path and carries no
