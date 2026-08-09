@@ -26,13 +26,19 @@ Pending implementation, in dependency order:
    home placement must establish an ownership boundary that cannot claim a foreign
    agent whose filename happens to share a plugin prefix — a marketplace-scoped
    ownership record or content marker checked before any prune or overwrite, with a
-   colliding foreign file reported and left untouched. Reconciliation covers the
-   marketplace's whole ownership set, not only the invoking plugin's namespace,
-   and it needs no catalog access: the shipped entry point compares the
-   ownership record against the plugin set the selected home itself reports
-   installed, so definitions the marketplace placed for a plugin since removed
-   or renamed in `.agents/plugins/marketplace.json` are pruned by any surviving
-   plugin's placement run — every consumer refresh is a caller — and a catalog
+   colliding foreign file reported and left untouched. Cross-plugin cleanup is a distinct
+   marketplace-scope reconciliation, separate from the plugin's
+   namespace-bounded placement so both of the governing decision's rules hold:
+   a plugin's placement verb creates, replaces, and prunes only within its own
+   namespace, while the reconciliation pass acts under the marketplace's
+   recorded ownership — the authority the decision grants agent-home placement
+   — over the whole ownership set. The reconciler identifies stale definitions
+   against the refreshed marketplace registration's current plugin set in the
+   selected home — catalog state the home itself carries after a marketplace
+   refresh, needing neither repository catalog access nor an installed-plugin
+   heuristic — so definitions the marketplace placed for a plugin since removed
+   or renamed in `.agents/plugins/marketplace.json` are pruned by the
+   reconciliation any consumer refresh runs after placement, and a catalog
    removal does not strand stale home definitions;
    `outcomeeng/distribution/installation.py` drives the same reconciliation in
    bulk. The same slice removes
@@ -48,7 +54,11 @@ Pending implementation, in dependency order:
    including definitions placed under the retired required-placement router
    guidance — are reported as the fault with their directed repair, removal of
    the committed copies, never silently refreshed, pruned, or left shadowing
-   the home copy.
+   the home copy. This repository's own 14 committed `.codex/agents/*.toml`
+   files are the first detected instance: their removal lands inside this
+   slice, after home delivery is in place, because removing them earlier would
+   leave Codex sessions without those roles while nothing yet populates
+   `$CODEX_HOME/agents/`.
 2. Home-placement declaration and L2 evidence — the implementation changeset adds
    the home-placement scenario to
    `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md`
