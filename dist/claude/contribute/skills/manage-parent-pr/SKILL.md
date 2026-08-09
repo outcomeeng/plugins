@@ -21,7 +21,7 @@ The open pull request's current state read once, every valid review finding answ
 With `base` resolved, settle the number. A URL's `owner/name` segments must equal that `base`; a mismatch stops the flow rather than being reconciled. When `$ARGUMENTS` is empty, look the pull request up for the current branch and stop when none exists:
 
 ```bash
-gh pr list --repo "<base>" --head "<current-branch>" --json number
+gh pr list --repo "<base>" --head "$(git branch --show-current)" --json number
 ```
 
 **Step 3 — Read current state once.** Substitute the resolved values literally per `/contribution-standards` `<resolution>`:
