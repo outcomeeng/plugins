@@ -459,14 +459,14 @@ Each harness retains plugin content already loaded by a running session. Reload 
 Work in the checkout whose authored plugin files you are changing:
 
 1. Edit `src/plugins/<plugin>/` and run `just build-skills` so the change lands in `dist/claude/<plugin>/`.
-2. Run `just verify-marketplace-installation` to install both committed catalogs through the real agent CLIs in disposable homes and exercise Codex lifecycle placement against the invocation checkout.
+2. Run `just verify-marketplace-installation` to install both committed catalogs through the real agent CLIs in disposable homes and exercise Codex checkout materialization against the invocation checkout.
 3. After a merged release, run `just install-marketplace` from the assigned checkout at `origin/main` to refresh the selected persistent Claude Code project and Codex home.
 
 `just verify-marketplace-installation` is the pre-merge proof and mutates only disposable state. `just install-marketplace` is the release action and mutates the selected persistent state. A persistent run stops before its first state-changing command when Claude Code user scope contains an `outcomeeng` registration, reporting the exact colliding settings path.
 
 ## Missing plugins or skills
 
-With explicit operator authorization to change persistent plugin state, run `just install-marketplace` from the intended checkout. The command derives the complete Claude Code and Codex plugin sets from the two committed marketplace catalogs, reconciles the canonical GitHub source, installs and enables every catalog plugin, and runs Codex lifecycle placement against that checkout.
+With explicit operator authorization to change persistent plugin state, run `just install-marketplace` from the intended checkout. The command derives the complete Claude Code and Codex plugin sets from the two committed marketplace catalogs, reconciles the canonical GitHub source, installs and enables every catalog plugin, and runs Codex checkout materialization against that checkout.
 
 Claude Code state is project-scoped. A user-scoped `outcomeeng` registration blocks the command and must be resolved by the owner of that settings file. Codex state belongs to the selected `$CODEX_HOME`; repository `.codex/config.toml` remains unrelated to plugin setup. Use `just verify-marketplace-installation` when the goal is disposable proof rather than a persistent state change.
 
