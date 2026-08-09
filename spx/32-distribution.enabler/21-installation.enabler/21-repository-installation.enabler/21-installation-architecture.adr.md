@@ -1,6 +1,6 @@
 # Repository Marketplace Installation Architecture
 
-Marketplace installation uses a Python ports-and-adapters boundary with persistent and isolated modes. Committed agent-harness declarations and selected state boundaries parse into immutable installation plans, orchestration executes those plans through agent-specific adapters implementing shared Protocols, and the CLI entry point binds the real subprocess runner. Persistent planning validates Claude Code's user/project scope boundary before mutation and derives Codex source state from the selected `CODEX_HOME` through the Codex CLI. Isolated planning redirects every agent state root beneath caller-selected disposable state and registers the invocation checkout. Checkout materialization — the skill-co-located checkout placement `spx/12-marketplace-state.adr.md` declares — receives the invocation checkout explicitly and remains bounded to each plugin's owned agent namespace.
+Marketplace installation uses a Python ports-and-adapters boundary with persistent and isolated modes. Committed agent-harness declarations and selected state boundaries parse into immutable installation plans, orchestration executes those plans through agent-specific adapters implementing shared Protocols, and the CLI entry point binds the real subprocess runner. Persistent planning validates Claude Code's user/project scope boundary before mutation and derives Codex source state from the selected `CODEX_HOME` through the Codex CLI. Isolated planning redirects every agent state root beneath caller-selected disposable state and registers the invocation checkout. Checkout materialization — the skill-co-located checkout placement `spx/12-marketplace-state.adr.md` declares — receives the invocation checkout explicitly and remains bounded to each plugin's owned agent namespace. Orchestration recognizes one non-terminal failure: a persistent-mode plugin install or enable whose agent CLI reports the plugin absent from the marketplace, which orchestration records as pending publication and passes over.
 
 ## Rationale
 
@@ -9,7 +9,8 @@ Separating declaration parsing, preflight inspection, plan construction, and ext
 ## Invariants
 
 - Installation operations preserve their declaration-derived order.
-- The first failed operation is terminal for one installation run.
+- The first failed operation is terminal for one installation run, other than a persistent-mode plugin operation reporting the plugin absent from the marketplace, which the run records as pending publication and continues past.
+- Only a persistent plan admits that pending-publication carve-out; an isolated plan registers the checkout as the marketplace, so the same absence there is terminal.
 - A persistent plan exists only after Claude Code user-scope collision detection and canonical project-source validation complete.
 - Persistent Codex commands carry the selected `CODEX_HOME` explicitly and never consult repository `.codex/config.toml`.
 - Every agent state path used by isolated mode resolves beneath its disposable home.
@@ -22,6 +23,8 @@ Separating declaration parsing, preflight inspection, plan construction, and ext
 - ALWAYS: committed Claude Code and Codex declarations plus selected installation mode are validated at the boundary and converted into frozen typed records before orchestration consumes them ([conformance])
 - ALWAYS: command execution avoids shell interpretation and preserves stdout, stderr, and the exit code in a structured result ([compliance])
 - ALWAYS: orchestration reports a failed operation with its agent, plugin when applicable, operation name, and structured command result, then executes no later operation ([compliance])
+- ALWAYS: a persistent-mode plugin install or enable whose result reports the plugin absent from the marketplace is recorded as pending publication in the installation report, and every later operation still executes ([compliance])
+- NEVER: the pending-publication carve-out applies to an isolated plan, to a non-plugin operation, or to a failure whose result does not report the plugin absent from the marketplace ([compliance])
 - ALWAYS: persistent planning rejects a user-scoped Claude Code `outcomeeng` registration before emitting a state-changing command and reports the colliding settings path ([compliance])
 - ALWAYS: the isolated harness redirects `HOME`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and `CODEX_SQLITE_HOME` beneath its disposable home for every agent invocation ([compliance])
 - ALWAYS: checkout materialization invokes the selected plugin's shipped placement entry point with the invocation checkout and may create, replace, or prune only files carrying that plugin's owned prefix ([compliance])
