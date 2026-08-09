@@ -4,9 +4,11 @@ Loaded by `/merging-standards` `<repo_local_overlay>` and `/merge`. The product-
 
 ## Deployment and release recognition
 
-No deployment action is declared. Every change proceeds without deployment authorization. Never ask the operator whether to merge.
+Never ask the operator whether to merge.
 
-Release is declared in two parts, governed by `RELEASE_READINESS` and detailed under `## Release installation`: fast-forwarding the designated main checkout to the merged tip, then persistent marketplace installation from the merged assigned checkout. The first part mutates a checkout outside the assigned worktree and surfaces its own approval prompt.
+Deployment is declared as advancing the designated main checkout to the merged tip, governed by `DEPLOYMENT_READINESS` and detailed under `## Deploy`. It mutates local environment state — a checkout this repository's own later sessions resolve against — and nothing a consumer of the published plugins observes, which is the boundary `spx/15-merging.pdr.md` draws between the two phases. It reaches outside the assigned worktree and surfaces its own approval prompt.
+
+Release is declared as persistent marketplace installation from the merged assigned checkout, governed by `RELEASE_READINESS` and detailed under `## Release`.
 
 ## Canonical checkout safety
 
@@ -77,11 +79,9 @@ A prior local review is reusable across a clean rebase only when the branch patc
 
 `@spec-tree` (configured in `.github/workflows/spec-tree-review.yml` `trigger_phrase`; repository-variable override `SPEC_TREE_REVIEW_TRIGGER_PHRASE`).
 
-## Release installation
+## Deploy: advance the designated main checkout
 
-The release action has two parts, both run after the merge and the assigned-worktree cleanup, in this order.
-
-### Advance the designated main checkout
+The `DEPLOY` phase, governed by `DEPLOYMENT_READINESS`, runs after the merge and before `RELEASE`. Phase order is the merge skill's; this overlay declares only what each phase does, never when it runs relative to a transport's cleanup or closeout step.
 
 The merge moved `origin/main` while `readings.mainCheckoutPath` stayed at the pre-merge commit, so every worktree and later context load resolving against the local `main` reads a stale commit until that one checkout moves. The canonical-checkout preflight above already resolved and health-checked it; occupancy is a separate reading, because a clean working tree never proves a checkout is free.
 
@@ -97,11 +97,11 @@ Advance only when `status` is `free` and `status --porcelain` prints nothing. A 
 
 The fast-forward writes outside the assigned worktree, so it surfaces its own approval prompt in a harness that enforces the working-directory boundary, and that prompt names the exact checkout being advanced. Never add a tool grant to suppress it.
 
-Record the checkout's full path and its new full HEAD SHA, or the named skip reason, among the release facts the closeout carries.
+Record the checkout's full path and its new full HEAD SHA, or the named skip reason, among the deploy facts the closeout carries.
 
-### Refresh persistent plugin installation
+## Release: refresh persistent plugin installation
 
-Switch the assigned worktree to `origin/main` (detached; never check out `main` anywhere other than the main checkout), then refresh the selected persistent Claude Code project and Codex home from that checkout:
+The `RELEASE` phase, governed by `RELEASE_READINESS`, runs after `DEPLOY`. Switch the assigned worktree to `origin/main` (detached; never check out `main` anywhere other than the main checkout), then refresh the selected persistent Claude Code project and Codex home from that checkout:
 
 ```bash
 just install-marketplace
