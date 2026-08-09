@@ -28,3 +28,20 @@ The margin narrows as the source grows. The suite passed repeatedly earlier the 
 **Resolution shape**: establish whether the clone the refresh performs can be shallow or filtered rather than full, since the marketplace source is consumed for its committed catalogs and plugin trees rather than its history. Failing that, raise the bound in the agent CLI through `/issue` against that dependency. Until either lands, treat a `marketplace-refresh` timeout in this test as this known defect rather than a regression in the changeset under test, and treat the release phase as incomplete whenever `just install-marketplace` exits non-zero at this operation.
 
 **Evidence**: reproduced twice on a host at 0.33 normalized load with `git ls-remote` against the same source returning in 0.58 seconds, so neither host starvation nor loss of connectivity explains it. Reproduced twice again in the release path after PR #515 merged, from a checkout at `33467bab05164e2974f179041f23eb6ff63669dd`, with identical structured records; clone duration was not measured in those two runs.
+
+## The unpublished-plugin fragment is matched but its real wording is only half observed
+
+`_is_pending_publication` in `outcomeeng/distribution/installation.py` classifies a failed plugin install or enable as pending publication when `UNPUBLISHED_PLUGIN_FRAGMENT` — the literal `not found in marketplace` — appears in the lower-cased stderr. The only evidence is `UnpublishedPluginRunner`, whose canned stderr was authored alongside the constant it matches, so the test cannot fail on a wording mismatch.
+
+Both real **install** messages were observed while adding the `contribute` plugin, against a canonical marketplace that did not yet publish it:
+
+- Claude Code: `Failed to install plugin "contribute@outcomeeng": Plugin "contribute" not found in marketplace "outcomeeng".`
+- Codex: `Error: plugin`contribute`was not found in marketplace`outcomeeng``
+
+Both contain the fragment, so the install path is real. Neither **enable** message was ever observed: the Claude plan issues install then enable per plugin, and the first observation run stopped at the Codex install before any enable ran. The fragment also carries no per-agent prefix, unlike `CLAUDE_ALREADY_INSTALLED_FRAGMENT`, so one unverified wording spans two CLIs.
+
+If either enable message words the absence differently, the carve-out silently never engages for that operation and the run fails where it should report pending.
+
+**Resolution shape**: build a disposable marketplace fixture that omits a plugin the built tree ships, register it as the source in the isolated homes the installation harness already provisions, and run the real `claude` and `codex` CLIs against it to record the install and enable wording for both. That is a new real-CLI evidence lane with its own fixture, not a change to an existing test, which is why it is not folded into the changeset that surfaced it.
+
+**Evidence**: raised by changeset review `2026-08-09_10-14-46-352-325b0ceb84d5` against the changeset that introduced the carve-out.
