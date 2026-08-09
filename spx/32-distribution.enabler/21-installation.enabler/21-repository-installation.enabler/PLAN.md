@@ -10,10 +10,17 @@ it also carries the invoked skill content, and a scope split is a reported fault
 
 Pending implementation, in dependency order:
 
-1. `outcomeeng/distribution/installation.py` — place each installed plugin's generated
-   Codex agent definitions into `$CODEX_HOME/agents/` during persistent installation,
-   within the namespace each plugin owns, pruning that namespace's stale definitions.
-   The retired manifest-tracked install model (removed by commit
+1. The co-location delivery slice. The plugin's shipped placement entry point
+   (`scripts/place_agents.py` in each plugin's generated tree) is repointed from
+   the invocation checkout to co-located delivery: it derives its destination
+   from where the plugin's skill content lives, placing home-installed plugins'
+   generated Codex agent definitions into `$CODEX_HOME/agents/`, within the
+   namespace each plugin owns, pruning that namespace's stale definitions. The
+   operation ships inside the plugin, so an ordinary consumer without this
+   repository's toolchain receives agents from the plugin itself;
+   `outcomeeng/distribution/installation.py` drives the same shipped entry point
+   in bulk during the maintainers' persistent installation. The retired
+   manifest-tracked install model (removed by commit
    `63fea7b7bc65d1c4b520bb09e0fe98ab5d06ccba`) is not restored. The home is a shared
    directory, so the checkout's bare `<plugin>_` prefix is not ownership proof there:
    home placement must establish an ownership boundary that cannot claim a foreign
@@ -29,11 +36,14 @@ Pending implementation, in dependency order:
    skill content — and updates the release documentation in `spx/local/merging.md` that
    describes the run, the third stale instruction surface beside the two templates
    the later items name. The same slice ships the decision's scope-split fault
-   detection: plugin-owned definitions committed in a checkout whose invoked
-   skills live in the selected agent home — including definitions placed under the
-   retired required-placement router guidance — are reported as the fault with
-   their directed repair, removal of the committed copies, never silently
-   refreshed, pruned, or left shadowing the home copy.
+   detection as a preflight: the split check runs before any marketplace or
+   plugin mutation in a run, so no refresh advances the home skills while a
+   committed definition still shadows them. Plugin-owned definitions committed
+   in a checkout whose invoked skills live in the selected agent home —
+   including definitions placed under the retired required-placement router
+   guidance — are reported as the fault with their directed repair, removal of
+   the committed copies, never silently refreshed, pruned, or left shadowing
+   the home copy.
 2. Home-placement declaration and L2 evidence — the implementation changeset adds
    the home-placement scenario to
    `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md`
@@ -43,21 +53,18 @@ Pending implementation, in dependency order:
    isolated installation harness to observe home-directory placement. Until then
    the declaration lives as the `([compliance])` rule in
    `spx/12-marketplace-state.adr.md`.
-3. Generated plugin lifecycle skills — the placement verb derives its
-   destination from co-location, reading where the plugin's skill content
-   lives. For skills installed in the selected agent home — every ordinary
-   consumer — the verb places the plugin's shipped agent definitions into
-   `$CODEX_HOME/agents/` through the plugin's own shipped placement entry
-   point, so a consumer without this repository's installation toolchain
-   receives agents from the plugin itself; `outcomeeng/distribution/installation.py`
-   in item 1 drives that same shipped operation in bulk for the maintainers'
-   refresh. Checkout materialization runs only where the checkout carries the
-   plugin's invoked skill content, and the verb reports the scope split
-   otherwise. The default repair path for a missing agent role refreshes the
-   selected agent home and then reloads the harness plugin index or starts a new
-   session, because a running session retains already-loaded plugin content. The
-   scope-split fault detection ships earlier, with the home-delivery slice above.
-   The same slice
+3. Generated plugin lifecycle skills — each plugin's `<plugin>-plugin` skill
+   becomes the consumer invocation of the entry point item 1 repoints: its
+   placement verb executes the shipped operation, deriving the destination from
+   co-location, so an ordinary consumer session populates `$CODEX_HOME/agents/`
+   by running the plugin's own skill. Checkout materialization runs only where
+   the checkout carries the plugin's invoked skill content, and the verb reports
+   the scope split otherwise. The default repair path for a missing agent role
+   refreshes the selected agent home — running the plugin's placement verb where
+   the definitions are absent — and then reloads the harness plugin index or
+   starts a new session, because a running session retains already-loaded plugin
+   content. The entry-point repointing and the scope-split fault detection ship
+   earlier, with the delivery slice above. The same slice
    rewrites the commit-directing Codex guidance in the authored lifecycle-skill
    template `src/templates/plugin/SKILL.md` ("durable checkout configuration …
    Commit them"), which renders into every plugin's `<plugin>-plugin` skill;
