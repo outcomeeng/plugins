@@ -33,7 +33,7 @@ Load each required bundled reference directly from this index:
   - assigned-worktree discipline, branch hygiene, topology, push, and base sync;
   - deterministic scope, local review, authority gates, and auditor verdicts;
   - review inspection, classification, check waits, failure modes, and success criteria.
-- Read `${CLAUDE_SKILL_DIR}/references/merge-cleanup.md` immediately before a merge mutation. It owns the merge command, overlay checks, worktree transition, and branch cleanup sequence.
+- Read `${CLAUDE_SKILL_DIR}/references/merge-cleanup.md` immediately before a merge mutation. It owns the merge command, overlay checks, worktree transition, branch cleanup sequence, and the closing `<base_checkout_refresh>` every transport applies once the changeset reaches the default branch on origin.
 - Read `${CLAUDE_SKILL_DIR}/references/action-tokens.md` before emitting a merge-lifecycle action token. It owns every token's trigger condition and required follow-up.
 
 The composing skill names the tagged section or operation it needs. Read the matching one-level reference directly from this index and apply it without reimplementing it. A bundled reference never dispatches another bundled reference.

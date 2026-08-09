@@ -16,7 +16,7 @@ Required handling when an eval-coverage sweep happens:
 
 ## 2. Worktree-safe branch-deletion default lacks eval coverage for the deletion mechanism
 
-The `managing-pr.md` merge-command scenario declares two observable branch-deletion behaviors: the overlay-silent default runs the worktree-safe deletion sequence (`gh pr merge --rebase --delete-branch=false`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately), and an overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects. The `merge-command-overlay-precedence` eval verifies only the merge-strategy flag and its source; no case exercises the deletion mechanism.
+The `managing-pr.md` merge-command scenario declares two observable branch-deletion behaviors: the overlay-silent default runs the worktree-safe deletion sequence (`gh pr merge --merge --delete-branch=false`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately), and an overlay MAY opt into inline `gh pr merge --merge --delete-branch` for always-single-worktree projects. The retired `merge-command-overlay-precedence` eval verified only the merge-strategy flag and its source; no case exercised the deletion mechanism.
 
 Required handling when an eval-coverage sweep happens:
 
