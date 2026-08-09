@@ -13,8 +13,8 @@ from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from outcomeeng.distribution.contracts import SKILL_FILENAME
 from outcomeeng.validation.grant_locality import (
-    SKILL_FILENAME,
     Violation,
     main,
     scan_file,

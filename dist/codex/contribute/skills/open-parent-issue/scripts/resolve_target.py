@@ -7,8 +7,6 @@ grant: a grant that walks out of `${SKILL_DIR}` encodes the provider's
 directory name and script layout where nothing can follow it, so moving the
 provider breaks the grant silently, while a moved module raises here at load.
 
-Grant locality is governed by `spx/13-plugin-and-runtime-conventions.adr.md`.
-
 Portability: stdlib only — no third-party packages, no `uv`, no project imports.
 """
 
