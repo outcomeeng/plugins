@@ -30,7 +30,7 @@ One ordered procedure classifies any text into exactly one kind. `/author-prose`
 4. **Unit.** The text is a fragment embedded in a designed surface — app chrome, button, label, empty state, error message, tooltip, notification or email template, short web-page section? Kind: **interface** -> `/interface-standards`.
 5. **Otherwise.** The text is a self-contained piece read start to finish. Kind: **copy** -> `/copy-standards`.
 
-Chat responses to the user are excluded from the prose surface entirely.
+Chat responses to the user are excluded from the prose surface entirely. Operational prose — a code comment, a commit message, an agent-facing instruction — is excluded the same way; the workflow that owns it governs it.
 
 Boundary consequences:
 
