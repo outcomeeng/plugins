@@ -3,7 +3,8 @@ name: prose-auditor
 description: >-
   ALWAYS invoke when auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance.
 tools: Read, Glob, Grep, Skill
-model: "{{! term('configured_agent_auditor_model') !}}"
+model: "{{! term('configured_agent_craft_model') !}}"
+sandbox_mode: read-only
 skills:
   - prose:audit-prose
 ---
