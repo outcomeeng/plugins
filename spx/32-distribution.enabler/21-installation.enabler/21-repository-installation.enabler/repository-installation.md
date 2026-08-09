@@ -21,6 +21,7 @@ CAN refresh every committed plugin in selected agent state and verify the same o
 ### Mappings
 
 - Each marketplace, plugin, and lifecycle operation a repository-installation plan performs maps to a failure report naming that operation and its agent, with the attempted commands ending at that operation and no later operation performed. ([test](tests/test_repository_installation.mapping.l1.py))
+- Each combination of installation mode and operation kind, failing with the wording that reports a plugin absent from the marketplace, maps to pending publication for a persistent plugin operation and to a terminal failure for every other combination. ([test](tests/test_repository_installation.mapping.l1.py))
 
 ### Compliance
 

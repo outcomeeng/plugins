@@ -1171,11 +1171,17 @@ __all__ = [
     "PersistentExecutionObservation",
     "PersistentPlanObservation",
     "PlanObservation",
+    "DesignatedFailureRunner",
     "RealInstallationObservation",
     "RecordingRunner",
+    "UnpublishedPluginObservation",
+    "UnpublishedPluginRunner",
     "VerificationRecipeObservation",
+    "canonical_catalog_plugin_names",
+    "committed_catalog_plugin_names",
     "observe_claude_user_collision",
     "observe_codex_config_independence",
+    "observe_designated_failure",
     "observe_first_failure",
     "observe_failed_run_restore",
     "observe_inspection_failure",
@@ -1185,6 +1191,7 @@ __all__ = [
     "observe_planned_operations",
     "observe_real_installation",
     "observe_repository_plan",
+    "observe_unpublished_plugin",
     "observe_verification_recipe",
 ]
 
@@ -1235,13 +1242,47 @@ class UnpublishedPluginObservation:
     calls: tuple[InstallationCommand, ...]
 
 
-def observe_unpublished_plugin(
+@dataclass
+class DesignatedFailureRunner:
+    """Installation runner that fails one designated command with a given stderr.
+
+    Controlled under `/test` Stage 5 Failure simulation: the classification a
+    run applies to a failed command depends on that command's operation and on
+    the wording its agent CLI emitted, and a real CLI produces neither on
+    demand for an arbitrary operation.
+
+    The stderr is supplied by the caller so the executed test owns which
+    wording each case carries; this runner selects nothing.
+    """
+
+    operation: Operation
+    stderr: str
+    plugin: str | None = None
+    calls: list[InstallationCommand] = field(default_factory=list)
+
+    def __call__(self, command: InstallationCommand) -> CommandResult:
+        self.calls.append(command)
+        designated = command.operation is self.operation and (
+            self.plugin is None or command.plugin == self.plugin
+        )
+        if designated:
+            return CommandResult(
+                argv=command.argv, exit_code=1, stdout="", stderr=self.stderr
+            )
+        stdout = (
+            codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+            if command.operation is Operation.MARKETPLACE_INSPECT
+            else ""
+        )
+        return CommandResult(argv=command.argv, exit_code=0, stdout=stdout, stderr="")
+
+
+def _observe_installation_run(
+    runner: UnpublishedPluginRunner | DesignatedFailureRunner,
     *,
     isolated: bool,
-    unpublished: frozenset[str],
 ) -> UnpublishedPluginObservation:
-    """Run one installation whose marketplace lacks the named plugins."""
-    runner = UnpublishedPluginRunner(unpublished)
+    """Execute one installation plan of the selected mode through `runner`."""
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
@@ -1269,6 +1310,31 @@ def observe_unpublished_plugin(
     )
 
 
+def observe_unpublished_plugin(
+    *,
+    isolated: bool,
+    unpublished: frozenset[str],
+) -> UnpublishedPluginObservation:
+    """Run one installation whose marketplace lacks the named plugins."""
+    return _observe_installation_run(
+        UnpublishedPluginRunner(unpublished), isolated=isolated
+    )
+
+
+def observe_designated_failure(
+    *,
+    isolated: bool,
+    operation: Operation,
+    stderr: str,
+    plugin: str | None = None,
+) -> UnpublishedPluginObservation:
+    """Run one installation in which the designated command fails with `stderr`."""
+    return _observe_installation_run(
+        DesignatedFailureRunner(operation=operation, stderr=stderr, plugin=plugin),
+        isolated=isolated,
+    )
+
+
 def canonical_catalog_plugin_names() -> frozenset[str]:
     """Plugins the canonical marketplace publishes, read from the base ref.
 
@@ -1284,7 +1350,7 @@ def canonical_catalog_plugin_names() -> frozenset[str]:
     return frozenset(names)
 
 
-def _base_ref_catalog_names(root: Path, path: str) -> set[str]:
+def _base_ref_catalog_names(root: Path, path: Path) -> set[str]:
     """Read one catalog at the base ref, fetching that ref when absent.
 
     A shallow checkout has no `origin/main`, which is how the governing CI job
@@ -1307,7 +1373,7 @@ def _base_ref_catalog_names(root: Path, path: str) -> set[str]:
                     f"{BASE_REF_BRANCH} failed with {fetched.stderr.strip()}"
                 )
         shown = subprocess.run(
-            ("git", "show", f"{BASE_REF}:{path}"),
+            ("git", "show", f"{BASE_REF}:{path.as_posix()}"),
             cwd=root,
             capture_output=True,
             text=True,
@@ -1319,7 +1385,9 @@ def _base_ref_catalog_names(root: Path, path: str) -> set[str]:
                 entry[CATALOG_PLUGIN_NAME_FIELD]
                 for entry in document[CATALOG_PLUGINS_FIELD]
             }
-    raise RuntimeError(f"cannot read {path} at {BASE_REF}: {shown.stderr.strip()}")
+    raise RuntimeError(
+        f"cannot read {path.as_posix()} at {BASE_REF}: {shown.stderr.strip()}"
+    )
 
 
 def committed_catalog_plugin_names() -> frozenset[str]:
