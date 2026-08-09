@@ -58,7 +58,16 @@ def test_every_planned_operation_reports_its_failure_and_stops_installation() ->
         assert attempted == observation.plan.commands[: len(attempted)]
 
 
-def test_the_carve_out_domain_covers_every_operation_a_plan_performs() -> None:
+def test_the_carve_out_domain_agrees_with_the_planned_operation_enumeration() -> None:
+    """Pin the domain to the other route through the same plan builders.
+
+    Both sides reach `build_isolated_installation_plan` and
+    `build_persistent_installation_plan`, so their agreement is consistency
+    between two harness routes rather than an independent completeness proof.
+    It catches the domain drifting away from the planned-operation enumeration;
+    what the carve-out assertion actually rests on is the parametrized case
+    below, which drives each operation through a real classification.
+    """
     covered = {operation for _, _, operation in CARVE_OUT_DOMAIN}
 
     assert covered == set(observe_planned_operations())
