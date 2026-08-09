@@ -14,7 +14,7 @@ Known follow-ups for the merging node. Coordination note; not spec truth.
 
 ## The overlay's base-checkout fast-forward has no deterministic coverage
 
-`spx/local/merging.md` declares a release-phase fast-forward of the designated main checkout with four outcomes — advanced, `held-by-live-session`, `uncommitted-work`, `not-fast-forwardable` — and no `[test]` or `[eval]` exercises any of them. The behavior reaches the spec tree through the product-local overlay assertion in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, which is `[audit]`-backed like every other clause of that assertion, so the gap is consistent with its neighbours rather than an unbacked claim.
+`spx/local/merging.md` declares a release-phase fast-forward of the designated main checkout with four outcomes — advanced, `held-by-live-session`, `uncommitted-work`, `not-fast-forwardable` — and no `[test]` or `[eval]` exercises any of them. The behavior reaches the spec tree through its own `[audit]`-backed assertion in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, alongside the product-local overlay assertion, so the gap is consistent with its neighbours rather than an unbacked claim.
 
 Deterministic coverage needs a harness that materializes a bare-repository pool with a designated main checkout and drives each outcome — a live claim, a dirty tree, a diverged local `main` — which no existing merging harness models.
 
