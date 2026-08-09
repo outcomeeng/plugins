@@ -141,7 +141,10 @@ unchanged.
 After merged distribution changes, `just install-marketplace` refreshes the
 project-scoped Claude Code marketplace and the selected `$CODEX_HOME` from the
 canonical GitHub source, installs every plugin from both committed catalogs, and
-runs Codex checkout materialization against the invocation checkout.
+runs Codex checkout materialization against the invocation checkout. Treat any
+`.codex/agents/` churn these runs produce as pending-removal behavior, never as
+definitions to commit, per `spx/local/merging.md` and
+`spx/12-marketplace-state.adr.md`.
 
 ### Bumping plugin versions on a branch
 
