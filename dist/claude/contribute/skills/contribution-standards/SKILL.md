@@ -54,6 +54,14 @@ Read the classification and act on it:
 | `fork-absent`         | A parent contribution with no head repository to push to            | STOP per `<invariants>` "Never choose the fork destination".                         |
 | `blocked`             | Permission unreadable, or `gh` unavailable or unauthenticated       | STOP and report the resolver's `detail` verbatim.                                    |
 
+**Verify `origin` before pushing or fetching through it.** The resolver names the head repository; `origin` is a local label that may point somewhere else entirely. Before the first `git push` or `git fetch` that names `origin`, confirm it resolves to the resolved head, and stop when it does not:
+
+```bash
+gh repo view "$(git remote get-url origin)" --json nameWithOwner --jq '.nameWithOwner'
+```
+
+A remote name proves nothing on its own — the same reason `upstream` never identifies a target. The base repository is always fetched by URL, so only the head side needs this check.
+
 Never reconstruct the classification from `gh` output read by eye. The resolver exists because reading `isFork`, `parent`, and `viewerPermission` correctly is the one step whose failure sends an artifact to the wrong organization.
 
 </resolution>

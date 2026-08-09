@@ -3,7 +3,7 @@ name: manage-parent-pr
 description: >-
   ALWAYS invoke this skill when continuing an open pull request against a repository the operator does not control — answering review, publishing a revision, or reporting its current state.
 argument-hint: "[pull request number or URL]"
-allowed-tools: Read, Glob, Grep, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Bash(python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(git fetch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git push origin HEAD:refs/heads/*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Bash(python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(git fetch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git push origin HEAD:refs/heads/*), Bash(printf:*)
 ---
 
 <objective>
@@ -36,7 +36,7 @@ Report `state`, `reviewDecision`, and each required check's conclusion verbatim.
 
 **Step 4 — GATE: Verify each finding before fixing it.** Reproduce the finding against the branch and report which findings confirmed. A finding the branch does not exhibit is answered with the evidence rather than with a change.
 
-**Step 5 — Fix, verify, append.** Apply every confirmed finding as a defect class: fix the cited site and every parallel instance the same rule reaches. Re-run the base repository's declared checks per `/contribution-standards`. Then append the revision:
+**Step 5 — Fix, verify, append.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` before the push. Apply every confirmed finding as a defect class: fix the cited site and every parallel instance the same rule reaches. Re-run the base repository's declared checks per `/contribution-standards`. Then append the revision:
 
 ```bash
 git push origin HEAD:refs/heads/"$(git branch --show-current)"

@@ -3,7 +3,7 @@ name: sync-fork
 description: >-
   ALWAYS invoke this skill when bringing a fork's default branch current with the repository it was forked from.
   NEVER sync a fork with a force push or a hard reset.
-allowed-tools: Read, Skill, Bash(python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh repo view:*), Bash(gh repo sync:*), Bash(git fetch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git log:*), Bash(git branch:*)
+allowed-tools: Read, Skill, Bash(python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh repo sync:*), Bash(git fetch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git log:*), Bash(git branch:*)
 ---
 
 <objective>
@@ -23,7 +23,7 @@ gh repo view "<head>" --json defaultBranchRef --jq '.defaultBranchRef.name'
 gh repo view "<base>" --json defaultBranchRef --jq '.defaultBranchRef.name'
 ```
 
-**Step 4 — GATE: Establish behind versus diverged.** Fetch the base default branch by URL, so the count never depends on a remote name the checkout may not carry, then count commits on each side:
+**Step 4 — GATE: Establish behind versus diverged.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` before fetching through it. Fetch the base default branch by URL, so the count never depends on a remote name the checkout may not carry, then count commits on each side:
 
 ```bash
 git fetch origin "<head-default-branch>"

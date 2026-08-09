@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when opening a pull request against a repository the operator does not control — a fork's parent, or any base whose permission is READ or NONE.
   NEVER open a pull request against such a repository without this skill.
 argument-hint: "[what the change does, or empty to describe it from the branch]"
-allowed-tools: Read, Glob, Grep, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git log:*), Bash(git diff:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git log:*), Bash(git diff:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(printf:*)
 ---
 
 <objective>
@@ -46,7 +46,7 @@ Capture verbose output in a directory from `mktemp -d`, inspect the exit status 
 
 **Step 7 — GATE: Review the outward text.** Draft the title and body per `<title_and_body>`, then review them per `/contribution-standards` `<invariants>` "Outward-facing text is permanent". Where the prose plugin is installed, dispatch its `prose-auditor` agent through the runtime's agent-dispatch surface and apply its findings. Where it is not, review against `/contribution-standards` `<outward_text>` and state in the report that the review ran unassisted.
 
-**Step 8 — Push, then open.** Push the branch to the head repository with the explicit destination ref, then open the pull request naming the base repository:
+**Step 8 — Push, then open.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` "Verify `origin` before pushing or fetching through it", then push the branch with the explicit destination ref and open the pull request naming the base repository:
 
 ```bash
 branch=$(git branch --show-current)
