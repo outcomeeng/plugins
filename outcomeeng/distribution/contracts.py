@@ -117,6 +117,9 @@ RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY: Final = (
 RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY: Final = (
     "configured_agent_auditor_model"
 )
+RUNTIME_TOKEN_CONFIGURED_AGENT_CRAFT_MODEL_CAPABILITY: Final = (
+    "configured_agent_craft_model"
+)
 RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY: Final = (
     "configured_agent_strong_models"
 )
