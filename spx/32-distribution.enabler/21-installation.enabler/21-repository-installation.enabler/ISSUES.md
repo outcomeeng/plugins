@@ -20,25 +20,3 @@ The margin narrows as the source grows. The suite passed repeatedly earlier the 
 **Resolution shape**: establish whether the clone the refresh performs can be shallow or filtered rather than full, since the marketplace source is consumed for its committed catalogs and plugin trees rather than its history. Failing that, raise the bound in the agent CLI through `/issue` against that dependency, and until either lands, treat a `marketplace-refresh` timeout in this test as this known defect rather than a regression in the changeset under test.
 
 **Evidence**: reproduced twice on a host at 0.33 normalized load with `git ls-remote` against the same source returning in 0.58 seconds, so neither host starvation nor loss of connectivity explains it.
-
-## The installation-architecture invariant contradicts agent-home delivery
-
-`spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md`
-asserts "Every lifecycle placement destination resolves beneath the invocation
-checkout." as a committed invariant, and its compliance rule binds lifecycle
-placement to the invocation checkout. `spx/12-marketplace-state.adr.md` decides
-that agent definitions installation delivers land in the selected agent home's
-agent directory, with checkout materialization the owning plugin lifecycle
-skill's explicit opt-in. The two committed decisions contradict each other about
-where lifecycle placement lands while the architecture amendment waits for the
-slice that changes the architecture.
-
-**Resolution shape**: `PLAN.md` item 1 in this node — scope the invariant and
-its compliance rule to the opt-in checkout-materialization path through
-`/author` with the `adr-auditor` gate, landing with the implementation slice.
-Until that slice ships, the architecture decision describes the shipped
-checkout-materialization implementation only, and `spx/12-marketplace-state.adr.md`
-governs where installation-delivered agent definitions land.
-
-**Evidence.** Surfaced by the current-head integration review of the changeset
-amending `spx/12-marketplace-state.adr.md` (PR #511).

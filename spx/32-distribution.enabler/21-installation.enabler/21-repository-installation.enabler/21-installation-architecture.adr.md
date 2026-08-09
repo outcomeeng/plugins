@@ -1,6 +1,6 @@
 # Repository Marketplace Installation Architecture
 
-Marketplace installation uses a Python ports-and-adapters boundary with persistent and isolated modes. Committed agent-harness declarations and selected state boundaries parse into immutable installation plans, orchestration executes those plans through agent-specific adapters implementing shared Protocols, and the CLI entry point binds the real subprocess runner. Persistent planning validates Claude Code's user/project scope boundary before mutation and derives Codex source state from the selected `CODEX_HOME` through the Codex CLI. Isolated planning redirects every agent state root beneath caller-selected disposable state and registers the invocation checkout. Plugin lifecycle placement receives the invocation checkout explicitly and remains bounded to each plugin's owned agent namespace.
+Marketplace installation uses a Python ports-and-adapters boundary with persistent and isolated modes. Committed agent-harness declarations and selected state boundaries parse into immutable installation plans, orchestration executes those plans through agent-specific adapters implementing shared Protocols, and the CLI entry point binds the real subprocess runner. Persistent planning validates Claude Code's user/project scope boundary before mutation and derives Codex source state from the selected `CODEX_HOME` through the Codex CLI. Isolated planning redirects every agent state root beneath caller-selected disposable state and registers the invocation checkout. Checkout materialization — the opt-in plugin lifecycle placement `spx/12-marketplace-state.adr.md` declares — receives the invocation checkout explicitly and remains bounded to each plugin's owned agent namespace.
 
 ## Rationale
 
@@ -13,7 +13,7 @@ Separating declaration parsing, preflight inspection, plan construction, and ext
 - A persistent plan exists only after Claude Code user-scope collision detection and canonical project-source validation complete.
 - Persistent Codex commands carry the selected `CODEX_HOME` explicitly and never consult repository `.codex/config.toml`.
 - Every agent state path used by isolated mode resolves beneath its disposable home.
-- Every lifecycle placement destination resolves beneath the invocation checkout.
+- Every checkout-materialization placement destination resolves beneath the invocation checkout.
 
 ## Verification
 
@@ -24,7 +24,7 @@ Separating declaration parsing, preflight inspection, plan construction, and ext
 - ALWAYS: orchestration reports a failed operation with its agent, plugin when applicable, operation name, and structured command result, then executes no later operation ([compliance])
 - ALWAYS: persistent planning rejects a user-scoped Claude Code `outcomeeng` registration before emitting a state-changing command and reports the colliding settings path ([compliance])
 - ALWAYS: the isolated harness redirects `HOME`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and `CODEX_SQLITE_HOME` beneath its disposable home for every agent invocation ([compliance])
-- ALWAYS: lifecycle placement invokes the selected plugin's shipped placement entry point with the invocation checkout and may create, replace, or prune only files carrying that plugin's owned prefix ([compliance])
+- ALWAYS: checkout materialization invokes the selected plugin's shipped placement entry point with the invocation checkout and may create, replace, or prune only files carrying that plugin's owned prefix ([compliance])
 - NEVER: persistent planning infers Codex plugin state from repository `.codex/config.toml`; the selected `CODEX_HOME` and Codex CLI are its state boundary ([compliance])
 
 ### Audit
