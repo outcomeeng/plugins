@@ -202,27 +202,34 @@ def mixed_minor_triggering_changes() -> tuple[ChangedPath, ...]:
     )
 
 
-def change_attribution_cases() -> tuple[tuple[ChangedPath, frozenset[str]], ...]:
-    """Every `FileStatus`, paired with the plugins that change attributes to.
+ATTRIBUTION_DESTINATION_PLUGIN: str = "foo"
+ATTRIBUTION_SOURCE_PLUGIN: str = "bar"
 
-    The destination sits in `foo` and any source in `bar`, so an attribution
-    that reaches the source path is visible as `bar` appearing in the result.
+
+def change_attribution_inputs() -> tuple[ChangedPath, ...]:
+    """One change per `FileStatus`, spanning the source-owned status domain.
+
+    Every change lands in `ATTRIBUTION_DESTINATION_PLUGIN` and carries a source
+    path in `ATTRIBUTION_SOURCE_PLUGIN` wherever git reports one, so an
+    attribution that reaches the source path is visible as that second plugin
+    appearing in the result. The domain enumerates `FileStatus` itself, so a
+    status added to the source contract enters the domain rather than needing a
+    case written for it here.
     """
     destination = distribution_relpath(
-        SOURCE_PLUGINS_DIR, "foo", f"{SKILLS_SUBDIR_NAME}/new-skill/{SKILL_FILENAME}"
+        SOURCE_PLUGINS_DIR,
+        ATTRIBUTION_DESTINATION_PLUGIN,
+        f"{SKILLS_SUBDIR_NAME}/new-skill/{SKILL_FILENAME}",
     )
     source = distribution_relpath(
-        SOURCE_PLUGINS_DIR, "bar", f"{SKILLS_SUBDIR_NAME}/old-skill/{SKILL_FILENAME}"
+        SOURCE_PLUGINS_DIR,
+        ATTRIBUTION_SOURCE_PLUGIN,
+        f"{SKILLS_SUBDIR_NAME}/old-skill/{SKILL_FILENAME}",
     )
-    return (
-        (ChangedPath(FileStatus.ADDED, destination), frozenset({"foo"})),
-        (ChangedPath(FileStatus.MODIFIED, destination), frozenset({"foo"})),
-        (ChangedPath(FileStatus.DELETED, destination), frozenset({"foo"})),
-        (ChangedPath(FileStatus.COPIED, destination, source), frozenset({"foo"})),
-        (
-            ChangedPath(FileStatus.RENAMED, destination, source),
-            frozenset({"foo", "bar"}),
-        ),
+    carries_source = {FileStatus.COPIED, FileStatus.RENAMED}
+    return tuple(
+        ChangedPath(status, destination, source if status in carries_source else None)
+        for status in FileStatus
     )
 
 

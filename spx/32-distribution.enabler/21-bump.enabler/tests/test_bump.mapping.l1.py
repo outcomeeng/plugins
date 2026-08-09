@@ -10,8 +10,10 @@ from outcomeeng.distribution.bump import (
     plugins_from_change,
 )
 from outcomeeng_testing.generators.bump_mapping import (
+    ATTRIBUTION_DESTINATION_PLUGIN,
+    ATTRIBUTION_SOURCE_PLUGIN,
     AUTO_SEGMENT_MAPPING_CASES,
-    change_attribution_cases,
+    change_attribution_inputs,
     mixed_minor_triggering_changes,
     patch_only_changes,
 )
@@ -31,10 +33,14 @@ def test_auto_segment_returns_patch_when_no_change_triggers_minor() -> None:
 
 
 def test_each_file_status_attributes_its_change_to_the_expected_plugins() -> None:
-    cases = change_attribution_cases()
+    changes = change_attribution_inputs()
 
-    assert {change.status for change, _ in cases} == set(FileStatus)
-    for change, expected in cases:
+    assert {change.status for change in changes} == set(FileStatus)
+    for change in changes:
+        expected = {ATTRIBUTION_DESTINATION_PLUGIN}
+        if change.status is FileStatus.RENAMED:
+            expected.add(ATTRIBUTION_SOURCE_PLUGIN)
+
         assert plugins_from_change(change) == expected
 
 
