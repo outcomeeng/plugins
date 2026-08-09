@@ -68,6 +68,6 @@ Merge while the branch is checked out, then detach, run post-cleanup checks, and
 
 The tip check matches a worktree by commit alone, so a worktree parked at that same commit for an unrelated reason — one detached at the base right after a fast-forward merge, where base and branch tip are the same commit — reads as holding this branch's work. The match errs toward retention and never toward deletion, so the cost is a branch kept and reported with another worktree's status rather than uncommitted work lost.
 
-The merge advances the base on origin while the checkout that holds the base branch stays at the pre-merge commit. That checkout belongs to the environment rather than to the changeset, so bringing it current is a declared release action in `spx/local/merging.md`, never a step of this cleanup. Cleanup removes what the lifecycle created and stays inside the assigned worktree.
+The merge advances the base on origin while the checkout that holds the base branch stays at the pre-merge commit. That checkout belongs to the environment rather than to the changeset, so bringing it current is a declared release action in `spx/local/merging.md`, never a step of this cleanup. Cleanup removes what the lifecycle created, and every ref it mutates it mutates from the assigned worktree — the `git -C` inspections above read other worktrees to prove a deletion is safe and mutate nothing.
 
 </merge_cleanup>

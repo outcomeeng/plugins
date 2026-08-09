@@ -84,10 +84,12 @@ The release action has two parts, both run after the merge and the assigned-work
 The merge moved `origin/main` while `readings.mainCheckoutPath` stayed at the pre-merge commit, so every worktree and later context load resolving against the local `main` reads a stale commit until that one checkout moves. The canonical-checkout preflight above already resolved and health-checked it; occupancy is a separate reading, because a clean working tree never proves a checkout is free.
 
 ```bash
-spx worktree status --format json <main-checkout-path>
+spx -C <main-checkout-path> worktree status --format json
 git -C <main-checkout-path> status --porcelain
 git -C <main-checkout-path> merge --ff-only origin/main
 ```
+
+The global `-C` option is how every cross-checkout `spx` invocation in this repository selects its target, and `@outcomeeng/spx@0.6.15` — the pinned floor — answers `-C <path> worktree status --format json` with the free/running record this step reads. A positional path after `worktree status` is a different shape that no other call site uses and that no floor capability records; it belongs to no version this repository has established.
 
 Advance only when `status` is `free` and `status --porcelain` prints nothing. A `running` status skips with `reason=held-by-live-session` naming the reported session; any porcelain output skips with `reason=uncommitted-work`, because a fast-forward would carry those changes onto a different commit. `--ff-only` advances the branch pointer only when the local branch is already an ancestor of the merged tip, so a checkout carrying its own unmerged commits fails the command and is reported with `reason=not-fast-forwardable`. Every skip leaves that checkout exactly as found and is a reported condition, never a reason to force, reset, stash, or check `main` out anywhere else.
 
