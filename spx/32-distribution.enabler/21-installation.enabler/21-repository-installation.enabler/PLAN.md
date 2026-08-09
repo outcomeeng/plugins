@@ -105,11 +105,13 @@ Pending implementation, in dependency order:
    placement verb executes the shipped operation, deriving the destination from
    co-location, so an ordinary consumer session populates `$CODEX_HOME/agents/`
    by running the plugin's own skill. A home write is a mutation outside the
-   invocation checkout, so the verb names the absolute agent-home destination
-   and proceeds only under the confirmation the external-write policy in
-   `spx/43-instructions.enabler/21-skills.enabler/skills.md` requires — the
-   harness approval prompt for the out-of-checkout write is that confirmation,
-   never suppressed by a tool grant. Checkout materialization runs only where
+   invocation checkout, so the verb names each absolute destination file and
+   proceeds only under the approval granularity the external-write policy in
+   `spx/43-instructions.enabler/21-skills.enabler/skills.md` and the
+   subagent-authoring standard require — one approval covers one user-scope
+   file, so a batch placement obtains a separately named approval per
+   destination file, never one blanket approval for the batch and never a tool
+   grant that suppresses the prompt. Checkout materialization runs only where
    the checkout carries the plugin's invoked skill content, and the verb reports
    the scope split otherwise. The default repair path for a missing agent role
    refreshes the selected agent home — running the plugin's placement verb where
