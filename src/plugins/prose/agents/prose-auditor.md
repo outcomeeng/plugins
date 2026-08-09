@@ -1,7 +1,7 @@
 ---
 name: prose-auditor
 description: >-
-  ALWAYS invoke when auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance. NEVER invoke for chat responses to the user, operational prose such as code comments or commit messages, or an artifact a repository or domain workflow governs — a spec, decision record, SKILL.md, or agent guide.
+  ALWAYS invoke when auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance. NEVER invoke for chat responses to the user, operational prose such as code comments or commit messages, or an artifact a repository or domain workflow governs — a spec, decision record, SKILL.md, coordination note, or agent guide.
 tools: Read, Glob, Grep, Skill
 model: "{{! term('configured_agent_craft_model') !}}"
 {!% if target == 'codex' %!}

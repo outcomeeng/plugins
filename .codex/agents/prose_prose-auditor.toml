@@ -1,5 +1,5 @@
 name = "prose_prose-auditor"
-description = "ALWAYS invoke when auditing human-facing text \u2014 documents, web pages, articles, docs, UI text, product messages, or internal team pages \u2014 for prose quality and style-kind conformance. NEVER invoke for chat responses to the user, operational prose such as code comments or commit messages, or an artifact a repository or domain workflow governs \u2014 a spec, decision record, SKILL.md, or agent guide."
+description = "ALWAYS invoke when auditing human-facing text \u2014 documents, web pages, articles, docs, UI text, product messages, or internal team pages \u2014 for prose quality and style-kind conformance. NEVER invoke for chat responses to the user, operational prose such as code comments or commit messages, or an artifact a repository or domain workflow governs \u2014 a spec, decision record, SKILL.md, coordination note, or agent guide."
 model = "gpt-5.5"
 sandbox_mode = "read-only"
 web_search = "disabled"

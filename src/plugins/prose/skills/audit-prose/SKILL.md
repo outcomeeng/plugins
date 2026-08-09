@@ -19,7 +19,7 @@ A structured verdict on human-facing text — `APPROVED`, or `REJECTED` with fin
 - NEVER modify the document under review — this audit produces a verdict only.
 - NEVER flag a pattern the resolved kind's overrides explicitly permit — the overrides are the catalog's decision, not an oversight.
 - NEVER excuse a base-catalog match as "single use" or "it works here" — every match outside an override is a finding.
-- NEVER guess an ambiguous kind — honor the kind the dispatch declares; when none is declared, report the ambiguity in the verdict and audit the plausible kinds' shared rules only.
+- NEVER guess an ambiguous kind — honor a dispatch-declared kind only for text the detection procedure leaves ambiguous; when none is declared, report the ambiguity in the verdict and audit the plausible kinds' shared rules only.
 
 </constraints>
 
@@ -27,7 +27,7 @@ A structured verdict on human-facing text — `APPROVED`, or `REJECTED` with fin
 
 1. Read the text under audit — whatever the dispatch names, pastes, or points to.
 
-2. Classify it through `/prose-standards` `<kind_detection>` — pre-loaded above. A kind the dispatch declares is the resolved kind for the text it names — a dispatch line such as `Kind: docs (user-selected) for guide.md` fixes that file's kind without re-running detection. A document whose parts differ in kind receives per-part classification; each finding names its part's kind.
+2. Classify it through `/prose-standards` `<kind_detection>` — pre-loaded above. The ownership test always runs first; a kind the dispatch declares resolves only text the procedure otherwise leaves ambiguous — a dispatch line such as `Kind: docs (user-selected) for guide.md` fixes that file's kind without asking the user, never bypassing ownership. A document whose parts differ in kind receives per-part classification; each finding names its part's kind.
 
 3. Invoke the resolved kind's composed audit skill via the Skill tool: `prose:audit-copy`, `prose:audit-interface`, `prose:audit-docs`, or `prose:audit-internal-docs`. That skill loads the kind's standards and sweeps its categories; collect its findings.
 

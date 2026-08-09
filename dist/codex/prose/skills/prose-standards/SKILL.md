@@ -38,7 +38,7 @@ Boundary consequences:
 - Documentation wins over unit: an error-message reference page is docs; the error message itself, in product, is interface.
 - Marketing splits the same way: long-form is copy; headlines, CTAs, and feature blurbs are interface.
 - A document whose parts differ in kind receives each part's own layer, and audit findings name the kind per finding.
-- Text the procedure leaves ambiguous is resolved by the interactive caller asking the user to select a kind from this list — never by guessing, never by inventing a style outside it. A dispatched audit honors the kind its dispatch declares; when the dispatch declares none, the ambiguity is reported in the verdict and the plausible kinds' shared rules are audited.
+- Text the procedure leaves ambiguous is resolved by the interactive caller asking the user to select a kind from this list — never by guessing, never by inventing a style outside it. A dispatched audit honors a dispatch-declared kind only for text this procedure leaves ambiguous — ownership outranks a declared kind; when the dispatch declares none, the ambiguity is reported in the verdict and the plausible kinds' shared rules are audited.
 
 </kind_detection>
 
