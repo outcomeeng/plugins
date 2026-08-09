@@ -27,7 +27,7 @@ A structured verdict on human-facing text — `APPROVED`, or `REJECTED` with fin
 
 1. Read the text under audit — whatever the dispatch names, pastes, or points to.
 
-2. Classify it through `/prose-standards` `<kind_detection>` — pre-loaded above. The ownership test always runs first; a kind the dispatch declares resolves only text the procedure otherwise leaves ambiguous — a dispatch line such as `Kind: docs (user-selected) for guide.md` fixes that file's kind without asking the user, never bypassing ownership. A document whose parts differ in kind receives per-part classification; each finding names its part's kind.
+2. Classify it through `/prose-standards` `<kind_detection>` — pre-loaded above. The ownership test always runs first; a kind the dispatch declares resolves only text the procedure otherwise leaves ambiguous — a dispatch line such as `Kind: docs (user-selected) for guide.md` fixes that file's kind without asking the user, never bypassing ownership. A document whose parts differ in kind receives per-part classification; each finding names its part's kind, a declared kind binds only the text or part its dispatch line names, and a dispatch may carry one such line per ambiguous part.
 
 3. Invoke the resolved kind's composed audit skill via the Skill tool: `prose:audit-copy`, `prose:audit-interface`, `prose:audit-docs`, or `prose:audit-internal-docs`. That skill loads the kind's standards and sweeps its categories; collect its findings.
 

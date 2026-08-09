@@ -31,7 +31,7 @@ Human-facing text drafted against its kind's standards and approved by a `prose-
 
 4. Write or edit the text applying the base catalog and the kind's layer together. Zero tolerance for the base anti-patterns; the kind's overrides are the only sanctioned relaxations.
 
-5. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming the resolved kind in the dispatch when detection needed the user's choice. Fix findings and re-audit until the verdict is `APPROVED`.
+5. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming each user-resolved kind in the dispatch — one declaration per ambiguous part, binding only the text it names. Fix findings and re-audit until the verdict is `APPROVED`.
 
 </workflow>
 
