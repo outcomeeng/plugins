@@ -23,6 +23,8 @@ from outcomeeng.distribution.installation import (
     Agent,
     CANONICAL_CODEX_SOURCE,
     CANONICAL_MARKETPLACE_SOURCE,
+    CATALOG_PLUGIN_NAME_FIELD,
+    CATALOG_PLUGINS_FIELD,
     CLAUDE_CATALOG_PATH,
     CLAUDE_CONFIG_ENV,
     CLAUDE_ENABLED_PLUGINS_FIELD,
@@ -1180,3 +1182,108 @@ __all__ = [
     "observe_repository_plan",
     "observe_verification_recipe",
 ]
+
+
+@dataclass
+class UnpublishedPluginRunner:
+    """Installation runner whose marketplace has not published a named plugin set.
+
+    Controlled under `/test` Stage 5 Failure simulation: a real marketplace
+    reports a plugin absent only while that plugin is genuinely unpublished, a
+    state that disappears the moment the plugin merges, so it cannot be produced
+    on demand against the canonical source.
+    """
+
+    unpublished: frozenset[str]
+    calls: list[InstallationCommand] = field(default_factory=list)
+
+    def __call__(self, command: InstallationCommand) -> CommandResult:
+        self.calls.append(command)
+        plugin_operation = command.operation in {
+            Operation.PLUGIN_INSTALL,
+            Operation.PLUGIN_ENABLE,
+        }
+        if plugin_operation and command.plugin in self.unpublished:
+            return CommandResult(
+                argv=command.argv,
+                exit_code=1,
+                stdout="",
+                stderr=(
+                    f"Error: plugin `{command.plugin}` was not found in "
+                    f"marketplace `{MARKETPLACE_NAME}`"
+                ),
+            )
+        stdout = (
+            codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+            if command.operation is Operation.MARKETPLACE_INSPECT
+            else ""
+        )
+        return CommandResult(argv=command.argv, exit_code=0, stdout=stdout, stderr="")
+
+
+@dataclass(frozen=True)
+class UnpublishedPluginObservation:
+    """What one installation run did when the marketplace lacked a plugin."""
+
+    report: InstallationReport | None
+    failure: InstallationFailure | None
+    calls: tuple[InstallationCommand, ...]
+
+
+def observe_unpublished_plugin(
+    *,
+    isolated: bool,
+    unpublished: frozenset[str],
+) -> UnpublishedPluginObservation:
+    """Run one installation whose marketplace lacks the named plugins."""
+    runner = UnpublishedPluginRunner(unpublished)
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(repository_root(), mirror)
+        if isolated:
+            plan = build_isolated_installation_plan(
+                mirror, temporary_root / "state", os.environ
+            )
+        else:
+            _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+            environment = _persistent_environment(temporary_root)
+            preflight = build_persistent_preflight(mirror, environment)
+            plan = build_persistent_installation_plan(
+                preflight,
+                codex_marketplace_listing_payload(CANONICAL_CODEX_SOURCE),
+            )
+        try:
+            report = execute_installation(plan, runner)
+        except InstallationFailure as failure:
+            return UnpublishedPluginObservation(
+                report=None, failure=failure, calls=tuple(runner.calls)
+            )
+    return UnpublishedPluginObservation(
+        report=report, failure=None, calls=tuple(runner.calls)
+    )
+
+
+def canonical_catalog_plugin_names() -> frozenset[str]:
+    """Plugins the canonical marketplace publishes, read from the base ref.
+
+    An independent oracle: the published branch's own committed catalogs, read
+    through git rather than through the installation run whose classification is
+    under test. A missing base ref raises rather than reporting an empty set,
+    because an empty oracle would make every pending claim vacuously true.
+    """
+    names: set[str] = set()
+    for path in (CLAUDE_CATALOG_PATH, CODEX_CATALOG_PATH):
+        result = subprocess.run(
+            ("git", "show", f"origin/main:{path}"),
+            cwd=repository_root(),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        document = json.loads(result.stdout)
+        names.update(
+            entry[CATALOG_PLUGIN_NAME_FIELD]
+            for entry in document[CATALOG_PLUGINS_FIELD]
+        )
+    return frozenset(names)

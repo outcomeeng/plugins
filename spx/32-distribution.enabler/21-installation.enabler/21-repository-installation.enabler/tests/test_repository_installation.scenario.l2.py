@@ -8,7 +8,10 @@ from outcomeeng.distribution.installation import (
     CATALOG_PLUGINS_FIELD,
     SourceAction,
 )
-from outcomeeng_testing.harnesses.installation import observe_real_installation
+from outcomeeng_testing.harnesses.installation import (
+    canonical_catalog_plugin_names,
+    observe_real_installation,
+)
 
 
 def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
@@ -33,8 +36,10 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     )
     pending = frozenset(persistent_report["pending_publication"])
 
+    published = canonical_catalog_plugin_names()
+
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
-    assert pending <= claude_plugins | codex_plugins
+    assert pending == (claude_plugins | codex_plugins) - published
     assert observation.persistent_claude_plugins.installed == claude_plugins - pending
     assert (
         observation.persistent_claude_plugins.enabled

@@ -13,6 +13,7 @@ from outcomeeng.distribution.installation import (
     VERIFICATION_RECIPE_COMMAND,
 )
 from outcomeeng_testing.harnesses.installation import (
+    observe_unpublished_plugin,
     NONCANONICAL_MARKETPLACE_SOURCE,
     observe_claude_user_collision,
     observe_inspection_failure,
@@ -122,3 +123,31 @@ def test_claude_user_scope_collision_stops_before_mutation() -> None:
     assert str(observation.settings_path) in observation.error
     assert USER_SCOPE_COLLISION_DIAGNOSTIC in observation.error
     assert observation.attempted == ()
+
+
+def test_persistent_installation_reports_an_unpublished_plugin_and_completes() -> None:
+    observation = observe_unpublished_plugin(
+        isolated=False, unpublished=frozenset({"contribute"})
+    )
+
+    assert observation.failure is None
+    assert observation.report is not None
+    assert observation.report.pending_publication == ("contribute",)
+    installed = {
+        call.plugin
+        for call in observation.calls
+        if call.operation is Operation.PLUGIN_INSTALL
+    }
+    assert "contribute" in installed
+    assert len(installed) > 1
+
+
+def test_isolated_installation_treats_an_absent_plugin_as_terminal() -> None:
+    observation = observe_unpublished_plugin(
+        isolated=True, unpublished=frozenset({"contribute"})
+    )
+
+    assert observation.report is None
+    assert observation.failure is not None
+    assert observation.failure.command.plugin == "contribute"
+    assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
