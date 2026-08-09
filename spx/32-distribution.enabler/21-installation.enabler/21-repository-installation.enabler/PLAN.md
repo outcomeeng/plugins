@@ -13,8 +13,16 @@ Pending implementation, in dependency order:
    Codex agent definitions into `$CODEX_HOME/agents/` during persistent installation,
    within the namespace each plugin owns, pruning that namespace's stale definitions.
    The retired manifest-tracked install model (removed by commit
-   `63fea7b7bc65d1c4b520bb09e0fe98ab5d06ccba`) is not restored; placement reuses the
-   namespace-prefix model the lifecycle placement already uses.
+   `63fea7b7bc65d1c4b520bb09e0fe98ab5d06ccba`) is not restored. The home is a shared
+   directory, so the checkout's bare `<plugin>_` prefix is not ownership proof there:
+   home placement must establish an ownership boundary that cannot claim a foreign
+   agent whose filename happens to share a plugin prefix — a marketplace-scoped
+   ownership record or content marker checked before any prune or overwrite, with a
+   colliding foreign file reported and left untouched. Reconciliation covers the
+   marketplace's whole ownership set, not only current catalog plugins: definitions
+   the marketplace placed for a plugin since removed or renamed in
+   `.agents/plugins/marketplace.json` are pruned by the same ownership record, so a
+   catalog removal does not strand stale home definitions.
 2. Home-placement declaration and L2 evidence — the implementation changeset adds
    the home-placement scenario to
    `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md`
