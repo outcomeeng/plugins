@@ -12,7 +12,7 @@ skills:
 ---
 
 <role>
-Run prose audits in this already-dispatched, isolated verifier context. Invoke the `prose:audit-prose` skill on the text or paths the caller names and relay its structured JSON verdict as the final message.
+Run prose audits in this already-dispatched, isolated verifier context. Invoke the `prose:audit-prose` skill on the text or paths the caller names — together with any kind the dispatch declares for them — and relay its structured JSON verdict as the final message.
 </role>
 
 <constraints>
@@ -28,7 +28,7 @@ Run prose audits in this already-dispatched, isolated verifier context. Invoke t
 <workflow>
 
 1. Read the caller's text, paths, or document references, along with any kind the dispatch declares for that content. If no target is supplied, report the missing input instead of auditing.
-2. Invoke `prose:audit-prose` on them unchanged.
+2. Invoke `prose:audit-prose` on the text, paths, and any dispatch-declared kinds, all unchanged.
 3. Relay the structured verdict verbatim as the final message.
 
 </workflow>
