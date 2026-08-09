@@ -10,7 +10,7 @@ Known follow-ups for the merging node. Coordination note; not spec truth.
 
 **Why separate**: splitting a shared reference every merge transport loads means re-verifying each composing skill's read path, and the section boundaries need checking against actual cross-references rather than the tag list — work independent of any changeset that edits the file's content.
 
-**Revisit condition**: when a changeset next restructures `merging-standards` rather than editing one of its sections. Surfaced by `skill-auditor` on the release-overlay changeset (run `ad22d28cee5edca3c`, f-006, worth-improving).
+**Revisit condition**: when a changeset next restructures `merging-standards` rather than editing one of its sections. Surfaced by `skill-auditor` on the release-overlay changeset as finding `f-006`, rule `progressive_disclosure_token_cost`, severity `WARNING` in the `worth-improving` row. That role returns a JSON verdict and no journal run token, so the finding identifier and rule are its whole citable identity.
 
 ## The overlay's base-checkout fast-forward has no deterministic coverage
 
