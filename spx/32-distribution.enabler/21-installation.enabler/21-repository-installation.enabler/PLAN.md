@@ -127,7 +127,12 @@ Pending implementation, in dependency order:
    destination file, never one blanket approval for the batch and never a tool
    grant that suppresses the prompt. The same granularity binds the
    marketplace-scope reconciliation's deletions: each stale home file it would
-   prune is named and separately approved before removal. Checkout materialization runs only where
+   prune is named and separately approved before removal. The maintainers'
+   bulk flow authorizes differently, because a nested installer process can
+   surface no per-file harness prompt: `just install-marketplace` builds an
+   inspectable plan enumerating every home destination it will write or prune
+   before the first mutation, and the operator's explicit invocation of the
+   release command authorizes that enumerated set as one reviewed operation. Checkout materialization runs only where
    the checkout carries the plugin's invoked skill content, and the verb reports
    the scope split otherwise. The default repair path for a missing agent role
    refreshes the selected agent home — running the plugin's placement verb where
