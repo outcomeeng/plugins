@@ -2,6 +2,16 @@
 
 Known follow-ups for the merging node. Coordination note; not spec truth.
 
+## The overlay's base-checkout fast-forward has no deterministic coverage
+
+`spx/local/merging.md` declares a release-phase fast-forward of the designated main checkout with four outcomes — advanced, `held-by-live-session`, `uncommitted-work`, `not-fast-forwardable` — and no `[test]` or `[eval]` exercises any of them. The behavior reaches the spec tree through the product-local overlay assertion in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, which is `[audit]`-backed like every other clause of that assertion, so the gap is consistent with its neighbours rather than an unbacked claim.
+
+Deterministic coverage needs a harness that materializes a bare-repository pool with a designated main checkout and drives each outcome — a live claim, a dirty tree, a diverged local `main` — which no existing merging harness models.
+
+**Resolution shape**: fold these outcomes into the eval-coverage sweep the prompt-only-simulation entry below already schedules, since both need the same worktree-state modelling the current merge eval harnesses lack.
+
+**Revisit condition**: when `evals/local-completion-boundary` and `evals/transport-selection` are converted to producer-coupled evals.
+
 ## Transport classifier extraction awaits a published SPX CLI capability
 
 `src/plugins/spec-tree/skills/merge/scripts/classify_changeset.py` runs to 161 lines — the coordination-note-only classification over the full changed-file set, committed branch scope plus uncommitted working-tree changes, with counts computed over the whole set so a large changeset is never misclassified from a truncated sample. Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; the classifier has proven its value in use, so extraction is what it owes.

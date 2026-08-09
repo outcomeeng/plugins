@@ -30,7 +30,7 @@ After detach-based feature-worktree cleanup, run `spx diagnose --format json` ag
 
 ## Merge command
 
-Use a merge commit (the product's `main` history style), not the default rebase:
+Use a merge commit, matching this product's `main` history style and the universal default:
 
 ```bash
 gh pr merge <pr-number> --merge --delete-branch=false
@@ -77,7 +77,27 @@ A prior local review is reusable across a clean rebase only when the branch patc
 
 ## Release installation
 
-After the merge and cleaning up the assigned worktree, switch it to `origin/main` (detached; never check out `main` anywhere other than the main checkout). Then refresh the selected persistent Claude Code project and Codex home from that checkout:
+The release action has two parts, both run after the merge and the assigned-worktree cleanup, in this order.
+
+### Advance the designated main checkout
+
+The merge moved `origin/main` while `readings.mainCheckoutPath` stayed at the pre-merge commit, so every worktree and later context load resolving against the local `main` reads a stale commit until that one checkout moves. The canonical-checkout preflight above already resolved and health-checked it; occupancy is a separate reading, because a clean working tree never proves a checkout is free.
+
+```bash
+spx worktree status --format json <main-checkout-path>
+git -C <main-checkout-path> status --porcelain
+git -C <main-checkout-path> merge --ff-only origin/main
+```
+
+Advance only when `status` is `free` and `status --porcelain` prints nothing. A `running` status skips with `reason=held-by-live-session` naming the reported session; any porcelain output skips with `reason=uncommitted-work`, because a fast-forward would carry those changes onto a different commit. `--ff-only` advances the branch pointer only when the local branch is already an ancestor of the merged tip, so a checkout carrying its own unmerged commits fails the command and is reported with `reason=not-fast-forwardable`. Every skip leaves that checkout exactly as found and is a reported condition, never a reason to force, reset, stash, or check `main` out anywhere else.
+
+The fast-forward writes outside the assigned worktree, so it surfaces its own approval prompt in a harness that enforces the working-directory boundary, and that prompt names the exact checkout being advanced. Never add a tool grant to suppress it.
+
+Record the checkout's full path and its new full HEAD SHA, or the named skip reason, among the release facts the closeout carries.
+
+### Refresh persistent plugin installation
+
+Switch the assigned worktree to `origin/main` (detached; never check out `main` anywhere other than the main checkout), then refresh the selected persistent Claude Code project and Codex home from that checkout:
 
 ```bash
 just install-marketplace
