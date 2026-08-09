@@ -450,7 +450,7 @@ For the contents of any plugin or `spx/` subdirectory, run `ls` or read the cata
 
 **Claude Code** uses the project-scoped GitHub marketplace `outcomeeng/plugins`. `just install-marketplace` validates that user scope carries no colliding `outcomeeng` registration, reconciles the project registration to that canonical source, refreshes it, and installs and enables every plugin from `.claude-plugin/marketplace.json`.
 
-**Codex** marketplace registration and plugin installation belong to the selected `$CODEX_HOME`. Explicit `codex plugin marketplace add` and `codex plugin add` commands update that selected home. Repository `.codex/config.toml` has no plugin installation or enablement semantics. Plugin lifecycle skills place and prune plugin-owned agent definitions in the invocation checkout's `.codex/agents/` namespace.
+**Codex** marketplace registration and plugin installation belong to the selected `$CODEX_HOME`. Explicit `codex plugin marketplace add` and `codex plugin add` commands update that selected home. Repository `.codex/config.toml` has no plugin installation or enablement semantics. Plugin lifecycle skills place and prune plugin-owned agent definitions within each plugin's owned namespace; `spx/12-marketplace-state.adr.md` co-locates a plugin's agents with the skill content they invoke, so home-installed skills' agents belong in the selected agent home — delivery there ships with the pending home-delivery slice — and checkout materialization is valid only where the checkout carries the invoked skill content. Installation runs still execute checkout materialization pending the home-delivery slice, and `place-agents-check` still gates this repository on the committed copies staying byte-identical to shipped output — after editing agent sources, run `just place-agents` and commit the regenerated copies to satisfy that gate. The delivery slice retires the gate and removes the committed copies together; treat the directory as pending removal, never as durable configuration to grow.
 
 Each harness retains plugin content already loaded by a running session. Reload the harness plugin index or start a new session after persistent installation when the current session must consume refreshed content.
 
@@ -459,14 +459,14 @@ Each harness retains plugin content already loaded by a running session. Reload 
 Work in the checkout whose authored plugin files you are changing:
 
 1. Edit `src/plugins/<plugin>/` and run `just build-skills` so the change lands in `dist/claude/<plugin>/`.
-2. Run `just verify-marketplace-installation` to install both committed catalogs through the real agent CLIs in disposable homes and exercise Codex lifecycle placement against the invocation checkout.
+2. Run `just verify-marketplace-installation` to install both committed catalogs through the real agent CLIs in disposable homes and exercise Codex checkout materialization against the invocation checkout.
 3. After a merged release, run `just install-marketplace` from the assigned checkout at `origin/main` to refresh the selected persistent Claude Code project and Codex home.
 
 `just verify-marketplace-installation` is the pre-merge proof and mutates only disposable state. `just install-marketplace` is the release action and mutates the selected persistent state. A persistent run stops before its first state-changing command when Claude Code user scope contains an `outcomeeng` registration, reporting the exact colliding settings path.
 
 ## Missing plugins or skills
 
-With explicit operator authorization to change persistent plugin state, run `just install-marketplace` from the intended checkout. The command derives the complete Claude Code and Codex plugin sets from the two committed marketplace catalogs, reconciles the canonical GitHub source, installs and enables every catalog plugin, and runs Codex lifecycle placement against that checkout.
+With explicit operator authorization to change persistent plugin state, run `just install-marketplace` from the intended checkout. The command derives the complete Claude Code and Codex plugin sets from the two committed marketplace catalogs, reconciles the canonical GitHub source, installs and enables every catalog plugin, and runs Codex checkout materialization against that checkout.
 
 Claude Code state is project-scoped. A user-scoped `outcomeeng` registration blocks the command and must be resolved by the owner of that settings file. Codex state belongs to the selected `$CODEX_HOME`; repository `.codex/config.toml` remains unrelated to plugin setup. Use `just verify-marketplace-installation` when the goal is disposable proof rather than a persistent state change.
 

@@ -135,13 +135,18 @@ codex plugin marketplace upgrade outcomeeng
 Repository maintainers can verify both catalogs with
 `just verify-marketplace-installation`. The command installs every catalog plugin
 through the real Claude Code and Codex CLIs in disposable homes, then runs Codex
-agent placement against the invocation checkout. It leaves persistent plugin state
-unchanged.
+checkout materialization against the invocation checkout. It leaves persistent
+plugin state unchanged.
 
 After merged distribution changes, `just install-marketplace` refreshes the
 project-scoped Claude Code marketplace and the selected `$CODEX_HOME` from the
 canonical GitHub source, installs every plugin from both committed catalogs, and
-runs Codex lifecycle placement against the invocation checkout.
+runs Codex checkout materialization against the invocation checkout. The
+`place-agents-check` gate still requires the committed `.codex/agents/` copies
+to stay byte-identical to shipped output — run `just place-agents` after
+editing agent sources — while `spx/12-marketplace-state.adr.md` marks the
+directory as pending removal once home delivery ships; churn from a release
+run itself signals nothing to commit, per `spx/local/merging.md`.
 
 ### Bumping plugin versions on a branch
 
