@@ -14,7 +14,7 @@ A contribution needs a head repository the operator can push to. When no fork of
 
 ### Mappings
 
-- The observed fork state, resolved parent, and `viewerPermission` value map to exactly one classification — a controlled base, a parent contribution, or a blocked target ([test](tests/test_target_resolution.mapping.l1.py))
+- The observed fork state, resolved parent, and `viewerPermission` value map to exactly one classification — a controlled base, a parent contribution, an absent-fork target, or a blocked target ([test](tests/test_target_resolution.mapping.l1.py))
 
 ### Compliance
 

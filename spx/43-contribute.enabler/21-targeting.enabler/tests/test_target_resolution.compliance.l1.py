@@ -1,5 +1,6 @@
 from outcomeeng_testing.harnesses.contribution_targeting import (
     CHECKOUT_VIEW,
+    FORK,
     PARENT,
     Responses,
     checkout_response,
@@ -55,9 +56,17 @@ def test_an_unavailable_gh_blocks_before_reading_permission() -> None:
 
 
 def test_a_fork_reported_without_a_parent_blocks() -> None:
-    responses: Responses = {CHECKOUT_VIEW: orphan_fork_response()}
+    # The permission read on the fork itself succeeds with ADMIN, which is what a
+    # real gh reports for the operator's own fork. Without that response the test
+    # would pass on the runner's unconfigured-command failure rather than on the
+    # resolver detecting the orphaned fork.
+    responses: Responses = {
+        CHECKOUT_VIEW: orphan_fork_response(),
+        permission_key(FORK): permission_response("ADMIN"),
+    }
 
     resolution, _ = resolve_with(responses)
 
     assert resolution.classification == "blocked"
     assert resolution.permission is None
+    assert resolution.base is None

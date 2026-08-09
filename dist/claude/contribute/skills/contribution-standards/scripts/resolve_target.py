@@ -133,11 +133,21 @@ def resolve(runner: CommandRunner) -> Resolution:
         )
 
     parent = checkout.get("parent")
-    is_fork = bool(checkout.get("isFork")) and isinstance(parent, dict)
-    base = parent.get("nameWithOwner") if is_fork and isinstance(parent, dict) else head
-    if not isinstance(base, str) or not base:
+    is_fork = bool(checkout.get("isFork"))
+    parent_name = parent.get("nameWithOwner") if isinstance(parent, dict) else None
+    if is_fork and (not isinstance(parent_name, str) or not parent_name):
+        # A fork whose parent gh does not report must never fall back to itself:
+        # the operator usually controls their own fork, so treating it as the base
+        # would classify a contribution as `controlled` and send it nowhere.
         return Resolution(
             "blocked", head=head, detail="gh reported a fork with no parent repository"
+        )
+    base = parent_name if is_fork else head
+    if not isinstance(base, str) or not base:
+        return Resolution(
+            "blocked",
+            head=head,
+            detail="gh reported no base repository for this checkout",
         )
 
     permissions, detail = _json_field(
