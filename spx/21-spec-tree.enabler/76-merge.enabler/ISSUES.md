@@ -2,6 +2,16 @@
 
 Known follow-ups for the merging node. Coordination note; not spec truth.
 
+## `merge-policy.md` loads 510 lines for any one of its 24 sections
+
+`src/plugins/spec-tree/skills/merging-standards/references/merge-policy.md` spans 24 tagged sections, and `merging-standards`'s `<reference_index>` instructs reading it whole before any detailed merge-lifecycle operation. A composing step that needs only `<branch_hygiene>` or `<review_classification>` pays the full payload. The file carries the `<contents>` index its length requires, so this violates no standard today.
+
+`<review_classification>` is the strongest split candidate: `manage-pr` Step 3 already reaches it independently, and its taxonomy cross-references little else. A split file would hang directly off `SKILL.md`'s index, as `merge-cleanup.md` and `action-tokens.md` already do, so the no-reference-dispatches-a-reference rule holds.
+
+**Why separate**: splitting a shared reference every merge transport loads means re-verifying each composing skill's read path, and the section boundaries need checking against actual cross-references rather than the tag list — work independent of any changeset that edits the file's content.
+
+**Revisit condition**: when a changeset next restructures `merging-standards` rather than editing one of its sections. Surfaced by `skill-auditor` on the release-overlay changeset (run `ad22d28cee5edca3c`, f-006, worth-improving).
+
 ## The overlay's base-checkout fast-forward has no deterministic coverage
 
 `spx/local/merging.md` declares a release-phase fast-forward of the designated main checkout with four outcomes — advanced, `held-by-live-session`, `uncommitted-work`, `not-fast-forwardable` — and no `[test]` or `[eval]` exercises any of them. The behavior reaches the spec tree through the product-local overlay assertion in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, which is `[audit]`-backed like every other clause of that assertion, so the gap is consistent with its neighbours rather than an unbacked claim.
