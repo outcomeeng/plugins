@@ -73,7 +73,14 @@ Pending implementation, in dependency order:
    including definitions placed under the retired required-placement router
    guidance — are reported as the fault with their directed repair, removal of
    the committed copies, never silently refreshed, pruned, or left shadowing
-   the home copy. This repository's own 14 committed `.codex/agents/*.toml`
+   the home copy. Legacy checkout copies predate any ownership marker, so the
+   preflight classifies them by content, never by filename prefix alone: a
+   file byte-identical to a definition the plugin ships is plugin-placed and
+   receives the removal repair, while a file matching no shipped content —
+   edited, renamed, or developer-authored — is reported as an ambiguous
+   collision for operator review with the shadowing consequence named, never
+   prescribed for removal; in both cases the run stops rather than refreshing
+   around the split. This repository's own 14 committed `.codex/agents/*.toml`
    files are the first detected instance: their removal lands inside this
    slice, after home delivery is in place, because removing them earlier would
    leave Codex sessions without those roles while nothing yet populates
