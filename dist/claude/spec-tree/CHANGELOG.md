@@ -12,31 +12,11 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **Branch cleanup no longer advances the checkout that holds the base branch.** 0.88.4 added a step that fast-forwarded that checkout after every merge, on every transport. It was the wrong home: the base checkout predates the changeset and outlives it, while cleanup removes only what the lifecycle created, and reaching it meant writing outside the assigned worktree — which the merge lifecycle otherwise never does. Advancing a base checkout is environment maintenance, so a repository that wants it declares it as its own release action in `spx/local/merging.md`, where `RELEASE_READINESS` already governs consumer-visible refresh. A repository that declared no release action loses nothing; one that wants the behavior gains a declaration it controls. The branch-state closeout record drops its base-checkout-refresh field with the step.
 
-## 0.88.6
-
-### Changed
-
-- **The router's file-reading rule states the designated context per file class.** The previous wording — read named files yourself, never use subagents to read files named by the user or referenced by skills — read as forbidding a configured auditor from inspecting the very files its role task names, and a consumer reviewer rejected an auditor's path-reading on that literal reading. The rule now separates the classes it always meant: a file the user names is read in the main conversation, a file this conversation authored is verified by a configured verifier or reviewer in an independent context, and subagents may locate files while the main conversation reads what it needs in full.
-
-## 0.88.5
-
-### Changed
-
-- **The router names two authorities its own lifecycle already exercises.** `### Autonomy Boundary` now places the `/merge` direct-push transport's publication of a coordination-note-only changeset — under a held `MERGE_READINESS` with a converged local review — inside its governing flow. The configured-verifier role contracts now name a craft plugin's `{plugin}-auditor` as an installed pre-authorized role, closing the gap between the never-dispatch-unnamed-roles rule and the plugin lifecycle instruction that materializes those agents.
-
 ## 0.88.4
 
 ### Changed
 
 - **The default merge strategy is a merge commit.** `gh pr merge` defaults to `--merge` rather than `--rebase`; `--rebase` and `--squash` remain available through the overlay's merge-flag declaration. A merge commit keeps every branch commit reachable, so the merged tip is a true ancestor of the base and `git branch -d` alone proves the branch deletable. The rewriting strategies reach that proof only through the patch-equivalence fallback, which a multi-commit squash fails outright. A repository that declares its own merge flag sees no change.
-
-## 0.88.3
-
-### Added
-
-- **`/open-pr` resolves the pull request's target repository before pushing.** `gh pr create` names no repository and resolves a fork's base to its **parent**, so a flow that never checks can push a branch to one repository and open the pull request against another organization's. The new repository-target gate resolves the PR target, the push target, and the operator's access class before the push, and stops when they disagree or when access is `READ`, `NONE`, or empty.
-
-- **`/issue` confirms the target repository before writing into it.** Filing a follow-up into a dependency's queue writes to a repository resolved from a marketplace registration rather than named by the operator. Resolving a path is not authorization to write to it, so the skill now presents the absolute target root, its origin identity, the resolved ref and goal, and stops for approval. A target named directly as a checkout path skips the confirmation.
 
 ## 0.88.2
 
