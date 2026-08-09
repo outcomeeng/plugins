@@ -2,7 +2,7 @@
 name: author-internal-docs
 user-invocable: false
 description: >-
-  Internal-doc authoring guidance — Notion pages, runbooks, scorecards, policies, onboarding guides, and workspace decision records — composed by author-prose for the internal-docs kind. Reached only through author-prose, never matched directly.
+  Internal-doc authoring guidance — Notion pages, runbooks, scorecards, policies, onboarding guides, and team decision records — composed by author-prose for the internal-docs kind. Reached only through author-prose, never matched directly.
 allowed-tools: Read, Edit, Write, Glob, Grep, Skill
 ---
 
@@ -24,7 +24,7 @@ The `/internal-docs-standards` catalog encodes the calibration: inherited rules 
 
 <workflow>
 
-1. Identify the document type — process documentation, workspace-native decision record, workspace-native design spec, reference page, competency model, scorecard, onboarding guide, status page. Each type has its own conventions in `<doc_type_conventions>`.
+1. Identify the document type — process documentation, ungoverned team decision record, ungoverned design spec, reference page, competency model, scorecard, onboarding guide, status page. Each type has its own conventions in `<doc_type_conventions>`.
 
 2. Identify canonical homes. For each concept the document will reference, locate its canonical home in the workspace. Plan inline hyperlinks to those homes; don't restate canonical content.
 

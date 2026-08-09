@@ -15,7 +15,7 @@ This is a reference skill. Composing internal-doc skills load these standards ex
 </reference_note>
 
 <scope>
-USE this catalog for internal team docs that live in the workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content. Decision records and design specs belong here only as workspace-native documents that no repository or domain workflow already governs.
+USE this catalog for internal team docs wherever the team keeps them — a workspace tool or a repository: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content. Decision records and design specs belong here only as team documents that no repository or domain workflow already governs.
 
 DO NOT use this catalog for repository-governed engineering artifacts. `AGENTS.md`, spec-tree specs, ADRs, PDRs, `PLAN.md`, `ISSUES.md`, and `SKILL.md` carry dedicated domain workflows that own their structure, voice, and required sections. Follow the governing repository skill and apply its conventions. This catalog states no authoring rules for those artifacts and never substitutes for that workflow.
 

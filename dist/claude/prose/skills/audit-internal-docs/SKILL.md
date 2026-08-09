@@ -2,7 +2,7 @@
 name: audit-internal-docs
 user-invocable: false
 description: >-
-  Internal-doc audit methodology — judges workspace documents against the base anti-pattern catalog, the internal-doc overrides, and the internal-doc formatting and structure rules, producing findings that carry pattern, category, quote, and rewrite.
+  Internal-doc audit methodology — judges team documents, wherever the team keeps them, against the base anti-pattern catalog, the internal-doc overrides, and the internal-doc formatting and structure rules, producing findings that carry pattern, category, quote, and rewrite.
 model: "opus"
 allowed-tools: Read, Glob, Grep, Skill
 ---
