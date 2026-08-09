@@ -4,6 +4,7 @@ import pytest
 
 from outcomeeng.distribution.installation import (
     CANONICAL_MARKETPLACE_SOURCE,
+    PLUGIN_OPERATIONS,
     UNPUBLISHED_PLUGIN_FRAGMENT,
     Operation,
 )
@@ -17,7 +18,6 @@ from outcomeeng_testing.harnesses.installation import (
 )
 
 CARVE_OUT_SOURCES = (CANONICAL_MARKETPLACE_SOURCE, NONCANONICAL_MARKETPLACE_SOURCE)
-PLUGIN_OPERATIONS = frozenset({Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE})
 
 
 def _carve_out_domain() -> tuple[tuple[bool, str, Operation], ...]:

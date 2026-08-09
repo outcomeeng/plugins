@@ -104,6 +104,12 @@ class Operation(StrEnum):
     PLUGIN_LIST = "plugin-list"
 
 
+PLUGIN_OPERATIONS: frozenset[Operation] = frozenset(
+    {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+)
+"""Operations that name one plugin, as opposed to a marketplace or the checkout."""
+
+
 class SourceAction(StrEnum):
     """Reconciliation required for one configured marketplace source."""
 
@@ -710,7 +716,7 @@ def _is_pending_publication(
     """
     return (
         plan.mode is InstallationMode.PERSISTENT
-        and command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        and command.operation in PLUGIN_OPERATIONS
         and command.plugin is not None
         and UNPUBLISHED_PLUGIN_FRAGMENT in result.stderr.lower()
     )
@@ -1147,6 +1153,7 @@ __all__ = [
     "AgentAdapter",
     "CANONICAL_CODEX_SOURCE",
     "CANONICAL_MARKETPLACE_SOURCE",
+    "PLUGIN_OPERATIONS",
     "UNPUBLISHED_PLUGIN_FRAGMENT",
     "CATALOG_PLUGIN_NAME_FIELD",
     "CATALOG_PLUGINS_FIELD",

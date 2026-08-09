@@ -50,6 +50,7 @@ from outcomeeng.distribution.installation import (
     MARKETPLACE_NAME,
     Operation,
     PersistentPreflight,
+    PLUGIN_OPERATIONS,
     PYTHON_EXECUTABLE,
     SourceAction,
     STATE_ENV_NAMES,
@@ -1212,10 +1213,7 @@ class UnpublishedPluginRunner:
 
     def __call__(self, command: InstallationCommand) -> CommandResult:
         self.calls.append(command)
-        plugin_operation = command.operation in {
-            Operation.PLUGIN_INSTALL,
-            Operation.PLUGIN_ENABLE,
-        }
+        plugin_operation = command.operation in PLUGIN_OPERATIONS
         if plugin_operation and command.plugin in self.unpublished:
             return CommandResult(
                 argv=command.argv,
