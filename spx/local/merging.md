@@ -4,7 +4,9 @@ Loaded by `/merging-standards` `<repo_local_overlay>` and `/merge`. The product-
 
 ## Deployment and release recognition
 
-No deployment action is declared. Every change proceeds without deployment authorization. Release is declared as persistent marketplace installation from the merged assigned checkout, governed by `RELEASE_READINESS`. Never ask the operator whether to merge.
+No deployment action is declared. Every change proceeds without deployment authorization. Never ask the operator whether to merge.
+
+Release is declared in two parts, governed by `RELEASE_READINESS` and detailed under `## Release installation`: fast-forwarding the designated main checkout to the merged tip, then persistent marketplace installation from the merged assigned checkout. The first part mutates a checkout outside the assigned worktree and surfaces its own approval prompt.
 
 ## Canonical checkout safety
 

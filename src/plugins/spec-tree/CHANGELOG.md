@@ -8,7 +8,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 A version missing below shipped without an entry. Read the gap as an absent entry, never as an absent release.
 
-An entry is written by the changeset that ships the change, or later by the author of that change. Nobody else writes one: reconstructing what another release's consumers needed to know from its commits and diffs produces a plausible guess, and a guess in this file is indistinguishable from a record. A gap therefore persists until whoever made the change fills it.
+An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
 ## 0.88.7
 
@@ -17,6 +17,8 @@ An entry is written by the changeset that ships the change, or later by the auth
 - **Branch cleanup no longer advances the checkout that holds the base branch.** 0.88.4 added a step that fast-forwarded that checkout after every merge, on every transport. It was the wrong home: the base checkout predates the changeset and outlives it, while cleanup removes only what the lifecycle created, and reaching it meant writing outside the assigned worktree — which the merge lifecycle otherwise never does. Advancing a base checkout is environment maintenance, so a repository that wants it declares it as its own release action in `spx/local/merging.md`, where `RELEASE_READINESS` already governs consumer-visible refresh. A repository that declared no release action loses nothing; one that wants the behavior gains a declaration it controls. The branch-state closeout record drops its base-checkout-refresh field with the step.
 
 ## 0.88.4
+
+Recorded by 0.88.7, which reverses this release's base-checkout refresh. Shipped in commit `dbd7b429cdc3744f7288553d1be8a4e91b76ab40`.
 
 ### Changed
 
