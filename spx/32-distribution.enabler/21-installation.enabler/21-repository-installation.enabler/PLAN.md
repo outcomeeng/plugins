@@ -35,10 +35,14 @@ Pending implementation, in dependency order:
    — over the whole ownership set. The reconciler identifies stale definitions
    against the marketplace's current plugin set, resolved without repository
    catalog access or an installed-plugin heuristic: the build embeds a catalog
-   snapshot in each plugin's shipped runtime tree, and because the snapshot is
-   a build product of the committed catalog, a catalog-membership change
-   regenerates every plugin's embedded snapshot — the release that ships a
-   removal or rename ships current snapshots to every surviving plugin — and
+   snapshot in each plugin's shipped runtime tree, stamped with a monotonic
+   catalog revision — the committed catalog's commit timestamp at build time —
+   so snapshots from different releases order totally: the reconciler selects
+   the highest stamp across the home's installed plugins, and equal stamps are
+   the same catalog state. Because the snapshot is a build product of the
+   committed catalog, a catalog-membership change regenerates every plugin's
+   embedded snapshot — the release that ships a removal or rename ships
+   current snapshots to every surviving plugin — and
    the reconciler reads the newest snapshot across the home's installed
    plugins. A home whose installed marketplace plugins were all since removed
    from the catalog has no snapshot observing current membership; those
