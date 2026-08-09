@@ -15,7 +15,7 @@ One pull request open against a repository the operator does not control, carryi
 
 **Step 1 — Load the standards and read the invocation input.** Invoke `/contribution-standards` through the runtime's skill-composition surface. Its `<invariants>` govern every step below; this workflow adds ordering and the pull-request specifics.
 
-`$ARGUMENTS`, when non-empty, is the one-sentence description of the change used in Step 3's authorization and in the Step 8 body. When it is empty, derive that sentence from the branch name and its own commit subjects (`git log --format=%s origin/HEAD..HEAD`), which needs nothing a later step resolves.
+`$ARGUMENTS`, when non-empty, is the one-sentence description of the change used in Step 3's authorization and in the Step 8 body. When it is empty, derive that sentence from the checkout's current branch at invocation — the branch the change was written on, distinct from the `<branch>` Step 4 cuts — and its own commit subjects (`git log --format=%s origin/HEAD..HEAD`), which needs nothing a later step resolves.
 
 **Step 2 — GATE: Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>` and act on its `classification`. Report `base`, `head`, and `permission` verbatim. `controlled`, `fork-absent`, and `blocked` each stop here — `controlled` belongs to a controlled-repository pull-request flow, and the other two stop per the standards. Only `parent-contribution` continues.
 
@@ -29,7 +29,9 @@ The authorization covers this pull request and its later revisions. It does not 
 gh repo view "<base>" --json defaultBranchRef --jq '.defaultBranchRef.name'
 ```
 
-Read that name, then fetch and branch in a second block:
+Derive `<branch>` from the one-sentence description Step 1 resolved: lowercase it, drop every word that names neither the action nor its subject, join what remains with hyphens, and stop at five words. "Fix the flaky retry timeout in the webhook handler" keeps six words and stops at five, giving `fix-flaky-retry-timeout-webhook`. The branch names the change and nothing else — never the operator, the fork, or Claude. Resolve it here, because Steps 8 and 9 read it back from the checkout and a branch that does not exist yet answers nothing.
+
+Read the default-branch name, then fetch and branch in a second block:
 
 ```bash
 git fetch "https://github.com/<base>.git" "<base-default-branch>"
@@ -46,7 +48,9 @@ Capture verbose output in a directory from `mktemp -d`, inspect the exit status 
 
 **Step 7 — GATE: Review the outward text.** Draft the title and body per `<title_and_body>`, then review them per `/contribution-standards` `<invariants>` "Outward-facing text is permanent". Where the prose plugin is installed, dispatch its `prose-auditor` agent through the runtime's agent-dispatch surface and apply its findings. Where it is not, review against `/contribution-standards` `<outward_text>` and state in the report that the review ran unassisted.
 
-**Step 8 — Push, then open.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` "Verify `origin` before pushing or fetching through it", then push the branch with the explicit destination ref and open the pull request naming the base repository:
+**Step 8 — Push, then open.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` "Verify `origin` before pushing or fetching through it", then push the branch with the explicit destination ref and open the pull request naming the base repository.
+
+Derive `<head-owner>` from the resolved `head`, which the resolver reports as `owner/name`: take the portion before the `/`. `gh pr create --head` reads `owner:branch`, so passing the whole `owner/name` there names no head at all.
 
 ```bash
 branch=$(git branch --show-current)
@@ -88,7 +92,7 @@ Pass `--draft` when the contribution is unsolicited or its conformance to the ba
 Flag rationale:
 
 - `--repo` — the resolved base. Without it `gh` opens against whatever it resolves from the checkout, which for a fork is the parent, reached by inference rather than by decision.
-- `--head <owner>:<branch>` — the head repository and branch, stated explicitly so the head never depends on inference and no fork-selection prompt appears.
+- `--head <head-owner>:<branch>` — the head repository's owner and the branch, both resolved above, stated explicitly so the head never depends on inference and no fork-selection prompt appears.
 - `--base` — the base repository's default branch, resolved in Step 4.
 - `--body-file -` — the body arrives on stdin with real newlines. `--body` does not expand escape sequences, and no temporary file, command substitution, or post-hoc repair assembles the body.
 
@@ -116,8 +120,8 @@ The body explains why; the diff already shows what. Never name Claude or its run
 
 - MUST resolve the target through the bundled resolver before the first write — reading `isFork`, `parent`, and `viewerPermission` by eye is the failure this gate exists to prevent.
 - MUST obtain authorization naming the resolved base in the same turn before creating the pull request.
-- MUST name the base repository with `--repo` and the head with `--head <owner>:<branch>` on `gh pr create`.
-- MUST cut the contribution branch from the base repository's default branch.
+- MUST name the base repository with `--repo` and the head with `--head <head-owner>:<branch>` on `gh pr create`.
+- MUST cut the contribution branch from the base repository's default branch, under a name derived in Step 4 before the first command that uses it.
 - NEVER open against a base whose classification is `controlled`, `fork-absent`, or `blocked`.
 - NEVER create the fork — report the destination candidates and stop.
 - NEVER report an unrunnable check as passed, or omit it from the body.
@@ -139,7 +143,7 @@ The body explains why; the diff already shows what. Never name Claude or its run
 - The contribution branch was cut from the base repository's default branch.
 - The base repository's declared checks ran locally and reported success; any check that could not run is named in the body as unverified with its reason.
 - The title and body passed a prose review, and a review that ran unassisted is reported as such.
-- `gh pr create` named the base with `--repo` and the head with `--head <owner>:<branch>`, and the body arrived on stdin.
+- `gh pr create` named the base with `--repo` and the head with `--head <head-owner>:<branch>`, and the body arrived on stdin.
 - The pull-request URL is surfaced and `/manage-parent-pr` has taken over.
 
 </success_criteria>
