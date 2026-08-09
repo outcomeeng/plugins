@@ -773,8 +773,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     if arguments.json_output:
         print(json.dumps(_report_document(report), sort_keys=True))
     else:
-        print(f"installed {len(report.plan.claude_plugins)} Claude plugins")
-        print(f"installed {len(report.plan.codex_plugins)} Codex plugins")
+        pending = set(report.pending_publication)
+        claude = [p for p in report.plan.claude_plugins if p not in pending]
+        codex = [p for p in report.plan.codex_plugins if p not in pending]
+        print(f"installed {len(claude)} Claude plugins")
+        print(f"installed {len(codex)} Codex plugins")
+        for plugin in report.pending_publication:
+            print(f"pending publication, not installed: {plugin}")
     return 0
 
 
