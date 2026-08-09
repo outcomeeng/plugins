@@ -1179,6 +1179,7 @@ __all__ = [
     "VerificationRecipeObservation",
     "canonical_catalog_plugin_names",
     "committed_catalog_plugin_names",
+    "designated_failure_operations",
     "observe_claude_user_collision",
     "observe_codex_config_independence",
     "observe_designated_failure",
@@ -1277,28 +1278,53 @@ class DesignatedFailureRunner:
         return CommandResult(argv=command.argv, exit_code=0, stdout=stdout, stderr="")
 
 
+def _build_run_plan(
+    temporary_root: Path, *, isolated: bool, source: str
+) -> InstallationPlan:
+    """One installation plan of the selected mode and configured source."""
+    mirror = temporary_root / "checkout"
+    _mirror_installation_inputs(repository_root(), mirror)
+    if isolated:
+        return build_isolated_installation_plan(
+            mirror, temporary_root / "state", os.environ
+        )
+    _write_project_marketplace(mirror, source)
+    environment = _persistent_environment(temporary_root)
+    preflight = build_persistent_preflight(mirror, environment)
+    codex_source = (
+        CANONICAL_CODEX_SOURCE if source == CANONICAL_MARKETPLACE_SOURCE else source
+    )
+    return build_persistent_installation_plan(
+        preflight, codex_marketplace_listing_payload(codex_source)
+    )
+
+
+def designated_failure_operations(
+    *, isolated: bool, source: str = CANONICAL_MARKETPLACE_SOURCE
+) -> tuple[Operation, ...]:
+    """Distinct operations the plan `observe_designated_failure` drives performs.
+
+    Exposes the reachable operation domain for one mode and source so a linked
+    test enumerates what a run can actually fail at, rather than naming
+    operations by hand.
+    """
+    with TemporaryDirectory() as temporary_directory:
+        plan = _build_run_plan(
+            Path(temporary_directory), isolated=isolated, source=source
+        )
+    return tuple(dict.fromkeys(command.operation for command in plan.commands))
+
+
 def _observe_installation_run(
     runner: UnpublishedPluginRunner | DesignatedFailureRunner,
     *,
     isolated: bool,
+    source: str = CANONICAL_MARKETPLACE_SOURCE,
 ) -> UnpublishedPluginObservation:
     """Execute one installation plan of the selected mode through `runner`."""
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(repository_root(), mirror)
-        if isolated:
-            plan = build_isolated_installation_plan(
-                mirror, temporary_root / "state", os.environ
-            )
-        else:
-            _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
-            environment = _persistent_environment(temporary_root)
-            preflight = build_persistent_preflight(mirror, environment)
-            plan = build_persistent_installation_plan(
-                preflight,
-                codex_marketplace_listing_payload(CANONICAL_CODEX_SOURCE),
-            )
+        plan = _build_run_plan(temporary_root, isolated=isolated, source=source)
         try:
             report = execute_installation(plan, runner)
         except InstallationFailure as failure:
@@ -1327,11 +1353,13 @@ def observe_designated_failure(
     operation: Operation,
     stderr: str,
     plugin: str | None = None,
+    source: str = CANONICAL_MARKETPLACE_SOURCE,
 ) -> UnpublishedPluginObservation:
     """Run one installation in which the designated command fails with `stderr`."""
     return _observe_installation_run(
         DesignatedFailureRunner(operation=operation, stderr=stderr, plugin=plugin),
         isolated=isolated,
+        source=source,
     )
 
 
