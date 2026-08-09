@@ -43,9 +43,16 @@ Pending implementation, in dependency order:
    isolated installation harness to observe home-directory placement. Until then
    the declaration lives as the `([compliance])` rule in
    `spx/12-marketplace-state.adr.md`.
-3. Generated plugin lifecycle skills — checkout materialization gates on
-   co-location, reading the checkout itself: it runs only where the checkout
-   carries the plugin's invoked skill content, and it reports the scope split
+3. Generated plugin lifecycle skills — the placement verb derives its
+   destination from co-location, reading where the plugin's skill content
+   lives. For skills installed in the selected agent home — every ordinary
+   consumer — the verb places the plugin's shipped agent definitions into
+   `$CODEX_HOME/agents/` through the plugin's own shipped placement entry
+   point, so a consumer without this repository's installation toolchain
+   receives agents from the plugin itself; `outcomeeng/distribution/installation.py`
+   in item 1 drives that same shipped operation in bulk for the maintainers'
+   refresh. Checkout materialization runs only where the checkout carries the
+   plugin's invoked skill content, and the verb reports the scope split
    otherwise. The default repair path for a missing agent role refreshes the
    selected agent home and then reloads the harness plugin index or starts a new
    session, because a running session retains already-loaded plugin content. The
