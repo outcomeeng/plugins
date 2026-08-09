@@ -27,10 +27,15 @@ Pending implementation, in dependency order:
    agent whose filename happens to share a plugin prefix — a marketplace-scoped
    ownership record or content marker checked before any prune or overwrite, with a
    colliding foreign file reported and left untouched. Reconciliation covers the
-   marketplace's whole ownership set, not only current catalog plugins: definitions
-   the marketplace placed for a plugin since removed or renamed in
-   `.agents/plugins/marketplace.json` are pruned by the same ownership record, so a
-   catalog removal does not strand stale home definitions. The same slice removes
+   marketplace's whole ownership set, not only the invoking plugin's namespace,
+   and it needs no catalog access: the shipped entry point compares the
+   ownership record against the plugin set the selected home itself reports
+   installed, so definitions the marketplace placed for a plugin since removed
+   or renamed in `.agents/plugins/marketplace.json` are pruned by any surviving
+   plugin's placement run — every consumer refresh is a caller — and a catalog
+   removal does not strand stale home definitions;
+   `outcomeeng/distribution/installation.py` drives the same reconciliation in
+   bulk. The same slice removes
    the automatic checkout `LIFECYCLE_PLACE` step from installation runs — checkout
    materialization holds only where the checkout carries the plugin's invoked
    skill content — and updates the release documentation in `spx/local/merging.md` that
