@@ -6,6 +6,8 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+A version missing below shipped without an entry. The entry belongs to the changeset that ships the change, so a later changeset never writes one on its behalf — reconstructing what a release's consumers needed to know produces a plausible guess, not a record. Read the gap as an absent entry, never as an absent release.
+
 ## 0.88.7
 
 ### Removed
