@@ -3,7 +3,7 @@ name: sync-fork
 description: >-
   ALWAYS invoke this skill when bringing a fork's default branch current with the repository it was forked from.
   NEVER sync a fork with a force push or a hard reset.
-allowed-tools: Read, Skill, Bash(python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh repo sync:*), Bash(git fetch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git log:*), Bash(git branch:*)
+allowed-tools: Read, Skill, Bash(python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh repo sync:*), Bash(git fetch:*), Bash(git rev-list:*), Bash(git log:*)
 ---
 
 <objective>

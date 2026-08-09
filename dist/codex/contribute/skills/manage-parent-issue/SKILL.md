@@ -3,7 +3,7 @@ name: manage-parent-issue
 description: >-
   ALWAYS invoke this skill when continuing an open issue in a repository the operator does not control — answering a maintainer, adding evidence, or reporting the thread's current state.
 argument-hint: "[issue number or URL]"
-allowed-tools: Read, Glob, Grep, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, request_user_input, Bash(python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(git rev-parse:*), Bash(git log:*), Bash(printf:*)
+allowed-tools: Read, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, request_user_input, Bash(python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(printf:*)
 ---
 
 <objective>

@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when opening a pull request against a repository the operator does not control — a fork's parent, or any base whose permission is READ or NONE.
   NEVER open a pull request against such a repository without this skill.
 argument-hint: "[what the change does, or empty to describe it from the branch]"
-allowed-tools: Read, Glob, Grep, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, request_user_input, Bash(python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git log:*), Bash(git diff:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(printf:*)
+allowed-tools: Read, Glob, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, request_user_input, Bash(python3 "${SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
 ---
 
 <objective>
