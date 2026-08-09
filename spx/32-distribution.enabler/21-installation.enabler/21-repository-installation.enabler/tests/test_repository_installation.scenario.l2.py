@@ -28,17 +28,23 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
         for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
     )
 
+    persistent_report = cast(
+        dict[str, list[str]], json.loads(observation.persistent_stdout)
+    )
+    pending = frozenset(persistent_report["pending_publication"])
+
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
-    assert observation.persistent_claude_plugins.installed == claude_plugins
+    assert pending <= claude_plugins | codex_plugins
+    assert observation.persistent_claude_plugins.installed == claude_plugins - pending
     assert (
         observation.persistent_claude_plugins.enabled
-        == observation.persistent_selection
+        == observation.persistent_selection - pending
     )
     assert observation.persistent_selection < claude_plugins
     assert (
         observation.persistent_settings_after == observation.persistent_settings_before
     )
-    assert observation.persistent_codex_plugins.installed == codex_plugins
+    assert observation.persistent_codex_plugins.installed == codex_plugins - pending
     assert observation.persistent_claude_source_action is SourceAction.REFRESH
     assert observation.persistent_codex_source_action is SourceAction.REFRESH
     assert observation.first_exit_code == 0, observation.first_stderr

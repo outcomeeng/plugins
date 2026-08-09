@@ -54,6 +54,7 @@ CODEX_MARKETPLACE_LIST_COMMAND = (
 )
 PLACEMENT_SCRIPT_RELATIVE_PATH = Path("scripts/place_agents.py")
 CLAUDE_ALREADY_INSTALLED_FRAGMENT = "already installed"
+UNPUBLISHED_PLUGIN_FRAGMENT = "not found in marketplace"
 CLAUDE_ALREADY_ENABLED_FRAGMENT = "already enabled"
 EXTRA_MARKETPLACES_FIELD = "extraKnownMarketplaces"
 CLAUDE_SOURCE_FIELD = "source"
@@ -174,6 +175,7 @@ class InstallationReport:
 
     plan: InstallationPlan
     results: tuple[CommandResult, ...]
+    pending_publication: tuple[str, ...] = ()
 
 
 class InstallationFailure(RuntimeError):
@@ -690,6 +692,30 @@ def persistent_environment(
     return tuple(sorted(environment.items()))
 
 
+def _is_pending_publication(
+    plan: InstallationPlan,
+    command: InstallationCommand,
+    result: CommandResult,
+) -> bool:
+    """Whether a failed plugin operation names a plugin the source has not published.
+
+    A persistent run installs from the canonical marketplace, so a checkout whose
+    committed catalog is ahead of that marketplace declares plugins it cannot yet
+    install — every changeset that adds a plugin is in exactly that state until it
+    merges. That is the checkout leading its published source, not a failure.
+
+    An isolated run registers the checkout itself as the marketplace, so the same
+    message there means the catalog and the built tree disagree, which is a defect
+    and stays terminal.
+    """
+    return (
+        plan.mode is InstallationMode.PERSISTENT
+        and command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        and command.plugin is not None
+        and UNPUBLISHED_PLUGIN_FRAGMENT in result.stderr.lower()
+    )
+
+
 def execute_installation(
     plan: InstallationPlan,
     runner: CommandRunner,
@@ -700,13 +726,21 @@ def execute_installation(
     if plan.mode is InstallationMode.ISOLATED:
         _create_isolated_roots(plan.roots)
     results = list(completed)
+    pending: list[str] = []
     for command in plan.commands:
         result = _checked_result(command, runner(command))
         result = _agent_adapter(command.agent).normalize_result(command, result)
         if result.exit_code != 0:
-            raise InstallationFailure(command, result, tuple(results))
+            if not _is_pending_publication(plan, command, result):
+                raise InstallationFailure(command, result, tuple(results))
+            if command.plugin is not None and command.plugin not in pending:
+                pending.append(command.plugin)
         results.append(result)
-    return InstallationReport(plan=plan, results=tuple(results))
+    return InstallationReport(
+        plan=plan,
+        results=tuple(results),
+        pending_publication=tuple(pending),
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -1098,6 +1132,7 @@ def _report_document(report: InstallationReport) -> dict[str, object]:
         ),
         "checkout": str(report.plan.roots.checkout),
         "codex_home": str(report.plan.roots.codex_home),
+        "pending_publication": list(report.pending_publication),
     }
 
 
@@ -1107,6 +1142,7 @@ __all__ = [
     "AgentAdapter",
     "CANONICAL_CODEX_SOURCE",
     "CANONICAL_MARKETPLACE_SOURCE",
+    "UNPUBLISHED_PLUGIN_FRAGMENT",
     "CATALOG_PLUGIN_NAME_FIELD",
     "CATALOG_PLUGINS_FIELD",
     "CLAUDE_CATALOG_PATH",
