@@ -9,7 +9,7 @@ allowed-tools: Read
 ---
 
 <objective>
-A compact shared contract that keeps every merge transport on the same authority, delivered-value, finding-disposition, and closeout semantics while routing detailed lifecycle policy to a bundled reference.
+A compact shared contract that keeps every merge transport on the same authority, delivered-value, finding-disposition, and closeout semantics.
 </objective>
 
 <shared_contract>

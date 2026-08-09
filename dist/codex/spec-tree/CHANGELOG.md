@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Removed
 
-- **Branch cleanup no longer advances the checkout that holds the base branch.** 0.88.4 added a step that fast-forwarded that checkout after every merge, on every transport. It was the wrong home: the base checkout predates the changeset and outlives it, while cleanup removes only what the lifecycle created, and reaching it meant writing outside the assigned worktree — which the merge lifecycle otherwise never does. Advancing a base checkout is environment maintenance, so a repository that wants it declares it as its own release action in `spx/local/merging.md`, where `RELEASE_READINESS` already governs consumer-visible refresh. A repository that declared no release action loses nothing; one that wants the behavior gains a declaration it controls.
+- **Branch cleanup no longer advances the checkout that holds the base branch.** 0.88.4 added a step that fast-forwarded that checkout after every merge, on every transport. It was the wrong home: the base checkout predates the changeset and outlives it, while cleanup removes only what the lifecycle created, and reaching it meant writing outside the assigned worktree — which the merge lifecycle otherwise never does. Advancing a base checkout is environment maintenance, so a repository that wants it declares it as its own release action in `spx/local/merging.md`, where `RELEASE_READINESS` already governs consumer-visible refresh. A repository that declared no release action loses nothing; one that wants the behavior gains a declaration it controls. The branch-state closeout record drops its base-checkout-refresh field with the step.
 
 ## 0.88.5
 
