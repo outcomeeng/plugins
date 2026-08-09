@@ -3,7 +3,7 @@ name: manage-parent-issue
 description: >-
   ALWAYS invoke this skill when continuing an open issue in a repository the operator does not control — answering a maintainer, adding evidence, or reporting the thread's current state.
 argument-hint: "[issue number or URL]"
-allowed-tools: Read, Glob, Grep, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Bash(python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(git rev-parse:*), Bash(git log:*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/../contribution-standards/scripts/resolve_target.py":*), Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(git rev-parse:*), Bash(git log:*), Bash(printf:*)
 ---
 
 <objective>
@@ -38,7 +38,11 @@ When the answer requires a condition that cannot be reproduced in the real surfa
 printf '%s\n' '<line>' '<line>' | gh issue comment "<number>" --repo "<base>" --body-file -
 ```
 
-**Step 6 — Close only what the operator opened.** An issue the operator filed may be closed once resolved, and closing it is a new outward action requiring authorization in that turn. An issue anyone else filed is the maintainer's to close.
+**Step 6 — GATE: Close only what the operator opened, and only when authorized.** An issue anyone else filed is the maintainer's to close; stop there. For an issue the operator filed, closing is a new outward action, not a revision of the authorized one, so present through the runtime's structured-question tool the resolved `base`, the issue number and title, and the choice to close it or leave it open. Close only after the operator authorizes it in this turn:
+
+```bash
+gh issue close "<number>" --repo "<base>"
+```
 
 **Step 7 — Return.** Report the issue URL, the state read in Step 3, and what was answered. Do not wait for a response.
 
