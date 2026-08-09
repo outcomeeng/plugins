@@ -40,7 +40,12 @@ Pending implementation, in dependency order:
    regenerates every plugin's embedded snapshot — the release that ships a
    removal or rename ships current snapshots to every surviving plugin — and
    the reconciler reads the newest snapshot across the home's installed
-   plugins — so definitions the marketplace placed for a plugin since removed
+   plugins. A home whose installed marketplace plugins were all since removed
+   from the catalog has no snapshot observing current membership; those
+   plugins' definitions stay beside their still-installed skills — co-located
+   and ownership-bounded, an uncataloged installation rather than a scope
+   split — until a current catalog plugin's installation delivers a fresh
+   snapshot or the maintainers' bulk flow runs — so definitions the marketplace placed for a plugin since removed
    or renamed in `.agents/plugins/marketplace.json` are pruned on the next
    shipped-operation run. No shipped surface can intercept the agent CLI's own
    marketplace or plugin refresh commands, and `spx/15-hook-safety.pdr.md` bars
