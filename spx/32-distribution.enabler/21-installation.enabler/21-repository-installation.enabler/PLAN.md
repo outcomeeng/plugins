@@ -114,7 +114,9 @@ Pending implementation, in dependency order:
    subagent-authoring standard require — one approval covers one user-scope
    file, so a batch placement obtains a separately named approval per
    destination file, never one blanket approval for the batch and never a tool
-   grant that suppresses the prompt. Checkout materialization runs only where
+   grant that suppresses the prompt. The same granularity binds the
+   marketplace-scope reconciliation's deletions: each stale home file it would
+   prune is named and separately approved before removal. Checkout materialization runs only where
    the checkout carries the plugin's invoked skill content, and the verb reports
    the scope split otherwise. The default repair path for a missing agent role
    refreshes the selected agent home — running the plugin's placement verb where
