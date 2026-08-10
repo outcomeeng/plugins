@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **The merge lifecycle's CLOSE phase requires a fresh `/handoff` invocation.** The final closeout is `/handoff`'s output, never transport-authored prose: however operator-useful a hand-written summary reads, the duties behind the message — claimed-session accounting, worktree-release verification, continuation disposition — run only when the skill runs. A `/handoff` completed earlier in the same conversation never satisfies CLOSE for work merged after it, because new merged work reopens the session and the handoff workflow's existing-owner classification makes the repeat invocation cheap. `/merge`, `/manage-github-pr`, and the merge policy's close phase and success criteria all carry the rule, with a matching failure mode in both transport skills.
+- **The merge lifecycle's CLOSE phase requires a fresh `/handoff` invocation.** The final closeout is `/handoff`'s output, never transport-authored prose: however operator-useful a hand-written summary reads, the duties behind the message — claimed-session accounting, worktree-release verification, continuation disposition — run only when the skill runs. A `/handoff` completed earlier in the same conversation never satisfies CLOSE for work merged after it, because new merged work reopens the session and the handoff workflow's existing-session search makes the repeat invocation cheap, reconciling the earlier handoff's artifact as a same-owner continuation. `/merge`, `/manage-github-pr`, and the merge policy's close phase and success criteria all carry the rule, with a matching failure mode in both transport skills.
 
 ## 0.88.7
 
