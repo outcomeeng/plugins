@@ -1,61 +1,41 @@
-"""Entrypoint reaching the shared contribution target resolver.
+"""Run the `contribution-standards` resolver from this skill's own directory.
 
-This skill's own command surface for target resolution. The resolver itself is
-owned by the `contribution-standards` skill, and this file loads it by a path
-resolved relative to `__file__` rather than naming that skill in a permission
-grant: a grant that walks out of `${SKILL_DIR}` encodes the provider's
-directory name and script layout where nothing can follow it, so moving the
-provider breaks the grant silently, while a moved module raises here at load.
-
-Portability: stdlib only — no third-party packages, no `uv`, no project imports.
+Reached by a path relative to this file, so a moved provider raises here instead
+of a grant into a sibling's directory that would degrade to a permission prompt.
+Stdlib only.
 """
 
 from __future__ import annotations
 
 import importlib.util
-import pathlib
 import sys
+from pathlib import Path
 from types import ModuleType
 
 RESOLVER_MODULE = "contribution_target_resolver"
-RESOLVER_RELPATH = ("contribution-standards", "scripts", "resolve_target.py")
+RESOLVER = (
+    Path(__file__)
+    .resolve()
+    .parents[2]
+    .joinpath("contribution-standards", "scripts", "resolve_target.py")
+)
 
 
 def load_resolver() -> ModuleType:
-    """Load the provider skill's resolver module via the co-location convention.
-
-    The module sits beside this plugin's other skills, so the skills directory is
-    two parents above this script. Cached in `sys.modules` under a name distinct
-    from this entrypoint's own so one process can hold both.
-    """
-    cached = sys.modules.get(RESOLVER_MODULE)
-    if cached is not None:
-        return cached
-    skills_dir = pathlib.Path(__file__).resolve().parent.parent.parent
-    path = skills_dir.joinpath(*RESOLVER_RELPATH)
-    unreachable = (
-        f"Cannot load the contribution target resolver from {path}. "
-        "The contribution-standards skill is missing or was moved; "
-        "reinstall the contribute plugin."
-    )
-    # Checked before the spec is built: `spec_from_file_location` returns a spec
-    # for a path that does not exist, deferring the failure to `exec_module` as a
-    # bare FileNotFoundError. The whole point of reaching the provider by import
-    # is that a move fails here, saying what to do about it.
-    if not path.is_file():
-        raise RuntimeError(unreachable)
-    spec = importlib.util.spec_from_file_location(RESOLVER_MODULE, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(unreachable)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[RESOLVER_MODULE] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-def main() -> int:
-    return int(load_resolver().main())
+    """Import the provider's resolver once, registered under its own name."""
+    if RESOLVER_MODULE not in sys.modules:
+        spec = importlib.util.spec_from_file_location(RESOLVER_MODULE, RESOLVER)
+        if not RESOLVER.is_file() or spec is None or spec.loader is None:
+            raise RuntimeError(
+                f"No contribution target resolver at {RESOLVER}. The "
+                "contribution-standards skill is missing or moved; reinstall "
+                "the contribute plugin."
+            )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[RESOLVER_MODULE] = module
+        spec.loader.exec_module(module)
+    return sys.modules[RESOLVER_MODULE]
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(int(load_resolver().main()))
