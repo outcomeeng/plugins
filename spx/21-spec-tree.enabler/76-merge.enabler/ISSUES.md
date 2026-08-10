@@ -2,6 +2,14 @@
 
 Known follow-ups for the merging node. Coordination note; not spec truth.
 
+## The CLOSE-phase fresh-handoff explanation is restated in three skill surfaces
+
+The rule that a transport never authors the closeout and a prior same-conversation `/handoff` never satisfies `CLOSE` lives canonically in `src/plugins/spec-tree/skills/merging-standards/references/merge-policy.md` `<close_phase>`, and `src/plugins/spec-tree/skills/merge/SKILL.md` (Step 4, Step D5, one failure mode, success criteria) and `src/plugins/spec-tree/skills/manage-github-pr/SKILL.md` (Step 7, Failure 4, success criteria) each restate the mechanism and the cheapness rebuttal in their own wording. The `skill-auditor` (finding `f-005`, rule `conciseness`, severity `WARNING`, on the changeset that introduced the rule) proposes keeping the canonical explanation in `<close_phase>` and reducing the transport skills to a citation plus their local signal and avoid-action, because the introducing changeset itself had to hunt one wording drift across three authored files.
+
+**Why it is large**: the consolidation restructures how the rule is taught across three shipped skill surfaces and trades against the same auditor's `keep-these-aspects` rows, which value the self-contained failure-mode narratives; resolving that tension is an editorial pass over the whole CLOSE teaching shape, gated by `skill-auditor`, not a wording fix inside the introducing changeset.
+
+**Revisit condition**: the next changeset that restructures `merging-standards` or either transport skill's CLOSE teaching.
+
 ## `merge-policy.md` loads 510 lines for any one of its 24 sections
 
 `src/plugins/spec-tree/skills/merging-standards/references/merge-policy.md` spans 24 tagged sections, and `merging-standards`'s `<reference_index>` instructs reading it whole before any detailed merge-lifecycle operation. A composing step that needs only `<branch_hygiene>` or `<review_classification>` pays the full payload. The file carries the `<contents>` index its length requires, so this violates no standard today.
