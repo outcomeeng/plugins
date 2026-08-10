@@ -141,8 +141,10 @@ def test_persistent_installation_reports_an_unpublished_plugin_and_completes() -
         for call in observation.calls
         if call.operation is Operation.PLUGIN_INSTALL
     }
-    assert absent in installed
-    assert len(installed) > 1
+    # Every catalog plugin, not merely more than one: "every other plugin still
+    # installs" fails the moment the run stops early, and a count threshold
+    # passes a run that stopped after the second plugin.
+    assert installed == committed_catalog_plugin_names()
 
 
 def test_isolated_installation_treats_an_absent_plugin_as_terminal() -> None:

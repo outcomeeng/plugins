@@ -54,6 +54,7 @@ from outcomeeng.distribution.installation import (
     PYTHON_EXECUTABLE,
     SourceAction,
     STATE_ENV_NAMES,
+    UNPUBLISHED_PLUGIN_FRAGMENT,
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
@@ -1220,8 +1221,8 @@ class UnpublishedPluginRunner:
                 exit_code=1,
                 stdout="",
                 stderr=(
-                    f"Error: plugin `{command.plugin}` was not found in "
-                    f"marketplace `{MARKETPLACE_NAME}`"
+                    f"Error: plugin `{command.plugin}` was "
+                    f"{UNPUBLISHED_PLUGIN_FRAGMENT} `{MARKETPLACE_NAME}`"
                 ),
             )
         stdout = (
