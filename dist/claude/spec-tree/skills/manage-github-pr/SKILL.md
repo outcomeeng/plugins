@@ -62,7 +62,7 @@ After the plan or required confirmation, run `spx worktree status` from the assi
 
 **Step 6 — Drive to merge.** Invoke `/manage-pr <pr-pointer> --return-closeout` when the pointer is known, or `/manage-pr --return-closeout` when it resolves from the current branch. The explicit marker keeps broader-goal continuation and session closure in this outer lifecycle. `/manage-pr` evaluates `MERGE_READINESS`, merges under the gate, and runs any declared deploy and release phases.
 
-**Step 7 — Continue or close.** Consume `/manage-pr`'s closeout-ready result. When it carries remaining in-scope work — a further PR, a pending `PLAN.md` item, a `spx/EXCLUDE` entry, a declared-but-unimplemented assertion — continue with it directly. When no in-scope work remains, invoke `/handoff` plain with the carried branch-state record and return its closeout. Do not append a separate merge receipt. The `--return-closeout` marker makes this outer lifecycle's ownership explicit.
+**Step 7 — Continue or close.** Consume `/manage-pr`'s closeout-ready result. When it carries remaining in-scope work — a further PR, a pending `PLAN.md` item, a `spx/EXCLUDE` entry, a declared-but-unimplemented assertion — continue with it directly. When no in-scope work remains, invoke `/handoff` plain with the carried branch-state record and return its closeout. Do not append a separate merge receipt, and do not hand-author the closeout in place of the `/handoff` invocation — a `/handoff` completed earlier in the same conversation never satisfies this step for work merged after it, because new merged work reopens the session and the handoff workflow's existing-session search makes the repeat invocation cheap, reconciling the earlier handoff's artifact as a same-owner continuation. The `--return-closeout` marker makes this outer lifecycle's ownership explicit.
 
 </workflow>
 
@@ -84,6 +84,8 @@ After the plan or required confirmation, run `spx worktree status` from the assi
 
 **Failure 3: The lifecycle was reimplemented inline.** Claude opened, managed, merged, or cleaned up the PR by running ad hoc `git` or `gh` commands from this skill instead of invoking the governing lifecycle skills. Signal: inline commit, open, manage, merge, branch cleanup, or closeout logic appears in the main flow after mode detection. Avoid: after intent is established, delegate each lifecycle stage to `/commit-changes`, `/open-pr`, `/manage-pr`, and `/handoff` as specified; this skill owns orchestration, not the stage protocols.
 
+**Failure 4: A prior handoff substituted for Step 7.** Claude merged new work after a `/handoff` had already closed the session in the same conversation, judged a second invocation redundant, and hand-authored the final closeout. Signal: a transport-authored closing summary with no `/handoff` invocation after the merge. Avoid: new merged work reopens the session; invoke `/handoff` plain and let its existing-session search reconcile the earlier handoff's artifact as a same-owner continuation — that reconciliation is what makes the repeat invocation cheap. That cheapness is the reason to invoke it, never the reason to skip it.
+
 </failure_modes>
 
 <success_criteria>
@@ -92,6 +94,6 @@ After the plan or required confirmation, run `spx worktree status` from the assi
 - By default the lifecycle ran autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, the plan was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The invocation resolved to the GitHub-PR transport from its arguments and live repository state, and `spx/local/merging.md` configured the transport through `/open-pr`, `/manage-pr`, and `/merging-standards`.
 - Each lifecycle stage ran through its governing skill, not an inline reimplementation.
-- The PR reached merged state through `/manage-pr`'s gates, `/manage-pr` built the branch-state closeout record and ran safe cleanup, and `--return-closeout` returned that evidence to this outer lifecycle. Remaining in-scope work continued; a complete disposition invoked `/handoff` plain here (the skill deciding session-file creation per continuation state, never a hardcoded `--no-session`). An explicit gate — an unmet `VERIFICATION_READINESS` or `MERGE_READINESS` predicate, or a withheld `DEPLOYMENT_READINESS` or `RELEASE_READINESS` — surfaced to the user.
+- The PR reached merged state through `/manage-pr`'s gates, `/manage-pr` built the branch-state closeout record and ran safe cleanup, and `--return-closeout` returned that evidence to this outer lifecycle. Remaining in-scope work continued; a complete disposition invoked `/handoff` plain here, after the merge (the skill deciding session-file creation per continuation state, never a hardcoded `--no-session`) — an earlier `/handoff` in the same conversation did not stand in for it, and no closeout was transport-authored. An explicit gate — an unmet `VERIFICATION_READINESS` or `MERGE_READINESS` predicate, or a withheld `DEPLOYMENT_READINESS` or `RELEASE_READINESS` — surfaced to the user.
 
 </success_criteria>

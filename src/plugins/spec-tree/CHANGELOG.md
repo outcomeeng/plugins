@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.88.8
+
+### Changed
+
+- **The merge lifecycle's CLOSE phase requires a fresh `/handoff` invocation.** The final closeout is `/handoff`'s output, never transport-authored prose: however operator-useful a hand-written summary reads, the duties behind the message — claimed-session accounting, worktree-release verification, continuation disposition — run only when the skill runs. A `/handoff` completed earlier in the same conversation never satisfies CLOSE for work merged after it, because new merged work reopens the session and the handoff workflow's existing-session search makes the repeat invocation cheap, reconciling the earlier handoff's artifact as a same-owner continuation. `/merge`, `/manage-github-pr`, and the merge policy's close phase and success criteria all carry the rule, with a matching failure mode in both transport skills.
+
 ## 0.88.7
 
 ### Removed
