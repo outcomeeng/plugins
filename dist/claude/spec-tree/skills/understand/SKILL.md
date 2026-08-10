@@ -518,7 +518,7 @@ Claude treated a transport checkpoint as delivered value. Continue through `/mer
 
 **Enforcement surfaces were edited before the governing assertion existed.**
 
-Claude changed skill and instruction surfaces to enforce a new behavioral rule without authoring the spec assertion those surfaces implement; a reviewer discovered the gap after the surfaces were written, and the assertion landed last. Enter through `/contextualize` on the owning node and author the governing assertion first, per `<spec_first_routing>` — the enforcement surfaces implement a declaration that already exists.
+Claude changed skill and instruction surfaces to enforce a new behavioral rule without authoring the spec assertion those surfaces implement — the enforcement prose was the visible deliverable, so the inversion read as progress — and a reviewer discovered the gap after the surfaces were written, with the assertion landing last. Enter through `/contextualize` on the owning node and author the governing assertion first, per `<spec_first_routing>` — the enforcement surfaces implement a declaration that already exists.
 
 </failure_modes>
 
