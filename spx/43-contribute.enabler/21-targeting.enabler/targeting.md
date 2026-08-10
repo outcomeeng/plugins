@@ -15,6 +15,7 @@ A contribution needs a head repository the operator can push to. When no fork of
 ### Mappings
 
 - The observed fork state, resolved parent, and `viewerPermission` value map to exactly one classification — a controlled base, a parent contribution, an absent-fork target, or a blocked target ([test](tests/test_target_resolution.mapping.l1.py))
+- Each skill that resolves a target carries its own entrypoint, and every one of them loads the single shared resolver rather than a copy ([test](tests/test_resolver_entrypoint.mapping.l1.py))
 
 ### Properties
 
@@ -28,3 +29,4 @@ A contribution needs a head repository the operator can push to. When no fork of
 - ALWAYS: authorization covers the artifact it named and that artifact's later revisions; a new pull request, a new issue, or a comment on an unrelated thread each require their own ([audit])
 - ALWAYS: an absent fork stops the flow with the resolved parent, the accounts and organizations that could hold the fork, and the exact fork command — the destination is the operator's choice, never resolution's ([audit])
 - NEVER: a permission class is inferred from a git remote, the authenticated account, or a successful push — none of the three reports the permission governing the base ([test](tests/test_target_resolution.compliance.l1.py))
+- NEVER: an entrypoint whose provider skill is absent resolves quietly — the missing resolver raises at load, naming the path it looked for, because a grant reaching into the provider's directory would instead stop matching and degrade to a permission prompt ([test](tests/test_resolver_entrypoint.compliance.l1.py))

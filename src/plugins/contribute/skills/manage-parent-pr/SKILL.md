@@ -76,7 +76,8 @@ Cut every sentence about the contribution's own process — attempts made, time 
 - MUST read the pull request's state exactly once per invocation and return without waiting.
 - MUST verify a finding against the branch before changing code for it.
 - MUST name the base repository with `--repo` on every `gh` write.
-- NEVER force-push the head branch.
+- NEVER force-push the head branch. The `Bash(git push origin HEAD:refs/heads/*)` grant matches by prefix, so it admits `--force` and `--force-with-lease` too; this constraint is the whole containment for those flags.
+- NEVER write through `gh api` — the `Bash(gh api repos/*/pulls/*/comments:*)` grant exists to read review threads, and matching by prefix it also admits `-X DELETE` and `-X PATCH` against a maintainer's comment. Read only.
 - NEVER call `gh pr edit --add-reviewer`, `gh pr review`, or any maintainer-side action against a base the operator does not control.
 - NEVER treat `reviewDecision: CHANGES_REQUESTED` as a state the contributor can clear.
 

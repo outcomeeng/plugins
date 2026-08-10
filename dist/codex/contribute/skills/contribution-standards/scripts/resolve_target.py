@@ -22,10 +22,28 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Final, Protocol
 
 CONTROLLED_PERMISSIONS = frozenset({"ADMIN", "MAINTAIN", "WRITE"})
 CONTRIBUTOR_PERMISSIONS = frozenset({"READ", "NONE"})
+
+# The `gh` invocations this resolution makes, named here so a caller reading the
+# resolver's interaction protocol reads the commands themselves rather than a
+# copy that drifts when an argument list changes.
+CHECKOUT_VIEW_COMMAND: Final[tuple[str, ...]] = (
+    "gh",
+    "repo",
+    "view",
+    "--json",
+    "isFork,parent,nameWithOwner",
+)
+ACCOUNT_COMMAND: Final[tuple[str, ...]] = ("gh", "api", "user")
+ORGANIZATIONS_COMMAND: Final[tuple[str, ...]] = ("gh", "api", "user/orgs")
+
+
+def permission_command(base: str) -> tuple[str, ...]:
+    """The command that reads the operator's permission on `base`."""
+    return ("gh", "repo", "view", base, "--json", "viewerPermission")
 
 
 @dataclass(frozen=True)
@@ -100,10 +118,10 @@ def _json_field(
 def _fork_candidates(runner: CommandRunner) -> list[str]:
     """Accounts and organizations that could hold a fork, best effort."""
     candidates: list[str] = []
-    user, _ = _json_field(runner, ["gh", "api", "user"])
+    user, _ = _json_field(runner, list(ACCOUNT_COMMAND))
     if user and isinstance(user.get("login"), str):
         candidates.append(user["login"])
-    result = runner.run(["gh", "api", "user/orgs"])
+    result = runner.run(list(ORGANIZATIONS_COMMAND))
     if result.returncode == 0:
         try:
             orgs = json.loads(result.stdout)
@@ -120,9 +138,7 @@ def _fork_candidates(runner: CommandRunner) -> list[str]:
 
 def resolve(runner: CommandRunner) -> Resolution:
     """Classify the contribution target from the current checkout."""
-    checkout, detail = _json_field(
-        runner, ["gh", "repo", "view", "--json", "isFork,parent,nameWithOwner"]
-    )
+    checkout, detail = _json_field(runner, list(CHECKOUT_VIEW_COMMAND))
     if checkout is None:
         return Resolution("blocked", detail=detail)
 
@@ -150,9 +166,7 @@ def resolve(runner: CommandRunner) -> Resolution:
             detail="gh reported no base repository for this checkout",
         )
 
-    permissions, detail = _json_field(
-        runner, ["gh", "repo", "view", base, "--json", "viewerPermission"]
-    )
+    permissions, detail = _json_field(runner, list(permission_command(base)))
     if permissions is None:
         return Resolution("blocked", base=base, head=head, detail=detail)
 

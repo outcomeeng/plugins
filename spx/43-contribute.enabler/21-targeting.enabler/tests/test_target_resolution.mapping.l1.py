@@ -1,7 +1,7 @@
 import pytest
 
 from outcomeeng_testing.harnesses.contribution_targeting import (
-    CHECKOUT_VIEW,
+    checkout_view_key,
     PARENT,
     Responses,
     account_lookups,
@@ -12,9 +12,12 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
     resolve_with,
 )
 
-# `gh` reports a permission the resolver either controls, contributes to, or
-# recognizes as neither. The first two sets are the resolver's own; the third is
-# every other value `gh` can return, standing in for the open remainder.
+# `gh` reports a permission the resolver either controls or contributes to. Both
+# sets are the resolver's own and finite, which is what makes this domain a
+# mapping. Every value outside them is an open remainder with no finite
+# enumeration, so it is proven by generator in
+# `test_target_resolution.property.l1.py` rather than by a hand-picked example
+# here.
 #
 # The bucket membership is imported rather than restated. It is a value the spec
 # tree declares and the resolver complies with, so under
@@ -24,7 +27,6 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
 # behavior the value governs — which classification each bucket produces under
 # each fork state — and the agreement itself reaches audit.
 _RESOLVER = load_resolver()
-UNRECOGNIZED_PERMISSION = "TRIAGE"
 
 
 def classifications() -> list[tuple[bool, str, str]]:
@@ -41,7 +43,6 @@ def classifications() -> list[tuple[bool, str, str]]:
                     "parent-contribution" if is_fork else "fork-absent",
                 )
             )
-        cases.append((is_fork, UNRECOGNIZED_PERMISSION, "blocked"))
     return cases
 
 
@@ -54,7 +55,6 @@ def test_the_permission_buckets_partition_the_values_they_name() -> None:
 
     assert not (controlled & contributor)
     assert controlled and contributor
-    assert UNRECOGNIZED_PERMISSION not in (controlled | contributor)
 
 
 @pytest.mark.parametrize(("is_fork", "permission", "expected"), CLASSIFICATIONS)
@@ -62,7 +62,7 @@ def test_fork_state_and_permission_map_to_one_classification(
     is_fork: bool, permission: str, expected: str
 ) -> None:
     responses: Responses = {
-        CHECKOUT_VIEW: checkout_response(is_fork),
+        checkout_view_key(): checkout_response(is_fork),
         permission_key(PARENT): permission_response(permission),
         **account_lookups(),
     }

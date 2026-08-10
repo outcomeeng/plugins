@@ -17,9 +17,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Final, Protocol
 
@@ -32,24 +36,11 @@ from outcomeeng_testing.generators.contribution_targeting import (
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = (
-    REPO_ROOT
-    / "src"
-    / "plugins"
-    / "contribute"
-    / "skills"
-    / "contribution-standards"
-    / "scripts"
-    / "resolve_target.py"
-)
+SKILLS_DIR = REPO_ROOT / "src" / "plugins" / "contribute" / "skills"
+PROVIDER_SKILL = "contribution-standards"
+ENTRYPOINT_RELPATH = ("scripts", "resolve_target.py")
+SCRIPT = SKILLS_DIR.joinpath(PROVIDER_SKILL, *ENTRYPOINT_RELPATH)
 
-CHECKOUT_VIEW: tuple[str, ...] = (
-    "gh",
-    "repo",
-    "view",
-    "--json",
-    "isFork,parent,nameWithOwner",
-)
 FORK = "silvarbor/example"
 PARENT = "someone/example"
 
@@ -126,9 +117,14 @@ def orphan_fork_response() -> tuple[int, str, str]:
     return (0, json.dumps(payload), "")
 
 
+def checkout_view_key() -> tuple[str, ...]:
+    """The checkout-view command the resolver issues, read from the resolver."""
+    return tuple(load_resolver().CHECKOUT_VIEW_COMMAND)
+
+
 def permission_key(base: str) -> tuple[str, ...]:
-    """The command that reads the operator's permission on a base repository."""
-    return ("gh", "repo", "view", base, "--json", "viewerPermission")
+    """The permission-read command the resolver issues for `base`, read from it."""
+    return tuple(load_resolver().permission_command(base))
 
 
 def permission_response(value: str | None) -> tuple[int, str, str]:
@@ -139,11 +135,14 @@ def permission_response(value: str | None) -> tuple[int, str, str]:
 
 def account_lookups() -> Responses:
     """The account and organization reads the fork-absent path makes."""
-    user_key: tuple[str, ...] = ("gh", "api", "user")
-    orgs_key: tuple[str, ...] = ("gh", "api", "user/orgs")
+    resolver = load_resolver()
     return {
-        user_key: (0, json.dumps({"login": "operator"}), ""),
-        orgs_key: (0, json.dumps([{"login": "silvarbor"}]), ""),
+        tuple(resolver.ACCOUNT_COMMAND): (0, json.dumps({"login": "operator"}), ""),
+        tuple(resolver.ORGANIZATIONS_COMMAND): (
+            0,
+            json.dumps([{"login": "silvarbor"}]),
+            "",
+        ),
     }
 
 
@@ -152,6 +151,78 @@ def resolve_with(responses: Responses) -> tuple[ResolutionLike, RecordingRunner]
     runner = RecordingRunner(responses)
     resolution: ResolutionLike = load_resolver().resolve(runner)
     return resolution, runner
+
+
+def consumer_entrypoints() -> tuple[Path, ...]:
+    """Every consuming skill's own resolver entrypoint, discovered from the tree.
+
+    Discovered rather than enumerated: a skill added to the plugin enters this
+    domain without a case being written for it here. The provider's own script is
+    excluded — it is the shared resolver, not an entrypoint reaching one.
+    """
+    pattern = str(Path("*").joinpath(*ENTRYPOINT_RELPATH))
+    return tuple(sorted(p for p in SKILLS_DIR.glob(pattern) if p != SCRIPT))
+
+
+@contextmanager
+def _isolated_module_state() -> Iterator[None]:
+    """Restore `sys.modules` so one entrypoint's load cannot satisfy the next."""
+    before = dict(sys.modules)
+    try:
+        yield
+    finally:
+        sys.modules.clear()
+        sys.modules.update(before)
+
+
+def _load_entrypoint(path: Path) -> ModuleType:
+    """Load one entrypoint under a name unique to its skill directory."""
+    name = f"entrypoint_{path.parent.parent.name.replace('-', '_')}"
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load the entrypoint at {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@dataclass(frozen=True)
+class EntrypointObservation:
+    """What one entrypoint produced when asked for the shared resolver."""
+
+    path: Path
+    resolver_file: Path | None
+    error: str | None
+
+
+def observe_entrypoint(path: Path) -> EntrypointObservation:
+    """Load `path` from the real tree and ask it for the shared resolver."""
+    with _isolated_module_state():
+        module = _load_entrypoint(path)
+        sys.modules.pop(module.RESOLVER_MODULE, None)
+        try:
+            resolver = module.load_resolver()
+        except RuntimeError as error:
+            return EntrypointObservation(path, None, str(error))
+        resolver_file = getattr(resolver, "__file__", None)
+        return EntrypointObservation(
+            path, Path(resolver_file) if resolver_file else None, None
+        )
+
+
+def observe_entrypoint_without_provider(path: Path) -> EntrypointObservation:
+    """Load a copy of `path`'s skill placed where no provider skill exists.
+
+    The consuming skill directory is copied alone into a temporary skills tree,
+    so the sibling the entrypoint reaches for is genuinely absent rather than
+    stubbed. This is the failure the entrypoint exists to make loud.
+    """
+    with TemporaryDirectory() as temporary_directory:
+        skills = Path(temporary_directory) / "skills"
+        skill = path.parent.parent
+        shutil.copytree(skill, skills / skill.name)
+        return observe_entrypoint(skills.joinpath(skill.name, *ENTRYPOINT_RELPATH))
 
 
 TARGETING_PROPERTY_EXAMPLES: Final = 100

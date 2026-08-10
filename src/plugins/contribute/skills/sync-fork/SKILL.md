@@ -51,7 +51,7 @@ NEVER pass `--force`. The flag exists to make the fork's default branch match th
 
 - MUST resolve the parent through the bundled resolver, never from a remote named `upstream` — a remote name is a local label that identifies no repository.
 - MUST classify behind versus diverged before syncing.
-- NEVER pass `--force` to `gh repo sync`.
+- NEVER pass `--force` to `gh repo sync`. The `Bash(gh repo sync:*)` grant matches by prefix, so it admits `--force` too — the allow-list cannot express "every flag but this one". This constraint is the whole containment for that flag, not a restatement of what the grant already blocks.
 - NEVER resolve divergence by discarding commits; report them and stop.
 - NEVER treat a stale fork default branch as a blocker for opening a contribution — a contribution branch is cut from the base repository's default branch.
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from outcomeeng_testing.harnesses.contribution_targeting import (
-    CHECKOUT_VIEW,
+    checkout_view_key,
     PARENT,
     Responses,
     account_lookups,
@@ -18,7 +18,7 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
 def test_any_permission_outside_both_buckets_blocks_the_target() -> None:
     def check(is_fork: bool, permission: str) -> None:
         responses: Responses = {
-            CHECKOUT_VIEW: checkout_response(is_fork),
+            checkout_view_key(): checkout_response(is_fork),
             permission_key(PARENT): permission_response(permission),
             **account_lookups(),
         }

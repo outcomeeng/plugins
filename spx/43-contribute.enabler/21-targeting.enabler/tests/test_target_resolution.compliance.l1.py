@@ -1,5 +1,5 @@
 from outcomeeng_testing.harnesses.contribution_targeting import (
-    CHECKOUT_VIEW,
+    checkout_view_key,
     FORK,
     PARENT,
     Responses,
@@ -13,7 +13,7 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
 
 def test_an_absent_permission_field_yields_no_permission_class() -> None:
     responses: Responses = {
-        CHECKOUT_VIEW: checkout_response(True),
+        checkout_view_key(): checkout_response(True),
         permission_key(PARENT): permission_response(None),
     }
 
@@ -25,7 +25,7 @@ def test_an_absent_permission_field_yields_no_permission_class() -> None:
 
 def test_no_signal_outside_gh_is_consulted_for_permission() -> None:
     responses: Responses = {
-        CHECKOUT_VIEW: checkout_response(True),
+        checkout_view_key(): checkout_response(True),
         permission_key(PARENT): permission_response(None),
     }
 
@@ -36,7 +36,7 @@ def test_no_signal_outside_gh_is_consulted_for_permission() -> None:
 
 def test_a_failed_permission_read_blocks_and_keeps_the_gh_error() -> None:
     responses: Responses = {
-        CHECKOUT_VIEW: checkout_response(True),
+        checkout_view_key(): checkout_response(True),
         permission_key(PARENT): (1, "", "HTTP 404: Not Found"),
     }
 
@@ -47,12 +47,12 @@ def test_a_failed_permission_read_blocks_and_keeps_the_gh_error() -> None:
 
 
 def test_an_unavailable_gh_blocks_before_reading_permission() -> None:
-    responses: Responses = {CHECKOUT_VIEW: (127, "", "gh: command not found")}
+    responses: Responses = {checkout_view_key(): (127, "", "gh: command not found")}
 
     resolution, runner = resolve_with(responses)
 
     assert resolution.classification == "blocked"
-    assert runner.commands == [CHECKOUT_VIEW]
+    assert runner.commands == [checkout_view_key()]
 
 
 def test_a_fork_reported_without_a_parent_blocks() -> None:
@@ -61,7 +61,7 @@ def test_a_fork_reported_without_a_parent_blocks() -> None:
     # would pass on the runner's unconfigured-command failure rather than on the
     # resolver detecting the orphaned fork.
     responses: Responses = {
-        CHECKOUT_VIEW: orphan_fork_response(),
+        checkout_view_key(): orphan_fork_response(),
         permission_key(FORK): permission_response("ADMIN"),
     }
 

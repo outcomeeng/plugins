@@ -17,8 +17,8 @@ import pathlib
 import sys
 from types import ModuleType
 
-_RESOLVER_MODULE = "contribution_target_resolver"
-_RESOLVER_RELPATH = ("contribution-standards", "scripts", "resolve_target.py")
+RESOLVER_MODULE = "contribution_target_resolver"
+RESOLVER_RELPATH = ("contribution-standards", "scripts", "resolve_target.py")
 
 
 def load_resolver() -> ModuleType:
@@ -28,16 +28,27 @@ def load_resolver() -> ModuleType:
     two parents above this script. Cached in `sys.modules` under a name distinct
     from this entrypoint's own so one process can hold both.
     """
-    cached = sys.modules.get(_RESOLVER_MODULE)
+    cached = sys.modules.get(RESOLVER_MODULE)
     if cached is not None:
         return cached
     skills_dir = pathlib.Path(__file__).resolve().parent.parent.parent
-    path = skills_dir.joinpath(*_RESOLVER_RELPATH)
-    spec = importlib.util.spec_from_file_location(_RESOLVER_MODULE, path)
+    path = skills_dir.joinpath(*RESOLVER_RELPATH)
+    unreachable = (
+        f"Cannot load the contribution target resolver from {path}. "
+        "The contribution-standards skill is missing or was moved; "
+        "reinstall the contribute plugin."
+    )
+    # Checked before the spec is built: `spec_from_file_location` returns a spec
+    # for a path that does not exist, deferring the failure to `exec_module` as a
+    # bare FileNotFoundError. The whole point of reaching the provider by import
+    # is that a move fails here, saying what to do about it.
+    if not path.is_file():
+        raise RuntimeError(unreachable)
+    spec = importlib.util.spec_from_file_location(RESOLVER_MODULE, path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load the contribution target resolver from {path}")
+        raise RuntimeError(unreachable)
     module = importlib.util.module_from_spec(spec)
-    sys.modules[_RESOLVER_MODULE] = module
+    sys.modules[RESOLVER_MODULE] = module
     spec.loader.exec_module(module)
     return module
 
