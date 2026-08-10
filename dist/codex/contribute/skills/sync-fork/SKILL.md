@@ -38,8 +38,10 @@ A diverged default branch stops the flow. Report each commit on the left side wi
 **Step 5 — Sync.**
 
 ```bash
-gh repo sync "<head>" --source "<base>" --branch "<base-default-branch>"
+gh repo sync "<head>" --source "<base>" --branch "<head-default-branch>"
 ```
+
+`--branch` names the branch to update in the destination, so it is the head's default branch — the one Step 4 compared. Naming the base's default instead updates a differently-named branch, or fails, and either way leaves the fork's default stale. When the two defaults carry different names, report both and stop: `gh repo sync` matches by name, and choosing which branch tracks which is the operator's call.
 
 NEVER pass `--force`. The flag exists to make the fork's default branch match the parent's by discarding whatever the fork carries, which is the outcome Step 4 stops for.
 

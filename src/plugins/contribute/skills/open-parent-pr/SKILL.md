@@ -40,6 +40,15 @@ git switch -c "<branch>" FETCH_HEAD
 
 Branch from `FETCH_HEAD`, never from the head repository's default branch, which is behind by however long since the last sync.
 
+**When the contribution already exists as commits on the invocation branch**, cutting at `FETCH_HEAD` alone abandons them and pushes the base tip. Replay them onto the new branch before continuing, and confirm the diff against `FETCH_HEAD` carries the intended change:
+
+```bash
+git cherry-pick <first-commit>..<last-commit>
+git diff --stat FETCH_HEAD...HEAD
+```
+
+An empty diff means the contribution was left behind; stop rather than opening a pull request with no change in it.
+
 **Step 5 — Conform to the base repository's conventions.** Before writing code, read what that repository declares: its contributing guide, the READMEs governing any fixture or test-data directory the change touches, metadata schemas, the documents a change of this kind updates, and the commit-message style of recent history. Shape the change to those conventions.
 
 **Step 6 — GATE: Run the base repository's own verification.** Locate its declared checks — the commands its contributing guide names, its workflow files, and its build and test targets — and run them locally. They must report success.
@@ -56,6 +65,8 @@ Derive `<head-owner>` from the resolved `head`, which the resolver reports as `o
 branch=$(git branch --show-current)
 git push -u origin HEAD:refs/heads/"${branch}"
 ```
+
+`gh pr create --head <owner>:<branch>` resolves a user-owned head; `gh` does not support an organization as that owner. The resolver reports organization destinations among its fork candidates, so when the resolved head is organization-owned, this form cannot select it. Run the creation from a checkout whose `origin` is that head repository and pass `--head <branch>` alone, and stop with the resolved head named when neither form selects it — never fall back to a head `gh` picks.
 
 Interactive Claude Code and Codex sessions pipe the body through a quoted heredoc:
 

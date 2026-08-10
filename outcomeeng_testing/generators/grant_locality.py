@@ -29,14 +29,37 @@ def escaping_grant_declarations() -> tuple[str, ...]:
     """
     scenario = source_scenarios()[0]
     sibling = f"../{scenario.plugin}-standards/scripts/{scenario.skill}.py"
-    return tuple(
-        _declaration(f'Bash(python3 "${{{variable}}}/{sibling}":*)')
-        for variable in SKILL_DIR_VARIABLES
-    ) + tuple(
-        # A bare parent reference with no trailing path still leaves the
-        # directory, so the escape does not depend on what follows it.
-        _declaration(f'Bash(cat "${{{variable}}}/..":*)')
-        for variable in SKILL_DIR_VARIABLES
+    return (
+        tuple(
+            _declaration(f'Bash(python3 "${{{variable}}}/{sibling}":*)')
+            for variable in SKILL_DIR_VARIABLES
+        )
+        + tuple(
+            # A bare parent reference with no trailing path still leaves the
+            # directory, so the escape does not depend on what follows it.
+            _declaration(f'Bash(cat "${{{variable}}}/..":*)')
+            for variable in SKILL_DIR_VARIABLES
+        )
+        + tuple(
+            # The parent reference need not lead: descending first and then rising
+            # twice still lands above the skill directory.
+            _declaration(
+                f'Bash(python3 "${{{variable}}}/scripts/../../{scenario.plugin}/x.py":*)'
+            )
+            for variable in SKILL_DIR_VARIABLES
+        )
+        + tuple(
+            # The YAML list form of the same field, which carries each grant on its
+            # own indented line rather than in the declaration's scalar.
+            "\n".join(
+                (
+                    f"{ALLOWED_TOOLS_FIELD}:",
+                    "  - Read",
+                    f'  - Bash(python3 "${{{variable}}}/{sibling}":*)',
+                )
+            )
+            for variable in SKILL_DIR_VARIABLES
+        )
     )
 
 
@@ -58,7 +81,19 @@ def local_grant_declarations() -> tuple[str, ...]:
         _declaration("Bash(git status:*)", "Glob", "Skill"),
         _declaration(f'Read("${{{SKILL_DIR_VARIABLES[0]}}}/references/notes.md")'),
     )
-    return (*own_entrypoint, *returning_descent, *pathless)
+    # The YAML list form carrying only local grants: the widened parse must not
+    # turn a supported spelling into a false positive.
+    listed = tuple(
+        "\n".join(
+            (
+                f"{ALLOWED_TOOLS_FIELD}:",
+                "  - Read",
+                f'  - Bash(python3 "${{{variable}}}/scripts/run.py":*)',
+            )
+        )
+        for variable in SKILL_DIR_VARIABLES
+    )
+    return (*own_entrypoint, *returning_descent, *pathless, *listed)
 
 
 def body_mentions() -> tuple[str, ...]:

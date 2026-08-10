@@ -24,7 +24,7 @@ With `base` resolved, a URL's `owner/name` segments must equal it; a mismatch st
 **Step 3 — Read the thread once.**
 
 ```bash
-gh issue view "<number>" --repo "<base>" --json state,title,body,comments,labels,url
+gh issue view "<number>" --repo "<base>" --json state,title,body,comments,labels,author,url
 ```
 
 Read it one time and report `state` and the last maintainer comment verbatim. `/contribution-standards` forbids polling, watching, and sleeping on the artifact; a maintainer answers on their own schedule.
@@ -39,7 +39,7 @@ When the answer requires a condition that cannot be reproduced in the real surfa
 printf '%s\n' '<line>' '<line>' | gh issue comment "<number>" --repo "<base>" --body-file -
 ```
 
-**Step 6 — GATE: Close only what the operator opened, and only when authorized.** An issue anyone else filed is the maintainer's to close; stop there. For an issue the operator filed, closing is a new outward action, not a revision of the authorized one, so present through the runtime's structured-question tool the resolved `base`, the issue number and title, and the choice to close it or leave it open. Close only after the operator authorizes it in this turn:
+**Step 6 — GATE: Close only what the operator opened, and only when authorized.** Compare the `author` read in Step 3 against the authenticated account; that field is the only evidence of who filed the issue, and without it this gate cannot hold. An issue anyone else filed is the maintainer's to close; stop there. For an issue the operator filed, closing is a new outward action, not a revision of the authorized one, so present through the runtime's structured-question tool the resolved `base`, the issue number and title, and the choice to close it or leave it open. Close only after the operator authorizes it in this turn:
 
 ```bash
 gh issue close "<number>" --repo "<base>"

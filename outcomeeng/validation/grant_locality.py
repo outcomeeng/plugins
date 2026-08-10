@@ -17,9 +17,10 @@ evolves.  It also settles the reach without depending on whether an invoked
 skill's grants remain in force while it is active — a property neither agent
 harness states and both are free to change.
 
-Grant locality is governed by ``spx/13-plugin-and-runtime-conventions.adr.md``;
-this validator is the deterministic enforcement of that decision over shipped
-skill frontmatter.
+A reference escapes when its path resolves above the skill directory, however it
+is spelled: ``${VAR}/..`` and ``${VAR}/scripts/../../sibling`` both leave, while
+``${VAR}/scripts/../scripts`` returns to itself and stays.  Containment is
+decided by walking the segments, never by matching one spelling.
 
 Usage::
 
@@ -49,21 +50,64 @@ ALLOWED_TOOLS_FIELD: Final = "allowed-tools"
 # whichever spelling that target's tree carries.
 SKILL_DIR_VARIABLES: Final = ("CLAUDE_SKILL_DIR", "SKILL_DIR")
 
-# A skill-directory reference whose first path segment escapes that directory.
-# The variable's own name is matched with the alternation rather than a suffix
-# match so ``${SKILL_DIR}`` does not also match inside ``${CLAUDE_SKILL_DIR}``
-# and report one violation twice.  Only a leading ``..`` escapes: a descent that
-# returns to itself (``scripts/../scripts``) still resolves inside the skill and
-# is left to review rather than flagged here.
-_ESCAPING_GRANT: Final[re.Pattern[str]] = re.compile(
-    r"\$\{(?:" + "|".join(SKILL_DIR_VARIABLES) + r")\}/\.\.(?:/[^\"'\s:)]*)?"
+# Any skill-directory reference and the path trailing it.  The variable's own
+# name is matched with the alternation rather than a suffix match so
+# ``${SKILL_DIR}`` does not also match inside ``${CLAUDE_SKILL_DIR}`` and report
+# one violation twice.  Containment is decided from the trailing path, not from
+# this pattern, so every spelling reaches the same walk.
+_SKILL_DIR_REFERENCE: Final[re.Pattern[str]] = re.compile(
+    r"\$\{(?:" + "|".join(SKILL_DIR_VARIABLES) + r")\}(?P<path>(?:/[^\"'\s:)]*)?)"
 )
 
-# The ``allowed-tools`` line, matched at the start of a frontmatter line so a
-# body mention of the field name is not read as a grant declaration.
+# The ``allowed-tools`` declaration, matched at the start of a line so a body
+# mention of the field name is not read as a grant declaration.
 _ALLOWED_TOOLS_LINE: Final[re.Pattern[str]] = re.compile(
     r"^" + re.escape(ALLOWED_TOOLS_FIELD) + r"\s*:(?P<value>.*)$"
 )
+
+
+def _escapes(path: str) -> bool:
+    """Whether ``path`` resolves above the directory the variable named.
+
+    Walks the segments rather than matching a spelling: each ordinary segment
+    descends and each ``..`` ascends, so a reference escapes exactly when the
+    walk ever rises above its starting directory. ``scripts/../scripts`` returns
+    to itself and stays; ``scripts/../../sibling`` does not.
+    """
+    depth = 0
+    for segment in path.split("/"):
+        if segment in ("", "."):
+            continue
+        if segment == "..":
+            depth -= 1
+            if depth < 0:
+                return True
+        else:
+            depth += 1
+    return False
+
+
+def _declaration_values(text: str) -> list[tuple[int, str]]:
+    """Return ``(line, value)`` for every ``allowed-tools`` declaration.
+
+    A declaration's value is its same-line scalar plus every following indented
+    line, which is what carries a YAML list form where each grant sits on its
+    own ``- `` line. Continuation stops at the first line that is neither blank
+    nor indented, so the next frontmatter key ends the value.
+    """
+    values: list[tuple[int, str]] = []
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        declaration = _ALLOWED_TOOLS_LINE.match(line)
+        if declaration is None:
+            continue
+        collected = [declaration.group("value")]
+        for continuation in lines[index + 1 :]:
+            if continuation.strip() and not continuation[:1].isspace():
+                break
+            collected.append(continuation)
+        values.append((index + 1, "\n".join(collected)))
+    return values
 
 
 @dataclass(frozen=True)
@@ -78,13 +122,11 @@ class Violation:
 def find_escaping_grants(text: str) -> list[tuple[int, str]]:
     """Return ``(line, reference)`` for each grant that escapes the skill directory."""
     violations: list[tuple[int, str]] = []
-    for lineno, line in enumerate(text.splitlines(), start=1):
-        declaration = _ALLOWED_TOOLS_LINE.match(line)
-        if declaration is None:
-            continue
+    for lineno, value in _declaration_values(text):
         violations.extend(
             (lineno, match.group(0))
-            for match in _ESCAPING_GRANT.finditer(declaration.group("value"))
+            for match in _SKILL_DIR_REFERENCE.finditer(value)
+            if _escapes(match.group("path"))
         )
     return violations
 

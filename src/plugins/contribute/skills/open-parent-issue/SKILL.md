@@ -24,10 +24,13 @@ An issue needs no head repository, so both `parent-contribution` and `fork-absen
 **Step 3 — Search before filing.** Search the base repository for an existing issue describing the same observation:
 
 ```bash
-gh search issues --repo "<base>" --state all "<distinguishing terms>"
+gh search issues --repo "<base>" --state open "<distinguishing terms>"
+gh search issues --repo "<base>" --state closed "<distinguishing terms>"
 ```
 
-An existing issue takes a comment through `/manage-parent-issue`, not a duplicate. Report what the search returned.
+Both states are searched because `gh search issues --state` accepts only `open` or `closed`; passing `all` fails the command and would stop the flow before duplicate detection runs. A closed issue matters as much as an open one — it may record that the maintainer already rejected this report.
+
+An existing issue takes a comment through `/manage-parent-issue`, not a duplicate. Report what both searches returned.
 
 **Step 4 — Assemble the evidence.** Per `/contribution-standards` `<invariants>` "Carry reproducible evidence", collect: the versions of every tool involved, the base repository commit the observation was made against, the exact command or interaction that produced it, and a negative control showing the same method reporting the opposite result.
 

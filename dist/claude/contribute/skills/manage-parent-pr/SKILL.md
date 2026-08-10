@@ -22,26 +22,38 @@ The open pull request's current state read once, every valid review finding answ
 With `base` resolved, settle the number. A URL's `owner/name` segments must equal that `base`; a mismatch stops the flow rather than being reconciled. When `$ARGUMENTS` is empty, look the pull request up for the current branch and stop when none exists:
 
 ```bash
-gh pr list --repo "<base>" --head "$(git branch --show-current)" --json number
+gh pr list --repo "<base>" --head "$(git branch --show-current)" --json number,headRefName,headRepository,headRepositoryOwner
 ```
+
+`--head` filters by branch name only — `gh` does not accept `<owner>:<branch>` there — so two forks carrying the same branch name both match. Select the entry whose `headRepositoryOwner` and `headRepository` equal the resolved `head`, and stop when none does rather than taking the first.
 
 **Step 3 — Read current state once.** Substitute the resolved values literally per `/contribution-standards` `<resolution>`:
 
 ```bash
-gh pr view "<number>" --repo "<base>" --json state,isDraft,reviewDecision,mergeStateStatus,statusCheckRollup,comments,reviews,headRefName,url
+gh pr view "<number>" --repo "<base>" --json state,isDraft,reviewDecision,mergeStateStatus,statusCheckRollup,comments,reviews,headRefName,headRepository,headRepositoryOwner,url
 ```
 
 Read review threads through the API when line-anchored comments matter. Read the state one time — a maintainer answers on their own schedule, and `/contribution-standards` forbids polling, watching, and sleeping on the artifact.
 
 Report `state`, `reviewDecision`, and each required check's conclusion verbatim. `reviewDecision` stays `CHANGES_REQUESTED` until the maintainer looks again; nothing on the contributor's side clears it, and that is not a defect to work around.
 
+**STOP when `state` is `CLOSED` or `MERGED`.** Report that outcome and return. This gate precedes every later step, because a management pass on a finished pull request would otherwise fix findings, push, and post a reply to a thread nobody is going to act on.
+
+**STOP when `headRepositoryOwner`/`headRepository` do not equal the resolved `head`.** A number or URL names a pull request from any fork, and Step 5 pushes this checkout's `HEAD`; without this check a fix reaches an unrelated fork's branch while the reply claims this pull request was revised. When they do match, check out `headRefName` before editing, so the branch being fixed is the branch the pull request carries.
+
 **Step 4 — GATE: Verify each finding before fixing it.** Reproduce the finding against the branch and report which findings confirmed. A finding the branch does not exhibit is answered with the evidence rather than with a change.
 
-**Step 5 — Fix, verify, append.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` before the push. Apply every confirmed finding as a defect class: fix the cited site and every parallel instance the same rule reaches. Re-run the base repository's declared checks per `/contribution-standards`. Then append the revision:
+**Step 5 — Fix, commit, verify, append.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` before the push. Apply every confirmed finding as a defect class: fix the cited site and every parallel instance the same rule reaches. Re-run the base repository's declared checks per `/contribution-standards`.
+
+Commit the fixes before pushing. A push transfers commits, so an uncommitted fix leaves the pull request exactly as the maintainer left it while Step 6 posts a reply announcing a revision that is not there:
 
 ```bash
+git add <fixed-paths>
+git commit
 git push origin HEAD:refs/heads/"$(git branch --show-current)"
 ```
+
+Confirm the push moved the remote branch before continuing to Step 6.
 
 The push updates the open pull request in place and needs no fresh authorization, because it revises the artifact the operator already authorized. NEVER force-push a branch a reviewer has already read.
 
@@ -54,8 +66,6 @@ printf '%s\n' '<line>' '<line>' | gh pr comment "<number>" --repo "<base>" --bod
 That comment is the re-request. Requesting a reviewer is a maintainer-side action; `gh pr edit --add-reviewer` fails on a base the operator does not control, and the failure is the expected path.
 
 **Step 7 — Return.** Report the pull-request URL, the state read in Step 3, what changed, and what the maintainer has been asked to look at. Do not wait for the response.
-
-When the maintainer has merged or closed the pull request, report that outcome and stop; a merged contribution needs no further pass.
 
 </workflow>
 

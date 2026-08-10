@@ -20,9 +20,9 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
 # here.
 #
 # The bucket membership is imported rather than restated. It is a value the spec
-# tree declares and the resolver complies with, so under
-# `spx/12-shipped-scripting.adr.md` every oracle for that agreement is a second
-# declaration: a copy here would compare the resolver to a transcription and
+# tree declares and the resolver complies with, so every oracle for that
+# agreement is a second declaration: a copy here would compare the resolver to
+# a transcription and
 # hold for whatever the transcription said. What this file verifies is the
 # behavior the value governs — which classification each bucket produces under
 # each fork state — and the agreement itself reaches audit.
