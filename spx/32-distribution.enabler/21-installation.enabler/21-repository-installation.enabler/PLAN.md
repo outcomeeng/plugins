@@ -170,4 +170,12 @@ Pending implementation, in dependency order:
    commit-directing guidance, so the node cannot stay passing while a rendered
    router contradicts `spx/12-marketplace-state.adr.md`.
 5. Smoke evidence that Codex discovers user-scope agents from `$CODEX_HOME/agents/`
-   in tool-backed sessions, through the disposable-home harness.
+   in tool-backed sessions, through the disposable-home harness. The observable is
+   the Codex CLI's own session behavior — the real CLI, run against the disposable
+   home, listing or dispatching an agent role placed there. A filesystem
+   observation cannot back this evidence: file presence in `$CODEX_HOME/agents/`
+   is item 2's placement evidence, and this item exists precisely because
+   placement can succeed while the runtime ignores the directory. The assertion
+   authored for this item names that session-level observable, so the evidence
+   type survives `/verify` routing and the `test-evidence-auditor` gate instead
+   of being reducible to a placement re-check.
