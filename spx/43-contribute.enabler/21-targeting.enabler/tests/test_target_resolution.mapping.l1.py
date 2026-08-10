@@ -29,18 +29,20 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
 _RESOLVER = load_resolver()
 
 
-def classifications() -> list[tuple[bool, str, str]]:
+def classifications() -> list[tuple[bool, str, object]]:
     """Every fork state paired with every permission bucket the resolver names."""
-    cases: list[tuple[bool, str, str]] = []
+    cases: list[tuple[bool, str, object]] = []
     for is_fork in (False, True):
         for permission in sorted(_RESOLVER.CONTROLLED_PERMISSIONS):
-            cases.append((is_fork, permission, "controlled"))
+            cases.append((is_fork, permission, _RESOLVER.Classification.CONTROLLED))
         for permission in sorted(_RESOLVER.CONTRIBUTOR_PERMISSIONS):
             cases.append(
                 (
                     is_fork,
                     permission,
-                    "parent-contribution" if is_fork else "fork-absent",
+                    _RESOLVER.Classification.PARENT_CONTRIBUTION
+                    if is_fork
+                    else _RESOLVER.Classification.FORK_ABSENT,
                 )
             )
     return cases
@@ -59,7 +61,7 @@ def test_the_permission_buckets_partition_the_values_they_name() -> None:
 
 @pytest.mark.parametrize(("is_fork", "permission", "expected"), CLASSIFICATIONS)
 def test_fork_state_and_permission_map_to_one_classification(
-    is_fork: bool, permission: str, expected: str
+    is_fork: bool, permission: str, expected: object
 ) -> None:
     responses: Responses = {
         checkout_view_key(): checkout_response(is_fork),

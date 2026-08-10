@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from outcomeeng_testing.harnesses.contribution_targeting import (
+    ENTRYPOINT_RELPATH,
     consumer_entrypoints,
     observe_entrypoint_without_provider,
 )
@@ -26,4 +27,4 @@ def test_a_missing_provider_raises_and_names_the_path(entrypoint: Path) -> None:
 
     assert observation.resolver_file is None
     assert observation.error is not None
-    assert "resolve_target.py" in observation.error
+    assert ENTRYPOINT_RELPATH[-1] in observation.error

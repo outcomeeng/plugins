@@ -4,11 +4,14 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
     PARENT,
     Responses,
     checkout_response,
+    load_resolver,
     orphan_fork_response,
     permission_key,
     permission_response,
     resolve_with,
 )
+
+_RESOLVER = load_resolver()
 
 
 def test_an_absent_permission_field_yields_no_permission_class() -> None:
@@ -19,7 +22,7 @@ def test_an_absent_permission_field_yields_no_permission_class() -> None:
 
     resolution, _ = resolve_with(responses)
 
-    assert resolution.classification == "blocked"
+    assert resolution.classification is _RESOLVER.Classification.BLOCKED
     assert resolution.permission is None
 
 
@@ -42,7 +45,7 @@ def test_a_failed_permission_read_blocks_and_keeps_the_gh_error() -> None:
 
     resolution, _ = resolve_with(responses)
 
-    assert resolution.classification == "blocked"
+    assert resolution.classification is _RESOLVER.Classification.BLOCKED
     assert "HTTP 404: Not Found" in resolution.detail
 
 
@@ -51,7 +54,7 @@ def test_an_unavailable_gh_blocks_before_reading_permission() -> None:
 
     resolution, runner = resolve_with(responses)
 
-    assert resolution.classification == "blocked"
+    assert resolution.classification is _RESOLVER.Classification.BLOCKED
     assert runner.commands == [checkout_view_key()]
 
 
@@ -67,6 +70,6 @@ def test_a_fork_reported_without_a_parent_blocks() -> None:
 
     resolution, _ = resolve_with(responses)
 
-    assert resolution.classification == "blocked"
+    assert resolution.classification is _RESOLVER.Classification.BLOCKED
     assert resolution.permission is None
     assert resolution.base is None

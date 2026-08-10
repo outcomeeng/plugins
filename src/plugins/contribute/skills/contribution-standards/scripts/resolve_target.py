@@ -22,10 +22,26 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import Final, Protocol
 
 CONTROLLED_PERMISSIONS = frozenset({"ADMIN", "MAINTAIN", "WRITE"})
 CONTRIBUTOR_PERMISSIONS = frozenset({"READ", "NONE"})
+
+
+class Classification(StrEnum):
+    """The classifications one resolution can produce.
+
+    The skills branch on these values and the emitted JSON carries them, so they
+    are the resolver's vocabulary rather than four literals repeated across its
+    own branches.
+    """
+
+    CONTROLLED = "controlled"
+    PARENT_CONTRIBUTION = "parent-contribution"
+    FORK_ABSENT = "fork-absent"
+    BLOCKED = "blocked"
+
 
 # The `gh` invocations this resolution makes, named here so a caller reading the
 # resolver's interaction protocol reads the commands themselves rather than a
@@ -73,7 +89,7 @@ class SubprocessRunner:
 class Resolution:
     """The resolved contribution target."""
 
-    classification: str
+    classification: Classification
     base: str | None = None
     head: str | None = None
     permission: str | None = None
@@ -140,12 +156,13 @@ def resolve(runner: CommandRunner) -> Resolution:
     """Classify the contribution target from the current checkout."""
     checkout, detail = _json_field(runner, list(CHECKOUT_VIEW_COMMAND))
     if checkout is None:
-        return Resolution("blocked", detail=detail)
+        return Resolution(Classification.BLOCKED, detail=detail)
 
     head = checkout.get("nameWithOwner")
     if not isinstance(head, str) or not head:
         return Resolution(
-            "blocked", detail="gh reported no nameWithOwner for this checkout"
+            Classification.BLOCKED,
+            detail="gh reported no nameWithOwner for this checkout",
         )
 
     parent = checkout.get("parent")
@@ -156,24 +173,26 @@ def resolve(runner: CommandRunner) -> Resolution:
         # the operator usually controls their own fork, so treating it as the base
         # would classify a contribution as `controlled` and send it nowhere.
         return Resolution(
-            "blocked", head=head, detail="gh reported a fork with no parent repository"
+            Classification.BLOCKED,
+            head=head,
+            detail="gh reported a fork with no parent repository",
         )
     base = parent_name if is_fork else head
     if not isinstance(base, str) or not base:
         return Resolution(
-            "blocked",
+            Classification.BLOCKED,
             head=head,
             detail="gh reported no base repository for this checkout",
         )
 
     permissions, detail = _json_field(runner, list(permission_command(base)))
     if permissions is None:
-        return Resolution("blocked", base=base, head=head, detail=detail)
+        return Resolution(Classification.BLOCKED, base=base, head=head, detail=detail)
 
     permission = permissions.get("viewerPermission")
     if not isinstance(permission, str) or not permission:
         return Resolution(
-            "blocked",
+            Classification.BLOCKED,
             base=base,
             head=head,
             detail=(
@@ -184,7 +203,7 @@ def resolve(runner: CommandRunner) -> Resolution:
 
     if permission in CONTROLLED_PERMISSIONS:
         return Resolution(
-            "controlled",
+            Classification.CONTROLLED,
             base=base,
             head=head,
             permission=permission,
@@ -194,7 +213,7 @@ def resolve(runner: CommandRunner) -> Resolution:
 
     if permission not in CONTRIBUTOR_PERMISSIONS:
         return Resolution(
-            "blocked",
+            Classification.BLOCKED,
             base=base,
             head=head,
             permission=permission,
@@ -203,7 +222,7 @@ def resolve(runner: CommandRunner) -> Resolution:
 
     if is_fork:
         return Resolution(
-            "parent-contribution",
+            Classification.PARENT_CONTRIBUTION,
             base=base,
             head=head,
             permission=permission,
@@ -212,7 +231,7 @@ def resolve(runner: CommandRunner) -> Resolution:
         )
 
     return Resolution(
-        "fork-absent",
+        Classification.FORK_ABSENT,
         base=base,
         head=None,
         permission=permission,
@@ -228,7 +247,7 @@ def resolve(runner: CommandRunner) -> Resolution:
 def main() -> int:
     resolution = resolve(SubprocessRunner())
     print(json.dumps(resolution.as_dict(), indent=2))
-    return 0 if resolution.classification != "blocked" else 1
+    return 0 if resolution.classification is not Classification.BLOCKED else 1
 
 
 if __name__ == "__main__":

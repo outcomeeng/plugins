@@ -8,11 +8,14 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
     Responses,
     account_lookups,
     checkout_response,
+    load_resolver,
     permission_key,
     permission_response,
     resolve_with,
     run_unrecognized_permission_property,
 )
+
+_RESOLVER = load_resolver()
 
 
 def test_any_permission_outside_both_buckets_blocks_the_target() -> None:
@@ -25,6 +28,6 @@ def test_any_permission_outside_both_buckets_blocks_the_target() -> None:
 
         resolution, _ = resolve_with(responses)
 
-        assert resolution.classification == "blocked"
+        assert resolution.classification is _RESOLVER.Classification.BLOCKED
 
     run_unrecognized_permission_property(check)
