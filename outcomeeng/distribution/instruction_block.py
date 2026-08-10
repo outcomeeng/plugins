@@ -156,29 +156,6 @@ WAIT_FOR_LOAD_POLICY_REQUIREMENTS: Final = (
     ("ready command", WAIT_FOR_LOAD_READY_REQUIREMENT),
     ("scope preservation", WAIT_FOR_LOAD_SCOPE_REQUIREMENT),
 )
-STOP_TRIGGERS_POLICY_HEADING: Final = "## Stop Triggers"
-EDIT_READINESS_STOP_TRIGGER: Final = (
-    "🛑 **About to edit a spec, source, test, or instruction file with no working "
-    "branch or missing node context**"
-)
-EDIT_READINESS_POLICY_REQUIREMENTS: Final = (
-    ("stop trigger", EDIT_READINESS_STOP_TRIGGER),
-    ("working-branch prerequisite", "the checkout is on a local working branch"),
-    (
-        "node-context prerequisite",
-        "live `<SPEC_TREE_CONTEXT>` marker covers every node governing the files "
-        "the change touches",
-    ),
-    (
-        "assertion-first rule",
-        "authors the governing assertion before any enforcement surface is edited",
-    ),
-    (
-        "coordination-note boundary",
-        "Coordination-note-only edits (`PLAN.md`, `ISSUES.md`) follow their "
-        "transport's rules",
-    ),
-)
 
 
 @dataclass(frozen=True)
@@ -525,10 +502,6 @@ class AuthorityHierarchyPolicyError(InstructionBlockRenderError):
 
 class WaitForLoadPolicyError(InstructionBlockRenderError):
     """Raised when a rendered router omits or contradicts its load-wait policy."""
-
-
-class EditReadinessPolicyError(InstructionBlockRenderError):
-    """Raised when a rendered router omits part of its edit-readiness stop trigger."""
 
 
 class OperatorQuestionPolicyError(InstructionBlockRenderError):
@@ -878,36 +851,6 @@ def operator_question_policy_block(router: str) -> str | None:
     return router[start : end + len(OPERATOR_QUESTION_POLICY_CLOSE)]
 
 
-def stop_triggers_policy_section(router: str) -> str | None:
-    """Return the stop-triggers section from a complete router."""
-    try:
-        return _markdown_section(router, STOP_TRIGGERS_POLICY_HEADING)
-    except FoundationAccessPolicyError:
-        return None
-
-
-def validate_edit_readiness_policy(blocks_by_harness: Mapping[str, str]) -> None:
-    """Reject a rendered harness router that weakens the edit-readiness stop trigger."""
-    for harness, document in blocks_by_harness.items():
-        router = managed_router_block(document)
-        try:
-            section = _markdown_section(router, STOP_TRIGGERS_POLICY_HEADING)
-        except FoundationAccessPolicyError as exc:
-            raise EditReadinessPolicyError(
-                f"missing router section: {STOP_TRIGGERS_POLICY_HEADING}"
-            ) from exc
-        missing = [
-            name
-            for name, required_text in EDIT_READINESS_POLICY_REQUIREMENTS
-            if required_text not in section
-        ]
-        if missing:
-            details = ", ".join(missing)
-            raise EditReadinessPolicyError(
-                f"{harness} router edit-readiness stop trigger is incomplete: {details}"
-            )
-
-
 def validate_operator_question_policy(
     blocks_by_harness: Mapping[str, str],
 ) -> None:
@@ -1049,7 +992,6 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     validate_foundation_access_policy(rendered)
     validate_authority_hierarchy_policy(rendered)
     validate_wait_for_load_policy(rendered)
-    validate_edit_readiness_policy(rendered)
     validate_operator_question_policy(rendered)
     validate_subagent_dispatch_policy(rendered)
     validate_harness_dispatch_mechanics(rendered)

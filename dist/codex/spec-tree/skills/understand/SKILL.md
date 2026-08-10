@@ -52,14 +52,6 @@ When a higher-level artifact changes, align every first affected lower spec in t
 
 </decision_to_spec_alignment>
 
-<spec_first_routing>
-
-- ALWAYS: enter a change that makes a behavioral rule enforceable through `/contextualize` on the owning node, and author the governing assertion before editing any enforcement surface.
-
-A skill, agent, or instruction surface enforces rules the spec tree declares, so making a rule enforceable is spec-governed work: the governing assertion is the first edit, and the enforcement surfaces implement it. Claude tends to invert this — editing the skill or instruction surface first, with no spec declaring the rule those surfaces enforce, leaving the missing assertion for a reviewer to discover after the surfaces are written. The inversion reads as progress because the enforcement prose is the visible deliverable; spec-first entry makes that finding impossible instead of probable.
-
-</spec_first_routing>
-
 <atemporal_voice>
 
 - ALWAYS: specs state atemporal product truth and contain no history or journey language.
@@ -515,10 +507,6 @@ Claude treated implementation incompleteness as evidence against a coherent deci
 **A pushed branch was reported as complete.**
 
 Claude treated a transport checkpoint as delivered value. Continue through `/merge` until the changeset reaches the default branch on origin or an explicit gate blocks every remaining independent action.
-
-**Enforcement surfaces were edited before the governing assertion existed.**
-
-Claude changed skill and instruction surfaces to enforce a new behavioral rule without authoring the spec assertion those surfaces implement — the enforcement prose was the visible deliverable, so the inversion read as progress — and a reviewer discovered the gap after the surfaces were written, with the assertion landing last. Enter through `/contextualize` on the owning node and author the governing assertion first, per `<spec_first_routing>` — the enforcement surfaces implement a declaration that already exists.
 
 </failure_modes>
 

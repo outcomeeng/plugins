@@ -50,34 +50,6 @@ def test_leaked_harness_dispatch_mechanics_are_rejected() -> None:
                 source.validate_harness_dispatch_mechanics({agent_harness: leaked})
 
 
-def test_every_harness_router_carries_the_edit_readiness_stop_trigger() -> None:
-    for enabled_languages in harness.template_language_subsets():
-        documents = evidence.rendered_instruction_blocks(enabled_languages)
-        source.validate_edit_readiness_policy(documents)
-        for document in documents.values():
-            section = source.stop_triggers_policy_section(
-                source.managed_router_block(document)
-            )
-            assert section is not None
-
-
-def test_dropping_a_required_edit_readiness_literal_is_rejected() -> None:
-    documents = evidence.rendered_instruction_blocks()
-    for agent_harness, document in documents.items():
-        section = source.stop_triggers_policy_section(
-            source.managed_router_block(document)
-        )
-        assert section is not None
-        for _, required_text in source.EDIT_READINESS_POLICY_REQUIREMENTS:
-            violating_document = document.replace(
-                section, section.replace(required_text, "", 1), 1
-            )
-            with pytest.raises(source.EditReadinessPolicyError):
-                source.validate_edit_readiness_policy(
-                    {agent_harness: violating_document}
-                )
-
-
 def test_dropping_a_required_dispatch_literal_is_rejected() -> None:
     for enabled_languages in harness.template_language_subsets():
         documents = evidence.rendered_instruction_blocks(enabled_languages)

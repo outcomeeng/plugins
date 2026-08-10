@@ -10,13 +10,6 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
-## 0.88.9
-
-### Added
-
-- **The foundation declares spec-first routing for enforcement surfaces.** A change that makes a behavioral rule enforceable — in a skill, agent, or instruction surface — is spec-governed work: it enters through `/contextualize` on the owning node and authors the governing assertion before any enforcement surface is edited. `/understand`'s truth hierarchy carries the rule and a failure mode naming the inversion — enforcement surfaces edited first, the missing assertion left for a reviewer to discover.
-- **The managed router gains an edit-readiness stop trigger.** Before the first edit to a spec, source, test, or instruction file, the checkout is on a local working branch and a live context marker covers every node governing the touched files; coordination-note-only edits keep following their transport's rules. Rendered into both harness routers on the next `/update-instruction-block` run (template 0.36.0).
-
 ## 0.88.8
 
 ### Changed
