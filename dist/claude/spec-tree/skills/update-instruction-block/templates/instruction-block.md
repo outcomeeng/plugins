@@ -1,5 +1,5 @@
 ---
-template_version: "0.35.0"
+template_version: "0.36.0"
 template_source: spec-tree
 ---
 
@@ -132,6 +132,8 @@ Default-branch work is complete only when it reaches the default branch on origi
 - the applicable gates have run or produced concrete failing evidence.
 
 🛑 **About to finish on a detached HEAD or stop at a fresh commit** — `git status --short --branch` reporting `## HEAD (no branch)`, or a new local commit, is not an endpoint; create or switch to a local branch preserving the worktree changes, unless the user explicitly limited the task to local-only work.
+
+🛑 **About to edit a spec, source, test, or instruction file with no working branch or missing node context** — before the first such edit, two prerequisites hold: the checkout is on a local working branch, and a live `<SPEC_TREE_CONTEXT>` marker covers every node governing the files the change touches. A change that makes a behavioral rule enforceable — in a skill, agent, or instruction surface — authors the governing assertion before any enforcement surface is edited. Coordination-note-only edits (`PLAN.md`, `ISSUES.md`) follow their transport's rules instead. Stop, complete the missing prerequisite, then edit.
 
 ## Checkpoint Commits
 
