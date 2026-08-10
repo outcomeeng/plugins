@@ -51,6 +51,8 @@ When a status assessment finds a determined changeset with commits ahead of its 
 
 The `/handoff` invocation supplies the operator-useful product summary, verification evidence, delivered state, remaining-work disposition, and session-file decision. Merge transports invoke `/handoff` without receiving `--no-session`; the handoff workflow decides whether a continuation reader is needed from live state. A merge transport MUST NOT replace this phase with a receipt-only response that lists PR state, branch cleanup, commit SHAs, or sync mechanics while leaving the operator to infer what changed or what happens next.
 
+The closeout is `/handoff`'s output, never transport-authored prose. A hand-written summary that reads operator-useful is the same violation as a receipt, because the duties behind the message — claimed-session accounting, worktree-release verification, continuation disposition — run only when the skill runs. A `/handoff` completed earlier in the same conversation never satisfies `CLOSE` for work merged after it: new merged work reopens the session, and the handoff workflow's existing-session search classifies threads a prior handoff already owns as existing-owner closures, so the repeat invocation is cheap. Cheapness is the reason to invoke it, never the reason to skip it.
+
 </close_phase>
 
 <branch_state_closeout>
