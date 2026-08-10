@@ -29,6 +29,8 @@ from typing import Final, Protocol
 
 from hypothesis import given, seed, settings
 
+from outcomeeng.distribution.contracts import SKILL_FILENAME
+from outcomeeng.validation.grant_locality import ALLOWED_TOOLS_FIELD
 from outcomeeng_testing.generators.contribution_targeting import (
     fork_states,
     unrecognized_permissions,
@@ -153,15 +155,37 @@ def resolve_with(responses: Responses) -> tuple[ResolutionLike, RecordingRunner]
     return resolution, runner
 
 
-def consumer_entrypoints() -> tuple[Path, ...]:
-    """Every consuming skill's own resolver entrypoint, discovered from the tree.
+def target_resolving_skills() -> tuple[Path, ...]:
+    """Skill directories whose own frontmatter grants a resolver entrypoint.
 
-    Discovered rather than enumerated: a skill added to the plugin enters this
-    domain without a case being written for it here. The provider's own script is
-    excluded — it is the shared resolver, not an entrypoint reaching one.
+    The grant is how a skill declares that it resolves a target, and it is
+    independent of whether the entrypoint file exists. Deriving the domain from
+    the script instead would make a deleted entrypoint shrink the domain rather
+    than fail a case, so the absence it should expose would be invisible.
+
+    Matched against the `allowed-tools` declaration rather than the file text:
+    the provider skill names the same relative path in its own prose while
+    granting nothing, and belongs outside this domain.
     """
-    pattern = str(Path("*").joinpath(*ENTRYPOINT_RELPATH))
-    return tuple(sorted(p for p in SKILLS_DIR.glob(pattern) if p != SCRIPT))
+    needle = "/".join(ENTRYPOINT_RELPATH)
+    skills: list[Path] = []
+    for skill_file in sorted(SKILLS_DIR.glob(f"*/{SKILL_FILENAME}")):
+        for line in skill_file.read_text(encoding="utf-8").splitlines():
+            if line.startswith(f"{ALLOWED_TOOLS_FIELD}:") and needle in line:
+                skills.append(skill_file.parent)
+                break
+    return tuple(skills)
+
+
+def consumer_entrypoints() -> tuple[Path, ...]:
+    """The entrypoint path each target-resolving skill is expected to carry.
+
+    A path here may not exist — that is the point. Existence is the linked
+    test's assertion, not this function's filter.
+    """
+    return tuple(
+        skill.joinpath(*ENTRYPOINT_RELPATH) for skill in target_resolving_skills()
+    )
 
 
 @contextmanager

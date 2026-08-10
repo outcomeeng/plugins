@@ -2,6 +2,7 @@
 name: manage-parent-issue
 description: >-
   ALWAYS invoke this skill when continuing an open issue in a repository the operator does not control — answering a maintainer, adding evidence, or reporting the thread's current state.
+  NEVER comment on or close an issue in such a repository without this skill.
 argument-hint: "[issue number or URL]"
 allowed-tools: Read, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, request_user_input, Bash(python3 "${SKILL_DIR}/scripts/resolve_target.py":*), Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(printf:*)
 ---

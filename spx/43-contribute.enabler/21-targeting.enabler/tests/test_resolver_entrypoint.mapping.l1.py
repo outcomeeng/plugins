@@ -15,9 +15,17 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
 ENTRYPOINTS = consumer_entrypoints()
 
 
-def test_the_plugin_ships_a_consuming_entrypoint_to_map() -> None:
+def test_the_plugin_declares_target_resolving_skills() -> None:
     """An empty domain would make every case below vacuously true."""
-    assert ENTRYPOINTS, f"no consuming entrypoint found beside {SCRIPT}"
+    assert ENTRYPOINTS, f"no skill grants an entrypoint beside {SCRIPT}"
+
+
+@pytest.mark.parametrize("entrypoint", ENTRYPOINTS, ids=lambda p: p.parent.parent.name)
+def test_each_target_resolving_skill_carries_its_entrypoint(entrypoint: Path) -> None:
+    """The skill granted this path; a grant naming nothing is the failure here."""
+    assert entrypoint.is_file(), (
+        f"{entrypoint.parent.parent.name} grants {entrypoint.name} but ships none"
+    )
 
 
 @pytest.mark.parametrize("entrypoint", ENTRYPOINTS, ids=lambda p: p.parent.parent.name)

@@ -123,6 +123,7 @@ The body explains why; the diff already shows what. Never name Claude or its run
 - MUST name the base repository with `--repo` and the head with `--head <head-owner>:<branch>` on `gh pr create`.
 - MUST cut the contribution branch from the base repository's default branch, under a name derived in Step 4 before the first command that uses it.
 - NEVER force-push. The `Bash(git push -u origin HEAD:refs/heads/*)` grant matches by prefix, so it admits `--force` and `--force-with-lease` too; this constraint is the whole containment for those flags.
+- NEVER pass `--force` or `--discard-changes` to `git switch` — the `Bash(git switch:*)` grant matches by prefix and admits both, and either one drops uncommitted work in the invocation checkout. Cutting the contribution branch never needs them.
 - NEVER open against a base whose classification is `controlled`, `fork-absent`, or `blocked`.
 - NEVER create the fork — report the destination candidates and stop.
 - NEVER report an unrunnable check as passed, or omit it from the body.

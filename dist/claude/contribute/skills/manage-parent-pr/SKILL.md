@@ -2,6 +2,7 @@
 name: manage-parent-pr
 description: >-
   ALWAYS invoke this skill when continuing an open pull request against a repository the operator does not control — answering review, publishing a revision, or reporting its current state.
+  NEVER comment on or push to such a pull request without this skill.
 argument-hint: "[pull request number or URL]"
 allowed-tools: Read, Skill, Agent, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(git fetch:*), Bash(git branch --show-current), Bash(git push origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
 ---
