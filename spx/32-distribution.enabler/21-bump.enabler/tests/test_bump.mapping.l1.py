@@ -12,16 +12,22 @@ from outcomeeng.distribution.bump import (
 from outcomeeng_testing.generators.bump_mapping import (
     ATTRIBUTION_DESTINATION_PLUGIN,
     ATTRIBUTION_SOURCE_PLUGIN,
-    AUTO_SEGMENT_MAPPING_CASES,
     change_attribution_inputs,
+    lifecycle_surface_changes,
     mixed_minor_triggering_changes,
+    non_lifecycle_surface_changes,
     patch_only_changes,
 )
 
 
-def test_auto_segment_classifies_each_status_and_path_pattern() -> None:
-    for status, path, expected in AUTO_SEGMENT_MAPPING_CASES:
-        assert auto_segment([ChangedPath(status=status, path=path)]) == expected
+def test_a_lifecycle_change_to_a_declared_surface_is_minor() -> None:
+    for change in lifecycle_surface_changes():
+        assert auto_segment([change]) is Segment.MINOR, change
+
+
+def test_a_modifying_or_undeclared_surface_change_is_patch() -> None:
+    for change in non_lifecycle_surface_changes():
+        assert auto_segment([change]) is Segment.PATCH, change
 
 
 def test_auto_segment_returns_minor_when_any_change_is_minor_triggering() -> None:
@@ -45,7 +51,5 @@ def test_each_file_status_attributes_its_change_to_the_expected_plugins() -> Non
 
 
 def test_auto_segment_never_returns_major() -> None:
-    for status, path, _ in AUTO_SEGMENT_MAPPING_CASES:
-        assert (
-            auto_segment([ChangedPath(status=status, path=path)]) is not Segment.MAJOR
-        )
+    for change in lifecycle_surface_changes() + non_lifecycle_surface_changes():
+        assert auto_segment([change]) is not Segment.MAJOR, change

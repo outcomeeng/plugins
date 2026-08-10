@@ -24,152 +24,156 @@ from outcomeeng.distribution.contracts import (
 )
 from outcomeeng_testing.generators.bump import distribution_relpath
 
-AUTO_SEGMENT_MAPPING_CASES: tuple[tuple[FileStatus, str, Segment], ...] = (
-    (
-        FileStatus.ADDED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR,
-            "foo",
-            f"{SKILLS_SUBDIR_NAME}/new-skill/{SKILL_FILENAME}",
+
+def lifecycle_surface_changes() -> tuple[ChangedPath, ...]:
+    """Lifecycle changes to a declared plugin surface, across every root.
+
+    Each entry is a non-modifying status applied to one of the three declared
+    surfaces — a skill's `SKILL.md`, an agent definition, a plugin manifest —
+    under the authored root and both generated roots. These are inputs only; the
+    segment each one classifies to is asserted by the linked test.
+    """
+    return (
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "foo",
+                f"{SKILLS_SUBDIR_NAME}/new-skill/{SKILL_FILENAME}",
+            ),
         ),
-        Segment.MINOR,
-    ),
-    (
-        FileStatus.COPIED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR,
-            "foo",
-            f"{SKILLS_SUBDIR_NAME}/copied-skill/{SKILL_FILENAME}",
+        ChangedPath(
+            FileStatus.COPIED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "foo",
+                f"{SKILLS_SUBDIR_NAME}/copied-skill/{SKILL_FILENAME}",
+            ),
         ),
-        Segment.MINOR,
-    ),
-    (
-        FileStatus.DELETED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR,
-            "foo",
-            f"{SKILLS_SUBDIR_NAME}/old-skill/{SKILL_FILENAME}",
+        ChangedPath(
+            FileStatus.DELETED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "foo",
+                f"{SKILLS_SUBDIR_NAME}/old-skill/{SKILL_FILENAME}",
+            ),
         ),
-        Segment.MINOR,
-    ),
-    (
-        FileStatus.RENAMED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR,
-            "foo",
-            f"{SKILLS_SUBDIR_NAME}/renamed/{SKILL_FILENAME}",
+        ChangedPath(
+            FileStatus.RENAMED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "foo",
+                f"{SKILLS_SUBDIR_NAME}/renamed/{SKILL_FILENAME}",
+            ),
         ),
-        Segment.MINOR,
-    ),
-    (
-        FileStatus.ADDED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR,
-            "foo",
-            f"{AGENTS_SUBDIR_NAME}/new-agent{MARKDOWN_FILE_SUFFIX}",
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "foo",
+                f"{AGENTS_SUBDIR_NAME}/new-agent{MARKDOWN_FILE_SUFFIX}",
+            ),
         ),
-        Segment.MINOR,
-    ),
-    (
-        FileStatus.ADDED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR,
-            "foo",
-            f"{CLAUDE_PLUGIN_SUBDIR_NAME}/plugin.json",
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "foo",
+                f"{CLAUDE_PLUGIN_SUBDIR_NAME}/plugin.json",
+            ),
         ),
-        Segment.MINOR,
-    ),
-    (
-        FileStatus.ADDED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR,
-            "foo",
-            f"{CODEX_PLUGIN_SUBDIR_NAME}/plugin.json",
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "foo",
+                f"{CODEX_PLUGIN_SUBDIR_NAME}/plugin.json",
+            ),
         ),
-        Segment.MINOR,
-    ),
-    (
-        FileStatus.ADDED,
-        distribution_relpath(
-            DIST_CLAUDE_PLUGINS_DIR,
-            "foo",
-            f"{SKILLS_SUBDIR_NAME}/generated-skill/{SKILL_FILENAME}",
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(
+                DIST_CLAUDE_PLUGINS_DIR,
+                "foo",
+                f"{SKILLS_SUBDIR_NAME}/generated-skill/{SKILL_FILENAME}",
+            ),
         ),
-        Segment.MINOR,
-    ),
-    (
-        FileStatus.ADDED,
-        distribution_relpath(
-            DIST_CODEX_PLUGINS_DIR,
-            "foo",
-            f"{SKILLS_SUBDIR_NAME}/generated-skill/{SKILL_FILENAME}",
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(
+                DIST_CODEX_PLUGINS_DIR,
+                "foo",
+                f"{SKILLS_SUBDIR_NAME}/generated-skill/{SKILL_FILENAME}",
+            ),
         ),
-        Segment.MINOR,
-    ),
-    (
-        FileStatus.MODIFIED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR,
-            "foo",
-            f"{SKILLS_SUBDIR_NAME}/existing/{SKILL_FILENAME}",
+    )
+
+
+def non_lifecycle_surface_changes() -> tuple[ChangedPath, ...]:
+    """Changes that are either modifying or land outside a declared surface.
+
+    The first three modify a declared surface; the rest touch a path no declared
+    surface covers, under both an authored and a generated root. These are inputs
+    only; the segment each one classifies to is asserted by the linked test.
+    """
+    return (
+        ChangedPath(
+            FileStatus.MODIFIED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "foo",
+                f"{SKILLS_SUBDIR_NAME}/existing/{SKILL_FILENAME}",
+            ),
         ),
-        Segment.PATCH,
-    ),
-    (
-        FileStatus.MODIFIED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR,
-            "foo",
-            f"{CLAUDE_PLUGIN_SUBDIR_NAME}/plugin.json",
+        ChangedPath(
+            FileStatus.MODIFIED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "foo",
+                f"{CLAUDE_PLUGIN_SUBDIR_NAME}/plugin.json",
+            ),
         ),
-        Segment.PATCH,
-    ),
-    (
-        FileStatus.MODIFIED,
-        distribution_relpath(
-            DIST_CODEX_PLUGINS_DIR,
-            "foo",
-            f"{SKILLS_SUBDIR_NAME}/generated-skill/{SKILL_FILENAME}",
+        ChangedPath(
+            FileStatus.MODIFIED,
+            distribution_relpath(
+                DIST_CODEX_PLUGINS_DIR,
+                "foo",
+                f"{SKILLS_SUBDIR_NAME}/generated-skill/{SKILL_FILENAME}",
+            ),
         ),
-        Segment.PATCH,
-    ),
-    (
-        FileStatus.ADDED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR, "foo", "skills/existing/scripts/helper.py"
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR, "foo", "skills/existing/scripts/helper.py"
+            ),
         ),
-        Segment.PATCH,
-    ),
-    (
-        FileStatus.COPIED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR, "foo", "skills/existing/scripts/copied_helper.py"
+        ChangedPath(
+            FileStatus.COPIED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR, "foo", "skills/existing/scripts/copied_helper.py"
+            ),
         ),
-        Segment.PATCH,
-    ),
-    (
-        FileStatus.ADDED,
-        distribution_relpath(
-            SOURCE_PLUGINS_DIR, "foo", "skills/existing/references/notes.md"
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR, "foo", "skills/existing/references/notes.md"
+            ),
         ),
-        Segment.PATCH,
-    ),
-    (
-        FileStatus.ADDED,
-        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "templates/new-template.md"),
-        Segment.PATCH,
-    ),
-    (
-        FileStatus.ADDED,
-        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "hooks/hooks.json"),
-        Segment.PATCH,
-    ),
-    (
-        FileStatus.DELETED,
-        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", ".gitignore"),
-        Segment.PATCH,
-    ),
-)
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR, "foo", "templates/new-template.md"
+            ),
+        ),
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "hooks/hooks.json"),
+        ),
+        ChangedPath(
+            FileStatus.DELETED,
+            distribution_relpath(SOURCE_PLUGINS_DIR, "foo", ".gitignore"),
+        ),
+    )
 
 
 def versions() -> SearchStrategy[Version]:
