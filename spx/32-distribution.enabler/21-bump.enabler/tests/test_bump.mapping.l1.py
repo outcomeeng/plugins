@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from outcomeeng.distribution.bump import (
-    ChangedPath,
     FileStatus,
     Segment,
     auto_segment,
