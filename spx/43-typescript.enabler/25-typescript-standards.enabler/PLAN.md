@@ -34,7 +34,9 @@ Remaining TypeScript work, in order:
    remain in the linked test while the generator owns the domain. The harness keeps seed,
    run count, and replay diagnostics and nothing else — the split
    `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`
-   ALWAYS:25 already implies. The Rust plugin was corrected to that shape first; see
+   already implied by its ALWAYS giving the property harness seed selection, run count,
+   replay input, and failure diagnostics while the executed test owns none of that
+   configuration. The Rust plugin was corrected to that shape first; see
    `spx/43-rust.enabler/PLAN.md`, whose worked examples are the reference for this slice.
 
    **Site inventory, measured against the shipped skill.** Twenty example sites across

@@ -27,7 +27,7 @@ The Rust delta is the discriminator in Rust terms: a `pub` item in the product c
 ## Predicate-seam correction to the worked examples — executed
 
 `rust-test-standards` stated the predicate seam correctly in `<success_criteria>`, `<acceptable_doubles>`, `<predicate_and_oracle_litmus>`, `<test_data_policy>`, and `<anti_patterns>`, and contradicted it in all fourteen worked examples, each of which was a single call to an `assert_*` harness function with no assertion macro in the `#[test]` body. The governing rules are
-`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md` ALWAYS:18 and NEVER:36, and the shared `test-evidence-standards` `<predicate_seam>`.
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md` — the ALWAYS giving the linked executed test every behavioral predicate and assertion API call, and the NEVER against infrastructure encoding that predicate through a verdict, expected-value parameter, assertion call, matcher, or verdict-shaped method — and the shared `test-evidence-standards` `<predicate_seam>`.
 
 Every example now ends in an assertion macro the reader can see, with the harness supplying resources, lifecycle, and — for property runs — case count, seed, and replay output while the invariant stays in the `#[test]` closure. Four examples also imported domain values from `fixtures::` modules, which
 `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` forbids; those now draw from generators, and the surviving `fixtures::` imports return paths.
