@@ -158,17 +158,17 @@ Apply every question in `/test-evidence-standards` `<common_litmus_questions>`, 
 <tooling>
 Use the lightest Rust-native tool that preserves evidence:
 
-| Need                          | Preferred tooling                                             |
-| ----------------------------- | ------------------------------------------------------------- |
-| L1 scenario and mapping tests | `#[test]`, `assert_eq!`, `rstest` when parameterization helps |
-| temp files or dirs            | `tempfile`                                                    |
-| async tests                   | `#[tokio::test]` or runtime-specific test macro               |
-| property testing              | harness wrapper backed by `proptest` or `quickcheck`          |
-| CLI binaries                  | `assert_cmd` and `predicates`                                 |
-| textual golden output         | `insta` when the output surface itself is the assertion       |
-| compile-fail or diagnostics   | `trybuild`                                                    |
-| local services or containers  | `testcontainers` or repo-native harnesses                     |
-| coverage                      | `cargo llvm-cov` when available                               |
+| Need                          | Preferred tooling                                              |
+| ----------------------------- | -------------------------------------------------------------- |
+| L1 scenario and mapping tests | `#[test]`, `assert_eq!`, `rstest` when parameterization helps  |
+| temp files or dirs            | `tempfile`                                                     |
+| async tests                   | `#[tokio::test]` or runtime-specific test macro                |
+| property testing              | harness wrapper backed by `proptest` or `quickcheck`           |
+| CLI binaries                  | `assert_cmd` to build and run the binary, `Output` to the test |
+| textual golden output         | `insta` when the output surface itself is the assertion        |
+| compile-fail or diagnostics   | `trybuild`                                                     |
+| local services or containers  | `testcontainers` or repo-native harnesses                      |
+| coverage                      | `cargo llvm-cov` when available                                |
 
 Snapshot tests are valid only when the textual or structured output surface is itself the contract. They are weak evidence for business logic that has a stronger structural assertion available.
 </tooling>
@@ -198,9 +198,9 @@ ALWAYS import command names, rule names, matcher tokens, status values, domain i
 // ❌ rejected: duplicates a value the production module should own
 const PASS_STATUS: &str = "pass";
 
-// ✅ preferred: import from the production module
+// ✅ preferred: import from the production module and assert against governed behavior
 use product::audit::GateStatus;
-assert_eq!(GateStatus::Pass.as_str(), product::audit::PASS_STATUS_TOKEN);
+assert_eq!(run_gate(&input).status, GateStatus::Pass);
 ```
 
 </source_owned_values>
@@ -343,6 +343,7 @@ fn loads_yaml_from_temp_dir() {
 Use the product property harness for universal invariants. The harness runs the domain; the invariant and its `prop_assert*` macro stay in the `#[test]` closure:
 
 ```rust
+use proptest::prop_assert_eq;
 use <product>_testing::generators::configs::valid_config_strategy;
 use <product>_testing::harnesses::properties::run_property;
 
@@ -424,6 +425,9 @@ Reject or rewrite these patterns:
 | source text read from tests                                                        | proves implementation text rather than behavior                                                     |
 | missing harness cleanup                                                            | leaves shared state that changes later test outcomes                                                |
 | test-file bindings that choose data, expectations, configuration, or verdict rules | valid bindings only receive values selected by source contracts, harnesses, generators, or fixtures |
+| a case value moved into a production module so the test can cite that module       | a production address is not a production contract; nothing outside the test requires the symbol     |
+| `.assert().success()` or a `predicates` matcher as the verdict                     | the library owns the predicate; take the `Output` and assert on it with the declared assertion API  |
+| a command name, subcommand, or flag written as a literal in the test               | the binary's argument vocabulary is a source contract the owning module exports                     |
 | predicate or assertion macro moved into a harness, generator, or collaborator      | the linked `#[test]` function owns every predicate and assertion macro                              |
 | property runner tuning in a test file                                              | the property harness owns seed, case count, persistence, and replay diagnostics                     |
 

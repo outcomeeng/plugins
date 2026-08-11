@@ -19,7 +19,7 @@ Level 2 covers behavior that needs a real binary, async runtime, local service, 
 
 | Concern                          | Typical tooling                        |
 | -------------------------------- | -------------------------------------- |
-| CLI binary behavior              | `assert_cmd`, `predicates`             |
+| CLI binary behavior              | `assert_cmd`, `Output` to the test     |
 | async adapters with real runtime | `#[tokio::test]`                       |
 | local databases or queues        | repo-native harness, `testcontainers`  |
 | protocol adapters                | real HTTP server/client, local sockets |
@@ -52,8 +52,13 @@ use <product>_testing::harnesses::filesystem::TempProduct;
 fn init_command_writes_project_files() {
     let project = TempProduct::seeded_from(empty_project_path());
 
-    product_binary().arg("init").current_dir(project.path()).assert().success();
+    let outcome = product_binary()
+        .arg(product::init::COMMAND)
+        .current_dir(project.path())
+        .output()
+        .unwrap();
 
+    assert!(outcome.status.success());
     assert!(project.path().join(product::init::MANIFEST_FILE).exists());
 }
 ```
@@ -90,12 +95,13 @@ use <product>_testing::harnesses::queue::QueueHarness;
 #[tokio::test]
 async fn worker_consumes_real_queue_messages() {
     let queue = QueueHarness::start().await;
+    let drained_depth = queue.depth().await.unwrap();
     let job = any_pending_job();
     queue.publish(&job).await.unwrap();
 
     run_worker_once(queue.connection()).await.unwrap();
 
-    assert_eq!(queue.depth().await.unwrap(), 0);
+    assert_eq!(queue.depth().await.unwrap(), drained_depth);
 }
 ```
 

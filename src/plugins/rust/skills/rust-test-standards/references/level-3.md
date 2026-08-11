@@ -83,8 +83,14 @@ fn sync_command_uploads_to_remote_sandbox() {
     let sandbox = RemoteSandbox::claim();
     let tree = any_syncable_tree();
 
-    product_binary().arg("sync").arg(tree.path()).arg(sandbox.url()).assert().success();
+    let outcome = product_binary()
+        .arg(product::sync::COMMAND)
+        .arg(tree.path())
+        .arg(sandbox.url())
+        .output()
+        .unwrap();
 
+    assert!(outcome.status.success());
     assert_eq!(sandbox.listing().unwrap(), tree.expected_listing());
 }
 ```

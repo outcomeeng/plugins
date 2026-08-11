@@ -1,10 +1,10 @@
 <contents>
 
 - `<overview>` — the progression and the predicate rule every example keeps
-- `<source_contract_values>` — source-owned case values
-- `<named_typical_cases>` — one named category per test
-- `<named_edge_cases>` — boundary cases kept separate
-- `<systematic_coverage>` — iteration over a source-owned enumeration
+- `<source_contract_values>` — source-owned expected results beside a spec-declared case
+- `<one_scenario_per_test>` — one spec scenario per test
+- `<boundary_cases>` — boundary cases the spec or rule names
+- `<systematic_coverage>` — iteration over a generated domain
 - `<property_coverage>` — generator domain, harness run policy, test-owned invariant
 - `<ordering_strategy>` — trivial to complex
 - `<anti_patterns>` — rejections
@@ -14,18 +14,18 @@
 <overview>
 Move from named, inspectable cases to broader coverage without losing the ability to diagnose failures quickly.
 
-Every example below keeps the assertion macro in the `#[test]` body. A harness supplies setup, resources, and property-run policy; a generator supplies the domain; the source module owns the case values and the expected results. A harness call that both acts and judges hides the predicate and is rejected.
+Every example below keeps the assertion macro in the `#[test]` body. A harness supplies setup, resources, and property-run policy; a generator supplies the domain; the source module owns the vocabulary the expectation is written in. A scenario's own case is the interaction the spec declares, transcribed into the test — adding it to a production module so the test can import it gives the case a production address without giving it a production contract.
 </overview>
 
 <source_contract_values>
-Keep reusable source-owned values in source modules and reusable generated domains in `<product>-testing`.
+Keep reusable source-owned values in source modules and reusable generated domains in `<product>-testing`. `Status` is source-owned because production returns it; the input is the interaction the governing scenario declares.
 
 ```rust
-use product::inputs::{simple_input_case, Status};
+use product::Status;
 
 #[test]
 fn processes_simple_input() {
-    let processed = process(simple_input_case()).unwrap();
+    let processed = process("id=42;kind=widget").unwrap();
 
     assert_eq!(processed.status, Status::Accepted);
 }
@@ -33,51 +33,52 @@ fn processes_simple_input() {
 
 </source_contract_values>
 
-<named_typical_cases>
+<one_scenario_per_test>
+One spec scenario per test, named for the interaction it carries. A second scenario is a second spec assertion, never a second member of a "typical case" set the test author assembled.
 
 ```rust
-use product::inputs::{unicode_input_case, Status};
+use product::Status;
 
 #[test]
 fn processes_unicode_input() {
-    let processed = process(unicode_input_case()).unwrap();
+    let processed = process("id=42;kind=wîdget").unwrap();
 
     assert_eq!(processed.status, Status::Accepted);
 }
 ```
 
-Each failure names a concrete category, so the failing case is immediately inspectable.
-</named_typical_cases>
+Each failure names a concrete interaction, so the failing case is immediately inspectable.
+</one_scenario_per_test>
 
-<named_edge_cases>
+<boundary_cases>
+A boundary case is evidence when the spec declares it or the governing rule names it as a violating input. `ProcessError::Empty` is the source-owned rejection contract; the empty input is what the rule names.
 
 ```rust
-use product::inputs::empty_input_case;
 use product::ProcessError;
 
 #[test]
 fn rejects_empty_input() {
-    let rejected = process(empty_input_case());
+    let rejected = process("");
 
     assert!(matches!(rejected, Err(ProcessError::Empty)));
 }
 ```
 
-Keep boundary cases separate from the happy path. A failing edge case should say exactly which boundary broke.
-</named_edge_cases>
+Keep boundary cases separate from the happy path. A failing boundary case should say exactly which boundary broke.
+</boundary_cases>
 
 <systematic_coverage>
-Iterate the source-owned enumeration once the individual scenarios are already clear. The source module owns both the input and the expected result, so the loop adds coverage without the test author inventing a case.
+Iterate a generated domain once the individual scenarios are already clear. The generator supplies each input and the expectation derives from that input, so the loop adds coverage without the test author writing a case table beside it.
 
 ```rust
-use product::inputs::KNOWN_CASES;
+use <product>_testing::generators::inputs::encoded_inputs;
 
 #[test]
-fn processes_known_cases() {
-    for case in KNOWN_CASES {
-        let processed = process(case.input).unwrap();
+fn every_generated_input_reports_its_kind() {
+    for input in encoded_inputs() {
+        let processed = process(&input.encoding).unwrap();
 
-        assert_eq!(processed.status, case.expected_status, "case {}", case.name);
+        assert_eq!(processed.kind, input.kind, "input {}", input.encoding);
     }
 }
 ```
@@ -88,6 +89,7 @@ fn processes_known_cases() {
 Use `proptest` for true universal claims. The harness owns case count, seed, regression persistence, and replay output; the closure owns the invariant.
 
 ```rust
+use proptest::prop_assert_eq;
 use <product>_testing::generators::keys::canonical_key_strings;
 use <product>_testing::harnesses::properties::run_property;
 
@@ -118,6 +120,7 @@ Run tests from trivial to complex:
 <anti_patterns>
 
 - a harness call that both acts and judges, so the `#[test]` body carries no assertion macro
+- a case value moved into a production module solely so a test can cite that module as its import path
 - starting with property tests when no named regression cases exist
 - anonymous inline fixtures with no category name
 - mocks that assert collaborator calls instead of governed behavior
