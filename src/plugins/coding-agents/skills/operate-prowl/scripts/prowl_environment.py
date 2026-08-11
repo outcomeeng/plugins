@@ -386,6 +386,27 @@ class ExecutionStatus(StrEnum):
     OPERATION_UNAVAILABLE = "operation-unavailable"
 
 
+class TargetMatchCardinality(StrEnum):
+    ZERO = "zero"
+    ONE = "one"
+    MULTIPLE = "multiple"
+
+
+TARGET_RESOLUTION_STATUS_BY_CARDINALITY = {
+    TargetMatchCardinality.ZERO: ExecutionStatus.IDENTITY_UNAVAILABLE,
+    TargetMatchCardinality.ONE: ExecutionStatus.SUCCEEDED,
+    TargetMatchCardinality.MULTIPLE: ExecutionStatus.IDENTITY_AMBIGUOUS,
+}
+
+
+def target_match_cardinality(candidate_count: int) -> TargetMatchCardinality:
+    if candidate_count == 0:
+        return TargetMatchCardinality.ZERO
+    if candidate_count == 1:
+        return TargetMatchCardinality.ONE
+    return TargetMatchCardinality.MULTIPLE
+
+
 class EnvelopeKind(StrEnum):
     DELEGATION_REQUEST = "delegation-request"
 
@@ -1028,11 +1049,11 @@ def resolve_target(
                 }
                 for participant in matched
             ]
-            if not candidates:
-                status = ExecutionStatus.IDENTITY_UNAVAILABLE
+            cardinality = target_match_cardinality(len(candidates))
+            status = TARGET_RESOLUTION_STATUS_BY_CARDINALITY[cardinality]
+            if cardinality is TargetMatchCardinality.ZERO:
                 detail = f"No non-caller Prowl agent contains target path {path}."
-            elif len(candidates) > 1:
-                status = ExecutionStatus.IDENTITY_AMBIGUOUS
+            elif cardinality is TargetMatchCardinality.MULTIPLE:
                 detail = f"Target path {path} matches multiple non-caller Prowl agents."
         except ProwlEnvironmentError as error:
             status = error.status

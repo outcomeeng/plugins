@@ -3,7 +3,10 @@ from io import StringIO
 from types import ModuleType
 from typing import cast
 
-from outcomeeng_testing.generators.prowl_environment import public_agent_item
+from outcomeeng_testing.generators.prowl_environment import (
+    public_agent_item,
+    resolver_target_path,
+)
 from outcomeeng_testing.harnesses.coding_agents import load_agent_message
 from outcomeeng_testing.harnesses.prowl_environment import (
     RecordingRunner,
@@ -82,48 +85,27 @@ def test_resolver_returns_complete_inventory_and_one_non_caller_template() -> No
     ]
 
 
-def test_resolver_reports_zero_and_multiple_non_caller_matches_without_sending() -> (
-    None
-):
+def test_resolver_reports_each_non_caller_match_cardinality_without_sending() -> None:
     module = load_prowl_environment()
     agents = [public_agent_item(module, ordinal) for ordinal in range(3)]
 
-    for target_path, expected_status, expected_count in (
-        (
-            cast(dict[str, object], agents[0][module.WORKTREE_FIELD])[
-                module.PATH_FIELD
-            ],
-            module.ExecutionStatus.IDENTITY_UNAVAILABLE,
-            0,
-        ),
-        (
-            cast(dict[str, object], agents[0][module.WORKTREE_FIELD])[
-                module.ROOT_PATH_FIELD
-            ],
-            module.ExecutionStatus.IDENTITY_AMBIGUOUS,
-            2,
-        ),
-        (
-            cast(
-                str,
-                cast(dict[str, object], agents[0][module.WORKTREE_FIELD])[
-                    module.ROOT_PATH_FIELD
-                ],
-            )
-            + "/docs",
-            module.ExecutionStatus.IDENTITY_UNAVAILABLE,
-            0,
-        ),
-    ):
+    for (
+        cardinality,
+        expected_status,
+    ) in module.TARGET_RESOLUTION_STATUS_BY_CARDINALITY.items():
+        target_path = resolver_target_path(module, agents, cardinality)
         runner = RecordingRunner([prowl_agents_command_result(module, agents)])
         result = module.resolve_target(
-            cast(str, target_path),
+            target_path,
             cast(dict[str, str], agents[0][module.PANE_FIELD])[module.ID_FIELD],
             runner,
         )
 
         assert result[module.STATUS_FIELD] == expected_status
-        assert len(result[module.CANDIDATES_FIELD]) == expected_count
+        assert (
+            module.target_match_cardinality(len(result[module.CANDIDATES_FIELD]))
+            is cardinality
+        )
         assert all(
             candidate[module.PARTICIPANT_FIELD][module.PANE_FIELD]
             != result[module.CALLER_FIELD][module.PANE_FIELD]
@@ -135,6 +117,35 @@ def test_resolver_reports_zero_and_multiple_non_caller_matches_without_sending()
                 None,
             )
         ]
+
+
+def test_repository_child_path_does_not_match_repository_root() -> None:
+    module = load_prowl_environment()
+    agents = [public_agent_item(module, ordinal) for ordinal in range(3)]
+    repository = cast(
+        str,
+        cast(dict[str, object], agents[0][module.WORKTREE_FIELD])[
+            module.ROOT_PATH_FIELD
+        ],
+    )
+    runner = RecordingRunner([prowl_agents_command_result(module, agents)])
+
+    result = module.resolve_target(
+        f"{repository}/docs",
+        cast(dict[str, str], agents[0][module.PANE_FIELD])[module.ID_FIELD],
+        runner,
+    )
+
+    assert (
+        result[module.STATUS_FIELD]
+        == module.TARGET_RESOLUTION_STATUS_BY_CARDINALITY[
+            module.TargetMatchCardinality.ZERO
+        ]
+    )
+    assert result[module.CANDIDATES_FIELD] == []
+    assert runner.calls == [
+        (module.command_for(module.operation_request(module.Operation.AGENTS)), None)
+    ]
 
 
 def test_filled_resolver_template_returns_one_complete_checked_send_result() -> None:

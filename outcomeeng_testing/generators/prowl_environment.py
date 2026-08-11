@@ -105,6 +105,35 @@ def public_agent_item(module: ModuleType, ordinal: int) -> dict[str, object]:
     }
 
 
+def resolver_target_path(
+    module: ModuleType,
+    agents: list[dict[str, object]],
+    cardinality: object,
+) -> str:
+    if cardinality is module.TargetMatchCardinality.ZERO:
+        agent = agents[0]
+        field_name = module.PATH_FIELD
+    elif cardinality is module.TargetMatchCardinality.ONE:
+        agent = agents[1]
+        field_name = module.PATH_FIELD
+    elif cardinality is module.TargetMatchCardinality.MULTIPLE:
+        agent = agents[0]
+        field_name = module.ROOT_PATH_FIELD
+    else:
+        raise AssertionError(f"Unknown target-match cardinality: {cardinality}")
+    worktree = agent[module.WORKTREE_FIELD]
+    if not isinstance(worktree, dict):
+        raise AssertionError("Generated public agent has no worktree object")
+    value = worktree[field_name]
+    if not isinstance(value, str):
+        raise AssertionError(f"Generated worktree {field_name} is not text")
+    return value
+
+
+def subprocess_input_text(ordinal: int) -> str:
+    return f"generated subprocess input {ordinal}"
+
+
 def agent_identity(module: ModuleType, ordinal: int) -> dict[str, str]:
     suffix = str(ordinal)
     return {
