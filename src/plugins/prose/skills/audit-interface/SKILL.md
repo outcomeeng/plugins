@@ -25,15 +25,17 @@ Findings on surface text — each carrying pattern, category, quote, and rewrite
 <audit_workflow>
 
 1. Sweep the base categories against the full `/prose-standards` descriptions, applying the two overrides: fragments pass for surface elements (not for body text inside them), and repetition passes across parallel elements (not within one element's prose).
-2. Sweep the `/interface-standards` `<additional_rules>` per element type: action-led buttons and links, sentence case, brevity caps, one term per concept across the surface, error what-happened/what-next pairing, orienting empty states, consequence-naming confirmations, filler words.
-3. Identify every feature that triggers a `/prose-standards` rule pack, then sweep each triggered pack over the elements carrying that feature — the instruction pack on a stepped empty state or onboarding sequence, the table pack on a table rendered as an element. A pack binds on the feature, in every kind.
-4. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence or element with co-occurring patterns yields one finding naming every pattern present.
+2. Sweep the `/interface-standards` `<voice_canon>` rule by rule: substance-first openings, plain words, filler words, unsupported assertion, one term one meaning, failure text, sentence case, punctuation.
+3. Sweep the `/interface-standards` `<additional_rules>` per element type: action-led buttons and links, sentence case, brevity caps, one term per concept across the surface, error what-happened/what-next pairing, orienting empty states, consequence-naming confirmations, filler words.
+4. Identify every feature that triggers a `/prose-standards` rule pack, then sweep each triggered pack over the elements carrying that feature — the instruction pack on a stepped empty state or onboarding sequence, the table pack on a table rendered as an element. A pack binds on the feature, in every kind.
+5. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence or element with co-occurring patterns yields one finding naming every pattern present.
 
 </audit_workflow>
 
 <success_criteria>
 
-- Every base category and every interface rule was swept per element type.
+- Every base category, every voice-canon rule, and every interface rule was swept per element type.
+- Every rule pack the surface triggers was applied over the elements that trigger it.
 - The overrides produced no false-positive findings, and out-of-bounds uses of them were still flagged.
 - Every finding carries pattern, category, quote, and rewrite, with rewrites showing fixed text.
 

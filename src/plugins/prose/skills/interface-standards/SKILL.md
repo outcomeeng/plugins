@@ -7,12 +7,19 @@ allowed-tools: Read
 ---
 
 <objective>
-The interface kind's standards layer over `/prose-standards` — inherited rules, the fragment override, and the writing rules for text that functions as part of a surface.
+The interface kind's standards layer over `/prose-standards` — the shared voice canon, inherited rules, the fragment override, and the writing rules for text that functions as part of a surface.
 </objective>
 
 <reference_note>
 This is a reference skill. `/author-interface` and `/audit-interface` load it; the routers reach it only through them. Its `<voice_canon>` renders from the same authored fragment as the plugin's shipped `prose` output style and every other kind layer, so a change to that canon changes every voice the plugin ships.
 </reference_note>
+
+<voice_canon>
+The shared voice rules, transcluded from the authored canon every kind and the shipped output style render from — one source, every surface.
+
+{!% include 'prose/voice/fragment.md' %!}
+
+</voice_canon>
 
 <inherited_rules>
 Every `/prose-standards` anti-pattern applies unchanged except where `<overrides>` relaxes it — word choice (significance and authenticity adverbs, overused vocabulary, ornate nouns, pompous verbs), tone (false suspense, unnecessary metaphors, hypothetical openers, asserted clarity, stakes inflation, condescension), formatting (em-dash overuse, unicode decoration), and the sentence- and composition-level rules as far as fragments carry them. Composing skills load `/prose-standards` for the full descriptions and examples.
@@ -27,13 +34,6 @@ Fragments are the norm for surface elements. The base rule that every sentence n
 
 Repetition across elements is consistency, not duplication. The base one-point-once rule governs a piece read linearly; a surface is scanned. The same term, the same phrase pattern, and the same construction repeated across parallel elements is required — variation across parallel elements reads as a difference in meaning.
 </overrides>
-
-<voice_canon>
-The shared voice rules, transcluded from the authored canon every kind and the shipped output style render from — one source, every surface.
-
-{!% include 'prose/voice/fragment.md' %!}
-
-</voice_canon>
 
 <additional_rules>
 Rules specific to surface elements, on top of `<voice_canon>`.

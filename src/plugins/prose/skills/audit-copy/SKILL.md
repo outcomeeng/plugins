@@ -25,15 +25,16 @@ Findings on a self-contained piece — each carrying pattern, category, quote, a
 <audit_workflow>
 
 1. Sweep every base category — word choice, sentence structure, paragraph structure, tone, formatting, composition — against the full `/prose-standards` descriptions.
-2. Sweep the `/copy-standards` `<additional_rules>`: paragraph progression, example development, single-use rhetorical devices, length against substance, unannounced ending, tradeoffs in place.
-3. Identify every feature that triggers a `/prose-standards` rule pack, then sweep each triggered pack over the passages carrying that feature — the instruction pack on an embedded numbered procedure, the table pack on an embedded table. A pack binds on the feature, in every kind.
-4. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence with co-occurring patterns yields one finding naming every pattern present.
+2. Sweep the `/copy-standards` `<voice_canon>` rule by rule: substance-first openings, plain words, filler words, unsupported assertion, one term one meaning, failure text, sentence case, punctuation.
+3. Sweep the `/copy-standards` `<additional_rules>`: paragraph progression, example development, single-use rhetorical devices, length against substance, unannounced ending, tradeoffs in place.
+4. Identify every feature that triggers a `/prose-standards` rule pack, then sweep each triggered pack over the passages carrying that feature — the instruction pack on an embedded numbered procedure, the table pack on an embedded table. A pack binds on the feature, in every kind.
+5. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence with co-occurring patterns yields one finding naming every pattern present.
 
 </audit_workflow>
 
 <success_criteria>
 
-- Every base category and every copy composition rule was swept, none skipped as unlikely.
+- Every base category, every voice-canon rule, and every copy composition rule was swept, none skipped as unlikely.
 - Every finding carries pattern, category, quote, and rewrite, with rewrites showing fixed text.
 
 </success_criteria>

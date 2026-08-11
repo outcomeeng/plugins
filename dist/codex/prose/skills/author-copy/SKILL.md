@@ -52,6 +52,8 @@ Build toward the point directly — never negate before stating what something i
 
 <tone_and_composition>
 
+Apply `/copy-standards` `<voice_canon>` first — it is the shared canon every kind and the shipped output style render from, and its rules bind before anything in this skill: substance-first openings, plain words, no filler words, assert only what is demonstrated, one term one meaning, failure text pairing what happened with what to do next, sentence case for titles and headings and labels, standard punctuation.
+
 Write at the reader's level; skip analogies simpler than the concept. Begin where the content begins — the first sentence delivers substance. Scope claims to what the text demonstrates; the reader assesses significance. Name sources or rewrite the sentence to stand on its own evidence. Use terms that already exist before coining labels.
 
 Compose per `/copy-standards` `<additional_rules>`: arguments progress, one developed example beats a stack, rhetorical devices are single-use, length matches substance, endings end, tradeoffs live in place.

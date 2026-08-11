@@ -66,6 +66,14 @@ One text carries one kind. Register variation inside it is carried by the `/pros
 
 </success_criteria>
 
+<failure_modes>
+
+**Drafting started before the kind was settled.**
+
+Claude read "write the onboarding page for the new export flow", recognized a page, and drafted against the document layer. The text was destined for a product-tour overlay, so every paragraph had to become a sequence of elements under the interface brevity caps. Nothing survived the conversion but the facts. The kind is not a property of a draft that can be corrected afterward; it selects the standards the draft is built from, so an unresolved kind stops the writing rather than steering it.
+
+</failure_modes>
+
 <reference_index>
 
 | Skill                                                   | When to read                            |
