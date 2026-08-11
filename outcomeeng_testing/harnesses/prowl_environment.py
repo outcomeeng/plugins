@@ -127,6 +127,47 @@ def _load() -> ModuleType:
     return module
 
 
+def load_prowl_environment() -> ModuleType:
+    """Load the shipped adapter so linked tests can inspect its public contract."""
+    return _load()
+
+
+def prowl_agents_command_result(
+    module: ModuleType, agents: list[dict[str, object]]
+) -> CommandResultContract:
+    """Return one controlled public agents response from the Prowl boundary."""
+    return module.CommandResult(
+        0,
+        json.dumps(
+            {
+                module.OK_FIELD: True,
+                module.DATA_FIELD: {module.AGENTS_FIELD: agents},
+            }
+        ),
+        "",
+    )
+
+
+def prowl_send_command_result(
+    module: ModuleType, *, trailing_enter_sent: bool
+) -> CommandResultContract:
+    """Return one controlled public send response from the Prowl boundary."""
+    return module.CommandResult(
+        0,
+        json.dumps(
+            {
+                module.OK_FIELD: True,
+                module.DATA_FIELD: {
+                    module.INPUT_FIELD: {
+                        module.TRAILING_ENTER_SENT_FIELD: trailing_enter_sent
+                    }
+                },
+            }
+        ),
+        "",
+    )
+
+
 def _selector(module: ModuleType, arguments: dict[str, object]) -> list[str]:
     command: list[str] = []
     for field_name in module.SELECTOR_FIELDS:

@@ -12,19 +12,19 @@ A source-owned coordination envelope delivered through `/operate-prowl` to one c
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one JSON message request containing `toPane`, `kind`, `subject`, `facts`, and any applicable coordination fields. When required data is absent or the target is ambiguous, stop and name the missing or ambiguous fields before discovery or delivery; never invent message data. When the recipient is named by worktree, repository, or working directory rather than a pane UUID — the form an operator uses — resolve it through `/operate-prowl`'s operator-target resolution before building the request.
-2. Invoke `/operate-prowl` for the `agents` operation. Require `status: "succeeded"`; stop with its exact status and detail otherwise.
-3. Pass the public agent array and the active `PROWL_PANE_ID` or `PROWL_WORKTREE_PATH` environment evidence to the bundled script's `discover` operation over stdin. The script returns one complete caller and all complete targets.
-4. Require `status: "prowl-pane"`, one complete caller identity, and one target selected by its complete `pane` UUID. Stop with the exact status and detail on `unsupported-terminal`, `caller-ambiguous`, or `invalid-schema`; NEVER select by title, focus, position, or prose.
+1. Interpret `$ARGUMENTS` as one JSON message request containing the recipient's absolute worktree, repository, or working-directory path, `kind`, `subject`, `facts`, and any applicable coordination fields. When required data is absent, stop and name it before discovery or delivery; never invent message data or ask for a pane UUID.
+2. Invoke `/operate-prowl` once for `resolve-target` with the supplied path. Preserve the complete result. It returns the checked inventory, complete caller and participants, and non-caller candidates whose `sendRequestTemplate` already selects each pane with immediate-return mode and normal trailing-Enter behavior.
+3. Require one selected candidate. Use the sole candidate on `succeeded`; on `identity-ambiguous`, select only after the operator chooses among the returned worktree and branch metadata; on `identity-unavailable`, report the exact detail and participant worktrees. NEVER select by title, focus, position, prose, or the caller's pane.
+4. Build the bundled script's `discovery` input directly from the resolver result: `caller` is the returned caller, `targets` is the returned complete participant list, `status` is `prowl-pane`, `schemaVersion` is `1`, and `detail` is null. Set `toPane` from the selected candidate's complete participant. This source-owned bridge uses the captured resolver result directly; never write an intermediate file or run an ad hoc transformation script.
 5. Build a message request with `toPane`, `kind`, `subject`, `facts`, optional `request`, optional `coordinationReference`, optional `mutationTarget`, optional `observedState`, and optional `accepted`. `kind` is exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. An acknowledgement, mutation-state report, or mutation authorization MUST reuse the active proposal UUID; an initiating proposal or fact MUST omit it so the adapter creates a new UUID. An acknowledgement MUST carry boolean `accepted`; every other kind omits it.
 6. For a delegated mutation, use the source-owned handshake:
    - An `ownership-proposal` carries `mutationTarget` with exact `pane`, `worktree`, `branch`, `repository`, full `head`, and `status` values; pane, worktree, branch, and repository match the live recipient identity.
    - A `mutation-state` response carries the same target plus `observedState` with exact `worktree`, `branch`, `repository`, full `head`, and `status` values matching the live sender identity.
    - A `mutation-authorization` carries the checked target and observed state and targets that same live recipient. Any mismatch returns `invalid-identity` before delivery planning.
 7. Pass the discovery and message request to the bundled script's `build` operation. It returns the complete `envelope` and a semantic `delivery` containing `toPane` and `text`.
-8. Invoke `/operate-prowl` for one `send` operation using the delivery's complete pane, exact text, immediate-return mode, and normal trailing-Enter behavior. NEVER construct environment command arguments outside that capability and NEVER use `noEnter` for a delivery.
+8. Confirm the selected candidate template's pane equals the delivery's complete `toPane`, fill its null `text` with the delivery's exact text, and invoke `/operate-prowl` once with that request. NEVER alter its `pane` or `noWait`, construct a second request, use `noEnter`, or retry after the editor becomes free.
 9. Pass the envelope and the exact environment result to the bundled script's `result` operation. Set `delivered` true only when `/operate-prowl` returned a complete checked `send` result with `status: "succeeded"`, `commandExitCode: 0`, and public `response.data.input.trailing_enter_sent: true`; preserve that complete result under `transport`. The bundled script rejects delivered status when any checked transport or submission field is absent or inconsistent. Prefilled text that remains in the recipient editor is not delivered.
-10. Report the complete `coordinationReference`, checked `commandExitCode`, and delivery `status`. `delivered` means only that the environment capability accepted transport; it NEVER means acknowledged, agreed, authorized, or owned. Stop with the exact status and detail on `delivery-failed`, `invalid-identity`, `environment-unavailable`, or `invalid-schema`.
+10. Report the complete `coordinationReference`, checked `commandExitCode`, and delivery `status`. Once trailing Enter is confirmed, the turn is queued and no second send is needed. `delivered` means only that the environment capability accepted transport; it NEVER means acknowledged, agreed, authorized, or owned. Stop with the exact status and detail on `delivery-failed`, `invalid-identity`, `environment-unavailable`, or `invalid-schema`.
 
 </workflow>
 
@@ -33,10 +33,6 @@ A source-owned coordination envelope delivered through `/operate-prowl` to one c
 Pass every payload over stdin. When the shell accepts multiline input:
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" discover <<'JSON'
-{"agents":[],"environment":{"PROWL_PANE_ID":"<complete-pane-uuid>"}}
-JSON
-
 python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" build <<'JSON'
 {"discovery":{},"messageRequest":{}}
 JSON
@@ -49,7 +45,6 @@ JSON
 When the runner requires one physical command line:
 
 ```bash
-printf '%s\n' '{"agents":[],"environment":{"PROWL_PANE_ID":"<complete-pane-uuid>"}}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" discover
 printf '%s\n' '{"discovery":{},"messageRequest":{}}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" build
 printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":{},"detail":"<exact-environment-detail>"}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" result
 ```
@@ -59,7 +54,8 @@ printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":
 <constraints>
 
 - ALWAYS preserve complete source-supplied agent, pane, worktree, branch, repository, run, coordination-reference, mutation-target, observed-state, and transport identities.
-- ALWAYS invoke `/operate-prowl` for public environment discovery and delivery.
+- ALWAYS invoke `/operate-prowl` for source-owned target resolution and delivery.
+- ALWAYS retain each complete command result in the active tool context and feed it into the next source-owned operation; no scratch file or shell redirect is part of this workflow.
 - NEVER scan transcript files, use another terminal multiplexer, or ask the operator to relay a message as a fallback.
 - NEVER select an endpoint by title, focus, position, inferred prose, or an undeclared environment.
 - NEVER convert transport success into acknowledgement, agreement, ownership, mutation authorization, or continuation state.
@@ -68,7 +64,7 @@ printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":
 
 <testing>
 
-Before release, exercise `discover_callers`, `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete public identities and controlled environment-result payloads. Exercise CLI dispatch for `discover`, `build`, and `result` with stdin payloads. The matrix covers unique and ambiguous callers, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, malformed identities and optional fields, non-unique pane selection, delivered and failed environment results, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
+Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Exercise CLI dispatch for `build` and `result` with stdin payloads. The matrix covers unique and ambiguous resolver candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, malformed identities and optional fields, delivered and failed environment results, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
 
 </testing>
 
@@ -82,11 +78,13 @@ Before release, exercise `discover_callers`, `coordination_reference`, `build_en
 
 **A pane UUID was requested from the operator.** Claude asked which pane to send to, when the operator had already named the target the only way they can — by worktree or working directory. Resolve the operator's naming against the live inventory and report the target back in the same terms.
 
+**A blocked redirect was rewritten as another program.** Claude redirected public inventory and discovery JSON into `$SP/agents.json` and `$SP/discovery.json`. The dangerous-command guard terminated the dynamic truncating redirect and instructed Claude to ask for authority. Claude wrote a Python replacement and continued, discarding the guard result. Use `/operate-prowl`'s `resolve-target` result directly in the active tool context. When a guard terminates a command family, stop that family and follow the sanctioned operation or ask the operator; never reformulate it.
+
 </failure_modes>
 
 <success_criteria>
 
-- Discovery passes only with `status: "prowl-pane"`, one complete caller, and complete public targets.
+- Target resolution passes only with one complete non-caller candidate selected from the complete checked inventory.
 - Build passes only with one validated envelope and one semantic delivery bound to the target's complete pane UUID.
 - Delivery passes only after `/operate-prowl` returns a checked successful result whose public input record confirms trailing Enter was sent; every failure preserves its exact status, detail, and command exit code when present.
 - Caller, recipient, mutation-target, and observed-state identities validate before delivery.

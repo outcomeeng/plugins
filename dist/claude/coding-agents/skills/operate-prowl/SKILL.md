@@ -33,27 +33,27 @@ A selector is exactly one of `target`, `worktree`, `tab`, or `pane`. Preserve it
 
 <operator_target_resolution>
 
-An operator names a target by where the work lives — a worktree path, a repository directory, the working directory of the agent they mean, or a phrase describing it ("the agent in the frontend checkout", "my other window"). An operator never supplies a pane UUID, and a reply that asks for one has misread the request.
+An operator names a target by where the work lives — an absolute worktree path, repository directory, or working directory. Resolve that path through one `resolve-target` invocation before operating:
 
-Resolve an operator-named target to a pane before operating:
+```bash
+printf '%s\n' '{"schemaVersion":1,"path":"<absolute-operator-supplied-path>"}' | python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" resolve-target
+```
 
-1. Run `agents`. Its typed identity projection is the one source that carries each pane's complete worktree and repository, so it is what a path match reads. `list` inventories instantiated panes and never establishes a per-pane worktree or repository here; treating its payload as that inventory would match against a field this surface does not promise.
-2. Match the operator's phrasing against those worktree and repository paths. A path the operator gives may be a subdirectory of the worktree root, so match by containment, not string equality.
-3. Operate on the matched pane's complete UUID.
+The resolver runs the public `agents` operation once and returns its complete checked result under `inventory`, every complete participant under `participants`, the complete caller selected from `PROWL_PANE_ID`, and non-caller path matches under `candidates`. Each candidate carries its complete participant metadata and a `sendRequestTemplate` with that pane already selected, `noWait: true`, and `text: null`. Fill `text` with the semantic payload; never repair the JSON through shell substitution or a temporary file.
+
+Use the one candidate directly when `status` is `succeeded`. On `identity-ambiguous`, name every candidate by worktree and branch and ask which one; select only from the returned candidates. On `identity-unavailable`, report the supplied path and the returned participant worktrees. The resolver performs no send in every result state.
 
 A target that is not a coding-agent pane is outside what `agents` returns, so no path match is available for it. Say that the operator's target is not among the agent panes and name the ones that are, rather than falling back to an inventory that carries no worktree to match.
 
 Absent from `agents` is not the same as absent from Prowl. A worktree Prowl already knows but has never entered has no pane to match yet and stays reachable through an explicitly authorized `open` request, which takes a path rather than a selector; that is the lazy activation `<failure_modes>` describes. Distinguish it from a target Prowl has no relationship with at all before reporting the operator's target as unavailable.
 
-Report the target back to the operator the way they named it — the worktree or directory — while using the pane UUID internally. Echoing a UUID to an operator who named a directory forces them to verify a value they never supplied.
-
-When the inventory holds no match, say which worktrees are present rather than asking the operator to supply an identifier they do not have. When more than one pane matches, name the candidates by worktree and branch and ask which one; never guess by focus, position, or title.
+Report the target back to the operator as the supplied path while using the selected template's pane internally. Never ask the operator for a pane UUID or guess by focus, position, or title.
 
 </operator_target_resolution>
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one low-level operation, one delegation request, or one terminal handback. When it is empty, require a concrete operation before running the adapter. When a selector or delegation participant is named by worktree, repository, or working directory rather than a pane UUID — the form an operator uses — resolve it per `<operator_target_resolution>` before building the request.
+1. Interpret `$ARGUMENTS` as one target resolution, low-level operation, delegation request, or terminal handback. When it is empty, require a concrete operation before running the adapter. Resolve an absolute worktree, repository, or working-directory target per `<operator_target_resolution>` before building its operation request.
 2. For `list`, `agents`, `read`, or `send`, build this source-owned request shape and set only arguments the operation accepts:
 
 ```json
@@ -83,7 +83,7 @@ When the runner requires one physical command line:
 printf '%s\n' '{"schemaVersion":1,"operation":"agents","arguments":{}}' | python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" run
 ```
 
-5. Accept only `status: "succeeded"`. Preserve the complete versioned result, `commandExitCode`, and public `response` values. For `open`, preserve `response.data.resolution`, `created_tab`, and the complete target; `exact-root` with `created_tab: true` is the lazy equivalent of clicking a known sidebar worktree that has no terminal pane. `new-root` means Prowl added a previously unknown root and never proves a prepared recovery target existed. For submitted `send`, preserve `response.data.input.trailing_enter_sent`; a successful command with that field false or absent does not prove the turn left the editor. Stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `prowl-unavailable`, `mutation-unauthorized`, or `operation-unavailable`.
+5. Accept only `status: "succeeded"` for a submitted operation. Preserve the complete versioned result, `commandExitCode`, and public `response` values. For `open`, preserve `response.data.resolution`, `created_tab`, and the complete target; `exact-root` with `created_tab: true` is the lazy equivalent of clicking a known sidebar worktree that has no terminal pane. `new-root` means Prowl added a previously unknown root and never proves a prepared recovery target existed. For submitted `send`, require `commandExitCode: 0` and preserve `response.data.input.trailing_enter_sent`; success with that field false or absent does not prove the turn left the editor. Once the checked send reports `trailing_enter_sent: true`, the turn is queued and delivery is complete; never send it again because the entry box becomes free. Stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `prowl-unavailable`, `mutation-unauthorized`, or `operation-unavailable`.
 6. For bounded delegation between two identities returned by `agents`, submit this shape to `delegate`:
 
 ```json
@@ -161,7 +161,7 @@ Two environment conditions silently break a handback. Name both in the delegatio
 
 <testing>
 
-Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Cover every operation mapping, public JSON success and failure, exact participant projection, mutation rejection before command construction, delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch. Delegation coverage includes that `sender.pane` survives the envelope into the recipient's handback intact, since the recipient reads its return path from that field alone; an unknown top-level key in a delegation request is rejected rather than silently dropped, so a caller inventing a field learns it is unsupported instead of sending a delegation the recipient cannot answer.
+Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Cover every operation mapping, public JSON success and failure, exact participant projection, target-resolution zero/one/multiple matches with caller exclusion, candidate-specific send templates, one checked send with trailing-Enter evidence, mutation rejection before command construction, delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch. Delegation coverage includes that `sender.pane` survives the envelope into the recipient's handback intact, since the recipient reads its return path from that field alone; an unknown top-level key in a delegation request is rejected rather than silently dropped, so a caller inventing a field learns it is unsupported instead of sending a delegation the recipient cannot answer.
 
 </testing>
 
@@ -179,6 +179,8 @@ Before release, import the bundled module with controlled `CommandRunner` implem
 
 **An overridden socket was read as an empty environment.** Claude pointed the CLI at a non-default socket, saw an inventory with none of the expected panes, and concluded the recipient was gone. The socket belonged to a different instance — a verification harness, not the operator's live application. Confirm the inventory contains the expected panes before concluding a target is absent, per `<environment_traps>`.
 
+**Target resolution was rebuilt around scratch files.** Claude wrote the `agents` result and discovery result through dynamic redirects under `$SP`. The dangerous-command guard terminated the command because the shell would open an unproved path with truncation. Claude then rewrote the same operation as a Python script, bypassing the stop instead of using a sanctioned capability. Invoke `resolve-target` over direct stdin, keep its returned JSON as the tool result, and stop when a guard terminates that command family; never reformulate the blocked operation.
+
 </failure_modes>
 
 <success_criteria>
@@ -188,7 +190,8 @@ Before release, import the bundled module with controlled `CommandRunner` implem
 - Every delegation preserves its initiating coordination reference through exactly one completed, failed, rejected, or unavailable terminal handback.
 - Every delegation's `instruction` ends with the exact command reaching `sender.pane` and the `<environment_traps>` conditions, so the recipient can push completion without discovering the environment first; the pane itself is read from the envelope, never restated as a separate field.
 - A durable handback writes its file before sending, and the notification reaches the sender's pane as a submitted turn rather than editor prefill.
-- An operator-named target is resolved from the worktree or directory the operator supplied and reported back in those terms, never as a pane UUID the operator must verify.
+- One `resolve-target` invocation returns the checked inventory, complete caller and participants, non-caller path matches, and candidate-specific immediate-return send templates without sending.
+- An operator-named target is reported as the supplied worktree or directory, never as a pane UUID the operator must verify.
 - Terminal results carry complete inline content or an exact durable reference with a bounded projection.
 - Unauthorized focus, key, creation, closure, and open requests fail before Prowl runs.
 - Lazy activation is established by an authorized `open` result carrying `resolution: exact-root`, `created_tab: true`, and the complete returned pane identity.

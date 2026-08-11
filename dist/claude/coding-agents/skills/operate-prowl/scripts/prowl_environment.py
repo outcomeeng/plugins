@@ -103,6 +103,14 @@ DELEGATION_FIELD = "delegation"
 TERMINAL_FIELD = "terminal"
 CONCLUSION_FIELD = "conclusion"
 PARTICIPANTS_FIELD = "participants"
+PARTICIPANT_FIELD = "participant"
+CALLER_FIELD = "caller"
+CANDIDATES_FIELD = "candidates"
+INVENTORY_FIELD = "inventory"
+SEND_REQUEST_TEMPLATE_FIELD = "sendRequestTemplate"
+INPUT_FIELD = "input"
+TRAILING_ENTER_SENT_FIELD = "trailing_enter_sent"
+PROWL_PANE_ID_ENV = "PROWL_PANE_ID"
 
 REQUEST_FIELDS = frozenset({SCHEMA_VERSION_FIELD, OPERATION_FIELD, ARGUMENTS_FIELD})
 SUCCESS_RESULT_FIELDS = frozenset(
@@ -391,6 +399,7 @@ class TerminalKind(StrEnum):
 
 class CliOperation(StrEnum):
     RUN = "run"
+    RESOLVE_TARGET = "resolve-target"
     DELEGATE = "delegate"
     HAND_BACK = "handback"
 
@@ -943,6 +952,105 @@ def participant_projection(payload: object) -> dict[str, object]:
     }
 
 
+def _path_contains(root: str, target: str) -> bool:
+    if not os.path.isabs(root):
+        return False
+    normalized_root = os.path.normpath(root)
+    normalized_target = os.path.normpath(target)
+    try:
+        return (
+            os.path.commonpath((normalized_root, normalized_target)) == normalized_root
+        )
+    except ValueError:
+        return False
+
+
+def _send_request_template(participant: Mapping[str, str]) -> dict[str, object]:
+    return {
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        OPERATION_FIELD: Operation.SEND,
+        ARGUMENTS_FIELD: {
+            PANE_FIELD: participant[PANE_FIELD],
+            TEXT_FIELD: None,
+            NO_WAIT_FIELD: True,
+        },
+    }
+
+
+def resolve_target(
+    path: str, caller_pane: str, runner: CommandRunner
+) -> dict[str, object]:
+    if not path or not os.path.isabs(path):
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            "resolve-target path must be an absolute worktree, repository, or working-directory path.",
+        )
+    if not caller_pane:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.IDENTITY_UNAVAILABLE,
+            f"resolve-target requires the caller pane in {PROWL_PANE_ID_ENV}.",
+        )
+
+    inventory = execute(operation_request(Operation.AGENTS), runner)
+    participants: list[dict[str, str]] = []
+    caller: dict[str, str] | None = None
+    candidates: list[dict[str, object]] = []
+    status = inventory[STATUS_FIELD]
+    detail: str | None = None
+    if status is ExecutionStatus.SUCCEEDED:
+        try:
+            participants = participants_from_agents(inventory[RESPONSE_FIELD])
+            caller_matches = [
+                participant
+                for participant in participants
+                if participant[PANE_FIELD] == caller_pane
+            ]
+            if len(caller_matches) != 1:
+                raise ProwlEnvironmentError(
+                    ExecutionStatus.IDENTITY_UNAVAILABLE,
+                    f"Caller pane {caller_pane} is absent from the public Prowl agent inventory.",
+                )
+            caller = caller_matches[0]
+            matched = [
+                participant
+                for participant in participants
+                if participant[PANE_FIELD] != caller_pane
+                and (
+                    _path_contains(participant[WORKTREE_FIELD], path)
+                    or _path_contains(participant[REPOSITORY_FIELD], path)
+                )
+            ]
+            candidates = [
+                {
+                    PARTICIPANT_FIELD: participant,
+                    SEND_REQUEST_TEMPLATE_FIELD: _send_request_template(participant),
+                }
+                for participant in matched
+            ]
+            if not candidates:
+                status = ExecutionStatus.IDENTITY_UNAVAILABLE
+                detail = f"No non-caller Prowl agent contains target path {path}."
+            elif len(candidates) > 1:
+                status = ExecutionStatus.IDENTITY_AMBIGUOUS
+                detail = f"Target path {path} matches multiple non-caller Prowl agents."
+        except ProwlEnvironmentError as error:
+            status = error.status
+            detail = str(error)
+    else:
+        detail = cast(str, inventory.get(DETAIL_FIELD))
+
+    return {
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        OPERATION_FIELD: CliOperation.RESOLVE_TARGET,
+        STATUS_FIELD: status,
+        DETAIL_FIELD: detail,
+        INVENTORY_FIELD: inventory,
+        PARTICIPANTS_FIELD: participants,
+        CALLER_FIELD: caller,
+        CANDIDATES_FIELD: candidates,
+    }
+
+
 def _canonical_reference(value: object) -> str:
     reference = _text(value, COORDINATION_REFERENCE_FIELD)
     try:
@@ -1232,17 +1340,31 @@ def main(
     runner: CommandRunner | None = None,
     stdin: TextIO | None = None,
     stdout: TextIO | None = None,
+    environment: Mapping[str, str] | None = None,
 ) -> int:
     args = _parser().parse_args(argv)
     cli_operation = CliOperation(args.cli_operation)
     command_runner = runner if runner is not None else SubprocessRunner()
     input_stream = stdin if stdin is not None else sys.stdin
     output_stream = stdout if stdout is not None else sys.stdout
+    active_environment = environment if environment is not None else os.environ
     try:
         value = _json_input(input_stream, "stdin")
         envelope: dict[str, object] | None = None
         terminal: dict[str, object] | None = None
-        if cli_operation is CliOperation.RUN:
+        if cli_operation is CliOperation.RESOLVE_TARGET:
+            unexpected = sorted(set(value) - {SCHEMA_VERSION_FIELD, PATH_FIELD})
+            if unexpected or value.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
+                raise ProwlEnvironmentError(
+                    ExecutionStatus.INVALID_SCHEMA,
+                    "resolve-target requires exactly schemaVersion and path.",
+                )
+            result = resolve_target(
+                _text(value.get(PATH_FIELD), PATH_FIELD),
+                active_environment.get(PROWL_PANE_ID_ENV, ""),
+                command_runner,
+            )
+        elif cli_operation is CliOperation.RUN:
             request = value
         elif cli_operation is CliOperation.DELEGATE:
             envelope = _delegation_from_cli(value)
@@ -1257,11 +1379,12 @@ def main(
                 projection=cast(str | None, value.get(PROJECTION_FIELD)),
             )
             request = delegation_delivery_request(terminal)
-        result = execute(request, command_runner)
-        if envelope is not None:
-            result[DELEGATION_FIELD] = envelope
-        if terminal is not None:
-            result[TERMINAL_FIELD] = terminal
+        if cli_operation is not CliOperation.RESOLVE_TARGET:
+            result = execute(request, command_runner)
+            if envelope is not None:
+                result[DELEGATION_FIELD] = envelope
+            if terminal is not None:
+                result[TERMINAL_FIELD] = terminal
     except ProwlEnvironmentError as error:
         result = {
             SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
