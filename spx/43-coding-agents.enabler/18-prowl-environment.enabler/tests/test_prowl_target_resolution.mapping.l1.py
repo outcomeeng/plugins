@@ -33,6 +33,16 @@ def _expected_participant(
     }
 
 
+def _expected_resolution_status(module: ModuleType, cardinality: object) -> object:
+    if cardinality is module.TargetMatchCardinality.ZERO:
+        return module.ExecutionStatus.IDENTITY_UNAVAILABLE
+    if cardinality is module.TargetMatchCardinality.ONE:
+        return module.ExecutionStatus.SUCCEEDED
+    if cardinality is module.TargetMatchCardinality.MULTIPLE:
+        return module.ExecutionStatus.IDENTITY_AMBIGUOUS
+    raise AssertionError(f"Unknown target-match cardinality: {cardinality}")
+
+
 def test_resolver_returns_complete_inventory_and_one_non_caller_template() -> None:
     module = load_prowl_environment()
     agents = [public_agent_item(module, ordinal) for ordinal in range(3)]
@@ -89,10 +99,7 @@ def test_resolver_reports_each_non_caller_match_cardinality_without_sending() ->
     module = load_prowl_environment()
     agents = [public_agent_item(module, ordinal) for ordinal in range(3)]
 
-    for (
-        cardinality,
-        expected_status,
-    ) in module.TARGET_RESOLUTION_STATUS_BY_CARDINALITY.items():
+    for cardinality in module.TargetMatchCardinality:
         target_path = resolver_target_path(module, agents, cardinality)
         runner = RecordingRunner([prowl_agents_command_result(module, agents)])
         result = module.resolve_target(
@@ -101,7 +108,9 @@ def test_resolver_reports_each_non_caller_match_cardinality_without_sending() ->
             runner,
         )
 
-        assert result[module.STATUS_FIELD] == expected_status
+        assert result[module.STATUS_FIELD] == _expected_resolution_status(
+            module, cardinality
+        )
         assert (
             module.target_match_cardinality(len(result[module.CANDIDATES_FIELD]))
             is cardinality
@@ -136,12 +145,7 @@ def test_repository_child_path_does_not_match_repository_root() -> None:
         runner,
     )
 
-    assert (
-        result[module.STATUS_FIELD]
-        == module.TARGET_RESOLUTION_STATUS_BY_CARDINALITY[
-            module.TargetMatchCardinality.ZERO
-        ]
-    )
+    assert result[module.STATUS_FIELD] == module.ExecutionStatus.IDENTITY_UNAVAILABLE
     assert result[module.CANDIDATES_FIELD] == []
     assert runner.calls == [
         (module.command_for(module.operation_request(module.Operation.AGENTS)), None)

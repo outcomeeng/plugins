@@ -62,22 +62,6 @@ def fact_envelope(
     )
 
 
-def successful_transport(module: ModuleType) -> dict[str, object]:
-    return {
-        module.SCHEMA_VERSION_FIELD: module.TRANSPORT_SCHEMA_VERSION,
-        module.TRANSPORT_OPERATION_FIELD: module.TRANSPORT_SEND_OPERATION,
-        module.STATUS_FIELD: module.TRANSPORT_SUCCEEDED_STATUS,
-        module.COMMAND_EXIT_CODE_FIELD: 0,
-        module.TRANSPORT_RESPONSE_FIELD: {
-            module.DATA_FIELD: {
-                module.INPUT_FIELD: {
-                    module.TRAILING_ENTER_SENT_FIELD: True,
-                }
-            }
-        },
-    }
-
-
 def generated_envelope(
     module: ModuleType,
     *,

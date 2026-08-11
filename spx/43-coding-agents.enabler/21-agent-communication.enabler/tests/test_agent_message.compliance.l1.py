@@ -1,4 +1,6 @@
+import hashlib
 import json
+import uuid
 from io import StringIO
 from types import ModuleType
 from typing import cast
@@ -6,17 +8,20 @@ from typing import cast
 import pytest
 
 from outcomeeng_testing.generators.coding_agents import (
-    agent_item,
     message_content,
-    mutation_target,
-    observed_mutation_state,
 )
+from outcomeeng_testing.generators.prowl_environment import public_agent_item
 from outcomeeng_testing.harnesses.coding_agents import (
     agent_discovery,
     fact_envelope,
     generated_envelope,
     load_agent_message,
-    successful_transport,
+)
+from outcomeeng_testing.harnesses.prowl_environment import (
+    RecordingRunner,
+    load_prowl_environment,
+    prowl_agents_command_result,
+    prowl_send_command_result,
 )
 
 
@@ -27,12 +32,28 @@ def _public_context() -> tuple[
     dict[str, str],
     dict[str, object],
 ]:
+    prowl = load_prowl_environment()
     module = load_agent_message()
-    public_roster = [agent_item(module, ordinal=1), agent_item(module, ordinal=2)]
-    sender = module.identity_from_agent(public_roster[0])
-    recipient = module.identity_from_agent(public_roster[1])
+    public_roster = [public_agent_item(prowl, ordinal) for ordinal in range(2)]
+    runner = RecordingRunner([prowl_agents_command_result(prowl, public_roster)])
+    inventory = prowl.execute(prowl.operation_request(prowl.Operation.AGENTS), runner)
+    sender, recipient = prowl.participants_from_agents(inventory[prowl.RESPONSE_FIELD])
     discovery = agent_discovery(module, public_roster, sender[module.PANE_FIELD])
     return module, public_roster, sender, recipient, discovery
+
+
+def _checked_transport(pane: str) -> dict[str, object]:
+    prowl = load_prowl_environment()
+    runner = RecordingRunner(
+        [prowl_send_command_result(prowl, trailing_enter_sent=True)]
+    )
+    request = prowl.operation_request(
+        prowl.Operation.SEND,
+        pane=pane,
+        text="source-checked compliance delivery",
+        no_wait=True,
+    )
+    return cast(dict[str, object], prowl.execute(request, runner))
 
 
 def test_delivery_preserves_complete_public_identities_and_semantic_payload() -> None:
@@ -56,7 +77,7 @@ def test_delivery_preserves_complete_public_identities_and_semantic_payload() ->
 def test_delivery_requires_complete_checked_transport_evidence() -> None:
     module, _, sender, recipient, _ = _public_context()
     envelope = fact_envelope(module, sender, recipient)
-    transport = successful_transport(module)
+    transport = _checked_transport(recipient[module.PANE_FIELD])
 
     result = module.delivery_result(
         envelope,
@@ -122,7 +143,7 @@ def test_transport_success_establishes_no_coordination_state() -> None:
         fact_envelope(module, sender, recipient),
         delivered=True,
         command_exit_code=0,
-        transport=successful_transport(module),
+        transport=_checked_transport(recipient[module.PANE_FIELD]),
     )
 
     assert result[module.ACKNOWLEDGED_FIELD] is False
@@ -167,11 +188,37 @@ def test_envelopes_reject_incomplete_participant_identities() -> None:
 
 def test_mutation_messages_require_exact_target_and_observed_state() -> None:
     module, _, sender, recipient, _ = _public_context()
-    active_reference = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-    recipient_target = mutation_target(module, recipient, ordinal=2)
-    sender_target = mutation_target(module, sender, ordinal=1)
-    recipient_state = observed_mutation_state(module, recipient, ordinal=2)
-    sender_state = observed_mutation_state(module, sender, ordinal=1)
+    active_reference = str(
+        uuid.uuid5(uuid.NAMESPACE_URL, sender[module.WORKTREE_FIELD])
+    )
+    sender_head = hashlib.sha1(
+        sender[module.PANE_FIELD].encode(), usedforsecurity=False
+    ).hexdigest()
+    recipient_head = hashlib.sha1(
+        recipient[module.PANE_FIELD].encode(), usedforsecurity=False
+    ).hexdigest()
+    sender_target = {
+        module.PANE_FIELD: sender[module.PANE_FIELD],
+        module.WORKTREE_FIELD: sender[module.WORKTREE_FIELD],
+        module.BRANCH_FIELD: sender[module.BRANCH_FIELD],
+        module.REPOSITORY_FIELD: sender[module.REPOSITORY_FIELD],
+        module.HEAD_FIELD: sender_head,
+        module.STATUS_FIELD: module.CLEAN_STATUS,
+    }
+    recipient_target = {
+        module.PANE_FIELD: recipient[module.PANE_FIELD],
+        module.WORKTREE_FIELD: recipient[module.WORKTREE_FIELD],
+        module.BRANCH_FIELD: recipient[module.BRANCH_FIELD],
+        module.REPOSITORY_FIELD: recipient[module.REPOSITORY_FIELD],
+        module.HEAD_FIELD: recipient_head,
+        module.STATUS_FIELD: module.CLEAN_STATUS,
+    }
+    sender_state = {
+        field: sender_target[field] for field in module.OBSERVED_STATE_FIELDS
+    }
+    recipient_state = {
+        field: recipient_target[field] for field in module.OBSERVED_STATE_FIELDS
+    }
     proposal_content = message_content(
         module.MessageKind.OWNERSHIP_PROPOSAL, 10, request_required=True
     )
@@ -221,7 +268,10 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
         module.BRANCH_FIELD,
         module.REPOSITORY_FIELD,
     ):
-        mismatched = {**recipient_target, identity_field: sender[identity_field]}
+        mismatched_value = sender[identity_field]
+        if mismatched_value == recipient_target[identity_field]:
+            mismatched_value = f"{mismatched_value}-different"
+        mismatched = {**recipient_target, identity_field: mismatched_value}
         with pytest.raises(module.MessageError) as raised:
             generated_envelope(
                 module,
@@ -415,7 +465,9 @@ def test_message_cli_preserves_source_owned_results() -> None:
                     module.ENVELOPE_FIELD: envelope,
                     module.DELIVERED_FIELD: True,
                     module.COMMAND_EXIT_CODE_FIELD: 0,
-                    module.TRANSPORT_FIELD: successful_transport(module),
+                    module.TRANSPORT_FIELD: _checked_transport(
+                        recipient[module.PANE_FIELD]
+                    ),
                 }
             )
         ),

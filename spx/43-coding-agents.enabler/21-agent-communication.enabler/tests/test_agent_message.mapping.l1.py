@@ -1,119 +1,143 @@
+import hashlib
 import uuid
+from types import ModuleType
 from typing import cast
 
-from outcomeeng_testing.generators.coding_agents import (
-    agent_item,
-    message_content,
-    mutation_target,
-    observed_mutation_state,
-)
+from outcomeeng_testing.generators.coding_agents import message_content
+from outcomeeng_testing.generators.prowl_environment import public_agent_item
 from outcomeeng_testing.harnesses.coding_agents import (
     fact_envelope,
     load_agent_message,
-    successful_transport,
+)
+from outcomeeng_testing.harnesses.prowl_environment import (
+    RecordingRunner,
+    load_prowl_environment,
+    prowl_agents_command_result,
+    prowl_send_command_result,
 )
 
 
+def _observed_participants() -> tuple[
+    ModuleType,
+    ModuleType,
+    list[dict[str, object]],
+    list[dict[str, str]],
+]:
+    prowl = load_prowl_environment()
+    message = load_agent_message()
+    agents = [public_agent_item(prowl, ordinal) for ordinal in range(3)]
+    runner = RecordingRunner([prowl_agents_command_result(prowl, agents)])
+    inventory = prowl.execute(prowl.operation_request(prowl.Operation.AGENTS), runner)
+    participants = prowl.participants_from_agents(inventory[prowl.RESPONSE_FIELD])
+    return prowl, message, agents, participants
+
+
+def _checked_transport(prowl: ModuleType, pane: str) -> dict[str, object]:
+    runner = RecordingRunner(
+        [prowl_send_command_result(prowl, trailing_enter_sent=True)]
+    )
+    request = prowl.operation_request(
+        prowl.Operation.SEND,
+        pane=pane,
+        text="source-checked mapping delivery",
+        no_wait=True,
+    )
+    return cast(dict[str, object], prowl.execute(request, runner))
+
+
 def test_agent_message_mappings() -> None:
-    module = load_agent_message()
-    first = agent_item(module, ordinal=1)
-    agents = [first]
-    pane = cast(dict[str, object], first[module.PANE_FIELD])
-    pane_id = cast(str, pane[module.ID_FIELD])
+    prowl, module, agents, participants = _observed_participants()
+    first = agents[0]
+    pane = cast(dict[str, object], first[prowl.PANE_FIELD])
+    pane_id = cast(str, pane[prowl.ID_FIELD])
 
     status, matches = module.discover_callers(
         agents, {module.PROWL_PANE_ID_ENV: pane_id}
     )
     assert status == module.CallerStatus.PROWL_PANE
-    assert len(matches) == 1
+    assert matches == [participants[0]]
     assert (
         module.discover_callers(agents, {})[0]
         == module.CallerStatus.UNSUPPORTED_TERMINAL
     )
 
-    ambiguous_roster = [first, agent_item(module, ordinal=2, worktree_ordinal=1)]
-    worktree = module.identity_from_agent(first)[module.WORKTREE_FIELD]
+    ambiguous_agent = public_agent_item(prowl, 4)
+    ambiguous_worktree = cast(dict[str, object], ambiguous_agent[prowl.WORKTREE_FIELD])
+    first_worktree = cast(dict[str, object], first[prowl.WORKTREE_FIELD])
+    ambiguous_worktree[prowl.PATH_FIELD] = first_worktree[prowl.PATH_FIELD]
+    ambiguous_roster = [first, ambiguous_agent]
     assert (
         module.discover_callers(
-            ambiguous_roster, {module.PROWL_WORKTREE_PATH_ENV: worktree}
+            ambiguous_roster,
+            {module.PROWL_WORKTREE_PATH_ENV: participants[0][prowl.WORKTREE_FIELD]},
         )[0]
         == module.CallerStatus.CALLER_AMBIGUOUS
     )
 
-    active = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    sender = participants[0]
+    recipient = participants[1]
+    active_reference = str(uuid.uuid5(uuid.NAMESPACE_URL, sender[module.PANE_FIELD]))
     assert {
-        module.coordination_reference(kind, active) for kind in module.RESPONSE_KINDS
-    } == {active}
+        module.coordination_reference(kind, active_reference)
+        for kind in module.RESPONSE_KINDS
+    } == {active_reference}
     proposal_reference = module.coordination_reference(
         module.MessageKind.OWNERSHIP_PROPOSAL,
         None,
-        lambda: uuid.UUID("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
+        lambda: uuid.uuid5(uuid.NAMESPACE_URL, sender[module.WORKTREE_FIELD]),
     )
     fact_reference = module.coordination_reference(
         module.MessageKind.FACT,
         None,
-        lambda: uuid.UUID("cccccccc-cccc-4ccc-8ccc-cccccccccccc"),
+        lambda: uuid.uuid5(uuid.NAMESPACE_URL, recipient[module.WORKTREE_FIELD]),
     )
-    assert len({active, proposal_reference, fact_reference}) == 3
+    assert len({active_reference, proposal_reference, fact_reference}) == 3
 
-    sender = module.identity_from_agent(first)
-    recipient = module.identity_from_agent(agent_item(module, ordinal=3))
-    recipient_target = mutation_target(module, recipient, ordinal=3)
-    sender_target = mutation_target(module, sender, ordinal=1)
-    recipient_state = observed_mutation_state(module, recipient, ordinal=3)
-    sender_state = observed_mutation_state(module, sender, ordinal=1)
-    cases = (
-        (
-            module.MessageKind.OWNERSHIP_PROPOSAL,
-            module.MessageState.OWNERSHIP_PROPOSED,
-            None,
-            None,
-            None,
-            None,
-        ),
-        (
-            module.MessageKind.FACT,
-            module.MessageState.FACT_REPORTED,
-            None,
-            None,
-            None,
-            None,
-        ),
-        (
-            module.MessageKind.ACKNOWLEDGEMENT,
-            module.MessageState.ACKNOWLEDGED,
-            active,
-            None,
-            None,
-            True,
-        ),
-        (
-            module.MessageKind.MUTATION_STATE,
-            module.MessageState.MUTATION_STATE_REPORTED,
-            active,
-            sender_target,
-            sender_state,
-            None,
-        ),
-        (
-            module.MessageKind.MUTATION_AUTHORIZATION,
-            module.MessageState.MUTATION_AUTHORIZED,
-            active,
-            recipient_target,
-            recipient_state,
-            None,
-        ),
-    )
+    sender_head = hashlib.sha1(
+        sender[module.PANE_FIELD].encode(), usedforsecurity=False
+    ).hexdigest()
+    recipient_head = hashlib.sha1(
+        recipient[module.PANE_FIELD].encode(), usedforsecurity=False
+    ).hexdigest()
+    sender_target = {
+        module.PANE_FIELD: sender[module.PANE_FIELD],
+        module.WORKTREE_FIELD: sender[module.WORKTREE_FIELD],
+        module.BRANCH_FIELD: sender[module.BRANCH_FIELD],
+        module.REPOSITORY_FIELD: sender[module.REPOSITORY_FIELD],
+        module.HEAD_FIELD: sender_head,
+        module.STATUS_FIELD: module.CLEAN_STATUS,
+    }
+    recipient_target = {
+        module.PANE_FIELD: recipient[module.PANE_FIELD],
+        module.WORKTREE_FIELD: recipient[module.WORKTREE_FIELD],
+        module.BRANCH_FIELD: recipient[module.BRANCH_FIELD],
+        module.REPOSITORY_FIELD: recipient[module.REPOSITORY_FIELD],
+        module.HEAD_FIELD: recipient_head,
+        module.STATUS_FIELD: module.CLEAN_STATUS,
+    }
+    sender_state = {
+        field: sender_target[field] for field in module.OBSERVED_STATE_FIELDS
+    }
+    recipient_state = {
+        field: recipient_target[field] for field in module.OBSERVED_STATE_FIELDS
+    }
+
     observed_states: set[object] = set()
-    for ordinal, (
-        kind,
-        expected_state,
-        reference,
-        target,
-        state,
-        accepted,
-    ) in enumerate(cases, start=2):
+    for ordinal, (kind, expected_state) in enumerate(
+        zip(module.MessageKind, module.MessageState, strict=True), start=1
+    ):
         content = message_content(kind, ordinal)
+        fields: dict[str, object] = {}
+        if kind in module.RESPONSE_KINDS:
+            fields["active_reference"] = active_reference
+        if kind is module.MessageKind.ACKNOWLEDGEMENT:
+            fields["accepted"] = True
+        elif kind is module.MessageKind.MUTATION_STATE:
+            fields["mutation_target"] = sender_target
+            fields["observed_state"] = sender_state
+        elif kind is module.MessageKind.MUTATION_AUTHORIZATION:
+            fields["mutation_target"] = recipient_target
+            fields["observed_state"] = recipient_state
         envelope = module.build_envelope(
             kind=kind,
             sender=sender,
@@ -121,20 +145,17 @@ def test_agent_message_mappings() -> None:
             subject=content.subject,
             facts=list(content.facts),
             request=content.request,
-            active_reference=reference,
-            mutation_target=target,
-            observed_state=state,
-            accepted=accepted,
+            **fields,
         )
         assert envelope[module.KIND_FIELD] == kind
         assert envelope[module.MESSAGE_STATE_FIELD] == expected_state
-        assert envelope[module.ACCEPTED_FIELD] is accepted
+        assert envelope[module.ACCEPTED_FIELD] is fields.get("accepted")
         if kind in module.RESPONSE_KINDS:
-            assert envelope[module.COORDINATION_REFERENCE_FIELD] == active
+            assert envelope[module.COORDINATION_REFERENCE_FIELD] == active_reference
         else:
-            assert envelope[module.COORDINATION_REFERENCE_FIELD] != active
+            assert envelope[module.COORDINATION_REFERENCE_FIELD] != active_reference
         observed_states.add(envelope[module.MESSAGE_STATE_FIELD])
-    assert len(observed_states) == len(module.MessageKind)
+    assert observed_states == set(module.MessageState)
 
     rejected_content = message_content(module.MessageKind.ACKNOWLEDGEMENT, 7)
     rejected_acknowledgement = module.build_envelope(
@@ -144,7 +165,7 @@ def test_agent_message_mappings() -> None:
         subject=rejected_content.subject,
         facts=list(rejected_content.facts),
         request=rejected_content.request,
-        active_reference=active,
+        active_reference=active_reference,
         accepted=False,
     )
     assert rejected_acknowledgement[module.ACCEPTED_FIELD] is False
@@ -156,11 +177,12 @@ def test_agent_message_mappings() -> None:
         command_exit_code=7,
         detail="transport rejected",
     )
+    transport = _checked_transport(prowl, recipient[module.PANE_FIELD])
     delivered = module.delivery_result(
         envelope,
         delivered=True,
-        command_exit_code=0,
-        transport=successful_transport(module),
+        command_exit_code=cast(int, transport[prowl.COMMAND_EXIT_CODE_FIELD]),
+        transport=transport,
     )
     assert failed[module.STATUS_FIELD] == module.DeliveryStatus.DELIVERY_FAILED
     assert delivered[module.STATUS_FIELD] == module.DeliveryStatus.DELIVERED

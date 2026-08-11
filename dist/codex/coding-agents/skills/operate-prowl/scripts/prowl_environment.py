@@ -392,13 +392,6 @@ class TargetMatchCardinality(StrEnum):
     MULTIPLE = "multiple"
 
 
-TARGET_RESOLUTION_STATUS_BY_CARDINALITY = {
-    TargetMatchCardinality.ZERO: ExecutionStatus.IDENTITY_UNAVAILABLE,
-    TargetMatchCardinality.ONE: ExecutionStatus.SUCCEEDED,
-    TargetMatchCardinality.MULTIPLE: ExecutionStatus.IDENTITY_AMBIGUOUS,
-}
-
-
 def target_match_cardinality(candidate_count: int) -> TargetMatchCardinality:
     if candidate_count == 0:
         return TargetMatchCardinality.ZERO
