@@ -132,18 +132,20 @@ Read each linked test file before coupling. Identify every variable, constant, l
 
 Use language syntax while reading to enumerate declarations, then classify ownership by reading the declaration and its evidence role. Do not outsource the verdict to a grep pattern or validation command.
 
-| Binding or predicate role                                                                                                              | Verdict                                  |
-| -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Actual result, observation, resource handle, generated parameter, callback input, or imported-contract alias that introduces no choice | ACCEPT — assertion flow                  |
-| Behavioral predicate or assertion API call in the linked test function or callback                                                     | ACCEPT — test-owned predicate            |
-| Predicate, matcher, expected-value parameter, assertion call, or verdict helper in infrastructure                                      | REJECT — assertion seam                  |
-| Runner settings, seed policy, retries, setup policy, or lifecycle policy                                                               | REJECT — test-owned configuration        |
-| Hand-picked test data, boundary bags, expected outputs, fixture contents, or generator domains                                         | REJECT — test-owned data                 |
-| Source-owned singleton shape or vocabulary copied into the test                                                                        | REJECT — source ownership copied to test |
+Before applying the data rows, resolve anything that looks like case data through the per-assertion-type litmus from `/test-evidence-standards`, applied below. A case that litmus assigns to the test itself is correctly owned there and is never a REJECT; demanding it move into a production module is the source laundering the standard forbids.
+
+| Binding or predicate role                                                                                                                       | Verdict                                  |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Actual result, observation, resource handle, generated parameter, callback input, or imported-contract alias that introduces no choice          | ACCEPT — assertion flow                  |
+| Behavioral predicate or assertion API call in the linked test function or callback                                                              | ACCEPT — test-owned predicate            |
+| Predicate, matcher, expected-value parameter, assertion call, or verdict helper in infrastructure                                               | REJECT — assertion seam                  |
+| Runner settings, seed policy, retries, setup policy, or lifecycle policy                                                                        | REJECT — test-owned configuration        |
+| Test-invented case data, boundary bags, expected outputs, fixture contents, or generator domains the assertion type does not assign to the test | REJECT — test-owned data                 |
+| Source-owned singleton shape or vocabulary copied into the test                                                                                 | REJECT — source ownership copied to test |
 
 Do not treat casing or syntax as evidence. Renaming `MAPPING_RUNS` to `mappingRuns`, changing an assignment to destructuring, or receiving a value through a parameter does not change what the binding chooses.
 
-Use `predicate-ownership` with rule `assertion-seam` and remediation target `test-file` when infrastructure owns a predicate, matcher, expected-value parameter, assertion call, or verdict helper. Use `oracle-independence` with remediation target `independent-oracle` when an expected result derives from the production table, algorithm, parser, branch logic, or other implementation path that produces the actual result. Use `source-ownership` when the test copies a source-owned singleton shape or vocabulary. Use `declarations` for the remaining two REJECT rows — test-owned configuration and test-owned data — so a binding that chooses runner settings, seed policy, setup or lifecycle policy, hand-picked data, boundary bags, expected outputs, fixture contents, or generator domains always reports one property name rather than an invented one.
+Use `predicate-ownership` with rule `assertion-seam` and remediation target `test-file` when infrastructure owns a predicate, matcher, expected-value parameter, assertion call, or verdict helper. Use `oracle-independence` with remediation target `independent-oracle` when an expected result derives from the production table, algorithm, parser, branch logic, or other implementation path that produces the actual result. Use `source-ownership` when the test copies a source-owned singleton shape or vocabulary. Use `declarations` for the remaining two REJECT rows — test-owned configuration and test-owned data — so a binding that chooses runner settings, seed policy, setup or lifecycle policy, boundary bags, expected outputs, fixture contents, generator domains, or case data the assertion type does not assign to the test always reports one property name rather than an invented one.
 
 For property-based tests, verify seed and replay behavior by reading the imported harness or property wrapper. If a property test has no harness-owned seed policy and no failure output that includes the seed or replay path, REJECT with `test-owned configuration` or `missing property seed reporting`.
 

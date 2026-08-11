@@ -64,19 +64,19 @@ fn rejects_empty_input() {
 }
 ```
 
-Keep boundary cases separate from the happy path. A failing boundary case should say exactly which boundary broke.
+Keep boundary cases separate from the happy path. A failing boundary case must say exactly which boundary broke.
 </boundary_cases>
 
 <systematic_coverage>
 Iterate the finite domain production owns once the individual scenarios are already clear. Production dispatches on `INPUT_KINDS` and encodes through its own encoder, so the loop covers the whole mapping and the expectation derives from the input rather than from a case table the test author wrote beside it.
 
 ```rust
-use product::inputs::INPUT_KINDS;
+use product::inputs::{encode, INPUT_KINDS};
 
 #[test]
 fn every_registered_kind_round_trips() {
     for kind in INPUT_KINDS {
-        let processed = process(&product::inputs::encode(kind)).unwrap();
+        let processed = process(&encode(kind)).unwrap();
 
         assert_eq!(processed.kind, *kind, "kind {kind:?}");
     }
