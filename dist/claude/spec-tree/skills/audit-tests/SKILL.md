@@ -128,14 +128,16 @@ Read each linked test file before coupling. Identify every variable, constant, l
 
 Use language syntax while reading to enumerate declarations, then classify ownership by reading the declaration and its evidence role. Do not outsource the verdict to a grep pattern or validation command.
 
-| Binding or predicate role                                                                                                              | Verdict                                  |
-| -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Actual result, observation, resource handle, generated parameter, callback input, or imported-contract alias that introduces no choice | ACCEPT — assertion flow                  |
-| Behavioral predicate or assertion API call in the linked test function or callback                                                     | ACCEPT — test-owned predicate            |
-| Predicate, matcher, expected-value parameter, assertion call, or verdict helper in infrastructure                                      | REJECT — assertion seam                  |
-| Runner settings, seed policy, retries, setup policy, or lifecycle policy                                                               | REJECT — test-owned configuration        |
-| Hand-picked test data, boundary bags, expected outputs, fixture contents, or generator domains                                         | REJECT — test-owned data                 |
-| Source-owned singleton shape or vocabulary copied into the test                                                                        | REJECT — source ownership copied to test |
+Before applying the data rows, resolve anything that looks like case data through the per-assertion-type litmus in Step 3b. The litmus assigns some cases to the test itself — a scenario's case is the spec's own interaction transcribed there, a conformance expectation comes from the external oracle, and a compliance case is the violating input the governing rule names. A case arriving from one of those three sources is correctly owned by the test and is never a REJECT; demanding it move into a production module is the source laundering the standard forbids.
+
+| Binding or predicate role                                                                                                                       | Verdict                                  |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Actual result, observation, resource handle, generated parameter, callback input, or imported-contract alias that introduces no choice          | ACCEPT — assertion flow                  |
+| Behavioral predicate or assertion API call in the linked test function or callback                                                              | ACCEPT — test-owned predicate            |
+| Predicate, matcher, expected-value parameter, assertion call, or verdict helper in infrastructure                                               | REJECT — assertion seam                  |
+| Runner settings, seed policy, retries, setup policy, or lifecycle policy                                                                        | REJECT — test-owned configuration        |
+| Test-invented case data, boundary bags, expected outputs, fixture contents, or generator domains the assertion type does not assign to the test | REJECT — test-owned data                 |
+| Source-owned singleton shape or vocabulary copied into the test                                                                                 | REJECT — source ownership copied to test |
 
 Do not treat casing or syntax as evidence. Renaming `MAPPING_RUNS` to `mappingRuns`, changing an assignment to destructuring, or receiving a value through a parameter does not change what the binding chooses.
 
