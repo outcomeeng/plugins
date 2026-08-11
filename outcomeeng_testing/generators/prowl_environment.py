@@ -130,8 +130,8 @@ def resolver_target_path(
     return value
 
 
-def subprocess_input_text(ordinal: int) -> str:
-    return f"generated subprocess input {ordinal}"
+def subprocess_input_texts() -> st.SearchStrategy[str]:
+    return st.text(max_size=200)
 
 
 def agent_identity(module: ModuleType, ordinal: int) -> dict[str, str]:

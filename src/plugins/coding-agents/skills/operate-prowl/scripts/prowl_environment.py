@@ -1050,10 +1050,13 @@ def resolve_target(
                 for participant in matched
             ]
             cardinality = target_match_cardinality(len(candidates))
-            status = TARGET_RESOLUTION_STATUS_BY_CARDINALITY[cardinality]
             if cardinality is TargetMatchCardinality.ZERO:
+                status = ExecutionStatus.IDENTITY_UNAVAILABLE
                 detail = f"No non-caller Prowl agent contains target path {path}."
+            elif cardinality is TargetMatchCardinality.ONE:
+                status = ExecutionStatus.SUCCEEDED
             elif cardinality is TargetMatchCardinality.MULTIPLE:
+                status = ExecutionStatus.IDENTITY_AMBIGUOUS
                 detail = f"Target path {path} matches multiple non-caller Prowl agents."
         except ProwlEnvironmentError as error:
             status = error.status

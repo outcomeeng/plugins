@@ -113,6 +113,15 @@ printf '%s\n' '{"schemaVersion":1,"operation":"agents","arguments":{}}' | python
 The envelope already carries the return address: `sender.pane` is the sender's own complete pane, and the recipient reads it from the delegation it receives. Nothing else needs a field. What the recipient cannot infer is the exact command that reaches that pane and the environment conditions that break it, so the `instruction` ends by naming both per `<handback_delivery>`. The sender cannot poll for completion, so the recipient is the only party that can close the loop; an instruction that omits the handback is a request the sender can never learn the answer to.
 
 The result carries the complete source-owned `delegation` envelope. Preserve it for the terminal handback; transport success is not acceptance or completion.
+
+A direct delegation submission uses the same stdin boundary:
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" delegate <<'JSON'
+{"sender":{"agent":"agent-a","pane":"11111111-1111-4111-8111-111111111111","worktree":"/repo-a","branch":"work/a","repository":"/repo.git","run":"run-a"},"recipient":{"agent":"agent-b","pane":"22222222-2222-4222-8222-222222222222","worktree":"/repo-b","branch":"work/b","repository":"/repo.git","run":"run-b"},"subject":"Review resolver evidence","instruction":"Write the result first. Then run exactly: printf '%s\\n' '{\"schemaVersion\":1,\"operation\":\"send\",\"arguments\":{\"pane\":\"11111111-1111-4111-8111-111111111111\",\"text\":\"Resolver evidence review completed; terminal result follows.\",\"noWait\":true}}' | python3 \"${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py\" run. Capture the complete result and require status succeeded, commandExitCode 0, and response.data.input.trailing_enter_sent true. Use the default socket, confirm the expected panes, and use this bundled command path when the CLI is absent from PATH.","coordinationReference":null}
+JSON
+```
+
 7. The recipient submits exactly one terminal result to `handback`, carrying the original `delegation`, one `kind`, and one supported result form:
 
 - `delegation-completed`
@@ -121,6 +130,15 @@ The result carries the complete source-owned `delegation` envelope. Preserve it 
 - `delegation-unavailable`
 
 A complete inline result uses `inlineResult`. A durable result uses `resultReference` plus a bounded `projection`; both forms may appear together. The adapter rejects a missing result, a reference without projection, and a conflicting terminal handback.
+
+A direct inline handback submission carries the complete returned delegation:
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" handback <<'JSON'
+{"delegation":{"schemaVersion":1,"kind":"delegation-request","coordinationReference":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","sender":{"agent":"agent-a","pane":"11111111-1111-4111-8111-111111111111","worktree":"/repo-a","branch":"work/a","repository":"/repo.git","run":"run-a"},"recipient":{"agent":"agent-b","pane":"22222222-2222-4222-8222-222222222222","worktree":"/repo-b","branch":"work/b","repository":"/repo.git","run":"run-b"},"subject":"Review resolver evidence","instruction":"Write the result first. Then run exactly: printf '%s\\n' '{\"schemaVersion\":1,\"operation\":\"send\",\"arguments\":{\"pane\":\"11111111-1111-4111-8111-111111111111\",\"text\":\"Resolver evidence review completed; terminal result follows.\",\"noWait\":true}}' | python3 \"${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py\" run. Capture the complete result and require status succeeded, commandExitCode 0, and response.data.input.trailing_enter_sent true. Use the default socket, confirm the expected panes, and use this bundled command path when the CLI is absent from PATH."},"kind":"delegation-completed","inlineResult":"Resolver evidence approved."}
+JSON
+```
+
 8. Return the complete terminal result to the delegating workflow. Do not poll the recipient, add acceptance or progress phases, or infer completion from pane output.
 
 </workflow>

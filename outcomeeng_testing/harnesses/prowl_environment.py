@@ -6,7 +6,7 @@ import importlib.util
 import json
 import sys
 import uuid
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from io import StringIO
 from pathlib import Path
@@ -24,6 +24,7 @@ from outcomeeng_testing.generators.prowl_environment import (
     public_agent_item,
     public_prowl_operation_names,
     result_forms,
+    subprocess_input_texts,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -45,6 +46,12 @@ PROPERTY_EXAMPLES = 40
 PROPERTY_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-prowl-environment.enabler/tests/"
     "test_prowl_environment.property.l1.py"
+)
+SUBPROCESS_INPUT_PROPERTY_SEED = 2026081101
+SUBPROCESS_INPUT_PROPERTY_EXAMPLES = 40
+SUBPROCESS_INPUT_PROPERTY_REPLAY_PATH = (
+    "spx/43-coding-agents.enabler/18-prowl-environment.enabler/tests/"
+    "test_prowl_subprocess_input.property.l1.py"
 )
 
 
@@ -479,6 +486,26 @@ print(json.dumps({
             ),
             stdin=input_text,
         ),
+    )
+
+
+def run_subprocess_input_property(assert_input: Callable[[str], None]) -> None:
+    """Drive generated explicit input while the linked test owns its predicate."""
+
+    @seed(SUBPROCESS_INPUT_PROPERTY_SEED)
+    @settings(
+        max_examples=SUBPROCESS_INPUT_PROPERTY_EXAMPLES,
+        deadline=None,
+        print_blob=True,
+    )
+    @given(input_text=subprocess_input_texts())
+    def generated_input_property(input_text: str) -> None:
+        assert_input(input_text)
+
+    run_replayable_property(
+        generated_input_property,
+        seed_value=SUBPROCESS_INPUT_PROPERTY_SEED,
+        replay_path=SUBPROCESS_INPUT_PROPERTY_REPLAY_PATH,
     )
 
 
