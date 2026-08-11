@@ -313,98 +313,70 @@ fn command_builder_reports_success() {
 }
 ```
 
-Tempdir example:
+Tempdir example. The harness owns the temporary product and its cleanup; the fixture arrives by path; the `#[test]` calls the governed function and asserts:
 
 ```rust
-use <product>_testing::fixtures::configs::valid_site_config;
-use <product>_testing::harnesses::filesystem::assert_loads_yaml_from_temp_config;
+use <product>_testing::fixtures::configs::valid_site_config_path;
+use <product>_testing::harnesses::filesystem::TempProduct;
 
 #[test]
 fn loads_yaml_from_temp_dir() {
-    assert_loads_yaml_from_temp_config(valid_site_config(), load_config);
+    let product = TempProduct::seeded_from(valid_site_config_path());
+
+    let config = load_config(product.path()).unwrap();
+
+    assert_eq!(config.base_url, product::config::DEFAULT_BASE_URL);
 }
 ```
 
 </level_1_patterns>
 
 <property_and_compile_time_patterns>
-Use the product property harness for universal invariants:
+Use the product property harness for universal invariants. The harness runs the domain; the invariant and its `prop_assert*` macro stay in the `#[test]` closure:
 
 ```rust
 use <product>_testing::generators::configs::valid_config_strategy;
-use <product>_testing::harnesses::properties::assert_config_roundtrips;
+use <product>_testing::harnesses::properties::run_property;
 
 #[test]
 fn config_roundtrips() {
-    assert_config_roundtrips(valid_config_strategy(), encode_config, decode_config);
+    run_property(valid_config_strategy(), |config| {
+        let encoded = encode_config(&config);
+
+        prop_assert_eq!(decode_config(&encoded).unwrap(), config);
+        Ok(())
+    });
 }
 ```
 
 Property tests MUST run through a harness or wrapper that owns `proptest` / `quickcheck` configuration, seed policy, case count, failure persistence, and replay diagnostics. The test file supplies the invariant and imports generated domains; it does not declare runner tuning or seed policy. On failure, output must include the seed, regression file path, or replay command needed to reproduce the generated case.
 
-Use `trybuild` for compile-time guarantees:
+That split is exact: the harness owns everything about *how many* cases run and *which* seed produced a failure, and the `#[test]` closure owns *what makes a case pass*. A harness signature that accepts the encode and decode functions and asserts inside itself moves the invariant out of the test and fails the seam.
+
+Use `trybuild` for compile-time guarantees. The compiler is the oracle; the fixture module supplies inert `.rs` paths and the `#[test]` drives the `TestCases` handle:
 
 ```rust
 #[test]
 fn ui_contracts_hold() {
-    <product>_testing::harnesses::trybuild::assert_ui_contracts(
-        <product>_testing::fixtures::ui::valid_builders(),
-        <product>_testing::fixtures::ui::invalid_builders(),
-    );
+    let cases = trybuild::TestCases::new();
+
+    for builder in <product>_testing::fixtures::ui::valid_builder_paths() {
+        cases.pass(builder);
+    }
+    for builder in <product>_testing::fixtures::ui::invalid_builder_paths() {
+        cases.compile_fail(builder);
+    }
 }
 ```
 
 </property_and_compile_time_patterns>
 
 <level_2_patterns>
-Use Level 2 when governed behavior needs a real binary, runtime, adapter, or local collaborator.
-
-CLI binary example:
-
-```rust
-use <product>_testing::fixtures::projects::empty_project;
-use <product>_testing::harnesses::commands::assert_init_command_writes_project_files;
-
-#[test]
-fn init_command_writes_project_files() {
-    assert_init_command_writes_project_files(empty_project());
-}
-```
-
-Async L2 example:
-
-```rust
-use <product>_testing::fixtures::users::valid_user;
-use <product>_testing::harnesses::database::assert_user_repository_roundtrip;
-
-#[tokio::test]
-async fn repository_persists_and_loads_user() {
-    assert_user_repository_roundtrip(valid_user(), UserRepository::new).await;
-}
-```
-
+Use Level 2 when governed behavior needs a real binary, runtime, adapter, or local collaborator. The harness starts the binary, container, or service and hands back a handle; the `#[test]` drives the governed behavior through that handle and asserts on what it observes. Worked CLI, async-adapter, and containerized-collaborator examples are in `${SKILL_DIR}/references/level-2.md`.
 </level_2_patterns>
 
 <level_3_patterns>
-Use Level 3 when governed behavior depends on a real remote collaborator, deployed environment, external network, SaaS system, browser UI, or shared runtime that cannot be replaced by a local Level 2 harness without changing the claim.
-
-Remote API example:
-
-```rust
-#[tokio::test]
-async fn published_package_is_fetchable_from_registry() {
-    <product>_testing::harnesses::registry::assert_sandbox_package_publish_and_fetch().await;
-}
-```
-
-Browser workflow example:
-
-```rust
-#[tokio::test]
-async fn login_flow_reaches_dashboard() {
-    <product>_testing::harnesses::browser::assert_login_flow_reaches_dashboard().await;
-}
-```
+Use Level 3 when governed behavior depends on a real remote collaborator, deployed environment, external network, SaaS system, browser UI, or shared runtime that cannot be replaced by a local Level 2 harness without changing the claim. The harness owns credential resolution, sandbox isolation, and cleanup; the `#[test]` owns the contract claim. Worked remote-API, sandboxed-CLI, and browser-workflow examples are in `${SKILL_DIR}/references/level-3.md`.
 
 Level 3 tests must declare their isolation boundary, credentials, cleanup behavior, and expected runtime. If the repository has no safe Level 3 lane, stop and surface that product decision rather than hiding the dependency behind a skipped test.
 </level_3_patterns>
@@ -424,7 +396,9 @@ Keep deterministic measurement and audit-time evidence judgment distinct:
 
 **Failure 2: Copied an owned example into an async harness.** Claude passed `user` by value into `save(user)` and then read `user.id()` and `user.email()` afterward. Why it failed: the example no longer compiled for normal non-`Copy` data and taught consumers to work around ownership rather than express the tested behavior. How to avoid: write Rust examples as executable ownership models; borrow shared generated values when later assertions still need them.
 
-**Failure 3: Accepted property runner tuning in a test file.** Claude treated a local `const CASES` or seed setting as harmless test configuration. Why it failed: property seed policy, case count, persistence, and replay diagnostics belong to the harness or wrapper, while the test file owns only the invariant. How to avoid: route property assertions through the `<product>-testing` property harness and require reproducible failure output.
+**Failure 3: Taught the predicate seam in prose and broke it in every example.** Claude stated the seam correctly in `<success_criteria>`, `<acceptable_doubles>`, `<predicate_and_oracle_litmus>`, and `<anti_patterns>`, then wrote every worked example as a single call to an `assert_*` harness function with no assertion macro in the `#[test]` body. Why it failed: a reader copies the example, not the prose, so the shipped guidance taught the exact pattern the standard rejects — and the resulting tests pass the reader's own reading of this skill. How to avoid: read each example as the artifact it will become. Every `#[test]` body ends in an `assert!`, `assert_eq!`, `assert_ne!`, `matches!`, or `prop_assert*` the reader can see; a harness call that both acts and judges is the defect, whatever it is named.
+
+**Failure 4: Accepted property runner tuning in a test file.** Claude treated a local `const CASES` or seed setting as harmless test configuration. Why it failed: property seed policy, case count, persistence, and replay diagnostics belong to the harness or wrapper, while the test file owns only the invariant. How to avoid: route property assertions through the `<product>-testing` property harness and require reproducible failure output.
 
 </failure_modes>
 
