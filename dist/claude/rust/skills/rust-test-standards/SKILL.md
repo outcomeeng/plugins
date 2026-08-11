@@ -424,7 +424,7 @@ Do not require `spx validation literal` for Rust tests. The literal validator is
 </anti_patterns>
 
 <reference_guides>
-Level 1 and property patterns are worked inline above, so `level-1.md` adds Rust-native detail beyond them. Levels 2 and 3 carry no inline examples at all — their reference files are the only worked examples for those levels.
+Levels 2 and 3 carry no inline examples — their reference files are the only worked examples for those levels.
 
 - `${CLAUDE_SKILL_DIR}/references/level-1.md` - pure computation, tempdir, trait seams, and property tests beyond the inline patterns
 - `${CLAUDE_SKILL_DIR}/references/level-2.md` - the worked CLI binary, async adapter, and containerized collaborator examples
