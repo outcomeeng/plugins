@@ -248,7 +248,7 @@ Strings and numbers are never valid fixtures. A string literal representing a do
 
 **5. Test infrastructure layout**
 
-Harnesses, generators, and inert fixtures are production code. They live in a separate workspace-member crate (`<product>-testing/` directory at workspace root, Cargo package `<product>-testing`, Rust import path `<product>_testing`), declared as a `[dev-dependencies]` entry of consumers:
+Harnesses, generators, and inert fixtures are production code. They live in the separate workspace-member crate named in `<portable_test_crate>`, declared as a `[dev-dependencies]` entry of consumers:
 
 - `<product>-testing/src/harnesses/<name>.rs` — modules that mediate access to external resources.
 - `<product>-testing/src/generators/<name>.rs` — factories producing valid inputs for proptest/quickcheck/parameterized tests.
