@@ -34,6 +34,10 @@ def _load(name: str) -> ModuleType:
     return module
 
 
+def load_agent_message() -> ModuleType:
+    return _load("coding_agents_agent_message")
+
+
 def _discovery(
     module: ModuleType,
     roster: list[dict[str, object]],

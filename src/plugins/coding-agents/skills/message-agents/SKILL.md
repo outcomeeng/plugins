@@ -12,11 +12,11 @@ A source-owned coordination envelope delivered through `/operate-prowl` to one c
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one JSON message request containing the recipient's absolute worktree, repository, or working-directory path, `kind`, `subject`, `facts`, and any applicable coordination fields. When required data is absent, stop and name it before discovery or delivery; never invent message data or ask for a pane UUID.
+1. Interpret `$ARGUMENTS` as one JSON message request containing `recipientPath` with the recipient's absolute worktree, repository, or working-directory path, `kind`, `subject`, `facts`, and any applicable coordination fields. The request may carry `toPane` only as a complete identity assertion from an upstream coordination plan. When required data is absent, stop and name it before discovery or delivery; never invent message data or ask for a pane UUID.
 2. Invoke `/operate-prowl` once for `resolve-target` with the supplied path. Preserve the complete result. It returns the checked inventory, complete caller and participants, and non-caller candidates whose `sendRequestTemplate` already selects each pane with immediate-return mode and normal trailing-Enter behavior.
-3. Require one selected candidate. Use the sole candidate on `succeeded`; on `identity-ambiguous`, ask the operator to choose among the returned worktree and branch metadata, then select the exact candidate with that complete worktree and branch from the captured result without rerunning resolution; on `identity-unavailable`, report the exact detail and participant worktrees. NEVER select by title, focus, position, prose, or the caller's pane.
+3. Require one selected candidate. Use the sole candidate on `succeeded`; on `identity-ambiguous`, ask the operator to choose among the returned worktree and branch metadata, then select the exact candidate with that complete worktree and branch from the captured result without rerunning resolution; on `identity-unavailable`, report the exact detail and participant worktrees. When the request carries `toPane`, require it to equal the selected candidate's complete pane UUID or stop with `invalid-identity`. NEVER select by title, focus, position, prose, or the caller's pane.
 4. Build the bundled script's `discovery` input directly from the resolver result: `caller` is the returned caller, `targets` is the returned complete participant list, and `status` is `prowl-pane`. Set `toPane` from the selected candidate's complete participant. This source-owned bridge uses the captured resolver result directly; never write an intermediate file or run an ad hoc transformation script.
-5. Build a message request with `toPane`, `kind`, `subject`, `facts`, optional `request`, optional `coordinationReference`, optional `mutationTarget`, optional `observedState`, and optional `accepted`. `kind` is exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. An acknowledgement, mutation-state report, or mutation authorization MUST reuse the active proposal UUID; an initiating proposal or fact MUST omit it so the adapter creates a new UUID. An acknowledgement MUST carry boolean `accepted`; every other kind omits it.
+5. Build the bundled script's message request with the selected candidate's `toPane`, `kind`, `subject`, `facts`, optional `request`, optional `coordinationReference`, optional `mutationTarget`, optional `observedState`, and optional `accepted`. `recipientPath` has completed target resolution and never enters the envelope. `kind` is exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. An acknowledgement, mutation-state report, or mutation authorization MUST reuse the active proposal UUID; an initiating proposal or fact MUST omit it so the adapter creates a new UUID. An acknowledgement MUST carry boolean `accepted`; every other kind omits it.
 6. For a delegated mutation, use the source-owned handshake:
    - An `ownership-proposal` carries `mutationTarget` with exact `pane`, `worktree`, `branch`, `repository`, full `head`, and `status` values; pane, worktree, branch, and repository match the live recipient identity.
    - A `mutation-state` response carries the same target plus `observedState` with exact `worktree`, `branch`, `repository`, full `head`, and `status` values matching the live sender identity.
@@ -54,6 +54,7 @@ printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":
 <constraints>
 
 - ALWAYS preserve complete source-supplied agent, pane, worktree, branch, repository, run, coordination-reference, mutation-target, observed-state, and transport identities.
+- ALWAYS report the selected target using the exact `recipientPath` supplied by the caller while using the resolved pane UUID only inside the delivery operation.
 - ALWAYS invoke `/operate-prowl` for source-owned target resolution and delivery.
 - ALWAYS retain each complete command result in the active tool context and feed it into the next source-owned operation; no scratch file or shell redirect is part of this workflow.
 - NEVER scan transcript files, use another terminal multiplexer, or ask the operator to relay a message as a fallback.
@@ -84,7 +85,7 @@ Before release, exercise `coordination_reference`, `build_envelope`, `send_reque
 
 <success_criteria>
 
-- Target resolution passes only with one complete non-caller candidate selected from the complete checked inventory.
+- Target resolution passes only with one complete non-caller candidate selected from the complete checked inventory for `recipientPath`, with any supplied `toPane` matching that candidate.
 - Build passes only with one validated envelope and one semantic delivery bound to the target's complete pane UUID.
 - Delivery passes only after `/operate-prowl` returns a checked successful result whose public input record confirms trailing Enter was sent; every failure preserves its exact status, detail, and command exit code when present.
 - Caller, recipient, mutation-target, and observed-state identities validate before delivery.

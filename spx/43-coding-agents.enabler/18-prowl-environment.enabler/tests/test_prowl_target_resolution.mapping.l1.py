@@ -4,6 +4,7 @@ from types import ModuleType
 from typing import cast
 
 from outcomeeng_testing.generators.prowl_environment import public_agent_item
+from outcomeeng_testing.harnesses.coding_agents import load_agent_message
 from outcomeeng_testing.harnesses.prowl_environment import (
     RecordingRunner,
     load_prowl_environment,
@@ -168,4 +169,65 @@ def test_filled_resolver_template_returns_one_complete_checked_send_result() -> 
     assert runner.calls == [
         (module.command_for(module.operation_request(module.Operation.AGENTS)), None),
         (module.command_for(request), None),
+    ]
+
+
+def test_resolver_output_builds_and_delivers_one_message_envelope() -> None:
+    prowl = load_prowl_environment()
+    message = load_agent_message()
+    agents = [public_agent_item(prowl, ordinal) for ordinal in range(2)]
+    expected_participants = [_expected_participant(prowl, agent) for agent in agents]
+    runner = RecordingRunner(
+        [
+            prowl_agents_command_result(prowl, agents),
+            prowl_send_command_result(prowl, trailing_enter_sent=True),
+        ]
+    )
+    resolved = prowl.resolve_target(
+        expected_participants[1][prowl.WORKTREE_FIELD],
+        expected_participants[0][prowl.PANE_FIELD],
+        runner,
+    )
+    candidate = resolved[prowl.CANDIDATES_FIELD][0]
+    participant = candidate[prowl.PARTICIPANT_FIELD]
+    discovery = {
+        message.SCHEMA_VERSION_FIELD: message.SCHEMA_VERSION,
+        message.STATUS_FIELD: message.CallerStatus.PROWL_PANE,
+        message.DETAIL_FIELD: None,
+        message.CALLER_FIELD: resolved[prowl.CALLER_FIELD],
+        message.TARGETS_FIELD: resolved[prowl.PARTICIPANTS_FIELD],
+    }
+    message_request = message.build_request(
+        to_pane=participant[prowl.PANE_FIELD],
+        kind=message.MessageKind.FACT,
+        subject=participant[prowl.BRANCH_FIELD],
+        facts=[participant[prowl.WORKTREE_FIELD]],
+        request=None,
+    )
+    built = message.send_request(message_request, discovery)
+    delivery = built[message.DELIVERY_FIELD]
+    request = candidate[prowl.SEND_REQUEST_TEMPLATE_FIELD]
+    request[prowl.ARGUMENTS_FIELD][prowl.TEXT_FIELD] = delivery[message.TEXT_FIELD]
+
+    transport = prowl.execute(request, runner)
+    result = message.delivery_result(
+        built[message.ENVELOPE_FIELD],
+        delivered=True,
+        command_exit_code=transport[prowl.COMMAND_EXIT_CODE_FIELD],
+        transport=transport,
+    )
+
+    envelope = built[message.ENVELOPE_FIELD]
+    assert envelope[message.SENDER_FIELD] == expected_participants[0]
+    assert envelope[message.RECIPIENT_FIELD] == expected_participants[1]
+    assert delivery[message.TO_PANE_FIELD] == expected_participants[1][prowl.PANE_FIELD]
+    assert (
+        request[prowl.ARGUMENTS_FIELD][prowl.PANE_FIELD]
+        == delivery[message.TO_PANE_FIELD]
+    )
+    assert result[message.STATUS_FIELD] == message.DeliveryStatus.DELIVERED
+    assert result[message.TRANSPORT_FIELD] == transport
+    assert runner.calls == [
+        (prowl.command_for(prowl.operation_request(prowl.Operation.AGENTS)), None),
+        (prowl.command_for(request), None),
     ]
