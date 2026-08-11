@@ -183,9 +183,10 @@ Snapshot tests are valid only when the textual or structured output surface is i
 | Generator-produced | Pure code emits varied values each run                        | `<product>-testing/src/generators/` |
 | Harness-managed    | Infrastructure mediates interaction with an external resource | `<product>-testing/src/harnesses/`  |
 | Fixture files      | An inert whole payload the code under test reads by path      | `<product>-testing/fixtures/`       |
+| Assertion-assigned | The case the assertion type fixes rather than the test author | Inline in the `#[test]` body        |
 | Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file             |
 
-Each origin below has its own section. Descriptive inline is the one exception and needs none. `<test_infrastructure_layout>` is a layout note, not an origin: it closes the section by placing harnesses, generators, and fixtures inside the infrastructure crate, with fixtures split into loader code and data.
+Each origin below has its own section; assertion-assigned and descriptive inline are the two exceptions and need none. An assertion-assigned case is one the assertion type places in the test itself — a scenario's exact interaction as the spec declares it, a conformance expectation from the external oracle, or the violating input a compliance rule names. Such a literal is correct in the `#[test]` body, and moving it into a production module so the test can import it gives the case a production address without a production contract. `<test_infrastructure_layout>` is a layout note, not an origin: it closes the section by placing harnesses, generators, and fixtures inside the infrastructure crate, with fixtures split into loader code and data.
 
 **TEST FILES OWN NO DATA OR POLICY.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 
@@ -210,6 +211,8 @@ Use generators for inputs that vary per run. A generator is a pure function — 
 
 - Use generator strategies for randomized inputs consumed by the property harness
 - Write strategy factories for domain-shaped values
+
+A generated value reaches an executed test only through the property harness, which owns the seed and the replay diagnostics. Sampling a generator once inside an ordinary `#[test]` or `#[tokio::test]` produces evidence no one can reproduce: the failing value is never reported, and the next run draws a different one, so the failure disappears. A scenario at any level takes the case its assertion assigns instead, and a claim that genuinely ranges over a domain is a property assertion.
 
 ```rust
 // <product>-testing/src/generators/audit.rs
@@ -369,12 +372,8 @@ Use `trybuild` for compile-time guarantees. This is the one shape whose `#[test]
 fn ui_contracts_hold() {
     let cases = trybuild::TestCases::new();
 
-    for builder in <product>_testing::fixtures::ui::valid_builder_paths() {
-        cases.pass(builder);
-    }
-    for builder in <product>_testing::fixtures::ui::invalid_builder_paths() {
-        cases.compile_fail(builder);
-    }
+    cases.pass(<product>_testing::fixtures::ui::case_path("builder_accepts_typed_field"));
+    cases.compile_fail(<product>_testing::fixtures::ui::case_path("builder_rejects_untyped_field"));
 }
 ```
 

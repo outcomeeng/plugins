@@ -6,6 +6,17 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.8.1
+
+### Fixed
+
+- **Every worked example keeps its assertion in the test.** The test standards stated the predicate seam and contradicted it in all fourteen examples, each a single call to an `assert_*` harness function. Copying an example no longer produces a test the standard rejects.
+- **No example gives a test-only case a production address.** Cases that had been placed in a module under test so the test could cite a production path are now the interaction the spec declares, transcribed into the test body. The origin table gains that assertion-assigned origin, so following it no longer pushes a scenario case into production.
+- **CLI examples assert through the declared assertion API.** `.assert().success()` was a verdict the library owned; the examples now take the `Output` and assert on it. Command names come from the owning production module rather than string literals.
+- **Generated values reach a test only through the property harness.** Level 2 and Level 3 scenario examples sampled a generator once with no seed, so a failure was unreproducible; each now takes the case its assertion assigns.
+- **`trybuild` cases carry no verdict in their fixture names.** Case paths are neutral and the test selects `pass` or `compile_fail` per case, so inverting a compile-time claim edits only the test.
+- Both property examples import `prop_assert_eq!`; neither compiled as written.
+
 ## 0.8.0
 
 ### Removed

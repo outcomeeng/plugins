@@ -56,13 +56,12 @@ The harness owns credential resolution, sandbox isolation, and cleanup on `Drop`
 Remote API contract:
 
 ```rust
-use <product>_testing::generators::packages::any_publishable_package;
 use <product>_testing::harnesses::registry::SandboxRegistry;
 
 #[tokio::test]
 async fn package_can_be_published_and_fetched() {
     let registry = SandboxRegistry::connect().await;
-    let package = any_publishable_package();
+    let package = product::packages::Package::new("widget", "1.0.0");
 
     registry.publish(&package).await.unwrap();
     let fetched = registry.fetch(package.name(), package.version()).await.unwrap();
@@ -74,14 +73,14 @@ async fn package_can_be_published_and_fetched() {
 CLI against a real sandbox:
 
 ```rust
-use <product>_testing::generators::payloads::any_syncable_tree;
+use <product>_testing::fixtures::trees::syncable_tree;
 use <product>_testing::harnesses::commands::product_binary;
 use <product>_testing::harnesses::sandbox::RemoteSandbox;
 
 #[test]
 fn sync_command_uploads_to_remote_sandbox() {
     let sandbox = RemoteSandbox::claim();
-    let tree = any_syncable_tree();
+    let tree = syncable_tree();
 
     let outcome = product_binary()
         .arg(product::sync::COMMAND)
@@ -98,14 +97,14 @@ fn sync_command_uploads_to_remote_sandbox() {
 Browser workflow:
 
 ```rust
-use <product>_testing::generators::accounts::any_enrolled_account;
 use <product>_testing::harnesses::browser::BrowserSession;
 
 #[tokio::test]
 async fn login_flow_reaches_dashboard() {
     let session = BrowserSession::start().await;
+    let account = session.enrolled_account();
 
-    session.log_in_as(&any_enrolled_account()).await.unwrap();
+    session.log_in_as(&account).await.unwrap();
 
     assert_eq!(session.current_route().await.unwrap(), product::routes::DASHBOARD);
 }

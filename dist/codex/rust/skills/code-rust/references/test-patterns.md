@@ -4,7 +4,7 @@
 - `<source_contract_values>` — source-owned expected results beside a spec-declared case
 - `<one_scenario_per_test>` — one spec scenario per test
 - `<boundary_cases>` — boundary cases the spec or rule names
-- `<systematic_coverage>` — iteration over a generated domain
+- `<systematic_coverage>` — iteration over the finite domain production owns
 - `<property_coverage>` — generator domain, harness run policy, test-owned invariant
 - `<ordering_strategy>` — trivial to complex
 - `<anti_patterns>` — rejections
@@ -68,20 +68,22 @@ Keep boundary cases separate from the happy path. A failing boundary case should
 </boundary_cases>
 
 <systematic_coverage>
-Iterate a generated domain once the individual scenarios are already clear. The generator supplies each input and the expectation derives from that input, so the loop adds coverage without the test author writing a case table beside it.
+Iterate the finite domain production owns once the individual scenarios are already clear. Production dispatches on `INPUT_KINDS` and encodes through its own encoder, so the loop covers the whole mapping and the expectation derives from the input rather than from a case table the test author wrote beside it.
 
 ```rust
-use <product>_testing::generators::inputs::encoded_inputs;
+use product::inputs::INPUT_KINDS;
 
 #[test]
-fn every_generated_input_reports_its_kind() {
-    for input in encoded_inputs() {
-        let processed = process(&input.encoding).unwrap();
+fn every_registered_kind_round_trips() {
+    for kind in INPUT_KINDS {
+        let processed = process(&product::inputs::encode(kind)).unwrap();
 
-        assert_eq!(processed.kind, input.kind, "input {}", input.encoding);
+        assert_eq!(processed.kind, *kind, "kind {kind:?}");
     }
 }
 ```
+
+A generator belongs to a property assertion, where the harness owns the seed and reports the replay input. Sampling one generated value inside an ordinary `#[test]` reports no seed, so the failing case is gone on the next run.
 
 </systematic_coverage>
 

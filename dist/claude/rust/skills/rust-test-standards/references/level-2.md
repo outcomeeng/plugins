@@ -68,14 +68,13 @@ fn init_command_writes_project_files() {
 <async_adapter_pattern>
 
 ```rust
-use <product>_testing::generators::users::any_valid_user;
 use <product>_testing::harnesses::database::PostgresHarness;
 
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
     let database = PostgresHarness::start().await;
     let repository = UserRepository::new(database.pool());
-    let user = any_valid_user();
+    let user = product::users::User::new("u-1", "widget@example.com");
 
     repository.save(&user).await.unwrap();
     let loaded = repository.load(user.id()).await.unwrap();
@@ -89,14 +88,13 @@ async fn repository_persists_and_loads_user() {
 <containerized_collaborator_pattern>
 
 ```rust
-use <product>_testing::generators::jobs::any_pending_job;
 use <product>_testing::harnesses::queue::QueueHarness;
 
 #[tokio::test]
 async fn worker_consumes_real_queue_messages() {
     let queue = QueueHarness::start().await;
     let drained_depth = queue.depth().await.unwrap();
-    let job = any_pending_job();
+    let job = product::jobs::Job::pending("job-1");
     queue.publish(&job).await.unwrap();
 
     run_worker_once(queue.connection()).await.unwrap();
