@@ -2,7 +2,6 @@ import hashlib
 import json
 import uuid
 from io import StringIO
-from types import ModuleType
 from typing import cast
 
 import pytest
@@ -10,54 +9,16 @@ import pytest
 from outcomeeng_testing.generators.coding_agents import (
     message_content,
 )
-from outcomeeng_testing.generators.prowl_environment import public_agent_item
 from outcomeeng_testing.harnesses.coding_agents import (
-    agent_discovery,
     fact_envelope,
     generated_envelope,
-    load_agent_message,
+    observe_send_transport,
+    public_message_context,
 )
-from outcomeeng_testing.harnesses.prowl_environment import (
-    RecordingRunner,
-    load_prowl_environment,
-    prowl_agents_command_result,
-    prowl_send_command_result,
-)
-
-
-def _public_context() -> tuple[
-    ModuleType,
-    list[dict[str, object]],
-    dict[str, str],
-    dict[str, str],
-    dict[str, object],
-]:
-    prowl = load_prowl_environment()
-    module = load_agent_message()
-    public_roster = [public_agent_item(prowl, ordinal) for ordinal in range(2)]
-    runner = RecordingRunner([prowl_agents_command_result(prowl, public_roster)])
-    inventory = prowl.execute(prowl.operation_request(prowl.Operation.AGENTS), runner)
-    sender, recipient = prowl.participants_from_agents(inventory[prowl.RESPONSE_FIELD])
-    discovery = agent_discovery(module, public_roster, sender[module.PANE_FIELD])
-    return module, public_roster, sender, recipient, discovery
-
-
-def _checked_transport(pane: str) -> dict[str, object]:
-    prowl = load_prowl_environment()
-    runner = RecordingRunner(
-        [prowl_send_command_result(prowl, trailing_enter_sent=True)]
-    )
-    request = prowl.operation_request(
-        prowl.Operation.SEND,
-        pane=pane,
-        text="source-checked compliance delivery",
-        no_wait=True,
-    )
-    return cast(dict[str, object], prowl.execute(request, runner))
 
 
 def test_delivery_preserves_complete_public_identities_and_semantic_payload() -> None:
-    module, public_roster, sender, recipient, _ = _public_context()
+    module, public_roster, sender, recipient, _ = public_message_context()
 
     assert (
         sender[module.RUN_FIELD]
@@ -75,9 +36,9 @@ def test_delivery_preserves_complete_public_identities_and_semantic_payload() ->
 
 
 def test_delivery_requires_complete_checked_transport_evidence() -> None:
-    module, _, sender, recipient, _ = _public_context()
+    module, _, sender, recipient, _ = public_message_context()
     envelope = fact_envelope(module, sender, recipient)
-    transport = _checked_transport(recipient[module.PANE_FIELD])
+    transport = observe_send_transport(recipient[module.PANE_FIELD])
 
     result = module.delivery_result(
         envelope,
@@ -138,12 +99,12 @@ def test_delivery_requires_complete_checked_transport_evidence() -> None:
 
 
 def test_transport_success_establishes_no_coordination_state() -> None:
-    module, _, sender, recipient, _ = _public_context()
+    module, _, sender, recipient, _ = public_message_context()
     result = module.delivery_result(
         fact_envelope(module, sender, recipient),
         delivered=True,
         command_exit_code=0,
-        transport=_checked_transport(recipient[module.PANE_FIELD]),
+        transport=observe_send_transport(recipient[module.PANE_FIELD]),
     )
 
     assert result[module.ACKNOWLEDGED_FIELD] is False
@@ -152,7 +113,7 @@ def test_transport_success_establishes_no_coordination_state() -> None:
 
 
 def test_envelopes_reject_incomplete_participant_identities() -> None:
-    module, _, sender, recipient, _ = _public_context()
+    module, _, sender, recipient, _ = public_message_context()
 
     for label, identity in (
         (module.SENDER_FIELD, sender),
@@ -187,7 +148,7 @@ def test_envelopes_reject_incomplete_participant_identities() -> None:
 
 
 def test_mutation_messages_require_exact_target_and_observed_state() -> None:
-    module, _, sender, recipient, _ = _public_context()
+    module, _, sender, recipient, _ = public_message_context()
     active_reference = str(
         uuid.uuid5(uuid.NAMESPACE_URL, sender[module.WORKTREE_FIELD])
     )
@@ -382,7 +343,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
 
 
 def test_send_request_targets_only_exact_pane_identity() -> None:
-    module, _, sender, recipient, discovery = _public_context()
+    module, _, sender, recipient, discovery = public_message_context()
     request_content = message_content(module.MessageKind.FACT, 28)
     valid_request = module.build_request(
         to_pane=recipient[module.PANE_FIELD],
@@ -414,7 +375,7 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
 
 
 def test_message_cli_preserves_source_owned_results() -> None:
-    module, public_roster, sender, recipient, discovery = _public_context()
+    module, public_roster, sender, recipient, discovery = public_message_context()
     envelope = fact_envelope(module, sender, recipient)
     request_content = message_content(module.MessageKind.FACT, 29)
     valid_request = module.build_request(
@@ -465,7 +426,7 @@ def test_message_cli_preserves_source_owned_results() -> None:
                     module.ENVELOPE_FIELD: envelope,
                     module.DELIVERED_FIELD: True,
                     module.COMMAND_EXIT_CODE_FIELD: 0,
-                    module.TRANSPORT_FIELD: _checked_transport(
+                    module.TRANSPORT_FIELD: observe_send_transport(
                         recipient[module.PANE_FIELD]
                     ),
                 }

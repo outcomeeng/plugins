@@ -1,52 +1,18 @@
 import hashlib
 import uuid
-from types import ModuleType
 from typing import cast
 
 from outcomeeng_testing.generators.coding_agents import message_content
 from outcomeeng_testing.generators.prowl_environment import public_agent_item
 from outcomeeng_testing.harnesses.coding_agents import (
     fact_envelope,
-    load_agent_message,
+    observe_send_transport,
+    observed_message_participants,
 )
-from outcomeeng_testing.harnesses.prowl_environment import (
-    RecordingRunner,
-    load_prowl_environment,
-    prowl_agents_command_result,
-    prowl_send_command_result,
-)
-
-
-def _observed_participants() -> tuple[
-    ModuleType,
-    ModuleType,
-    list[dict[str, object]],
-    list[dict[str, str]],
-]:
-    prowl = load_prowl_environment()
-    message = load_agent_message()
-    agents = [public_agent_item(prowl, ordinal) for ordinal in range(3)]
-    runner = RecordingRunner([prowl_agents_command_result(prowl, agents)])
-    inventory = prowl.execute(prowl.operation_request(prowl.Operation.AGENTS), runner)
-    participants = prowl.participants_from_agents(inventory[prowl.RESPONSE_FIELD])
-    return prowl, message, agents, participants
-
-
-def _checked_transport(prowl: ModuleType, pane: str) -> dict[str, object]:
-    runner = RecordingRunner(
-        [prowl_send_command_result(prowl, trailing_enter_sent=True)]
-    )
-    request = prowl.operation_request(
-        prowl.Operation.SEND,
-        pane=pane,
-        text="source-checked mapping delivery",
-        no_wait=True,
-    )
-    return cast(dict[str, object], prowl.execute(request, runner))
 
 
 def test_agent_message_mappings() -> None:
-    prowl, module, agents, participants = _observed_participants()
+    prowl, module, agents, participants = observed_message_participants()
     first = agents[0]
     pane = cast(dict[str, object], first[prowl.PANE_FIELD])
     pane_id = cast(str, pane[prowl.ID_FIELD])
@@ -177,7 +143,7 @@ def test_agent_message_mappings() -> None:
         command_exit_code=7,
         detail="transport rejected",
     )
-    transport = _checked_transport(prowl, recipient[module.PANE_FIELD])
+    transport = observe_send_transport(recipient[module.PANE_FIELD])
     delivered = module.delivery_result(
         envelope,
         delivered=True,

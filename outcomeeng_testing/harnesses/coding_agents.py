@@ -10,6 +10,13 @@ from types import ModuleType
 from typing import cast
 
 from outcomeeng_testing.generators.coding_agents import message_content
+from outcomeeng_testing.generators.prowl_environment import public_agent_item
+from outcomeeng_testing.harnesses.prowl_environment import (
+    RecordingRunner,
+    load_prowl_environment,
+    prowl_agents_command_result,
+    prowl_send_command_result,
+)
 
 ROOT = Path(__file__).parents[2]
 AGENT_MESSAGE_PATH = (
@@ -29,6 +36,51 @@ def _load(name: str) -> ModuleType:
 
 def load_agent_message() -> ModuleType:
     return _load("coding_agents_agent_message")
+
+
+def observed_message_participants() -> tuple[
+    ModuleType,
+    ModuleType,
+    list[dict[str, object]],
+    list[dict[str, str]],
+]:
+    """Return identities observed through the public Prowl agents operation."""
+    prowl = load_prowl_environment()
+    message = load_agent_message()
+    roster = [public_agent_item(prowl, ordinal) for ordinal in range(3)]
+    runner = RecordingRunner([prowl_agents_command_result(prowl, roster)])
+    inventory = prowl.execute(prowl.operation_request(prowl.Operation.AGENTS), runner)
+    participants = prowl.participants_from_agents(inventory[prowl.RESPONSE_FIELD])
+    return prowl, message, roster, participants
+
+
+def public_message_context() -> tuple[
+    ModuleType,
+    list[dict[str, object]],
+    dict[str, str],
+    dict[str, str],
+    dict[str, object],
+]:
+    """Return a sender, recipient, and discovery from public Prowl evidence."""
+    _, message, roster, participants = observed_message_participants()
+    sender, recipient = participants[:2]
+    discovery = agent_discovery(message, roster, sender[message.PANE_FIELD])
+    return message, roster, sender, recipient, discovery
+
+
+def observe_send_transport(pane: str) -> dict[str, object]:
+    """Return the complete adapter result for a submitted Prowl turn."""
+    prowl = load_prowl_environment()
+    runner = RecordingRunner(
+        [prowl_send_command_result(prowl, trailing_enter_sent=True)]
+    )
+    request = prowl.operation_request(
+        prowl.Operation.SEND,
+        pane=pane,
+        text="source-checked message delivery",
+        no_wait=True,
+    )
+    return cast(dict[str, object], prowl.execute(request, runner))
 
 
 def agent_discovery(
