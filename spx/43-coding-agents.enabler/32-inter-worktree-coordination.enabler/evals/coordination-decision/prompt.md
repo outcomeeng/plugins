@@ -6,6 +6,7 @@ src/plugins/coding-agents/skills/coordinate-agents/SKILL.md
 
 Apply the complete Prowl resolution, semantic messaging, and coordination producers below to the supplied authoritative evidence. Resolve every operator-named path through the Prowl producer, construct every message through the messaging producer, and return only the coordinator's structured JSON verdict. Do not invoke external tools or send messages during this evaluation; execute the supplied producers against the public evidence in the request.
 
+<pre><code>
 <!-- Producer: src/plugins/coding-agents/skills/operate-prowl/SKILL.md -->
 
 ---
@@ -440,6 +441,8 @@ Use these branch-owned payloads:
 - Independent work and signal gaps produce no message.
 
 </success_criteria>
+
+</code></pre>
 
 The authoritative coordination evidence (JSON-encoded):
 
