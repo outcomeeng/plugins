@@ -188,8 +188,7 @@ Snapshot tests are valid only when the textual or structured output surface is i
 
 Executed Rust test files are typed assertion files: the `#[test]`/`#[tokio::test]` function or its callbacks own every behavioral predicate and assertion macro. A `let`, `const`, `static`, closure parameter, or macro parameter is valid when it only receives or renames an actual result, source-owned contract, generated value, harness observation, or resource handle and introduces no data or policy. A binding that chooses case data, an expected output, a runner setting, a seed, setup policy, a fixture payload, or a generator domain belongs in the `<product>-testing` workspace crate, source contracts, inert whole-payload fixtures, or justified eval case data.
 
-**1. Source-owned values**
-
+<source_owned_values>
 ALWAYS import command names, rule names, matcher tokens, status values, domain identifiers, and public constants from the owning production module. If the module does not export them yet, refactor it to export them before writing the test.
 
 ```rust
@@ -201,8 +200,9 @@ use product::audit::GateStatus;
 assert_eq!(GateStatus::Pass.as_str(), product::audit::PASS_STATUS_TOKEN);
 ```
 
-**2. Generator-produced values**
+</source_owned_values>
 
+<generator_produced_values>
 Use generators for inputs that vary per run. A generator is a pure function — it emits values, holds no state, and has no side effects.
 
 - Use generator strategies for randomized inputs consumed by the property harness
@@ -220,8 +220,9 @@ fn valid_gate_statuses() -> impl Strategy<Value = GateStatus> {
 }
 ```
 
-**3. Harness-managed**
+</generator_produced_values>
 
+<harness_managed_values>
 Use harnesses for tests that interact with external systems — filesystems, APIs, binaries, testcontainers. A harness manages setup and teardown; it is not self-contained.
 
 ```rust
@@ -240,14 +241,16 @@ impl TestEnv {
 
 Consumers depend on the workspace-member crate via `[dev-dependencies]` and import as `use <product>_testing::harnesses::spec_tree::TestEnv;`.
 
-**4. Fixture files**
+</harness_managed_values>
 
+<fixture_files>
 Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in the `<product>-testing/` workspace-member crate under `<product>-testing/fixtures/` and are read from disk by path — never compiled in or imported as modules. This is the cross-language test-infrastructure rule.
 
 Strings and numbers are never valid fixtures. A string literal representing a domain value belongs in the production module or a generator, not a static file.
 
-**5. Test infrastructure layout**
+</fixture_files>
 
+<test_infrastructure_layout>
 Harnesses, generators, and inert fixtures are production code. They live in the separate workspace-member crate named in `<portable_test_crate>`, declared as a `[dev-dependencies]` entry of consumers:
 
 - `<product>-testing/src/harnesses/<name>.rs` — modules that mediate access to external resources.
@@ -257,7 +260,7 @@ Harnesses, generators, and inert fixtures are production code. They live in the 
 
 Do not create co-located test-infrastructure modules as homes for setup, data, generator selection, fixture loading, harness behavior, diagnostics, credentials, or source vocabulary. Those concerns belong in `<product>-testing/` even when one test file consumes them today. Never use `tests/support/`, `crate::test_support`, `super::tests`, or `#[cfg(test)] mod` patterns as homes for shared test infrastructure — those keep ungoverned utility code inside production crates or under `tests/`.
 
-- Do not read production source files as test input to prove behavior
+</test_infrastructure_layout>
 
 </test_data_policy>
 
