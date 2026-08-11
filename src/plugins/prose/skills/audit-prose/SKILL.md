@@ -19,6 +19,7 @@ A structured verdict on human-facing text — `APPROVED`, `REJECTED` with findin
 
 - NEVER modify the text under review — this audit produces a verdict only.
 - NEVER derive the kind from the text. Judging against an inferred kind confirms text written for the wrong slot as correct, which is the error this surface exists to catch.
+- NEVER audit a repository- or domain-governed artifact here — a spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is answered with the `governed-elsewhere` finding, whatever kind the dispatch supplied. Ownership outranks a supplied kind.
 - NEVER audit without a kind. Emit `UNKNOWN` and read nothing.
 - NEVER flag a pattern the supplied kind's overrides explicitly permit — an override is the catalog's decision, not an oversight.
 - NEVER excuse a base-catalog match as "single use" or "it works here" — every match outside an override is a finding.
@@ -27,6 +28,8 @@ A structured verdict on human-facing text — `APPROVED`, `REJECTED` with findin
 
 <kind_intake>
 
+Before either step below, check ownership. A spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is governed by its own workflow, and a dispatch naming one is answered with the `governed-elsewhere` finding rather than an audit against the kind it supplied. Ownership outranks a supplied kind, so a kind arriving at step 1 never resolves past this check.
+
 The kind is an input. Resolve it in this order and stop at the first that yields one:
 
 1. **The invocation.** A kind named in the arguments or the caller's request — `interface`, `document`, or `copy`.
@@ -34,23 +37,23 @@ The kind is an input. Resolve it in this order and stop at the first that yields
 
 Neither yields one, so no audit runs: emit the `UNKNOWN` verdict in `<verdict_format>` and stop. Asking is unavailable here, because this skill runs inside a dispatched verifier context with no user to ask.
 
-Ownership outranks a supplied kind. A spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is governed by its own workflow; a dispatch naming one is answered with the `governed-elsewhere` finding rather than an audit against the supplied kind.
-
 One text carries one kind. Register variation inside it is judged by the `/prose-standards` `<rule_packs>`, which bind on a feature rather than on a kind.
 
 </kind_intake>
 
 <workflow>
 
-1. Resolve the kind through `<kind_intake>`. Without one, emit `UNKNOWN` and stop before reading the text.
+1. Check ownership through `<kind_intake>`. A governed artifact is answered with the `governed-elsewhere` finding and stops here, whatever kind the dispatch supplied.
 
-2. Read the text under audit — whatever the dispatch names, pastes, or points to.
+2. Resolve the kind through `<kind_intake>`. Without one, emit `UNKNOWN` and stop before reading the text.
 
-3. Invoke the supplied kind's composed audit skill via the Skill tool: `prose:audit-interface`, `prose:audit-document`, or `prose:audit-copy`. That skill loads the kind's standards and sweeps its categories; collect its findings.
+3. Read the text under audit — whatever the dispatch names, pastes, or points to.
 
-4. Identify every feature that triggers a rule pack and confirm the composed skill swept each triggered pack over the passages carrying that feature.
+4. Invoke the supplied kind's composed audit skill via the Skill tool: `prose:audit-interface`, `prose:audit-document`, or `prose:audit-copy`. That skill loads the kind's standards and sweeps its categories; collect its findings.
 
-5. Emit the structured verdict in the `<verdict_format>` shape as the final message — no prose outside the JSON object.
+5. Identify every feature that triggers a rule pack and confirm the composed skill swept each triggered pack over the passages carrying that feature.
+
+6. Emit the structured verdict in the `<verdict_format>` shape as the final message — no prose outside the JSON object.
 
 </workflow>
 
