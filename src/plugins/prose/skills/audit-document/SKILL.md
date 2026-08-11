@@ -42,14 +42,14 @@ Overrides, from `<overrides>`: numbered-step imperatives, bold table cells as ro
 
 </what_to_check>
 
-<workflow>
+<audit_workflow>
 
 1. Sweep the inherited categories and the voice canon against the full `/prose-standards` descriptions, applying the document overrides.
 2. Sweep sentence shape and page architecture from `<what_to_check>` against `/document-standards`, counting every cap that is a count.
 3. Identify every feature that triggers a rule pack, then sweep each triggered pack over the passages carrying that feature.
 4. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence carrying co-occurring patterns yields one finding naming every pattern present, listed before single-pattern findings.
 
-</workflow>
+</audit_workflow>
 
 <success_criteria>
 

@@ -47,5 +47,5 @@ The ordered steps ("`/contextualize` invoked", "artifact read", "tests run") bel
 </success_criteria_shape>
 
 <prose_variant>
-The prose auditors (`audit-prose`, `audit-document`) may name their procedure section to fit their domain. They keep the verdict-as-output `<objective>` and the `<success_criteria>` soundness shape.
+The prose router-auditor (`audit-prose`) may name its procedure section to fit its domain: its procedure routes and assembles rather than sweeping rules, and its composed per-kind auditors do the sweeping. It keeps the verdict-as-output `<objective>` and the `<success_criteria>` soundness shape. A composed per-kind auditor is an ordinary auditor and uses `<audit_workflow>`.
 </prose_variant>

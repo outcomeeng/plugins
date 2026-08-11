@@ -91,17 +91,13 @@ Avoid: "**Intro call.** Thirty minutes. **Blank-paper exercise.** Ninety minutes
 **Callouts sparingly.** Reserve them for warnings, content that does not fit the main flow, or short structured asides. One or two per page; more becomes noise. Never use a callout for metadata.
 
 **Decisive language for decisions.** A page that encodes a decision states it: "We do X" or "The bar is Y". Avoid hedge constructions. Present the reasoning, then state the decision.
+
+**Structure carries the hierarchy.** Headings, bold key terms, tables, and lists make the shape visible, and a returning reader finds a specific section in five seconds. Walls of unbroken prose hide structure even when the structure is there.
+
+**Every rule carries an example.** When the page states a rule or convention, give an example that demonstrates it. Document readers retrieve pages to apply them, and the example is what makes the rule applicable.
+
+**Each section orients in its first sentence.** When sections cover separate concerns, the opening sentence of each names that section's concern.
 </additional_rules>
-
-<positive_patterns>
-Things a document should do.
-
-Scannable hierarchy. Headings, bold key terms, tables, and lists carry the visible structure. A returning reader finds a specific section in five seconds. Walls of unbroken prose hide structure even when the structure is there.
-
-Concrete examples. When stating a rule or convention, give an example that demonstrates it. Document readers retrieve pages to apply them, and examples make the rule applicable.
-
-Per-section context. When sections cover separate concerns, the first sentence of each section orients the reader to that section's concern.
-</positive_patterns>
 
 <success_criteria>
 The catalog itself is sound when every rule in `<inherited_rules>`, `<overrides>`, and `<additional_rules>` carries its name and rule text, and every override carries at least one worked example.

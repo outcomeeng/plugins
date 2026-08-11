@@ -14,6 +14,12 @@ A self-contained piece — essay, article, long-form narrative — that reads as
 
 </objective>
 
+<reference_note>
+
+Composed by `/author-prose` for the copy kind. This skill carries no `<workflow>`, unlike `/author-document` and `/author-interface`, because a piece read start to finish is drafted and revised rather than assembled in order. Its guidance is grouped by the level it governs — word, sentence, tone and composition, formatting — and every group binds throughout the draft.
+
+</reference_note>
+
 <word_choice>
 
 Use common verbs. Is, has, does, makes, runs, shows. When a simpler verb says the same thing, use it. "The library is the city's main archive" over any construction that dresses up "is" in formalwear.
@@ -52,7 +58,7 @@ Build toward the point directly — never negate before stating what something i
 
 <tone_and_composition>
 
-Apply `/copy-standards` `<voice_canon>` first — it is the shared canon every kind and the shipped output style render from, and its rules bind before anything in this skill: substance-first openings, plain words, no filler words, assert only what is demonstrated, one term one meaning, failure text pairing what happened with what to do next, sentence case for titles and headings and labels, standard punctuation.
+Apply `/copy-standards` `<voice_canon>` first — the shared canon every kind and the shipped output style render from. Its rules bind before every composition rule below: substance-first openings, plain words, no filler words, assert only what is demonstrated, one term one meaning, failure text pairing what happened with what to do next, sentence case for titles and headings and labels, standard punctuation.
 
 Write at the reader's level; skip analogies simpler than the concept. Begin where the content begins — the first sentence delivers substance. Scope claims to what the text demonstrates; the reader assesses significance. Name sources or rewrite the sentence to stand on its own evidence. Use terms that already exist before coining labels.
 
