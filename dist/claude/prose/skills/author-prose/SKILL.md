@@ -25,6 +25,8 @@ Human-facing text drafted against the kind its caller supplied and approved by a
 
 <kind_intake>
 
+Before any step below, check ownership. A spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is governed by its own workflow and never enters the prose surface, whatever kind the request supplies. Chat responses and operational prose — a code comment, a commit message, an agent-facing instruction — stay outside it the same way. Ownership outranks a supplied kind, so a kind arriving at step 1 never resolves past this check.
+
 The kind is an input. Resolve it in this order and stop at the first that yields one:
 
 1. **The invocation.** A kind named in the arguments or the request — `interface`, `document`, or `copy`.
@@ -37,28 +39,29 @@ The kind is an input. Resolve it in this order and stop at the first that yields
 | `document`  | A document set: product docs, wiki pages, runbooks, reference, policies, rubrics, onboarding guides, READMEs |
 | `copy`      | A standalone piece read start to finish: essays, articles, long-form landing narrative                       |
 
-Before any of the three, check ownership: a spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is governed by its own workflow and never enters the prose surface. Chat responses and operational prose — a code comment, a commit message, an agent-facing instruction — stay outside it the same way.
-
 One text carries one kind. Register variation inside it is carried by the `/prose-standards` `<rule_packs>`, which bind on a feature rather than on a kind, so a runbook's procedure and an essay's table are governed where they appear without a second kind.
 
 </kind_intake>
 
 <workflow>
 
-1. Resolve the kind through `<kind_intake>`. Nothing is written before it is settled.
+1. Check ownership through `<kind_intake>`. A governed artifact routes to its own workflow and stops here, whatever kind the request supplied.
 
-2. Invoke the kind's composed author skill via the Skill tool: `prose:author-interface`, `prose:author-document`, or `prose:author-copy`. That skill loads its standards layer, which transcludes the shared voice canon and carries the kind's writing guidance.
+2. Resolve the kind through `<kind_intake>`. Nothing is written before it is settled.
 
-3. Write or edit the text applying the base catalog and the kind's layer together. Zero tolerance for the base anti-patterns; the kind's overrides are the only sanctioned relaxations.
+3. Invoke the kind's composed author skill via the Skill tool: `prose:author-interface`, `prose:author-document`, or `prose:author-copy`. That skill loads its standards layer, which transcludes the shared voice canon and carries the kind's writing guidance.
 
-4. Apply every rule pack the text triggers. A numbered procedure triggers the instruction pack; a table triggers the table pack.
+4. Write or edit the text applying the base catalog and the kind's layer together. Zero tolerance for the base anti-patterns; the kind's overrides are the only sanctioned relaxations.
 
-5. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming the kind in the dispatch as `Kind: <kind>`. The dispatched audit reads nothing without it. Fix findings and re-audit until the verdict is `APPROVED`.
+5. Apply every rule pack the text triggers. A numbered procedure triggers the instruction pack; a table triggers the table pack.
+
+6. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming the kind in the dispatch as `Kind: <kind>`. The dispatched audit reads nothing without it. Fix findings and re-audit until the verdict is `APPROVED`.
 
 </workflow>
 
 <success_criteria>
 
+- Ownership was checked before the kind resolved, and a governed artifact routed to its own workflow without drafting, whatever kind the request supplied.
 - The kind came from the invocation, the repository's map, or one asked question, and was settled before drafting began.
 - The text was written through the kind's composed author skill, not from the router's own judgment.
 - Every rule pack the text triggers was applied where its feature appears.

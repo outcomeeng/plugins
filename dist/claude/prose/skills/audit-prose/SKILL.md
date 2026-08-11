@@ -97,6 +97,7 @@ No kind resolved, so the verdict is blocked instead:
 <success_criteria>
 
 - The final message is exactly the `<verdict_format>` JSON object.
+- A dispatch naming a governed artifact — a spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide — produced the `governed-elsewhere` finding without reading the text or invoking `prose:audit-interface`, `prose:audit-document`, or `prose:audit-copy`, whatever kind it supplied.
 - The kind in the verdict is the supplied kind, never one this skill concluded.
 - A dispatch carrying no kind produced `UNKNOWN` with its reason, and no text was read.
 - Every finding carries all four fields, and the rewrite shows fixed text rather than an instruction.
@@ -110,6 +111,10 @@ No kind resolved, so the verdict is blocked instead:
 **The kind was inferred from the text.**
 
 Claude read the text, recognized a runbook, audited it against the document layer, and returned `APPROVED`. The text had been written as marketing copy for a docs site and was wrong for its slot in exactly the way the audit existed to catch — inferring the kind from the artifact makes the artifact its own standard, so any text is correct for the kind it already resembles. The kind is supplied or the audit does not run.
+
+**The ownership check was stated but never reached.**
+
+Claude placed the ownership rule after the sentence "Resolve it in this order and stop at the first that yields one". A dispatch naming `document` for an ADR resolved at step 1, stopped as instructed, and swept a governed artifact against the document standards. The rule was present and correct, and the reading order made it unreachable. A check that gates a resolution list precedes that list; a check positioned after one asserts its own precedence to a reader who has already stopped.
 
 **A caller check survived a description-only fix.**
 
