@@ -277,7 +277,7 @@ Instruction authoring: /create-skill, /create-subagent
 
 ### prose
 
-Prose craft through one routed surface (/author-prose, /audit-prose) over per-kind style layers: copy, interface, docs, internal docs
+Prose craft through one routed surface (/author-prose, /audit-prose) over caller-supplied kind layers: interface, document, copy
 
 | Type  | Name                   | Purpose                                                                                                                                                                                                        |
 | ----- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
