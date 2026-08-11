@@ -1,5 +1,15 @@
 # TypeScript Skill Issues
 
+## `architect-typescript` tells a Codex reader that Claude Code invoked it
+
+`<accessing_typescript>`'s file-access section reads "When this skill is invoked, Claude Code provides the base directory in the loading message". The build substitutes `${CLAUDE_SKILL_DIR}` for `${SKILL_DIR}` when rendering the Codex tree but leaves the sentence, so `dist/codex/typescript/skills/architect-typescript/SKILL.md` ships a claim about the wrong runtime to a Codex-reading agent. The variable substitution is correct; only the prose is wrong.
+
+**Resolution shape**: phrase it runtime-neutrally — "the skill loader provides the base directory" — and prefer that phrasing in the skill templates so a new skill does not reintroduce it.
+
+**Revisit condition**: resolve when `architect-typescript` next changes, since the fix needs a typescript version bump and its own `skill-auditor` gate.
+
+**Evidence**: raised by `instructions:skill-auditor` against `code-rust`, which named the cross-plugin spread. The two rust instances were corrected to the neutral phrasing in the changeset that found them.
+
 ## Legacy XML Structure Cleanup
 
 Observed during the TypeScript test-data policy cleanup.

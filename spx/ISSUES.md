@@ -41,7 +41,6 @@ Remaining drift (agent-concept "runtime" usage, distinct from generic "at runtim
 
 - `hdl` — `review-systemverilog/references/systemverilog-idioms.md` (716), `review-vhdl/references/vhdl-idioms.md` (472)
 - `instructions` — all seven `create-subagent/references/*.md` (410–971), both `audit-skill/references/*.md` (116, 140), both `create-skill/references/*.md` (113, 123)
-- `rust` — none. The predicate-seam correction resolved every rust reference file over the threshold: the three `rust-test-standards/references/level-{1,2,3}.md` files and `code-rust/references/test-patterns.md` gained `<contents>` blocks as it edited them, and the revisit condition below then carried `architect-rust/references/{adr-patterns,rust-principles}.md` and `code-rust/references/outcome-engineering-patterns.md` in the same changeset.
 - `spec-tree` — `audit-eval-evidence/references/evidence-model.md` (143)
 - `typescript` — `architect-typescript/references/typescript-principles.md` (144), both `code-typescript/references/*.md` (116, 138), `typescript-test-standards/references/exception-implementations.md` (109)
 - `work` — both `draw-excalidraw/references/*.md` (128, 202), both `sanitize-powerpoint/references/*.md` (134, 136)
@@ -53,38 +52,6 @@ A table of contents is satisfied by a `## Contents` section, an XML `<contents>`
 **Resolution shape**: add a table of contents to each file in the form its surrounding skill already uses — `## Contents` for markdown-structured references, `<contents>` for XML-structured ones — listing every top-level section. Run `instructions:skill-auditor` over each affected skill afterward. The sweep divides cleanly by plugin, so it can land as one changeset per plugin rather than one large one.
 
 **Revisit condition.** Resolve per plugin when that plugin next needs a reference-file change, or as one dedicated sweep. `create-subagent` is the highest-value single target: seven files, 4,646 lines, the largest partial-read exposure in the marketplace.
-
-## A shipped skill tells a Codex reader that Claude Code invoked it
-
-`<accessing_skill_files>` in several skills reads "When this skill is invoked, Claude Code provides the base directory in the loading message". The build substitutes `${CLAUDE_SKILL_DIR}` for `${SKILL_DIR}` when rendering the Codex tree but leaves the sentence, so `dist/codex/**` ships a claim about the wrong runtime to a Codex-reading agent. The variable substitution itself is correct; only the prose is wrong.
-
-`src/plugins/typescript/skills/architect-typescript/SKILL.md` still carries it. The two rust instances were corrected to "the skill loader provides the base directory" in the changeset that found them.
-
-**Resolution shape**: phrase the mechanism runtime-neutrally wherever the sentence appears, and prefer that phrasing in the skill templates so a new skill does not reintroduce it.
-
-**Why the remainder is separate.** Correcting the typescript instance needs a typescript version bump and its own `skill-auditor` gate, in a plugin the rust-scoped changeset that found this deliberately does not touch.
-
-**Evidence.** Raised by `instructions:skill-auditor` against `code-rust`, which named the cross-plugin spread.
-
-## Reference files structure their own sections as markdown headings
-
-`/skill-standards` `<reference_file_guidance>` prefers semantic XML for a reference file's own structure, reserving markdown for content that is itself a markdown artifact. `architect-rust/references/{adr-patterns,rust-principles}.md` structure themselves with `#`/`##` headings, as do reference files in several other plugins; the sibling `code-rust/references/{test-patterns,outcome-engineering-patterns}.md` already use pure XML. In `adr-patterns.md` the markdown *inside* each pattern is correct — an ADR is a markdown artifact — and only the file's own scaffolding is at issue.
-
-**Resolution shape**: convert each reference file's own sections to semantic XML tags, leaving markdown-artifact examples alone.
-
-**Why this is separate.** The auditor rates it recommendation-level rather than critical, and it spans plugins; `spx/43-typescript.enabler/ISSUES.md` already records the TypeScript half under "Legacy XML Structure Cleanup". One pass per plugin, each with its own gate.
-
-**Evidence.** Raised by `instructions:skill-auditor` against `architect-rust`.
-
-## Three test-standards skills open with success criteria nothing can check
-
-`python-test-standards`, `rust-test-standards`, and `typescript-test-standards` each open `<success_criteria>` with bullets asserting upstream skill sequencing — that `/test` selected the assertion type before implementation, and that the language standards skill loaded before the test standards reference. Neither is a property of the produced test artifact, so no check against a test file can falsify either. The remaining criteria in each skill are checkable, and each skill's `<predicate_and_oracle_litmus>` already operationalizes them into concrete inversion and mutation checks.
-
-**Resolution shape**: fold the sequencing bullets into `<objective>` or `<reference_note>` as preconditions and scope `<success_criteria>` to properties the litmus section already makes checkable.
-
-**Why this is separate.** The three skills carry the pattern verbatim, so correcting one diverges it from two untouched siblings — the divergence `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`'s defect-class-sweep rule exists to prevent. The fix is one cross-plugin pass over three plugins, each needing its own `skill-auditor` gate and version bump.
-
-**Evidence.** Raised by `instructions:skill-auditor` against `rust-test-standards` during the predicate-seam correction, which names the cross-plugin scope in the finding itself.
 
 ## Agent-specific behavior is enumerated inside product-level decisions
 
