@@ -92,7 +92,13 @@ The divergence is invisible in the authored files: an author copying a hardcoded
 
 Required handling: decide which layer owns per-runtime model selection for agent frontmatter, record it in the agent-authoring standards, then sweep the eight auditor agents onto the chosen form. Deciding one agent at a time reproduces the divergence, so this is not a per-file edit. Gate changed agents with `instructions:subagent-auditor`.
 
-## 9. Audit-skill target-argument declaration convention
+## 9. Python-parity standards subtree
+
+The instructions node lacks the standards subtree the Python plugin models. `spx/43-python.enabler` groups its standards under `spx/43-python.enabler/25-python-standards.enabler/` with facet children — architecture, tests, and the `29-python-code.enabler` workflow child that carries the language's workflow assertions. `spx/43-instructions.enabler` carries only the two meta-skill cluster children (`21-skills.enabler`, `21-subagents.enabler`), so the instruction-artifact workflow assertion lives in the plugin-level spec `spx/43-instructions.enabler/instructions.md` for lack of a workflow child.
+
+**Required handling**: restructure via `/decompose spx/43-instructions.enabler` toward the Python model — a standards subtree with a workflow child — and move the spec-first instruction-artifact workflow assertion from `spx/43-instructions.enabler/instructions.md` into that workflow child. Structural change (node creation and assertion relocation), not a text edit.
+
+## 10. Audit-skill target-argument declaration convention
 
 The audit skills declare their target input two ways. `src/plugins/instructions/skills/audit-subagent/SKILL.md` declares `argument-hint` and `arguments` and substitutes the named argument through its body. `src/plugins/instructions/skills/audit-skill/SKILL.md`, `src/plugins/spec-tree/skills/audit-adr/SKILL.md`, and `src/plugins/spec-tree/skills/audit-pdr/SKILL.md` declare no argument and take their target from the invoking prompt, so `/` autocomplete offers no signal about the expected input. `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` requires `argument-hint` when a skill takes arguments, which does not settle whether an audit target is an argument or prompt context.
 
