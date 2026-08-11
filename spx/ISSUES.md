@@ -54,6 +54,16 @@ A table of contents is satisfied by a `## Contents` section, an XML `<contents>`
 
 **Revisit condition.** Resolve per plugin when that plugin next needs a reference-file change, or as one dedicated sweep. `create-subagent` is the highest-value single target: seven files, 4,646 lines, the largest partial-read exposure in the marketplace.
 
+## Three test-standards skills open with success criteria nothing can check
+
+`python-test-standards`, `rust-test-standards`, and `typescript-test-standards` each open `<success_criteria>` with bullets asserting upstream skill sequencing — that `/test` selected the assertion type before implementation, and that the language standards skill loaded before the test standards reference. Neither is a property of the produced test artifact, so no check against a test file can falsify either. The remaining criteria in each skill are checkable, and each skill's `<predicate_and_oracle_litmus>` already operationalizes them into concrete inversion and mutation checks.
+
+**Resolution shape**: fold the sequencing bullets into `<objective>` or `<reference_note>` as preconditions and scope `<success_criteria>` to properties the litmus section already makes checkable.
+
+**Why this is separate.** The three skills carry the pattern verbatim, so correcting one diverges it from two untouched siblings — the divergence `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`'s defect-class-sweep rule exists to prevent. The fix is one cross-plugin pass over three plugins, each needing its own `skill-auditor` gate and version bump.
+
+**Evidence.** Raised by `instructions:skill-auditor` against `rust-test-standards` during the predicate-seam correction, which names the cross-plugin scope in the finding itself.
+
 ## Agent-specific behavior is enumerated inside product-level decisions
 
 Product-level decisions carry per-agent facts inline, so adding an agent harness edits decisions
