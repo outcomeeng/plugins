@@ -310,12 +310,14 @@ fn rejects_empty_url_sets() {
 Dependency seam example:
 
 ```rust
+use <product>_testing::generators::repos::any_sync_config;
 use <product>_testing::harnesses::commands::success_runner;
-use <product>_testing::generators::repos::source_checkout_path;
 
 #[test]
 fn command_builder_reports_success() {
-    assert!(sync_repo(&source_checkout_path(), "origin", &success_runner()).unwrap().success);
+    let result = sync_repo(&any_sync_config(), &success_runner()).unwrap();
+
+    assert!(result.success);
 }
 ```
 
