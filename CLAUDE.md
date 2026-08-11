@@ -500,7 +500,7 @@ This section is the interim consumer of the declaration; the `spx` verification 
 
 ## Spec-First Editing
 
-🛑 **STOP TRIGGER — about to edit a file while not on a working branch, or before `/contextualize` has run for every node governing the touched files? STOP.** Branch and load the missing context first.
+🛑 **STOP TRIGGER — about to edit a file for a change destined for the default branch while not on a working branch, or before `/contextualize` has run for every node governing the touched files? STOP.** Branch and load the missing context first.
 
 A change that makes a behavioral rule enforceable — a skill, agent, template, or instruction surface — is spec-governed: author the governing assertion in the owning node before editing any enforcement surface. Editing the surfaces first and leaving the missing assertion for a reviewer to find is the failure this rule exists to prevent.
 
