@@ -123,6 +123,12 @@ If the work is outside the spec tree, proceed with the provided requirements and
 
 </reference_guides>
 
+<failure_modes>
+
+**Failure 1: Wrote a test whose body only calls a harness.** Claude produced `#[test]` bodies that were a single `<product>_testing::harnesses::*::assert_*(...)` call, following the shape this skill's own test-patterns reference then carried in all five of its examples. Why it failed: the harness both acted and judged, so a failing case reported a panic from inside infrastructure instead of an actual-against-expected comparison, and inverting the claim meant editing the harness every other test shared. How to avoid: keep the assertion macro in the `#[test]` body. A harness supplies setup, resources, and property-run policy; a generator supplies the domain; the source module owns the case values and expected results. Treat any bare `harness::assert_*` call as the anti-pattern `${CLAUDE_SKILL_DIR}/references/test-patterns.md` `<anti_patterns>` names first.
+
+</failure_modes>
+
 <success_criteria>
 
 - The Rust implementation satisfies its governed evidence with no unresolved implementation-audit finding.

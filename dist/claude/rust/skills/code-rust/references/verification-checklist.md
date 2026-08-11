@@ -53,6 +53,7 @@ If the repository publishes stricter wrapper commands in `CLAUDE.md` or `README.
 <testing>
 
 - tests prove behavior rather than implementation details
+- each `#[test]` body carries its own assertion macro, never a bare harness call that both acts and judges — the shape `${CLAUDE_SKILL_DIR}/references/test-patterns.md` `<anti_patterns>` names first
 - edge cases and regressions are named clearly
 - property claims use property-based tests
 - compile-time claims use compile-fail evidence where appropriate

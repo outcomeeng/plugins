@@ -58,13 +58,13 @@ spx/.../tests/<subject>.<evidence>.<level>[.<runner>].rs
 | `property`    | Property       | Harness-owned property invariant over a generated domain                     |
 | `compliance`  | Compliance     | Violating fixture, lint harness, or rule oracle                              |
 
-**Level tokens** — the infrastructure required to run the test:
+**Level tokens** — the execution level, whose infrastructure `<level_tooling>` details:
 
-| Token | Level | Infrastructure                                                                 |
-| ----- | ----- | ------------------------------------------------------------------------------ |
-| `l1`  | 1     | Rust stdlib, `cargo test`, temp dirs, repo-required dev tools                  |
-| `l2`  | 2     | Workspace binaries, local services, Docker, databases, local browser harnesses |
-| `l3`  | 3     | External network, deployed systems, SaaS APIs, browser UI, shared environments |
+| Token | Level |
+| ----- | ----- |
+| `l1`  | 1     |
+| `l2`  | 2     |
+| `l3`  | 3     |
 
 **Optional runner token** — appended after the level token when the test requires a specific async executor or test harness (e.g., `tokio`, `actix`).
 
@@ -182,7 +182,10 @@ Snapshot tests are valid only when the textual or structured output surface is i
 | Source-owned       | The production module defines and exports the value           | Import from that module             |
 | Generator-produced | Pure code emits varied values each run                        | `<product>-testing/src/generators/` |
 | Harness-managed    | Infrastructure mediates interaction with an external resource | `<product>-testing/src/harnesses/`  |
+| Fixture payload    | An inert whole payload the code under test reads by path      | `<product>-testing/fixtures/`       |
 | Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file             |
+
+Each origin below has its own section, except descriptive inline, which needs none. `<test_infrastructure_layout>` closes the section with where the three infrastructure homes live rather than naming a sixth origin.
 
 **TEST FILES OWN NO DATA OR POLICY.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 
