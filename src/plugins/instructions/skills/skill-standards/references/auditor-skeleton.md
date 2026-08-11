@@ -47,5 +47,5 @@ The ordered steps ("`/contextualize` invoked", "artifact read", "tests run") bel
 </success_criteria_shape>
 
 <prose_variant>
-The prose auditors (`audit-prose`, `audit-internal-docs`) may name their procedure section to fit their domain. They keep the verdict-as-output `<objective>` and the `<success_criteria>` soundness shape.
+The prose auditors (`audit-prose`, `audit-document`) may name their procedure section to fit their domain. They keep the verdict-as-output `<objective>` and the `<success_criteria>` soundness shape.
 </prose_variant>
