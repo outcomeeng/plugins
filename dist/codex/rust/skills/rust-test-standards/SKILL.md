@@ -185,7 +185,7 @@ Snapshot tests are valid only when the textual or structured output surface is i
 | Fixture files      | An inert whole payload the code under test reads by path      | `<product>-testing/fixtures/`       |
 | Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file             |
 
-Each origin below has its own section, except descriptive inline, which needs none. `<test_infrastructure_layout>` closes the section with where the infrastructure crate puts harnesses, generators, and fixtures — the last split into loader code and data — rather than naming a sixth origin.
+Each origin below has its own section. Descriptive inline is the one exception and needs none. `<test_infrastructure_layout>` is a layout note, not an origin: it closes the section by placing harnesses, generators, and fixtures inside the infrastructure crate, with fixtures split into loader code and data.
 
 **TEST FILES OWN NO DATA OR POLICY.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 

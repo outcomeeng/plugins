@@ -157,7 +157,7 @@ Use the authoritative template (from `/understand`). The ADR is decision-first:
 
 **Phase 4: Verify Consistency**
 
-- No ADR should contradict another
+- No ADR contradicts another
 - Node ADRs must align with ancestor ADRs
 - Nested ADRs must not contradict parent-level ADRs
 

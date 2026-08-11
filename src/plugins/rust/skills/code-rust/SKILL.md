@@ -29,7 +29,7 @@ Do not search the product directory for skill files when the loading message alr
 
 <quick_start>
 
-1. Read `/rust-standards`, `/rust-test-standards`, and repo-local Rust overlays when present.
+1. Read the repo-local Rust overlays when present; the standards above are already loaded.
 2. If this is a spec-tree work item, invoke `spec-tree:contextualize` before editing code.
 3. Read `${CLAUDE_SKILL_DIR}/workflows/implementation.md` for new work or `${CLAUDE_SKILL_DIR}/workflows/remediation.md` for review feedback.
 4. Invoke `/verify` when behavior changes require new or revised evidence; use `/test-rust` for Rust expression after test is selected.
