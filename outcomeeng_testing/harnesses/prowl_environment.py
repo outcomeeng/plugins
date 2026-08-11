@@ -136,15 +136,18 @@ def prowl_agents_command_result(
     module: ModuleType, agents: list[dict[str, object]]
 ) -> CommandResultContract:
     """Return one controlled public agents response from the Prowl boundary."""
-    return module.CommandResult(
-        0,
-        json.dumps(
-            {
-                module.OK_FIELD: True,
-                module.DATA_FIELD: {module.AGENTS_FIELD: agents},
-            }
+    return cast(
+        CommandResultContract,
+        module.CommandResult(
+            0,
+            json.dumps(
+                {
+                    module.OK_FIELD: True,
+                    module.DATA_FIELD: {module.AGENTS_FIELD: agents},
+                }
+            ),
+            "",
         ),
-        "",
     )
 
 
@@ -152,19 +155,22 @@ def prowl_send_command_result(
     module: ModuleType, *, trailing_enter_sent: bool
 ) -> CommandResultContract:
     """Return one controlled public send response from the Prowl boundary."""
-    return module.CommandResult(
-        0,
-        json.dumps(
-            {
-                module.OK_FIELD: True,
-                module.DATA_FIELD: {
-                    module.INPUT_FIELD: {
-                        module.TRAILING_ENTER_SENT_FIELD: trailing_enter_sent
-                    }
+    return cast(
+        CommandResultContract,
+        module.CommandResult(
+            0,
+            json.dumps(
+                {
+                    module.OK_FIELD: True,
+                    module.DATA_FIELD: {
+                        module.INPUT_FIELD: {
+                            module.TRAILING_ENTER_SENT_FIELD: trailing_enter_sent
+                        }
+                    },
                 },
-            }
+            ),
+            "",
         ),
-        "",
     )
 
 
