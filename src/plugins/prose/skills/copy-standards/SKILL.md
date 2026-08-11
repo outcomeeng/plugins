@@ -7,14 +7,23 @@ allowed-tools: Read
 ---
 
 <objective>
-The copy kind's standards layer over `/prose-standards` — inherited rules, no overrides, and the composition rules for self-contained pieces.
+The copy kind's standards layer over `/prose-standards` — the shared voice canon, inherited rules, no overrides, and the composition rules for a self-contained piece.
 </objective>
 
 <reference_note>
-This is a reference skill. `/author-copy` and `/audit-copy` load it; the routers reach it only through them.
+This is a reference skill. `/author-copy` and `/audit-copy` load it; the routers reach it only through them. Its `<voice_canon>` renders from the same authored fragment as the plugin's shipped `prose` output style and every other kind layer, so a change to that canon changes every voice the plugin ships.
 </reference_note>
 
+<voice_canon>
+The shared voice rules, transcluded from the authored canon every kind and the shipped output style render from — one source, every surface.
+
+{!% include 'prose/voice/fragment.md' %!}
+
+</voice_canon>
+
 <inherited_rules>
+The `/prose-standards` `<rule_packs>` bind wherever their feature appears in the piece — the instruction pack on an embedded procedure, the table pack on an embedded table.
+
 Every `/prose-standards` anti-pattern applies unchanged, at zero tolerance — word choice (significance and authenticity adverbs, overused vocabulary, ornate nouns, pompous verbs), sentence structure (negative parallelism, stacked negations, rhetorical self-answers, anaphora and tricolon abuse, filler transitions, tacked-on significance, false ranges, gerund fragment litanies, tautological definitions, redundant paired examples), paragraph structure (punchy-fragment paragraphs, listicles in a trench coat), tone (false suspense, unnecessary metaphors, hypothetical openers, performed vulnerability, asserted clarity, stakes inflation, condescension, vague attributions, invented concept labels), formatting (em-dash overuse, bold-first bullets, unicode decoration), and composition (fractal summaries, dead metaphors, analogy stacking, one-point dilution, duplication, signposted conclusions, dismissive optimism). Composing skills load `/prose-standards` for the full descriptions and examples.
 </inherited_rules>
 

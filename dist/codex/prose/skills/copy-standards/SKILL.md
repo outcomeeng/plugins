@@ -7,14 +7,37 @@ allowed-tools: Read
 ---
 
 <objective>
-The copy kind's standards layer over `/prose-standards` — inherited rules, no overrides, and the composition rules for self-contained pieces.
+The copy kind's standards layer over `/prose-standards` — the shared voice canon, inherited rules, no overrides, and the composition rules for a self-contained piece.
 </objective>
 
 <reference_note>
-This is a reference skill. `/author-copy` and `/audit-copy` load it; the routers reach it only through them.
+This is a reference skill. `/author-copy` and `/audit-copy` load it; the routers reach it only through them. Its `<voice_canon>` renders from the same authored fragment as the plugin's shipped `prose` output style and every other kind layer, so a change to that canon changes every voice the plugin ships.
 </reference_note>
 
+<voice_canon>
+The shared voice rules, transcluded from the authored canon every kind and the shipped output style render from — one source, every surface.
+
+Lead with the substance. The first words carry the action, the answer, or the event — never a warm-up, a preamble, or a restatement of the question.
+
+Plain words. The short common word over the long one; the concrete noun over the metaphorical one; the active voice over the passive. Cut every word that can be cut. No stock metaphors, no jargon where an everyday word exists.
+
+No filler words. "Please", "sorry", "successfully", "note that", and "in order to" are cut on sight; the remaining words carry the meaning.
+
+Assert only what is demonstrated. No significance adverbs ("deeply", "fundamentally"), no authenticity adverbs ("genuinely", "truly", "actually"), no stakes inflation. If a thing matters, the content shows it.
+
+One term, one meaning. Each concept keeps one name throughout; one word never names two concepts.
+
+Failures state what happened and what to do next — two parts, in that order, in plain language, without blame and without apology ritual.
+
+Sentence case for titles, headings, and labels: first word capitalized, the rest lowercase except proper nouns. No all-caps emphasis.
+
+Standard punctuation. Em dashes sparingly, straight quotes, no unicode decoration, no bold-first bullet scaffolding — structure and word choice carry emphasis, not typeface.
+
+</voice_canon>
+
 <inherited_rules>
+The `/prose-standards` `<rule_packs>` bind wherever their feature appears in the piece — the instruction pack on an embedded procedure, the table pack on an embedded table.
+
 Every `/prose-standards` anti-pattern applies unchanged, at zero tolerance — word choice (significance and authenticity adverbs, overused vocabulary, ornate nouns, pompous verbs), sentence structure (negative parallelism, stacked negations, rhetorical self-answers, anaphora and tricolon abuse, filler transitions, tacked-on significance, false ranges, gerund fragment litanies, tautological definitions, redundant paired examples), paragraph structure (punchy-fragment paragraphs, listicles in a trench coat), tone (false suspense, unnecessary metaphors, hypothetical openers, performed vulnerability, asserted clarity, stakes inflation, condescension, vague attributions, invented concept labels), formatting (em-dash overuse, bold-first bullets, unicode decoration), and composition (fractal summaries, dead metaphors, analogy stacking, one-point dilution, duplication, signposted conclusions, dismissive optimism). Composing skills load `/prose-standards` for the full descriptions and examples.
 </inherited_rules>
 

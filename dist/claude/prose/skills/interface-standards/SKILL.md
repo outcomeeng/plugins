@@ -11,7 +11,7 @@ The interface kind's standards layer over `/prose-standards` — inherited rules
 </objective>
 
 <reference_note>
-This is a reference skill. `/author-interface` and `/audit-interface` load it; the routers reach it only through them. Its `<voice_canon>` renders from the same authored fragment as the plugin's shipped `prose` output style, so a change to that canon changes the chat voice the plugin ships.
+This is a reference skill. `/author-interface` and `/audit-interface` load it; the routers reach it only through them. Its `<voice_canon>` renders from the same authored fragment as the plugin's shipped `prose` output style and every other kind layer, so a change to that canon changes every voice the plugin ships.
 </reference_note>
 
 <inherited_rules>
@@ -27,7 +27,7 @@ Repetition across elements is consistency, not duplication. The base one-point-o
 </overrides>
 
 <voice_canon>
-The shared voice rules, transcluded from the authored canon the shipped `prose` output style also renders from — one source, two surfaces.
+The shared voice rules, transcluded from the authored canon every kind and the shipped output style render from — one source, every surface.
 
 Lead with the substance. The first words carry the action, the answer, or the event — never a warm-up, a preamble, or a restatement of the question.
 

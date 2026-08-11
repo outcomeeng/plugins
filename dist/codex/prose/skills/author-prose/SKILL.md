@@ -2,6 +2,7 @@
 name: author-prose
 description: >-
   ALWAYS invoke this skill when writing or editing any text for human readers — documents, web pages, articles, product docs, UI text, error messages, notifications, emails, READMEs, release notes, marketing copy, and internal team pages. NEVER invoke for chat responses to the user (no matter how long), code comments, commit messages, or agent-facing instructions like SKILL.md.
+argument-hint: "[interface|document|copy] <what to write>"
 allowed-tools: Read, Edit, Write, Glob, Grep, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent
 ---
 
@@ -9,46 +10,67 @@ Invoke the `prose:prose-standards` skill before proceeding. If that skill is una
 
 <objective>
 
-Human-facing text drafted against its kind's standards and approved by a `prose-auditor` pass.
+Human-facing text drafted against the kind its caller supplied and approved by a `prose-auditor` pass.
 
 </objective>
 
 <constraints>
 
-- NEVER write the text before the kind is resolved — a draft against the wrong kind's standards reads wrong in ways later editing does not repair.
-- NEVER guess an ambiguous kind or invent a style outside the taxonomy — ask the user to select a kind.
-- NEVER author a repository- or domain-governed artifact here — ownership routes to the governing workflow before any other test runs.
+- NEVER derive the kind from the request, the destination, or a draft. Writing precedes the text, so no property of the text exists to read; a draft against the wrong kind's standards reads wrong in ways later editing does not repair.
+- NEVER guess when no kind arrives. Ask, from the three-kind list, once.
+- NEVER invent a style outside the taxonomy.
+- NEVER author a repository- or domain-governed artifact here — ownership outranks a supplied kind, and a governed artifact routes to its own workflow before anything else runs.
 
 </constraints>
 
+<kind_intake>
+
+The kind is an input. Resolve it in this order and stop at the first that yields one:
+
+1. **The invocation.** A kind named in the arguments or the request — `interface`, `document`, or `copy`.
+2. **The repository's map.** When the repository declares a path-to-kind map at `spx/local/prose.md` and the target path matches an entry, that entry is the kind. The map is a declaration its owner wrote, never an inference.
+3. **One question.** Ask the user to pick from the three kinds, presenting what each covers. Never guess and never proceed without an answer.
+
+| Kind        | The text goes into                                                                                           |
+| ----------- | ------------------------------------------------------------------------------------------------------------ |
+| `interface` | A designed surface: buttons, labels, empty states, error messages, tooltips, notifications, email templates  |
+| `document`  | A document set: product docs, wiki pages, runbooks, reference, policies, rubrics, onboarding guides, READMEs |
+| `copy`      | A standalone piece read start to finish: essays, articles, long-form landing narrative                       |
+
+Before any of the three, check ownership: a spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is governed by its own workflow and never enters the prose surface. Chat responses and operational prose — a code comment, a commit message, an agent-facing instruction — stay outside it the same way.
+
+One text carries one kind. Register variation inside it is carried by the `/prose-standards` `<rule_packs>`, which bind on a feature rather than on a kind, so a runbook's procedure and an essay's table are governed where they appear without a second kind.
+
+</kind_intake>
+
 <workflow>
 
-1. Classify the text through `/prose-standards` `<kind_detection>` — the ordered procedure is pre-loaded above. Ownership routes away; ambiguity asks the user; every other text resolves to exactly one kind: copy, interface, docs, or internal-docs.
+1. Resolve the kind through `<kind_intake>`. Nothing is written before it is settled.
 
-2. Invoke the kind's composed author skill via the Skill tool: `prose:author-copy`, `prose:author-interface`, `prose:author-docs`, or `prose:author-internal-docs`. That skill loads its standards layer and carries the kind's writing guidance and workflow.
+2. Invoke the kind's composed author skill via the Skill tool: `prose:author-interface`, `prose:author-document`, or `prose:author-copy`. That skill loads its standards layer, which transcludes the shared voice canon and carries the kind's writing guidance.
 
-3. For a document whose parts differ in kind — a docs page with embedded UI strings, a landing page with an essay — apply each part's kind. Classify per part, not per file.
+3. Write or edit the text applying the base catalog and the kind's layer together. Zero tolerance for the base anti-patterns; the kind's overrides are the only sanctioned relaxations.
 
-4. Write or edit the text applying the base catalog and the kind's layer together. Zero tolerance for the base anti-patterns; the kind's overrides are the only sanctioned relaxations.
+4. Apply every rule pack the text triggers. A numbered procedure triggers the instruction pack; a table triggers the table pack.
 
-5. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming each user-resolved kind in the dispatch as `Kind: <kind> (user-selected) for <file-or-part>` — one declaration per ambiguous part, binding only the text it names. Fix findings and re-audit until the verdict is `APPROVED`.
+5. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming the kind in the dispatch as `Kind: <kind>`. The dispatched audit reads nothing without it. Fix findings and re-audit until the verdict is `APPROVED`.
 
 </workflow>
 
 <success_criteria>
 
-- The kind was resolved by the detection procedure or an explicit user choice before drafting began.
+- The kind came from the invocation, the repository's map, or one asked question, and was settled before drafting began.
 - The text was written through the kind's composed author skill, not from the router's own judgment.
-- Mixed documents received per-part classification.
-- A `prose-auditor` dispatch returned `APPROVED` on the final text.
+- Every rule pack the text triggers was applied where its feature appears.
+- The `prose-auditor` dispatch carried the kind and returned `APPROVED` on the final text.
 
 </success_criteria>
 
 <reference_index>
 
-| Skill                                                                        | When to read                               |
-| ---------------------------------------------------------------------------- | ------------------------------------------ |
-| `/prose-standards`                                                           | Always — detection procedure and catalog   |
-| `/author-copy`, `/author-interface`, `/author-docs`, `/author-internal-docs` | The resolved kind's skill, after detection |
+| Skill                                                   | When to read                            |
+| ------------------------------------------------------- | --------------------------------------- |
+| `/prose-standards`                                      | Always — base catalog and rule packs    |
+| `/author-interface`, `/author-document`, `/author-copy` | The supplied kind's skill, after intake |
 
 </reference_index>
