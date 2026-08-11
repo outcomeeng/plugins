@@ -75,6 +75,7 @@ CLI against a real sandbox:
 
 ```rust
 use <product>_testing::generators::payloads::any_syncable_tree;
+use <product>_testing::harnesses::commands::product_binary;
 use <product>_testing::harnesses::sandbox::RemoteSandbox;
 
 #[test]
