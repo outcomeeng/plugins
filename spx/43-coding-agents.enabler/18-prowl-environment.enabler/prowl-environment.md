@@ -11,7 +11,6 @@ CAN operate between any positively identified Prowl agents without constructing 
 - Every supported operation — list, agents, read, send, key, focus, tab create, tab close, pane close, and open — maps from one source-owned request shape to one exact Prowl argument vector and checked response result ([test](tests/test_prowl_environment.mapping.l1.py))
 - Public Prowl agent evidence maps to complete source-preserved agent, pane, worktree, branch, repository, and applicable run identities or to a named unavailable or ambiguous result ([test](tests/test_prowl_environment.mapping.l1.py))
 - An absolute worktree, repository, or working-directory path maps through one source-owned resolver to the complete caller, complete pane inventory, non-caller path matches, and candidate-specific immediate-return send request templates; zero, one, and multiple matches produce unavailable, succeeded, and ambiguous results without sending, while a selected template produces exactly one checked send result with trailing-Enter evidence and no retry ([test](tests/test_prowl_target_resolution.mapping.l1.py))
-- Default subprocess input maps an absent payload to null-device stdin and an explicit text payload to unchanged captured input ([test](tests/test_prowl_environment.mapping.l1.py))
 - A delegation request maps to exactly one correlated `delegation-completed`, `delegation-failed`, `delegation-rejected`, or `delegation-unavailable` terminal handback containing a complete inline result or an exact durable result reference with a bounded inline projection ([test](tests/test_prowl_environment.mapping.l1.py))
 
 ### Conformance
@@ -20,6 +19,7 @@ CAN operate between any positively identified Prowl agents without constructing 
 
 ### Properties
 
+- Default subprocess input maps an absent payload to null-device stdin, and every explicit text payload reaches captured input unchanged ([test](tests/test_prowl_subprocess_input.property.l1.py))
 - Matching repeated terminal handbacks for one coordination reference preserve one terminal outcome, while conflicting terminal states for that reference are rejected ([test](tests/test_prowl_environment.property.l1.py))
 
 ### Compliance
