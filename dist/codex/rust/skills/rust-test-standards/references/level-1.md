@@ -5,9 +5,9 @@
 - `<file_placement>` — co-located spec test path
 - `<dependency_seam_pattern>` — narrow trait and function seams
 - `<recorder_pattern>` — recording collaborator that exposes calls
-- `<tempdir_pattern>` — harness-owned temporary product, test-owned predicate
-- `<property_pattern>` — generator domain, harness run policy, test-owned invariant
 - `<anti_patterns>` — Level 1 rejections
+
+The tempdir and property patterns are worked inline in `SKILL.md` and are not repeated here.
 
 </contents>
 
@@ -85,45 +85,6 @@ impl CommandRunner for RecordingRunner {
 ```
 
 </recorder_pattern>
-
-<tempdir_pattern>
-The harness creates the temporary product and releases it through `Drop`. The fixture reaches the governed function as a path. The `#[test]` holds the predicate.
-
-```rust
-use <product>_testing::fixtures::configs::fast_mode_config_path;
-use <product>_testing::harnesses::filesystem::TempProduct;
-
-#[test]
-fn loads_config_from_temp_dir() {
-    let product = TempProduct::seeded_from(fast_mode_config_path());
-
-    let config = load_config(product.path()).unwrap();
-
-    assert_eq!(config.mode, product::config::Mode::Fast);
-}
-```
-
-</tempdir_pattern>
-
-<property_pattern>
-The generator owns the domain. The harness owns case count, seed, regression persistence, and replay output. The closure inside the `#[test]` owns the invariant.
-
-```rust
-use <product>_testing::generators::keys::canonical_key_strings;
-use <product>_testing::harnesses::properties::run_property;
-
-#[test]
-fn canonical_key_roundtrips() {
-    run_property(canonical_key_strings(), |raw| {
-        let parsed = CanonicalKey::parse(&raw).unwrap();
-
-        prop_assert_eq!(parsed.to_string(), raw);
-        Ok(())
-    });
-}
-```
-
-</property_pattern>
 
 <anti_patterns>
 

@@ -426,7 +426,7 @@ Do not require `spx validation literal` for Rust tests. The literal validator is
 <reference_guides>
 Levels 2 and 3 carry no inline examples — their reference files are the only worked examples for those levels.
 
-- `${CLAUDE_SKILL_DIR}/references/level-1.md` - pure computation, tempdir, trait seams, and property tests beyond the inline patterns
+- `${CLAUDE_SKILL_DIR}/references/level-1.md` - the trait-seam and recording-collaborator shapes beyond the inline patterns
 - `${CLAUDE_SKILL_DIR}/references/level-2.md` - the worked CLI binary, async adapter, and containerized collaborator examples
 - `${CLAUDE_SKILL_DIR}/references/level-3.md` - the worked remote API, sandboxed CLI, and browser workflow examples, with credentials, isolation, and cleanup
 
