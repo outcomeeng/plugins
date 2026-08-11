@@ -54,6 +54,28 @@ A table of contents is satisfied by a `## Contents` section, an XML `<contents>`
 
 **Revisit condition.** Resolve per plugin when that plugin next needs a reference-file change, or as one dedicated sweep. `create-subagent` is the highest-value single target: seven files, 4,646 lines, the largest partial-read exposure in the marketplace.
 
+## A shipped skill tells a Codex reader that Claude Code invoked it
+
+`<accessing_skill_files>` in several skills reads "When this skill is invoked, Claude Code provides the base directory in the loading message". The build substitutes `${CLAUDE_SKILL_DIR}` for `${SKILL_DIR}` when rendering the Codex tree but leaves the sentence, so `dist/codex/**` ships a claim about the wrong runtime to a Codex-reading agent. The variable substitution itself is correct; only the prose is wrong.
+
+`src/plugins/typescript/skills/architect-typescript/SKILL.md` still carries it. The two rust instances were corrected to "the skill loader provides the base directory" in the changeset that found them.
+
+**Resolution shape**: phrase the mechanism runtime-neutrally wherever the sentence appears, and prefer that phrasing in the skill templates so a new skill does not reintroduce it.
+
+**Why the remainder is separate.** Correcting the typescript instance needs a typescript version bump and its own `skill-auditor` gate, in a plugin the rust-scoped changeset that found this deliberately does not touch.
+
+**Evidence.** Raised by `instructions:skill-auditor` against `code-rust`, which named the cross-plugin spread.
+
+## Reference files structure their own sections as markdown headings
+
+`/skill-standards` `<reference_file_guidance>` prefers semantic XML for a reference file's own structure, reserving markdown for content that is itself a markdown artifact. `architect-rust/references/{adr-patterns,rust-principles}.md` structure themselves with `#`/`##` headings, as do reference files in several other plugins; the sibling `code-rust/references/{test-patterns,outcome-engineering-patterns}.md` already use pure XML. In `adr-patterns.md` the markdown *inside* each pattern is correct — an ADR is a markdown artifact — and only the file's own scaffolding is at issue.
+
+**Resolution shape**: convert each reference file's own sections to semantic XML tags, leaving markdown-artifact examples alone.
+
+**Why this is separate.** The auditor rates it recommendation-level rather than critical, and it spans plugins; `spx/43-typescript.enabler/ISSUES.md` already records the TypeScript half under "Legacy XML Structure Cleanup". One pass per plugin, each with its own gate.
+
+**Evidence.** Raised by `instructions:skill-auditor` against `architect-rust`.
+
 ## Three test-standards skills open with success criteria nothing can check
 
 `python-test-standards`, `rust-test-standards`, and `typescript-test-standards` each open `<success_criteria>` with bullets asserting upstream skill sequencing — that `/test` selected the assertion type before implementation, and that the language standards skill loaded before the test standards reference. Neither is a property of the produced test artifact, so no check against a test file can falsify either. The remaining criteria in each skill are checkable, and each skill's `<predicate_and_oracle_litmus>` already operationalizes them into concrete inversion and mutation checks.
