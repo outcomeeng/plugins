@@ -2,7 +2,7 @@
 
 ## `architect-rust` reference files structure themselves as markdown
 
-`/skill-standards` `<reference_file_guidance>` prefers semantic XML for a reference file's own structure, reserving markdown for content that is itself a markdown artifact. `architect-rust/references/adr-patterns.md` and `architect-rust/references/rust-principles.md` use `#`/`##` headings for their own scaffolding, while the sibling `code-rust/references/{test-patterns,outcome-engineering-patterns}.md` already use pure XML. In `adr-patterns.md` the markdown *inside* each pattern is correct — an ADR is a markdown artifact — and only the file's own sections are at issue.
+`/audit-skill` `<reference_file_guidance>` prefers semantic XML for a reference file's own structure, reserving markdown for content that is itself a markdown artifact. `architect-rust/references/adr-patterns.md` and `architect-rust/references/rust-principles.md` use `#`/`##` headings for their own scaffolding, while the sibling `code-rust/references/{test-patterns,outcome-engineering-patterns}.md` already use pure XML. In `adr-patterns.md` the markdown *inside* each pattern is correct — an ADR is a markdown artifact — and only the file's own sections are at issue.
 
 **Resolution shape**: convert each file's own sections to semantic XML tags, leaving the markdown-artifact examples alone.
 
