@@ -26,7 +26,8 @@ Findings on a self-contained piece — each carrying pattern, category, quote, a
 
 1. Sweep every base category — word choice, sentence structure, paragraph structure, tone, formatting, composition — against the full `/prose-standards` descriptions.
 2. Sweep the `/copy-standards` `<additional_rules>`: paragraph progression, example development, single-use rhetorical devices, length against substance, unannounced ending, tradeoffs in place.
-3. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence with co-occurring patterns yields one finding naming every pattern present.
+3. Identify every feature that triggers a `/prose-standards` rule pack, then sweep each triggered pack over the passages carrying that feature — the instruction pack on an embedded numbered procedure, the table pack on an embedded table. A pack binds on the feature, in every kind.
+4. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence with co-occurring patterns yields one finding naming every pattern present.
 
 </audit_workflow>
 

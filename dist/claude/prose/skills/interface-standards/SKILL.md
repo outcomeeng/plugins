@@ -16,6 +16,8 @@ This is a reference skill. `/author-interface` and `/audit-interface` load it; t
 
 <inherited_rules>
 Every `/prose-standards` anti-pattern applies unchanged except where `<overrides>` relaxes it — word choice (significance and authenticity adverbs, overused vocabulary, ornate nouns, pompous verbs), tone (false suspense, unnecessary metaphors, hypothetical openers, asserted clarity, stakes inflation, condescension), formatting (em-dash overuse, unicode decoration), and the sentence- and composition-level rules as far as fragments carry them. Composing skills load `/prose-standards` for the full descriptions and examples.
+
+The `/prose-standards` `<rule_packs>` bind wherever their feature appears in the surface — the instruction pack on a stepped empty state or onboarding sequence, the table pack on a comparison or pricing table rendered as an element.
 </inherited_rules>
 
 <overrides>

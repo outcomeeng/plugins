@@ -26,7 +26,8 @@ Findings on surface text — each carrying pattern, category, quote, and rewrite
 
 1. Sweep the base categories against the full `/prose-standards` descriptions, applying the two overrides: fragments pass for surface elements (not for body text inside them), and repetition passes across parallel elements (not within one element's prose).
 2. Sweep the `/interface-standards` `<additional_rules>` per element type: action-led buttons and links, sentence case, brevity caps, one term per concept across the surface, error what-happened/what-next pairing, orienting empty states, consequence-naming confirmations, filler words.
-3. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence or element with co-occurring patterns yields one finding naming every pattern present.
+3. Identify every feature that triggers a `/prose-standards` rule pack, then sweep each triggered pack over the elements carrying that feature — the instruction pack on a stepped empty state or onboarding sequence, the table pack on a table rendered as an element. A pack binds on the feature, in every kind.
+4. Return each finding with the pattern name, its category, the offending quote verbatim, and a concrete rewrite. A sentence or element with co-occurring patterns yields one finding naming every pattern present.
 
 </audit_workflow>
 

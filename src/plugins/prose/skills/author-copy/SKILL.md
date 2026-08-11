@@ -56,6 +56,8 @@ Write at the reader's level; skip analogies simpler than the concept. Begin wher
 
 Compose per `/copy-standards` `<additional_rules>`: arguments progress, one developed example beats a stack, rhetorical devices are single-use, length matches substance, endings end, tradeoffs live in place.
 
+Apply every `/prose-standards` rule pack the piece triggers. An embedded numbered procedure triggers the instruction pack; an embedded table triggers the table pack. A pack binds on the feature, in every kind.
+
 </tone_and_composition>
 
 <formatting>
@@ -70,6 +72,7 @@ Punctuation names the relationship between clauses; when uncertain, a period and
 - Sentence openings vary; each paragraph develops rather than segments.
 - Claims are scoped to what the text demonstrates and sources are named.
 - The `/copy-standards` layer holds: examples developed, devices single-use, length matched to substance, no announced ending.
+- Every rule pack the piece triggers was applied where its feature appears.
 - Zero instances of any `/prose-standards` pattern.
 
 </success_criteria>

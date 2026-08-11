@@ -22,7 +22,9 @@ Surface text — chrome, messages, and short page fragments — where every elem
 
 3. Apply the base catalog through the two overrides only — fragments for surface elements, consistency-repetition across parallel elements. Everything else in `/prose-standards` binds at zero tolerance, including in body text inside elements.
 
-4. Read the result as the surface, not as a list: parallel elements phrased in parallel, one name per concept, no filler words.
+4. Apply every `/prose-standards` rule pack the surface triggers. A stepped empty state or onboarding sequence triggers the instruction pack; a table rendered as an element triggers the table pack. A pack binds on the feature, in every kind.
+
+5. Read the result as the surface, not as a list: parallel elements phrased in parallel, one name per concept, no filler words.
 
 </workflow>
 
