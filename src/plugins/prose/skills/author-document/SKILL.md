@@ -26,17 +26,19 @@ A colleague returning to a hiring scorecard for the third time does not re-read 
 
 1. Identify the page type — procedure or runbook, reference, conceptual guide, tutorial, policy, rubric, competency model, onboarding guide, status page, ungoverned team decision record, ungoverned design spec. Each carries its own shape in `<page_type_conventions>`.
 
-2. Collect the set's established terms for every concept the page touches. The one-term-one-meaning rule in the voice canon binds new text to the existing vocabulary; introduce a new term only for a concept the set does not yet name.
+2. Apply `/document-standards` `<voice_canon>` first — the shared canon every kind and the shipped output style render from. Its rules bind before every page rule below: substance-first openings, plain words, no filler words, assert only what is demonstrated, one term one meaning, failure text pairing what happened with what to do next, sentence case for titles and headings and labels, standard punctuation.
 
-3. Identify canonical homes. For each concept the page references, locate its canonical home — another page in the set or a repository document. Plan inline hyperlinks; never restate canonical content.
+3. Collect the set's established terms for every concept the page touches. This is where the canon's one-term-one-meaning rule meets the existing vocabulary; introduce a new term only for a concept the set does not yet name.
 
-4. Draft lead-first. Open with the substantive lead sentence, then scaffold the rest below it.
+4. Identify canonical homes. For each concept the page references, locate its canonical home — another page in the set or a repository document. Plan inline hyperlinks; never restate canonical content.
 
-5. Apply `/document-standards` `<additional_rules>` as the page takes shape: the sentence caps, heading case, key-term bolding, cross-links, list and callout shape, decisive language.
+5. Draft lead-first. Open with the substantive lead sentence, then scaffold the rest below it.
 
-6. Apply each triggered rule pack from `/prose-standards` `<rule_packs>`. A procedure triggers the instruction pack — 20-word steps, one instruction each, condition first, action verb leading. A table triggers the table pack.
+6. Apply `/document-standards` `<additional_rules>` as the page takes shape: the sentence caps, heading case, key-term bolding, cross-links, list and callout shape, decisive language.
 
-7. Apply the formatting overrides where they help. `/document-standards` `<overrides>` carries them with worked examples; each relaxes a base rule a scanned page needs back.
+7. Apply each triggered rule pack from `/prose-standards` `<rule_packs>`. A procedure triggers the instruction pack — 20-word steps, one instruction each, condition first, action verb leading. A table triggers the table pack.
+
+8. Apply the formatting overrides where they help. `/document-standards` `<overrides>` carries them with worked examples; each relaxes a base rule a scanned page needs back.
 
 </workflow>
 
@@ -66,6 +68,7 @@ Status pages. Lead with the current status in one sentence. Then context, then n
 
 <success_criteria>
 
+- Every voice-canon rule holds across the page.
 - The opening sentence is the substantive lead, not metadata or boilerplate.
 - Every descriptive sentence is inside the 25-word cap, in a simple tense, with no verbal "-ing" clause.
 - Every procedure obeys the instruction pack and every table obeys the table pack.
