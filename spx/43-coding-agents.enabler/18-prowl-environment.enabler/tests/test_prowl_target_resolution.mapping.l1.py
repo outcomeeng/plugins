@@ -32,9 +32,7 @@ def _expected_participant(
 def test_resolver_returns_complete_inventory_and_one_non_caller_template() -> None:
     module = load_prowl_environment()
     agents = [public_agent_item(module, ordinal) for ordinal in range(3)]
-    expected_participants = [
-        _expected_participant(module, agent) for agent in agents
-    ]
+    expected_participants = [_expected_participant(module, agent) for agent in agents]
     runner = RecordingRunner([prowl_agents_command_result(module, agents)])
     output = StringIO()
 
@@ -103,6 +101,17 @@ def test_resolver_reports_zero_and_multiple_non_caller_matches_without_sending()
             ],
             module.ExecutionStatus.IDENTITY_AMBIGUOUS,
             2,
+        ),
+        (
+            cast(
+                str,
+                cast(dict[str, object], agents[0][module.WORKTREE_FIELD])[
+                    module.ROOT_PATH_FIELD
+                ],
+            )
+            + "/docs",
+            module.ExecutionStatus.IDENTITY_UNAVAILABLE,
+            0,
         ),
     ):
         runner = RecordingRunner([prowl_agents_command_result(module, agents)])

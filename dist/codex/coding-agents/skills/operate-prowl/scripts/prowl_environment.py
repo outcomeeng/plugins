@@ -1017,7 +1017,8 @@ def resolve_target(
                 if participant[PANE_FIELD] != caller_pane
                 and (
                     _path_contains(participant[WORKTREE_FIELD], path)
-                    or _path_contains(participant[REPOSITORY_FIELD], path)
+                    or os.path.normpath(participant[REPOSITORY_FIELD])
+                    == os.path.normpath(path)
                 )
             ]
             candidates = [
