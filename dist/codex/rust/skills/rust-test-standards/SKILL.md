@@ -186,7 +186,7 @@ Snapshot tests are valid only when the textual or structured output surface is i
 | Assertion-assigned | The case the assertion type fixes rather than the test author | Inline in the `#[test]` body        |
 | Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file             |
 
-Each origin below has its own section; assertion-assigned and descriptive inline are the two exceptions and need none. An assertion-assigned case is one the assertion type places in the test itself — a scenario's exact interaction as the spec declares it, a conformance expectation from the external oracle, or the violating input a compliance rule names. Such a literal is correct in the `#[test]` body, and moving it into a production module so the test can import it gives the case a production address without a production contract. `<test_infrastructure_layout>` is a layout note, not an origin: it closes the section by placing harnesses, generators, and fixtures inside the infrastructure crate, with fixtures split into loader code and data.
+Each origin below has its own section; assertion-assigned and descriptive inline are the two exceptions and need none. An assertion-assigned case is one the assertion type places in the test itself — a scenario's exact interaction as the spec declares it, a conformance expectation from the external oracle, or the violating input a compliance rule names. Such a literal is correct in the `#[test]` body, and moving it into a production module so the test can import it gives the case a production address without a production contract. A vocabulary token inside that case — a command name, status value, or rule identifier — stays source-owned and is imported per `<source_owned_values>`; the origin covers the case, never the vocabulary the case is written in. `<test_infrastructure_layout>` is a layout note, not an origin: it closes the section by placing harnesses, generators, and fixtures inside the infrastructure crate, with fixtures split into loader code and data.
 
 **TEST FILES OWN NO DATA OR POLICY.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 
@@ -313,12 +313,13 @@ fn rejects_empty_url_sets() {
 Dependency seam example:
 
 ```rust
-use <product>_testing::generators::repos::any_sync_config;
 use <product>_testing::harnesses::commands::success_runner;
 
 #[test]
 fn command_builder_reports_success() {
-    let result = sync_repo(&any_sync_config(), &success_runner()).unwrap();
+    let config = product::sync::SyncConfig::new("origin", product::sync::Mode::Push);
+
+    let result = sync_repo(&config, &success_runner()).unwrap();
 
     assert!(result.success);
 }
