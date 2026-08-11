@@ -37,10 +37,10 @@ Remaining TypeScript work, in order:
    ALWAYS:25 already implies. The Rust plugin was corrected to that shape first; see
    `spx/43-rust.enabler/PLAN.md`, whose worked examples are the reference for this slice.
 
-   **Site inventory, measured against the shipped skill.** Nineteen example sites across
+   **Site inventory, measured against the shipped skill.** Twenty example sites across
    `typescript-test-standards`, in three classes:
 
-   - **Twelve bare delegations** — `await assertX(...)` as the whole test body, no `expect`.
+   - **Thirteen bare delegations** — `await assertX(...)` as the whole test body, no `expect`.
      `references/exception-implementations.md:15,19,36,42,62,68,85,102`;
      `references/l1-patterns.md:53`; `references/l2-patterns.md:13,17`;
      `levels/l1-local-deterministic.md:73`; `levels/l2-local-infrastructure.md:35`.
