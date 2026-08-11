@@ -393,9 +393,9 @@ Level 3 tests must declare their isolation boundary, credentials, cleanup behavi
 <coverage_rules>
 Keep deterministic measurement and audit-time evidence judgment distinct:
 
-- The caller's deterministic gate prefers `cargo llvm-cov`, compares the baseline without the test against the run with the test, and reports the actual per-file or per-function delta. When tooling is unavailable, the caller records that limitation.
+- The deterministic gate prefers `cargo llvm-cov`, compares the baseline without the test against the run with the test, and reports the actual per-file or per-function delta. When tooling is unavailable, the gate records that limitation.
 - `/audit-rust-tests` runs no coverage command. It reads the evidence chain and judges whether the test drives execution into the assertion-relevant source path, marking trivially total paths `saturated`.
-- A structural reachability judgment never claims a measured percentage or replaces the caller's deterministic coverage result.
+- A structural reachability judgment never claims a measured percentage or replaces the deterministic gate's coverage result.
 
 </coverage_rules>
 
