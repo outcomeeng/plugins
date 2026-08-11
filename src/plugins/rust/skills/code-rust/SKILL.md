@@ -47,7 +47,7 @@ Prefer explicit ownership, typed errors, and narrow seams over framework-heavy i
 
 No generated mocks as the default testing strategy. When a controlled implementation is needed, keep coupling to the real seam with a small hand-written recorder, harness, or trait implementation.
 
-Do not declare work complete until the full validation sequence passes.
+NEVER declare work complete until the full validation sequence passes.
 
 </essential_principles>
 
