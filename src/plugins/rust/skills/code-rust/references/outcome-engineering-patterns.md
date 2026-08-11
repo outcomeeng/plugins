@@ -1,3 +1,14 @@
+<contents>
+
+- `<overview>` — what these patterns cover
+- `<external_command_boundary>` — Protocol-typed runner at the process edge
+- `<resource_cleanup_with_raii>` — release through `Drop`
+- `<typed_config_with_boundary_validation>` — parse once at the boundary
+- `<typed_errors>` — error enums the caller can match
+- `<async_service_boundary>` — async seams that stay testable
+
+</contents>
+
 <overview>
 These patterns capture Rust-native seams and boundary shapes that keep implementation code testable and explicit.
 </overview>

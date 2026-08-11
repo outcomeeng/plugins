@@ -182,10 +182,10 @@ Snapshot tests are valid only when the textual or structured output surface is i
 | Source-owned       | The production module defines and exports the value           | Import from that module             |
 | Generator-produced | Pure code emits varied values each run                        | `<product>-testing/src/generators/` |
 | Harness-managed    | Infrastructure mediates interaction with an external resource | `<product>-testing/src/harnesses/`  |
-| Fixture payload    | An inert whole payload the code under test reads by path      | `<product>-testing/fixtures/`       |
+| Fixture files      | An inert whole payload the code under test reads by path      | `<product>-testing/fixtures/`       |
 | Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file             |
 
-Each origin below has its own section, except descriptive inline, which needs none. `<test_infrastructure_layout>` closes the section with where the three infrastructure homes live rather than naming a sixth origin.
+Each origin below has its own section, except descriptive inline, which needs none. `<test_infrastructure_layout>` closes the section with where the infrastructure crate puts harnesses, generators, and fixtures — the last split into loader code and data — rather than naming a sixth origin.
 
 **TEST FILES OWN NO DATA OR POLICY.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 

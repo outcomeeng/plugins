@@ -1,5 +1,16 @@
 # Rust Architectural Principles
 
+## Contents
+
+- Ownership and Borrowing Are Architecture
+- Type-Driven Invariants
+- Clean Architecture in Rust
+- Error Boundaries Are a Design Decision
+- Concurrency and Async Need Architectural Justification
+- Resource Lifecycle and RAII
+- Security and Unsafe Boundaries
+- Crate Selection Is Architectural
+
 ## Ownership and Borrowing Are Architecture
 
 - Model ownership explicitly in ADRs for state, caches, handles, and domain aggregates

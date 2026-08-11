@@ -2,6 +2,17 @@
 
 These patterns show how testability constraints appear under the `## Verification` section's `### Audit` subsection. See `/rust-architecture-standards` for the canonical ADR section structure.
 
+## Contents
+
+- Pattern: External Tool Integration
+- Pattern: Configuration Loading
+- Pattern: CLI Structure
+- Pattern: Error Handling
+- Pattern: Async Operations
+- Pattern: Unsafe or FFI Boundary
+
+Each pattern carries its own `## Verification` section with an `### Audit` subsection.
+
 ## Pattern: External Tool Integration
 
 When integrating with external tools:
