@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import sys
 import uuid
@@ -81,6 +82,25 @@ def observe_send_transport(pane: str) -> dict[str, object]:
         no_wait=True,
     )
     return cast(dict[str, object], prowl.execute(request, runner))
+
+
+def mutation_observation(
+    module: ModuleType,
+    participant: dict[str, str],
+) -> tuple[dict[str, object], dict[str, object]]:
+    """Return a synthetic mutation target and its projected observed state."""
+    target: dict[str, object] = {
+        module.PANE_FIELD: participant[module.PANE_FIELD],
+        module.WORKTREE_FIELD: participant[module.WORKTREE_FIELD],
+        module.BRANCH_FIELD: participant[module.BRANCH_FIELD],
+        module.REPOSITORY_FIELD: participant[module.REPOSITORY_FIELD],
+        module.HEAD_FIELD: hashlib.sha1(
+            participant[module.PANE_FIELD].encode(), usedforsecurity=False
+        ).hexdigest(),
+        module.STATUS_FIELD: module.CLEAN_STATUS,
+    }
+    state = {field: target[field] for field in module.OBSERVED_STATE_FIELDS}
+    return target, state
 
 
 def agent_discovery(

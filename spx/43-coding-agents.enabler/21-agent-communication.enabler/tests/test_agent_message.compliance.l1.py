@@ -1,4 +1,3 @@
-import hashlib
 import json
 import uuid
 from io import StringIO
@@ -12,6 +11,7 @@ from outcomeeng_testing.generators.coding_agents import (
 from outcomeeng_testing.harnesses.coding_agents import (
     fact_envelope,
     generated_envelope,
+    mutation_observation,
     observe_send_transport,
     public_message_context,
 )
@@ -152,34 +152,8 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
     active_reference = str(
         uuid.uuid5(uuid.NAMESPACE_URL, sender[module.WORKTREE_FIELD])
     )
-    sender_head = hashlib.sha1(
-        sender[module.PANE_FIELD].encode(), usedforsecurity=False
-    ).hexdigest()
-    recipient_head = hashlib.sha1(
-        recipient[module.PANE_FIELD].encode(), usedforsecurity=False
-    ).hexdigest()
-    sender_target = {
-        module.PANE_FIELD: sender[module.PANE_FIELD],
-        module.WORKTREE_FIELD: sender[module.WORKTREE_FIELD],
-        module.BRANCH_FIELD: sender[module.BRANCH_FIELD],
-        module.REPOSITORY_FIELD: sender[module.REPOSITORY_FIELD],
-        module.HEAD_FIELD: sender_head,
-        module.STATUS_FIELD: module.CLEAN_STATUS,
-    }
-    recipient_target = {
-        module.PANE_FIELD: recipient[module.PANE_FIELD],
-        module.WORKTREE_FIELD: recipient[module.WORKTREE_FIELD],
-        module.BRANCH_FIELD: recipient[module.BRANCH_FIELD],
-        module.REPOSITORY_FIELD: recipient[module.REPOSITORY_FIELD],
-        module.HEAD_FIELD: recipient_head,
-        module.STATUS_FIELD: module.CLEAN_STATUS,
-    }
-    sender_state = {
-        field: sender_target[field] for field in module.OBSERVED_STATE_FIELDS
-    }
-    recipient_state = {
-        field: recipient_target[field] for field in module.OBSERVED_STATE_FIELDS
-    }
+    sender_target, sender_state = mutation_observation(module, sender)
+    recipient_target, recipient_state = mutation_observation(module, recipient)
     proposal_content = message_content(
         module.MessageKind.OWNERSHIP_PROPOSAL, 10, request_required=True
     )

@@ -1,4 +1,3 @@
-import hashlib
 import uuid
 from typing import cast
 
@@ -6,6 +5,7 @@ from outcomeeng_testing.generators.coding_agents import message_content
 from outcomeeng_testing.generators.prowl_environment import public_agent_item
 from outcomeeng_testing.harnesses.coding_agents import (
     fact_envelope,
+    mutation_observation,
     observe_send_transport,
     observed_message_participants,
 )
@@ -59,34 +59,8 @@ def test_agent_message_mappings() -> None:
     )
     assert len({active_reference, proposal_reference, fact_reference}) == 3
 
-    sender_head = hashlib.sha1(
-        sender[module.PANE_FIELD].encode(), usedforsecurity=False
-    ).hexdigest()
-    recipient_head = hashlib.sha1(
-        recipient[module.PANE_FIELD].encode(), usedforsecurity=False
-    ).hexdigest()
-    sender_target = {
-        module.PANE_FIELD: sender[module.PANE_FIELD],
-        module.WORKTREE_FIELD: sender[module.WORKTREE_FIELD],
-        module.BRANCH_FIELD: sender[module.BRANCH_FIELD],
-        module.REPOSITORY_FIELD: sender[module.REPOSITORY_FIELD],
-        module.HEAD_FIELD: sender_head,
-        module.STATUS_FIELD: module.CLEAN_STATUS,
-    }
-    recipient_target = {
-        module.PANE_FIELD: recipient[module.PANE_FIELD],
-        module.WORKTREE_FIELD: recipient[module.WORKTREE_FIELD],
-        module.BRANCH_FIELD: recipient[module.BRANCH_FIELD],
-        module.REPOSITORY_FIELD: recipient[module.REPOSITORY_FIELD],
-        module.HEAD_FIELD: recipient_head,
-        module.STATUS_FIELD: module.CLEAN_STATUS,
-    }
-    sender_state = {
-        field: sender_target[field] for field in module.OBSERVED_STATE_FIELDS
-    }
-    recipient_state = {
-        field: recipient_target[field] for field in module.OBSERVED_STATE_FIELDS
-    }
+    sender_target, sender_state = mutation_observation(module, sender)
+    recipient_target, recipient_state = mutation_observation(module, recipient)
 
     observed_states: set[object] = set()
     for ordinal, (kind, expected_state) in enumerate(
