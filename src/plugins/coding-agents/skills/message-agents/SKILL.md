@@ -3,7 +3,7 @@ name: message-agents
 description: >-
   ALWAYS invoke this skill when discovering a Prowl coding-agent recipient or sending facts, ownership proposals, state reports, authorizations, or acknowledgements to another agent pane.
 argument-hint: "<JSON message request>"
-allowed-tools: Skill, Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py":*)
+allowed-tools: Skill, Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py":*), {{! tool('ask_user') !}}
 ---
 
 <objective>
