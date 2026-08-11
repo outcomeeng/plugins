@@ -1,5 +1,6 @@
 import json
 from io import StringIO
+from types import ModuleType
 from typing import cast
 
 from outcomeeng_testing.generators.prowl_environment import public_agent_item
@@ -11,9 +12,29 @@ from outcomeeng_testing.harnesses.prowl_environment import (
 )
 
 
+def _expected_participant(
+    module: ModuleType, agent: dict[str, object]
+) -> dict[str, str]:
+    pane = cast(dict[str, str], agent[module.PANE_FIELD])
+    worktree = cast(dict[str, str], agent[module.WORKTREE_FIELD])
+    project = cast(dict[str, str], agent[module.PROJECT_FIELD])
+    run = cast(dict[str, str], agent[module.RUN_FIELD])
+    return {
+        module.AGENT_FIELD: cast(str, agent[module.ID_FIELD]),
+        module.PANE_FIELD: pane[module.ID_FIELD],
+        module.WORKTREE_FIELD: worktree[module.PATH_FIELD],
+        module.BRANCH_FIELD: project[module.BRANCH_FIELD],
+        module.REPOSITORY_FIELD: worktree[module.ROOT_PATH_FIELD],
+        module.RUN_FIELD: run[module.ID_FIELD],
+    }
+
+
 def test_resolver_returns_complete_inventory_and_one_non_caller_template() -> None:
     module = load_prowl_environment()
     agents = [public_agent_item(module, ordinal) for ordinal in range(3)]
+    expected_participants = [
+        _expected_participant(module, agent) for agent in agents
+    ]
     runner = RecordingRunner([prowl_agents_command_result(module, agents)])
     output = StringIO()
 
@@ -49,15 +70,11 @@ def test_resolver_returns_complete_inventory_and_one_non_caller_template() -> No
     assert result[module.INVENTORY_FIELD][module.STATUS_FIELD] == str(
         module.ExecutionStatus.SUCCEEDED
     )
-    assert result[module.PARTICIPANTS_FIELD] == [
-        module.participant_from_agent(agent) for agent in agents
-    ]
-    assert result[module.CALLER_FIELD] == module.participant_from_agent(agents[0])
-    assert candidate[module.PARTICIPANT_FIELD] == module.participant_from_agent(
-        agents[1]
-    )
+    assert result[module.PARTICIPANTS_FIELD] == expected_participants
+    assert result[module.CALLER_FIELD] == expected_participants[0]
+    assert candidate[module.PARTICIPANT_FIELD] == expected_participants[1]
     assert template[module.ARGUMENTS_FIELD] == {
-        module.PANE_FIELD: module.participant_from_agent(agents[1])[module.PANE_FIELD],
+        module.PANE_FIELD: expected_participants[1][module.PANE_FIELD],
         module.TEXT_FIELD: None,
         module.NO_WAIT_FIELD: True,
     }
