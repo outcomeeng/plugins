@@ -16,6 +16,14 @@ Rust currently has only the top-level Rust node for these concerns, so this note
 
 Steps 3 and 4 are independent of the predicate-seam correction recorded below: that correction changes what each example asserts and who owns the assertion, and decides nothing about credential resolution or skip policy.
 
+## Rust delta for the source-laundering rule — pending
+
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md` carries the language-neutral source-laundering rule: a case, example, or expectation table placed inside a module under test so a test can cite a production path as its provenance, with ownership following consumption rather than address. `spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/` declares the Python discriminator in the same changeset. Rust has no delta yet.
+
+The Rust delta is the discriminator in Rust terms: a `pub` item in the product crate whose only callers are `spx/**/tests/` modules and the `<product>-testing` crate, reached because `#[path]`-wired spec tests compile inside the product crate and can therefore call items no released consumer can. `#[cfg(test)]` gating is the adjacent case and is a different defect — it keeps the symbol out of the shipped artifact while still putting test data in the product crate.
+
+**Blocked on nothing.** It was left out because the operator scoped the authoring pass to the language-neutral level and Python.
+
 ## Predicate-seam correction to the worked examples — executed
 
 `rust-test-standards` stated the predicate seam correctly in `<success_criteria>`, `<acceptable_doubles>`, `<predicate_and_oracle_litmus>`, `<test_data_policy>`, and `<anti_patterns>`, and contradicted it in all fourteen worked examples, each of which was a single call to an `assert_*` harness function with no assertion macro in the `#[test]` body. The governing rules are

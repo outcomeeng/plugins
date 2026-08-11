@@ -64,6 +64,14 @@ Remaining TypeScript work, in order:
 The Goal/Foundation sections below predate #468 and are retained as the derivation trail;
 treat the Progress list above as current.
 
+## TypeScript delta for the source-laundering rule — pending
+
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md` carries the language-neutral source-laundering rule: a case, example, or expectation table placed inside a module under test so a test can cite a production path as its provenance, with ownership following consumption rather than address. `spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/` declares the Python discriminator in the same changeset. TypeScript has no delta yet, and `32-test-data-ownership.enabler` is where its constant-bag sibling already lives.
+
+The TypeScript delta is the discriminator in TypeScript terms: an export from `src/` whose only importers are `spx/**/tests/` and `testing/`, reached because a barrel re-export and a `export const` case array read as ordinary module surface. Tree-shaking removes the symbol from a bundle without making it source-owned, so bundle absence is not the discriminator — importer identity is.
+
+**Blocked on nothing.** It was left out because the operator scoped the authoring pass to the language-neutral level and Python.
+
 ## Goal
 
 Three coupled corrections, driven by the PR 459 evidence-routing foundation (see
