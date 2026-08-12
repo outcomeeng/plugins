@@ -37,9 +37,16 @@ OPERATE_PROWL_RELATIVE = Path("skills/operate-prowl")
 RAW_PROWL_VIOLATION_FIXTURE = (
     ROOT / "outcomeeng_testing/fixtures/prowl_environment/raw_prowl_command.py.txt"
 )
+PROWL_HELP_VIOLATION_FIXTURE = (
+    ROOT / "outcomeeng_testing/fixtures/prowl_environment/prowl_help_command.py.txt"
+)
 LOCAL_WORKTREE_ENUMERATION_VIOLATION_FIXTURE = (
     ROOT / "outcomeeng_testing/fixtures/prowl_environment/"
     "local_worktree_enumeration.py.txt"
+)
+LOCAL_FILESYSTEM_ENUMERATION_VIOLATION_FIXTURE = (
+    ROOT / "outcomeeng_testing/fixtures/prowl_environment/"
+    "local_filesystem_enumeration.py.txt"
 )
 PROPERTY_SEED = 2026071801
 PROPERTY_EXAMPLES = 40
@@ -279,9 +286,25 @@ def raw_prowl_violation_source() -> tuple[str, dict[str, str]]:
     )
 
 
+def prowl_help_violation_source() -> tuple[str, dict[str, str]]:
+    """Return the help-only fixture identity and its source observation."""
+    return (
+        str(PROWL_HELP_VIOLATION_FIXTURE.relative_to(ROOT)),
+        _source_texts((PROWL_HELP_VIOLATION_FIXTURE,)),
+    )
+
+
 def local_worktree_enumeration_violation_source() -> tuple[str, dict[str, str]]:
     """Return the local-enumeration fixture identity and source observation."""
     return (
         str(LOCAL_WORKTREE_ENUMERATION_VIOLATION_FIXTURE.relative_to(ROOT)),
         _source_texts((LOCAL_WORKTREE_ENUMERATION_VIOLATION_FIXTURE,)),
+    )
+
+
+def local_filesystem_enumeration_violation_source() -> tuple[str, dict[str, str]]:
+    """Return the filesystem-enumeration fixture and its source observation."""
+    return (
+        str(LOCAL_FILESYSTEM_ENUMERATION_VIOLATION_FIXTURE.relative_to(ROOT)),
+        _source_texts((LOCAL_FILESYSTEM_ENUMERATION_VIOLATION_FIXTURE,)),
     )

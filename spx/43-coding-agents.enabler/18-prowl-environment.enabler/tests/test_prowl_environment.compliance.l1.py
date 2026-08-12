@@ -11,8 +11,10 @@ from outcomeeng_testing.generators.prowl_environment import (
 from outcomeeng_testing.harnesses.prowl_environment import (
     RecordingRunner,
     load_prowl_environment,
+    local_filesystem_enumeration_violation_source,
     local_worktree_enumeration_violation_source,
     observe_delegation_sender_pane,
+    prowl_help_violation_source,
     prowl_command_source_texts,
     prowl_environment_source_texts,
     raw_prowl_violation_source,
@@ -91,6 +93,10 @@ def test_list_and_open_preserve_lazy_terminal_resolution() -> None:
     assert module.local_worktree_enumeration_violations(fixture_source) == [
         fixture_path
     ]
+    filesystem_path, filesystem_source = local_filesystem_enumeration_violation_source()
+    assert module.local_worktree_enumeration_violations(filesystem_source) == [
+        filesystem_path
+    ]
 
 
 def test_prowl_environment_compliance() -> None:
@@ -158,6 +164,8 @@ def test_raw_prowl_command_rule_rejects_only_the_violating_fixture() -> None:
 
     fixture_path, fixture_source = raw_prowl_violation_source()
     assert module.raw_prowl_command_violations(fixture_source) == [fixture_path]
+    help_path, help_source = prowl_help_violation_source()
+    assert module.raw_prowl_command_violations(help_source) == [help_path]
 
 
 def test_delegation_cli_rejects_an_unsupported_field() -> None:

@@ -374,12 +374,15 @@ ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "force": FORCE_FIELD,
     "mutation_authorized": MUTATION_AUTHORIZED_FIELD,
 }
-RAW_PROWL_COMMAND_PATTERN: Final[re.Pattern[str]] = re.compile(
-    r"PROWL_COMMAND|[\[(]['\"]prowl['\"]"
+RAW_PROWL_COMMAND_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
+    re.compile(r"PROWL_COMMAND|[\[(]['\"]prowl['\"]"),
+    re.compile(r"\bHELP_OPTION\b"),
 )
 LOCAL_WORKTREE_ENUMERATION_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"['\"]git['\"]\s*,\s*['\"]worktree['\"]\s*,\s*['\"]list['\"]"),
     re.compile(r"['\"]\.git[/\\\\]worktrees(?:[/\\\\]|['\"])"),
+    re.compile(r"\bos\.(?:listdir|scandir|walk)\s*\("),
+    re.compile(r"\.(?:iterdir|glob|rglob)\s*\("),
 )
 
 
@@ -750,7 +753,9 @@ def command_for(request: object) -> tuple[str, ...]:
 
 def raw_prowl_command_violations(sources: Mapping[str, str]) -> list[str]:
     return sorted(
-        name for name, text in sources.items() if RAW_PROWL_COMMAND_PATTERN.search(text)
+        name
+        for name, text in sources.items()
+        if any(pattern.search(text) for pattern in RAW_PROWL_COMMAND_PATTERNS)
     )
 
 
