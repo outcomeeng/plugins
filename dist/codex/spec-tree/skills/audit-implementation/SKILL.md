@@ -34,7 +34,7 @@ The invocation request `$ARGUMENTS` carries:
 
 - Repository path.
 - Changeset scope as `<base>..<head>` for `--scope`.
-- Governing node paths and any explicit file-list partition supplied with the request.
+- Governing node paths.
 - Deterministic verification already run, or the concrete reason the audit is intentionally blocked before verification.
 - Run-driver identity using the six published producer fields: producer kind, agent name, agent-owning plugin name, skill name, skill-owning plugin name, and invocation role.
 

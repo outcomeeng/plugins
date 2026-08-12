@@ -205,7 +205,7 @@ Write implementation code, then run every applicable deterministic check selecte
 
 <step number="8" name="Code audit" gate="true">
 
-Dispatch the `implementation-auditor` agent with the canonical five labeled fields: repository path, exact committed changeset scope, no live file list, governing node paths, and deterministic verification already run. The wrapper and orchestration skill derive language partitions from that scope.
+Dispatch the `implementation-auditor` agent with the canonical request fields: repository path, exact committed changeset scope, governing node paths, deterministic verification already run, and run-driver identity. The wrapper and orchestration skill derive language partitions from that scope.
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — Step 4 audits the committed scope while Step 6 fans out across every affected governed evidence node and type. Those audit lenses remain necessary but insufficient, so the distinct whole-diff review in Step 9 stays required for cross-cutting effects no single audit lens catches.
 
