@@ -16,9 +16,20 @@ def test_agent_message_mappings() -> None:
     sender = participants[0]
     recipient = participants[1]
     active_reference = str(uuid.uuid5(uuid.NAMESPACE_URL, sender[module.PANE_FIELD]))
+    assert module.RESPONSE_KINDS == frozenset(
+        {
+            module.MessageKind.ACKNOWLEDGEMENT,
+            module.MessageKind.MUTATION_STATE,
+            module.MessageKind.MUTATION_AUTHORIZATION,
+        }
+    )
     assert {
         module.coordination_reference(kind, active_reference)
-        for kind in module.RESPONSE_KINDS
+        for kind in (
+            module.MessageKind.ACKNOWLEDGEMENT,
+            module.MessageKind.MUTATION_STATE,
+            module.MessageKind.MUTATION_AUTHORIZATION,
+        )
     } == {active_reference}
     proposal_reference = module.coordination_reference(
         module.MessageKind.OWNERSHIP_PROPOSAL,
@@ -37,7 +48,26 @@ def test_agent_message_mappings() -> None:
 
     observed_states: set[object] = set()
     for ordinal, (kind, expected_state) in enumerate(
-        zip(module.MessageKind, module.MessageState, strict=True), start=1
+        (
+            (
+                module.MessageKind.OWNERSHIP_PROPOSAL,
+                module.MessageState.OWNERSHIP_PROPOSED,
+            ),
+            (module.MessageKind.FACT, module.MessageState.FACT_REPORTED),
+            (
+                module.MessageKind.ACKNOWLEDGEMENT,
+                module.MessageState.ACKNOWLEDGED,
+            ),
+            (
+                module.MessageKind.MUTATION_STATE,
+                module.MessageState.MUTATION_STATE_REPORTED,
+            ),
+            (
+                module.MessageKind.MUTATION_AUTHORIZATION,
+                module.MessageState.MUTATION_AUTHORIZED,
+            ),
+        ),
+        start=1,
     ):
         content = message_content(kind, ordinal)
         fields: dict[str, object] = {}
