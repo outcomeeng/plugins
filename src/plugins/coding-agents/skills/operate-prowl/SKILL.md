@@ -45,7 +45,7 @@ Use the one candidate directly when `status` is `succeeded`. On `identity-ambigu
 
 A target that is not a coding-agent pane is outside what `agents` returns, so no path match is available for it. Say that the operator's target is not among the agent panes and name the ones that are, rather than falling back to an inventory that carries no worktree to match.
 
-Absent from `agents` is not the same as absent from Prowl. A worktree Prowl already knows but has never entered has no pane to match yet and stays reachable through an explicitly authorized `open` request, which takes a path rather than a selector; that is the lazy activation `<failure_modes>` describes. Distinguish it from a target Prowl has no relationship with at all before reporting the operator's target as unavailable.
+`resolve-target` resolves active pane targets from `agents`. When the supplied path matches no non-caller participant, return `identity-unavailable` with the complete pane inventory. A sidebar worktree that has never been entered has no pane UUID and cannot receive a message yet; an explicitly authorized `open` request can activate an operator-known path, after which `resolve-target` can run again. The resolver never probes with `open` or claims whether an unmatched path is known to Prowl.
 
 Report the target back to the operator as the supplied path while using the selected template's pane internally. Never ask the operator for a pane UUID or guess by focus, position, or title.
 
@@ -180,6 +180,12 @@ Two environment conditions silently break a handback. Name both in the delegatio
 <testing>
 
 Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Run the documented `run` form with an `agents` payload and require `status: "succeeded"`, `commandExitCode: 0`, and a public response; run `resolve-target` with pane-only, worktree-only, and combined caller evidence and require one inventory call, caller exclusion, and zero sends; fill one returned send template and require `response.data.input.trailing_enter_sent: true`; run `delegate` and `handback` with the documented envelope shapes and require the initiating coordination reference and `sender.pane` to survive. Cover every operation mapping, public JSON failure, mutation rejection before command construction, URI-bearing delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch. An unknown top-level delegation key is rejected instead of silently dropped.
+
+Recorded exercised payload/results:
+
+- `{"schemaVersion":1,"operation":"agents","arguments":{}}` with a successful public agents response → `status: "succeeded"`, `commandExitCode: 0`, and the response preserved.
+- `resolve-target` with an active non-caller worktree path → one candidate and no send; an unmatched absolute path → `identity-unavailable`, an empty candidate array, and no `open` probe.
+- A filled returned send template with `trailing_enter_sent: true` in the public response → one `succeeded` send result; the same submission evidence then supports one delivered message envelope.
 
 </testing>
 
