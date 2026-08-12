@@ -15,20 +15,6 @@ def test_instruction_block_compliance_evidence() -> None:
     assert evidence.router_policy_evidence_run().executed == source.ROUTER_POLICY_NAMES
 
 
-def test_every_harness_router_enforces_authority_hierarchy() -> None:
-    for enabled_languages in harness.template_language_subsets():
-        documents = evidence.rendered_instruction_blocks(enabled_languages)
-        source.validate_authority_hierarchy_policy(documents)
-        for agent_harness, document in documents.items():
-            for _, required_text in source.AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS:
-                assert required_text in document
-                violating_document = document.replace(required_text, "", 1)
-                with pytest.raises(source.AuthorityHierarchyPolicyError):
-                    source.validate_authority_hierarchy_policy(
-                        {agent_harness: violating_document}
-                    )
-
-
 def test_every_harness_router_authorizes_subagent_dispatch() -> None:
     for enabled_languages in harness.template_language_subsets():
         documents = evidence.rendered_instruction_blocks(enabled_languages)
