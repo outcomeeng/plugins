@@ -116,7 +116,7 @@ The taxonomy is closed: `spx/` admits no artifact outside this table, the canoni
 | Test file               | Proves one typed assertion class                   | Executable assertion evidence                                         | Test runner                                  |
 | Test infrastructure     | Provides harnesses, generators, and inert fixtures | Governed production code outside `spx/` and `tests/`                  | Code, architecture, and test-evidence audits |
 | Enforcement             | Constrains source structure                        | Lint rules, AST selectors, and pattern matchers                       | Tests against violating fixtures             |
-| `PLAN.md` / `ISSUES.md` | Coordinates pending work or known imperfections    | Stale-prone node-local context                                        | Reconciliation on context load               |
+| `PLAN.md` / `ISSUES.md` | Coordinates pending work or known imperfections    | Stale-prone node-local or product-root context                        | Reconciliation on context load               |
 
 ADR versus PDR is decided by content. An ADR governs architecture invisible to the product's users; a PDR governs behavior those users observe. Tree position and numeric prefix determine a decision's reach, so broad or foundational reach never determines its type. Product users differ by product: test-infrastructure layout can be product behavior for a methodology and architecture for an application.
 
@@ -226,7 +226,7 @@ NN-{slug}.{enabler|outcome}/
 - The spec file is `{slug}.md`, with no numeric or type suffix.
 - `knowledge/` is an optional node knowledge root — a knowledge bundle whose `index.md` lists its contents; the product root may carry `spx/knowledge/` the same way.
 - `[test]` evidence is co-located under `tests/`; the directory materializes with the first test file, and its filename encodes one assertion type and execution level according to the product's language convention.
-- `[eval]` evidence is co-located under `evals/{rule-slug}/` with `eval.toml`, `cases.jsonl`, `prompt.md`, and `history.jsonl`; full run transcripts stay ignored under `runs/`.
+- `[eval]` evidence is co-located under `evals/{rule-slug}/` with `eval.toml`, `cases.jsonl`, `prompt.md`, and `history.jsonl`, plus `prompt.template.md` when the eval declares a producer prompt source; full run transcripts stay ignored under `runs/`.
 - `PLAN.md` and `ISSUES.md` are optional coordination notes, never product truth.
 - ADRs and PDRs are files inside a node directory, never child nodes.
 
