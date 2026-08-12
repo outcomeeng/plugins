@@ -6,6 +6,16 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.6.0
+
+### Breaking
+
+- **`/message-agents` requests require `recipientPath`.** Supply the recipient's absolute worktree, repository, or working-directory path. A previous `toPane` value remains an optional identity assertion and is no longer sufficient by itself.
+
+### Added
+
+- **Path-based Prowl target resolution.** `/operate-prowl` maps an operator-supplied work path to complete matching agent-pane metadata and candidate-specific send request templates.
+
 ## 0.5.0
 
 ### Removed
