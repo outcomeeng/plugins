@@ -29,8 +29,8 @@ trials = 1
 [prompt_source]
 kind = "producer-files"
 producers = [
-  "src/plugins/coding-agents/skills/operate-prowl/SKILL.md",
-  "src/plugins/coding-agents/skills/message-agents/SKILL.md",
-  "src/plugins/coding-agents/skills/coordinate-agents/SKILL.md",
+  "dist/claude/coding-agents/skills/operate-prowl/SKILL.md",
+  "dist/claude/coding-agents/skills/message-agents/SKILL.md",
+  "dist/claude/coding-agents/skills/coordinate-agents/SKILL.md",
 ]
 template = "prompt.template.md"

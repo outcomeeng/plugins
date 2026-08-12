@@ -446,3 +446,26 @@ def test_resolver_rejects_ambiguous_worktree_caller_identity() -> None:
     assert result[module.STATUS_FIELD] == module.ExecutionStatus.IDENTITY_AMBIGUOUS
     assert result[module.CALLER_FIELD] is None
     assert result[module.CANDIDATES_FIELD] == []
+
+
+def test_resolver_rejects_conflicting_caller_identity_fields() -> None:
+    module = load_prowl_environment()
+    agents = [public_agent_item(module, ordinal) for ordinal in range(3)]
+    participants = [_expected_participant(module, agent) for agent in agents]
+    runner = RecordingRunner([prowl_agents_command_result(module, agents)])
+
+    result = module.resolve_target(
+        participants[2][module.WORKTREE_FIELD],
+        {
+            module.PROWL_PANE_ID_ENV: participants[0][module.PANE_FIELD],
+            module.PROWL_WORKTREE_PATH_ENV: participants[1][module.WORKTREE_FIELD],
+        },
+        runner,
+    )
+
+    assert result[module.STATUS_FIELD] == module.ExecutionStatus.IDENTITY_UNAVAILABLE
+    assert result[module.CALLER_FIELD] is None
+    assert result[module.CANDIDATES_FIELD] == []
+    assert runner.calls == [
+        (module.command_for(module.operation_request(module.Operation.AGENTS)), None)
+    ]

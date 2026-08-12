@@ -1,20 +1,20 @@
 <!-- Generated from the complete producer set:
-src/plugins/coding-agents/skills/operate-prowl/SKILL.md
-src/plugins/coding-agents/skills/message-agents/SKILL.md
-src/plugins/coding-agents/skills/coordinate-agents/SKILL.md
+dist/claude/coding-agents/skills/operate-prowl/SKILL.md
+dist/claude/coding-agents/skills/message-agents/SKILL.md
+dist/claude/coding-agents/skills/coordinate-agents/SKILL.md
 -->
 
 Apply the complete Prowl resolution, semantic messaging, and coordination producers below to the supplied authoritative evidence. Resolve every operator-named path through the Prowl producer, construct every message through the messaging producer, and return only the coordinator's structured JSON verdict. Do not invoke external tools or send messages during this evaluation; execute the supplied producers against the public evidence in the request.
 
 <pre><code>
-<!-- Producer: src/plugins/coding-agents/skills/operate-prowl/SKILL.md -->
+<!-- Producer: dist/claude/coding-agents/skills/operate-prowl/SKILL.md -->
 
 ---
 name: operate-prowl
 description: >-
   ALWAYS invoke this skill when a workflow needs a public Prowl operation or a correlated delegation handback between Prowl coding agents. NEVER run Prowl command help or construct the public CLI command directly when this capability is available.
 argument-hint: "<operation, delegation, or JSON request>"
-allowed-tools: Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py":*), {{! tool('ask_user') !}}
+allowed-tools: Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py":*), AskUserQuestion
 ---
 
 <objective>
@@ -52,7 +52,7 @@ printf '%s\n' '{"schemaVersion":1,"path":"<absolute-operator-supplied-path>"}' |
 
 The resolver runs the public `agents` operation once and returns its complete checked result under `inventory`, every complete participant under `participants`, the complete caller selected from `PROWL_PANE_ID` or the exact `PROWL_WORKTREE_PATH` fallback, and non-caller path matches under `candidates`. When both caller values exist, both must identify the same participant. Each candidate carries its complete participant metadata and a `sendRequestTemplate` with that pane already selected, `noWait: true`, and `text: null`. Fill `text` with the semantic payload; never repair the JSON through shell substitution or a temporary file.
 
-Use the one candidate directly when `status` is `succeeded`. On `identity-ambiguous` with a complete caller, use `{{! tool('ask_user') !}}` for one single-select question. Number candidates in resolver order; show each candidate's complete pane, worktree, branch, and repository; and map the answer back to that exact captured candidate, including its `sendRequestTemplate`. When the runtime's option cap is below the candidate count, include the complete numbered inventory in the question and accept an exact candidate number through its free-form response; never omit a candidate. On `identity-ambiguous` with `caller: null`, report the exact detail as an unresolved caller-identity conflict and stop; no candidate choice can resolve it. On `identity-unavailable`, report the supplied path and the returned participant worktrees. The resolver performs no send in every result state.
+Use the one candidate directly when `status` is `succeeded`. On `identity-ambiguous` with a complete caller, use `AskUserQuestion` for one single-select question. Number candidates in resolver order; show each candidate's complete pane, worktree, branch, and repository; and map the answer back to that exact captured candidate, including its `sendRequestTemplate`. When the runtime's option cap is below the candidate count, include the complete numbered inventory in the question and accept an exact candidate number through its free-form response; never omit a candidate. On `identity-ambiguous` with `caller: null`, report the exact detail as an unresolved caller-identity conflict and stop; no candidate choice can resolve it. On `identity-unavailable`, report the supplied path and the returned participant worktrees. The resolver performs no send in every result state.
 
 A target that is not a coding-agent pane is outside what `agents` returns, so no path match is available for it. Say that the operator's target is not among the agent panes and name the ones that are, rather than falling back to an inventory that carries no worktree to match.
 
@@ -77,7 +77,7 @@ Report the target back to the operator as the supplied path while using the sele
 
 `list` inventories instantiated terminal panes only. A worktree visible in Prowl's sidebar but never entered in the current app process can be absent from `list` because it has no pane UUID yet.
 
-3. For `key`, `focus`, `tab-create`, `tab-close`, `pane-close`, or `open`, require an explicit user instruction authorizing that exact external mutation in the same turn. `open` can visibly switch focus and create a first terminal tab, so it is never read-only. When authorization is absent, use `{{! tool('ask_user') !}}` with the exact operation and complete target identity; do not run the adapter. After authorization, add `"mutationAuthorized": true` inside `arguments`. For `open`, set arguments to `{"mutationAuthorized":true}` or `{"path":"<complete-source-supplied-path>","mutationAuthorized":true}`.
+3. For `key`, `focus`, `tab-create`, `tab-close`, `pane-close`, or `open`, require an explicit user instruction authorizing that exact external mutation in the same turn. `open` can visibly switch focus and create a first terminal tab, so it is never read-only. When authorization is absent, use `AskUserQuestion` with the exact operation and complete target identity; do not run the adapter. After authorization, add `"mutationAuthorized": true` inside `arguments`. For `open`, set arguments to `{"mutationAuthorized":true}` or `{"path":"<complete-source-supplied-path>","mutationAuthorized":true}`.
 4. Submit a low-level request over stdin.
 
 When the shell accepts multiline input:
@@ -235,14 +235,14 @@ Recorded exercised payload/results:
 </success_criteria>
 
 
-<!-- Producer: src/plugins/coding-agents/skills/message-agents/SKILL.md -->
+<!-- Producer: dist/claude/coding-agents/skills/message-agents/SKILL.md -->
 
 ---
 name: message-agents
 description: >-
   ALWAYS invoke this skill when discovering a Prowl coding-agent recipient or sending facts, ownership proposals, state reports, authorizations, or acknowledgements to another agent pane.
 argument-hint: "<JSON message request>"
-allowed-tools: Skill, Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py":*), {{! tool('ask_user') !}}
+allowed-tools: Skill, Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py":*), AskUserQuestion
 ---
 
 <objective>
@@ -253,7 +253,7 @@ A source-owned coordination envelope delivered to one complete Prowl pane identi
 
 1. Read `$ARGUMENTS`. When it is empty or whitespace, stop with `invalid-schema` and require one JSON message request containing `recipientPath`, `kind`, `subject`, and `facts`; perform no discovery or delivery. Otherwise interpret it as that request, with `recipientPath` holding the recipient's absolute worktree, repository, or working-directory path and with any applicable coordination fields. The request may carry `toPane` only as a complete identity assertion from an upstream coordination plan. When required data is absent, stop and name it before discovery or delivery; never invent message data or ask for a pane UUID.
 2. Invoke `/operate-prowl` once for `resolve-target` with the supplied path. Preserve the complete result. It returns the checked inventory, complete caller and participants, and non-caller candidates whose `sendRequestTemplate` already selects each pane with immediate-return mode and normal trailing-Enter behavior.
-3. Require a complete resolved caller and one selected candidate. On `identity-ambiguous` with `caller: null`, report the exact detail as an unresolved caller-identity conflict and stop; never ask the operator to select from the empty candidate set. Otherwise, when the request carries `toPane`, match it against the captured non-caller candidates before considering cardinality: exactly one matching candidate selects it, while zero or multiple matches stop with `invalid-identity`. Without `toPane`, use the sole candidate on `succeeded`. On `identity-ambiguous`, use `{{! tool('ask_user') !}}` for one single-select question: number candidates in resolver order, show each candidate's complete pane, worktree, branch, and repository, and map the answer back to that exact captured candidate and its `sendRequestTemplate` without rerunning resolution. When the runtime's option cap is below the candidate count, include the complete numbered inventory in the question and accept an exact candidate number through its free-form response; never omit a candidate. On `identity-unavailable`, report the exact detail and participant worktrees. NEVER select by title, focus, position, prose, or the caller's pane.
+3. Require a complete resolved caller and one selected candidate. On `identity-ambiguous` with `caller: null`, report the exact detail as an unresolved caller-identity conflict and stop; never ask the operator to select from the empty candidate set. Otherwise, when the request carries `toPane`, match it against the captured non-caller candidates before considering cardinality: exactly one matching candidate selects it, while zero or multiple matches stop with `invalid-identity`. Without `toPane`, use the sole candidate on `succeeded`. On `identity-ambiguous`, use `AskUserQuestion` for one single-select question: number candidates in resolver order, show each candidate's complete pane, worktree, branch, and repository, and map the answer back to that exact captured candidate and its `sendRequestTemplate` without rerunning resolution. When the runtime's option cap is below the candidate count, include the complete numbered inventory in the question and accept an exact candidate number through its free-form response; never omit a candidate. On `identity-unavailable`, report the exact detail and participant worktrees. NEVER select by title, focus, position, prose, or the caller's pane.
 4. Build the bundled script's `discovery` input directly from the resolver result: `caller` is the returned caller, `targets` is the returned complete participant list, and `status` is `prowl-pane`. Set `toPane` from the selected candidate's complete participant. This source-owned bridge uses the captured resolver result directly; never write an intermediate file or run an ad hoc transformation script.
 5. Build the bundled script's message request with the selected candidate's `toPane`, `kind`, `subject`, `facts`, optional `request`, optional `coordinationReference`, optional `mutationTarget`, optional `observedState`, and optional `accepted`. `recipientPath` has completed target resolution and never enters the envelope. `kind` is exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. An acknowledgement, mutation-state report, or mutation authorization MUST reuse the active proposal UUID; an initiating proposal or fact MUST omit it so the adapter creates a new UUID. An acknowledgement MUST carry boolean `accepted`; every other kind omits it.
 6. For a delegated mutation, use the source-owned handshake:
@@ -339,7 +339,7 @@ Recorded exercised payload/results:
 </success_criteria>
 
 
-<!-- Producer: src/plugins/coding-agents/skills/coordinate-agents/SKILL.md -->
+<!-- Producer: dist/claude/coding-agents/skills/coordinate-agents/SKILL.md -->
 
 ---
 name: coordinate-agents
