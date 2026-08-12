@@ -104,7 +104,7 @@ Specified and failing are valid states. They expose where lower layers must catc
 
 - ALWAYS: classify content by the artifact purpose that owns it.
 
-The taxonomy is closed: `spx/` admits no content outside it. Placement decides only between the two authoring layers — content that governs is an ADR or PDR, content that declares is a spec; verification and implementation artifacts are never placed by classification, because assertions derive their locations.
+The taxonomy is closed: `spx/` admits no artifact outside it, and `spx/local/` overlays are operational configuration rather than artifacts. Placement decides only between the two authoring layers — content that governs is an ADR or PDR, content that declares is a spec; verification and implementation artifacts are never placed by classification, because assertion tags derive evidence locations and node ownership with the language's declared infrastructure home derives implementation locations.
 
 | Artifact                | Purpose                                            | Contains                                             | Verified by                                  |
 | ----------------------- | -------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------- |
