@@ -104,18 +104,19 @@ Specified and failing are valid states. They expose where lower layers must catc
 
 - ALWAYS: classify content by the artifact purpose that owns it.
 
-The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and a node's optional knowledge root. Operational files — `spx/local/` overlays and the spec-tree exclusion mechanism — are configuration, not artifacts. Coordination notes raise no placement question: `PLAN.md` and `ISSUES.md` carry no truth and sit at their node per the canonical shape. Placement decides only between the two authoring layers — content that governs is an ADR or PDR, content that declares is a spec. Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and node ownership with the language's declared infrastructure home derives implementation locations.
+The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and the optional knowledge root a node or the product root carries. Operational files — `spx/local/` overlays and the spec-tree exclusion mechanism — are configuration, not artifacts. Coordination notes raise no placement question: `PLAN.md` and `ISSUES.md` carry no truth and sit at their node or the product root. Placement decides only between the two authoring layers — content that governs is an ADR or PDR, content that declares is a spec. Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and node ownership with the language's declared infrastructure home derives implementation locations (see `<test_artifact_boundaries>`).
 
-| Artifact                | Purpose                                            | Contains                                             | Verified by                                  |
-| ----------------------- | -------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------- |
-| ADR                     | Governs how the product is built                   | Architecture decisions, rationale, invariants        | ADR audit                                    |
-| PDR                     | Governs what users can rely on                     | Product decisions and observable properties          | PDR audit                                    |
-| Enabler spec            | Declares infrastructure output                     | `PROVIDES ... SO THAT ... CAN ...` and assertions    | Linked evidence                              |
-| Outcome spec            | Declares an output hypothesis                      | Output, outcome, impact, and assertions              | Linked evidence                              |
-| Test file               | Proves one typed assertion class                   | Executable assertion evidence                        | Test runner                                  |
-| Test infrastructure     | Provides harnesses, generators, and inert fixtures | Governed production code outside `spx/` and `tests/` | Code, architecture, and test-evidence audits |
-| Enforcement             | Constrains source structure                        | Lint rules, AST selectors, and pattern matchers      | Tests against violating fixtures             |
-| `PLAN.md` / `ISSUES.md` | Coordinates pending work or known imperfections    | Stale-prone node-local context                       | Reconciliation on context load               |
+| Artifact                | Purpose                                            | Contains                                                              | Verified by                                  |
+| ----------------------- | -------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------- |
+| Product spec            | Declares the product's identity and scope          | Product hypothesis, consumers, surfaces, and product-level assertions | Linked evidence                              |
+| ADR                     | Governs how the product is built                   | Architecture decisions, rationale, invariants                         | ADR audit                                    |
+| PDR                     | Governs what users can rely on                     | Product decisions and observable properties                           | PDR audit                                    |
+| Enabler spec            | Declares infrastructure output                     | `PROVIDES ... SO THAT ... CAN ...` and assertions                     | Linked evidence                              |
+| Outcome spec            | Declares an output hypothesis                      | Output, outcome, impact, and assertions                               | Linked evidence                              |
+| Test file               | Proves one typed assertion class                   | Executable assertion evidence                                         | Test runner                                  |
+| Test infrastructure     | Provides harnesses, generators, and inert fixtures | Governed production code outside `spx/` and `tests/`                  | Code, architecture, and test-evidence audits |
+| Enforcement             | Constrains source structure                        | Lint rules, AST selectors, and pattern matchers                       | Tests against violating fixtures             |
+| `PLAN.md` / `ISSUES.md` | Coordinates pending work or known imperfections    | Stale-prone node-local context                                        | Reconciliation on context load               |
 
 ADR versus PDR is decided by content. An ADR governs architecture invisible to the product's users; a PDR governs behavior those users observe. Tree position and numeric prefix determine a decision's reach, so broad or foundational reach never determines its type. Product users differ by product: test-infrastructure layout can be product behavior for a methodology and architecture for an application.
 
