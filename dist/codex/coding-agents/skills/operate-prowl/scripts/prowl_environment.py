@@ -377,6 +377,10 @@ ARGUMENT_NAMES: Final[Mapping[str, str]] = {
 RAW_PROWL_COMMAND_PATTERN: Final[re.Pattern[str]] = re.compile(
     r"PROWL_COMMAND|[\[(]['\"]prowl['\"]"
 )
+LOCAL_WORKTREE_ENUMERATION_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
+    re.compile(r"['\"]git['\"]\s*,\s*['\"]worktree['\"]\s*,\s*['\"]list['\"]"),
+    re.compile(r"['\"]\.git[/\\\\]worktrees(?:[/\\\\]|['\"])"),
+)
 
 
 class ExecutionStatus(StrEnum):
@@ -747,6 +751,16 @@ def command_for(request: object) -> tuple[str, ...]:
 def raw_prowl_command_violations(sources: Mapping[str, str]) -> list[str]:
     return sorted(
         name for name, text in sources.items() if RAW_PROWL_COMMAND_PATTERN.search(text)
+    )
+
+
+def local_worktree_enumeration_violations(
+    sources: Mapping[str, str],
+) -> list[str]:
+    return sorted(
+        name
+        for name, text in sources.items()
+        if any(pattern.search(text) for pattern in LOCAL_WORKTREE_ENUMERATION_PATTERNS)
     )
 
 
@@ -1378,8 +1392,16 @@ def _delegation_from_cli(value: dict[str, object]) -> dict[str, object]:
 
 
 def command_exit_code(result: object) -> int:
-    status = _object(result, "result").get(STATUS_FIELD)
-    return 0 if status == ExecutionStatus.SUCCEEDED else 2
+    value = _object(result, "result")
+    status = value.get(STATUS_FIELD)
+    if status == ExecutionStatus.SUCCEEDED:
+        return 0
+    if value.get(OPERATION_FIELD) == CliOperation.RESOLVE_TARGET and status in {
+        ExecutionStatus.IDENTITY_UNAVAILABLE,
+        ExecutionStatus.IDENTITY_AMBIGUOUS,
+    }:
+        return 0
+    return 2
 
 
 def _resolve_target_from_cli(

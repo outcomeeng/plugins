@@ -1,0 +1,5 @@
+"""Violating adapter payload for local worktree enumeration detection."""
+
+import subprocess
+
+subprocess.run(["git", "worktree", "list"], check=True)

@@ -37,6 +37,10 @@ OPERATE_PROWL_RELATIVE = Path("skills/operate-prowl")
 RAW_PROWL_VIOLATION_FIXTURE = (
     ROOT / "outcomeeng_testing/fixtures/prowl_environment/raw_prowl_command.py.txt"
 )
+LOCAL_WORKTREE_ENUMERATION_VIOLATION_FIXTURE = (
+    ROOT / "outcomeeng_testing/fixtures/prowl_environment/"
+    "local_worktree_enumeration.py.txt"
+)
 PROPERTY_SEED = 2026071801
 PROPERTY_EXAMPLES = 40
 PROPERTY_REPLAY_PATH = (
@@ -262,9 +266,22 @@ def prowl_command_source_texts() -> dict[str, str]:
     return _source_texts(script_paths)
 
 
+def prowl_environment_source_texts() -> dict[str, str]:
+    """Return the authoritative Prowl adapter source observation."""
+    return _source_texts((PROWL_ENVIRONMENT_PATH,))
+
+
 def raw_prowl_violation_source() -> tuple[str, dict[str, str]]:
     """Return the violating fixture identity and its source observation."""
     return (
         str(RAW_PROWL_VIOLATION_FIXTURE.relative_to(ROOT)),
         _source_texts((RAW_PROWL_VIOLATION_FIXTURE,)),
+    )
+
+
+def local_worktree_enumeration_violation_source() -> tuple[str, dict[str, str]]:
+    """Return the local-enumeration fixture identity and source observation."""
+    return (
+        str(LOCAL_WORKTREE_ENUMERATION_VIOLATION_FIXTURE.relative_to(ROOT)),
+        _source_texts((LOCAL_WORKTREE_ENUMERATION_VIOLATION_FIXTURE,)),
     )

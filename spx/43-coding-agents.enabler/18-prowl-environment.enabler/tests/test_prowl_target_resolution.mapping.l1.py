@@ -103,16 +103,28 @@ def test_resolver_reports_each_non_caller_match_cardinality_without_sending() ->
     for cardinality in module.TargetMatchCardinality:
         target_path = resolver_target_path(module, agents, cardinality)
         runner = RecordingRunner([prowl_agents_command_result(module, agents)])
-        result = module.resolve_target(
-            target_path,
-            {
+        output = StringIO()
+        exit_code = module.main(
+            [module.CliOperation.RESOLVE_TARGET],
+            runner=runner,
+            stdin=StringIO(
+                json.dumps(
+                    {
+                        module.SCHEMA_VERSION_FIELD: module.SCHEMA_VERSION,
+                        module.PATH_FIELD: target_path,
+                    }
+                )
+            ),
+            stdout=output,
+            environment={
                 module.PROWL_PANE_ID_ENV: cast(
                     dict[str, str], agents[0][module.PANE_FIELD]
                 )[module.ID_FIELD]
             },
-            runner,
         )
+        result = json.loads(output.getvalue())
 
+        assert exit_code == 0
         assert result[module.STATUS_FIELD] == _expected_resolution_status(
             module, cardinality
         )
@@ -131,6 +143,64 @@ def test_resolver_reports_each_non_caller_match_cardinality_without_sending() ->
                 None,
             )
         ]
+
+
+def test_resolver_cli_rejects_malformed_input_and_execution_failure() -> None:
+    module = load_prowl_environment()
+    agents = [public_agent_item(module, ordinal) for ordinal in range(2)]
+    environment = {
+        module.PROWL_PANE_ID_ENV: cast(dict[str, str], agents[0][module.PANE_FIELD])[
+            module.ID_FIELD
+        ]
+    }
+    malformed_output = StringIO()
+
+    malformed_exit_code = module.main(
+        [module.CliOperation.RESOLVE_TARGET],
+        runner=RecordingRunner([]),
+        stdin=StringIO(
+            json.dumps({module.SCHEMA_VERSION_FIELD: module.SCHEMA_VERSION})
+        ),
+        stdout=malformed_output,
+        environment=environment,
+    )
+
+    malformed_result = json.loads(malformed_output.getvalue())
+    assert malformed_exit_code != 0
+    assert (
+        malformed_result[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+    )
+
+    failed_output = StringIO()
+    failed_runner = RecordingRunner(
+        [module.CommandResult(1, "", str(module.ExecutionStatus.COMMAND_FAILED))]
+    )
+    target_path = cast(
+        str,
+        cast(dict[str, object], agents[1][module.WORKTREE_FIELD])[module.PATH_FIELD],
+    )
+
+    failed_exit_code = module.main(
+        [module.CliOperation.RESOLVE_TARGET],
+        runner=failed_runner,
+        stdin=StringIO(
+            json.dumps(
+                {
+                    module.SCHEMA_VERSION_FIELD: module.SCHEMA_VERSION,
+                    module.PATH_FIELD: target_path,
+                }
+            )
+        ),
+        stdout=failed_output,
+        environment=environment,
+    )
+
+    failed_result = json.loads(failed_output.getvalue())
+    assert failed_exit_code != 0
+    assert failed_result[module.STATUS_FIELD] == module.ExecutionStatus.COMMAND_FAILED
+    assert failed_runner.calls == [
+        (module.command_for(module.operation_request(module.Operation.AGENTS)), None)
+    ]
 
 
 def test_repository_child_path_does_not_match_repository_root() -> None:

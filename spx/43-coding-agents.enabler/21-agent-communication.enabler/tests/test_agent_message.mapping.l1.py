@@ -41,6 +41,8 @@ def test_agent_message_mappings() -> None:
         None,
         lambda: uuid.uuid5(uuid.NAMESPACE_URL, recipient[module.WORKTREE_FIELD]),
     )
+    assert str(uuid.UUID(proposal_reference)) == proposal_reference
+    assert str(uuid.UUID(fact_reference)) == fact_reference
     assert len({active_reference, proposal_reference, fact_reference}) == 3
 
     sender_target, sender_state = mutation_observation(module, sender)

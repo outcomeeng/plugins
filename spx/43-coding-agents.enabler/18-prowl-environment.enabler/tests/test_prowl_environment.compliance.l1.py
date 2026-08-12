@@ -11,8 +11,10 @@ from outcomeeng_testing.generators.prowl_environment import (
 from outcomeeng_testing.harnesses.prowl_environment import (
     RecordingRunner,
     load_prowl_environment,
+    local_worktree_enumeration_violation_source,
     observe_delegation_sender_pane,
     prowl_command_source_texts,
+    prowl_environment_source_texts,
     raw_prowl_violation_source,
 )
 
@@ -80,6 +82,14 @@ def test_list_and_open_preserve_lazy_terminal_resolution() -> None:
     assert runner.calls == [
         (module.command_for(list_request), None),
         (module.command_for(open_request), None),
+    ]
+    assert (
+        module.local_worktree_enumeration_violations(prowl_environment_source_texts())
+        == []
+    )
+    fixture_path, fixture_source = local_worktree_enumeration_violation_source()
+    assert module.local_worktree_enumeration_violations(fixture_source) == [
+        fixture_path
     ]
 
 
