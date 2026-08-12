@@ -323,6 +323,19 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
         == recipient[module.PANE_FIELD]
     )
 
+    with pytest.raises(module.MessageError) as raised:
+        module.send_request(
+            {**valid_request, module.TO_PANE_FIELD: sender[module.PANE_FIELD]},
+            {
+                **discovery,
+                module.TARGETS_FIELD: [
+                    sender,
+                    *cast(list[object], discovery[module.TARGETS_FIELD]),
+                ],
+            },
+        )
+    assert raised.value.status == module.DeliveryStatus.INVALID_IDENTITY
+
     for invalid_discovery in (
         {**discovery, module.STATUS_FIELD: "identity-unavailable"},
         {**discovery, module.STATUS_FIELD: "identity-ambiguous"},

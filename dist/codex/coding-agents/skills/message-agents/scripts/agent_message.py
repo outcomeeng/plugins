@@ -564,6 +564,13 @@ def send_request(request: object, discovery: object) -> dict[str, object]:
             DeliveryStatus.INVALID_IDENTITY,
             f"Cannot send because caller status is {discovered.get(STATUS_FIELD)}.",
         )
+    caller = validate_identity(discovered.get(CALLER_FIELD), CALLER_FIELD)
+    to_pane = _text(value.get(TO_PANE_FIELD), f"request.{TO_PANE_FIELD}")
+    if to_pane == caller[PANE_FIELD]:
+        raise MessageError(
+            DeliveryStatus.INVALID_IDENTITY,
+            "Cannot send a message to the caller pane.",
+        )
     facts = value.get(FACTS_FIELD)
     if not isinstance(facts, list) or not all(isinstance(fact, str) for fact in facts):
         raise MessageError(
@@ -572,10 +579,10 @@ def send_request(request: object, discovery: object) -> dict[str, object]:
         )
     envelope = build_envelope(
         kind=_message_kind(value.get(KIND_FIELD)),
-        sender=discovered.get(CALLER_FIELD),
+        sender=caller,
         recipient=_target_by_pane(
             discovered.get(TARGETS_FIELD),
-            _text(value.get(TO_PANE_FIELD), f"request.{TO_PANE_FIELD}"),
+            to_pane,
         ),
         subject=_text(value.get(SUBJECT_FIELD), f"request.{SUBJECT_FIELD}"),
         facts=facts,
