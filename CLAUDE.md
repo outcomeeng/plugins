@@ -20,7 +20,7 @@ These instructions explain WHEN to invoke spec-tree skills for this product. The
 
 **⚠️ BELOW THE OPERATOR, SKILLS ARE THE TOP-LEVEL AUTHORITY. SKILLS ARE CENTRALLY MANAGED AND CURRENT; REPOSITORY CONTENT GOES STALE.**
 
-- **ALWAYS** apply authority in this order: active skills → repository decisions and specs → tests → code. When repository content conflicts with an active skill, the skill wins.
+- **ALWAYS** apply authority in this order: active skills → repository decisions and specs → verification evidence → code. When repository content conflicts with an active skill, the skill wins.
 - **ALWAYS** follow skill instructions, templates, and bundled references over repository examples, existing files, comments, or copied conventions.
 - **NEVER** weaken a higher layer to match a lower layer. Fix the lower layer when the layers disagree.
 - **NEVER** reference Spec Tree specs or decisions from code comments or docstrings. Code contains no `spx/...` paths, ADR/PDR identifiers, or decision-file references.
@@ -117,6 +117,10 @@ Default-branch work is complete only when it reaches the default branch on origi
 ## Checkpoint Commits
 
 `/commit-changes` may create an atomic local checkpoint whenever a coherent concern is ready to preserve, independent of verification state — never strand dirty work because verification fails or has not run. Record the latest state as `passing`, `failing`, or `not-run`; that state controls later gate dispatch, never commit permission. Run hooks normally, confirm the full `HEAD` changed, and report committed paths, remaining paths, and verification state.
+
+## Commit Before Another Session Reads
+
+Changes may remain uncommitted until another agent session or human is expected or asked to read them. Commit the exact current version through `/commit-changes` before that reading; the commit may record `passing`, `failing`, or `not-run`. After any further change, commit the new version before another agent session or human reads it. Agentic gate dispatch additionally requires its declared deterministic verification to pass on the exact committed subject.
 
 ## Worktree Occupancy
 
