@@ -34,7 +34,6 @@ The invocation request `$ARGUMENTS` carries:
 
 - Repository path.
 - Changeset scope as `<base>..<head>` for `--scope`.
-- Optional explicit live file list for advisory pre-commit audits, including modified and untracked files that are not yet part of `<head>`. A run with a live file list never satisfies an apply or merge gate.
 - Governing node paths and any explicit file-list partition supplied with the request.
 - Deterministic verification already run, or the concrete reason the audit is intentionally blocked before verification.
 - Run-driver identity using the six published producer fields: producer kind, agent name, agent-owning plugin name, skill name, skill-owning plugin name, and invocation role.
@@ -44,7 +43,6 @@ The invocation request `$ARGUMENTS` carries:
 ```text
 Repository: <absolute-repository-path>
 Scope: <base>..<head> committed changeset scope
-Live file list: none for a gating audit; <full modified and untracked paths> for an advisory audit
 Governing node(s): <full spx/... paths>
 Deterministic verification already run: <commands and results, or blocking reason>
 Run driver identity: <one JSON object with the six published producer fields>
@@ -52,7 +50,7 @@ Run driver identity: <one JSON object with the six published producer fields>
 
 If `$ARGUMENTS` is empty or lacks repository path, changeset scope, governing nodes, deterministic verification state, or run-driver identity, return BLOCKED before starting a verification run. Name the missing request fields and the exact `$ARGUMENTS` shape required to retry.
 
-Use the supplied changeset scope and explicit live file list exactly. Do not derive a different base, widen to the whole repository, drop uncommitted files, or collapse the scope to only one file unless the request supplied that exact scope. A gate-eligible request addresses an exact committed head and supplies no live file list. For an advisory pre-commit audit, record the live file list in the `--input` payload at run start and in scope payloads so SPX persistence preserves the files inspected, while reporting that the run cannot satisfy a gate.
+Use the supplied committed changeset scope exactly. Do not derive a different base, widen to the whole repository, or collapse the scope to only one file unless the request supplied that exact scope. Reject a request that asks the verifier agent session to inspect modified or untracked files: the exact version must be committed before the audit is dispatched.
 
 </request_contract>
 
@@ -71,7 +69,7 @@ spx verification run start \
   --input stdin
 ```
 
-The `--input` payload carries the request, deterministic verification state, governing nodes, and any explicit live file list supplied for pre-commit audits. The command returns a JSON locator; extract its `runToken` field exactly and use that token for every later command. Never pass the whole JSON locator as `--run`.
+The `--input` payload carries the request, deterministic verification state, and governing nodes. The command returns a JSON locator; extract its `runToken` field exactly and use that token for every later command. Never pass the whole JSON locator as `--run`.
 
 Execute every state-changing `spx verification run` command serially. A tool
 response or tool-call batch contains at most one `start`, `scope add`, `finding
@@ -295,8 +293,6 @@ Plan the complete inventory before invoking any concern skill, but NEVER mark a 
 
 A missing required concern skill, unsupported path already claimed by a recognized implementation-language partition, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a recognized language partition; queue the complete final gap inventory, persist it serially, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
-When the request supplies an explicit live file list, pass that list as the exact advisory scope to every complete concern trio rather than inspecting the committed changeset alone. A live path claimed by a recognized implementation-language concern that receives no result is a coverage gap even when it is absent from `<head>`; an artifact outside every implementation concern remains outside implementation-audit ownership.
-
 </coverage_model>
 
 <skill_map>
@@ -485,8 +481,8 @@ How to avoid: Stop and return the boundary failure with the deterministic comman
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-path, or coverage-gap unit within a recognized implementation-language partition appears in the rendered projection rather than being hidden in prose; artifacts outside implementation-audit ownership produce no fabricated coverage unit.
 - Every audited concern preserves its complete non-empty inspected-path set as path-scoped units whose `subject` fields are the exact paths; every expected unit is audited only after the concern completes, and its finding count derives from accepted finding rows rather than a custom field.
-- The same request, live file list, scope, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
-- A gating run addresses a committed head with no live file list; a run carrying modified or untracked files identifies itself as advisory and is never presented as gate evidence.
+- The same request, committed scope, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
+- Every run addresses an exact committed head; modified or untracked files are rejected before project inspection because the verifier agent session reads only a committed version.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>
