@@ -18,6 +18,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
   **Migration.** A test that moved a spec-declared case into production to satisfy an earlier audit can move it back into the test body; the audit no longer requires the production symbol, and the symbol itself is now a finding if nothing else requires it.
 
+- **A symbol with no in-repository caller is no longer laundered on that basis alone.** Step 3a judged source ownership from the callers it could see, so a public error code, a package version dunder, or a protocol only third parties implement read as a symbol nothing requires — the same false positive in the opposite direction. Ownership now turns on a contract outside the test tree, and the absent caller opens that question instead of settling it: the audit inspects dynamic registration, the published package surface, generated and reflective use, and consumers outside the checkout, and names those surfaces in any laundering finding it still reports.
+
 ## 0.88.8
 
 ### Changed

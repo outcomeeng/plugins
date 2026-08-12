@@ -154,6 +154,8 @@ Apply category-specific ownership checks to every imported test-infrastructure a
 | Fixture       | Inert whole payload consumed by path or bytes                                          | Isolated tokens, values, expected outputs, or executable exports                                            |
 | Discovery     | Test collection and registration policy                                                | Fixture bodies, domain values, generated cases, or hidden setup policy                                      |
 
+A source symbol the test cites is judged by declared-contract ownership: production consumes it, emits it, publishes it as API, registers it, or serializes it against a declared schema. An absent in-repository caller opens that question rather than settling it, so inspect dynamic registration, the published package surface, generated and reflective use, and consumers outside the checkout before reporting the symbol as laundered. Name the surfaces inspected in the finding.
+
 For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source and independent oracle in the inventory. Apply the per-assertion-type litmus questions from `/test-evidence-standards`. A value with no valid owner produces a `source-ownership` finding; an expectation derived from the production path under test produces an `oracle-independence` finding. The finding's `file` names the artifact that copied or coupled the value. Every `source-ownership` finding sets `remediation_target` to `source-contract`, even when the copied value appears in a harness, generator, fixture, discovery file, or test; the defect location never becomes the semantic owner.
 
 </step>
