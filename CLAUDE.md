@@ -431,7 +431,7 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 
 - `src/plugins/` — authored skills, thin agents, manifests, and templates. One subdirectory per plugin.
 - `dist/claude/`, `dist/codex/` — generated runtime plugin trees (rebuilt from `src/plugins/` by `just build-skills`) shipped to consumer repos. The plugin catalog in [`README.md`](README.md#plugins) is authoritative for what each plugin contains; this file does not duplicate it.
-- `spx/` — this product's spec tree (durable map). The managed Spec Tree instruction block in this root file is the skill router. Per-node `local/` holds product-specific skill overlays; `spx/local/` also carries the generated-source declaration `generated-sources.toml`, a verification-scope input distinct from the `*.md` skill overlays.
+- `spx/` — this product's spec tree (durable map). The managed Spec Tree instruction block in this root file is the skill router. `spx/local/` holds the product-specific skill overlays and carries the generated-source declaration `generated-sources.toml`, a verification-scope input distinct from the `*.md` skill overlays.
 - `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/` — this product's Python toolchain (validation, distribution, eval harness) and its test infrastructure. Not portable to consumer projects; do not import from inside any plugin.
 - `.claude-plugin/marketplace.json` — Claude Code marketplace catalog (one entry per shipped plugin).
 - `.agents/plugins/marketplace.json` — Codex marketplace catalog (mirror of the above).
