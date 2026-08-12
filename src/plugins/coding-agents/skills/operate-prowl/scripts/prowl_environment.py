@@ -110,6 +110,8 @@ INVENTORY_FIELD = "inventory"
 SEND_REQUEST_TEMPLATE_FIELD = "sendRequestTemplate"
 INPUT_FIELD = "input"
 TRAILING_ENTER_SENT_FIELD = "trailing_enter_sent"
+RESOLUTION_FIELD = "resolution"
+CREATED_TAB_FIELD = "created_tab"
 PROWL_PANE_ID_ENV = "PROWL_PANE_ID"
 PROWL_WORKTREE_PATH_ENV = "PROWL_WORKTREE_PATH"
 CALLER_IDENTITY_ENV_FIELDS = (PROWL_PANE_ID_ENV, PROWL_WORKTREE_PATH_ENV)
@@ -392,6 +394,12 @@ class TargetMatchCardinality(StrEnum):
     ZERO = "zero"
     ONE = "one"
     MULTIPLE = "multiple"
+
+
+class OpenResolution(StrEnum):
+    EXACT_ROOT = "exact-root"
+    INSIDE_ROOT = "inside-root"
+    NEW_ROOT = "new-root"
 
 
 def target_match_cardinality(candidate_count: int) -> TargetMatchCardinality:

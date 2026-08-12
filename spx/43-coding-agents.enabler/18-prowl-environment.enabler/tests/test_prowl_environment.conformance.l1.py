@@ -23,6 +23,12 @@ def test_prowl_environment_conformance() -> None:
                 module.ID_FIELD: f"{operation.value}-identity-verbatim",
             },
         }
+        response_data = response[module.DATA_FIELD]
+        if operation is module.Operation.OPEN:
+            response_data[module.RESOLUTION_FIELD] = module.OpenResolution.EXACT_ROOT
+            response_data[module.CREATED_TAB_FIELD] = True
+        elif operation is module.Operation.SEND:
+            response_data[module.INPUT_FIELD] = {module.TRAILING_ENTER_SENT_FIELD: True}
         output_stream = StringIO()
 
         cli_exit_code = module.main(
@@ -40,6 +46,19 @@ def test_prowl_environment_conformance() -> None:
         assert validated[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
         assert validated[module.RESPONSE_FIELD] == response
         assert validated[module.COMMAND_EXIT_CODE_FIELD] == 0
+        validated_response = validated[module.RESPONSE_FIELD]
+        validated_data = validated_response[module.DATA_FIELD]
+        if operation is module.Operation.OPEN:
+            assert (
+                validated_data[module.RESOLUTION_FIELD]
+                == module.OpenResolution.EXACT_ROOT
+            )
+            assert validated_data[module.CREATED_TAB_FIELD] is True
+        elif operation is module.Operation.SEND:
+            assert (
+                validated_data[module.INPUT_FIELD][module.TRAILING_ENTER_SENT_FIELD]
+                is True
+            )
 
 
 def test_prowl_environment_failure_results_conform() -> None:

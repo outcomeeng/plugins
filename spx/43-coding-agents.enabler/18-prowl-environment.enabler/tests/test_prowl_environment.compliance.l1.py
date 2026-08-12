@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import cast
 
@@ -5,13 +6,81 @@ from outcomeeng_testing.generators.prowl_environment import (
     agent_identity,
     delegation_text_case,
     operation_requests,
+    public_agent_item,
 )
 from outcomeeng_testing.harnesses.prowl_environment import (
+    RecordingRunner,
     load_prowl_environment,
     observe_delegation_sender_pane,
     prowl_command_source_texts,
     raw_prowl_violation_source,
 )
+
+
+def test_list_and_open_preserve_lazy_terminal_resolution() -> None:
+    module = load_prowl_environment()
+    instantiated_pane = public_agent_item(module, 0)
+    worktree = cast(dict[str, object], instantiated_pane[module.WORKTREE_FIELD])
+    worktree_path = cast(str, worktree[module.PATH_FIELD])
+    list_request = module.operation_request(module.Operation.LIST)
+    open_request = module.operation_request(
+        module.Operation.OPEN,
+        path=worktree_path,
+        mutation_authorized=True,
+    )
+    runner = RecordingRunner(
+        [
+            module.CommandResult(
+                0,
+                json.dumps(
+                    {
+                        module.OK_FIELD: True,
+                        module.DATA_FIELD: {
+                            module.ITEMS_FIELD: [instantiated_pane],
+                        },
+                    }
+                ),
+                "",
+            ),
+            module.CommandResult(
+                0,
+                json.dumps(
+                    {
+                        module.OK_FIELD: True,
+                        module.DATA_FIELD: {
+                            module.RESOLUTION_FIELD: module.OpenResolution.EXACT_ROOT,
+                            module.CREATED_TAB_FIELD: True,
+                            module.TARGET_FIELD: instantiated_pane,
+                        },
+                    }
+                ),
+                "",
+            ),
+        ]
+    )
+
+    listed = module.execute(list_request, runner)
+    opened = module.execute(open_request, runner)
+
+    listed_response = cast(dict[str, object], listed[module.RESPONSE_FIELD])
+    listed_data = cast(dict[str, object], listed_response[module.DATA_FIELD])
+    listed_items = cast(list[dict[str, object]], listed_data[module.ITEMS_FIELD])
+    opened_response = cast(dict[str, object], opened[module.RESPONSE_FIELD])
+    opened_data = cast(dict[str, object], opened_response[module.DATA_FIELD])
+    opened_target = cast(dict[str, object], opened_data[module.TARGET_FIELD])
+    listed_pane = cast(dict[str, object], listed_items[0][module.PANE_FIELD])
+    opened_pane = cast(dict[str, object], opened_target[module.PANE_FIELD])
+
+    assert listed[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+    assert listed_items == [instantiated_pane]
+    assert opened[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+    assert opened_data[module.RESOLUTION_FIELD] == module.OpenResolution.EXACT_ROOT
+    assert opened_data[module.CREATED_TAB_FIELD] is True
+    assert opened_pane[module.ID_FIELD] == listed_pane[module.ID_FIELD]
+    assert runner.calls == [
+        (module.command_for(list_request), None),
+        (module.command_for(open_request), None),
+    ]
 
 
 def test_prowl_environment_compliance() -> None:

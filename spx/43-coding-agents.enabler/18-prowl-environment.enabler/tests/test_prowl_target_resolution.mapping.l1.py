@@ -261,6 +261,67 @@ def test_resolver_output_builds_and_delivers_one_message_envelope() -> None:
     ]
 
 
+def test_ambiguous_resolver_requires_one_authoritative_message_pane() -> None:
+    prowl = load_prowl_environment()
+    message = load_agent_message()
+    agents = [public_agent_item(prowl, ordinal) for ordinal in range(4)]
+    participants = [_expected_participant(prowl, agent) for agent in agents]
+    runner = RecordingRunner([prowl_agents_command_result(prowl, agents)])
+    resolved = prowl.resolve_target(
+        participants[1][prowl.REPOSITORY_FIELD],
+        {prowl.PROWL_PANE_ID_ENV: participants[0][prowl.PANE_FIELD]},
+        runner,
+    )
+    candidates = resolved[prowl.CANDIDATES_FIELD]
+    selected = candidates[0][prowl.PARTICIPANT_FIELD]
+    discovery = {
+        message.SCHEMA_VERSION_FIELD: message.SCHEMA_VERSION,
+        message.STATUS_FIELD: message.DISCOVERY_READY_STATUS,
+        message.DETAIL_FIELD: None,
+        message.CALLER_FIELD: resolved[prowl.CALLER_FIELD],
+        message.TARGETS_FIELD: [
+            candidate[prowl.PARTICIPANT_FIELD] for candidate in candidates
+        ],
+    }
+    request = message.build_request(
+        to_pane=selected[prowl.PANE_FIELD],
+        kind=message.MessageKind.FACT,
+        subject=selected[prowl.BRANCH_FIELD],
+        facts=[selected[prowl.WORKTREE_FIELD]],
+        request=None,
+    )
+
+    built = message.send_request(request, discovery)
+
+    assert resolved[prowl.STATUS_FIELD] == prowl.ExecutionStatus.IDENTITY_AMBIGUOUS
+    assert len(candidates) == 3
+    assert built[message.ENVELOPE_FIELD][message.RECIPIENT_FIELD] == selected
+    assert (
+        built[message.DELIVERY_FIELD][message.TO_PANE_FIELD]
+        == selected[prowl.PANE_FIELD]
+    )
+    assert runner.calls == [
+        (prowl.command_for(prowl.operation_request(prowl.Operation.AGENTS)), None)
+    ]
+
+    for targets in (
+        [],
+        [selected, selected],
+    ):
+        invalid_discovery = {**discovery, message.TARGETS_FIELD: targets}
+        try:
+            message.send_request(request, invalid_discovery)
+        except message.MessageError as error:
+            assert error.status == message.DeliveryStatus.INVALID_IDENTITY
+        else:
+            raise AssertionError(
+                "message build accepted a pane without exactly one discovered target"
+            )
+    assert runner.calls == [
+        (prowl.command_for(prowl.operation_request(prowl.Operation.AGENTS)), None)
+    ]
+
+
 def test_resolver_maps_each_source_owned_caller_identity_shape() -> None:
     module = load_prowl_environment()
     agents = [public_agent_item(module, ordinal) for ordinal in range(2)]
