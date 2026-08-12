@@ -12,7 +12,7 @@ A sealed `spx journal --type review` run whose terminal event records review sta
 
 <inputs>
 
-The skill self-discovers the committed review scope from the current worktree. Callers commit the exact current version before invoking the reviewer agent session and leave the worktree clean. Callers that need a non-default range export `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` before invoking the skill. Wrapper agents may also export branch and target identity variables.
+The skill self-discovers the review scope from the current worktree. Callers commit the exact current version before invoking the reviewer agent session and leave the worktree clean. Callers that need a non-default range export `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` before invoking the skill. Wrapper agents may also export branch and target identity variables.
 
 </inputs>
 

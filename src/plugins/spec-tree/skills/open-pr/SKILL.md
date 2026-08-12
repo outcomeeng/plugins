@@ -96,6 +96,10 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 
 <prose>
 
+## Changes
+
+- <change>
+
 ## Test plan
 
 - [ ] <verification step>
@@ -109,7 +113,7 @@ EOF
 Programmatic runners that require one physical command line use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
 
 ```bash
-printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
+printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
 ```
 
 Flag rationale:

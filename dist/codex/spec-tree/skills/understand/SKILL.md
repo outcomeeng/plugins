@@ -376,9 +376,9 @@ When vocabulary overlaps another grammar, resolve verification vocabulary here f
 
 <commit_before_another_session_reads>
 
-- ALWAYS: commit the exact current version before another agent session or human is expected or asked to read it.
+- ALWAYS: when repository writes are authorized, commit the exact current version before another agent session or human is expected or asked to read it; without repository-write authorization, defer the reading.
 
-Changes may remain uncommitted until another agent session or human is expected or asked to read them. The commit records verification state as `passing`, `failing`, or `not-run`; that state controls gate eligibility, never commit permission. After any further change, commit the new version before another agent session or human reads it. An agentic verification gate additionally requires applicable deterministic verification to pass on the exact committed subject.
+Changes may remain uncommitted until another agent session or human is expected or asked to read them. When repository writes are authorized, the commit records verification state as `passing`, `failing`, or `not-run`; that state controls gate eligibility, never commit permission. After any further change, commit the new version before another agent session or human reads it. An agentic verification gate additionally requires applicable deterministic verification to pass on the exact committed subject.
 
 </commit_before_another_session_reads>
 
