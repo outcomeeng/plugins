@@ -22,23 +22,7 @@ If the requirement is unclear, resolve that before implementation.
 </phase>
 
 <phase name="codebase_discovery">
-Read:
-
-- `README.md`, `docs/`, `CLAUDE.md`
-- `Cargo.toml`
-- `rust-toolchain.toml` when present
-
-Search for:
-
-- similar modules and patterns
-- existing trait seams, error types, and tracing conventions
-- nearby tests and fixtures that already exercise the area
-
-Document before moving on:
-
-- crates already available
-- prior art worth following
-- repository conventions that govern the target area
+Follow `<codebase_discovery>` in `SKILL.md` for what to read, what to search for, and what to confirm. Document the crates already available, the prior art worth following, and the repository conventions that govern the target area before moving on.
 
 </phase>
 

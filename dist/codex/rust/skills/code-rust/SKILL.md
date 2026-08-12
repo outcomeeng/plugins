@@ -13,7 +13,7 @@ Rust implementation code with spec-driven behavior, explicit seams, and full val
 </objective>
 
 <accessing_skill_files>
-When this skill is invoked, Claude Code provides the base directory in the loading message:
+When this skill is invoked, the skill loader provides the base directory in the loading message:
 
 ```text
 Base directory for this skill: ${SKILL_DIR}
@@ -29,8 +29,8 @@ Do not search the product directory for skill files when the loading message alr
 
 <quick_start>
 
-1. Read `/rust-standards`, `/rust-test-standards`, and repo-local Rust overlays when present.
-2. If this is a spec-tree work item, invoke `spec-tree:contextualize` before editing code.
+1. Read the repo-local Rust overlays when present; the standards above are already loaded.
+2. Follow `<context_loading>` when this is a spec-tree work item.
 3. Read `${SKILL_DIR}/workflows/implementation.md` for new work or `${SKILL_DIR}/workflows/remediation.md` for review feedback.
 4. Invoke `/verify` when behavior changes require new or revised evidence; use `/test-rust` for Rust expression after test is selected.
 5. Finish with the repository validation sequence or, if none is published, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-targets`.
@@ -47,7 +47,7 @@ Prefer explicit ownership, typed errors, and narrow seams over framework-heavy i
 
 No generated mocks as the default testing strategy. When a controlled implementation is needed, keep coupling to the real seam with a small hand-written recorder, harness, or trait implementation.
 
-Do not declare work complete until the full validation sequence passes.
+NEVER declare work complete until the full validation sequence passes.
 
 </essential_principles>
 
@@ -122,6 +122,12 @@ If the work is outside the spec tree, proceed with the provided requirements and
 - `${SKILL_DIR}/workflows/remediation.md` -- protocol for fixing review feedback
 
 </reference_guides>
+
+<failure_modes>
+
+**Failure 1: Wrote a test whose body only calls a harness.** Claude produced `#[test]` bodies that were a single `<product>_testing::harnesses::*::assert_*(...)` call, following the shape this skill's own test-patterns reference then carried in all five of its examples. Why it failed: the harness both acted and judged, so a failing case reported a panic from inside infrastructure instead of an actual-against-expected comparison, and inverting the claim meant editing the harness every other test shared. How to avoid: keep the assertion macro in the `#[test]` body. A harness supplies setup, resources, and property-run policy; a generator supplies the domain; the source module owns the vocabulary the expectation is written in, while an assertion-assigned case stays in the test body. Treat any bare `harness::assert_*` call as the anti-pattern `${SKILL_DIR}/references/test-patterns.md` `<anti_patterns>` names first.
+
+</failure_modes>
 
 <success_criteria>
 

@@ -27,11 +27,52 @@ Remaining TypeScript work, in order:
    `<property_based_testing>` and `audit-typescript-tests:132` still say the invariant lives
    in the imported property harness, contradicting the shared `<assertion_type_litmus>`
    ("the invariant remains in the linked test"). Reopens plugins-e's just-merged skills.
+
+   **Dependency cleared, and the shape is now decided.** `test-evidence-standards` is on
+   `origin/main`. Its `<predicate_seam>` requires every assertion API call to be lexically
+   visible in the linked test; `<assertion_type_litmus>` requires the property invariant to
+   remain in the linked test while the generator owns the domain. The harness keeps seed,
+   run count, and replay diagnostics and nothing else — the split
+   `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`
+   already implied by its ALWAYS giving the property harness seed selection, run count,
+   replay input, and failure diagnostics while the executed test owns none of that
+   configuration. The Rust plugin was corrected to that shape first; see
+   `spx/43-rust.enabler/PLAN.md`, whose worked examples are the reference for this slice.
+
+   **Site inventory, measured against the shipped skill.** Twenty example sites across
+   `typescript-test-standards`, in three classes:
+
+   - **Thirteen bare delegations** — `await assertX(...)` as the whole test body, no `expect`.
+     `references/exception-implementations.md:15,19,36,42,62,68,85,102`;
+     `references/l1-patterns.md:53`; `references/l2-patterns.md:13,17`;
+     `levels/l1-local-deterministic.md:73`; `levels/l2-local-infrastructure.md:35`.
+   - **Six property-run delegations** — `assertProperty(...)` moving the whole run into the
+     harness. `SKILL.md:204-207` (the four-row pattern table);
+     `references/l1-patterns.md:20`; `levels/l1-local-deterministic.md:54`.
+   - **One naming-only defect** — `levels/l3-remote-credentialed.md:34` keeps `expect` in the
+     test and reads `await expect(assertSignedStripeFixtureAccepted()).resolves.toMatchObject(...)`.
+     The seam holds; the helper name asserts something it does not do. Rename, do not restructure.
+
+   Class 1 and class 2 contradict this subtree's own
+   `43-test-infrastructure-auditing.enabler/test-infrastructure-auditing.md:16`, which already
+   forbids an imported harness that "itself calls `expect`, an assertion API, or a matcher".
+   The spec is right and the shipped examples are wrong, so this is skill-content work only —
+   no spec assertion changes.
+
+   Scope was held to Rust by operator decision when both defects were on the table together.
 3. **`audit-typescript-code`** — heaviest of the three auditors; minor alignment to the
    pure-enforcement shape at most.
 
 The Goal/Foundation sections below predate #468 and are retained as the derivation trail;
 treat the Progress list above as current.
+
+## TypeScript delta for the source-laundering rule — pending
+
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md` carries the language-neutral source-laundering rule: a case, example, or expectation table placed inside a module under test so a test can cite a production path as its provenance, with ownership following consumption rather than address. `spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/` declares the Python discriminator in the same changeset. TypeScript has no delta yet, and `32-test-data-ownership.enabler` is where its constant-bag sibling already lives.
+
+The TypeScript delta is the discriminator in TypeScript terms: an export from `src/` whose only importers are `spx/**/tests/` and `testing/`, reached because a barrel re-export and a `export const` case array read as ordinary module surface. Tree-shaking removes the symbol from a bundle without making it source-owned, so bundle absence is not the discriminator — importer identity is.
+
+**Blocked on nothing.** It was left out because the operator scoped the authoring pass to the language-neutral level and Python.
 
 ## Goal
 

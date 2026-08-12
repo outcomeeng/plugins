@@ -1,3 +1,16 @@
+<contents>
+
+- `<overview>` — what Level 1 covers
+- `<what_belongs_here>` — concern-to-tooling table
+- `<file_placement>` — co-located spec test path
+- `<dependency_seam_pattern>` — narrow trait and function seams
+- `<recorder_pattern>` — recording collaborator that exposes calls
+- `<anti_patterns>` — Level 1 rejections
+
+The tempdir and property patterns are worked inline in `SKILL.md` and are not repeated here.
+
+</contents>
+
 <overview>
 Level 1 covers logic that can run with Rust stdlib, normal developer tooling, and temporary local fixtures. The goal is fast, deterministic evidence with direct coupling to the governed code.
 </overview>
@@ -72,34 +85,6 @@ impl CommandRunner for RecordingRunner {
 ```
 
 </recorder_pattern>
-
-<tempdir_pattern>
-
-```rust
-use <product>_testing::fixtures::configs::fast_mode_config;
-use <product>_testing::harnesses::filesystem::assert_loads_config_from_temp_dir;
-
-#[test]
-fn loads_config_from_temp_dir() {
-    assert_loads_config_from_temp_dir(fast_mode_config(), load_config);
-}
-```
-
-</tempdir_pattern>
-
-<property_pattern>
-
-```rust
-use <product>_testing::generators::keys::canonical_key_strings;
-use <product>_testing::harnesses::properties::assert_canonical_key_roundtrips;
-
-#[test]
-fn canonical_key_roundtrips() {
-    assert_canonical_key_roundtrips(canonical_key_strings(), CanonicalKey::parse);
-}
-```
-
-</property_pattern>
 
 <anti_patterns>
 

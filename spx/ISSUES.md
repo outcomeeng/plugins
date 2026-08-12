@@ -35,13 +35,12 @@ Remaining drift (agent-concept "runtime" usage, distinct from generic "at runtim
 
 **Resolution shape**: a whole-tree sweep aligning agent-concept "runtime" usage to "agent" / "agent harness" per `spx/12-agent-harness.pdr.md`, distinguishing it from generic execution-time "runtime". Because node names carry the term, the sweep includes `/refactor` node renames and is therefore a structural change, not a text-only pass — deferred from the scoped marketplace-state/diagnose terminology fix that surfaced it, by operator decision.
 
-## 26 bundled reference files over 100 lines carry no table of contents
+## 22 bundled reference files over 100 lines carry no table of contents
 
-`/skill-standards` `<progressive_disclosure>` requires a table of contents at the top of every reference file over 100 lines, "so partial reads still see the full scope". Twenty-six files across seven plugins exceed the threshold without one, ranging from 108 to 971 lines:
+`/skill-standards` `<progressive_disclosure>` requires a table of contents at the top of every reference file over 100 lines, "so partial reads still see the full scope". Twenty-two files across six plugins exceed the threshold without one, ranging from 109 to 971 lines:
 
 - `hdl` — `review-systemverilog/references/systemverilog-idioms.md` (716), `review-vhdl/references/vhdl-idioms.md` (472)
 - `instructions` — all seven `create-subagent/references/*.md` (410–971), both `audit-skill/references/*.md` (116, 140), both `create-skill/references/*.md` (113, 123)
-- `rust` — `architect-rust/references/{adr-patterns,rust-principles}.md` (120, 108), `code-rust/references/outcome-engineering-patterns.md` (138), `rust-test-standards/references/level-1.md` (111)
 - `spec-tree` — `audit-eval-evidence/references/evidence-model.md` (143)
 - `typescript` — `architect-typescript/references/typescript-principles.md` (144), both `code-typescript/references/*.md` (116, 138), `typescript-test-standards/references/exception-implementations.md` (109)
 - `work` — both `draw-excalidraw/references/*.md` (128, 202), both `sanitize-powerpoint/references/*.md` (134, 136)

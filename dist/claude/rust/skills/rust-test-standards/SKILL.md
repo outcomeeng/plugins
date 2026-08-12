@@ -58,13 +58,13 @@ spx/.../tests/<subject>.<evidence>.<level>[.<runner>].rs
 | `property`    | Property       | Harness-owned property invariant over a generated domain                     |
 | `compliance`  | Compliance     | Violating fixture, lint harness, or rule oracle                              |
 
-**Level tokens** — the infrastructure required to run the test:
+**Level tokens** — the execution level, whose infrastructure `<level_tooling>` details:
 
-| Token | Level | Infrastructure                                                                 |
-| ----- | ----- | ------------------------------------------------------------------------------ |
-| `l1`  | 1     | Rust stdlib, `cargo test`, temp dirs, repo-required dev tools                  |
-| `l2`  | 2     | Workspace binaries, local services, Docker, databases, local browser harnesses |
-| `l3`  | 3     | External network, deployed systems, SaaS APIs, browser UI, shared environments |
+| Token | Level |
+| ----- | ----- |
+| `l1`  | 1     |
+| `l2`  | 2     |
+| `l3`  | 3     |
 
 **Optional runner token** — appended after the level token when the test requires a specific async executor or test harness (e.g., `tokio`, `actix`).
 
@@ -158,17 +158,17 @@ Apply every question in `/test-evidence-standards` `<common_litmus_questions>`, 
 <tooling>
 Use the lightest Rust-native tool that preserves evidence:
 
-| Need                          | Preferred tooling                                             |
-| ----------------------------- | ------------------------------------------------------------- |
-| L1 scenario and mapping tests | `#[test]`, `assert_eq!`, `rstest` when parameterization helps |
-| temp files or dirs            | `tempfile`                                                    |
-| async tests                   | `#[tokio::test]` or runtime-specific test macro               |
-| property testing              | harness wrapper backed by `proptest` or `quickcheck`          |
-| CLI binaries                  | `assert_cmd` and `predicates`                                 |
-| textual golden output         | `insta` when the output surface itself is the assertion       |
-| compile-fail or diagnostics   | `trybuild`                                                    |
-| local services or containers  | `testcontainers` or repo-native harnesses                     |
-| coverage                      | `cargo llvm-cov` when available                               |
+| Need                          | Preferred tooling                                              |
+| ----------------------------- | -------------------------------------------------------------- |
+| L1 scenario and mapping tests | `#[test]`, `assert_eq!`, `rstest` when parameterization helps  |
+| temp files or dirs            | `tempfile`                                                     |
+| async tests                   | `#[tokio::test]` or runtime-specific test macro                |
+| property testing              | harness wrapper backed by `proptest` or `quickcheck`           |
+| CLI binaries                  | `assert_cmd` to build and run the binary, `Output` to the test |
+| textual golden output         | `insta` when the output surface itself is the assertion        |
+| compile-fail or diagnostics   | `trybuild`                                                     |
+| local services or containers  | `testcontainers` or repo-native harnesses                      |
+| coverage                      | `cargo llvm-cov` when available                                |
 
 Snapshot tests are valid only when the textual or structured output surface is itself the contract. They are weak evidence for business logic that has a stronger structural assertion available.
 </tooling>
@@ -182,31 +182,37 @@ Snapshot tests are valid only when the textual or structured output surface is i
 | Source-owned       | The production module defines and exports the value           | Import from that module             |
 | Generator-produced | Pure code emits varied values each run                        | `<product>-testing/src/generators/` |
 | Harness-managed    | Infrastructure mediates interaction with an external resource | `<product>-testing/src/harnesses/`  |
+| Fixture files      | An inert whole payload the code under test reads by path      | `<product>-testing/fixtures/`       |
+| Assertion-assigned | The case the assertion type fixes rather than the test author | Inline in the `#[test]` body        |
 | Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file             |
+
+Each origin below has its own section; assertion-assigned and descriptive inline are the two exceptions and need none. An assertion-assigned case is one the assertion type places in the test itself — a scenario's exact interaction as the spec declares it, a conformance expectation from the external oracle, or the violating input a compliance rule names. Such a literal is correct in the `#[test]` body, and moving it into a production module so the test can import it gives the case a production address without a production contract. A vocabulary token inside that case — a command name, status value, or rule identifier — stays source-owned and is imported per `<source_owned_values>`; the origin covers the case, never the vocabulary the case is written in. `<test_infrastructure_layout>` is a layout note, not an origin: it closes the section by placing harnesses, generators, and fixtures inside the infrastructure crate, with fixtures split into loader code and data.
 
 **TEST FILES OWN NO DATA OR POLICY.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 
-Executed Rust test files are typed assertion files: the `#[test]`/`#[tokio::test]` function or its callbacks own every behavioral predicate and assertion macro. A `let`, `const`, `static`, closure parameter, or macro parameter is valid when it only receives or renames an actual result, source-owned contract, generated value, harness observation, or resource handle and introduces no data or policy. A binding that chooses case data, an expected output, a runner setting, a seed, setup policy, a fixture payload, or a generator domain belongs in the `<product>-testing` workspace crate, source contracts, inert whole-payload fixtures, or justified eval case data.
+Executed Rust test files are typed assertion files: the `#[test]`/`#[tokio::test]` function or its callbacks own every behavioral predicate and assertion macro. A `let`, `const`, `static`, closure parameter, or macro parameter is valid when it only receives or renames an actual result, source-owned contract, generated value, harness observation, or resource handle and introduces no data or policy. A binding that chooses case data the assertion type does not assign to the test, an expected output, a runner setting, a seed, setup policy, a fixture payload, or a generator domain belongs in the `<product>-testing` workspace crate, source contracts, inert whole-payload fixtures, or justified eval case data. An assertion-assigned case is the exception the origin table names: it is chosen by the assertion type rather than the test author, so its binding stays in the `#[test]` body.
 
-**1. Source-owned values**
-
+<source_owned_values>
 ALWAYS import command names, rule names, matcher tokens, status values, domain identifiers, and public constants from the owning production module. If the module does not export them yet, refactor it to export them before writing the test.
 
 ```rust
 // ❌ rejected: duplicates a value the production module should own
 const PASS_STATUS: &str = "pass";
 
-// ✅ preferred: import from the production module
+// ✅ preferred: import from the production module and assert against governed behavior
 use product::audit::GateStatus;
-assert_eq!(GateStatus::Pass.as_str(), product::audit::PASS_STATUS_TOKEN);
+assert_eq!(run_gate(&input).status, GateStatus::Pass);
 ```
 
-**2. Generator-produced values**
+</source_owned_values>
 
+<generator_produced_values>
 Use generators for inputs that vary per run. A generator is a pure function — it emits values, holds no state, and has no side effects.
 
 - Use generator strategies for randomized inputs consumed by the property harness
 - Write strategy factories for domain-shaped values
+
+A generated value reaches an executed test only through the property harness, which owns the seed and the replay diagnostics. Sampling a generator once inside an ordinary `#[test]` or `#[tokio::test]` produces evidence no one can reproduce: the failing value is never reported, and the next run draws a different one, so the failure disappears. A scenario at any level takes the case its assertion assigns instead, and a claim that genuinely ranges over a domain is a property assertion.
 
 ```rust
 // <product>-testing/src/generators/audit.rs
@@ -220,8 +226,9 @@ fn valid_gate_statuses() -> impl Strategy<Value = GateStatus> {
 }
 ```
 
-**3. Harness-managed**
+</generator_produced_values>
 
+<harness_managed_values>
 Use harnesses for tests that interact with external systems — filesystems, APIs, binaries, testcontainers. A harness manages setup and teardown; it is not self-contained.
 
 ```rust
@@ -240,15 +247,17 @@ impl TestEnv {
 
 Consumers depend on the workspace-member crate via `[dev-dependencies]` and import as `use <product>_testing::harnesses::spec_tree::TestEnv;`.
 
-**4. Fixture files**
+</harness_managed_values>
 
+<fixture_files>
 Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in the `<product>-testing/` workspace-member crate under `<product>-testing/fixtures/` and are read from disk by path — never compiled in or imported as modules. This is the cross-language test-infrastructure rule.
 
 Strings and numbers are never valid fixtures. A string literal representing a domain value belongs in the production module or a generator, not a static file.
 
-**5. Test infrastructure layout**
+</fixture_files>
 
-Harnesses, generators, and inert fixtures are production code. They live in a separate workspace-member crate (`<product>-testing/` directory at workspace root, Cargo package `<product>-testing`, Rust import path `<product>_testing`), declared as a `[dev-dependencies]` entry of consumers:
+<test_infrastructure_layout>
+Harnesses, generators, and inert fixtures are production code. They live in the separate workspace-member crate named in `<portable_test_crate>`, declared as a `[dev-dependencies]` entry of consumers:
 
 - `<product>-testing/src/harnesses/<name>.rs` — modules that mediate access to external resources.
 - `<product>-testing/src/generators/<name>.rs` — factories producing valid inputs for proptest/quickcheck/parameterized tests.
@@ -257,7 +266,7 @@ Harnesses, generators, and inert fixtures are production code. They live in a se
 
 Do not create co-located test-infrastructure modules as homes for setup, data, generator selection, fixture loading, harness behavior, diagnostics, credentials, or source vocabulary. Those concerns belong in `<product>-testing/` even when one test file consumes them today. Never use `tests/support/`, `crate::test_support`, `super::tests`, or `#[cfg(test)] mod` patterns as homes for shared test infrastructure — those keep ungoverned utility code inside production crates or under `tests/`.
 
-- Do not read production source files as test input to prove behavior
+</test_infrastructure_layout>
 
 </test_data_policy>
 
@@ -305,106 +314,78 @@ Dependency seam example:
 
 ```rust
 use <product>_testing::harnesses::commands::success_runner;
-use <product>_testing::generators::repos::source_checkout_path;
 
 #[test]
 fn command_builder_reports_success() {
-    assert!(sync_repo(&source_checkout_path(), "origin", &success_runner()).unwrap().success);
+    let config = product::sync::SyncConfig::new("origin", product::sync::Mode::Push);
+
+    let result = sync_repo(&config, &success_runner()).unwrap();
+
+    assert!(result.success);
 }
 ```
 
-Tempdir example:
+Tempdir example. The harness owns the temporary product and its cleanup; the fixture arrives by path; the `#[test]` calls the governed function and asserts:
 
 ```rust
-use <product>_testing::fixtures::configs::valid_site_config;
-use <product>_testing::harnesses::filesystem::assert_loads_yaml_from_temp_config;
+use <product>_testing::fixtures::configs::valid_site_config_path;
+use <product>_testing::harnesses::filesystem::TempProduct;
 
 #[test]
 fn loads_yaml_from_temp_dir() {
-    assert_loads_yaml_from_temp_config(valid_site_config(), load_config);
+    let product = TempProduct::seeded_from(valid_site_config_path());
+
+    let config = load_config(product.path()).unwrap();
+
+    assert_eq!(config.base_url, product::config::DEFAULT_BASE_URL);
 }
 ```
 
 </level_1_patterns>
 
 <property_and_compile_time_patterns>
-Use the product property harness for universal invariants:
+Use the product property harness for universal invariants. The harness runs the domain; the invariant and its `prop_assert*` macro stay in the `#[test]` closure:
 
 ```rust
+use proptest::prop_assert_eq;
 use <product>_testing::generators::configs::valid_config_strategy;
-use <product>_testing::harnesses::properties::assert_config_roundtrips;
+use <product>_testing::harnesses::properties::run_property;
 
 #[test]
 fn config_roundtrips() {
-    assert_config_roundtrips(valid_config_strategy(), encode_config, decode_config);
+    run_property(valid_config_strategy(), |config| {
+        let encoded = encode_config(&config);
+
+        prop_assert_eq!(decode_config(&encoded).unwrap(), config);
+        Ok(())
+    });
 }
 ```
 
 Property tests MUST run through a harness or wrapper that owns `proptest` / `quickcheck` configuration, seed policy, case count, failure persistence, and replay diagnostics. The test file supplies the invariant and imports generated domains; it does not declare runner tuning or seed policy. On failure, output must include the seed, regression file path, or replay command needed to reproduce the generated case.
 
-Use `trybuild` for compile-time guarantees:
+That split is exact: the harness owns everything about *how many* cases run and *which* seed produced a failure, and the `#[test]` closure owns *what makes a case pass*. A harness signature that accepts the encode and decode functions and asserts inside itself moves the invariant out of the test and fails the seam.
+
+Use `trybuild` for compile-time guarantees. This is the one shape whose `#[test]` body ends in no assertion macro, and it is a named exception rather than a delegated predicate: `pass` and `compile_fail` are themselves the assertion API for a compile-time claim, they are called in the test where a reader sees them, and the verdict comes from the compiler — an oracle outside the product — against an inert `.stderr` fixture. Inverting the claim still changes only the test, by moving a path between the two calls. A harness that wrapped both calls and reported success would be the delegation this standard rejects.
 
 ```rust
 #[test]
 fn ui_contracts_hold() {
-    <product>_testing::harnesses::trybuild::assert_ui_contracts(
-        <product>_testing::fixtures::ui::valid_builders(),
-        <product>_testing::fixtures::ui::invalid_builders(),
-    );
+    let cases = trybuild::TestCases::new();
+
+    cases.pass(<product>_testing::fixtures::ui::case_path("builder_accepts_typed_field"));
+    cases.compile_fail(<product>_testing::fixtures::ui::case_path("builder_rejects_untyped_field"));
 }
 ```
 
 </property_and_compile_time_patterns>
 
 <level_2_patterns>
-Use Level 2 when governed behavior needs a real binary, runtime, adapter, or local collaborator.
-
-CLI binary example:
-
-```rust
-use <product>_testing::fixtures::projects::empty_project;
-use <product>_testing::harnesses::commands::assert_init_command_writes_project_files;
-
-#[test]
-fn init_command_writes_project_files() {
-    assert_init_command_writes_project_files(empty_project());
-}
-```
-
-Async L2 example:
-
-```rust
-use <product>_testing::fixtures::users::valid_user;
-use <product>_testing::harnesses::database::assert_user_repository_roundtrip;
-
-#[tokio::test]
-async fn repository_persists_and_loads_user() {
-    assert_user_repository_roundtrip(valid_user(), UserRepository::new).await;
-}
-```
-
+Use Level 2 when governed behavior needs a real binary, runtime, adapter, or local collaborator. The harness starts the binary, container, or service and hands back a handle; the `#[test]` drives the governed behavior through that handle and asserts on what it observes. Worked CLI, async-adapter, and containerized-collaborator examples are in `${CLAUDE_SKILL_DIR}/references/level-2.md`.
 </level_2_patterns>
 
 <level_3_patterns>
-Use Level 3 when governed behavior depends on a real remote collaborator, deployed environment, external network, SaaS system, browser UI, or shared runtime that cannot be replaced by a local Level 2 harness without changing the claim.
-
-Remote API example:
-
-```rust
-#[tokio::test]
-async fn published_package_is_fetchable_from_registry() {
-    <product>_testing::harnesses::registry::assert_sandbox_package_publish_and_fetch().await;
-}
-```
-
-Browser workflow example:
-
-```rust
-#[tokio::test]
-async fn login_flow_reaches_dashboard() {
-    <product>_testing::harnesses::browser::assert_login_flow_reaches_dashboard().await;
-}
-```
+Use Level 3 when governed behavior depends on a real remote collaborator, deployed environment, external network, SaaS system, browser UI, or shared runtime that cannot be replaced by a local Level 2 harness without changing the claim. The harness owns credential resolution, sandbox isolation, and cleanup; the `#[test]` owns the contract claim. Worked remote-API, sandboxed-CLI, and browser-workflow examples are in `${CLAUDE_SKILL_DIR}/references/level-3.md`.
 
 Level 3 tests must declare their isolation boundary, credentials, cleanup behavior, and expected runtime. If the repository has no safe Level 3 lane, stop and surface that product decision rather than hiding the dependency behind a skipped test.
 </level_3_patterns>
@@ -412,9 +393,9 @@ Level 3 tests must declare their isolation boundary, credentials, cleanup behavi
 <coverage_rules>
 Keep deterministic measurement and audit-time evidence judgment distinct:
 
-- The caller's deterministic gate prefers `cargo llvm-cov`, compares the baseline without the test against the run with the test, and reports the actual per-file or per-function delta. When tooling is unavailable, the caller records that limitation.
+- The deterministic gate prefers `cargo llvm-cov`, compares the baseline without the test against the run with the test, and reports the actual per-file or per-function delta. When tooling is unavailable, the gate records that limitation.
 - `/audit-rust-tests` runs no coverage command. It reads the evidence chain and judges whether the test drives execution into the assertion-relevant source path, marking trivially total paths `saturated`.
-- A structural reachability judgment never claims a measured percentage or replaces the caller's deterministic coverage result.
+- A structural reachability judgment never claims a measured percentage or replaces the deterministic gate's coverage result.
 
 </coverage_rules>
 
@@ -424,36 +405,41 @@ Keep deterministic measurement and audit-time evidence judgment distinct:
 
 **Failure 2: Copied an owned example into an async harness.** Claude passed `user` by value into `save(user)` and then read `user.id()` and `user.email()` afterward. Why it failed: the example no longer compiled for normal non-`Copy` data and taught consumers to work around ownership rather than express the tested behavior. How to avoid: write Rust examples as executable ownership models; borrow shared generated values when later assertions still need them.
 
-**Failure 3: Accepted property runner tuning in a test file.** Claude treated a local `const CASES` or seed setting as harmless test configuration. Why it failed: property seed policy, case count, persistence, and replay diagnostics belong to the harness or wrapper, while the test file owns only the invariant. How to avoid: route property assertions through the `<product>-testing` property harness and require reproducible failure output.
+**Failure 3: Taught the predicate seam in prose and broke it in every example.** Claude stated the seam correctly in `<success_criteria>`, `<acceptable_doubles>`, `<predicate_and_oracle_litmus>`, and `<anti_patterns>`, then wrote every worked example as a single call to an `assert_*` harness function with no assertion macro in the `#[test]` body. Why it failed: a reader copies the example, not the prose, so the shipped guidance taught the exact pattern the standard rejects — and the resulting tests pass the reader's own reading of this skill. How to avoid: read each example as the artifact it will become. Every `#[test]` body ends in an `assert!`, `assert_eq!`, `assert_ne!`, `matches!`, or `prop_assert*` the reader can see, or — for a compile-time claim alone — in the `trybuild` `pass` and `compile_fail` registrations that are themselves that claim's assertion API. A harness call that both acts and judges is the defect, whatever it is named.
+
+**Failure 4: Accepted property runner tuning in a test file.** Claude treated a local `const CASES` or seed setting as harmless test configuration. Why it failed: property seed policy, case count, persistence, and replay diagnostics belong to the harness or wrapper, while the test file owns only the invariant. How to avoid: route property assertions through the `<product>-testing` property harness and require reproducible failure output.
 
 </failure_modes>
 
 <anti_patterns>
 Reject or rewrite these patterns:
 
-| Anti-pattern                                                                       | Why it fails                                                                                        |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| generated mocks for the main seam                                                  | severs evidence from the real interface                                                             |
-| snapshots of hand-written values                                                   | proves serialization of the fixture more than governed logic                                        |
-| example-only tests for property claims                                             | misses the universal claim stated by the spec                                                       |
-| async tests holding locks across await                                             | creates deadlocks and hides the real concurrency design                                             |
-| browser tooling for non-browser code                                               | adds cost without stronger evidence                                                                 |
-| compile-time claims tested at runtime                                              | misses the actual contract                                                                          |
-| source text read from tests                                                        | proves implementation text rather than behavior                                                     |
-| missing harness cleanup                                                            | leaves shared state that changes later test outcomes                                                |
-| test-file bindings that choose data, expectations, configuration, or verdict rules | valid bindings only receive values selected by source contracts, harnesses, generators, or fixtures |
-| predicate or assertion macro moved into a harness, generator, or collaborator      | the linked `#[test]` function owns every predicate and assertion macro                              |
-| property runner tuning in a test file                                              | the property harness owns seed, case count, persistence, and replay diagnostics                     |
+| Anti-pattern                                                                       | Why it fails                                                                                                                                 |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| generated mocks for the main seam                                                  | severs evidence from the real interface                                                                                                      |
+| snapshots of hand-written values                                                   | proves serialization of the fixture more than governed logic                                                                                 |
+| example-only tests for property claims                                             | misses the universal claim stated by the spec                                                                                                |
+| async tests holding locks across await                                             | creates deadlocks and hides the real concurrency design                                                                                      |
+| browser tooling for non-browser code                                               | adds cost without stronger evidence                                                                                                          |
+| compile-time claims tested at runtime                                              | misses the actual contract                                                                                                                   |
+| source text read from tests                                                        | proves implementation text rather than behavior                                                                                              |
+| missing harness cleanup                                                            | leaves shared state that changes later test outcomes                                                                                         |
+| test-file bindings that choose data, expectations, configuration, or verdict rules | valid bindings receive values selected by source contracts, harnesses, generators, or fixtures, or carry the case the assertion type assigns |
+| a case value moved into a production module so the test can cite that module       | a production address is not a production contract; nothing outside the test requires the symbol                                              |
+| `.assert().success()` or a `predicates` matcher as the verdict                     | the library owns the predicate; take the `Output` and assert on it with the declared assertion API                                           |
+| a command name, subcommand, or flag written as a literal in the test               | the binary's argument vocabulary is a source contract the owning module exports                                                              |
+| predicate or assertion macro moved into a harness, generator, or collaborator      | the linked `#[test]` function owns every predicate and assertion macro                                                                       |
+| property runner tuning in a test file                                              | the property harness owns seed, case count, persistence, and replay diagnostics                                                              |
 
 Do not require `spx validation literal` for Rust tests. The literal validator is TypeScript-only. Enforce source-owned values through review and Rust test standards instead.
 
 </anti_patterns>
 
 <reference_guides>
-Use these level guides when concrete Rust-native examples beyond the inline patterns are needed:
+Levels 2 and 3 carry no inline examples — their reference files are the only worked examples for those levels.
 
-- `${CLAUDE_SKILL_DIR}/references/level-1.md` - pure computation, tempdir, trait seams, and property tests
-- `${CLAUDE_SKILL_DIR}/references/level-2.md` - CLI binaries, async adapters, local services, and containerized collaborators
-- `${CLAUDE_SKILL_DIR}/references/level-3.md` - remote systems, browser flows, credentials, isolation, and cleanup
+- `${CLAUDE_SKILL_DIR}/references/level-1.md` - the trait-seam and recording-collaborator shapes beyond the inline patterns
+- `${CLAUDE_SKILL_DIR}/references/level-2.md` - the worked CLI binary, async adapter, and containerized collaborator examples
+- `${CLAUDE_SKILL_DIR}/references/level-3.md` - the worked remote API, sandboxed CLI, and browser workflow examples, with credentials, isolation, and cleanup
 
 </reference_guides>

@@ -8,11 +8,31 @@ Rust currently has only the top-level Rust node for these concerns, so this note
 
 ## Steps
 
-1. Replace "test-owned" generator and harness wording in `rust-test-standards` with `product-testing` workspace-member crate wording.
-2. Move the generator example path from `tests/generators/audit.rs` to `product-testing/src/generators/audit.rs` and adjust imports to `product_testing::generators::*`.
+1. **Satisfied.** "test-owned" survives in `rust-test-standards` only in its correct sense — the predicate the linked `#[test]` owns — not as generator or harness placement wording. `audit-rust-tests` uses it as a finding label for a binding that chooses configuration or data.
+2. **Satisfied.** The generator example sits at `<product>-testing/src/generators/audit.rs` with `<product>_testing::generators::*` imports. `tests/generators/audit.rs` remains only as the subject of a documented failure mode, which is where it belongs.
 3. Decide whether credentialed `l3` behavior belongs in a shared cross-language decision or a Rust execution-level child node.
 4. After that governing decision exists, replace `#[ignore]` credential examples with fail-loud credential helpers.
 5. Gate with `spx validation markdown`, `spx spec status --format json`, `just check-skills`, `just docs-check`, and `rust:audit-rust-tests`.
+
+Steps 3 and 4 are independent of the predicate-seam correction recorded below: that correction changes what each example asserts and who owns the assertion, and decides nothing about credential resolution or skip policy.
+
+## Rust delta for the source-laundering rule — pending
+
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md` carries the language-neutral source-laundering rule: a case, example, or expectation table placed inside a module under test so a test can cite a production path as its provenance, with ownership following consumption rather than address. `spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/` declares the Python discriminator in the same changeset. Rust has no delta yet.
+
+The Rust delta is the discriminator in Rust terms: a `pub` item in the product crate whose only callers are `spx/**/tests/` modules and the `<product>-testing` crate, reached because `#[path]`-wired spec tests compile inside the product crate and can therefore call items no released consumer can. `#[cfg(test)]` gating is the adjacent case and is a different defect — it keeps the symbol out of the shipped artifact while still putting test data in the product crate.
+
+**Blocked on nothing.** It was left out because the operator scoped the authoring pass to the language-neutral level and Python.
+
+## Predicate-seam correction to the worked examples — executed
+
+`rust-test-standards` stated the predicate seam correctly in `<success_criteria>`, `<acceptable_doubles>`, `<predicate_and_oracle_litmus>`, `<test_data_policy>`, and `<anti_patterns>`, and contradicted it in all fourteen worked examples, each of which was a single call to an `assert_*` harness function with no assertion macro in the `#[test]` body. The governing rules are
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md` — the ALWAYS giving the linked executed test every behavioral predicate and assertion API call, and the NEVER against infrastructure encoding that predicate through a verdict, expected-value parameter, assertion call, matcher, or verdict-shaped method — and the shared `test-evidence-standards` `<predicate_seam>`.
+
+Every example now ends in an assertion macro the reader can see, with the harness supplying resources, lifecycle, and — for property runs — case count, seed, and replay output while the invariant stays in the `#[test]` closure. Four examples also imported domain values from `fixtures::` modules, which
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` forbids; those now draw from generators, and the surviving `fixtures::` imports return paths.
+
+No Rust assertion was added for the seam itself. It is a language-neutral rule the superset owns, and `rust.md:15` binds this node to Rust deltas only.
 
 ## Revisit condition
 

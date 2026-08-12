@@ -1,3 +1,16 @@
+<contents>
+
+- `<overview>` — what Level 2 covers
+- `<what_belongs_here>` — concern-to-tooling table
+- `<harness_rule>` — what to identify before writing the test
+- `<file_placement>` — co-located spec test path
+- `<cli_binary_pattern>` — real binary through a command harness
+- `<async_adapter_pattern>` — real database through a container harness
+- `<containerized_collaborator_pattern>` — real queue through a container harness
+- `<anti_patterns>` — Level 2 rejections
+
+</contents>
+
 <overview>
 Level 2 covers behavior that needs a real binary, async runtime, local service, or containerized collaborator. The code under test still runs on the developer machine; the difference is that the boundary is real.
 </overview>
@@ -6,7 +19,7 @@ Level 2 covers behavior that needs a real binary, async runtime, local service, 
 
 | Concern                          | Typical tooling                        |
 | -------------------------------- | -------------------------------------- |
-| CLI binary behavior              | `assert_cmd`, `predicates`             |
+| CLI binary behavior              | `assert_cmd`, `Output` to the test     |
 | async adapters with real runtime | `#[tokio::test]`                       |
 | local databases or queues        | repo-native harness, `testcontainers`  |
 | protocol adapters                | real HTTP server/client, local sockets |
@@ -31,12 +44,22 @@ Integration evidence belongs in `spx/.../tests/{subject}.{evidence}.l2.rs`.
 <cli_binary_pattern>
 
 ```rust
-use <product>_testing::fixtures::projects::empty_project;
-use <product>_testing::harnesses::commands::assert_init_command_writes_project_files;
+use <product>_testing::fixtures::projects::empty_project_path;
+use <product>_testing::harnesses::commands::product_binary;
+use <product>_testing::harnesses::filesystem::TempProduct;
 
 #[test]
 fn init_command_writes_project_files() {
-    assert_init_command_writes_project_files(empty_project());
+    let project = TempProduct::seeded_from(empty_project_path());
+
+    let outcome = product_binary()
+        .arg(product::init::COMMAND)
+        .current_dir(project.path())
+        .output()
+        .unwrap();
+
+    assert!(outcome.status.success());
+    assert!(project.path().join(product::init::MANIFEST_FILE).exists());
 }
 ```
 
@@ -45,12 +68,18 @@ fn init_command_writes_project_files() {
 <async_adapter_pattern>
 
 ```rust
-use <product>_testing::fixtures::users::valid_user;
-use <product>_testing::harnesses::database::assert_user_repository_roundtrip;
+use <product>_testing::harnesses::database::PostgresHarness;
 
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
-    assert_user_repository_roundtrip(valid_user(), UserRepository::new).await;
+    let database = PostgresHarness::start().await;
+    let repository = UserRepository::new(database.pool());
+    let user = product::users::User::new("u-1", "widget@example.com");
+
+    repository.save(&user).await.unwrap();
+    let loaded = repository.load(user.id()).await.unwrap();
+
+    assert_eq!(loaded, user);
 }
 ```
 
@@ -59,12 +88,18 @@ async fn repository_persists_and_loads_user() {
 <containerized_collaborator_pattern>
 
 ```rust
+use <product>_testing::harnesses::queue::QueueHarness;
+
 #[tokio::test]
 async fn worker_consumes_real_queue_messages() {
-    <product>_testing::harnesses::queue::assert_worker_consumes_real_queue_messages(
-        job_fixture(),
-        run_worker_once,
-    ).await;
+    let queue = QueueHarness::start().await;
+    let drained_depth = queue.depth().await.unwrap();
+    let job = product::jobs::Job::pending("job-1");
+    queue.publish(&job).await.unwrap();
+
+    run_worker_once(queue.connection()).await.unwrap();
+
+    assert_eq!(queue.depth().await.unwrap(), drained_depth);
 }
 ```
 

@@ -1,3 +1,15 @@
+<contents>
+
+- `<overview>` — what Level 3 covers
+- `<when_to_use>` — claims that require a real external collaborator
+- `<rust_patterns>` — Rust-native tooling at the owned boundary
+- `<requirements>` — what every Level 3 test declares
+- `<examples>` — remote API, sandboxed CLI, and browser workflow
+- `<anti_patterns>` — Level 3 rejections
+- `<repo_local_overlay>` — product truth that disables Level 3
+
+</contents>
+
 <overview>
 Level 3 tests prove Rust behavior against real external collaborators: remote APIs, deployed services, browser UI, shared environments, credentialed sandboxes, or managed infrastructure outside the local test process.
 </overview>
@@ -39,21 +51,62 @@ Every Level 3 test must declare:
 </requirements>
 
 <examples>
+The harness owns credential resolution, sandbox isolation, and cleanup on `Drop`. The `#[test]` owns the contract claim, so a reader sees the whole pass/fail predicate without opening the harness.
+
 Remote API contract:
 
 ```rust
+use <product>_testing::harnesses::registry::SandboxRegistry;
+
 #[tokio::test]
 async fn package_can_be_published_and_fetched() {
-    <product>_testing::harnesses::registry::assert_sandbox_package_publish_and_fetch().await;
+    let registry = SandboxRegistry::connect().await;
+    let package = product::packages::Package::new("widget", "1.0.0");
+
+    registry.publish(&package).await.unwrap();
+    let fetched = registry.fetch(package.name(), package.version()).await.unwrap();
+
+    assert_eq!(fetched.checksum(), package.checksum());
 }
 ```
 
 CLI against a real sandbox:
 
 ```rust
+use <product>_testing::fixtures::trees::syncable_tree;
+use <product>_testing::harnesses::commands::product_binary;
+use <product>_testing::harnesses::sandbox::RemoteSandbox;
+
 #[test]
 fn sync_command_uploads_to_remote_sandbox() {
-    <product>_testing::harnesses::sandbox::assert_sync_command_uploads_to_remote_sandbox();
+    let sandbox = RemoteSandbox::claim();
+    let tree = syncable_tree();
+
+    let outcome = product_binary()
+        .arg(product::sync::COMMAND)
+        .arg(tree.path())
+        .arg(sandbox.url())
+        .output()
+        .unwrap();
+
+    assert!(outcome.status.success());
+    assert_eq!(sandbox.listing().unwrap(), tree.expected_listing());
+}
+```
+
+Browser workflow:
+
+```rust
+use <product>_testing::harnesses::browser::BrowserSession;
+
+#[tokio::test]
+async fn login_flow_reaches_dashboard() {
+    let session = BrowserSession::start().await;
+    let account = session.enrolled_account();
+
+    session.log_in_as(&account).await.unwrap();
+
+    assert_eq!(session.current_route().await.unwrap(), product::routes::DASHBOARD);
 }
 ```
 
