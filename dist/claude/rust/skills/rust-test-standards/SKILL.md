@@ -414,22 +414,22 @@ Keep deterministic measurement and audit-time evidence judgment distinct:
 <anti_patterns>
 Reject or rewrite these patterns:
 
-| Anti-pattern                                                                       | Why it fails                                                                                        |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| generated mocks for the main seam                                                  | severs evidence from the real interface                                                             |
-| snapshots of hand-written values                                                   | proves serialization of the fixture more than governed logic                                        |
-| example-only tests for property claims                                             | misses the universal claim stated by the spec                                                       |
-| async tests holding locks across await                                             | creates deadlocks and hides the real concurrency design                                             |
-| browser tooling for non-browser code                                               | adds cost without stronger evidence                                                                 |
-| compile-time claims tested at runtime                                              | misses the actual contract                                                                          |
-| source text read from tests                                                        | proves implementation text rather than behavior                                                     |
-| missing harness cleanup                                                            | leaves shared state that changes later test outcomes                                                |
-| test-file bindings that choose data, expectations, configuration, or verdict rules | valid bindings only receive values selected by source contracts, harnesses, generators, or fixtures |
-| a case value moved into a production module so the test can cite that module       | a production address is not a production contract; nothing outside the test requires the symbol     |
-| `.assert().success()` or a `predicates` matcher as the verdict                     | the library owns the predicate; take the `Output` and assert on it with the declared assertion API  |
-| a command name, subcommand, or flag written as a literal in the test               | the binary's argument vocabulary is a source contract the owning module exports                     |
-| predicate or assertion macro moved into a harness, generator, or collaborator      | the linked `#[test]` function owns every predicate and assertion macro                              |
-| property runner tuning in a test file                                              | the property harness owns seed, case count, persistence, and replay diagnostics                     |
+| Anti-pattern                                                                       | Why it fails                                                                                                                                 |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| generated mocks for the main seam                                                  | severs evidence from the real interface                                                                                                      |
+| snapshots of hand-written values                                                   | proves serialization of the fixture more than governed logic                                                                                 |
+| example-only tests for property claims                                             | misses the universal claim stated by the spec                                                                                                |
+| async tests holding locks across await                                             | creates deadlocks and hides the real concurrency design                                                                                      |
+| browser tooling for non-browser code                                               | adds cost without stronger evidence                                                                                                          |
+| compile-time claims tested at runtime                                              | misses the actual contract                                                                                                                   |
+| source text read from tests                                                        | proves implementation text rather than behavior                                                                                              |
+| missing harness cleanup                                                            | leaves shared state that changes later test outcomes                                                                                         |
+| test-file bindings that choose data, expectations, configuration, or verdict rules | valid bindings receive values selected by source contracts, harnesses, generators, or fixtures, or carry the case the assertion type assigns |
+| a case value moved into a production module so the test can cite that module       | a production address is not a production contract; nothing outside the test requires the symbol                                              |
+| `.assert().success()` or a `predicates` matcher as the verdict                     | the library owns the predicate; take the `Output` and assert on it with the declared assertion API                                           |
+| a command name, subcommand, or flag written as a literal in the test               | the binary's argument vocabulary is a source contract the owning module exports                                                              |
+| predicate or assertion macro moved into a harness, generator, or collaborator      | the linked `#[test]` function owns every predicate and assertion macro                                                                       |
+| property runner tuning in a test file                                              | the property harness owns seed, case count, persistence, and replay diagnostics                                                              |
 
 Do not require `spx validation literal` for Rust tests. The literal validator is TypeScript-only. Enforce source-owned values through review and Rust test standards instead.
 

@@ -483,7 +483,7 @@ How to avoid: Construct each finding atomically from the canonical nine-field sc
 
 Claude rejected a package's `__version__` as source-ownership laundering because no module in the checkout consumed it. The packaging manifest declares it as published API, a surface the audit never opened, so a real contract was reported as a test-only address.
 
-How to avoid: Judge ownership by the contract outside the test tree, and read the checkout's declared surfaces — packaging entry points and export declarations, protocol implementations, registry and reflective lookups, generated use, and declared schemas — before reporting a symbol as laundered.
+How to avoid: Judge ownership by the contract outside the test tree, and read the checkout's declared surfaces — packaging entry points and export declarations, plugin and protocol implementations, registry and reflective lookups, generated use, and declared schemas — before reporting a symbol as laundered.
 
 </failure_modes>
 
