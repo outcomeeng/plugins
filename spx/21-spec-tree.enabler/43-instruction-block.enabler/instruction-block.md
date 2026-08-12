@@ -65,7 +65,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ### Compliance
 
-- ALWAYS: generation emits and validates a strongly warned authority hierarchy of operator → active skills → repository decisions and specs → verification evidence → code, states that centrally managed skills outrank stale repository content, and requires a lower layer to be fixed rather than weakening a higher layer ([test](tests/test_instruction_block.compliance.l1.py))
+- ALWAYS: generation emits and validates a strongly warned authority hierarchy of operator → active skills → repository decisions and specs → verification evidence → code, states that centrally managed skills outrank stale repository content, and requires a lower layer to be fixed rather than weakening a higher layer ([audit])
 - ALWAYS: generation emits and validates that an active skill loads a matching `spx/local/*.md` overlay only when the skill declares one, and that the overlay supplies repository-specific values and commands below the skill without replacing, weakening, or contradicting it ([test](tests/test_instruction_block.compliance.l1.py))
 - NEVER: generation permits code comments or docstrings to reference Spec Tree specs or decisions through `spx/...` paths, ADR/PDR identifiers, or decision-file references ([test](tests/test_instruction_block.compliance.l1.py))
 - ALWAYS: generation emits and validates that the active harness guide in every directory is read before work in that directory when the guide exists — `CLAUDE.md` for Claude Code and `AGENTS.md` for Codex ([test](tests/test_instruction_block.compliance.l1.py))
