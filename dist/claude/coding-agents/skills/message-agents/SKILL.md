@@ -7,7 +7,7 @@ allowed-tools: Skill, Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/
 ---
 
 <objective>
-A source-owned coordination envelope delivered through `/operate-prowl` to one complete Prowl pane identity, with transport status kept distinct from acknowledgement, agreement, authorization, and ownership.
+A source-owned coordination envelope delivered to one complete Prowl pane identity, with transport status kept distinct from acknowledgement, agreement, authorization, and ownership.
 </objective>
 
 <workflow>

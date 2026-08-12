@@ -7,7 +7,7 @@ allowed-tools: Skill, Bash(printf:*), Bash(python3 "${SKILL_DIR}/scripts/agent_m
 ---
 
 <objective>
-A source-owned coordination envelope delivered through `/operate-prowl` to one complete Prowl pane identity, with transport status kept distinct from acknowledgement, agreement, authorization, and ownership.
+A source-owned coordination envelope delivered to one complete Prowl pane identity, with transport status kept distinct from acknowledgement, agreement, authorization, and ownership.
 </objective>
 
 <workflow>
