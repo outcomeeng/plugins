@@ -104,7 +104,7 @@ Specified and failing are valid states. They expose where lower layers must catc
 
 - ALWAYS: classify content by the artifact purpose that owns it.
 
-The taxonomy is closed: `spx/` admits no artifact outside it, and `spx/local/` overlays are operational configuration rather than artifacts. Placement decides only between the two authoring layers — content that governs is an ADR or PDR, content that declares is a spec. Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and node ownership with the language's declared infrastructure home derives implementation locations.
+The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and a node's optional knowledge root. Operational files — `spx/local/` overlays and the spec-tree exclusion mechanism — are configuration, not artifacts. Coordination notes raise no placement question: `PLAN.md` and `ISSUES.md` carry no truth and sit at their node per the canonical shape. Placement decides only between the two authoring layers — content that governs is an ADR or PDR, content that declares is a spec. Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and node ownership with the language's declared infrastructure home derives implementation locations.
 
 | Artifact                | Purpose                                            | Contains                                             | Verified by                                  |
 | ----------------------- | -------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------- |
@@ -216,12 +216,14 @@ NN-{slug}.{enabler|outcome}/
 ├── {slug}.md
 ├── tests/                              # when the first [test] file exists
 ├── evals/{rule-slug}/                  # when the first [eval] exists
+├── knowledge/                          # optional knowledge root
 ├── PLAN.md                             # optional
 ├── ISSUES.md                           # optional
 └── NN-{child-slug}.{enabler|outcome}/
 ```
 
 - The spec file is `{slug}.md`, with no numeric or type suffix.
+- `knowledge/` is an optional node knowledge root — a knowledge bundle whose `index.md` lists its contents; the product root may carry `spx/knowledge/` the same way.
 - `[test]` evidence is co-located under `tests/`; the directory materializes with the first test file, and its filename encodes one assertion type and execution level according to the product's language convention.
 - `[eval]` evidence is co-located under `evals/{rule-slug}/` with `eval.toml`, `cases.jsonl`, `prompt.md`, and `history.jsonl`; full run transcripts stay ignored under `runs/`.
 - `PLAN.md` and `ISSUES.md` are optional coordination notes, never product truth.

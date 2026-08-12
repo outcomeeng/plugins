@@ -133,7 +133,7 @@ The methodology this repository adopts declares that a node may carry one knowle
 
 The canonical node shape in the inline `/understand` `<common_structure>` (authored in `src/plugins/spec-tree/skills/understand/SKILL.md`) declares only `{slug}.md`, `tests/`, `evals/{rule-slug}/`, `PLAN.md`, `ISSUES.md`, decision files, and child node directories. Consumer repositories therefore receive a node grammar that omits a declared artifact kind, and `/contextualize` delivers no knowledge index for a node that carries one.
 
-Required handling: amend `<common_structure>` to declare the knowledge root and the profile rules above, with the plugin version bump, `just build-skills`, and the `skill-auditor` gate that a shipped-skill edit requires.
+Required handling: amend `<common_structure>` to declare the profile rules above — `index.md` and `log.md` required in every bundle, typed frontmatter on non-reserved markdown files, and `index.md`-only context delivery — with the plugin version bump, `just build-skills`, and the `skill-auditor` gate that a shipped-skill edit requires. The knowledge root directory itself is declared: `<common_structure>` names `knowledge/` in the canonical node shape and `<artifact_placement>` admits it in the closed taxonomy; the profile rules remain the open work.
 
 Why separate: the amendment changes the shipped methodology's node grammar for every consumer repository and carries its own gate chain, while the changeset that surfaced it conforms one bundle inside this repository's own `spx/` tree.
 
