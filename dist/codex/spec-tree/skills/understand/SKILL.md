@@ -231,7 +231,7 @@ NN-{slug}.{enabler|outcome}/
 - The spec file is `{slug}.md`, with no numeric or type suffix.
 - `knowledge/` is an optional node knowledge root — a knowledge bundle whose `index.md` lists its contents; the product root may carry `spx/knowledge/` the same way.
 - `[test]` evidence is co-located under `tests/`; the directory materializes with the first test file, and its filename encodes one assertion type and execution level according to the product's language convention.
-- `[eval]` evidence is co-located under `evals/{rule-slug}/` with `eval.toml`, `cases.jsonl`, `prompt.md`, and `history.jsonl`, plus the eval-relative producer prompt template the eval declares; full run transcripts stay ignored under `runs/`.
+- `[eval]` evidence is co-located under `evals/{rule-slug}/`: `eval.toml` plus the case, prompt, history, and producer-template artifacts it declares by eval-relative path — canonically `cases.jsonl`, `prompt.md`, and `history.jsonl`, with a declared path also reaching a sibling eval's shared artifact; full run transcripts stay ignored under `runs/`.
 - `PLAN.md` and `ISSUES.md` are optional coordination notes, never product truth.
 - ADRs and PDRs are files inside a node directory, never child nodes.
 
