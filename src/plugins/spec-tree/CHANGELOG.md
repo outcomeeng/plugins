@@ -19,6 +19,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Added
 
 - **The canonical node shape names the optional `knowledge/` root.** A node may carry one knowledge root — a knowledge bundle whose `index.md` lists its contents — and the product root may carry `spx/knowledge/` the same way.
+- **Producer-coupled evals name their prompt template.** The canonical eval lane admits `prompt.template.md` beside `eval.toml`, `cases.jsonl`, `prompt.md`, and `history.jsonl` when the eval declares a producer prompt source.
 
 ## 0.88.9
 

@@ -104,7 +104,12 @@ Specified and failing are valid states. They expose where lower layers must catc
 
 - ALWAYS: classify content by the artifact purpose that owns it.
 
-The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and the optional knowledge root a node or the product root carries. Operational files — `spx/local/` overlays and the spec-tree exclusion mechanism — are configuration, not artifacts. Coordination notes raise no placement question: `PLAN.md` and `ISSUES.md` carry no truth and sit at their node or the product root. Placement decides only between the two authoring layers — content that governs is an ADR or PDR, content that declares is a spec. Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and node ownership with the language's declared infrastructure home derives implementation locations (see `<test_artifact_boundaries>`).
+The taxonomy is closed: `spx/` admits no artifact outside this table (whose rows include the root product spec), the canonical node shape, and the optional knowledge root a node or the product root carries.
+
+- Operational files — `spx/local/` overlays and `spx/EXCLUDE` — are configuration, not artifacts.
+- Coordination notes raise no placement question: `PLAN.md` and `ISSUES.md` carry no truth and sit at their node or the product root.
+- Placement decides only between the two authoring layers: content that governs is an ADR or PDR, and content that declares is a spec.
+- Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and node ownership with the language's declared infrastructure home derives implementation locations (see `<test_artifact_boundaries>`).
 
 | Artifact                | Purpose                                            | Contains                                                              | Verified by                                  |
 | ----------------------- | -------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------- |
