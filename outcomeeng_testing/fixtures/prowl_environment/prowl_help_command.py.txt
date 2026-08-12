@@ -1,0 +1,4 @@
+"""Violating shipped-script payload for Prowl help invocation detection."""
+
+checked_command = checked_prowl_command()
+checked_command.append(HELP_OPTION)

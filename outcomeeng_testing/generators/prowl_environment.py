@@ -18,14 +18,24 @@ class DelegationTextCase:
     projection: str
 
 
-def delegation_text_case(ordinal: int) -> DelegationTextCase:
-    suffix = str(ordinal)
-    return DelegationTextCase(
-        subject=f"bounded delegation {suffix}",
-        instruction=f"return terminal evidence {suffix}",
-        inline_result=f"terminal result {suffix}",
-        result_reference=f"result://terminal-{suffix}",
-        projection=f"bounded terminal projection {suffix}",
+def delegation_text_cases() -> st.SearchStrategy[DelegationTextCase]:
+    return st.builds(
+        DelegationTextCase,
+        subject=st.text(min_size=1, max_size=80),
+        instruction=st.text(min_size=1, max_size=160),
+        inline_result=st.text(min_size=1, max_size=200),
+        result_reference=st.from_regex(r"result://[a-z0-9]{1,32}", fullmatch=True),
+        projection=st.text(min_size=1, max_size=80),
+    )
+
+
+def message_texts() -> st.SearchStrategy[str]:
+    return st.text(min_size=1, max_size=200)
+
+
+def unsupported_delegation_fields(module: ModuleType) -> st.SearchStrategy[str]:
+    return st.from_regex(r"[A-Za-z][A-Za-z0-9]{0,31}", fullmatch=True).filter(
+        lambda field: field not in module.DELEGATION_CLI_FIELDS
     )
 
 
@@ -103,6 +113,48 @@ def public_agent_item(module: ModuleType, ordinal: int) -> dict[str, object]:
         },
         module.RUN_FIELD: {module.ID_FIELD: identity[module.RUN_FIELD]},
     }
+
+
+def resolver_target_path(
+    module: ModuleType,
+    agents: list[dict[str, object]],
+    cardinality: object,
+) -> str:
+    if cardinality is module.TargetMatchCardinality.ZERO:
+        agent = agents[0]
+        field_name = module.PATH_FIELD
+    elif cardinality is module.TargetMatchCardinality.ONE:
+        agent = agents[1]
+        field_name = module.PATH_FIELD
+    elif cardinality is module.TargetMatchCardinality.MULTIPLE:
+        agent = agents[0]
+        field_name = module.ROOT_PATH_FIELD
+    else:
+        raise AssertionError(f"Unknown target-match cardinality: {cardinality}")
+    worktree = agent[module.WORKTREE_FIELD]
+    if not isinstance(worktree, dict):
+        raise AssertionError("Generated public agent has no worktree object")
+    value = worktree[field_name]
+    if not isinstance(value, str):
+        raise AssertionError(f"Generated worktree {field_name} is not text")
+    return value
+
+
+def resolver_caller_environments(
+    module: ModuleType, participant: dict[str, str]
+) -> tuple[dict[str, str], ...]:
+    """Generate every supported caller-identity environment shape."""
+    values = {
+        module.PROWL_PANE_ID_ENV: participant[module.PANE_FIELD],
+        module.PROWL_WORKTREE_PATH_ENV: participant[module.WORKTREE_FIELD],
+    }
+    return tuple(
+        {field: values[field]} for field in module.CALLER_IDENTITY_ENV_FIELDS
+    ) + (values,)
+
+
+def subprocess_input_texts() -> st.SearchStrategy[str]:
+    return st.text(max_size=200)
 
 
 def agent_identity(module: ModuleType, ordinal: int) -> dict[str, str]:

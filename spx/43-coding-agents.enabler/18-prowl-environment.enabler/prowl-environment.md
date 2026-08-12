@@ -10,15 +10,16 @@ CAN operate between any positively identified Prowl agents without constructing 
 
 - Every supported operation — list, agents, read, send, key, focus, tab create, tab close, pane close, and open — maps from one source-owned request shape to one exact Prowl argument vector and checked response result ([test](tests/test_prowl_environment.mapping.l1.py))
 - Public Prowl agent evidence maps to complete source-preserved agent, pane, worktree, branch, repository, and applicable run identities or to a named unavailable or ambiguous result ([test](tests/test_prowl_environment.mapping.l1.py))
+- An absolute worktree, repository, or working-directory path maps through one source-owned resolver to the complete caller, complete pane inventory, non-caller path matches, and candidate-specific immediate-return send request templates; zero, one, and multiple matches produce unavailable, succeeded, and ambiguous results without sending, while a selected template produces exactly one checked send result with trailing-Enter evidence and no retry ([test](tests/test_prowl_target_resolution.mapping.l1.py))
 - A delegation request maps to exactly one correlated `delegation-completed`, `delegation-failed`, `delegation-rejected`, or `delegation-unavailable` terminal handback containing a complete inline result or an exact durable result reference with a bounded inline projection ([test](tests/test_prowl_environment.mapping.l1.py))
 
 ### Conformance
 
 - Every operation emits a versioned JSON result conforming to its source-owned schema while preserving Prowl identity, status, conclusion, exit-code, open resolution, tab-creation, and send-submission values verbatim ([test](tests/test_prowl_environment.conformance.l1.py))
-- A Prowl operation with no explicit input isolates the child command from the adapter request stream, while explicit input reaches the child unchanged ([test](tests/test_prowl_environment.conformance.l1.py))
 
 ### Properties
 
+- Default subprocess input maps an absent payload to null-device stdin, and every explicit text payload reaches captured input unchanged ([test](tests/test_prowl_subprocess_input.property.l1.py))
 - Matching repeated terminal handbacks for one coordination reference preserve one terminal outcome, while conflicting terminal states for that reference are rejected ([test](tests/test_prowl_environment.property.l1.py))
 
 ### Compliance
@@ -30,4 +31,4 @@ CAN operate between any positively identified Prowl agents without constructing 
 - NEVER: another shipped coding-agents skill instructs a workflow to construct raw Prowl commands, invoke Prowl command help, or depend on an external environment-control skill ([audit])
 - ALWAYS: the delegation surface instructs a recipient to close the loop by push — writing a durable result before sending one line to the pane the envelope already carries — because the sender cannot poll for completion ([audit])
 - ALWAYS: the delegation surface names the environment conditions that break a handback — an unresolvable command name and a socket owned by a different instance — so a recipient distinguishes them from an absent sender ([audit])
-- ALWAYS: the operation surface resolves a target named by worktree, repository, or working directory to a pane by path containment and reports it back in the terms the operator supplied ([audit])
+- ALWAYS: operator-target resolution reports a target named by absolute worktree, repository, or working-directory path in the same path terms the operator supplied while using the selected pane identity internally, never asking for a pane UUID or selecting by focus, position, or title ([audit])

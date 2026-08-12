@@ -1,0 +1,6 @@
+"""Violating adapter payload for filesystem enumeration detection."""
+
+from pathlib import Path
+
+worktree_metadata = Path.cwd() / ".git" / "worktrees"
+list(worktree_metadata.iterdir())

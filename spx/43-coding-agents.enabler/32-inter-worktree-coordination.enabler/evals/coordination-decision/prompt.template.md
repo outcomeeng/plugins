@@ -1,8 +1,13 @@
-<!-- Generated from the complete producer at {producer_path}. -->
+<!-- Generated from the complete producer set:
+{producer_paths}
+-->
 
-Apply the complete coordination producer below to the supplied authoritative evidence. Return only the producer's structured JSON verdict. Do not invoke tools or send messages during this evaluation.
+Apply the complete Prowl resolution, semantic messaging, and coordination producers below to the supplied authoritative evidence. Resolve every operator-named path through the Prowl producer, construct every message through the messaging producer, and return only the coordinator's structured JSON verdict. Do not invoke external tools or send messages during this evaluation; execute the supplied producers against the public evidence in the request.
 
-{producer_file}
+<pre><code>
+{producer_files}
+</code></pre>
+
 The authoritative coordination evidence (JSON-encoded):
 
 ```json
