@@ -49,6 +49,7 @@ def test_agent_message_mappings() -> None:
     recipient_target, recipient_state = mutation_observation(module, recipient)
 
     observed_states: set[object] = set()
+    initiating_references: set[str] = set()
     for ordinal, (kind, expected_state) in enumerate(
         (
             (
@@ -98,9 +99,17 @@ def test_agent_message_mappings() -> None:
         if kind in module.RESPONSE_KINDS:
             assert envelope[module.COORDINATION_REFERENCE_FIELD] == active_reference
         else:
-            assert envelope[module.COORDINATION_REFERENCE_FIELD] != active_reference
+            envelope_reference = cast(
+                str, envelope[module.COORDINATION_REFERENCE_FIELD]
+            )
+            assert str(uuid.UUID(envelope_reference)) == envelope_reference
+            assert envelope_reference not in initiating_references
+            initiating_references.add(envelope_reference)
         observed_states.add(envelope[module.MESSAGE_STATE_FIELD])
     assert observed_states == set(module.MessageState)
+    assert len(initiating_references) == len(
+        set(module.MessageKind) - module.RESPONSE_KINDS
+    )
 
     rejected_content = message_content(module.MessageKind.ACKNOWLEDGEMENT, 7)
     rejected_acknowledgement = module.build_envelope(
