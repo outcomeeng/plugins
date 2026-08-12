@@ -1,10 +1,11 @@
 import json
 import uuid
+from types import ModuleType
 from typing import cast
 
 from outcomeeng_testing.generators.prowl_environment import (
+    DelegationTextCase,
     agent_identity,
-    delegation_text_case,
     operation_requests,
     public_agent_item,
     public_prowl_operation_names,
@@ -12,6 +13,7 @@ from outcomeeng_testing.generators.prowl_environment import (
 from outcomeeng_testing.harnesses.prowl_environment import (
     RecordingRunner,
     load_prowl_environment,
+    run_terminal_mapping,
 )
 
 
@@ -223,44 +225,47 @@ def test_public_agent_evidence_maps_to_complete_identity_results() -> None:
 
 
 def test_terminal_kinds_map_to_correlated_handbacks() -> None:
-    module = load_prowl_environment()
-    sender = agent_identity(module, ordinal=1)
-    recipient = agent_identity(module, ordinal=2)
-    content = delegation_text_case(1)
-    reference = str(uuid.uuid5(uuid.NAMESPACE_URL, sender[module.PANE_FIELD]))
-    delegation = module.delegation_request(
-        sender=sender,
-        recipient=recipient,
-        subject=content.subject,
-        instruction=content.instruction,
-        coordination_reference=reference,
-    )
+    def assert_terminal(module: ModuleType, content: DelegationTextCase) -> None:
+        sender = agent_identity(module, ordinal=1)
+        recipient = agent_identity(module, ordinal=2)
+        reference = str(uuid.uuid5(uuid.NAMESPACE_URL, sender[module.PANE_FIELD]))
+        delegation = module.delegation_request(
+            sender=sender,
+            recipient=recipient,
+            subject=content.subject,
+            instruction=content.instruction,
+            coordination_reference=reference,
+        )
 
-    for terminal_kind in module.TerminalKind:
-        terminal = module.terminal_handback(
-            delegation,
-            terminal_kind,
-            inline_result=f"{content.inline_result}: {terminal_kind.value}",
-        )
-        assert terminal[module.COORDINATION_REFERENCE_FIELD] == reference
-        assert terminal[module.KIND_FIELD] == terminal_kind
-        assert terminal[module.SENDER_FIELD] == recipient
-        assert terminal[module.RECIPIENT_FIELD] == sender
-        assert module.reduce_terminal(None, terminal) == terminal
+        for terminal_kind in module.TerminalKind:
+            terminal = module.terminal_handback(
+                delegation,
+                terminal_kind,
+                inline_result=f"{content.inline_result}: {terminal_kind.value}",
+            )
+            assert terminal[module.COORDINATION_REFERENCE_FIELD] == reference
+            assert terminal[module.KIND_FIELD] == terminal_kind
+            assert terminal[module.SENDER_FIELD] == recipient
+            assert terminal[module.RECIPIENT_FIELD] == sender
+            assert module.reduce_terminal(None, terminal) == terminal
 
-        delivery = module.delegation_delivery_request(terminal)
-        delivery_arguments = cast(dict[str, object], delivery[module.ARGUMENTS_FIELD])
-        assert delivery_arguments[module.PANE_FIELD] == sender[module.PANE_FIELD]
+            delivery = module.delegation_delivery_request(terminal)
+            delivery_arguments = cast(
+                dict[str, object], delivery[module.ARGUMENTS_FIELD]
+            )
+            assert delivery_arguments[module.PANE_FIELD] == sender[module.PANE_FIELD]
 
-        durable = module.terminal_handback(
-            delegation,
-            terminal_kind,
-            result_reference=f"{content.result_reference}-{terminal_kind.value}",
-            projection=f"{content.projection}: {terminal_kind.value}",
-        )
-        assert durable[module.RESULT_REFERENCE_FIELD] == (
-            f"{content.result_reference}-{terminal_kind.value}"
-        )
-        assert durable[module.PROJECTION_FIELD] == (
-            f"{content.projection}: {terminal_kind.value}"
-        )
+            durable = module.terminal_handback(
+                delegation,
+                terminal_kind,
+                result_reference=f"{content.result_reference}-{terminal_kind.value}",
+                projection=f"{content.projection}: {terminal_kind.value}",
+            )
+            assert durable[module.RESULT_REFERENCE_FIELD] == (
+                f"{content.result_reference}-{terminal_kind.value}"
+            )
+            assert durable[module.PROJECTION_FIELD] == (
+                f"{content.projection}: {terminal_kind.value}"
+            )
+
+    run_terminal_mapping(assert_terminal)

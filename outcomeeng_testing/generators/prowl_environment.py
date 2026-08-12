@@ -18,14 +18,24 @@ class DelegationTextCase:
     projection: str
 
 
-def delegation_text_case(ordinal: int) -> DelegationTextCase:
-    suffix = str(ordinal)
-    return DelegationTextCase(
-        subject=f"bounded delegation {suffix}",
-        instruction=f"return terminal evidence {suffix}",
-        inline_result=f"terminal result {suffix}",
-        result_reference=f"result://terminal-{suffix}",
-        projection=f"bounded terminal projection {suffix}",
+def delegation_text_cases() -> st.SearchStrategy[DelegationTextCase]:
+    return st.builds(
+        DelegationTextCase,
+        subject=st.text(min_size=1, max_size=80),
+        instruction=st.text(min_size=1, max_size=160),
+        inline_result=st.text(min_size=1, max_size=200),
+        result_reference=st.from_regex(r"result://[a-z0-9]{1,32}", fullmatch=True),
+        projection=st.text(min_size=1, max_size=80),
+    )
+
+
+def message_texts() -> st.SearchStrategy[str]:
+    return st.text(min_size=1, max_size=200)
+
+
+def unsupported_delegation_fields(module: ModuleType) -> st.SearchStrategy[str]:
+    return st.from_regex(r"[A-Za-z][A-Za-z0-9]{0,31}", fullmatch=True).filter(
+        lambda field: field not in module.DELEGATION_CLI_FIELDS
     )
 
 

@@ -1,10 +1,11 @@
 import json
 import uuid
+from types import ModuleType
 from typing import cast
 
 from outcomeeng_testing.generators.prowl_environment import (
+    DelegationTextCase,
     agent_identity,
-    delegation_text_case,
     operation_requests,
     public_agent_item,
 )
@@ -13,11 +14,12 @@ from outcomeeng_testing.harnesses.prowl_environment import (
     load_prowl_environment,
     local_filesystem_enumeration_violation_source,
     local_worktree_enumeration_violation_source,
-    observe_delegation_sender_pane,
     prowl_help_violation_source,
     prowl_command_source_texts,
     prowl_environment_source_texts,
     raw_prowl_violation_source,
+    run_delegation_cli_compliance,
+    run_terminal_result_compliance,
 )
 
 
@@ -121,41 +123,44 @@ def test_prowl_environment_compliance() -> None:
 
 
 def test_terminal_handbacks_require_one_complete_result_form() -> None:
-    module = load_prowl_environment()
-    sender = agent_identity(module, ordinal=1)
-    recipient = agent_identity(module, ordinal=2)
-    content = delegation_text_case(3)
-    delegation = module.delegation_request(
-        sender=sender,
-        recipient=recipient,
-        subject=content.subject,
-        instruction=content.instruction,
-        coordination_reference=str(
-            uuid.uuid5(uuid.NAMESPACE_URL, sender[module.PANE_FIELD])
-        ),
-    )
-
-    for invalid_fields in (
-        {},
-        {module.RESULT_REFERENCE_FIELD: "result://missing-projection"},
-        {module.PROJECTION_FIELD: "projection without reference"},
-        {
-            module.RESULT_REFERENCE_FIELD: "result://overlength-projection",
-            module.PROJECTION_FIELD: (
-                "x" * (module.MAX_RESULT_PROJECTION_CHARACTERS + 1)
+    def assert_result_forms(module: ModuleType, content: DelegationTextCase) -> None:
+        sender = agent_identity(module, ordinal=1)
+        recipient = agent_identity(module, ordinal=2)
+        delegation = module.delegation_request(
+            sender=sender,
+            recipient=recipient,
+            subject=content.subject,
+            instruction=content.instruction,
+            coordination_reference=str(
+                uuid.uuid5(uuid.NAMESPACE_URL, sender[module.PANE_FIELD])
             ),
-        },
-    ):
-        try:
-            module.terminal_handback(
-                delegation,
-                module.TerminalKind.COMPLETED,
-                **module.result_form_arguments(invalid_fields),
-            )
-        except module.ProwlEnvironmentError as error:
-            assert error.status == module.ExecutionStatus.INVALID_SCHEMA
-        else:
-            raise AssertionError("invalid terminal result form was accepted")
+        )
+        overlength_projection = (
+            content.projection
+            * (module.MAX_RESULT_PROJECTION_CHARACTERS // len(content.projection) + 1)
+        )[: module.MAX_RESULT_PROJECTION_CHARACTERS + 1]
+
+        for invalid_fields in (
+            {},
+            {module.RESULT_REFERENCE_FIELD: content.result_reference},
+            {module.PROJECTION_FIELD: content.projection},
+            {
+                module.RESULT_REFERENCE_FIELD: content.result_reference,
+                module.PROJECTION_FIELD: overlength_projection,
+            },
+        ):
+            try:
+                module.terminal_handback(
+                    delegation,
+                    module.TerminalKind.COMPLETED,
+                    **module.result_form_arguments(invalid_fields),
+                )
+            except module.ProwlEnvironmentError as error:
+                assert error.status == module.ExecutionStatus.INVALID_SCHEMA
+            else:
+                raise AssertionError("invalid terminal result form was accepted")
+
+    run_terminal_result_compliance(assert_result_forms)
 
 
 def test_raw_prowl_command_rule_rejects_only_the_violating_fixture() -> None:
@@ -168,50 +173,42 @@ def test_raw_prowl_command_rule_rejects_only_the_violating_fixture() -> None:
     assert module.raw_prowl_command_violations(help_source) == [help_path]
 
 
-def test_delegation_cli_rejects_an_unsupported_field() -> None:
-    module = load_prowl_environment()
-    sender = agent_identity(module, 0)
-    request = {
-        module.SENDER_FIELD: sender,
-        module.RECIPIENT_FIELD: agent_identity(module, 1),
-        module.SUBJECT_FIELD: "bounded subject",
-        module.INSTRUCTION_FIELD: "bounded instruction",
-        module.COORDINATION_REFERENCE_FIELD: None,
-        "returnAddress": {module.PANE_FIELD: sender[module.PANE_FIELD]},
-    }
-
-    try:
-        module._delegation_from_cli(request)
-    except module.ProwlEnvironmentError as error:
-        assert "returnAddress" in str(error)
-    else:
-        raise AssertionError(
-            "an unsupported delegation field was accepted; a caller inventing a "
-            "field would send a delegation missing the data it believed it supplied"
-        )
-
-
-def test_delegation_cli_accepts_the_supported_fields() -> None:
-    module = load_prowl_environment()
-    sender = agent_identity(module, 0)
-
-    envelope = module._delegation_from_cli(
-        {
+def test_delegation_cli_rejects_unsupported_and_accepts_supported_fields() -> None:
+    def assert_delegation(
+        module: ModuleType, content: DelegationTextCase, unsupported_field: str
+    ) -> None:
+        sender = agent_identity(module, 0)
+        supported_request = {
             module.SENDER_FIELD: sender,
             module.RECIPIENT_FIELD: agent_identity(module, 1),
-            module.SUBJECT_FIELD: "bounded subject",
-            module.INSTRUCTION_FIELD: "bounded instruction",
+            module.SUBJECT_FIELD: content.subject,
+            module.INSTRUCTION_FIELD: content.instruction,
             module.COORDINATION_REFERENCE_FIELD: None,
         }
-    )
+        unsupported_request = {
+            **supported_request,
+            unsupported_field: {module.PANE_FIELD: sender[module.PANE_FIELD]},
+        }
 
-    assert envelope[module.SENDER_FIELD] == sender
+        try:
+            module._delegation_from_cli(unsupported_request)
+        except module.ProwlEnvironmentError as error:
+            assert unsupported_field in str(error)
+        else:
+            raise AssertionError(
+                "an unsupported delegation field was accepted; a caller inventing "
+                "a field would send a delegation missing the data it believed it "
+                "supplied"
+            )
 
+        envelope = module._delegation_from_cli(supported_request)
+        carried = cast(dict[str, object], envelope[module.SENDER_FIELD])
 
-def test_delegation_envelope_carries_the_sender_pane() -> None:
-    submitted, carried = observe_delegation_sender_pane()
+        assert envelope[module.SENDER_FIELD] == sender
+        assert carried[module.PANE_FIELD] == sender[module.PANE_FIELD], (
+            f"envelope carried sender pane {carried[module.PANE_FIELD]!r}, not the "
+            f"submitted {sender[module.PANE_FIELD]!r}; the recipient reads its "
+            "return path from this field alone"
+        )
 
-    assert carried == submitted, (
-        f"envelope carried sender pane {carried!r}, not the submitted {submitted!r}; "
-        "the recipient reads its return path from this field alone"
-    )
+    run_delegation_cli_compliance(assert_delegation)

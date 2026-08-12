@@ -14,6 +14,7 @@ from outcomeeng_testing.harnesses.prowl_environment import (
     load_prowl_environment,
     prowl_agents_command_result,
     prowl_send_command_result,
+    run_checked_send_mapping,
 )
 
 
@@ -232,42 +233,50 @@ def test_repository_child_path_does_not_match_repository_root() -> None:
 
 
 def test_filled_resolver_template_returns_one_complete_checked_send_result() -> None:
-    module = load_prowl_environment()
-    agents = [public_agent_item(module, ordinal) for ordinal in range(2)]
-    runner = RecordingRunner(
-        [
-            prowl_agents_command_result(module, agents),
-            prowl_send_command_result(module, trailing_enter_sent=True),
+    def assert_send(message_text: str) -> None:
+        module = load_prowl_environment()
+        agents = [public_agent_item(module, ordinal) for ordinal in range(2)]
+        runner = RecordingRunner(
+            [
+                prowl_agents_command_result(module, agents),
+                prowl_send_command_result(module, trailing_enter_sent=True),
+            ]
+        )
+        resolved = module.resolve_target(
+            cast(
+                str,
+                cast(dict[str, object], agents[1][module.WORKTREE_FIELD])[
+                    module.PATH_FIELD
+                ],
+            ),
+            {
+                module.PROWL_PANE_ID_ENV: cast(
+                    dict[str, str], agents[0][module.PANE_FIELD]
+                )[module.ID_FIELD]
+            },
+            runner,
+        )
+        request = resolved[module.CANDIDATES_FIELD][0][
+            module.SEND_REQUEST_TEMPLATE_FIELD
         ]
-    )
-    resolved = module.resolve_target(
-        cast(
-            str,
-            cast(dict[str, object], agents[1][module.WORKTREE_FIELD])[
-                module.PATH_FIELD
-            ],
-        ),
-        {
-            module.PROWL_PANE_ID_ENV: cast(
-                dict[str, str], agents[0][module.PANE_FIELD]
-            )[module.ID_FIELD]
-        },
-        runner,
-    )
-    request = resolved[module.CANDIDATES_FIELD][0][module.SEND_REQUEST_TEMPLATE_FIELD]
-    request[module.ARGUMENTS_FIELD][module.TEXT_FIELD] = "complete result ready"
+        request[module.ARGUMENTS_FIELD][module.TEXT_FIELD] = message_text
 
-    result = module.execute(request, runner)
+        result = module.execute(request, runner)
 
-    assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
-    assert result[module.COMMAND_EXIT_CODE_FIELD] == 0
-    assert result[module.RESPONSE_FIELD][module.DATA_FIELD][module.INPUT_FIELD][
-        module.TRAILING_ENTER_SENT_FIELD
-    ]
-    assert runner.calls == [
-        (module.command_for(module.operation_request(module.Operation.AGENTS)), None),
-        (module.command_for(request), None),
-    ]
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        assert result[module.COMMAND_EXIT_CODE_FIELD] == 0
+        assert result[module.RESPONSE_FIELD][module.DATA_FIELD][module.INPUT_FIELD][
+            module.TRAILING_ENTER_SENT_FIELD
+        ]
+        assert runner.calls == [
+            (
+                module.command_for(module.operation_request(module.Operation.AGENTS)),
+                None,
+            ),
+            (module.command_for(request), None),
+        ]
+
+    run_checked_send_mapping(assert_send)
 
 
 def test_resolver_output_builds_and_delivers_one_message_envelope() -> None:

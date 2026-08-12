@@ -18,9 +18,11 @@ from outcomeeng_testing.generators.prowl_environment import (
     DelegationTextCase,
     agent_identity,
     coordination_references,
-    delegation_text_case,
+    delegation_text_cases,
+    message_texts,
     result_forms,
     subprocess_input_texts,
+    unsupported_delegation_fields,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -54,6 +56,30 @@ PROPERTY_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-prowl-environment.enabler/tests/"
     "test_prowl_environment.property.l1.py"
 )
+TERMINAL_MAPPING_SEED = 2026081201
+TERMINAL_MAPPING_EXAMPLES = 20
+TERMINAL_MAPPING_REPLAY_PATH = (
+    "spx/43-coding-agents.enabler/18-prowl-environment.enabler/tests/"
+    "test_prowl_environment.mapping.l1.py"
+)
+TERMINAL_RESULT_COMPLIANCE_SEED = 2026081202
+TERMINAL_RESULT_COMPLIANCE_EXAMPLES = 20
+TERMINAL_RESULT_COMPLIANCE_REPLAY_PATH = (
+    "spx/43-coding-agents.enabler/18-prowl-environment.enabler/tests/"
+    "test_prowl_environment.compliance.l1.py"
+)
+DELEGATION_CLI_COMPLIANCE_SEED = 2026081203
+DELEGATION_CLI_COMPLIANCE_EXAMPLES = 20
+DELEGATION_CLI_COMPLIANCE_REPLAY_PATH = (
+    "spx/43-coding-agents.enabler/18-prowl-environment.enabler/tests/"
+    "test_prowl_environment.compliance.l1.py"
+)
+CHECKED_SEND_MAPPING_SEED = 2026081204
+CHECKED_SEND_MAPPING_EXAMPLES = 20
+CHECKED_SEND_MAPPING_REPLAY_PATH = (
+    "spx/43-coding-agents.enabler/18-prowl-environment.enabler/tests/"
+    "test_prowl_target_resolution.mapping.l1.py"
+)
 SUBPROCESS_INPUT_PROPERTY_SEED = 2026081101
 SUBPROCESS_INPUT_PROPERTY_EXAMPLES = 40
 SUBPROCESS_INPUT_PROPERTY_REPLAY_PATH = (
@@ -80,23 +106,6 @@ class RecordingRunner:
         if not self.results:
             raise RuntimeError(f"Unexpected command: {argv}")
         return self.results.pop(0)
-
-
-def observe_delegation_sender_pane() -> tuple[str, str]:
-    """Return the submitted sender pane and the pane the envelope carries."""
-    module = _load()
-    sender = agent_identity(module, 0)
-    envelope = module._delegation_from_cli(
-        {
-            "sender": sender,
-            "recipient": agent_identity(module, 1),
-            "subject": "bounded subject",
-            "instruction": "bounded instruction",
-            "coordinationReference": None,
-        }
-    )
-    carried = cast(dict[str, object], envelope["sender"])
-    return sender["pane"], cast(str, carried["pane"])
 
 
 def _load() -> ModuleType:
@@ -224,16 +233,17 @@ def run_terminal_property(
     module = _load()
     sender = agent_identity(module, ordinal=1)
     recipient = agent_identity(module, ordinal=2)
-    property_text = delegation_text_case(2)
 
     @seed(PROPERTY_SEED)
     @settings(max_examples=PROPERTY_EXAMPLES, deadline=None, print_blob=True)
     @given(
+        property_text=delegation_text_cases(),
         reference=coordination_references(),
         terminal_kind=st.sampled_from(tuple(module.TerminalKind)),
         result_form=result_forms(),
     )
     def generated_terminal_property(
+        property_text: DelegationTextCase,
         reference: str,
         terminal_kind: object,
         result_form: tuple[str | None, str | None, str | None],
@@ -252,6 +262,94 @@ def run_terminal_property(
         generated_terminal_property,
         seed_value=PROPERTY_SEED,
         replay_path=PROPERTY_REPLAY_PATH,
+    )
+
+
+def run_terminal_mapping(
+    assert_terminal: Callable[[ModuleType, DelegationTextCase], None],
+) -> None:
+    """Drive variable delegation text through the finite terminal-kind mapping."""
+    module = _load()
+
+    @seed(TERMINAL_MAPPING_SEED)
+    @settings(max_examples=TERMINAL_MAPPING_EXAMPLES, deadline=None, print_blob=True)
+    @given(content=delegation_text_cases())
+    def generated_terminal_mapping(content: DelegationTextCase) -> None:
+        assert_terminal(module, content)
+
+    run_replayable_property(
+        generated_terminal_mapping,
+        seed_value=TERMINAL_MAPPING_SEED,
+        replay_path=TERMINAL_MAPPING_REPLAY_PATH,
+    )
+
+
+def run_terminal_result_compliance(
+    assert_result_forms: Callable[[ModuleType, DelegationTextCase], None],
+) -> None:
+    """Drive variable delegation text through terminal result-form violations."""
+    module = _load()
+
+    @seed(TERMINAL_RESULT_COMPLIANCE_SEED)
+    @settings(
+        max_examples=TERMINAL_RESULT_COMPLIANCE_EXAMPLES,
+        deadline=None,
+        print_blob=True,
+    )
+    @given(content=delegation_text_cases())
+    def generated_result_compliance(content: DelegationTextCase) -> None:
+        assert_result_forms(module, content)
+
+    run_replayable_property(
+        generated_result_compliance,
+        seed_value=TERMINAL_RESULT_COMPLIANCE_SEED,
+        replay_path=TERMINAL_RESULT_COMPLIANCE_REPLAY_PATH,
+    )
+
+
+def run_delegation_cli_compliance(
+    assert_delegation: Callable[[ModuleType, DelegationTextCase, str], None],
+) -> None:
+    """Drive variable valid members and unsupported keys through delegation input."""
+    module = _load()
+
+    @seed(DELEGATION_CLI_COMPLIANCE_SEED)
+    @settings(
+        max_examples=DELEGATION_CLI_COMPLIANCE_EXAMPLES,
+        deadline=None,
+        print_blob=True,
+    )
+    @given(
+        content=delegation_text_cases(),
+        unsupported_field=unsupported_delegation_fields(module),
+    )
+    def generated_delegation_compliance(
+        content: DelegationTextCase, unsupported_field: str
+    ) -> None:
+        assert_delegation(module, content, unsupported_field)
+
+    run_replayable_property(
+        generated_delegation_compliance,
+        seed_value=DELEGATION_CLI_COMPLIANCE_SEED,
+        replay_path=DELEGATION_CLI_COMPLIANCE_REPLAY_PATH,
+    )
+
+
+def run_checked_send_mapping(assert_send: Callable[[str], None]) -> None:
+    """Drive variable message text through the checked-send mapping."""
+
+    @seed(CHECKED_SEND_MAPPING_SEED)
+    @settings(
+        max_examples=CHECKED_SEND_MAPPING_EXAMPLES, deadline=None, print_blob=True
+    )
+    @given(message_text=message_texts())
+    def generated_checked_send_mapping(message_text: str) -> None:
+        assert_send(message_text)
+
+    run_replayable_property(
+        generated_checked_send_mapping,
+        seed_value=CHECKED_SEND_MAPPING_SEED,
+        replay_path=CHECKED_SEND_MAPPING_REPLAY_PATH,
     )
 
 
