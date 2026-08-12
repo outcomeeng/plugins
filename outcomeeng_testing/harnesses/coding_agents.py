@@ -57,7 +57,6 @@ def observed_message_participants() -> tuple[
 
 def public_message_context() -> tuple[
     ModuleType,
-    list[dict[str, object]],
     dict[str, str],
     dict[str, str],
     dict[str, object],
@@ -65,8 +64,8 @@ def public_message_context() -> tuple[
     """Return a sender, recipient, and discovery from public Prowl evidence."""
     _, message, roster, participants = observed_message_participants()
     sender, recipient = participants[:2]
-    discovery = agent_discovery(message, roster, sender[message.PANE_FIELD])
-    return message, roster, sender, recipient, discovery
+    discovery = resolver_discovery(message, participants, sender)
+    return message, sender, recipient, discovery
 
 
 def observe_send_transport(pane: str) -> dict[str, object]:
@@ -103,15 +102,18 @@ def mutation_observation(
     return target, state
 
 
-def agent_discovery(
+def resolver_discovery(
     module: ModuleType,
-    roster: list[dict[str, object]],
-    pane_id: str,
+    participants: list[dict[str, str]],
+    caller: dict[str, str],
 ) -> dict[str, object]:
-    return cast(
-        dict[str, object],
-        module.discover(roster, {module.PROWL_PANE_ID_ENV: pane_id}),
-    )
+    return {
+        module.SCHEMA_VERSION_FIELD: module.SCHEMA_VERSION,
+        module.STATUS_FIELD: module.DISCOVERY_READY_STATUS,
+        module.DETAIL_FIELD: None,
+        module.CALLER_FIELD: caller,
+        module.TARGETS_FIELD: participants,
+    }
 
 
 def fact_envelope(

@@ -50,7 +50,7 @@ An operator names a target by where the work lives — an absolute worktree path
 printf '%s\n' '{"schemaVersion":1,"path":"<absolute-operator-supplied-path>"}' | python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" resolve-target
 ```
 
-The resolver runs the public `agents` operation once and returns its complete checked result under `inventory`, every complete participant under `participants`, the complete caller selected from `PROWL_PANE_ID`, and non-caller path matches under `candidates`. Each candidate carries its complete participant metadata and a `sendRequestTemplate` with that pane already selected, `noWait: true`, and `text: null`. Fill `text` with the semantic payload; never repair the JSON through shell substitution or a temporary file.
+The resolver runs the public `agents` operation once and returns its complete checked result under `inventory`, every complete participant under `participants`, the complete caller selected from `PROWL_PANE_ID` or the exact `PROWL_WORKTREE_PATH` fallback, and non-caller path matches under `candidates`. When both caller values exist, both must identify the same participant. Each candidate carries its complete participant metadata and a `sendRequestTemplate` with that pane already selected, `noWait: true`, and `text: null`. Fill `text` with the semantic payload; never repair the JSON through shell substitution or a temporary file.
 
 Use the one candidate directly when `status` is `succeeded`. On `identity-ambiguous`, name every candidate by worktree and branch and ask which one; select only from the returned candidates. On `identity-unavailable`, report the supplied path and the returned participant worktrees. The resolver performs no send in every result state.
 
@@ -140,7 +140,7 @@ JSON
 - `delegation-rejected`
 - `delegation-unavailable`
 
-A complete inline result uses `inlineResult`. A durable result uses `resultReference` plus a bounded `projection`; both forms may appear together. The adapter rejects a missing result, a reference without projection, and a conflicting terminal handback.
+A complete inline result uses `inlineResult`. A durable result uses a scheme-bearing `resultReference` plus a bounded `projection`; use `file:///absolute/path` for a local file. Both forms may appear together. The adapter rejects a missing result, a reference without a URI scheme or projection, and a conflicting terminal handback.
 
 A direct inline handback submission carries the complete returned delegation:
 
@@ -158,7 +158,7 @@ JSON
 
 Completion travels by push, never by pull. The sender's environment blocks polling loops by design, so a sender that "checks later" has no later to check in — it reads once, sees nothing, and moves on while the finished result sits on disk. The recipient closes the loop or nobody does.
 
-**A durable result separates payload from signal.** The file carries the payload; one line sent into the sender's pane carries the signal. Write the file first, then send. `resultReference` names the complete absolute path and `projection` carries the bounded summary, so the sender knows what landed without opening it.
+**A durable result separates payload from signal.** The file carries the payload; one line sent into the sender's pane carries the signal. Write the file first, then send. `resultReference` names the complete scheme-bearing reference — `file:///absolute/path` for a local file — and `projection` carries the bounded summary, so the sender knows what arrived without opening it.
 
 **The recipient delivers the handback by sending one line into the return address's pane**, using the `send` operation with normal trailing-Enter behavior. That send lands as a turn in the sender's session, which is what makes it a signal rather than a message the sender must go looking for. A `noEnter` send prefills the sender's editor and signals nothing.
 
@@ -190,7 +190,7 @@ Two environment conditions silently break a handback. Name both in the delegatio
 
 <testing>
 
-Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Cover every operation mapping, public JSON success and failure, exact participant projection, target-resolution zero/one/multiple matches with caller exclusion, candidate-specific send templates, one checked send with trailing-Enter evidence, mutation rejection before command construction, delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch. Delegation coverage includes that `sender.pane` survives the envelope into the recipient's handback intact, since the recipient reads its return path from that field alone; an unknown top-level key in a delegation request is rejected rather than silently dropped, so a caller inventing a field learns it is unsupported instead of sending a delegation the recipient cannot answer.
+Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Run the documented `run` form with an `agents` payload and require `status: "succeeded"`, `commandExitCode: 0`, and a public response; run `resolve-target` with pane-only, worktree-only, and combined caller evidence and require one inventory call, caller exclusion, and zero sends; fill one returned send template and require `response.data.input.trailing_enter_sent: true`; run `delegate` and `handback` with the documented envelope shapes and require the initiating coordination reference and `sender.pane` to survive. Cover every operation mapping, public JSON failure, mutation rejection before command construction, URI-bearing delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch. An unknown top-level delegation key is rejected instead of silently dropped.
 
 </testing>
 
@@ -247,7 +247,7 @@ A source-owned coordination envelope delivered through `/operate-prowl` to one c
 
 1. Interpret `$ARGUMENTS` as one JSON message request containing `recipientPath` with the recipient's absolute worktree, repository, or working-directory path, `kind`, `subject`, `facts`, and any applicable coordination fields. The request may carry `toPane` only as a complete identity assertion from an upstream coordination plan. When required data is absent, stop and name it before discovery or delivery; never invent message data or ask for a pane UUID.
 2. Invoke `/operate-prowl` once for `resolve-target` with the supplied path. Preserve the complete result. It returns the checked inventory, complete caller and participants, and non-caller candidates whose `sendRequestTemplate` already selects each pane with immediate-return mode and normal trailing-Enter behavior.
-3. Require one selected candidate. Use the sole candidate on `succeeded`; on `identity-ambiguous`, ask the operator to choose among the returned worktree and branch metadata, then select the exact candidate with that complete worktree and branch from the captured result without rerunning resolution; on `identity-unavailable`, report the exact detail and participant worktrees. When the request carries `toPane`, require it to equal the selected candidate's complete pane UUID or stop with `invalid-identity`. NEVER select by title, focus, position, prose, or the caller's pane.
+3. Require one selected candidate. When the request carries `toPane`, match it against the captured non-caller candidates before considering cardinality: exactly one matching candidate selects it, while zero or multiple matches stop with `invalid-identity`. Without `toPane`, use the sole candidate on `succeeded`; on `identity-ambiguous`, ask the operator to choose among the returned worktree and branch metadata, then select that exact candidate from the captured result without rerunning resolution; on `identity-unavailable`, report the exact detail and participant worktrees. NEVER select by title, focus, position, prose, or the caller's pane.
 4. Build the bundled script's `discovery` input directly from the resolver result: `caller` is the returned caller, `targets` is the returned complete participant list, and `status` is `prowl-pane`. Set `toPane` from the selected candidate's complete participant. This source-owned bridge uses the captured resolver result directly; never write an intermediate file or run an ad hoc transformation script.
 5. Build the bundled script's message request with the selected candidate's `toPane`, `kind`, `subject`, `facts`, optional `request`, optional `coordinationReference`, optional `mutationTarget`, optional `observedState`, and optional `accepted`. `recipientPath` has completed target resolution and never enters the envelope. `kind` is exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. An acknowledgement, mutation-state report, or mutation authorization MUST reuse the active proposal UUID; an initiating proposal or fact MUST omit it so the adapter creates a new UUID. An acknowledgement MUST carry boolean `accepted`; every other kind omits it.
 6. For a delegated mutation, use the source-owned handshake:
@@ -298,7 +298,7 @@ printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":
 
 <testing>
 
-Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Exercise CLI dispatch for `build` and `result` with stdin payloads. The matrix covers unique and ambiguous resolver candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, malformed identities and optional fields, delivered and failed environment results, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
+Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Run the documented `build` stdin form and require `delivery.status: "ready"`; run the documented `result` form with a complete successful `send` payload and require `status: "delivered"`, then remove or alter each required transport field and require rejection. The matrix covers authoritative `toPane` selection from ambiguous candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, malformed identities and optional fields, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
 
 </testing>
 
@@ -348,7 +348,7 @@ Use only explicit SPX facts, public runtime projections, checked command results
 
 <workflow>
 
-1. Identify every participant with complete agent, pane, worktree, branch, repository, and applicable run identities. An operator names a participant by worktree, repository, or working directory rather than by pane UUID; resolve that naming to a complete identity through `/operate-prowl`'s operator-target resolution, and report participants back to the operator in the terms they used.
+1. Identify every participant with complete agent, pane, worktree, branch, repository, and applicable run identities. Capture the complete current caller from `/operate-prowl`'s resolver result before planning messages. An operator names a participant by worktree, repository, or working directory rather than by pane UUID; resolve that naming to a complete identity through `/operate-prowl`'s operator-target resolution, and report participants back to the operator in the terms they used.
 2. Classify the relationship from authoritative evidence:
    - `ownership-overlap`: paths, concerns, or an external mutation overlap.
    - `dependency-handoff`: one workflow has a checked fact another consumes.
@@ -402,11 +402,11 @@ Use these branch-owned payloads:
 - When any observed worktree, branch, repository, HEAD, or status value differs from the target, emit `status: "coordination-needed"`, `reason: "ownership-overlap"`, and no message. A mismatch produces no authorization.
 - Emit one `mutation-authorization` only when the accepted acknowledgement is valid and every observed value matches. Target the exact recipient pane, preserve the active coordination reference, echo the target and observed state, and set `request` exactly to `Recreate the required change in the target worktree; do not mutate or transfer from the sibling worktree.`
 - Every sibling worktree stays read-only to both workflows. Transfer an exact commit only through a separate ownership proposal and accepted acknowledgement; delegated-mutation authorization never transfers a sibling commit.
-- A shared blocker produces exactly one non-null `operatorAction` carrying its complete `externalConditionKey` and operator-confirmed `status`. When restoration is operator-confirmed, keep that action record and produce one `kind: "fact"` recovery message for every affected participant.
+- A shared blocker produces exactly one non-null `operatorAction` carrying its complete `externalConditionKey` and operator-confirmed `status`. When restoration is operator-confirmed, keep that action record. The current caller consumes the recovery fact from the verdict and `operatorAction`; produce one `kind: "fact"` recovery message for every other affected participant.
 - Independent work produces `status: "no-coordination"`, `reason: "independent"`, `operatorAction: null`, and no message only when authoritative evidence explicitly establishes independence. Blocker evidence with distinct complete `externalConditionKey` values and no other relationship evidence establishes that the blockers are independent.
 - A signal gap produces `status: "signal-gap"`, `reason: "insufficient-evidence"`, `operatorAction: null`, and no message.
 
-5. Invoke `/message-agents` once for each planned message, passing its complete `recipientPath`, `toPane`, and semantic fields unchanged. NEVER call Prowl directly from this skill.
+5. Remove any planned message whose `toPane` equals the complete current caller pane, then invoke `/message-agents` once for each remaining message, passing its complete `recipientPath`, `toPane`, and semantic fields unchanged. NEVER call Prowl directly from this skill.
 6. Preserve each delivery result separately from the coordination verdict. A delivery counts only when `/message-agents` reports a checked submitted turn; prefilled text or transport without trailing-Enter evidence remains a delivery failure. Each operating workflow re-evaluates its own state after receiving facts.
 
 </workflow>
@@ -418,6 +418,7 @@ Use these branch-owned payloads:
 - NEVER combine blockers whose authoritative external-condition keys differ.
 - NEVER authorize a delegated mutation before exact target/state verification, or authorize editing, staging, stashing, checkout, reset, or commit in a sibling worktree.
 - NEVER send directly; delivery belongs to `/message-agents`.
+- NEVER plan or deliver a message to the complete current caller pane.
 - NEVER wait on another workflow by polling its pane, re-reading it on a timer, or treating one empty read as evidence it produced nothing. A read establishes that pane's state at the instant it ran, never that a request is unanswered.
 - NEVER leave the operator to carry a result between two workflows. When a request needs an answer, the request itself carries the return path.
 
@@ -436,7 +437,7 @@ Use these branch-owned payloads:
 <success_criteria>
 
 - The structured verdict names whether coordination is needed, its authoritative reason, complete participants, and protocol-valid messages whose delivery result proves submission rather than editor prefill.
-- Shared blockers yield one human-owned action and facts for every affected workflow without centralizing execution.
+- Shared blockers yield one human-owned action, expose the recovery fact to the current workflow in the verdict, and message every other affected workflow without centralizing execution.
 - Delegated mutations carry an exact target envelope, require an exact pre-mutation state report, and produce no authorization on any identity mismatch.
 - Independent work and signal gaps produce no message.
 

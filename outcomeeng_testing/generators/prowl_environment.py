@@ -130,6 +130,19 @@ def resolver_target_path(
     return value
 
 
+def resolver_caller_environments(
+    module: ModuleType, participant: dict[str, str]
+) -> tuple[dict[str, str], ...]:
+    """Generate every supported caller-identity environment shape."""
+    values = {
+        module.PROWL_PANE_ID_ENV: participant[module.PANE_FIELD],
+        module.PROWL_WORKTREE_PATH_ENV: participant[module.WORKTREE_FIELD],
+    }
+    return tuple(
+        {field: values[field]} for field in module.CALLER_IDENTITY_ENV_FIELDS
+    ) + (values,)
+
+
 def subprocess_input_texts() -> st.SearchStrategy[str]:
     return st.text(max_size=200)
 

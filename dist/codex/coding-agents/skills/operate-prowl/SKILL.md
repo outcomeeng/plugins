@@ -39,7 +39,7 @@ An operator names a target by where the work lives — an absolute worktree path
 printf '%s\n' '{"schemaVersion":1,"path":"<absolute-operator-supplied-path>"}' | python3 "${SKILL_DIR}/scripts/prowl_environment.py" resolve-target
 ```
 
-The resolver runs the public `agents` operation once and returns its complete checked result under `inventory`, every complete participant under `participants`, the complete caller selected from `PROWL_PANE_ID`, and non-caller path matches under `candidates`. Each candidate carries its complete participant metadata and a `sendRequestTemplate` with that pane already selected, `noWait: true`, and `text: null`. Fill `text` with the semantic payload; never repair the JSON through shell substitution or a temporary file.
+The resolver runs the public `agents` operation once and returns its complete checked result under `inventory`, every complete participant under `participants`, the complete caller selected from `PROWL_PANE_ID` or the exact `PROWL_WORKTREE_PATH` fallback, and non-caller path matches under `candidates`. When both caller values exist, both must identify the same participant. Each candidate carries its complete participant metadata and a `sendRequestTemplate` with that pane already selected, `noWait: true`, and `text: null`. Fill `text` with the semantic payload; never repair the JSON through shell substitution or a temporary file.
 
 Use the one candidate directly when `status` is `succeeded`. On `identity-ambiguous`, name every candidate by worktree and branch and ask which one; select only from the returned candidates. On `identity-unavailable`, report the supplied path and the returned participant worktrees. The resolver performs no send in every result state.
 
@@ -129,7 +129,7 @@ JSON
 - `delegation-rejected`
 - `delegation-unavailable`
 
-A complete inline result uses `inlineResult`. A durable result uses `resultReference` plus a bounded `projection`; both forms may appear together. The adapter rejects a missing result, a reference without projection, and a conflicting terminal handback.
+A complete inline result uses `inlineResult`. A durable result uses a scheme-bearing `resultReference` plus a bounded `projection`; use `file:///absolute/path` for a local file. Both forms may appear together. The adapter rejects a missing result, a reference without a URI scheme or projection, and a conflicting terminal handback.
 
 A direct inline handback submission carries the complete returned delegation:
 
@@ -147,7 +147,7 @@ JSON
 
 Completion travels by push, never by pull. The sender's environment blocks polling loops by design, so a sender that "checks later" has no later to check in — it reads once, sees nothing, and moves on while the finished result sits on disk. The recipient closes the loop or nobody does.
 
-**A durable result separates payload from signal.** The file carries the payload; one line sent into the sender's pane carries the signal. Write the file first, then send. `resultReference` names the complete absolute path and `projection` carries the bounded summary, so the sender knows what landed without opening it.
+**A durable result separates payload from signal.** The file carries the payload; one line sent into the sender's pane carries the signal. Write the file first, then send. `resultReference` names the complete scheme-bearing reference — `file:///absolute/path` for a local file — and `projection` carries the bounded summary, so the sender knows what arrived without opening it.
 
 **The recipient delivers the handback by sending one line into the return address's pane**, using the `send` operation with normal trailing-Enter behavior. That send lands as a turn in the sender's session, which is what makes it a signal rather than a message the sender must go looking for. A `noEnter` send prefills the sender's editor and signals nothing.
 
@@ -179,7 +179,7 @@ Two environment conditions silently break a handback. Name both in the delegatio
 
 <testing>
 
-Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Cover every operation mapping, public JSON success and failure, exact participant projection, target-resolution zero/one/multiple matches with caller exclusion, candidate-specific send templates, one checked send with trailing-Enter evidence, mutation rejection before command construction, delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch. Delegation coverage includes that `sender.pane` survives the envelope into the recipient's handback intact, since the recipient reads its return path from that field alone; an unknown top-level key in a delegation request is rejected rather than silently dropped, so a caller inventing a field learns it is unsupported instead of sending a delegation the recipient cannot answer.
+Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Run the documented `run` form with an `agents` payload and require `status: "succeeded"`, `commandExitCode: 0`, and a public response; run `resolve-target` with pane-only, worktree-only, and combined caller evidence and require one inventory call, caller exclusion, and zero sends; fill one returned send template and require `response.data.input.trailing_enter_sent: true`; run `delegate` and `handback` with the documented envelope shapes and require the initiating coordination reference and `sender.pane` to survive. Cover every operation mapping, public JSON failure, mutation rejection before command construction, URI-bearing delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch. An unknown top-level delegation key is rejected instead of silently dropped.
 
 </testing>
 

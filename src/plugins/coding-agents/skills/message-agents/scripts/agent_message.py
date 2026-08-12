@@ -10,7 +10,7 @@ import re
 import sys
 import uuid
 from enum import StrEnum
-from typing import Callable, Mapping, TextIO, cast
+from typing import Callable, TextIO, cast
 
 SCHEMA_VERSION = 3
 SCHEMA_VERSION_FIELD = "schemaVersion"
@@ -23,16 +23,13 @@ AGREED_FIELD = "agreed"
 OWNERSHIP_ESTABLISHED_FIELD = "ownershipEstablished"
 CALLER_FIELD = "caller"
 TARGETS_FIELD = "targets"
-AGENTS_FIELD = "agents"
-ENVIRONMENT_FIELD = "environment"
 DISCOVERY_FIELD = "discovery"
 MESSAGE_REQUEST_FIELD = "messageRequest"
 ENVELOPE_FIELD = "envelope"
 DELIVERY_FIELD = "delivery"
 DELIVERED_FIELD = "delivered"
 TEXT_FIELD = "text"
-PROWL_PANE_ID_ENV = "PROWL_PANE_ID"
-PROWL_WORKTREE_PATH_ENV = "PROWL_WORKTREE_PATH"
+DISCOVERY_READY_STATUS = "prowl-pane"
 TO_PANE_FIELD = "toPane"
 KIND_FIELD = "kind"
 SUBJECT_FIELD = "subject"
@@ -47,13 +44,9 @@ REPOSITORY_FIELD = "repository"
 MESSAGE_STATE_FIELD = "messageState"
 SENDER_FIELD = "sender"
 RECIPIENT_FIELD = "recipient"
-ID_FIELD = "id"
 PANE_FIELD = "pane"
 WORKTREE_FIELD = "worktree"
-PROJECT_FIELD = "project"
 RUN_FIELD = "run"
-PATH_FIELD = "path"
-ROOT_PATH_FIELD = "root_path"
 BRANCH_FIELD = "branch"
 CLEAN_STATUS = "clean"
 FULL_HEAD_PATTERN = re.compile(r"[0-9a-f]{40}")
@@ -123,25 +116,8 @@ IDENTITY_INPUT_FIELDS = frozenset((*IDENTITY_FIELDS, RUN_FIELD))
 
 
 class Operation(StrEnum):
-    DISCOVER = "discover"
     BUILD = "build"
     RESULT = "result"
-
-
-class CallerStatus(StrEnum):
-    PROWL_PANE = "prowl-pane"
-    UNSUPPORTED_TERMINAL = "unsupported-terminal"
-    CALLER_AMBIGUOUS = "caller-ambiguous"
-
-
-CALLER_STATUS_DETAILS = {
-    CallerStatus.UNSUPPORTED_TERMINAL: (
-        "Prowl caller evidence is unavailable. Run inside a Prowl pane with an exact pane or worktree identity."
-    ),
-    CallerStatus.CALLER_AMBIGUOUS: (
-        "Prowl caller evidence matches more than one detected agent. Supply an exact PROWL_PANE_ID before sending."
-    ),
-}
 
 
 class MessageKind(StrEnum):
@@ -225,34 +201,6 @@ def _message_kind(value: object, location: str = "request.kind") -> MessageKind:
         ) from error
 
 
-def identity_from_agent(item: object) -> dict[str, str]:
-    value = _object(item, "agent")
-    pane = _object(value.get(PANE_FIELD), f"agent.{PANE_FIELD}")
-    worktree = _object(value.get(WORKTREE_FIELD), f"agent.{WORKTREE_FIELD}")
-    project = _object(value.get(PROJECT_FIELD), f"agent.{PROJECT_FIELD}")
-    identity = {
-        "agent": _text(value.get(ID_FIELD), f"agent.{ID_FIELD}"),
-        "pane": _text(pane.get(ID_FIELD), f"agent.{PANE_FIELD}.{ID_FIELD}"),
-        "worktree": _text(
-            worktree.get(PATH_FIELD), f"agent.{WORKTREE_FIELD}.{PATH_FIELD}"
-        ),
-        "branch": _text(
-            project.get(BRANCH_FIELD), f"agent.{PROJECT_FIELD}.{BRANCH_FIELD}"
-        ),
-        "repository": _text(
-            worktree.get(ROOT_PATH_FIELD),
-            f"agent.{WORKTREE_FIELD}.{ROOT_PATH_FIELD}",
-        ),
-    }
-    run = value.get(RUN_FIELD)
-    if run is not None:
-        identity[RUN_FIELD] = _text(
-            _object(run, f"agent.{RUN_FIELD}").get(ID_FIELD),
-            f"agent.{RUN_FIELD}.{ID_FIELD}",
-        )
-    return validate_identity(identity, "identity")
-
-
 def validate_identity(identity: object, label: str) -> dict[str, str]:
     value = _object(identity, label)
     unexpected = sorted(set(value) - IDENTITY_INPUT_FIELDS)
@@ -279,38 +227,6 @@ def validate_identity(identity: object, label: str) -> dict[str, str]:
     if value.get(RUN_FIELD) is not None:
         validated[RUN_FIELD] = _text(value.get(RUN_FIELD), f"{label}.{RUN_FIELD}")
     return validated
-
-
-def discover_callers(
-    roster: list[dict[str, object]], environment: Mapping[str, str]
-) -> tuple[CallerStatus, list[dict[str, str]]]:
-    pane_id = environment.get(PROWL_PANE_ID_ENV)
-    worktree_path = environment.get(PROWL_WORKTREE_PATH_ENV)
-    if not pane_id and not worktree_path:
-        return CallerStatus.UNSUPPORTED_TERMINAL, []
-    identities = [identity_from_agent(item) for item in roster]
-    matches = [
-        identity
-        for identity in identities
-        if (pane_id is None or identity[PANE_FIELD] == pane_id)
-        and (worktree_path is None or identity[WORKTREE_FIELD] == worktree_path)
-    ]
-    if len(matches) == 1:
-        return CallerStatus.PROWL_PANE, matches
-    return CallerStatus.CALLER_AMBIGUOUS, matches
-
-
-def discover(
-    roster: list[dict[str, object]], environment: Mapping[str, str]
-) -> dict[str, object]:
-    status, matches = discover_callers(roster, environment)
-    return {
-        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-        STATUS_FIELD: status,
-        DETAIL_FIELD: CALLER_STATUS_DETAILS.get(status),
-        CALLER_FIELD: matches[0] if status == CallerStatus.PROWL_PANE else None,
-        TARGETS_FIELD: [identity_from_agent(item) for item in roster],
-    }
 
 
 def coordination_reference(
@@ -643,7 +559,7 @@ def send_request(request: object, discovery: object) -> dict[str, object]:
             f"Message request contains unsupported fields: {', '.join(unexpected)}.",
         )
     discovered = _object(discovery, DISCOVERY_FIELD)
-    if discovered.get(STATUS_FIELD) != CallerStatus.PROWL_PANE:
+    if discovered.get(STATUS_FIELD) != DISCOVERY_READY_STATUS:
         raise MessageError(
             DeliveryStatus.INVALID_IDENTITY,
             f"Cannot send because caller status is {discovered.get(STATUS_FIELD)}.",
@@ -765,8 +681,6 @@ def delivery_result(
 def command_exit_code(operation: Operation, result: object) -> int:
     value = _object(result, "result")
     status = value.get(STATUS_FIELD)
-    if operation is Operation.DISCOVER:
-        return 0 if status == CallerStatus.PROWL_PANE else 2
     if operation is Operation.BUILD:
         delivery = value.get(DELIVERY_FIELD)
         return (
@@ -799,7 +713,6 @@ def _json_input(stream: TextIO) -> dict[str, object]:
 def main(
     argv: list[str] | None = None,
     *,
-    environment: Mapping[str, str] | None = None,
     stdin: TextIO | None = None,
     stdout: TextIO | None = None,
 ) -> int:
@@ -809,29 +722,7 @@ def main(
     output_stream = stdout if stdout is not None else sys.stdout
     try:
         value = _json_input(input_stream)
-        if operation is Operation.DISCOVER:
-            agents_value = value.get(AGENTS_FIELD)
-            if not isinstance(agents_value, list):
-                raise MessageError(
-                    DeliveryStatus.INVALID_SCHEMA,
-                    f"Expected an array at stdin.{AGENTS_FIELD}.",
-                )
-            active_environment = (
-                environment
-                if environment is not None
-                else cast(
-                    Mapping[str, str],
-                    _object(value.get(ENVIRONMENT_FIELD, {}), ENVIRONMENT_FIELD),
-                )
-            )
-            result = discover(
-                [
-                    _object(item, f"agents[{index}]")
-                    for index, item in enumerate(agents_value)
-                ],
-                active_environment,
-            )
-        elif operation is Operation.BUILD:
+        if operation is Operation.BUILD:
             result = send_request(
                 value.get(MESSAGE_REQUEST_FIELD), value.get(DISCOVERY_FIELD)
             )

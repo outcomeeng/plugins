@@ -17,7 +17,7 @@ Use only explicit SPX facts, public runtime projections, checked command results
 
 <workflow>
 
-1. Identify every participant with complete agent, pane, worktree, branch, repository, and applicable run identities. An operator names a participant by worktree, repository, or working directory rather than by pane UUID; resolve that naming to a complete identity through `/operate-prowl`'s operator-target resolution, and report participants back to the operator in the terms they used.
+1. Identify every participant with complete agent, pane, worktree, branch, repository, and applicable run identities. Capture the complete current caller from `/operate-prowl`'s resolver result before planning messages. An operator names a participant by worktree, repository, or working directory rather than by pane UUID; resolve that naming to a complete identity through `/operate-prowl`'s operator-target resolution, and report participants back to the operator in the terms they used.
 2. Classify the relationship from authoritative evidence:
    - `ownership-overlap`: paths, concerns, or an external mutation overlap.
    - `dependency-handoff`: one workflow has a checked fact another consumes.
@@ -71,11 +71,11 @@ Use these branch-owned payloads:
 - When any observed worktree, branch, repository, HEAD, or status value differs from the target, emit `status: "coordination-needed"`, `reason: "ownership-overlap"`, and no message. A mismatch produces no authorization.
 - Emit one `mutation-authorization` only when the accepted acknowledgement is valid and every observed value matches. Target the exact recipient pane, preserve the active coordination reference, echo the target and observed state, and set `request` exactly to `Recreate the required change in the target worktree; do not mutate or transfer from the sibling worktree.`
 - Every sibling worktree stays read-only to both workflows. Transfer an exact commit only through a separate ownership proposal and accepted acknowledgement; delegated-mutation authorization never transfers a sibling commit.
-- A shared blocker produces exactly one non-null `operatorAction` carrying its complete `externalConditionKey` and operator-confirmed `status`. When restoration is operator-confirmed, keep that action record and produce one `kind: "fact"` recovery message for every affected participant.
+- A shared blocker produces exactly one non-null `operatorAction` carrying its complete `externalConditionKey` and operator-confirmed `status`. When restoration is operator-confirmed, keep that action record. The current caller consumes the recovery fact from the verdict and `operatorAction`; produce one `kind: "fact"` recovery message for every other affected participant.
 - Independent work produces `status: "no-coordination"`, `reason: "independent"`, `operatorAction: null`, and no message only when authoritative evidence explicitly establishes independence. Blocker evidence with distinct complete `externalConditionKey` values and no other relationship evidence establishes that the blockers are independent.
 - A signal gap produces `status: "signal-gap"`, `reason: "insufficient-evidence"`, `operatorAction: null`, and no message.
 
-5. Invoke `/message-agents` once for each planned message, passing its complete `recipientPath`, `toPane`, and semantic fields unchanged. NEVER call Prowl directly from this skill.
+5. Remove any planned message whose `toPane` equals the complete current caller pane, then invoke `/message-agents` once for each remaining message, passing its complete `recipientPath`, `toPane`, and semantic fields unchanged. NEVER call Prowl directly from this skill.
 6. Preserve each delivery result separately from the coordination verdict. A delivery counts only when `/message-agents` reports a checked submitted turn; prefilled text or transport without trailing-Enter evidence remains a delivery failure. Each operating workflow re-evaluates its own state after receiving facts.
 
 </workflow>
@@ -87,6 +87,7 @@ Use these branch-owned payloads:
 - NEVER combine blockers whose authoritative external-condition keys differ.
 - NEVER authorize a delegated mutation before exact target/state verification, or authorize editing, staging, stashing, checkout, reset, or commit in a sibling worktree.
 - NEVER send directly; delivery belongs to `/message-agents`.
+- NEVER plan or deliver a message to the complete current caller pane.
 - NEVER wait on another workflow by polling its pane, re-reading it on a timer, or treating one empty read as evidence it produced nothing. A read establishes that pane's state at the instant it ran, never that a request is unanswered.
 - NEVER leave the operator to carry a result between two workflows. When a request needs an answer, the request itself carries the return path.
 
@@ -105,7 +106,7 @@ Use these branch-owned payloads:
 <success_criteria>
 
 - The structured verdict names whether coordination is needed, its authoritative reason, complete participants, and protocol-valid messages whose delivery result proves submission rather than editor prefill.
-- Shared blockers yield one human-owned action and facts for every affected workflow without centralizing execution.
+- Shared blockers yield one human-owned action, expose the recovery fact to the current workflow in the verdict, and message every other affected workflow without centralizing execution.
 - Delegated mutations carry an exact target envelope, require an exact pre-mutation state report, and produce no authorization on any identity mismatch.
 - Independent work and signal gaps produce no message.
 

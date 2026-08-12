@@ -18,16 +18,7 @@ from outcomeeng_testing.harnesses.coding_agents import (
 
 
 def test_delivery_preserves_complete_public_identities_and_semantic_payload() -> None:
-    module, public_roster, sender, recipient, _ = public_message_context()
-
-    assert (
-        sender[module.RUN_FIELD]
-        == cast(dict[str, object], public_roster[0][module.RUN_FIELD])[module.ID_FIELD]
-    )
-    assert (
-        recipient[module.RUN_FIELD]
-        == cast(dict[str, object], public_roster[1][module.RUN_FIELD])[module.ID_FIELD]
-    )
+    module, sender, recipient, _ = public_message_context()
 
     envelope = fact_envelope(module, sender, recipient)
     delivery = module.delivery_request(envelope)
@@ -36,7 +27,7 @@ def test_delivery_preserves_complete_public_identities_and_semantic_payload() ->
 
 
 def test_delivery_requires_complete_checked_transport_evidence() -> None:
-    module, _, sender, recipient, _ = public_message_context()
+    module, sender, recipient, _ = public_message_context()
     envelope = fact_envelope(module, sender, recipient)
     transport = observe_send_transport(recipient[module.PANE_FIELD])
 
@@ -99,7 +90,7 @@ def test_delivery_requires_complete_checked_transport_evidence() -> None:
 
 
 def test_transport_success_establishes_no_coordination_state() -> None:
-    module, _, sender, recipient, _ = public_message_context()
+    module, sender, recipient, _ = public_message_context()
     result = module.delivery_result(
         fact_envelope(module, sender, recipient),
         delivered=True,
@@ -113,7 +104,7 @@ def test_transport_success_establishes_no_coordination_state() -> None:
 
 
 def test_envelopes_reject_incomplete_participant_identities() -> None:
-    module, _, sender, recipient, _ = public_message_context()
+    module, sender, recipient, _ = public_message_context()
 
     for label, identity in (
         (module.SENDER_FIELD, sender),
@@ -148,7 +139,7 @@ def test_envelopes_reject_incomplete_participant_identities() -> None:
 
 
 def test_mutation_messages_require_exact_target_and_observed_state() -> None:
-    module, _, sender, recipient, _ = public_message_context()
+    module, sender, recipient, _ = public_message_context()
     active_reference = str(
         uuid.uuid5(uuid.NAMESPACE_URL, sender[module.WORKTREE_FIELD])
     )
@@ -317,7 +308,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
 
 
 def test_send_request_targets_only_exact_pane_identity() -> None:
-    module, _, sender, recipient, discovery = public_message_context()
+    module, sender, recipient, discovery = public_message_context()
     request_content = message_content(module.MessageKind.FACT, 28)
     valid_request = module.build_request(
         to_pane=recipient[module.PANE_FIELD],
@@ -333,8 +324,8 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
     )
 
     for invalid_discovery in (
-        {**discovery, module.STATUS_FIELD: module.CallerStatus.UNSUPPORTED_TERMINAL},
-        {**discovery, module.STATUS_FIELD: module.CallerStatus.CALLER_AMBIGUOUS},
+        {**discovery, module.STATUS_FIELD: "identity-unavailable"},
+        {**discovery, module.STATUS_FIELD: "identity-ambiguous"},
     ):
         with pytest.raises(module.MessageError) as raised:
             module.send_request(valid_request, invalid_discovery)
@@ -349,7 +340,7 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
 
 
 def test_message_cli_preserves_source_owned_results() -> None:
-    module, public_roster, sender, recipient, discovery = public_message_context()
+    module, sender, recipient, discovery = public_message_context()
     envelope = fact_envelope(module, sender, recipient)
     request_content = message_content(module.MessageKind.FACT, 29)
     valid_request = module.build_request(
@@ -359,17 +350,6 @@ def test_message_cli_preserves_source_owned_results() -> None:
         facts=list(request_content.facts),
         request=request_content.request,
     )
-
-    discover_stdout = StringIO()
-    discover_exit = module.main(
-        [module.Operation.DISCOVER],
-        environment={module.PROWL_PANE_ID_ENV: sender[module.PANE_FIELD]},
-        stdin=StringIO(json.dumps({module.AGENTS_FIELD: public_roster})),
-        stdout=discover_stdout,
-    )
-    discover_output = json.loads(discover_stdout.getvalue())
-    assert discover_exit == 0
-    assert discover_output[module.STATUS_FIELD] == module.CallerStatus.PROWL_PANE
 
     build_stdout = StringIO()
     build_exit = module.main(

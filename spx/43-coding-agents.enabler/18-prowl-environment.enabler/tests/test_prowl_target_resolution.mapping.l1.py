@@ -5,6 +5,7 @@ from typing import cast
 
 from outcomeeng_testing.generators.prowl_environment import (
     public_agent_item,
+    resolver_caller_environments,
     resolver_target_path,
 )
 from outcomeeng_testing.harnesses.coding_agents import load_agent_message
@@ -104,7 +105,11 @@ def test_resolver_reports_each_non_caller_match_cardinality_without_sending() ->
         runner = RecordingRunner([prowl_agents_command_result(module, agents)])
         result = module.resolve_target(
             target_path,
-            cast(dict[str, str], agents[0][module.PANE_FIELD])[module.ID_FIELD],
+            {
+                module.PROWL_PANE_ID_ENV: cast(
+                    dict[str, str], agents[0][module.PANE_FIELD]
+                )[module.ID_FIELD]
+            },
             runner,
         )
 
@@ -141,7 +146,11 @@ def test_repository_child_path_does_not_match_repository_root() -> None:
 
     result = module.resolve_target(
         f"{repository}/docs",
-        cast(dict[str, str], agents[0][module.PANE_FIELD])[module.ID_FIELD],
+        {
+            module.PROWL_PANE_ID_ENV: cast(
+                dict[str, str], agents[0][module.PANE_FIELD]
+            )[module.ID_FIELD]
+        },
         runner,
     )
 
@@ -168,7 +177,11 @@ def test_filled_resolver_template_returns_one_complete_checked_send_result() -> 
                 module.PATH_FIELD
             ],
         ),
-        cast(dict[str, str], agents[0][module.PANE_FIELD])[module.ID_FIELD],
+        {
+            module.PROWL_PANE_ID_ENV: cast(
+                dict[str, str], agents[0][module.PANE_FIELD]
+            )[module.ID_FIELD]
+        },
         runner,
     )
     request = resolved[module.CANDIDATES_FIELD][0][module.SEND_REQUEST_TEMPLATE_FIELD]
@@ -200,14 +213,14 @@ def test_resolver_output_builds_and_delivers_one_message_envelope() -> None:
     )
     resolved = prowl.resolve_target(
         expected_participants[1][prowl.WORKTREE_FIELD],
-        expected_participants[0][prowl.PANE_FIELD],
+        {prowl.PROWL_PANE_ID_ENV: expected_participants[0][prowl.PANE_FIELD]},
         runner,
     )
     candidate = resolved[prowl.CANDIDATES_FIELD][0]
     participant = candidate[prowl.PARTICIPANT_FIELD]
     discovery = {
         message.SCHEMA_VERSION_FIELD: message.SCHEMA_VERSION,
-        message.STATUS_FIELD: message.CallerStatus.PROWL_PANE,
+        message.STATUS_FIELD: message.DISCOVERY_READY_STATUS,
         message.DETAIL_FIELD: None,
         message.CALLER_FIELD: resolved[prowl.CALLER_FIELD],
         message.TARGETS_FIELD: resolved[prowl.PARTICIPANTS_FIELD],
@@ -246,3 +259,50 @@ def test_resolver_output_builds_and_delivers_one_message_envelope() -> None:
         (prowl.command_for(prowl.operation_request(prowl.Operation.AGENTS)), None),
         (prowl.command_for(request), None),
     ]
+
+
+def test_resolver_maps_each_source_owned_caller_identity_shape() -> None:
+    module = load_prowl_environment()
+    agents = [public_agent_item(module, ordinal) for ordinal in range(2)]
+    participants = [_expected_participant(module, agent) for agent in agents]
+
+    assert module.CALLER_IDENTITY_ENV_FIELDS == (
+        module.PROWL_PANE_ID_ENV,
+        module.PROWL_WORKTREE_PATH_ENV,
+    )
+    for environment in resolver_caller_environments(module, participants[0]):
+        runner = RecordingRunner([prowl_agents_command_result(module, agents)])
+        result = module.resolve_target(
+            participants[1][module.WORKTREE_FIELD], environment, runner
+        )
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        assert result[module.CALLER_FIELD] == participants[0]
+        assert (
+            result[module.CANDIDATES_FIELD][0][module.PARTICIPANT_FIELD]
+            == (participants[1])
+        )
+
+
+def test_resolver_rejects_ambiguous_worktree_caller_identity() -> None:
+    module = load_prowl_environment()
+    agents = [public_agent_item(module, ordinal) for ordinal in range(3)]
+    first_worktree = cast(dict[str, str], agents[0][module.WORKTREE_FIELD])
+    second_worktree = cast(dict[str, str], agents[1][module.WORKTREE_FIELD])
+    second_worktree[module.PATH_FIELD] = first_worktree[module.PATH_FIELD]
+    runner = RecordingRunner([prowl_agents_command_result(module, agents)])
+
+    result = module.resolve_target(
+        cast(
+            str,
+            cast(dict[str, object], agents[2][module.WORKTREE_FIELD])[
+                module.PATH_FIELD
+            ],
+        ),
+        {module.PROWL_WORKTREE_PATH_ENV: first_worktree[module.PATH_FIELD]},
+        runner,
+    )
+
+    assert result[module.STATUS_FIELD] == module.ExecutionStatus.IDENTITY_AMBIGUOUS
+    assert result[module.CALLER_FIELD] is None
+    assert result[module.CANDIDATES_FIELD] == []

@@ -2,7 +2,6 @@ import uuid
 from typing import cast
 
 from outcomeeng_testing.generators.coding_agents import message_content
-from outcomeeng_testing.generators.prowl_environment import public_agent_item
 from outcomeeng_testing.harnesses.coding_agents import (
     fact_envelope,
     mutation_observation,
@@ -12,33 +11,7 @@ from outcomeeng_testing.harnesses.coding_agents import (
 
 
 def test_agent_message_mappings() -> None:
-    prowl, module, agents, participants = observed_message_participants()
-    first = agents[0]
-    pane = cast(dict[str, object], first[prowl.PANE_FIELD])
-    pane_id = cast(str, pane[prowl.ID_FIELD])
-
-    status, matches = module.discover_callers(
-        agents, {module.PROWL_PANE_ID_ENV: pane_id}
-    )
-    assert status == module.CallerStatus.PROWL_PANE
-    assert matches == [participants[0]]
-    assert (
-        module.discover_callers(agents, {})[0]
-        == module.CallerStatus.UNSUPPORTED_TERMINAL
-    )
-
-    ambiguous_agent = public_agent_item(prowl, 4)
-    ambiguous_worktree = cast(dict[str, object], ambiguous_agent[prowl.WORKTREE_FIELD])
-    first_worktree = cast(dict[str, object], first[prowl.WORKTREE_FIELD])
-    ambiguous_worktree[prowl.PATH_FIELD] = first_worktree[prowl.PATH_FIELD]
-    ambiguous_roster = [first, ambiguous_agent]
-    assert (
-        module.discover_callers(
-            ambiguous_roster,
-            {module.PROWL_WORKTREE_PATH_ENV: participants[0][prowl.WORKTREE_FIELD]},
-        )[0]
-        == module.CallerStatus.CALLER_AMBIGUOUS
-    )
+    prowl, module, _, participants = observed_message_participants()
 
     sender = participants[0]
     recipient = participants[1]
