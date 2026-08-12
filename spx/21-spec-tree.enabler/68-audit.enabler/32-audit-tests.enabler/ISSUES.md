@@ -20,7 +20,7 @@ Both `[eval]` suites under `evals/` (`full-chain-ownership`, `full-chain-ownersh
 
 ## No case exercises declared-contract ownership
 
-Step 3a of `/audit-tests` judges a source symbol the test cites by declared-contract ownership, so an absent in-repository caller opens the ownership question rather than settling it and the audit inspects dynamic registration, the published package surface, generated and reflective use, and consumers outside the checkout before reporting a symbol as laundered. No case in the shared `cases.jsonl` supplies such a symbol, so reverting that rule to a blanket "absent caller proves laundering" changes no case outcome and neither suite carries falsifiable evidence that the behavior is present.
+Step 3a of `/audit-tests` judges a source symbol the test cites by declared-contract ownership, so an absent in-repository caller opens the ownership question rather than settling it and the audit inspects the declared surfaces the checkout carries — packaging entry points and export declarations, protocol implementations, registry and reflective lookups, generated use, and declared schemas — before reporting a symbol as laundered. No case in the shared `cases.jsonl` supplies such a symbol, so reverting that rule to a blanket "absent caller proves laundering" changes no case outcome and neither suite carries falsifiable evidence that the behavior is present.
 
 **Status against the standard.** `/audit-eval-evidence` `gate-4-falsifiability` is `REJECT` for both suites: a producer behavior an assertion claims must be reachable by a case that fails when the behavior is removed.
 
