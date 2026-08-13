@@ -32,6 +32,8 @@ This skill does NOT:
 - Modify git configuration
 - Bypass pre-commit hooks
 
+Changes may remain uncommitted until another agent session or human is expected or asked to read them. When repository writes are authorized, commit the exact current version before that reading. After any further change, commit the new version before another agent session or human reads it. Without repository-write authorization, defer the reading. Record verification state as `passing`, `failing`, or `not-run`; green verification governs gate eligibility rather than commit permission.
+
 </context>
 
 <project_specialization>
@@ -52,13 +54,11 @@ After loading this skill, check whether `spx/local/commit-changes.md` exists (pa
 
 </context_gathering>
 
-<review_workflow_context>
+<verification_checkpoint_context>
 
-**When invoked before or after a review or audit gate** (e.g., from `/apply` or after `audit-python-code` findings):
+This skill creates either a local checkpoint before a verification gate or a publication-ready commit after one:
 
-This skill creates either a local checkpoint before a gate or a publication-ready commit after the gate. In that context:
-
-1. **Checkpoint at any verification state** — Commit stabilized work whether deterministic verification is passing, failing, or not run. Approval and green verification govern gate dispatch, publication, and merge readiness; they never govern whether a local checkpoint may exist.
+1. **Commit before another session reads** — When repository writes are authorized, commit the exact current version before another agent session or human is expected or asked to read it. Without that authorization, defer the reading. The commit may record deterministic verification as passing, failing, or not run; approval and green verification govern gate dispatch, publication, and merge readiness.
 2. **New checkpoint after repair** — When a gate rejects the subject, fix the defect class, rerun deterministic verification, and create a new commit. Do not amend the audited checkpoint while its run remains prior context.
 3. **Scope to work item** — Stage only files from the work item:
    - Implementation files
@@ -68,7 +68,7 @@ This skill creates either a local checkpoint before a gate or a publication-read
 
 Resolve the specific file list, work item context, and checkpoint purpose from the invocation inputs and repository state.
 
-</review_workflow_context>
+</verification_checkpoint_context>
 
 <concern_separation>
 

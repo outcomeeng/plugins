@@ -95,7 +95,7 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     ("repository staleness", "REPOSITORY CONTENT GOES STALE"),
     (
         "authority order",
-        "active skills → repository decisions and specs → tests → code",
+        "active skills → repository decisions and specs → verification evidence → code",
     ),
     (
         "skill conflict precedence",

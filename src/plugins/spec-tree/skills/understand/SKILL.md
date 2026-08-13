@@ -21,18 +21,18 @@ The complete Spec Tree foundation loaded eagerly in one skill payload and record
 **TRUTH FLOWS DOWN.** The Spec Tree is a durable, declarative map of what the product does. Its four layers depend on the layer above:
 
 ```text
-PDR/ADR  →  Spec  →  Test  →  Code
-governs     declares   verifies   complies
+PDR/ADR  →  Spec  →  Verification  →  Code
+governs     declares   verifies       complies
 ```
 
 - PDRs and ADRs decide product and architecture truth.
 - Specs declare product output in alignment with those decisions.
-- Tests are executable evidence derived from specs.
-- Code complies with tests.
+- Verification evidence is derived from specs.
+- Code complies with verification evidence.
 
 When layers disagree, the lower layer is in violation.
 
-- NEVER: weaken a decision to match a spec, a spec to match tests, or tests to match code.
+- NEVER: weaken a decision to match a spec, a spec to match verification evidence, or verification evidence to match code.
 
 </layer_precedence>
 
@@ -373,6 +373,14 @@ Every verification activity declares its type and purpose. A type's verdict mode
 When vocabulary overlaps another grammar, resolve verification vocabulary here first and inspect history before classifying a name as defective. Generated output and implementation names are lower-layer evidence.
 
 </vocabulary_boundaries>
+
+<commit_before_another_session_reads>
+
+- ALWAYS: when repository writes are authorized, commit the exact current version before another agent session or human reads it for collaboration or reusable verification; without repository-write authorization, defer a reading that requires a committed subject.
+
+Changes may remain uncommitted while the authoring agent session works on them. When repository writes are authorized, the commit records verification state as `passing`, `failing`, or `not-run`; that state controls gate eligibility, never commit permission. After any further change, commit the new version before another agent session or human reads it for collaboration or reusable verification. An explicit advisory audit or review may inspect modified or untracked work, but its verdict is not reusable gate evidence. An agentic verification gate additionally requires applicable deterministic verification to pass on the exact committed subject.
+
+</commit_before_another_session_reads>
 
 </verification_model>
 

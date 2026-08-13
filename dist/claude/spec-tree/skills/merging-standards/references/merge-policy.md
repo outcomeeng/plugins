@@ -252,12 +252,12 @@ Integrate base movement only by rebase through `/sync-base`. The same prohibitio
 
 The local `changes-reviewer` gate is the author-side, pre-push instance of the same review kind the CI review runs post-push — the two are the same class of gate on opposite sides of each push. Invoke it the way CI invokes its reviewer, passing nothing that narrows it:
 
-- **Let the review resolve its own scope.** `changes-reviewer` self-discovers the worktree it runs in and computes the diff itself. Pass the base only when the changeset's base is not `origin/HEAD` (a stacked PR), and pass nothing else — no file list, no changed-area summary, no "the important part is …".
+- **Bind the committed subject and let the review derive its scope.** Commit the exact current version, require a clean worktree, and record the full `HEAD` before dispatch. `changes-reviewer` derives the committed base/head diff itself. Pass the base only when the changeset's base is not `origin/HEAD` (a stacked PR), and pass nothing else — no file list, no changed-area summary, no "the important part is …".
 - **Add no interpretive scope.** Do not tell the reviewer which layers, files, or concerns to weight. It reviews the whole diff against the whole taxonomy.
 - **Add no severity pre-filter.** Do not ask only for `BLOCKING`, do not suppress `DEBT`. The reviewer emits every finding; handling is by validity and phase per `<review_classification>`, downstream of the review and never inside its invocation.
 - **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions (CLAUDE.md and the standards skills) and the shared taxonomy itself.
 
-Run it via the `changes-reviewer` agent. The isolated context keeps the verdict from being biased by what the operator's main context has been doing. Iterate to convergence: each round, act on findings by validity and phase per `<review_classification>`, until no valid finding remains unaddressed.
+Run it via the `changes-reviewer` agent. The verifier agent session stays isolated from the authoring agent session that produced the changeset. Iterate to convergence: each round, act on findings by validity and phase per `<review_classification>`, until no valid finding remains unaddressed.
 
 This is the review predicate `VERIFICATION_READINESS` reads, and it runs before every push — the opening push and every managing-flow follow-up push — against the diff that push would publish. Narrowing the invocation diverges the local gate from the CI reviewer it parallels, so its convergence no longer means what `VERIFICATION_READINESS` claims it means.
 
@@ -422,7 +422,7 @@ Severity is the validity judgment the reviewer makes. **Disposition** — whethe
 
 **Finding labels.** Both `BLOCKING` and `DEBT` require an action in this PR and use `Reference:` + `Evidence:` + `Required:`.
 
-**No findings: say so directly.** When the changeset has no `BLOCKING` or `DEBT` findings, post a one-line comment saying so. NEVER invent lower-priority findings to prove the review happened.
+**No findings: emit no finding.** When the changeset has no `BLOCKING` or `DEBT` findings, record zero finding objects; the run-completed event carries the clean result, and each local or hosted surface renders that result from the journal. NEVER invent lower-priority findings to prove the review happened.
 
 **Findings only — never open questions, never commentary.** A reviewer with a question frames it as a finding (e.g., "Evidence: cannot verify X from the changeset; if assumption Y holds, this breaks Z because …") rather than asking a question that waits for an answer. Questions add CI roundtrips a single-pass review cannot recover from. Praise, observations, and commentary that do not constitute findings are noise — omit them.
 
@@ -489,7 +489,7 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - A managing-flow pass that finds the branch behind `origin/<base>` completes `<base_sync>` before driving the work queue.
 - The PR opens `ready_for_review` once `VERIFICATION_READINESS` holds — local deterministic verification per `<local_deterministic_scope>` passes, every required evidence-auditor predicate has passed, and the local review has converged — with no draft phase as a gating mechanism (a stacked PR held draft per `<branch_topology>` is the one exception).
 - All `VERIFICATION_READINESS` predicates — local deterministic verification per `<local_deterministic_scope>`, required evidence-auditor predicates, and a converged local review — are re-established on the diff every push publishes: the opening push and every content-changing follow-up push; a push that only rebased onto an advanced base re-establishes them scoped by the `<base_sync>` preservation proof.
-- The local `changes-reviewer` gate is invoked per `<local_review_invocation>` — the review resolves its own scope, with no interpretive scope, severity pre-filter, or emphasis steering added.
+- The local `changes-reviewer` gate is invoked per `<local_review_invocation>` over an exact committed subject from a clean worktree; the review derives its base/head scope, with no interpretive scope, severity pre-filter, or emphasis steering added.
 - Waiting for CI review or checks uses the exact PR-check wait command from `<pr_check_wait>`.
 - All three surfaces in `<review_inspection>` are inspected after every push, with `comments` always present in the `gh pr view --json` field list.
 - Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and acted on by validity and phase, never by severity.
