@@ -63,6 +63,7 @@ Classify each `.md` file in scope by its filename extension or parent directory 
 - Files inside `tests/` directories (test code, not specs)
 - `PLAN.md` and `ISSUES.md` files (stale-prone coordination notes, not spec artifacts)
 - Files inside `spx/local/` directory (skill overlays, not spec artifacts)
+- Files inside a `knowledge/` directory (knowledge bundles the canonical node shape in live `/understand` `<common_structure>` declares, not spec artifacts)
 
 </file_classification>
 
