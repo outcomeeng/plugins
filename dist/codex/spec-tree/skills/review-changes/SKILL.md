@@ -12,7 +12,7 @@ A sealed `spx journal --type review` run whose terminal event records review sta
 
 <inputs>
 
-The skill self-discovers the review scope from the current worktree. A persisted gate caller commits the exact current version before invoking the reviewer agent session and leaves the worktree clean; a caller requesting explicit advisory feedback may supply staged, unstaged, or untracked work, and the resulting review supplies no reusable gate evidence. Callers that need a non-default range export `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` before invoking the skill. Wrapper agents may also export branch and target identity variables.
+The skill self-discovers the review scope from the current worktree. Reusable gate evidence requires the exact current version to be committed and the worktree to be clean. Explicit advisory feedback may include staged, unstaged, or untracked work, and the resulting review supplies no reusable gate evidence. Export `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` to select a non-default range. Branch and target identity variables may also be exported.
 
 </inputs>
 
