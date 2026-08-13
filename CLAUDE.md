@@ -120,7 +120,7 @@ Default-branch work is complete only when it reaches the default branch on origi
 
 ## Commit Before Another Session Reads
 
-Changes may remain uncommitted until another agent session or human is expected or asked to read them. When repository writes are authorized, commit the exact current version through `/commit-changes` before that reading; the commit may record `passing`, `failing`, or `not-run`. After any further change, commit the new version before another agent session or human reads it. Without repository-write authorization, defer the reading. Agentic gate dispatch additionally requires its declared deterministic verification to pass on the exact committed subject.
+Changes may remain uncommitted while the authoring agent session works on them. When repository writes are authorized, commit the exact current version through `/commit-changes` before another agent session or human reads it for collaboration or reusable verification; the commit may record `passing`, `failing`, or `not-run`. After any further change, commit the new version before another such reading. An explicit advisory audit or review may inspect modified or untracked work, but its verdict is not reusable gate evidence. Without repository-write authorization, defer a reading that requires a committed subject. Agentic gate dispatch additionally requires its declared deterministic verification to pass on the exact committed subject.
 
 ## Worktree Occupancy
 

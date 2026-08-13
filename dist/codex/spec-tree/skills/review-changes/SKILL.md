@@ -75,6 +75,16 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 
 </constraints>
 
+<failure_modes>
+
+**Runner failure bypassed the command boundary.** A runner verb exited non-zero, and Claude attempted to repair the journal through direct `spx journal` or scratch-file commands. Stop on the failed verb and surface its stderr; the runner remains the only command boundary.
+
+**A clean review became a finding.** Claude appended a no-findings comment or synthetic finding before `finish`. Append no finding object for a clean review; `finish` records zero finding counts in the terminal event and returns the raw run token.
+
+**A partial run was reported as complete.** `finish` failed before sealing, and Claude returned the earlier `runToken`. Report the non-zero exit and stderr; only the token printed by a successful `finish` is a completed review result.
+
+</failure_modes>
+
 <success_criteria>
 
 - [ ] The final output is exactly the raw `runToken` returned by `finish`.

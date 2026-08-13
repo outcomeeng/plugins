@@ -422,7 +422,7 @@ Severity is the validity judgment the reviewer makes. **Disposition** — whethe
 
 **Finding labels.** Both `BLOCKING` and `DEBT` require an action in this PR and use `Reference:` + `Evidence:` + `Required:`.
 
-**No findings: say so directly.** When the changeset has no `BLOCKING` or `DEBT` findings, post a one-line comment saying so. NEVER invent lower-priority findings to prove the review happened.
+**No findings: emit no finding.** When the changeset has no `BLOCKING` or `DEBT` findings, record zero finding objects; the run-completed event carries the clean result, and each local or hosted surface renders that result from the journal. NEVER invent lower-priority findings to prove the review happened.
 
 **Findings only — never open questions, never commentary.** A reviewer with a question frames it as a finding (e.g., "Evidence: cannot verify X from the changeset; if assumption Y holds, this breaks Z because …") rather than asking a question that waits for an answer. Questions add CI roundtrips a single-pass review cannot recover from. Praise, observations, and commentary that do not constitute findings are noise — omit them.
 
