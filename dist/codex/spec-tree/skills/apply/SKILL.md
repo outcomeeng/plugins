@@ -76,7 +76,7 @@ Before dispatching any persisted audit or review gate, bind its subject to an ex
 3. Confirm the worktree is clean and record the checkpoint's full `HEAD` commit ID.
 4. Dispatch the gate only when the required deterministic verification is `passing`, against the committed `<base>..<head>` scope. A `failing` or `not-run` checkpoint remains valid local history for recovery and collaboration while withholding gate dispatch. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
 
-Never dispatch an audit or review over modified or untracked files. Commit the exact version first; a `failing` or `not-run` checkpoint may support collaboration, while gate dispatch remains withheld until required deterministic verification passes on that committed subject.
+An audit or review over modified or untracked files is advisory. It may provide early feedback, but it never satisfies a Step 4, Step 6, Step 8, evidence-auditor, Step 9, or merge-readiness predicate. Commit the exact version before dispatching any persisted gate or asking another agent session or human to read a reusable verification subject.
 
 After a rejected audit or valid review finding, repair the defect class, rerun deterministic verification, and create a new checkpoint commit before redispatch. Preserve the earlier checkpoint identity while its run remains prior context; do not amend the audited commit in place.
 
