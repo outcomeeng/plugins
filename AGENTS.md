@@ -648,7 +648,7 @@ implementation file
   → containing node directory under spx/
 ```
 
-`spx/` contains only specs, decision records, coordination notes, and `tests/` subdirectories. Implementation code lives outside `spx/` (in `src/plugins/`, `outcomeeng/`, generated `dist/`, etc.). The inverse navigation walks from an outside-`spx/` file in the diff, through the import graph into an inside-`spx/` test, then up to the spec assertion linking that test, then up to the containing node.
+`spx/` contains only specs, decision records, coordination notes, co-located `tests/` and `evals/` evidence directories, optional `knowledge/` roots on a node or the product root, and operational configuration (`spx/local/`, `spx/EXCLUDE`). Implementation code lives outside `spx/` (in `src/plugins/`, `outcomeeng/`, generated `dist/`, etc.). The inverse navigation walks from an outside-`spx/` file in the diff, through the import graph into an inside-`spx/` test, then up to the spec assertion linking that test, then up to the containing node.
 
 If multiple implementation files in the diff resolve to multiple nodes, take their lowest common ancestor in the tree — `/contextualize` on the LCA pulls constraining context for every descendant.
 
