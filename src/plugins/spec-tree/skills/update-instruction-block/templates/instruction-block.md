@@ -169,7 +169,7 @@ The configured verifier and reviewer roles this router names are pre-authorized.
 
 - **NEVER** ask the operator to confirm dispatching one — not at a gate, not per node, not once per session, and never as a structured-question option set. A harness permission prompt is the operator's to answer, never a question to raise.
 - **NEVER** dispatch a sub-agent this router does not name merely because it is discovered, available, or plausibly useful.
-- **NEVER** run a verification skill — audit or review — in the main conversation; the separate context is what keeps the verdict free of that conversation's bias.
+- **NEVER** run a verification skill — audit or review — in the main conversation; the separate verifier agent session keeps the verdict free of the authoring agent session's bias.
 - **ALWAYS** treat the gate as blocked when a named role cannot be dispatched or does not return: finish the deterministic verification, then report the exact dispatch attempted and how it failed.
 
 ### Agent identity in generated artifacts
@@ -208,7 +208,7 @@ Avoid shorthand such as "config patch" or "ship it path" when the exact file, PR
 
 ## Quick Reference: Skills and Agents
 
-Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context. Audit agents return structured verdicts; changeset reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. Dispatch agents in parallel when auditing multiple targets; `### Sub-agent dispatch` above governs when to dispatch one.
+Skills run in the main conversation. Agents preload the skill and run autonomously in their own agent sessions. Audit agents return structured verdicts; changeset reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. Dispatch agents in parallel when auditing multiple targets; `### Sub-agent dispatch` above governs when to dispatch one.
 
 <!-- harness:codex -->
 
