@@ -441,7 +441,7 @@ Use this shape for skill audits:
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "skill-auditor",
-    "message": "Repository: <absolute-repository-path>\nSkill content: <full paths to every changed artifact governing the skill surface, including SKILL.md files, skill subdirectory files, authored shared fragments, and generated runtime copies>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed skill content for skill-authoring standards, agent-prompt standards, progressive disclosure, portability, voice, and structure. Return only the structured JSON verdict specified by instructions:audit-skill, with no prose outside the JSON object."
+    "message": "Repository: <absolute-repository-path>\nSkill content: <full paths to every changed artifact governing the skill surface, including SKILL.md files, skill subdirectory files, authored shared fragments, and generated runtime copies>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed skill content for skill-authoring standards, agent-prompt standards, progressive disclosure, portability, voice, and structure; also audit the complete plugin skill-name set when the active repository skill-authoring overlay requires a plugin-wide naming audit. Return only the structured JSON verdict specified by instructions:audit-skill, with no prose outside the JSON object."
   }
 }
 ```

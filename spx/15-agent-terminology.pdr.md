@@ -23,5 +23,5 @@ The terms agent harness, agent, agent adapter, and agent session stay separate s
 ### Audit
 
 - ALWAYS: decisions, specs, skills, and instructions that govern Codex, Claude Code, agent selection, agent configuration, agent adapters, agent sessions, plugin bootstrap, skill bootstrap, isolated agent execution, or agent observation identify whether they describe the agent harness, an agent, an agent adapter, or an agent session ([audit])
-- ALWAYS: product placement and decomposition account for domains whose behavior configures, launches, resumes, isolates, equips, or observes coding agents ([audit])
+- ALWAYS: each product domain whose behavior configures, launches, resumes, isolates, equips, or observes coding agents states in its governing spec or decision whether it governs the agent harness, an agent, an agent adapter, or an agent session ([audit])
 - NEVER: use unqualified agent for adapter implementation, session identity, plugin package, marketplace package, or the repository-managed agent harness when that specific role is meant ([audit])

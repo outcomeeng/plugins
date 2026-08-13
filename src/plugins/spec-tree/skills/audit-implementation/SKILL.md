@@ -34,7 +34,7 @@ The invocation request `$ARGUMENTS` carries:
 
 - Repository path.
 - Changeset scope as `<base>..<head>` for `--scope`.
-- Live file list: `none` for reusable gate evidence, or the full modified and untracked repository-relative path list for an explicit advisory audit.
+- Optional live file list: omitted or `none` for reusable gate evidence, or the full modified and untracked repository-relative path list for an explicit advisory audit.
 - Governing node paths.
 - Deterministic verification already run, or the concrete reason the audit is intentionally blocked before verification.
 - Run-driver identity using the six published producer fields: producer kind, agent name, agent-owning plugin name, skill name, skill-owning plugin name, and invocation role.
@@ -50,9 +50,9 @@ Deterministic verification already run: <commands and results, or blocking reaso
 Run driver identity: <one JSON object with the six published producer fields>
 ```
 
-If `$ARGUMENTS` is empty or lacks repository path, changeset scope, live file list, governing nodes, deterministic verification state, or run-driver identity, return BLOCKED before starting a verification run. Name the missing request fields and the exact `$ARGUMENTS` shape required to retry.
+If `$ARGUMENTS` is empty or lacks repository path, changeset scope, governing nodes, deterministic verification state, or run-driver identity, return BLOCKED before starting a verification run. Name the missing request fields and the exact `$ARGUMENTS` shape required to retry.
 
-Use the supplied committed changeset scope and live file list exactly. Do not derive a different base, widen to the whole repository, collapse the scope to only one file, or reconstruct the live file list. A request with `Live file list: none` addresses the exact committed subject and may produce reusable gate evidence after applicable deterministic verification passes. A request carrying the full modified and untracked path list is an explicit advisory audit over the committed scope plus those live paths; inspect those paths, mark the result advisory, and supply no reusable gate evidence.
+Use the supplied committed changeset scope and any supplied live file list exactly. Do not derive a different base, widen to the whole repository, collapse the scope to only one file, or reconstruct the live file list. A request that omits `Live file list` or supplies `Live file list: none` addresses the exact committed subject and may produce reusable gate evidence after applicable deterministic verification passes. A request carrying the full modified and untracked path list is an explicit advisory audit over the committed scope plus those live paths; inspect those paths, treat the result as advisory, and supply no reusable gate evidence.
 
 </request_contract>
 
@@ -71,7 +71,7 @@ spx verification run start \
   --input stdin
 ```
 
-The `--input` payload carries the request, live file list, deterministic verification state, governing nodes, and whether the result is advisory. The command returns a JSON locator; extract its `runToken` field exactly and use that token for every later command. Never pass the whole JSON locator as `--run`.
+The `--input` payload carries the request, the live file list or `none` when omitted, deterministic verification state, governing nodes, and whether the result is advisory. The command returns a JSON locator; extract its `runToken` field exactly and use that token for every later command. Never pass the whole JSON locator as `--run`.
 
 Execute every state-changing `spx verification run` command serially. A tool
 response or tool-call batch contains at most one `start`, `scope add`, `finding
@@ -275,7 +275,7 @@ Build an expected coverage inventory before invoking any language concern skill.
 
 Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; do not manufacture a language name, missing concern skill, unsupported unit, or coverage gap for a path outside implementation-audit ownership.
 
-Give every complete trio the supplied scope and live file list exactly. Each read-only concern skill owns language-specific applicability and identifies the subject paths it audited or returns `NOT_APPLICABLE`; the orchestration never substitutes its own file-pattern table. Build the pre-invocation inventory by discovered language and concern, then expand each concern's result into subject-path units when its final coverage status is known. A discovered language with an incomplete trio records the missing required concerns and rejects the run.
+Give every complete trio the supplied scope and any supplied live file list exactly. Each read-only concern skill owns language-specific applicability and identifies the subject paths it audited or returns `NOT_APPLICABLE`; the orchestration never substitutes its own file-pattern table. Build the pre-invocation inventory by discovered language and concern, then expand each concern's result into subject-path units when its final coverage status is known. A discovered language with an incomplete trio records the missing required concerns and rejects the run.
 
 Each expected unit records:
 
@@ -382,7 +382,7 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 **The request was empty or malformed.**
 
-What happened: Claude received no `$ARGUMENTS`, or `$ARGUMENTS` omitted repository path, changeset scope, live file list, governing nodes, deterministic verification state, or run-driver identity.
+What happened: Claude received no `$ARGUMENTS`, or `$ARGUMENTS` omitted repository path, changeset scope, governing nodes, deterministic verification state, or run-driver identity.
 
 Why it failed: Starting a verification run without the required selector fields creates durable audit state that cannot be tied to the intended scope.
 
@@ -483,8 +483,8 @@ How to avoid: Stop and return the boundary failure with the deterministic comman
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-path, or coverage-gap unit within a recognized implementation-language partition appears in the rendered projection rather than being hidden in prose; artifacts outside implementation-audit ownership produce no fabricated coverage unit.
 - Every audited concern preserves its complete non-empty inspected-path set as path-scoped units whose `subject` fields are the exact paths; every expected unit is audited only after the concern completes, and its finding count derives from accepted finding rows rather than a custom field.
-- The same request, committed scope, live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
-- Every gate-eligible run addresses an exact committed head with `Live file list: none`; an explicit advisory run may inspect the full supplied modified and untracked path list and supplies no reusable gate evidence.
+- The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
+- Every gate-eligible run addresses an exact committed head with the live file list omitted or set to `none`; an explicit advisory run may inspect the full supplied modified and untracked path list and supplies no reusable gate evidence.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>
