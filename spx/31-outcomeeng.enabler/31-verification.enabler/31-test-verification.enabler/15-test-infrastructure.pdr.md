@@ -24,7 +24,7 @@ For Rust, Cargo normalizes hyphens to underscores in import paths: package `<pro
 
 Each language plugin declares its normative path in this table or in a PDR amendment that extends this table. Language ADRs govern implementation mechanics such as `tsconfig` path mapping, Python package discovery, Cargo workspace configuration, or Go module and `internal/` placement.
 
-The canonical filename model `<subject>.<evidence>.<level>[.<runner>]` declares one evidence type per test file, so the contents of `spx/<node>/tests/` are typed assertion files only. The executed test owns every behavioral predicate and assertion API call. Harnesses, generators, and inert fixtures carry no predicates or assertions of their own and live elsewhere. Test infrastructure is production code for the methodology — it implements behavior, exposes interfaces that tests depend on, and can invalidate downstream evidence when it drifts — differing from product code only in purpose: it enables test assertions instead of shipping product behavior.
+The contents of `spx/<node>/tests/` are typed assertion files only, one evidence type per file. The executed test owns every behavioral predicate and assertion API call. Harnesses, generators, and inert fixtures carry no predicates or assertions of their own and live elsewhere. Test infrastructure is production code for the methodology — it implements behavior, exposes interfaces that tests depend on, and can invalidate downstream evidence when it drifts — differing from product code only in purpose: it enables test assertions instead of shipping product behavior.
 
 ## Category Semantics
 
@@ -145,7 +145,7 @@ The decision accepts these trade-offs:
 - ALWAYS: language test, standards, and audit skills teach the path, ownership, generator, fixture, harness, and full-chain audit rules from this decision for their language surface ([audit])
 - ALWAYS: the methodology — across skills, references, templates, examples, and audit findings — uses the term "infrastructure" for this category and never "support" as the category name ([audit])
 - NEVER: require or fabricate a top-level `infrastructure → testing → {generators, fixtures, harnesses}` subtree solely to govern test infrastructure — nodes with those slugs exist only when normal Spec Tree composition selects them for a real product concern ([audit])
-- NEVER: a `tests/` directory at any level of any spec tree contains a test harness, generator, fixture, or any non-test-assertion code — `tests/` contains only typed assertion files matching `<subject>.<evidence>.<level>[.<runner>]` ([audit])
+- NEVER: a `tests/` directory at any level of any spec tree contains a test harness, generator, fixture, or any non-test-assertion code — `tests/` contains only typed assertion files ([audit])
 - NEVER: the terms "test support", "test helpers", "test utilities", or "test tools" appear in the methodology, language standards, examples, paths, or audit skills as governing categories for harnesses, generators, or fixtures ([audit])
 - NEVER: a test-infrastructure module is imported into a product module — the dependency direction is `tests → infrastructure`, never `product → infrastructure` ([audit])
 - NEVER: a property, mapping, scenario, or compliance assertion relies on test infrastructure that weakens the evidence type it names; framework syntax or directory placement cannot upgrade example evidence into property, mapping, or compliance evidence ([audit])
