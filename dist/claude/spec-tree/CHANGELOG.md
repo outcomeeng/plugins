@@ -19,7 +19,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Added
 
 - **The canonical node shape names the optional `knowledge/` root.** A node may carry one knowledge root — a knowledge bundle whose `index.md` lists its contents — and the product root may carry `spx/knowledge/` the same way. `/align` skips files inside a `knowledge/` directory instead of reporting them as unrecognized Markdown.
-- **The eval lane's file set follows `eval.toml`.** The canonical eval lane is `eval.toml` plus the case, prompt, and producer-template artifacts it declares by eval-relative path — canonically `cases.jsonl` and `prompt.md` — so a declared path may also reach a sibling eval's shared artifact. The eval harness generates `history.jsonl` and the ignored `runs/` transcripts at fixed names it owns.
+- **The eval lane's file set follows `eval.toml`.** The canonical eval lane is `eval.toml` plus the case, prompt, and template artifacts it declares by eval-relative path — canonically `cases.jsonl`, `prompt.md`, and `prompt.template.md` — so a declared path may also reach a sibling eval's shared artifact. A declared producer source is a repository path outside the eval directory. The eval harness generates `history.jsonl` and the ignored `runs/` transcripts at fixed names it owns.
 
 ## 0.88.9
 
