@@ -1,5 +1,13 @@
 # Issues
 
+## The align eval-lane skip hides undeclared Markdown inside canonical eval directories
+
+The `/align` discover step excludes every file inside an `evals/` directory sitting directly under a node directory, and the `<file_classification>` skip list mirrors that blanket exclusion. The closed artifact taxonomy admits only the artifacts each `eval.toml` declares (case, prompt, and template paths) plus the harness-generated files, so an undeclared free-form document such as `evals/{rule-slug}/notes.md` is misplaced content — yet the blanket directory skip removes it from the scan before classification, and a full-tree alignment reports clean.
+
+**Resolution shape**: during discovery, resolve each `eval.toml`'s declared eval-relative paths and skip only those artifacts plus the harness-generated `history.jsonl`, leaving undeclared Markdown inside the eval directory in scope to be reported. This changes the discover step from static glob exclusions to per-eval declaration resolution, which is why it is a separate capability slice rather than a skip-list edit.
+
+**Why tracked**: surfaced by the Codex reviewer on PR #517 (review-thread comment `3774887664`, head `42d0a9c865ea338a5e0cd259ba9387544b4a094a`); dispositioned as tracked debt by operator direction on that PR's round-six findings. The fix requires `/align` to parse `eval.toml` during discovery — a discover-algorithm capability change owned by this node, outside the closed-taxonomy changeset's bounded concern.
+
 ## Evidence-mechanism specialization is conflated with cross-cutting duplication
 
 The `/align` audit flags a child node's `[test]`-evidence compliance rule as a "cross-cutting invariant in child" finding when an ancestor decision record carries an `[audit]`-evidence rule with overlapping content. The two rules are not the same artifact: `[audit]` is agentic semantic judgment, `[test]` is automated falsification. A child `[test]` rule that concretizes an ancestor `[audit]` rule against a specific code surface is legitimate evidence-type specialization, not placement debt.

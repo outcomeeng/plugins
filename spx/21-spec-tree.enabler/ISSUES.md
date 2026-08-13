@@ -138,3 +138,11 @@ Required handling: amend `<common_structure>` to declare the profile rules above
 Why separate: the amendment changes the shipped methodology's node grammar for every consumer repository and carries its own gate chain, while the changeset that surfaced it conforms one bundle inside this repository's own `spx/` tree.
 
 Surfaced by the local `changes-reviewer` (run `2026-07-24_18-55-59-928-7b385135ae6b`) and the CI reviewer on the eval-brief knowledge changeset, then narrowed to the shipped-grammar gap once the methodology's knowledge chapter settled the directory's standing.
+
+## 24. The eval-lane bullet states the producer-source boundary as harness-enforced
+
+The `/understand` `<common_structure>` eval-lane bullet (authored in `src/plugins/spec-tree/skills/understand/SKILL.md`, mirrored in both generated runtime trees and asserted by the eval-lane `[audit]` assertion in `spx/21-spec-tree.enabler/spec-tree.md`) states "A declared producer source is a repository path outside the eval directory, never a co-located artifact." The "never" clause is convention, not an enforced invariant: `_resolve_repo_relative_path` in `outcomeeng_evals/producer_prompt.py` (the resolver for `prompt_source.producer`/`producers`) rejects absolute paths and parent traversal and requires repo-root containment, but never checks that the resolved path falls outside the eval directory — unlike the template resolver, whose eval-directory containment is code-backed.
+
+**Resolution shape**: either add an eval-directory-exclusion check to producer-path resolution in `outcomeeng_evals/producer_prompt.py` so the code matches the stated invariant, or soften the bullet (and the mirrored spec assertion and changelog entry) to state the boundary as convention across every current usage. The choice spans the eval-harness node's code, so it is not a wording-only edit.
+
+**Why tracked**: surfaced by the CI changeset review on PR #517 (DEBT, head `42d0a9c865ea338a5e0cd259ba9387544b4a094a`); dispositioned as tracked debt by operator direction on that PR's round-six findings under a recorded expense concern.
