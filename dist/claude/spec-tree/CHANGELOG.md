@@ -10,6 +10,17 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.88.10
+
+### Changed
+
+- **The `/understand` artifact-placement taxonomy is closed.** The foundation now states that `spx/` admits no artifact outside the placement table — whose rows include the root product spec — the canonical node shape, and the optional knowledge root a node or the product root carries; that operational files (`spx/local/` overlays, the exclusion mechanism) are configuration rather than artifacts; and that coordination notes raise no placement question. Placement of unmatched content decides only between the governing layer (an ADR or PDR) and the declaring layer (a spec) — verification and implementation artifacts are never placed by classification, because assertion tags derive evidence locations and node ownership with the language's declared infrastructure home derives implementation locations. A repository carrying free-form documents under `spx/` outside these artifact kinds now has misplaced content: reclassify each such file into the decision or spec that owns its subject.
+
+### Added
+
+- **The canonical node shape names the optional `knowledge/` root.** A node may carry one knowledge root — a knowledge bundle whose `index.md` lists its contents — and the product root may carry `spx/knowledge/` the same way. `/align` skips files inside a `knowledge/` directory instead of reporting them as unrecognized Markdown.
+- **The eval lane's file set follows `eval.toml`.** The canonical eval lane is `eval.toml` plus the case, prompt, and template artifacts it declares by eval-relative path — canonically `cases.jsonl`, `prompt.md`, and `prompt.template.md`. A declared case or prompt path may reach a sibling eval's shared artifact; a declared template stays inside the eval directory. A declared producer source is a repository path outside the eval directory. The eval harness generates `history.jsonl` and the ignored `runs/` transcripts at fixed names it owns. `/align` skips the files inside a node's `evals/` lane instead of reporting them as unrecognized Markdown.
+
 ## 0.88.9
 
 ### Fixed

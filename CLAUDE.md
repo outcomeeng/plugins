@@ -396,7 +396,7 @@ implementation file
   → containing node directory under spx/
 ```
 
-`spx/` contains only specs, decision records, coordination notes, and `tests/` subdirectories. Implementation code lives outside `spx/` (in `src/plugins/`, `outcomeeng/`, generated `dist/`, etc.). The inverse navigation walks from an outside-`spx/` file in the diff, through the import graph into an inside-`spx/` test, then up to the spec assertion linking that test, then up to the containing node.
+`spx/` contains only specs, decision records, coordination notes, co-located `tests/` and `evals/` evidence directories, optional `knowledge/` roots on a node or the product root, and operational configuration (`spx/local/`, `spx/EXCLUDE`). Implementation code lives outside `spx/` (in `src/plugins/`, `outcomeeng/`, generated `dist/`, etc.). The inverse navigation walks from an outside-`spx/` file in the diff, through the import graph into an inside-`spx/` test, then up to the spec assertion linking that test, then up to the containing node.
 
 If multiple implementation files in the diff resolve to multiple nodes, take their lowest common ancestor in the tree — `/contextualize` on the LCA pulls constraining context for every descendant.
 
@@ -431,7 +431,7 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 
 - `src/plugins/` — authored skills, thin agents, manifests, and templates. One subdirectory per plugin.
 - `dist/claude/`, `dist/codex/` — generated runtime plugin trees (rebuilt from `src/plugins/` by `just build-skills`) shipped to consumer repos. The plugin catalog in [`README.md`](README.md#plugins) is authoritative for what each plugin contains; this file does not duplicate it.
-- `spx/` — this product's spec tree (durable map). The managed Spec Tree instruction block in this root file is the skill router. Per-node `local/` holds product-specific skill overlays; `spx/local/` also carries the generated-source declaration `generated-sources.toml`, a verification-scope input distinct from the `*.md` skill overlays.
+- `spx/` — this product's spec tree (durable map). The managed Spec Tree instruction block in this root file is the skill router. `spx/local/` holds the product-specific skill overlays and carries the generated-source declaration `generated-sources.toml`, a verification-scope input distinct from the `*.md` skill overlays.
 - `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/` — this product's Python toolchain (validation, distribution, eval harness) and its test infrastructure. Not portable to consumer projects; do not import from inside any plugin.
 - `.claude-plugin/marketplace.json` — Claude Code marketplace catalog (one entry per shipped plugin).
 - `.agents/plugins/marketplace.json` — Codex marketplace catalog (mirror of the above).

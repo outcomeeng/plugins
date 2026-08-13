@@ -4,6 +4,16 @@ Cross-cutting imperfections noticed in the marketplace that do not belong to a s
 
 `/contextualize` reads this file at product-root context-load time; the entries are visible to any session that enters `spx/`.
 
+## Product-level assertions carry no evidence tags
+
+The `/understand` artifact-placement table's Product spec row declares product-level assertions verified by linked evidence, and the `<verification_types>` rule requires each assertion to select test, evaluate, or audit from its real verdict. The six ALWAYS/NEVER bullets under `## Product-level assertions` in `spx/outcomeeng.product.md` carry no evidence tag, so the root spec fails the verification claim the closed taxonomy now makes for its artifact kind.
+
+**Resolution shape**: route each of the six assertions through `/verify` to select its verification type from the verdict its real subject can produce — several are semantic constraints that resolve to `[audit]`, while the verbatim-identity rules may support `[eval]` evidence — then tag each assertion and establish any path-bearing evidence the selection requires.
+
+**Why separate**: the tagging is a `/verify` pass over the product root with its own evidence-selection and possible eval-authoring chain, independent of the changeset that closed the placement taxonomy and surfaced the gap.
+
+**Evidence.** Surfaced by the CI changeset review on the closed-taxonomy change (PR #517), which compared the new Product spec row's verification claim against the untagged root-spec assertions.
+
 ## Govern Go test conventions before a Go language plugin ships
 
 The methodology documents Go's test-infrastructure home (`internal/testinfra/`) in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` and Go test-file naming (`<subject>.<evidence>.<level>[.<runner>]_test.go`) in the testing and understanding skill references. No decision governs Go test-runner selection (`go test`), subtest conventions, `t.Helper()` policy, or the per-language `[test]` runner the way `spx/15-test-language.adr.md` does for this product's own pytest suite — and that ADR does not mention Go.
