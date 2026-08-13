@@ -407,7 +407,7 @@ Use this shape for spec-node audits:
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "spec-auditor",
-    "message": "Repository: <absolute-repository-path>\nNode: <full spx/... node path>\nTask: Audit the node spec for assertion quality, evidence tags, atemporal voice, decision alignment, and spec-tree structure. Return APPROVED or REJECTED. For REJECTED, list concrete findings with full spx/... paths, governing rule, and required fix."
+    "message": "Repository: <absolute-repository-path>\nNode: <full spx/... node path>\nTask: Audit the node spec for assertion quality, evidence tags, atemporal voice, decision alignment, and spec-tree structure. Return only the audit-specs JSON verdict, with schema_version 1, skill audit-specs, overall APPROVED or REJECTED, the section-structure, atemporal-voice, and tag-fitness rows, and metadata. Do not add prose outside the JSON object."
   }
 }
 ```
@@ -429,7 +429,7 @@ Use this shape for decision audits:
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "pdr-auditor",
-    "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.pdr.md path>\nGoverning node: <full spx/... node path>\nTask: Audit the PDR for product-decision structure, atemporal voice, tag validity, downstream alignment, and evidence quality. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
+    "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.pdr.md path>\nGoverning node: <full spx/... node path>\nTask: Audit the PDR for product-decision structure, atemporal voice, tag validity, downstream alignment, and evidence quality. Return only the audit-pdr JSON verdict, with schema_version 1, skill audit-pdr, overall APPROVED or REJECTED, the content-classification, property-quality, tag-validity, atemporal-voice, and consistency rows, and metadata. Do not add prose outside the JSON object."
   }
 }
 ```
