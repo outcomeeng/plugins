@@ -157,7 +157,7 @@ The configured verifier and reviewer roles this router names are pre-authorized.
 
 **NEVER** name the agent or its runtime in an operational artifact — a branch name, commit message, pull-request title or body, review comment, or authorship marker written into a product file. Describe the work, never who performed it. Exact filesystem paths, package and tool names, quoted command output, and operator-supplied text keep their required spelling.
 
-**ALWAYS** confine that ban to operational artifacts. Instruction content that documents agent behavior names the agent as its subject by design; stripping that subject out of authored guidance to satisfy this rule misapplies it rather than complying with it.
+**ALWAYS** confine that ban to operational artifacts. Authored guidance that documents Claude's behavior uses imperative voice or names Claude as its subject by design; stripping Claude from that guidance to satisfy this rule misapplies it rather than complying with it.
 
 ### Operator questions
 
