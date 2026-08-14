@@ -36,7 +36,7 @@ Both states are searched because `gh search issues --state` accepts only `open` 
 
 An existing issue takes a comment through `/manage-parent-issue`, not a duplicate. Report what both searches returned.
 
-**Step 4 — Assemble the evidence.** Per `/contribution-standards` `<invariants>` "Carry reproducible evidence", collect: the versions of every tool involved, the base repository commit the observation was made against, the exact command or interaction that produced it, and a negative control showing the same method reporting the opposite result.
+**Step 4 — Assemble the evidence.** Per `/contribution-standards` `<invariants>` "Carry reproducible evidence", collect: the versions of every tool involved, the base repository commit the observation was made against, the exact command or interaction that produced it, and a negative control showing the same method reporting the opposite result. Those probes belong to the subject tool rather than to this skill, so they run per `/contribution-standards` `<capability_scope>`.
 
 A claim without a negative control cannot distinguish a defect from a broken measurement, and a maintainer has no way to tell which they received. When the condition cannot be reproduced in the real surface, say so and say why; never substitute a lookalike and report it as observed.
 

@@ -73,7 +73,7 @@ Never reconstruct the classification from `gh` output read by eye. The resolver 
 
 **Establish permission from the API.** `viewerPermission` on the resolved base is the only source. A git remote named `upstream` proves nothing, `gh api user` proves nothing, and a successful push proves nothing — the operator holds repositories across several organizations, and none of the three reports the permission governing this one.
 
-**Require in-turn authorization for `READ` and `NONE`.** Resolve the target, name it back to the operator, and create nothing there until the operator authorizes that base in the same turn.
+**Require in-turn authorization for `READ`, `TRIAGE`, and `NONE`.** Resolve the target, name it back to the operator, and create nothing there until the operator authorizes that base in the same turn.
 
 **Authorization covers the artifact and its revisions.** A push answering review updates the artifact the operator already authorized and needs no fresh authorization. A new pull request, a new issue, or a comment on an unrelated thread each require their own.
 
@@ -102,6 +102,20 @@ Never reconstruct the classification from `gh` output read by eye. The resolver 
 **Open as a draft when the contribution is unsolicited or its conventions are uncertain.** `--draft` costs nothing and says the shape is still open to direction.
 
 </invariants>
+
+<capability_scope>
+
+A skill's `allowed-tools` enumerates the commands it can name before it runs. Three things these flows require cannot be named in advance, because they belong to a repository the operator does not control and are discovered from it:
+
+- the base repository's declared checks, whatever its contributing guide, workflow files, and build targets name — `pytest`, `npm test`, `make`, `just`, or something this list has never heard of;
+- the version probes and reproducing commands an evidence claim needs, which belong to the subject tool rather than to this plugin;
+- editing the files a confirmed finding requires changing.
+
+Each runs through the runtime's own per-call approval, outside the approval-free surface `allowed-tools` grants. Those narrow grants are that surface, never a prohibition on the work these steps mandate.
+
+NEVER widen `allowed-tools` to a general execution or file-mutation grant to avoid those prompts. A grant broad enough to run whatever checks a base repository declares is broad enough to run anything, in a flow whose whole purpose is writing somewhere the operator does not control. When the runtime exposes no approval path at all, stop and report the exact command and the step requiring it; never skip a declared check and never report one as passed.
+
+</capability_scope>
 
 <outward_text>
 

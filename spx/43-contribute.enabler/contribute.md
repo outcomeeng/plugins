@@ -6,7 +6,7 @@ CAN publish a pull request, an issue, or a reply to that repository without reso
 
 The plugin exposes five workflow skills — `/open-parent-pr`, `/manage-parent-pr`, `/open-parent-issue`, `/manage-parent-issue`, and `/sync-fork` — over one composed-only reference skill, `contribution-standards`, that carries the invariants holding for every artifact regardless of its type. The plugin depends on no other plugin and on no CLI beyond `git`, `gh`, and a Python interpreter, so a consumer installs it without adopting a methodology.
 
-The surface is the complement of the outward-safety stop that a controlled-repository pull-request flow performs. That flow resolves the base repository, reads the operator's permission on it, and stops when the permission is `READ` or `NONE` or when the base resolves to a fork's parent. Those two stops are the cases this plugin handles, so the two surfaces partition every pull request between them and neither infers the other's case.
+The surface is the complement of the outward-safety stop that a controlled-repository pull-request flow performs. That flow resolves the base repository, reads the operator's permission on it, and stops when the permission is `READ`, `TRIAGE`, or `NONE` or when the base resolves to a fork's parent. Those two stops are the cases this plugin handles, so the two surfaces partition every pull request between them and neither infers the other's case.
 
 A contribution never reaches the operator's own default branch, so the merge lifecycle that authorizes integration does not govern it. Merge authority over the base repository belongs to its maintainer, and the flow's authority ends at publication and iteration.
 

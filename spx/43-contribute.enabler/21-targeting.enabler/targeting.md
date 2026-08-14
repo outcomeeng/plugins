@@ -25,7 +25,7 @@ A contribution needs a head repository the operator can push to. When no fork of
 
 - ALWAYS: every write to the base repository names it explicitly, because a command that omits the repository publishes wherever `gh` resolves the default ([audit])
 - ALWAYS: the operator's permission on the base comes from `viewerPermission` on the resolved base repository ([audit])
-- ALWAYS: a base repository whose permission is `READ` or `NONE` requires authorization naming that base in the same turn before any artifact is created there ([audit])
+- ALWAYS: a base repository whose permission is `READ`, `TRIAGE`, or `NONE` requires authorization naming that base in the same turn before any artifact is created there ([audit])
 - ALWAYS: authorization covers the artifact it named and that artifact's later revisions; a new pull request, a new issue, or a comment on an unrelated thread each require their own ([audit])
 - ALWAYS: an absent fork stops the flow with the resolved parent, the accounts and organizations that could hold the fork, and the exact fork command — the destination is the operator's choice, never resolution's ([audit])
 - NEVER: a permission class is inferred from a git remote, the authenticated account, or a successful push — none of the three reports the permission governing the base ([test](tests/test_target_resolution.compliance.l1.py))

@@ -81,7 +81,7 @@ git switch -C "<headRefName>" FETCH_HEAD
 
 **Step 4 — GATE: Verify each finding before fixing it.** Reproduce the finding against the branch and report which findings confirmed. A finding the branch does not exhibit is answered with the evidence rather than with a change.
 
-**Step 5 — Fix, commit, verify, append.** Apply every confirmed finding as a defect class: fix the cited site and every parallel instance the same rule reaches. Re-run the base repository's declared checks per `/contribution-standards`.
+**Step 5 — Fix, commit, verify, append.** Apply every confirmed finding as a defect class: fix the cited site and every parallel instance the same rule reaches. Re-run the base repository's declared checks per `/contribution-standards`. Editing those files and running those checks are both discovered work rather than commands this skill can name, so they proceed per `/contribution-standards` `<capability_scope>`.
 
 **When no finding produced a change, skip to Step 6.** A pass where every finding failed reproduction, and a pass invoked only to report the pull request's state, both reach this step with nothing to commit. `git commit` with no staged change exits non-zero, which would strand the evidence Step 6 owes the maintainer for the findings that did not reproduce. There is nothing to push either — the pull request already carries what it carried.
 
