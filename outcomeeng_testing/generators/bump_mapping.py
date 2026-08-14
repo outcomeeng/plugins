@@ -30,8 +30,11 @@ def lifecycle_surface_changes() -> tuple[ChangedPath, ...]:
 
     Each entry is a non-modifying status applied to one of the three declared
     surfaces — a skill's `SKILL.md`, an agent definition, a plugin manifest —
-    under the authored root and both generated roots. These are inputs only; the
-    segment each one classifies to is asserted by the linked test.
+    under the authored root and both generated roots. A rename reaches the
+    surface from either end, so the last entry renames a declared surface to a
+    path no surface covers: the plugin loses a skill, which the destination path
+    alone does not show. These are inputs only; the segment each one classifies
+    to is asserted by the linked test.
     """
     return (
         ChangedPath(
@@ -104,6 +107,15 @@ def lifecycle_surface_changes() -> tuple[ChangedPath, ...]:
                 DIST_CODEX_PLUGINS_DIR,
                 "foo",
                 f"{SKILLS_SUBDIR_NAME}/generated-skill/{SKILL_FILENAME}",
+            ),
+        ),
+        ChangedPath(
+            FileStatus.RENAMED,
+            distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "references/retired.md"),
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "foo",
+                f"{SKILLS_SUBDIR_NAME}/retired/{SKILL_FILENAME}",
             ),
         ),
     )
