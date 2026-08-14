@@ -102,6 +102,10 @@ Each item names what it touches. None is sliced into a PR yet.
 
 No shipped skill depends on an unpublished `spx` capability. Author and auditor consume one loadable standard. Routing stays acyclic. Every changed skill surface passes the typed skill auditor in an isolated context. Each touched plugin bumps once per branch. Generated trees are rebuilt, never hand-edited.
 
+## Decomposition disposition — the evidence-types decision stays whole
+
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md` carries 9 audit rules, past the roughly-7 signal in `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`. The count is dispositioned as accepted: the rules are one decision's verification surface over one subject — the assertion-type × execution-level cross-product — and its cell-composition rule binds the per-type sections to the level semantics, so splitting execution-level rules from per-type permission rules would separate the composition from the sections it composes and re-open the per-language divergence the decision exists to close.
+
 ## Decomposition disposition — the superset is a deliberate single node
 
 `test-verification.md` carries roughly 24 Compliance assertions, well past the roughly-7 signal in `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md:ALWAYS:1`. This is the intended shape, not carried-forward duplication: the node is the single language-neutral **superset** of the test-evidence seam rules, and every language test-standard node cites it and declares only its language delta. Decomposing the superset into per-concern child nodes would re-fragment the exact union the design unifies, and language nodes would then cite a parent whose rules are spread across children — reintroducing the cross-language drift the superset removes. The count is a consequence of consolidating three languages' rules into one owner, so the decomposition signal is dispositioned as accepted here rather than acted on.
