@@ -22,6 +22,8 @@ Harness obligations follow the level's dependency class, identically for every a
 
 Unavailable required evidence never passes: a missing mandatory credential, endpoint, binary, or local service fails loudly, or skips only where the suite declares that evidence optional.
 
+Every cell of the cross-product is decided by composition. An assertion type's section states its artifact rules — case source, oracle, domain, and type-specific artifacts — and those rules hold at every execution level unchanged; the execution level contributes only the harness obligations, the level floor, the availability rule, and the Stage 5 relief above, identically for every type. A per-type section states a per-level delta only where the type changes the answer, as the scenario section's table does. A permission undecidable from this composition is an amendment to this decision, never an author's or auditor's inference.
+
 ## Test-File Declaration
 
 The canonical filename model `<subject>.<evidence>.<level>[.<runner>]` declares each executed test file's cell: exactly one assertion type and exactly one execution level per file, with a runner token only for a non-default runner. Each language test-standards node declares exactly one filename instantiation of this model as part of its language delta, citing this decision by full path. The instantiation is expression: it renders the model into the language's file-naming convention and changes no token semantics.
