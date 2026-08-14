@@ -16,6 +16,10 @@ The fork's default branch current with its parent's default branch, or the diver
 
 **Step 2 — GATE: Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>`. Only `parent-contribution` continues — it is the classification that reports both a head repository and the parent it was forked from. `fork-absent` has nothing to sync, `controlled` describes a repository that is not a fork of another party's, and `blocked` stops with the resolver's `detail` verbatim.
 
+```bash
+python3 "${SKILL_DIR}/scripts/resolve_target.py"
+```
+
 **Step 3 — Read the two default branches.** Substitute the resolved values literally per `/contribution-standards` `<resolution>`:
 
 ```bash

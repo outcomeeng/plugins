@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when continuing an open pull request against a repository the operator does not control — answering review, publishing a revision, or reporting its current state.
   NEVER comment on or push to such a pull request without this skill.
 argument-hint: "[pull request number or URL]"
-allowed-tools: Read, Skill, Agent, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(git fetch:*), Bash(git branch --show-current), Bash(git push origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
+allowed-tools: Read, Skill, Agent, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(git fetch:*), Bash(git branch --show-current), Bash(git add:*), Bash(git commit:*), Bash(git push origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
 ---
 
 <objective>
@@ -18,6 +18,10 @@ The open pull request's current state read once, every valid review finding answ
 `$ARGUMENTS` is a pull-request number or URL. A bare number is the number; a URL's trailing path segment is the number. Both the URL check and the empty-input lookup need the resolved base, so Step 2 settles them.
 
 **Step 2 — Resolve the target, then the pull request.** Run the resolver named in `/contribution-standards` `<resolution>`. A classification other than `parent-contribution` means this pull request does not belong to this flow; stop and report the classification and `detail` verbatim.
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py"
+```
 
 With `base` resolved, settle the number. A URL's `owner/name` segments must equal that `base`; a mismatch stops the flow rather than being reconciled. When `$ARGUMENTS` is empty, look the pull request up for the current branch and stop when none exists:
 
@@ -49,11 +53,19 @@ Commit the fixes before pushing. A push transfers commits, so an uncommitted fix
 
 ```bash
 git add <fixed-paths>
-git commit
+git commit -m "<message in the base repository's commit style>"
 git push origin HEAD:refs/heads/"$(git branch --show-current)"
 ```
 
-Confirm the push moved the remote branch before continuing to Step 6.
+`git commit` takes its message on the command line. Bare `git commit` opens an editor, and no step here runs on a terminal that can answer one.
+
+Confirm the pull request carries the pushed commit before continuing to Step 6. `git commit` reported the new commit and `git push` reports the ref update it performed; `Everything up-to-date` means it moved nothing. Then read what the pull request itself now points at:
+
+```bash
+gh pr view "<number>" --repo "<base>" --json headRefOid --jq '.headRefOid'
+```
+
+Stop when it does not equal the commit just pushed. Step 6 would otherwise announce a revision the pull request does not carry.
 
 The push updates the open pull request in place and needs no fresh authorization, because it revises the artifact the operator already authorized. NEVER force-push a branch a reviewer has already read.
 
@@ -88,7 +100,10 @@ Cut every sentence about the contribution's own process — attempts made, time 
 - MUST verify a finding against the branch before changing code for it.
 - MUST name the base repository with `--repo` on every `gh` write.
 - NEVER force-push the head branch. The `Bash(git push origin HEAD:refs/heads/*)` grant matches by prefix, so it admits `--force` and `--force-with-lease` too; this constraint is the whole containment for those flags.
+- NEVER stage by wildcard. The `Bash(git add:*)` grant matches by prefix, so it admits `-A` and `.`, either of which sweeps unrelated work in the invocation checkout into a commit destined for someone else's repository. Name the fixed paths.
+- NEVER pass `--no-verify` to `git commit`. The `Bash(git commit:*)` grant matches by prefix and admits it. Hooks run from this checkout's own configuration, which conforming to the base repository's conventions is what installs, so skipping them drops part of the verification `/contribution-standards` requires. No hook being configured right now is not a reason to pass the flag.
 - NEVER write through `gh api` — the `Bash(gh api repos/*/pulls/*/comments:*)` grant exists to read review threads, and matching by prefix it also admits `-X DELETE` and `-X PATCH` against a maintainer's comment. Read only.
+- NEVER pass `--edit-last` or `--delete-last` to `gh pr comment`. The `Bash(gh pr comment:*)` grant matches by prefix and admits both, and either one rewrites or removes a comment a reviewer may already have read. `/contribution-standards` `<invariants>` "Iterate by appending" is the rule; this constraint is its containment here.
 - NEVER call `gh pr edit --add-reviewer`, `gh pr review`, or any maintainer-side action against a base the operator does not control.
 - NEVER treat `reviewDecision: CHANGES_REQUESTED` as a state the contributor can clear.
 
@@ -108,7 +123,7 @@ Cut every sentence about the contribution's own process — attempts made, time 
 - The pull request's state was read once, and `state`, `reviewDecision`, and each required check's conclusion appear verbatim.
 - Every confirmed finding is fixed as a defect class; every unconfirmed finding is answered with evidence.
 - The base repository's declared checks ran on the revised branch and reported success.
-- The revision reached the head branch by appending, never by force-push.
+- The revision reached the head branch by appending, never by force-push, and the pull request's `headRefOid` equals the commit that was pushed.
 - One comment states what changed, after a prose review, and stands as the re-request.
 - The pass returned without polling, watching, or sleeping.
 

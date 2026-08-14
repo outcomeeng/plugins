@@ -19,6 +19,10 @@ One issue open in a repository the operator does not control, carrying an observ
 
 **Step 2 — GATE: Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>`. Report `base` and `permission` verbatim.
 
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py"
+```
+
 An issue needs no head repository, so both `parent-contribution` and `fork-absent` continue here — the absent fork blocks a pull request, never a report. `controlled` stops: an issue in a repository the operator controls belongs to that repository's own workflow. `blocked` stops with the resolver's `detail` verbatim.
 
 **Step 3 — Search before filing.** Search the base repository for an existing issue describing the same observation:

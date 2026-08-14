@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when continuing an open issue in a repository the operator does not control — answering a maintainer, adding evidence, or reporting the thread's current state.
   NEVER comment on or close an issue in such a repository without this skill.
 argument-hint: "[issue number or URL]"
-allowed-tools: Read, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(printf:*)
+allowed-tools: Read, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api user:*), Bash(printf:*)
 ---
 
 <objective>
@@ -18,6 +18,10 @@ The open issue's current thread read once, the maintainer's question answered wi
 `$ARGUMENTS` is an issue number or URL. A bare number is the number; a URL's trailing path segment is the number. An empty `$ARGUMENTS` stops the flow, because this skill continues an identified thread and never picks one. The URL check needs the resolved base, so Step 2 settles it.
 
 **Step 2 — Resolve the target, then check the number.** Run the resolver named in `/contribution-standards` `<resolution>`. `parent-contribution` and `fork-absent` both continue — a thread needs no head repository. `controlled` and `blocked` stop, reporting the classification and `detail` verbatim.
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py"
+```
 
 With `base` resolved, a URL's `owner/name` segments must equal it; a mismatch stops the flow rather than being reconciled.
 
@@ -39,7 +43,13 @@ When the answer requires a condition that cannot be reproduced in the real surfa
 printf '%s\n' '<line>' '<line>' | gh issue comment "<number>" --repo "<base>" --body-file -
 ```
 
-**Step 6 — GATE: Close only what the operator opened, and only when authorized.** Compare the `author` read in Step 3 against the authenticated account; that field is the only evidence of who filed the issue, and without it this gate cannot hold. An issue anyone else filed is the maintainer's to close; stop there. For an issue the operator filed, closing is a new outward action, not a revision of the authorized one, so present through the runtime's structured-question tool the resolved `base`, the issue number and title, and the choice to close it or leave it open. Close only after the operator authorizes it in this turn:
+**Step 6 — GATE: Close only what the operator opened, and only when authorized.** Read the authenticated login, which is the only side of this comparison Step 3 does not already supply:
+
+```bash
+gh api user --jq '.login'
+```
+
+Compare it against `author.login` from the Step 3 read; that field is the only evidence of who filed the issue, and without both sides this gate cannot hold. An issue anyone else filed is the maintainer's to close; stop there. For an issue the operator filed, closing is a new outward action, not a revision of the authorized one, so present through the runtime's structured-question tool the resolved `base`, the issue number and title, and the choice to close it or leave it open. Close only after the operator authorizes it in this turn:
 
 ```bash
 gh issue close "<number>" --repo "<base>"
@@ -65,6 +75,9 @@ gh issue close "<number>" --repo "<base>"
 - MUST name the base repository with `--repo` on every `gh` write.
 - MUST answer the maintainer's question before adding anything else.
 - MUST obtain authorization in the same turn before closing an issue.
+- MUST read `gh api user` only for the Step 6 authorship comparison. `/contribution-standards` `<invariants>` "Establish permission from the API" rules the authenticated account out as evidence of permission on the base; it is evidence of identity and nothing else.
+- NEVER write through `gh api user`. The `Bash(gh api user:*)` grant matches by prefix, so it admits `-X PATCH` and `-X DELETE` against the operator's own GitHub account; this constraint is the whole containment for those verbs. Read only.
+- NEVER pass `--edit-last` or `--delete-last` to `gh issue comment`. The `Bash(gh issue comment:*)` grant matches by prefix and admits both, and either one rewrites or removes a comment a maintainer may already have read. `/contribution-standards` `<invariants>` "Iterate by appending" is the rule; this constraint is its containment here.
 - NEVER close, label, or reassign an issue the operator did not open.
 - NEVER present a synthesized approximation of the condition as an observation.
 
@@ -77,7 +90,7 @@ gh issue close "<number>" --repo "<base>"
 - The reply answers the question that was asked, with quoted evidence.
 - Inference is marked as inference; an unreproduced condition is marked unverified.
 - The reply passed a prose review, reported as unassisted where the prose plugin is absent.
-- Any close was authorized in the same turn and applied only to an issue the operator opened.
+- Any close was authorized in the same turn and applied only to an issue whose `author.login` equals the login `gh api user` reported.
 - The pass returned without polling, watching, or sleeping.
 
 </success_criteria>

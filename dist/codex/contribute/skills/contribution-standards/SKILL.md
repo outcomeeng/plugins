@@ -17,6 +17,7 @@ The invariants every artifact obeys on its way to a repository the operator does
 - Authorization for a `READ` or `NONE` base named that base in the turn the artifact was created.
 - The contribution branch was cut from the base repository's default branch.
 - Every outward-facing surface passed a prose review before it was sent.
+- No outward-facing surface named Claude or its runtime.
 - The artifact carries the evidence a maintainer needs to reproduce its claim without access to the operator's machine.
 
 </success_criteria>
@@ -85,6 +86,8 @@ Never reconstruct the classification from `gh` output read by eye. The resolver 
 **Run the base repository's own verification.** Its declared checks — the contributing guide's commands, the workflow files, the build and test targets — run locally and report success before the artifact opens. A check that cannot run locally is named in the body as unverified, with the reason. The maintainer's checks are the ones that decide the contribution; running them first spends review on substance.
 
 **Outward-facing text is permanent.** The notification reaches every watcher when the artifact appears, and deleting the artifact does not recall it. Title, body, comments, and review replies each pass a prose review before they are sent. Where the prose plugin is installed, dispatch its `prose-auditor` agent through the runtime's agent-dispatch surface, because that plugin produces a prose verdict only in a dispatched verifier context; where it is not installed, review against `<outward_text>` and report that the review ran unassisted.
+
+**Never name Claude or its runtime in the artifact.** Every outward-facing surface — issue and pull-request titles and bodies, comments, review replies, commit messages, and branch names — describes the work, never what produced it. A maintainer decides the contribution on its merits, and an authorship marker in a permanent public record raises a policy question the contribution never needed to raise. Exact tool names, quoted command output, and file paths keep their required spelling.
 
 **Carry reproducible evidence.** A maintainer cannot see the operator's machine. A defect claim states the tool versions involved, the base commit it was observed against, the command that produced the observation, and at least one negative control showing the same method reporting the opposite result. A claim without a negative control cannot distinguish a real defect from a broken measurement.
 

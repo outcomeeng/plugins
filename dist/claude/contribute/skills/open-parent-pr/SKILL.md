@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when opening a pull request against a repository the operator does not control — a fork's parent, or any base whose permission is READ or NONE.
   NEVER open a pull request against such a repository without this skill.
 argument-hint: "[what the change does, or empty to describe it from the branch]"
-allowed-tools: Read, Glob, Skill, Agent, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
+allowed-tools: Read, Glob, Skill, Agent, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git switch:*), Bash(git cherry-pick:*), Bash(git diff:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
 ---
 
 <objective>
@@ -18,6 +18,10 @@ One pull request open against a repository the operator does not control, carryi
 `$ARGUMENTS`, when non-empty, is the one-sentence description of the change used in Step 3's authorization and in the Step 8 body. When it is empty, derive that sentence from the checkout's current branch at invocation — the branch the change was written on, distinct from the `<branch>` Step 4 cuts — and its own commit subjects (`git log --format=%s origin/HEAD..HEAD`), which needs nothing a later step resolves.
 
 **Step 2 — GATE: Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>` and act on its `classification`. Report `base`, `head`, and `permission` verbatim. `controlled`, `fork-absent`, and `blocked` each stop here — `controlled` belongs to a controlled-repository pull-request flow, and the other two stop per the standards. Only `parent-contribution` continues.
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py"
+```
 
 **Step 3 — GATE: Obtain authorization.** Present, through the runtime's structured-question tool, the resolved `base`, the resolved `head`, the change in one sentence, and the choice to authorize the pull request against that base or to stop and inspect. Create nothing in the base repository until the operator authorizes it in this turn.
 
@@ -48,6 +52,8 @@ git diff --stat FETCH_HEAD...HEAD
 ```
 
 An empty diff means the contribution was left behind; stop rather than opening a pull request with no change in it.
+
+A conflict stops the replay mid-pick and leaves the checkout in that state. Run `git cherry-pick --abort` to return it to the branch tip, then report the conflicting commit and stop. The replay conflicts because the base moved under the change, and reconciling it is a decision about the contribution rather than a step of cutting the branch.
 
 **Step 5 — Conform to the base repository's conventions.** Before writing code, read what that repository declares: its contributing guide, the READMEs governing any fixture or test-data directory the change touches, metadata schemas, the documents a change of this kind updates, and the commit-message style of recent history. Shape the change to those conventions.
 
@@ -123,7 +129,7 @@ The body states what the change does, what verification ran, and what it answers
 
 A defect fix adds a **Root cause** paragraph and carries the evidence `/contribution-standards` requires: tool versions, the base commit observed against, the command that produced the observation, and a negative control.
 
-The body explains why; the diff already shows what. Never name Claude or its runtime anywhere in the title, body, or commits.
+The body explains why; the diff already shows what.
 
 </title_and_body>
 
@@ -135,6 +141,7 @@ The body explains why; the diff already shows what. Never name Claude or its run
 - MUST cut the contribution branch from the base repository's default branch, under a name derived in Step 4 before the first command that uses it.
 - NEVER force-push. The `Bash(git push -u origin HEAD:refs/heads/*)` grant matches by prefix, so it admits `--force` and `--force-with-lease` too; this constraint is the whole containment for those flags.
 - NEVER pass `--force` or `--discard-changes` to `git switch` — the `Bash(git switch:*)` grant matches by prefix and admits both, and either one drops uncommitted work in the invocation checkout. Cutting the contribution branch never needs them.
+- NEVER cherry-pick a commit outside the invocation branch's own range. The `Bash(git cherry-pick:*)` grant matches by prefix, so it admits any revision the checkout can name; Step 4 replays that branch's commits and nothing else.
 - NEVER open against a base whose classification is `controlled`, `fork-absent`, or `blocked`.
 - NEVER create the fork — report the destination candidates and stop.
 - NEVER report an unrunnable check as passed, or omit it from the body.
