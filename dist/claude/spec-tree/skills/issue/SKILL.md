@@ -1,7 +1,7 @@
 ---
 name: issue
 description: >-
-  ALWAYS invoke this skill when filing a follow-up into a spec-tree dependency's own session queue — for observations about the spec-tree plugin, the spx CLI, or another spec-tree dependency needing a change. NEVER edit a spec-tree dependency's installed source directly to record a needed fix; capture it as a handoff in that dependency's queue with this skill.
+  ALWAYS invoke this skill when filing a follow-up into the owning repository's session queue — including the invoking repository, the spec-tree plugin repository, the spx CLI repository, or another spec-tree dependency. NEVER edit installed dependency source or run the current work through full handoff closure merely to record a needed follow-up.
 argument-hint: "[target-dir-or-dependency]"
 allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(printenv CODEX_THREAD_ID), Bash(printenv CLAUDE_SESSION_ID), Bash(spx --version:*), Bash(spx session list:*), Bash(spx session show:*), Bash(spx -C:* diagnose*), Bash(spx -C:* session handoff*), Bash(spx -C:* session list*), Bash(spx -C:* session show*), Bash(git status:*), Bash(git rev-parse --path-format=absolute --git-common-dir), Bash(git remote get-url origin), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --path-format=absolute --git-common-dir), Bash(git -C:* rev-parse --show-toplevel), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(git -C:* remote get-url origin), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
 ---
@@ -123,7 +123,7 @@ Resolve a queue-safe `<queue-host>` before reading or writing sessions:
 - For a compliant bare-repository pool, run `spx -C <target-dir> diagnose --format json`, read the sole `worktree-pool` record, and use its absolute `readings.mainCheckoutPath`. Require `verdict=compliant`, a non-empty absolute main-checkout path, and matching normalized origin identity. Do not switch, detach, commit, or otherwise move the invoking or target worktree.
 - If the topology cannot produce a queue-safe checkout, stop with the exact diagnostic. Never reformulate the write against the active feature worktree.
 
-Before mutation, run `spx -C <queue-host> session list --json`, which covers both `todo` and `doing`, and inspect plausible matches with `spx -C <queue-host> session show <id>`. A match carries the dependency-followup body contract and describes the same observation and affected surfaces; a different title or wording does not make the observation distinct. When matches exist, reuse exactly one — prefer `doing` over `todo`, then the oldest full session id — report any additional matching ids as pre-existing duplicates, and create nothing. Deduplication is by reuse, never by archiving, releasing, deleting, editing, or moving an existing session.
+Before mutation, run `spx -C <queue-host> session list --json`, which covers both `todo` and `doing`, then snapshot every returned record's complete body with `spx -C <queue-host> session show <id>`. Inspect those bodies for plausible matches. A match carries the dependency-followup body contract and describes the same observation and affected surfaces; a different title or wording does not make the observation distinct. When matches exist, reuse exactly one — prefer `doing` over `todo`, then the oldest full session id — report any additional matching ids as pre-existing duplicates, and create nothing. Deduplication is by reuse, never by archiving, releasing, deleting, editing, or moving an existing session.
 
 When no match exists, create exactly one follow-up against `<queue-host>`. Snapshot every active session record first and require all pre-existing ids, statuses, metadata, and bodies to remain unchanged afterward. The only permitted queue delta is the one new `todo` session.
 
@@ -187,7 +187,7 @@ EOF
 
 `-C <queue-host>` runs the handoff against the owning repository's queue without moving the active checkout. For a different repository, the invoking session queue stays untouched. For the invoking repository, the only permitted queue delta is this one new `todo` follow-up.
 
-**Step 7 — Verify the stored or reused follow-up.** For `result=created`, parse `<HANDOFF_ID>` and `<SESSION_FILE>` from the command output. For either result, run `spx -C <queue-host> session show --json <HANDOFF_ID>` and require the session to exist in the owning repository with the expected `git_ref`, empty `specs` and `files`, non-empty `agent_session_id`, and non-empty `created_at`; a created session's `agent_session_id` must equal the runtime identity resolved in Step 6. When `same_repository=false`, run `spx session show --json <HANDOFF_ID>` from the invoking repository and require the id to be absent there. When `same_repository=true`, require the pre-existing active-session snapshot to be unchanged for `result=reused`; for `result=created`, require every pre-existing record to be unchanged and exactly one new `todo` id equal to `<HANDOFF_ID>`. Re-run `git status --porcelain=v1 --untracked-files=all` and require it to match the Step 5 snapshot byte-for-byte. A missing follow-up, field mismatch, unexpected queue delta, external-target copy in the invoking queue, or git-state difference blocks success and is reported with the observed values.
+**Step 7 — Verify the stored or reused follow-up.** For `result=created`, parse `<HANDOFF_ID>` and `<SESSION_FILE>` from the command output. For either result, run `spx -C <queue-host> session show --json <HANDOFF_ID>` and require the session to exist in the owning repository with empty `specs` and `files`, non-empty `git_ref`, non-empty `agent_session_id`, and non-empty `created_at`. A created session must carry the Step 2 `git_ref` and the runtime identity resolved in Step 6; a reused session must remain byte-identical to its Step 5 snapshot rather than being rewritten to the newly resolved branch or runtime identity. When `same_repository=false`, run `spx session show --json <HANDOFF_ID>` from the invoking repository and require the id to be absent there. When `same_repository=true`, require every pre-existing active-session record and body to be unchanged for either result; for `result=created`, additionally require exactly one new `todo` id equal to `<HANDOFF_ID>`. Re-run `git status --porcelain=v1 --untracked-files=all` and require it to match the Step 5 snapshot byte-for-byte. A missing follow-up, field mismatch, unexpected queue delta, external-target copy in the invoking queue, or git-state difference blocks success and is reported with the observed values.
 
 **Step 8 — Report.** Surface `result=created|reused`, the verified `<HANDOFF_ID>`, and `<SESSION_FILE>` when the command supplies it, naming the repository whose queue owns the follow-up. When pre-existing duplicates were observed, list their full ids without mutating them.
 
@@ -195,7 +195,7 @@ EOF
 
 <constraints>
 
-- NEVER edit, commit to, or push the target dependency's tracked source — the only effect on the target is the session document `spx -C <target-dir> session handoff` writes into its `.spx/sessions/todo/`.
+- NEVER edit, commit to, or push the owning repository's tracked source — the only possible effect is one session document `spx -C <queue-host> session handoff` writes into its `.spx/sessions/todo/` when no active semantic match exists.
 - NEVER alter the invoking repository's tracked git state or active branch. A same-repository filing may add one deduplicated `todo` session and makes no other queue change.
 - NEVER record the dependency's internal taxonomy (node address, decision index, assertion type) — capture observations; the dependency workflow classifies.
 - NEVER guess the target checkout directory — resolve it deterministically or ask.
@@ -218,13 +218,13 @@ How to avoid: Resolve the target dependency branch first, verify `refs/remotes/o
 
 <success_criteria>
 
-- [ ] Target resolution produced the exact checkout directory used by every `spx -C <target-dir>` command.
+- [ ] Target resolution produced the exact owning checkout and the queue-safe checkout used by every `spx -C <queue-host>` session command.
 - [ ] Equal git common directories or normalized origin identities were classified as `same_repository=true`; unequal identities were classified as `same_repository=false`.
 - [ ] Same-repository filing resolved a queue-safe checkout without switching, detaching, committing, or handing off the active worktree.
 - [ ] Both `todo` and `doing` were searched before a same-repository write; one matching active follow-up was reused, or exactly one new `todo` follow-up was created when no match existed.
 - [ ] `git -C <target-dir> rev-parse --verify refs/remotes/origin/<branch>` succeeded for the stored `git_ref`.
 - [ ] Every different-repository target not named directly by `$ARGUMENTS` as a checkout path was approved by the operator through the Step 6 confirmation, which named the absolute target root verbatim, before mutation; a same-repository filing relied on the explicit `/issue` invocation and made at most one deduplicated queue write.
-- [ ] `spx -C <queue-host> session show --json <HANDOFF_ID>` found the created or reused handoff in the owning queue and reported the expected `git_ref`, `specs: []`, `files: []`, non-empty `agent_session_id`, and non-empty `created_at`.
+- [ ] `spx -C <queue-host> session show --json <HANDOFF_ID>` found the handoff with `specs: []`, `files: []`, non-empty `git_ref`, non-empty `agent_session_id`, and non-empty `created_at`; a created handoff carried the resolved branch and current runtime identity, while a reused handoff stayed byte-identical to its snapshot.
 - [ ] The observation body contains no dependency node address, decision index, or assertion type.
 - [ ] For a different repository, `spx session show --json <HANDOFF_ID>` reports the target handoff id absent from the invoking repository; for the invoking repository, every pre-existing active session remains unchanged and the only permitted delta is one created `todo` id.
 - [ ] The invoking repository's `git status --porcelain=v1 --untracked-files=all` output matches the pre-handoff snapshot byte-for-byte.
