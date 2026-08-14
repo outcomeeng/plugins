@@ -78,3 +78,35 @@ with the request refused.
 
 **Revisit condition**: before onboarding documentation claims a clean first-run
 gate on macOS, or when a contributor reports the gate hanging with no output.
+
+## Two tests declare a level below the one their evidence run reaches
+
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md`
+puts a case at the l3 floor when the evidence run itself must reach a remote or
+network-dependent system to exercise the behavior under test. Two of this node's
+tests do reach one and declare a lower level:
+
+- `tests/test_repository_installation.scenario.l2.py` registers the canonical
+  GitHub source and reconciles it with `SourceAction.REFRESH`, so a real
+  `codex plugin marketplace upgrade` clones `https://github.com/outcomeeng/plugins.git`
+  during the run. That is in-cycle network reach, not the pre-cycle acquisition
+  the l3-floor scoping carves out. The clone-timeout defect recorded above is the
+  same network dependency observed from its failure side.
+- `tests/test_repository_installation.scenario.l1.py`'s
+  `test_verification_recipe_aliases_the_exact_l2_evidence` asserts the real
+  recipe exits zero, and the recipe's nested `just test` runs the file above, so
+  its pass predicate inherits that same network reach while declaring `l1`.
+
+**Resolution shape**: reclassifying is not a rename. The declared level is
+carried by the filename, by `VERIFICATION_TEST` in
+`outcomeeng/distribution/installation.py`, by the `verify-marketplace-installation`
+recipe, and by the `[test]` links in this node's spec, and moving evidence to
+`l3` changes which lane runs it in CI. Decide first whether the recipe test
+should assert the nested command rather than its exit status — that would drop
+its own floor to `l1` honestly and leave one file to reclassify instead of two.
+
+**Revisit condition**: with the next change to this node's evidence, or when the
+clone-bound defect above is resolved and the network dependency is reconsidered.
+
+Surfaced by the evidence audit of the contribute-plugin changeset, which found
+both misclassifications pre-existing and unchanged by that diff.
