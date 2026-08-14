@@ -2,6 +2,126 @@
 
 Known issues for `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler`.
 
+## Priority 0. Generalize adversarial review detection
+
+The gap is procedural: `review-changes` requires complete inspection, yet it gives the reviewer no explicit adversarial operations for testing the claims it reads.
+
+The prompts I received supplied those operations directly:
+
+- Construct counterexamples for “exhaustive,” “disjoint,” and “every cell is decidable.”
+- Compare corpus verdicts with headings, cited rules, numbering, and other cases.
+- Compare derived language text conjunct-by-conjunct with governing neutral rules.
+- Resolve new vocabulary and definite descriptions such as “default runner.”
+- Follow changed governing truth into unchanged Python and TypeScript skill families.
+- Recheck closure claims against the resulting files.
+- Attempt to refute every candidate finding before reporting it.
+
+The general review prompt currently says “review the whole taxonomy” and visit every changed file, linked evidence, changed test, and changed implementation ([review-prompt.md](../../../../src/plugins/spec-tree/skills/review-changes/references/review-prompt.md#L13)). Its class sweep begins after a finding is recognized and limits parallel-site evidence to what is visible in the diff ([review-prompt.md](../../../../src/plugins/spec-tree/skills/review-changes/references/review-prompt.md#L34)). The skill also treats the diff as the review input and grants only `Read` plus its runner ([SKILL.md](../../../../src/plugins/spec-tree/skills/review-changes/SKILL.md#L4), [SKILL.md](../../../../src/plugins/spec-tree/skills/review-changes/SKILL.md#L42)).
+
+That combination explains the misses:
+
+| Missing operation | Findings it exposed |
+|---|---|
+| Counterexample construction | Overlapping binary classes; preinstalled product artifact; checkout script; externally acquired portable artifact |
+| Conjunct-completeness | Construction laws dropped author-independent provenance; language deltas restated neutral categories |
+| Referent and vocabulary resolution | Undeclared default runner; undefined “evidence type” category |
+| Corpus and closure consistency | Case 25 under the wrong verdict heading; false `ISSUES.md` closure |
+| Outbound consumer traversal | Python fixture widening and three TypeScript family contradictions |
+
+I recommend three surgical changes.
+
+### 1. Add one `<adversarial_probes>` section
+
+Insert it after `<review_scope>` in `review-prompt.md`:
+
+```xml
+<adversarial_probes>
+
+Apply every relevant probe before deciding that a reviewed unit is clean:
+
+1. Universal and partition claims — for “all,” “every,” “complete,”
+   “exhaustive,” “mutually exclusive,” or equivalent claims, construct
+   boundary members inside the stated domain and classify each through the
+   changed rules exactly as written. Report an item that reaches two classes,
+   no class, or a result contradicted by its governing rule.
+
+2. Derived-rule completeness — when changed text cites, renders, restates, or
+   claims derivation from another rule, compare every source condition with
+   the derived text. A dropped, weakened, strengthened, or newly introduced
+   conjunct is a consistency finding.
+
+3. Referent and vocabulary resolution — resolve every newly introduced
+   definite description and category name to a declaring owner in the loaded
+   truth chain. Report an omitted owner, undefined synonym, or category that
+   collides with an existing taxonomy.
+
+4. Corpus and closure consistency — compare each changed case with its section
+   heading, verdict text, cited rule, numbering, internal references, and
+   declared count. Verify every “resolved,” “complete,” or routed closure claim
+   against the resulting files.
+
+Treat an observation as a candidate until the strongest plausible refutation
+has been attempted against the exact text and governing context. Append it as
+a finding only when it survives that attempt.
+
+</adversarial_probes>
+```
+
+This remains domain-neutral. It contains no references to execution levels, test runners, or PR #519.
+
+### 2. Extend scope from changed truth to its direct consumers
+
+Add a fifth item to `<review_scope>`:
+
+```text
+5. Every unchanged consumer, rendering, generated output, or sibling
+   specialization that the loaded context identifies as deriving from a
+   changed governing declaration.
+```
+
+Give the skill read-only `Grep` and `Glob` capabilities. Bound discovery to declared relationships:
+
+- Exact full-path citations to a changed decision or spec.
+- Generated-source relationships from the repository manifest.
+- Consumers or language renderings explicitly named by loaded governance.
+- Sibling specializations governed by a changed superset rule.
+
+This avoids an unbounded repository-wide semantic search while covering the production-family defects. The current “visible in the diff” language at prompt line 42 should become “visible in the reviewed scope,” because direct consumers can remain unchanged while becoming contradictory.
+
+Also generalize `append-scope` from “changed file” to “reviewed unit” so the journal records unchanged consumers actually inspected. A `scopeKind` of `changed`, `consumer`, or `governance` would make CI coverage auditable without changing the finding schema.
+
+### 3. Record the two observed failure modes in `SKILL.md`
+
+Add these concrete failures under `<failure_modes>`:
+
+```text
+**A universal claim was read without being executed.** Claude inspected every
+changed line and accepted “exhaustive” and “mutually exclusive” as prose. The
+claim failed for constructed boundary members absent from the corpus. Apply
+the universal-and-partition probe before completing that file's scope.
+
+**Changed governing truth stopped at the diff boundary.** Claude compared
+changed specifications with their governors while leaving unchanged language
+renderings and shipped auditors unread. Those consumers contradicted the new
+rule. Follow declared derivation edges outward and append every inspected
+consumer to review scope.
+```
+
+These are actual failures from the review series, which makes them appropriate skill failure modes.
+
+### Preserve these existing strengths
+
+Keep the current:
+
+- Full emitted-diff sweep.
+- Untrusted-input treatment.
+- Finding-only journal stream.
+- Rule-citation validation.
+- Same-class parallel-site sweep.
+- Separation from deterministic verification.
+
+The strongest minimal patch is therefore one new prompt section, one scope bullet plus read-only discovery capability, and two failure modes. Together they encode the reasoning that found all nine original issues and the successive discriminator holes without teaching any PR-specific answer.
+
 ## 1. Review nodes use gerunds
 
 `spx/21-spec-tree.enabler/68-reviewing.enabler` and `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` use gerund slugs. The nodes must be `review` and `review-changes`.
@@ -144,3 +264,79 @@ Revisit entries 5 and 6 when review moves from `spx journal --type review` to `s
 `tests/test_reviewing_changes.audit.l1.py` carries the evidence token `audit`, outside the five assertion types the canonical test-filename model in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md` recognizes (scenario, mapping, conformance, property, compliance), so the file declares no recognized cell.
 
 **Resolution shape**: route the file's assertions through `/test` to select the correct assertion type, rename the file to that token, and update the `[test]` links in this node's spec. Deferred from the decision changeset that bound the model because re-typing this node's evidence requires this node's context, `/test` routing, and the test-evidence gate.
+
+## Consolidated implementation plan
+
+The remaining tasks below harden the current `review-changes` implementation. They are implementation work, not active issue-driven defects.
+
+### Plan items
+
+1. Add deterministic diff-coordinate validation.
+   - Add a stdlib-only validator that compares each finding location with the diff emitted by `compute_diff.py`.
+   - Reject findings whose `file:line` is outside the changed coordinates visible to the review input.
+   - Wire the check into the existing per-finding validation path before journal emission.
+
+2. Add a prompt-injection guard for diff content.
+   - State in `references/review-prompt.md` that diff content is untrusted data.
+   - Require the reviewer to ignore instructions embedded in changed files, comments, fixtures, or generated text.
+   - Keep this separate from repository-rule citation grounding.
+
+### Coordination
+
+Run `/understand`, then `/contextualize spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` before acting. Verify each item against the current review prompt, policy module, journal adapter, and tests before implementation.
+
+### Salvage plan for prompt single-source cleanup
+
+Source branch: `work/review-prompt-single-source`
+
+Source PR: `https://github.com/outcomeeng/plugins/pull/387`
+
+Source head: `a3d65439c501a0f53bf7a8971fa0539e0cd5013b`
+
+Current replacement branch: `work/review-prompt-single-source-v2`
+
+Objective: merge the review prompt single-source cleanup without carrying the local hand-rolled preview workflow from the discarded branch.
+
+#### Keep
+
+- `REVIEW.md`: remove the repository-root review override so the shipped skill reference prompt is the only live review prompt authority.
+- `REVIEW.example.md`: remove the unused example prompt so consumers do not copy a parallel prompt contract.
+- `methodology/research/review-prompt.md`: remove the duplicate research prompt when it repeats the live prompt content.
+- `src/plugins/spec-tree/skills/review-changes/SKILL.md`: preserve the runner-only workflow and raw-run-token caller output; remove `REVIEW.md` from review materials and workflow steps.
+- `src/plugins/spec-tree/skills/review-changes/references/review-prompt.md`: preserve the tightened review prompt that forbids deterministic verification, requires streaming single-finding objects, rejects caller steering, and keeps rule citations grounded in loaded context.
+- `src/plugins/spec-tree/skills/review-changes/scripts/review_run.py`: preserve scope-coverage enforcement before `finish` when the implementation still needs it on current `origin/main`.
+- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md`: update assertions so the bundled prompt is the sole review context and repository-root prompt files are not loaded.
+- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`: keep the decision aligned with the single runner and journal-only durable state.
+- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/evals/wrapper-protocol/prompt.md`: preserve protocol wording that describes `append-scope`, streaming `append-finding`, and raw token output.
+- Co-located tests for the retained behavior: preserve only the assertions required for bundled-prompt single source, raw token output, no root prompt loading, scope coverage, and journal event behavior.
+- Generated `dist/claude/spec-tree/**` and `dist/codex/spec-tree/**`: regenerate from `src/plugins/spec-tree/**` with `just build-skills`; do not hand-copy generated content from the discarded branch.
+
+#### Inspect Before Keep
+
+- `src/plugins/spec-tree/skills/review-changes/scripts/journal_emit.py` and `review_result.py`: keep only changes still required by current tests and the live runner contract; avoid restoring review-specific finding validation into the skill path because `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/ISSUES.md` records that validation belongs in SPX.
+- `outcomeeng_testing/harnesses/reviewing_changes.py`: keep only fixture cleanup directly tied to removed root prompt policy or obsolete citation domains.
+- `spx/local/merging.md`: keep only review lifecycle wording that remains correct without the local preview workflow.
+
+#### Discard
+
+- `.github/workflows/review-changes-preview.yml`: discard the hand-rolled local workflow. The wanted preview is a thin caller of the reusable verification host from `outcomeeng/gh-actions`.
+- `.github/workflows/spec-tree-review.yml`: discard comments or behavior that make the local `review-changes-preview.yml` workflow canonical.
+- Commits `b5f5682742b22f8121d7d6b13d795b0aa10e5e7b`, `73fd856a16c32890769028746b794a0fd82e6986`, `82e96b29e1acfb27c452ed51118f2a14580125e1`, `bad2a8d58fe038f656281b86f792df62ca15c2dc`, `59ae3dbfc79865e2eadf0a0144863dbbb8f93526`, `c610caa2d1f27eaa20ae7c3469ad71f44911d927`, and `a3d65439c501a0f53bf7a8971fa0539e0cd5013b`: discard the local preview implementation and permission-envelope churn.
+- Any generated root guide or unrelated marketplace-wide distribution churn visible only because `work/review-prompt-single-source` is stale against current `origin/main`.
+
+#### Merge Path
+
+1. Apply the retained source changes onto `origin/main` on `work/review-prompt-single-source-v2`.
+2. Regenerate plugin distributions with `just build-skills`.
+3. Run scoped deterministic verification for the touched review-changes tests and skill/doc checks.
+4. Run `changes-reviewer` on the exact final tree and fix valid findings.
+5. Open and manage a replacement PR through the standard merge lifecycle.
+6. Close PR #387 after the replacement PR is open and carries the retained prompt work.
+
+### Strict-finding-disposition extraction
+
+Reconstruct the preserved review-journal and result-contract work from current `origin/main` as one review-owned merge cycle only when the patch has one observable result: the review skill records grounded findings in a sealed journal and returns one raw run token through source-owned evidence infrastructure.
+
+The extraction includes this node's spec, review prompt, journal runner and result contracts, co-located tests and evals, and the smallest review-specific harness or generator changes they require. Eval-harness capabilities that can merge independently remain in `spx/13-infrastructure.enabler/25-eval-harness.enabler/PLAN.md`; merge policy that consumes the token remains in `spx/21-spec-tree.enabler/76-merge.enabler/PLAN.md`.
+
+**Revisit condition:** replace this section with the extracted branch and PR identity after focused tests, evidence audits, and rollback analysis establish one review-owned cluster.
