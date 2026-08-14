@@ -2,7 +2,7 @@
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
 argument-hint: "[session-id | --list] [--auto-continue]"
-allowed-tools: Read, Bash(spx spec status:*), Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/verify_session_claims.py":*), AskUserQuestion, Glob, Skill
+allowed-tools: Read, Bash(spx spec status:*), Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/verify_session_claims.py":*), AskUserQuestion, Glob, Skill
 ---
 
 <objective>
@@ -19,19 +19,13 @@ A claimed handoff session — loaded, reconciled against current repository stat
 </constraints>
 
 <claimed_sessions>
-Three rules govern a conversation's claimed-session set:
+Two rules govern a conversation's claimed-session set:
 
 1. **The claimed-session set grows only by user confirmation.** A session joins the set when the user instructs Claude via `/pickup`, or when the user confirms a suggested pickup. Nothing else adds to it.
 
 2. **Closure has acceptable end states only through `/handoff`.** Every claimed session becomes Claude's sole responsibility. Reflect, persist remaining validated relevant context, and end with zero, one, or several session files — one canonical continuation per independent continuation thread in the resolved claimed-session set. Supplemental or sidecar handoffs for the same thread are never valid at closure.
 
-3. **Quick-exit shortcut.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
-   - Invoke `/handoff --no-session` to archive the wrongly-claimed session immediately. The session leaves the claimed-session set but is archived, not returned to the todo queue.
-   - Run `spx session release <id>` to move the session from `doing/` back to `todo/` for another context to claim.
-
-   Neither action counts toward the closure workload for the claimed-session set — the wrongly-claimed session leaves the set the moment the user confirms the quick exit.
-
-**Consequences of the three rules:**
+**Consequences of the two rules:**
 
 - Every successful `spx session pickup` adds that session id to the CLAIMED_SESSIONS marker for this conversation. A later pickup does not replace earlier entries — the set is additive.
 - The pickup workflow MUST NOT archive, release, delete, or manually move any session. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
@@ -55,9 +49,6 @@ spx session pickup [ids...] [--auto]
 
 # Show session content
 spx session show <id...>
-
-# Return claimed sessions to the todo queue (move doing -> todo)
-spx session release [ids...]
 
 # Create a handoff session (JSON header + body on stdin)
 spx session handoff
