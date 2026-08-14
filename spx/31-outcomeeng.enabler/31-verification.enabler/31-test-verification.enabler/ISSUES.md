@@ -14,6 +14,6 @@ An adversarial review of the merged PR #519 changeset (`988af420b503b010d85bda6e
 
 The skill-family findings remain, routed as renderings of the decision:
 
-- The shipped Python standards and auditor grant an `Any (fixture)` permission approving fixture-backed Mapping and Property cells the decision forbids, and the five shipped test skills still label the assertion-type axis "evidence type" — fold into the Python rendering (PLAN item 5) and the TypeScript rendering (PLAN item 7) respectively.
+- The shipped Python standards and auditor grant an `Any (fixture)` permission approving fixture-backed Mapping and Property cells the decision forbids, and the shipped test skills still label the assertion-type axis "evidence type" — fold into the Python rendering (PLAN item 5), the Rust rendering (PLAN item 6, for the `audit-rust-tests` site), and the TypeScript rendering (PLAN item 7) respectively.
 - The shipped TypeScript family forbids every runner skip for credentialed tests, contradicting the decision's optional-evidence skip and the aligned TypeScript delta — fold into PLAN item 7.
 - The TypeScript predicate-in-harness sites and the blanket binding ban are already owned by `spx/43-typescript.enabler/25-typescript-standards.enabler/PLAN.md` and get no second record here.
