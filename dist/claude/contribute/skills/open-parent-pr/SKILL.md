@@ -1,10 +1,10 @@
 ---
 name: open-parent-pr
 description: >-
-  ALWAYS invoke this skill when opening a pull request against a repository the operator does not control — a fork's parent, or any base whose permission is READ or NONE.
+  ALWAYS invoke this skill when opening a pull request against a repository the operator does not control — a fork's parent, or any base whose permission is READ, TRIAGE, or NONE.
   NEVER open a pull request against such a repository without this skill.
 argument-hint: "[what the change does, or empty to describe it from the branch]"
-allowed-tools: Read, Glob, Skill, Agent, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git switch:*), Bash(git cherry-pick:*), Bash(git diff:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
+allowed-tools: Read, Glob, Skill, Agent, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git switch:*), Bash(git cherry-pick:*), Bash(git diff:*), Bash(git status --porcelain), Bash(git add:*), Bash(git commit:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
 ---
 
 <objective>
@@ -15,7 +15,7 @@ One pull request open against a repository the operator does not control, carryi
 
 **Step 1 — Load the standards and read the invocation input.** Invoke `/contribution-standards` through the runtime's skill-composition surface. Its `<invariants>` govern every step below; this workflow adds ordering and the pull-request specifics.
 
-`$ARGUMENTS`, when non-empty, is the one-sentence description of the change used in Step 3's authorization and in the Step 8 body. When it is empty, derive that sentence from the checkout's current branch at invocation — the branch the change was written on, distinct from the `<branch>` Step 4 cuts — and its own commit subjects (`git log --format=%s origin/HEAD..HEAD`), which needs nothing a later step resolves.
+`$ARGUMENTS`, when non-empty, is the one-sentence description of the change used in Step 3's authorization and in the Step 9 body. When it is empty, derive that sentence from the checkout's current branch at invocation — the branch the change was written on, distinct from the `<branch>` Step 4 cuts — and its own commit subjects (`git log --format=%s origin/HEAD..HEAD`), which needs nothing a later step resolves.
 
 **Step 2 — GATE: Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>` and act on its `classification`. Report `base`, `head`, and `permission` verbatim. `controlled`, `fork-absent`, and `blocked` each stop here — `controlled` belongs to a controlled-repository pull-request flow, and the other two stop per the standards. Only `parent-contribution` continues.
 
@@ -33,7 +33,7 @@ The authorization covers this pull request and its later revisions. It does not 
 gh repo view "<base>" --json defaultBranchRef --jq '.defaultBranchRef.name'
 ```
 
-Derive `<branch>` from the one-sentence description Step 1 resolved: lowercase it, drop every word that names neither the action nor its subject, join what remains with hyphens, and stop at five words. "Fix the flaky retry timeout in the webhook handler" keeps six words and stops at five, giving `fix-flaky-retry-timeout-webhook`. The branch names the change and nothing else — never the operator, the fork, or Claude. Resolve it here, because Steps 8 and 9 read it back from the checkout and a branch that does not exist yet answers nothing.
+Derive `<branch>` from the one-sentence description Step 1 resolved: lowercase it, drop every word that names neither the action nor its subject, join what remains with hyphens, and stop at five words. "Fix the flaky retry timeout in the webhook handler" keeps six words and stops at five, giving `fix-flaky-retry-timeout-webhook`. The branch names the change and nothing else — never the operator, the fork, or Claude. Resolve it here, because Step 9 reads it back from the checkout and a branch that does not exist yet answers nothing.
 
 Read the default-branch name, then fetch and branch in a second block:
 
@@ -61,11 +61,26 @@ A conflict stops the replay mid-pick and leaves the checkout in that state. Run 
 
 **Step 6 — GATE: Run the base repository's own verification.** Locate its declared checks — the commands its contributing guide names, its workflow files, and its build and test targets — and run them locally. They must report success.
 
-Capture verbose output in a directory from `mktemp -d`, inspect the exit status and failing sections, and remove the directory on every exit path. Fix failures and re-run until green. A check that cannot run locally is recorded for Step 8's body with the reason it could not run; never report it as passed and never drop it silently.
+Capture verbose output in a directory from `mktemp -d`, inspect the exit status and failing sections, and remove the directory on every exit path. Fix failures and re-run until green. A check that cannot run locally is recorded for Step 9's body with the reason it could not run; never report it as passed and never drop it silently.
 
 **Step 7 — GATE: Review the outward text.** Draft the title and body per `<title_and_body>`, then review them per `/contribution-standards` `<invariants>` "Outward-facing text is permanent". Where the prose plugin is installed, dispatch its `prose-auditor` agent through the runtime's agent-dispatch surface and apply its findings. Where it is not, review against `/contribution-standards` `<outward_text>` and state in the report that the review ran unassisted.
 
-**Step 8 — Push, then open.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` "Verify `origin` before pushing or fetching through it", then push the branch with the explicit destination ref and open the pull request naming the base repository.
+**Step 8 — GATE: Commit what the push will carry.** A push transfers commits. Everything above — the branch cut, the conventions, the base repository's own checks, the outward-text review — can run against edits sitting in the working tree, and none of them reach the pull request. Read the tree before pushing:
+
+```bash
+git status --porcelain
+```
+
+Empty output means every verified change is already committed. Any output is the contribution, or part of it, still uncommitted: commit it in the base repository's commit style and re-run Step 6, because the checks passed against a tree that is now the commit.
+
+```bash
+git add <contribution-paths>
+git commit -m "<message in the base repository's commit style>"
+```
+
+Confirm the branch carries a change before continuing. `git diff --stat FETCH_HEAD...HEAD` empty here means the pull request would be empty; stop rather than opening it.
+
+**Step 9 — Push, then open.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` "Verify `origin` before pushing or fetching through it", then push the branch with the explicit destination ref and open the pull request naming the base repository.
 
 Derive `<head-owner>` from the resolved `head`, which the resolver reports as `owner/name`: take the portion before the `/`. `gh pr create --head` reads `owner:branch`, so passing the whole `owner/name` there names no head at all.
 
@@ -115,7 +130,7 @@ Flag rationale:
 - `--base` — the base repository's default branch, resolved in Step 4.
 - `--body-file -` — the body arrives on stdin with real newlines. `--body` does not expand escape sequences, and no temporary file, command substitution, or post-hoc repair assembles the body.
 
-**Step 9 — Hand off.** Surface the pull-request URL, then invoke `/manage-parent-pr` on it.
+**Step 10 — Hand off.** Surface the pull-request URL, then invoke `/manage-parent-pr` on it.
 
 </workflow>
 
@@ -143,6 +158,8 @@ The body explains why; the diff already shows what.
 - MUST cut the contribution branch from the base repository's default branch, under a name derived in Step 4 before the first command that uses it.
 - NEVER force-push. The `Bash(git push -u origin HEAD:refs/heads/*)` grant matches by prefix, so it admits `--force` and `--force-with-lease` too; this constraint is the whole containment for those flags.
 - NEVER pass `--force` or `--discard-changes` to `git switch` — the `Bash(git switch:*)` grant matches by prefix and admits both, and either one drops uncommitted work in the invocation checkout. Cutting the contribution branch never needs them.
+- NEVER stage by wildcard. The `Bash(git add:*)` grant matches by prefix, so it admits `-A` and `.`, either of which sweeps unrelated work in the invocation checkout into a commit bound for someone else's repository. Name the contribution's paths.
+- NEVER pass `--no-verify` to `git commit`. The `Bash(git commit:*)` grant matches by prefix and admits it. Hooks run from this checkout's own configuration, which conforming to the base repository's conventions is what installs, so skipping them drops part of the verification Step 6 requires.
 - NEVER cherry-pick a commit outside the invocation branch's own range. The `Bash(git cherry-pick:*)` grant matches by prefix, so it admits any revision the checkout can name; Step 4 replays that branch's commits and nothing else.
 - NEVER open against a base whose classification is `controlled`, `fork-absent`, or `blocked`.
 - NEVER create the fork — report the destination candidates and stop.

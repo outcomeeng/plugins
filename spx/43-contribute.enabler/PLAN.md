@@ -16,6 +16,23 @@ The asymmetry is worth tracking rather than treating as settled: these three
 close issues, post comments, and update a fork's default branch in a repository
 the operator does not control, which is the same risk class as their siblings.
 
+## Find an existing fork when the checkout is the base itself
+
+The resolver classifies a non-fork checkout as `fork-absent` without looking for
+a fork the operator already holds elsewhere. Working from a clone of the base
+repository is ordinary, and `/open-parent-pr` then stops and reports the
+`gh repo fork` command — which GitHub rejects when the fork already exists —
+while a usable contribution head sits in the operator's account or an
+organization the whole time.
+
+Closing it means the resolver searching for a fork rather than reading the
+checkout's own `parent` field: enumerating the authenticated account and its
+organizations, matching a fork of the resolved base, and choosing among several
+when more than one matches. That is a new classification path with its own
+assertions and its own evidence, and the destination choice is the operator's
+per `<invariants>` "Never choose the fork destination" — larger than the
+changeset that surfaced it.
+
 ## Give each skill one worked end-to-end example
 
 Every step in `manage-parent-issue`, `manage-parent-pr`, `open-parent-issue`,

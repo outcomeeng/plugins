@@ -14,7 +14,7 @@ The invariants every artifact obeys on its way to a repository the operator does
 
 - The base repository was named on every write rather than left to `gh`'s default.
 - The operator's permission on it came from `viewerPermission`, not from a remote, an account name, or a successful push.
-- Authorization for a `READ` or `NONE` base named that base in the turn the artifact was created.
+- Authorization for a base the operator does not control named that base in the turn the artifact was created.
 - The contribution branch was cut from the base repository's default branch.
 - Every outward-facing surface passed a prose review before it was sent.
 - No outward-facing surface named Claude or its runtime.
@@ -48,12 +48,12 @@ It prints one JSON object carrying `base`, `head`, `permission`, `classification
 
 Read the classification and act on it:
 
-| `classification`      | Meaning                                                           | Action                                                                               |
-| --------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `controlled`          | `ADMIN`, `MAINTAIN`, or `WRITE` on the resolved base, fork or not | STOP. This is a controlled-repository contribution; the plugin's flows do not apply. |
-| `parent-contribution` | `READ` or `NONE` on a base resolved through the checkout's parent | Continue under `<invariants>`, starting with authorization.                          |
-| `fork-absent`         | A parent contribution with no head repository to push to          | STOP per `<invariants>` "Never choose the fork destination".                         |
-| `blocked`             | Permission unreadable, or `gh` unavailable or unauthenticated     | STOP and report the resolver's `detail` verbatim.                                    |
+| `classification`      | Meaning                                                                      | Action                                                                               |
+| --------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `controlled`          | `ADMIN`, `MAINTAIN`, or `WRITE` on the resolved base, fork or not            | STOP. This is a controlled-repository contribution; the plugin's flows do not apply. |
+| `parent-contribution` | `READ`, `TRIAGE`, or `NONE` on a base resolved through the checkout's parent | Continue under `<invariants>`, starting with authorization.                          |
+| `fork-absent`         | A parent contribution with no head repository to push to                     | STOP per `<invariants>` "Never choose the fork destination".                         |
+| `blocked`             | Permission unreadable, or `gh` unavailable or unauthenticated                | STOP and report the resolver's `detail` verbatim.                                    |
 
 **Verify `origin` before pushing or fetching through it.** The resolver names the head repository; `origin` is a local label that may point somewhere else entirely. Before the first `git push` or `git fetch` that names `origin`, confirm it resolves to the resolved head, and stop when it does not:
 

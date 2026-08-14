@@ -1,7 +1,7 @@
 ---
 name: open-parent-issue
 description: >-
-  ALWAYS invoke this skill when filing an issue in a repository the operator does not control — a fork's parent, or any base whose permission is READ or NONE.
+  ALWAYS invoke this skill when filing an issue in a repository the operator does not control — a fork's parent, or any base whose permission is READ, TRIAGE, or NONE.
   NEVER open an issue against such a repository without this skill.
 argument-hint: "[what was observed]"
 allowed-tools: Read, Glob, Skill, Agent, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(gh issue create:*), Bash(gh search issues:*), Bash(git log:*), Bash(printf:*)
