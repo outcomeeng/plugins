@@ -2,6 +2,12 @@
 
 Fifteen skills become five, over three kinds instead of four.
 
+## Starting point
+
+`work/prose-kind-as-input` already carries the three-kind collapse: eleven commits replacing the `docs` and `internal-docs` skills with `author-document`, `audit-document`, and `document-standards`, making the kind an explicit router input, moving the ownership check ahead of kind resolution in both routers, and describing the three-kind taxonomy in the marketplace catalog. It stops at twelve skills.
+
+Rebase it onto the default branch and extend it to five skills, `architect-prose`, and journal-backed audit delivery.
+
 ## Target surface
 
 ```text
@@ -46,6 +52,14 @@ Resolved once, at whichever entry the caller invokes, and carried in the dispatc
 `audit-prose` streams its run through `spx journal` using the projection in `/project-run-journal`, and returns the raw run token. `spx/15-audit-result-delivery.pdr.md` requires an audit to reveal scope progress and each finding as the run advances; a verdict emitted only at the end satisfies neither property.
 
 `prose-auditor`'s final message becomes that token. The verdict assertion in `spx/43-prose.enabler/prose.md` names the journal projection rather than a terminal JSON object.
+
+`audit-prose` records its own run rather than returning results to a run driver.
+
+An `[eval]` assertion on this node waits for that run. A suite built against a prompt-imposed schema grades the prompt author rather than the skill, so eval evidence needs a verdict the skill itself emits; `ISSUES.md` carries the deferral until then.
+
+## The node's own assertions
+
+`prose.md` carries nine assertions in one `### Compliance` subsection, above the decomposition guidance, and this refactor rewrites most of them. `/decompose` runs before they are rewritten, not after.
 
 ## Descriptions
 

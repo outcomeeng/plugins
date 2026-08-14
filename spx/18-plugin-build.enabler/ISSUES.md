@@ -30,3 +30,27 @@ Claude Code 2.1.207 enables its server-side Advisor tool when user settings carr
 The eval harness controls its own Claude subprocess and disables Advisor at `outcomeeng_evals.runner.ClaudeCliRunner`. Native Claude verifier subagents launched through the built-in `Agent` tool bypass that adapter. Their agent frontmatter has no documented per-agent `advisorModel` field, so prompt guidance and tool allowlists do not prove suppression of the server-side Advisor tool.
 
 Revisit condition: before claiming cost-bounded verifier-agent execution, identify and test a supported Claude Code control that disables Advisor for every native verifier subagent while preserving the parent conversation's chosen advisor configuration. Prefer an enforceable per-agent runtime field. If Claude Code exposes no such field, introduce one shared verifier-launch policy or project-level override and prove through startup/debug evidence that every verifier agent runs without Advisor initialization. Keep this concern distinct from model selection: each verifier's declared `model: sonnet` does not disable its Advisor tool.
+
+## 4. The build ADR restates rules its spec nodes already own
+
+`15-build-architecture.adr.md` carries nine `[audit]`-tagged rules that a child or sibling node already declares with a `[test]` link. `spx/15-spec-coverage.adr.md` forbids exactly that: "use `[test]` evidence for assertions about executable code — audit is not a substitute for automated verification."
+
+| ADR rule                                            | Already declared with `[test]` at                              |
+| --------------------------------------------------- | -------------------------------------------------------------- |
+| Jinja2 custom delimiters                            | `21-source-and-templating.enabler`                             |
+| shared content under `src/_shared/<scope>/<topic>/` | `21-source-and-templating.enabler`                             |
+| the pre-commit build gate                           | `65-build-orchestration.enabler`                               |
+| no execution-time injection in built output         | `43-target-emission.enabler`                                   |
+| no unescaped skill-directory token in Codex output  | `43-target-emission.enabler`                                   |
+| render each divergent name from the registry        | `21-source-and-templating.enabler/21-runtime-parameterization` |
+| registry keyed by token kind                        | `21-source-and-templating.enabler/21-runtime-parameterization` |
+| frontmatter field stripping per target schema       | `43-target-emission.enabler`                                   |
+| no raw runtime-divergent token in authored source   | `spx/15-validation.enabler/32-runtime-token.enabler`           |
+
+**Resolution shape**: remove each restatement, leaving the decision that governs it. Distinguish a decision from a declaration by whether changing the sentence means a different architecture; if the same architecture spelled differently would falsify it, the spec owns it. Re-run `adr-auditor` afterwards.
+
+**Also in the same pass**: the ADR's own `NEVER: add separate ADRs for individual build concerns` forbids splitting the decision if its concerns prove independently changeable.
+
+**Not defects**, though an earlier draft of this entry listed them: the `### Testing` block's `[compliance]` tags carry no path because the canonical ADR template's Testing subsection has no path placeholder, unlike a spec assertion; and the no-separate-ADRs rule is correctly `[audit]`, being governance about decision shape.
+
+**Evidence**: nine findings confirmed by `adr-auditor` against the decision as it stands on `main`.
