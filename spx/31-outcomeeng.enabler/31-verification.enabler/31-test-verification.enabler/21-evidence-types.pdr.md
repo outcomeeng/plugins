@@ -1,4 +1,4 @@
-# Evidence Types
+# Evidence Cells
 
 Every `[test]` assertion's evidence occupies one cell of a cross-product: its assertion type — scenario, mapping, conformance, property, or compliance — times its execution level — `l1`, `l2`, or `l3`. This decision governs what each cell permits and requires: the neutral execution-level semantics, the artifact set available to each assertion type at each level, the filename declaration of the cell, and the acceptance corpus whose cases bind those boundaries. Language test-standard nodes express these semantics in language terms; they never alter them.
 
@@ -18,7 +18,7 @@ Three rules govern level selection:
 - A runner, framework, or implementation layer never determines the level; dependency class does.
 - A case's level floor is the heaviest dependency class among the behavior under test, the oracle, and the enforcement mechanism.
 
-One discriminator separates the two local classes, and it is mutually exclusive: what obtaining the executable costs inside the ordinary deterministic test cycle. A tool is repository-standard when the declared development environment supplies it or the repository's declared toolchain produces it within that cycle; a binary is product-specific when the evidence requires an artifact whose installation, bootstrap, download, or service lifecycle lies outside that cycle. A repository's own CLI is therefore `l1` evidence when its suite exercises the binary the declared toolchain builds in-cycle, and `l2` evidence when the claim requires the installed or bootstrapped artifact. The same discriminator classifies oracles and enforcement mechanisms.
+One ordered discriminator classifies the exact executable the evidence exercises, and its two steps are disjoint. First, an artifact of the product under test: `l1` when the suite exercises the binary the declared toolchain builds within the ordinary deterministic test cycle, `l2` when the claim requires the installed, bootstrapped, or preinstalled artifact — environment supply never reclassifies the product's own artifact as repository-standard. Second, every other executable: `l1` when the declared development environment supplies it or the declared toolchain produces it in-cycle, `l2` when obtaining it requires installation, bootstrap, download, or a service lifecycle outside that cycle. The same discriminator classifies oracles and enforcement mechanisms.
 
 Harness obligations follow the level's dependency class, identically for every assertion type: at `l1`, framework resource handles and standard-subprocess harnesses suffice; at `l2`, a harness owns the lifecycle — start, health, teardown — of each heavy local dependency; at `l3`, credential, isolation, and cleanup harnesses are required.
 
@@ -40,7 +40,7 @@ Valid:
 2. `l1` — the case is a complete artifact; an inert fixture is read by path and never imported.
 3. `l1` — the interaction writes into a framework-provided temporary directory using a generated incidental filename; neither binding introduces data or policy.
 4. `l1` — a command-line interaction runs through a standard-subprocess harness against a repository-standard binary — one the declared environment supplies or the declared toolchain builds within the ordinary test cycle, including the repository's own CLI built in-cycle; the harness exposes exit code and captured output, and the test owns every predicate.
-5. `l2` — the same interaction runs against a product-specific binary — one whose installation or bootstrap lies outside that cycle, including the same repository CLI when the claim requires the installed artifact; the level moves because the dependency class moved, not because a subprocess is involved.
+5. `l2` — the same interaction runs against a product-specific binary — one whose installation or bootstrap lies outside that cycle, including the same repository CLI when the claim requires the installed artifact even where the declared environment ships it preinstalled; the level moves because the dependency class moved, not because a subprocess is involved.
 6. `l3` — a credentialed end-to-end interaction runs through credential, isolation, and cleanup harnesses and remains one existential case.
 
 Rejected:
@@ -75,6 +75,7 @@ Rejected:
 22. One example presented as the mapping — quantifier mismatch.
 23. Parameterization rows chosen in the test file rather than imported or generated — test-owned data.
 24. The domain sampled at `l3` for cost — completeness is invariant; the exception path above is the only relief.
+25. A parallel expectation algorithm written from the author's model of the production mapping — differing from the production path but tracing to no spec-declared relationship, source-owned contract, or separately owned oracle — a second implementation as oracle (the author-invention independence assertions in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`).
 
 ## Conformance
 
@@ -84,7 +85,6 @@ A spec-declared value and the source complying with it admit no conformance evid
 
 Valid:
 
-25. A parallel expectation algorithm written from the author's model of the production mapping — differing from the production path but tracing to no spec-declared relationship, source-owned contract, or separately owned oracle — a second implementation as oracle (the author-invention independence assertions in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`).
 26. `l1` — generated output validated by a repository-standard schema validator against a separately owned schema.
 27. `l1` — a compile-fail harness passes a violating source fixture by path to the standard compiler; the compiler is the oracle.
 28. `l2` — an emitted artifact is validated by a product-specific binary's validator.

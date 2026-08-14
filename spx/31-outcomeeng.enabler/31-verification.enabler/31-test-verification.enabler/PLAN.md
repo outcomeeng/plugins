@@ -18,7 +18,7 @@ PR #454 on `work/python-test-seam-standards` currently changes 95 paths across s
 
 This plan is complete when PR #448 is merged and the PR #454 branch has either passed a current semantic-cohesion review as one contract or been replaced by dependency-ordered reviewable PRs whose node-local plans name the remaining work.
 
-## Programme: per-evidence-type test standards
+## Programme: per-assertion-type test standards
 
 Complete picture, authored before slicing. Every slice below derives from it; none of it is sliced yet.
 
@@ -26,11 +26,11 @@ Complete picture, authored before slicing. Every slice below derives from it; no
 
 Per-assertion-type guidance already exists on three surfaces. Each row below names what that guidance answers and the one question it leaves open. A slice whose only output is a second rendering of an answered question is cancelled.
 
-| Surface                                                                                                                                                             | Already answers                                                                                  | Open question                                                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| `src/plugins/spec-tree/skills/test-evidence-standards/SKILL.md` `<assertion_type_litmus>`                                                                           | Required source and oracle per type, and the reject condition per type                           | Which artifacts each type permits or requires, and how that changes across execution levels |
-| `src/plugins/python/skills/python-test-standards/SKILL.md` five-row case-source table; `src/plugins/rust/skills/rust-test-standards/SKILL.md` evidence-token tables | The per-type case source and the per-type testing shape in that language                         | The same artifact-permission question, and whether a language may narrow a neutral source   |
-| `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` `## Evidence Chain`                                  | Source-and-oracle independence per type, and that infrastructure cannot upgrade an evidence type | Nothing per-type; this row is the authority the other two render                            |
+| Surface                                                                                                                                                             | Already answers                                                                                   | Open question                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `src/plugins/spec-tree/skills/test-evidence-standards/SKILL.md` `<assertion_type_litmus>`                                                                           | Required source and oracle per type, and the reject condition per type                            | Which artifacts each type permits or requires, and how that changes across execution levels |
+| `src/plugins/python/skills/python-test-standards/SKILL.md` five-row case-source table; `src/plugins/rust/skills/rust-test-standards/SKILL.md` evidence-token tables | The per-type case source and the per-type testing shape in that language                          | The same artifact-permission question, and whether a language may narrow a neutral source   |
+| `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` `## Evidence Chain`                                  | Source-and-oracle independence per type, and that infrastructure cannot upgrade an assertion type | Nothing per-type; this row is the authority the other two render                            |
 
 Two further gaps are absences rather than under-specification.
 
