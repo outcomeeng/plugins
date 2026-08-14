@@ -8,7 +8,7 @@ allowed-tools: Read, Skill, Agent, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/res
 ---
 
 <objective>
-The open pull request's current state read once, every valid review finding answered in the head branch, and one comment stating what changed.
+Every valid review finding answered in the head branch, and one comment on the open pull request stating what changed.
 </objective>
 
 <workflow>

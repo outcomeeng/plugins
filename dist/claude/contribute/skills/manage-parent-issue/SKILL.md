@@ -8,7 +8,7 @@ allowed-tools: Read, Skill, Agent, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL
 ---
 
 <objective>
-The open issue's current thread read once, the maintainer's question answered with evidence, and one comment posted.
+The maintainer's question answered with evidence, and one comment posted to the open issue.
 </objective>
 
 <workflow>

@@ -8,7 +8,7 @@ allowed-tools: Read, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agen
 ---
 
 <objective>
-The open pull request's current state read once, every valid review finding answered in the head branch, and one comment stating what changed.
+Every valid review finding answered in the head branch, and one comment on the open pull request stating what changed.
 </objective>
 
 <workflow>
