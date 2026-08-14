@@ -39,7 +39,7 @@ In both steps the level floor stays `l3` where the evidence run itself must reac
 
 **Unavailable required evidence never passes:** a missing mandatory credential, endpoint, binary, or local service fails loudly, or skips only where the suite declares that evidence optional.
 
-**Controlled-implementation relief.** A controlled implementation enters evidence only under the test methodology's recorded exception set — failure simulation, interaction protocols, combinatorial cost, and the other named cases — and the evidence names the matching case. The combinatorial-cost exception is that set's member for broad evidence a real dependency makes prohibitively expensive.
+**Controlled-implementation relief.** A controlled implementation enters evidence only under the test methodology's exception set — the seven named cases from failure simulation through contract probes, declared by the generic test workflow that both authoring and auditing load — and the evidence names the matching case. The combinatorial-cost exception is that set's member for broad evidence a real dependency makes prohibitively expensive.
 
 **Cell composition.** Every assertion type × execution level cell is decided by composition: the type's artifact rules in `<type_level_permissions>` hold at every level unchanged, and the level contributes only the harness obligations, the level floor, the availability rule, and the controlled-implementation relief above, identically for every type. A per-type per-level delta exists only where the type changes the answer. A permission undecidable from this composition is an amendment to the product's governing evidence decision, never an author's or auditor's inference.
 
@@ -62,7 +62,7 @@ Cross-assertion, by example: temporary-directory creation and removal, working d
 
 The assertion's own, by example: the input, the expected output, the domain's boundaries, the oracle, the identity of the error.
 
-The only test shape holding nothing from the cross-assertion list is a function called with values, returning a value, compared in place. Touch the filesystem, a process, the clock, the network, or randomness and the test has acquired a value the spec does not contain and the assertion cannot own — so a harness exists, or those values are inlined at the call site.
+The only test shape holding nothing from the cross-assertion list is a function called with values, returning a value, compared in place. Touch the filesystem, a process, the clock, the network, or randomness and the test has acquired a value the spec does not contain and the assertion cannot own — so a harness exists, and the test receives only its handles and observations. A cross-assertion value never enters the test as a call-site literal; a call-site value is valid only when the two probes classify it as the assertion's own.
 
 **The first test in a node pays for the harness every later test uses.** The first test is the one with the least reason to build a harness and the most influence on what follows: reusable setup policy it hand-rolls inline becomes the template later tests copy. Build the harness at the first test that needs one.
 
@@ -188,7 +188,7 @@ A seam that fails mutation 1 launders the assertion into infrastructure. Evidenc
 
 <language_deltas>
 
-Language test standards are expression only. A language test standard realizes every source and artifact category this reference permits in its language's terms — assertion API, binding forms, generator libraries, test-infrastructure home, runner specifics, and the filename instantiation of the canonical model — and it neither narrows nor widens the category set or any seam, provenance, oracle, level, or permission rule stated here. A category a language cannot realize is surfaced as an amendment to the product's governing evidence decision, which records the exception centrally, never as a silent per-language subtraction.
+Language test standards are expression only. A language test standard cites its product's governing evidence decision by full path, and realizes every source and artifact category this reference permits in its language's terms — assertion API, binding forms, generator libraries, test-infrastructure home, runner specifics, and the filename instantiation of the canonical model — and it neither narrows nor widens the category set or any seam, provenance, oracle, level, or permission rule stated here. A category a language cannot realize is surfaced as an amendment to the product's governing evidence decision, which records the exception centrally, never as a silent per-language subtraction.
 
 </language_deltas>
 
