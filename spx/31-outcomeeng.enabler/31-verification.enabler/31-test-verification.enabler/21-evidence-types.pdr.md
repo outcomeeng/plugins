@@ -63,7 +63,7 @@ Valid:
 
 14. `l1` — the domain is imported from a production enum; expectations derive from an independent construction law; the test parameterizes over every member.
 15. `l1` — a generated finite domain composes two source-owned option sets; expectations derive per input independently of production.
-16. `l2` — every command in a source-owned command registry maps to its dispatch action through a product-binary harness.
+16. `l2` — every command in a source-owned command registry maps to its dispatch action through a product-binary harness against an installed or bootstrapped artifact per the executable discriminator; the same mapping against the in-cycle checkout build classifies `l1`.
 17. `l1` — boundary validation over a closed, finite, source-owned invalid set, every member exercised.
 18. A broad domain against an expensive real dependency runs through a configurable controlled implementation preserving the boundary, under a recorded Stage 5 combinatorial-cost exception.
 
