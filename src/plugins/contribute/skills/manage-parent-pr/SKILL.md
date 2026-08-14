@@ -105,7 +105,9 @@ Stop when it does not equal the commit just pushed. Step 6 would otherwise annou
 
 The push updates the open pull request in place and needs no fresh authorization, because it revises the artifact the operator already authorized. NEVER force-push a branch a reviewer has already read.
 
-**Step 6 — GATE: Review the reply, then post it.** Draft the comment per `<reply_shape>` and review it per `/contribution-standards` `<invariants>` "Outward-facing text is permanent" — the prose plugin's `prose-auditor` agent where installed, `<outward_text>` unassisted where not.
+**Step 6 — GATE: Review the reply, then post it.** A reply answers a review. An invocation that reports the pull request's current state, and the immediate handoff `/open-parent-pr` performs on a pull request nobody has reviewed yet, both reach this step with no finding to give a disposition to — they return after Step 7 without commenting, because a comment saying nothing notifies every watcher of a repository the operator does not control.
+
+With findings to answer, draft the comment per `<reply_shape>` and review it per `/contribution-standards` `<invariants>` "Outward-facing text is permanent" — the prose plugin's `prose-auditor` agent where installed, `<outward_text>` unassisted where not.
 
 ```bash
 printf '%s\n' '<line>' '<line>' | gh pr comment "<number>" --repo "<base>" --body-file -
@@ -137,6 +139,7 @@ Cut every sentence about the contribution's own process — attempts made, time 
 - MUST confirm `origin` resolves to the resolved head before the Step 3 fetch, not only before the Step 5 push. The fetch reads through `origin` too, and the reset that follows it moves the branch to whatever that fetch returned.
 - MUST require a clean working tree before the Step 3 reset, and commit nothing the operator left in progress.
 - NEVER commit or push when no confirmed finding produced a change; Step 6 still owes the maintainer the evidence for what did not reproduce.
+- NEVER post a comment when the pass had no finding to answer at all — a state-only invocation, or a handoff on a pull request nobody has reviewed yet, returns what it read and writes nothing.
 - MUST name the base repository with `--repo` on every `gh` write.
 - NEVER force-push the head branch. The `Bash(git push origin HEAD:refs/heads/*)` grant matches by prefix, so it admits `--force` and `--force-with-lease` too; this constraint is the whole containment for those flags.
 - NEVER pass `--force` or `--discard-changes` to `git switch`. The `Bash(git switch:*)` grant matches by prefix and admits both, and either one drops uncommitted work in the invocation checkout. `-C` moves the branch pointer and is required by Step 3; neither of those flags is.

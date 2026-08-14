@@ -62,8 +62,16 @@ SKILL_DIR_VARIABLES: Final = ("CLAUDE_SKILL_DIR", "SKILL_DIR")
 # ``"${VAR}/../sibling/x.py"``.  Stopping at the quote read the first spelling
 # as an empty path and passed it.  Quotes are stripped before the walk, so both
 # spellings reach the identical segment sequence.
+# The braces are optional because the shell reads ``$VAR/x`` and ``${VAR}/x``
+# identically; a rule matching only the braced spelling passes the other one.
+# The variable names are ordered longest-first so the alternation cannot match
+# ``SKILL_DIR`` inside ``CLAUDE_SKILL_DIR`` and report one violation twice.
 _SKILL_DIR_REFERENCE: Final[re.Pattern[str]] = re.compile(
-    r"\$\{(?:" + "|".join(SKILL_DIR_VARIABLES) + r")\}(?P<path>[^\s:),]*)"
+    r"\$(?:\{(?:"
+    + "|".join(sorted(SKILL_DIR_VARIABLES, key=len, reverse=True))
+    + r")\}|(?:"
+    + "|".join(sorted(SKILL_DIR_VARIABLES, key=len, reverse=True))
+    + r")\b)(?P<path>[^\s:),]*)"
 )
 
 # The quote characters a shell concatenates across.  Removing them turns every

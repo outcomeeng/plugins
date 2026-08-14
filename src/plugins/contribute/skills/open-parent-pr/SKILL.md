@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when opening a pull request against a repository the operator does not control — a fork's parent, or any base whose permission is READ, TRIAGE, or NONE.
   NEVER open a pull request against such a repository without this skill.
 argument-hint: "[what the change does, or empty to describe it from the branch]"
-allowed-tools: Read, Glob, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git switch:*), Bash(git cherry-pick:*), Bash(git diff:*), Bash(git status --porcelain), Bash(git add:*), Bash(git commit:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
+allowed-tools: Read, Glob, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh api users/*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git rev-parse:*), Bash(git switch:*), Bash(git cherry-pick:*), Bash(git diff:*), Bash(git status --porcelain), Bash(git add:*), Bash(git commit:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
 ---
 
 <objective>
@@ -39,16 +39,19 @@ Read the default-branch name, then fetch and branch in a second block:
 
 ```bash
 git fetch "https://github.com/<base>.git" "<base-default-branch>"
+git rev-parse FETCH_HEAD
 git switch -c "<branch>" FETCH_HEAD
 ```
 
+Record what `git rev-parse` printed as `<base-tip>` and use that SHA in every later comparison. `FETCH_HEAD` is overwritten by the next fetch from any source — one inside a check Step 6 runs, or inside a commit hook — so a later `FETCH_HEAD...HEAD` diff can silently compare against an unrelated commit and report a real contribution as empty.
+
 Branch from `FETCH_HEAD`, never from the head repository's default branch, which is behind by however long since the last sync.
 
-**When the contribution already exists as commits on the invocation branch**, cutting at `FETCH_HEAD` alone abandons them and pushes the base tip. Replay them onto the new branch before continuing, and confirm the diff against `FETCH_HEAD` carries the intended change:
+**When the contribution already exists as commits on the invocation branch**, cutting at `FETCH_HEAD` alone abandons them and pushes the base tip. Replay them onto the new branch before continuing, and confirm the diff against `<base-tip>` carries the intended change:
 
 ```bash
 git cherry-pick <first-commit>^..<last-commit>
-git diff --stat FETCH_HEAD...HEAD
+git diff --stat <base-tip>...HEAD
 ```
 
 The `^` is required. `A..B` means every commit reachable from `B` but not from `A`, so naming the first contribution commit as `A` excludes it: a multi-commit contribution silently loses its earliest commit, and a single-commit contribution replays nothing at all while the empty result still looks like a completed replay. `<first-commit>^` names that commit's parent, which is the range's exclusive end.
@@ -78,7 +81,7 @@ git add <contribution-paths>
 git commit -m "<message in the base repository's commit style>"
 ```
 
-Confirm the branch carries a change before continuing. `git diff --stat FETCH_HEAD...HEAD` empty here means the pull request would be empty; stop rather than opening it.
+Confirm the branch carries a change before continuing. `git diff --stat <base-tip>...HEAD` empty here means the pull request would be empty; stop rather than opening it.
 
 **Step 9 — Push, then open.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` "Verify `origin` before pushing or fetching through it" — a remote name is a local label, and pushing through the wrong one publishes the contribution to a repository nobody named:
 
@@ -95,7 +98,13 @@ branch=$(git branch --show-current)
 git push -u origin HEAD:refs/heads/"${branch}"
 ```
 
-`gh pr create --head <owner>:<branch>` resolves a user-owned head; `gh` does not support an organization as that owner. The resolver reports organization destinations among its fork candidates, so when the resolved head is organization-owned, this form cannot select it. Run the creation from a checkout whose `origin` is that head repository and pass `--head <branch>` alone, and stop with the resolved head named when neither form selects it — never fall back to a head `gh` picks.
+`gh pr create --head <owner>:<branch>` resolves a user-owned head; `gh` does not support an organization as that owner. Read which one this head has, because the resolver reports fork candidates only when no fork exists — the classification this flow never continues on — so its candidate list is empty here and answers nothing:
+
+```bash
+gh api users/"<head-owner>" --jq '.type'
+```
+
+`User` takes `--head <head-owner>:<branch>`. `Organization` cannot be selected that way at all: run the creation from a checkout whose `origin` is that head repository and pass `--head <branch>` alone. Stop with the resolved head named when neither form selects it — never fall back to a head `gh` picks.
 
 Interactive Claude Code and Codex sessions pipe the body through a quoted heredoc:
 
@@ -132,7 +141,7 @@ Pass `--draft` when the contribution is unsolicited or its conformance to the ba
 Flag rationale:
 
 - `--repo` — the resolved base. Without it `gh` opens against whatever it resolves from the checkout, which for a fork is the parent, reached by inference rather than by decision.
-- `--head <head-owner>:<branch>` — the head repository's owner and the branch, both resolved above, stated explicitly so the head never depends on inference and no fork-selection prompt appears.
+- `--head <head-owner>:<branch>` — the head repository's owner and the branch, both resolved above, stated explicitly so the head never depends on inference and no fork-selection prompt appears. An organization-owned head drops the owner and passes `--head <branch>` from a checkout whose `origin` is that repository, per the account-type read above.
 - `--base` — the base repository's default branch, resolved in Step 4.
 - `--body-file -` — the body arrives on stdin with real newlines. `--body` does not expand escape sequences, and no temporary file, command substitution, or post-hoc repair assembles the body.
 
@@ -188,7 +197,7 @@ The body explains why; the diff already shows what.
 - The contribution branch was cut from the base repository's default branch.
 - The base repository's declared checks ran locally and reported success; any check that could not run is named in the body as unverified with its reason.
 - The title and body passed a prose review, and a review that ran unassisted is reported as such.
-- `gh pr create` named the base with `--repo` and named the head explicitly — `<head-owner>:<branch>`, or `<branch>` alone for an organization-owned head — and the body arrived on stdin.
+- The head owner's account type was read before the head form was chosen, and `gh pr create` named the base with `--repo` and named the head explicitly — `<head-owner>:<branch>` for a user, `<branch>` alone for an organization — with the body arriving on stdin.
 - The pull-request URL is surfaced and `/manage-parent-pr` has taken over.
 
 </success_criteria>

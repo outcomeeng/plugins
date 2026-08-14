@@ -62,6 +62,12 @@ def escaping_grant_declarations() -> tuple[str, ...]:
             for variable in SKILL_DIR_VARIABLES
         )
         + tuple(
+            # The shell reads `$VAR/x` and `${VAR}/x` identically, so the
+            # unbraced spelling reaches the same sibling file.
+            _declaration(f"Bash(python3 ${variable}/{sibling}:*)")
+            for variable in SKILL_DIR_VARIABLES
+        )
+        + tuple(
             # The YAML list form of the same field, which carries each grant on its
             # own indented line rather than in the declaration's scalar.
             "\n".join(
@@ -95,6 +101,12 @@ def local_grant_declarations() -> tuple[str, ...]:
         _declaration(f'Bash(python3 "${{{variable}}}"/scripts/{scenario.skill}.py:*)')
         for variable in SKILL_DIR_VARIABLES
     )
+    # The unbraced spelling of a path that stays inside the directory: widening
+    # the pattern to read it must not turn a supported spelling into a finding.
+    unbraced = tuple(
+        _declaration(f"Bash(python3 ${variable}/scripts/{scenario.skill}.py:*)")
+        for variable in SKILL_DIR_VARIABLES
+    )
     # Grants that carry no path at all, and a reference file read.
     pathless = (
         _declaration("Bash(git status:*)", "Glob", "Skill"),
@@ -112,7 +124,14 @@ def local_grant_declarations() -> tuple[str, ...]:
         )
         for variable in SKILL_DIR_VARIABLES
     )
-    return (*own_entrypoint, *returning_descent, *split_quotes, *pathless, *listed)
+    return (
+        *own_entrypoint,
+        *returning_descent,
+        *split_quotes,
+        *unbraced,
+        *pathless,
+        *listed,
+    )
 
 
 def body_mentions() -> tuple[str, ...]:
