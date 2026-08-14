@@ -6,9 +6,11 @@ Every `[test]` assertion's evidence occupies one cell of a cross-product: its as
 
 Execution level measures execution pain and environment dependence. It is an axis independent of assertion type and of tooling.
 
-- `l1` — deterministic local evidence: pure logic, cheap temporary filesystem work, standard repository-required tools and subprocesses, and dependency-injected controlled implementations under a recorded exception.
+- `l1` — deterministic local evidence: pure logic, cheap temporary filesystem work, standard repository-required tools and subprocesses, and dependency-injected controlled implementations under a recorded Stage 5 exception case.
 - `l2` — real local infrastructure: local services, containers, browsers against local services, product-specific binaries, and other heavier local dependencies.
 - `l3` — remote, shared, credentialed, or network-dependent systems, selected only when equivalent evidence cannot be produced with local real infrastructure.
+
+A controlled implementation enters evidence only under the `/test` methodology's Stage 5 exception set — the seven named cases from failure simulation through contract probes — and the exception is recorded by naming the matching case in the evidence. The Stage 5 combinatorial-cost exception is that set's member for broad evidence a real dependency makes prohibitively expensive.
 
 Three rules govern level selection:
 
@@ -49,7 +51,7 @@ Rejected:
 
 ## Mapping
 
-A mapping proves a correspondence over a complete finite domain. The domain is the complete finite source-owned enumeration — imported from its owning registry, enum, schema, or typed factory — or a generated finite domain. Expected mappings derive independently of the production mapping. Completeness holds at every level: cost pressure routes to the combinatorial-cost controlled-implementation exception or to a lower level, never to sampling.
+A mapping proves a correspondence over a complete finite domain. The domain is the complete finite source-owned enumeration — imported from its owning registry, enum, schema, or typed factory — or a generated finite domain. Expected mappings derive independently of the production mapping. Completeness holds at every level: cost pressure routes to the Stage 5 combinatorial-cost exception or to a lower level, never to sampling.
 
 The independent expectation law may live inline in the linked test, in a spec-governed generator, or in an independent oracle module; independence is measured against the production path, not by location. Hand-written per-row expected values choose data and are rejected; a derivation from an independent construction law is not a choice.
 
@@ -59,7 +61,7 @@ Valid:
 15. `l1` — a generated finite domain composes two source-owned option sets; expectations derive per input independently of production.
 16. `l2` — every command in a source-owned command registry maps to its dispatch action through a product-binary harness.
 17. `l1` — boundary validation over a closed, finite, source-owned invalid set, every member exercised.
-18. A broad domain against an expensive real dependency runs through a configurable controlled implementation preserving the boundary, under a recorded combinatorial-cost exception.
+18. A broad domain against an expensive real dependency runs through a configurable controlled implementation preserving the boundary, under a recorded Stage 5 combinatorial-cost exception.
 
 Rejected:
 
@@ -96,7 +98,7 @@ Rejected:
 
 A property proves an invariant over an open domain. The case set comes from a generator over the declared domain with meaningful variation, composition, and shrinking; the invariant stays lexically in the linked test; a spec-governed harness owns seed selection, run count, replay input, and failure diagnostics, and a failing run is reproducible from its reported evidence.
 
-Property evidence is permitted at every level. The absence of a level restriction is decided, not overlooked: the lowest-level rule and the combinatorial-cost exception govern property cost at heavier levels.
+Property evidence is permitted at every level. The absence of a level restriction is decided, not overlooked: the lowest-level rule and the Stage 5 combinatorial-cost exception govern property cost at heavier levels.
 
 Valid:
 
@@ -159,5 +161,5 @@ Per-type and per-level permission decided once, language-neutrally, is what keep
 - ALWAYS: evidence for a cell satisfies the artifact permissions this decision states for its assertion type at its execution level ([audit])
 - ALWAYS: each corpus case in this decision decides acceptance identically in every language rendering ([audit])
 - NEVER: a language test-standards node narrows or widens the source and artifact categories this decision permits — a category a language cannot realize is an amendment to this decision ([audit])
-- NEVER: mapping completeness is relaxed by sampling at any level — cost routes to the combinatorial-cost controlled-implementation exception or to a lower level ([audit])
+- NEVER: mapping completeness is relaxed by sampling at any level — cost routes to the Stage 5 combinatorial-cost exception or to a lower level ([audit])
 - NEVER: unavailable required evidence produces a passing test — a missing mandatory dependency fails loudly or skips only where the suite declares that evidence optional ([audit])
