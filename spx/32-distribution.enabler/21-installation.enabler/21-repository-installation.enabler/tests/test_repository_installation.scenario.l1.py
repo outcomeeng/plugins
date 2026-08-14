@@ -13,6 +13,7 @@ from outcomeeng.distribution.installation import (
     VERIFICATION_RECIPE_COMMAND,
 )
 from outcomeeng_testing.harnesses.installation import (
+    absent_from_every_agent,
     committed_catalog_plugin_names,
     observe_unpublished_plugin,
     NONCANONICAL_MARKETPLACE_SOURCE,
@@ -130,12 +131,14 @@ def test_persistent_installation_reports_an_unpublished_plugin_and_completes() -
     absent = sorted(committed_catalog_plugin_names())[0]
 
     observation = observe_unpublished_plugin(
-        isolated=False, unpublished=frozenset({absent})
+        isolated=False, unpublished=absent_from_every_agent(frozenset({absent}))
     )
 
     assert observation.failure is None
     assert observation.report is not None
-    assert observation.report.pending_publication == (absent,)
+    assert {entry.plugin for entry in observation.report.pending_publication} == {
+        absent
+    }
     installed = {
         call.plugin
         for call in observation.calls
@@ -151,10 +154,27 @@ def test_isolated_installation_treats_an_absent_plugin_as_terminal() -> None:
     absent = sorted(committed_catalog_plugin_names())[0]
 
     observation = observe_unpublished_plugin(
-        isolated=True, unpublished=frozenset({absent})
+        isolated=True, unpublished=absent_from_every_agent(frozenset({absent}))
     )
 
     assert observation.report is None
     assert observation.failure is not None
     assert observation.failure.command.plugin == absent
     assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
+
+
+def test_a_plugin_absent_from_one_agent_stays_installed_for_the_other() -> None:
+    absent = sorted(committed_catalog_plugin_names())[0]
+
+    observation = observe_unpublished_plugin(
+        isolated=False, unpublished={Agent.CLAUDE: frozenset({absent})}
+    )
+
+    assert observation.failure is None
+    assert observation.report is not None
+    # The two marketplaces refresh separately, so one agent reporting a plugin
+    # unpublished says nothing about the other. A pending record carrying only
+    # the plugin name cannot express that, and drops the plugin from both
+    # agents' installed counts on either one's failure.
+    assert observation.report.pending_for(Agent.CLAUDE) == frozenset({absent})
+    assert observation.report.pending_for(Agent.CODEX) == frozenset()

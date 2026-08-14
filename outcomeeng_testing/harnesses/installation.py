@@ -1194,6 +1194,7 @@ __all__ = [
     "observe_planned_operations",
     "observe_real_installation",
     "observe_repository_plan",
+    "absent_from_every_agent",
     "observe_unpublished_plugin",
     "observe_verification_recipe",
 ]
@@ -1209,13 +1210,14 @@ class UnpublishedPluginRunner:
     on demand against the canonical source.
     """
 
-    unpublished: frozenset[str]
+    unpublished: Mapping[Agent, frozenset[str]]
     calls: list[InstallationCommand] = field(default_factory=list)
 
     def __call__(self, command: InstallationCommand) -> CommandResult:
         self.calls.append(command)
         plugin_operation = command.operation in PLUGIN_OPERATIONS
-        if plugin_operation and command.plugin in self.unpublished:
+        absent = self.unpublished.get(command.agent, frozenset())
+        if plugin_operation and command.plugin in absent:
             return CommandResult(
                 argv=command.argv,
                 exit_code=1,
@@ -1335,12 +1337,25 @@ def _observe_installation_run(
     )
 
 
+def absent_from_every_agent(names: frozenset[str]) -> Mapping[Agent, frozenset[str]]:
+    """The named plugins missing from every agent's marketplace.
+
+    The agent set comes from `Agent` itself, so an agent the source adds enters
+    this mapping without the callers naming it.
+    """
+    return {agent: names for agent in Agent}
+
+
 def observe_unpublished_plugin(
     *,
     isolated: bool,
-    unpublished: frozenset[str],
+    unpublished: Mapping[Agent, frozenset[str]],
 ) -> UnpublishedPluginObservation:
-    """Run one installation whose marketplace lacks the named plugins."""
+    """Run one installation whose marketplaces lack the named plugins.
+
+    The mapping is per agent because the two marketplaces refresh separately: a
+    plugin can be absent from one and installable from the other.
+    """
     return _observe_installation_run(
         UnpublishedPluginRunner(unpublished), isolated=isolated
     )

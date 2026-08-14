@@ -26,7 +26,9 @@ from enum import StrEnum
 from typing import Final, Protocol
 
 CONTROLLED_PERMISSIONS = frozenset({"ADMIN", "MAINTAIN", "WRITE"})
-CONTRIBUTOR_PERMISSIONS = frozenset({"READ", "NONE"})
+# TRIAGE carries issue and pull-request management without code-write access, so
+# it contributes rather than controls. Omitting it blocks a real collaborator.
+CONTRIBUTOR_PERMISSIONS = frozenset({"READ", "TRIAGE", "NONE"})
 
 
 class Classification(StrEnum):

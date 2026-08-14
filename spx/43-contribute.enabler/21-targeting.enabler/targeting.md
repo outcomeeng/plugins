@@ -6,7 +6,7 @@ CAN name their target explicitly on every write instead of accepting whatever `g
 
 `gh` resolves a fork's base to its parent, so a command that names no repository says nothing about where its artifact lands: a branch pushed to one repository and a pull request opened from it can reach a different organization entirely. Resolution runs before the first write and produces one classification the flows consume.
 
-Permission is read from `viewerPermission` on the resolved base. `ADMIN`, `MAINTAIN`, and `WRITE` mean the operator controls that repository and the contribution belongs to a controlled-repository flow instead. `READ` and `NONE` mean another party owns it, which is this plugin's case and the case that requires authorization. A git remote, the authenticated account name, and a successful push each report something other than the permission that governs the base, because an operator holds repositories across several organizations.
+Permission is read from `viewerPermission` on the resolved base. `ADMIN`, `MAINTAIN`, and `WRITE` mean the operator controls that repository and the contribution belongs to a controlled-repository flow instead. `READ`, `TRIAGE`, and `NONE` mean another party owns it, which is this plugin's case and the case that requires authorization. `TRIAGE` carries issue and pull-request management without code-write access, so a collaborator holding it contributes to the base rather than controlling it. A git remote, the authenticated account name, and a successful push each report something other than the permission that governs the base, because an operator holds repositories across several organizations.
 
 A contribution needs a head repository the operator can push to. When no fork of the base exists, the destination is a choice among the operator's accounts and organizations that resolution has no evidence to make.
 
@@ -19,7 +19,7 @@ A contribution needs a head repository the operator can push to. When no fork of
 
 ### Properties
 
-- Every `viewerPermission` value outside the permission sets the resolver names blocks the target, under either fork state — the reported permission is an open string, so a value the platform adds later resolves without the resolver changing ([test](tests/test_target_resolution.property.l1.py))
+- Every `viewerPermission` value outside the permission sets the resolver names blocks the target, under either fork state — the reported permission is an open string, and a value whose access level neither set states cannot be sorted into either one, so it blocks instead of defaulting ([test](tests/test_target_resolution.property.l1.py))
 
 ### Compliance
 

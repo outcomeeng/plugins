@@ -47,9 +47,11 @@ Branch from `FETCH_HEAD`, never from the head repository's default branch, which
 **When the contribution already exists as commits on the invocation branch**, cutting at `FETCH_HEAD` alone abandons them and pushes the base tip. Replay them onto the new branch before continuing, and confirm the diff against `FETCH_HEAD` carries the intended change:
 
 ```bash
-git cherry-pick <first-commit>..<last-commit>
+git cherry-pick <first-commit>^..<last-commit>
 git diff --stat FETCH_HEAD...HEAD
 ```
+
+The `^` is required. `A..B` means every commit reachable from `B` but not from `A`, so naming the first contribution commit as `A` excludes it: a multi-commit contribution silently loses its earliest commit, and a single-commit contribution replays nothing at all while the empty result still looks like a completed replay. `<first-commit>^` names that commit's parent, which is the range's exclusive end.
 
 An empty diff means the contribution was left behind; stop rather than opening a pull request with no change in it.
 

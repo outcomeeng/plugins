@@ -33,6 +33,8 @@ gh issue view "<number>" --repo "<base>" --json state,title,body,comments,labels
 
 Read it one time and report `state` and the last maintainer comment verbatim. `/contribution-standards` forbids polling, watching, and sleeping on the artifact; a maintainer answers on their own schedule.
 
+**STOP when `state` is `CLOSED`.** Report that outcome and return. This gate precedes every later step: a comment posted afterwards notifies every watcher of a thread whose decision is already made, and Step 6 has nothing left to close.
+
 **Step 4 — Answer what was asked.** Identify the maintainer's actual question. Gather the evidence it needs before drafting anything, under `/contribution-standards` `<invariants>` "Carry reproducible evidence" — versions, the base commit observed against, the exact command, and a negative control where the answer makes a defect claim.
 
 When the answer requires a condition that cannot be reproduced in the real surface, say the claim is unverified and say why. A synthesized approximation reported as an observation is worse than no answer, because the maintainer cannot tell which they received.

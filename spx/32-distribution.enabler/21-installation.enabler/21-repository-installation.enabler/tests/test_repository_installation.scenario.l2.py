@@ -4,6 +4,7 @@ import json
 from typing import cast
 
 from outcomeeng.distribution.installation import (
+    Agent,
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
     SourceAction,
@@ -32,18 +33,27 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     )
 
     persistent_report = cast(
-        dict[str, list[str]], json.loads(observation.persistent_stdout)
+        dict[str, list[dict[str, str]]], json.loads(observation.persistent_stdout)
     )
-    pending = frozenset(persistent_report["pending_publication"])
+    pending_entries = persistent_report["pending_publication"]
+    pending = frozenset(entry["plugin"] for entry in pending_entries)
+    claude_pending = frozenset(
+        entry["plugin"]
+        for entry in pending_entries
+        if entry["agent"] == Agent.CLAUDE.value
+    )
 
     published = canonical_catalog_plugin_names()
 
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
     assert pending == (claude_plugins | codex_plugins) - published
-    assert observation.persistent_claude_plugins.installed == claude_plugins - pending
+    assert (
+        observation.persistent_claude_plugins.installed
+        == claude_plugins - claude_pending
+    )
     assert (
         observation.persistent_claude_plugins.enabled
-        == observation.persistent_selection - pending
+        == observation.persistent_selection - claude_pending
     )
     assert observation.persistent_selection < claude_plugins
     assert (

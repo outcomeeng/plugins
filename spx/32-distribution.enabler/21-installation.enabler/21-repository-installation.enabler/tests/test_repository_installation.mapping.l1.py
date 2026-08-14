@@ -99,7 +99,9 @@ def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
     if pending:
         assert observation.failure is None
         assert observation.report is not None
-        assert plugin in observation.report.pending_publication
+        assert plugin in {
+            entry.plugin for entry in observation.report.pending_publication
+        }
     else:
         assert observation.report is None
         assert observation.failure is not None

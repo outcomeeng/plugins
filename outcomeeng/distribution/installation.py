@@ -175,13 +175,32 @@ class InstallationPlan:
     commands: tuple[InstallationCommand, ...]
 
 
+@dataclass(frozen=True, order=True)
+class PendingPublication:
+    """One plugin the agent's own refreshed marketplace has not published.
+
+    The agent is carried because the two marketplaces refresh separately: the
+    canonical branch can advance between them, leaving a plugin absent from one
+    and installed by the other. A plugin name alone cannot say which.
+    """
+
+    agent: Agent
+    plugin: str
+
+
 @dataclass(frozen=True)
 class InstallationReport:
     """Completed commands from one successful installation."""
 
     plan: InstallationPlan
     results: tuple[CommandResult, ...]
-    pending_publication: tuple[str, ...] = ()
+    pending_publication: tuple[PendingPublication, ...] = ()
+
+    def pending_for(self, agent: Agent) -> frozenset[str]:
+        """The plugins this agent could not install because they are unpublished."""
+        return frozenset(
+            entry.plugin for entry in self.pending_publication if entry.agent is agent
+        )
 
 
 class InstallationFailure(RuntimeError):
@@ -732,15 +751,17 @@ def execute_installation(
     if plan.mode is InstallationMode.ISOLATED:
         _create_isolated_roots(plan.roots)
     results = list(completed)
-    pending: list[str] = []
+    pending: list[PendingPublication] = []
     for command in plan.commands:
         result = _checked_result(command, runner(command))
         result = _agent_adapter(command.agent).normalize_result(command, result)
         if result.exit_code != 0:
             if not _is_pending_publication(plan, command, result):
                 raise InstallationFailure(command, result, tuple(results))
-            if command.plugin is not None and command.plugin not in pending:
-                pending.append(command.plugin)
+            if command.plugin is not None:
+                entry = PendingPublication(command.agent, command.plugin)
+                if entry not in pending:
+                    pending.append(entry)
         results.append(result)
     return InstallationReport(
         plan=plan,
@@ -779,13 +800,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     if arguments.json_output:
         print(json.dumps(_report_document(report), sort_keys=True))
     else:
-        pending = set(report.pending_publication)
-        claude = [p for p in report.plan.claude_plugins if p not in pending]
-        codex = [p for p in report.plan.codex_plugins if p not in pending]
+        claude_pending = report.pending_for(Agent.CLAUDE)
+        codex_pending = report.pending_for(Agent.CODEX)
+        claude = [p for p in report.plan.claude_plugins if p not in claude_pending]
+        codex = [p for p in report.plan.codex_plugins if p not in codex_pending]
         print(f"installed {len(claude)} Claude plugins")
         print(f"installed {len(codex)} Codex plugins")
-        for plugin in report.pending_publication:
-            print(f"pending publication, not installed: {plugin}")
+        for entry in report.pending_publication:
+            print(
+                f"pending publication, not installed: {entry.plugin} ({entry.agent.value})"
+            )
     return 0
 
 
@@ -1143,7 +1167,10 @@ def _report_document(report: InstallationReport) -> dict[str, object]:
         ),
         "checkout": str(report.plan.roots.checkout),
         "codex_home": str(report.plan.roots.codex_home),
-        "pending_publication": list(report.pending_publication),
+        "pending_publication": [
+            {"agent": entry.agent.value, "plugin": entry.plugin}
+            for entry in report.pending_publication
+        ],
     }
 
 
