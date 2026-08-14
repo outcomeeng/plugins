@@ -8,7 +8,7 @@ import pytest
 from outcomeeng.distribution.build import (
     COMMENT_DELIMITER_START,
     EmissionAction,
-    plan_emissions,
+    project_emissions,
     plugin_names,
     template_source_files,
 )
@@ -125,14 +125,14 @@ def test_per_plugin_template_renders_once_into_every_plugin() -> None:
     assert plugins
     assert templates
 
-    # Drive the real planner rather than re-deriving the path from the same
+    # Drive the real projection rather than re-deriving the path from the same
     # helper under test, so this fails if template fan-out stops happening.
-    plan = plan_emissions(CANONICAL_SOURCE_ROOT)
+    projection = project_emissions(CANONICAL_SOURCE_ROOT)
     for target in Target:
         for source in templates:
             rendered = [
                 emission
-                for emission in plan.for_target(target)
+                for emission in projection.for_target(target)
                 if emission.source == source
                 and emission.action in {EmissionAction.RENDER, EmissionAction.COPY}
             ]

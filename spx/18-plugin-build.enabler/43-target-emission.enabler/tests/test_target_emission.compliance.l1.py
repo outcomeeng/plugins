@@ -19,8 +19,8 @@ from outcomeeng_testing.harnesses.target_emission import (
     frontmatter_strip_is_idempotent,
     outputs_exclude_execution_time_injection,
     path_rewrite_is_idempotent,
-    planned_versus_emitted,
-    planned_sources,
+    projected_versus_emitted,
+    projected_sources,
     repeated_include_emits_shared_source_once,
     skill_dir_escape_preserves_authoring_guidance,
     source_emission_counts,
@@ -34,7 +34,7 @@ from outcomeeng_testing.harnesses.target_emission import (
 
 def test_every_source_file_emits_to_both_target_trees() -> None:
     counts = source_emission_counts()
-    sources = planned_sources()
+    sources = projected_sources()
     assert sources
     template_sources = set(template_source_files(CANONICAL_SOURCE_ROOT))
     plugin_count = len(plugin_names(CANONICAL_SOURCE_ROOT))
@@ -51,14 +51,14 @@ def test_every_source_file_emits_to_both_target_trees() -> None:
                 f"expected {expected}"
             )
 
-    for target, inventory in planned_versus_emitted().items():
-        assert inventory.planned_paths == inventory.emitted_paths, (
-            f"{target.value} planned/emitted path mismatch: "
-            f"{inventory.planned_paths ^ inventory.emitted_paths}"
+    for target, inventory in projected_versus_emitted().items():
+        assert inventory.projected_paths == inventory.emitted_paths, (
+            f"{target.value} projected/emitted path mismatch: "
+            f"{inventory.projected_paths ^ inventory.emitted_paths}"
         )
-        assert inventory.planned_directories == inventory.emitted_directories, (
-            f"{target.value} planned/emitted directory mismatch: "
-            f"{inventory.planned_directories ^ inventory.emitted_directories}"
+        assert inventory.projected_directories == inventory.emitted_directories, (
+            f"{target.value} projected/emitted directory mismatch: "
+            f"{inventory.projected_directories ^ inventory.emitted_directories}"
         )
 
     fixture = synthetic_inventory()
@@ -81,10 +81,10 @@ def test_every_source_file_emits_to_both_target_trees() -> None:
     for target, per_source in fixture.per_source_counts.items():
         uncovered = [path for path in fixture.source_paths if per_source[path] < 1]
         assert not uncovered, f"{target.value} emits nothing for {uncovered}"
-    for target, inventory in fixture.planned_versus_emitted.items():
-        assert inventory.planned_paths == inventory.emitted_paths, (
-            f"synthetic {target.value} planned/emitted mismatch: "
-            f"{inventory.planned_paths ^ inventory.emitted_paths}"
+    for target, inventory in fixture.projected_versus_emitted.items():
+        assert inventory.projected_paths == inventory.emitted_paths, (
+            f"synthetic {target.value} projected/emitted mismatch: "
+            f"{inventory.projected_paths ^ inventory.emitted_paths}"
         )
 
 
