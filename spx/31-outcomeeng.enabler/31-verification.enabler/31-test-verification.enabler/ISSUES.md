@@ -10,7 +10,7 @@
 
 ## Five accepted adversarial-review findings against the merged evidence-types decision
 
-An adversarial review of the merged PR #519 changeset (`988af420b503b010d85bda6e0afa3a748b5929b5..c42fceef6ef807429e7047d043e517b5e468df0d`), recorded at `/Users/shz/Code/outcomeeng/plugins/.spx/reviews/2026-08-14-pr519-codex-adversarial.md`, produced five findings, all judged valid:
+An adversarial review of the merged PR #519 changeset (`988af420b503b010d85bda6e0afa3a748b5929b5..c42fceef6ef807429e7047d043e517b5e468df0d`), recorded at `.spx/reviews/2026-08-14-pr519-codex-adversarial.md` (pool-relative, beside the git common dir), produced five findings, all judged valid:
 
 1. `l1` "repository-standard tools" versus `l2` "product-specific binaries" has no mutually exclusive discriminator — a repository's own CLI is undecidable between the levels, which the decision's own amendment rule makes an amendment obligation (`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md`).
 2. The mapping/property construction-law clarification defines independence only against the production path, dropping the author-invention independence `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md` requires — a parallel algorithm from the same mental model passes corpus cases 14, 15, and 37. Introduced by the merged changeset.
