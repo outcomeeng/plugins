@@ -32,14 +32,14 @@ from outcomeeng.distribution.build import (
     SourceFormatError,
     build,
     EmissionAction,
-    PlannedEmission,
+    ProjectedEmission,
     emit_skill,
     expand_include,
     expand_require_skill,
     format_directive,
     make_jinja_environment,
     parse_directives,
-    plan_emissions,
+    project_emissions,
     plugin_source_files,
     render_text,
     resolve_runtime_token,
@@ -292,9 +292,9 @@ def render_missing_fragment() -> None:
         render_text(case.template, shared_root=case.shared_root)
 
 
-def plan_missing_fragment() -> None:
+def project_missing_fragment() -> None:
     with _missing_fragment_case() as case:
-        plan_emissions(case.src_root)
+        project_emissions(case.src_root)
 
 
 @contextmanager
@@ -345,7 +345,7 @@ def malformed_source_tree_is_rejected() -> bool:
         source_root = root / SOURCE_ROOT_NAME
         source_root.mkdir()
         try:
-            plan_emissions(source_root)
+            project_emissions(source_root)
         except SourceFormatError as error:
             return str(source_root / PLUGINS_DIR_NAME) in str(error)
         return False
@@ -571,14 +571,14 @@ def _well_formed_source_tree_builds(case: SourceScenario) -> bool:
         source_inventory = frozenset(plugin_source_files(builder.src_root))
         if not frozenset(authored_plugin_files) <= source_inventory:
             return False
-        plan = plan_emissions(builder.src_root)
-        planned_plugin_emissions = tuple(
+        projection = project_emissions(builder.src_root)
+        projected_plugin_emissions = tuple(
             emission
-            for emission in plan.emissions
+            for emission in projection.emissions
             if emission.source in authored_plugin_files
         )
         if not all(
-            any(emission.source == source for emission in planned_plugin_emissions)
+            any(emission.source == source for emission in projected_plugin_emissions)
             for source in authored_plugin_files
         ):
             return False
@@ -586,7 +586,7 @@ def _well_formed_source_tree_builds(case: SourceScenario) -> bool:
         reader = DistTreeReader(root)
         return all(
             emission.relative_path in reader.list_all_files(emission.target)
-            for emission in planned_plugin_emissions
+            for emission in projected_plugin_emissions
         )
 
 
@@ -717,7 +717,7 @@ def _raw_directive_ships_literally(case: RawDirectiveCase) -> bool:
             case.source.plugin,
             skills={case.source.skill: case.template},
         )
-        plan_emissions(builder.src_root)
+        project_emissions(builder.src_root)
         build(builder.src_root, root / DIST_DIR_NAME)
         reader = DistTreeReader(root)
         return all(
@@ -755,7 +755,7 @@ def _require_emits_identically(case: SourceScenario) -> bool:
         emitted = {}
         for target in Target:
             emit_skill(
-                PlannedEmission(
+                ProjectedEmission(
                     source=source,
                     target=target,
                     relative_path=relative_path,

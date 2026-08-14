@@ -5,7 +5,7 @@ from pytest import raises
 from outcomeeng.distribution.build import IncludeResolutionError
 from outcomeeng_testing.harnesses.source_and_templating import (
     implementation_is_ready,
-    plan_missing_fragment,
+    project_missing_fragment,
     render_missing_fragment,
 )
 
@@ -21,4 +21,4 @@ def test_missing_fragment_raises_include_resolution_error() -> None:
 
 def test_missing_fragment_planning_raises_include_resolution_error() -> None:
     with raises(IncludeResolutionError):
-        plan_missing_fragment()
+        project_missing_fragment()

@@ -11,7 +11,7 @@ from tempfile import TemporaryDirectory
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
     PLACEMENT_MANIFEST_FILENAME,
-    BuildPlan,
+    EmissionProjection,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
     CODEX_SKILL_DIR_TOKEN,
@@ -28,8 +28,8 @@ from outcomeeng.distribution.build import (
     contains_execution_time_skill_content_injection,
     format_directive,
     frontmatter_field_names,
-    plan_emissions,
-    render_planned_emission_text,
+    project_emissions,
+    render_projected_emission_text,
     render_text,
     rewrite_paths_for_target,
     skill_dir_path_references,
@@ -80,7 +80,7 @@ class TargetEmissionSnapshot:
     source: PathSnapshot
     claude: PathSnapshot
     codex: PathSnapshot
-    plan: BuildPlan
+    projection: EmissionProjection
     src_root: Path
 
     def target(self, target: Target) -> PathSnapshot:
@@ -108,41 +108,45 @@ def source_emission_counts() -> dict[Target, Counter[Path]]:
     return {
         target: Counter(
             emission.source
-            for emission in snapshot.plan.for_target(target)
+            for emission in snapshot.projection.for_target(target)
             if emission.action in counted
         )
         for target in Target
     }
 
 
-def planned_sources() -> tuple[Path, ...]:
-    """Return every source the canonical plan emits from, including templates."""
+def projected_sources() -> tuple[Path, ...]:
+    """Return every source the canonical projection emits from, including templates."""
     snapshot = _canonical_emission_snapshot()
-    return tuple(sorted({emission.source for emission in snapshot.plan.emissions}))
+    return tuple(
+        sorted({emission.source for emission in snapshot.projection.emissions})
+    )
 
 
 @dataclass(frozen=True)
-class PlannedVersusEmitted:
-    """One target's planned output inventory beside what the build wrote."""
+class ProjectedVersusEmitted:
+    """One target's projected output inventory beside what the build wrote."""
 
-    planned_paths: frozenset[Path]
+    projected_paths: frozenset[Path]
     emitted_paths: frozenset[Path]
-    planned_directories: frozenset[Path]
+    projected_directories: frozenset[Path]
     emitted_directories: frozenset[Path]
 
 
-def planned_versus_emitted() -> dict[Target, PlannedVersusEmitted]:
-    """Return each target's planned and emitted inventories, undecided.
+def projected_versus_emitted() -> dict[Target, ProjectedVersusEmitted]:
+    """Return each target's projected and emitted inventories, undecided.
 
     The caller compares them; this returns the two sets rather than their
     equality so the predicate stays in the test that links the assertion.
     """
     snapshot = _canonical_emission_snapshot()
     return {
-        target: PlannedVersusEmitted(
-            planned_paths=frozenset(_planned_paths(snapshot.plan, target)),
+        target: ProjectedVersusEmitted(
+            projected_paths=frozenset(_projected_paths(snapshot.projection, target)),
             emitted_paths=frozenset(path for path, _content in snapshot.target(target)),
-            planned_directories=frozenset(_planned_directories(snapshot.plan, target)),
+            projected_directories=frozenset(
+                _projected_directories(snapshot.projection, target)
+            ),
             emitted_directories=frozenset(_parent_directories(snapshot.target(target))),
         )
         for target in Target
@@ -160,7 +164,7 @@ def structure_deviations() -> dict[Target, tuple[Path, ...]]:
     deviations: dict[Target, tuple[Path, ...]] = {}
     for target in Target:
         found: list[Path] = []
-        for emission in snapshot.plan.for_target(target):
+        for emission in snapshot.projection.for_target(target):
             if emission.action is EmissionAction.FAN_OUT:
                 continue
             if not emission.source.is_relative_to(plugins_root):
@@ -174,7 +178,7 @@ def structure_deviations() -> dict[Target, tuple[Path, ...]]:
 def agent_artifact_paths(target: Target) -> tuple[Path, ...]:
     """Return every agent artifact one generated target tree carries.
 
-    Reads the committed tree rather than the plan, so the observation reflects
+    Reads the committed tree rather than the projection, so the observation reflects
     what a consumer installs rather than what the build intended.
     """
     tree = REPOSITORY_ROOT / DIST_DIR_NAME / target.value
@@ -219,7 +223,7 @@ class SyntheticInventory:
     covered_actions: frozenset[EmissionAction]
     source_paths: tuple[Path, ...]
     per_source_counts: dict[Target, Counter[Path]]
-    planned_versus_emitted: dict[Target, PlannedVersusEmitted]
+    projected_versus_emitted: dict[Target, ProjectedVersusEmitted]
 
 
 def synthetic_inventory() -> SyntheticInventory:
@@ -233,25 +237,27 @@ def synthetic_inventory() -> SyntheticInventory:
         ),
         expected_subdirs=frozenset(PLUGIN_SUBDIRS),
         covered_actions=frozenset(
-            emission.action for emission in snapshot.plan.emissions
+            emission.action for emission in snapshot.projection.emissions
         ),
         source_paths=source_paths,
         per_source_counts={
             target: Counter(
                 emission.source.relative_to(plugins_root)
-                for emission in snapshot.plan.for_target(target)
+                for emission in snapshot.projection.for_target(target)
                 if emission.action is not EmissionAction.FAN_OUT
                 and emission.source.is_relative_to(plugins_root)
             )
             for target in Target
         },
-        planned_versus_emitted={
-            target: PlannedVersusEmitted(
-                planned_paths=frozenset(_planned_paths(snapshot.plan, target)),
+        projected_versus_emitted={
+            target: ProjectedVersusEmitted(
+                projected_paths=frozenset(
+                    _projected_paths(snapshot.projection, target)
+                ),
                 emitted_paths=frozenset(
                     path for path, _content in snapshot.target(target)
                 ),
-                planned_directories=frozenset(),
+                projected_directories=frozenset(),
                 emitted_directories=frozenset(),
             )
             for target in Target
@@ -273,7 +279,7 @@ def repeated_include_emits_shared_source_once() -> bool:
 def claude_output_preserves_skill_dir_token() -> bool:
     snapshot = _canonical_emission_snapshot()
     output_files = dict(snapshot.claude)
-    rendered_sources = _canonical_rendered_emissions(snapshot.plan, Target.CLAUDE)
+    rendered_sources = _canonical_rendered_emissions(snapshot.projection, Target.CLAUDE)
     expected = {
         path: _skill_dir_reference_counter(text, CLAUDE_SKILL_DIR_TOKEN)
         for path, text in rendered_sources.items()
@@ -308,7 +314,7 @@ def claude_output_preserves_skill_dir_token() -> bool:
 def codex_output_rewrites_skill_dir_token() -> bool:
     snapshot = _canonical_emission_snapshot()
     output_files = dict(snapshot.codex)
-    rendered_sources = _canonical_rendered_emissions(snapshot.plan, Target.CODEX)
+    rendered_sources = _canonical_rendered_emissions(snapshot.projection, Target.CODEX)
     expected = {
         path: (
             _escaped_skill_dir_references(text),
@@ -365,8 +371,8 @@ def codex_output_rewrites_skill_dir_token() -> bool:
 
 def skill_dir_escape_preserves_authoring_guidance() -> bool:
     snapshot = _canonical_emission_snapshot()
-    claude_sources = _canonical_rendered_emissions(snapshot.plan, Target.CLAUDE)
-    codex_sources = _canonical_rendered_emissions(snapshot.plan, Target.CODEX)
+    claude_sources = _canonical_rendered_emissions(snapshot.projection, Target.CLAUDE)
+    codex_sources = _canonical_rendered_emissions(snapshot.projection, Target.CODEX)
     claude_expected = {
         path: _escaped_skill_dir_references(text)
         for path, text in claude_sources.items()
@@ -478,9 +484,11 @@ def target_scoped_includes_emit_only_to_matching_tree() -> bool:
                     )
                 },
             )
-            plan = plan_emissions(builder.src_root)
+            projection = project_emissions(builder.src_root)
         for target in Target:
-            emitted = case.expected_relative_path in _planned_paths(plan, target)
+            emitted = case.expected_relative_path in _projected_paths(
+                projection, target
+            )
             if emitted == (target is case.target):
                 continue
             failures.append(
@@ -572,7 +580,7 @@ def _execution_time_commands(case: SourceScenario) -> tuple[str, ...]:
 @cache
 def _canonical_emission_snapshot() -> TargetEmissionSnapshot:
     source = _authored_plugin_snapshot(CANONICAL_SOURCE_ROOT)
-    plan = plan_emissions(CANONICAL_SOURCE_ROOT)
+    projection = project_emissions(CANONICAL_SOURCE_ROOT)
     dist_root = REPOSITORY_ROOT / DIST_DIR_NAME
     outputs = {
         target: tuple(
@@ -585,7 +593,7 @@ def _canonical_emission_snapshot() -> TargetEmissionSnapshot:
         source=source,
         claude=outputs[Target.CLAUDE],
         codex=outputs[Target.CODEX],
-        plan=plan,
+        projection=projection,
         src_root=CANONICAL_SOURCE_ROOT,
     )
 
@@ -606,14 +614,14 @@ def _authored_plugin_snapshot(src_root: Path) -> PathSnapshot:
     )
 
 
-def _planned_paths(plan: BuildPlan, target: Target) -> set[Path]:
-    return {emission.relative_path for emission in plan.for_target(target)}
+def _projected_paths(projection: EmissionProjection, target: Target) -> set[Path]:
+    return {emission.relative_path for emission in projection.for_target(target)}
 
 
-def _planned_directories(plan: BuildPlan, target: Target) -> set[Path]:
+def _projected_directories(projection: EmissionProjection, target: Target) -> set[Path]:
     return {
         parent
-        for path in _planned_paths(plan, target)
+        for path in _projected_paths(projection, target)
         for parent in path.parents
         if parent != Path()
     }
@@ -657,7 +665,7 @@ def _synthetic_emission_snapshot() -> TargetEmissionSnapshot:
                 },
             },
         )
-        plan = plan_emissions(builder.src_root)
+        projection = project_emissions(builder.src_root)
         source = _authored_plugin_snapshot(builder.src_root)
         dist_root = root / DIST_DIR_NAME
         build(builder.src_root, dist_root)
@@ -672,7 +680,7 @@ def _synthetic_emission_snapshot() -> TargetEmissionSnapshot:
         source=source,
         claude=outputs[Target.CLAUDE],
         codex=outputs[Target.CODEX],
-        plan=plan,
+        projection=projection,
         src_root=builder.src_root,
     )
 
@@ -701,10 +709,11 @@ def _repeated_include_failures(case: SourceScenario) -> tuple[str, ...]:
             / REFERENCES_SUBDIR_NAME
             / reference_filename
         ).resolve()
-        plan = plan_emissions(builder.src_root)
+        projection = project_emissions(builder.src_root)
     counts = {
         target: sum(
-            emission.source == reference_source for emission in plan.for_target(target)
+            emission.source == reference_source
+            for emission in projection.for_target(target)
         )
         for target in Target
     }
@@ -728,7 +737,7 @@ def _outputs_by_source_path(
     outputs = dict(snapshot.target(target))
     by_source: dict[Path, bytes] = {}
     plugins_root = snapshot.src_root / PLUGINS_DIR_NAME
-    for emission in snapshot.plan.for_target(target):
+    for emission in snapshot.projection.for_target(target):
         if emission.action not in _SOURCE_TEXT_ACTIONS:
             continue
         if emission.relative_path not in outputs:
@@ -779,7 +788,7 @@ def _synthetic_fan_out_translation_holds() -> bool:
     expected_codex = _translated_codex_references(expected_claude)
     fan_out_paths = {
         emission.relative_path
-        for emission in snapshot.plan.for_target(Target.CLAUDE)
+        for emission in snapshot.projection.for_target(Target.CLAUDE)
         if emission.action is EmissionAction.FAN_OUT
     }
     claude_outputs = dict(snapshot.claude)
@@ -824,15 +833,15 @@ def _decode_text(content: bytes) -> str:
 
 
 def _canonical_rendered_emissions(
-    plan: BuildPlan,
+    projection: EmissionProjection,
     target: Target,
 ) -> dict[Path, str]:
     return {
-        emission.relative_path: render_planned_emission_text(
+        emission.relative_path: render_projected_emission_text(
             emission,
             src_root=CANONICAL_SOURCE_ROOT,
         )
-        for emission in plan.for_target(target)
+        for emission in projection.for_target(target)
         if emission.source.suffix in TEXT_FILE_SUFFIXES
         and emission.action in _SOURCE_TEXT_ACTIONS
     }

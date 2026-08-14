@@ -189,7 +189,7 @@ class EmissionAction(StrEnum):
 
 
 @dataclass(frozen=True)
-class PlannedEmission:
+class ProjectedEmission:
     """One source-owned output in one generated target tree."""
 
     source: Path
@@ -199,14 +199,14 @@ class PlannedEmission:
 
 
 @dataclass(frozen=True)
-class BuildPlan:
+class EmissionProjection:
     """Complete source and output inventory for one build."""
 
     plugin_sources: tuple[Path, ...]
-    emissions: tuple[PlannedEmission, ...]
+    emissions: tuple[ProjectedEmission, ...]
 
-    def for_target(self, target: _Target) -> tuple[PlannedEmission, ...]:
-        """Return the planned outputs for ``target``."""
+    def for_target(self, target: _Target) -> tuple[ProjectedEmission, ...]:
+        """Return the projected outputs for ``target``."""
         return tuple(
             emission for emission in self.emissions if emission.target is target
         )
@@ -936,7 +936,7 @@ def frontmatter_field_names(text: str) -> frozenset[str]:
 
 
 def emit_skill(
-    emission: PlannedEmission,
+    emission: ProjectedEmission,
     *,
     dist_root: Path,
     shared_root: Path,
@@ -945,12 +945,12 @@ def emit_skill(
 
     Reads the emission's SKILL.md source, renders directives via shared_root,
     applies target-specific translation, and writes the result to the
-    destination the build plan assigned — which is the source's mirrored path
+    destination the build projection assigned — which is the source's mirrored path
     for an authored plugin skill and the per-plugin path for a template.
     """
     src_root = shared_root.parent
     destination = dist_root / emission.target.value / emission.relative_path
-    rendered = render_planned_emission_text(emission, src_root=src_root)
+    rendered = render_projected_emission_text(emission, src_root=src_root)
     translated = _translate_rendered_text(rendered, target=emission.target)
     _write_text(destination, translated)
     shutil.copymode(emission.source, destination)
@@ -974,7 +974,7 @@ def build(
 
     Raises SourceFormatError if src_root's tree shape is invalid.
     """
-    plan = plan_emissions(src_root)
+    projection = project_emissions(src_root)
     runner = _run_formatter if formatter_runner is None else formatter_runner
     formatter = _require_formatter(
         formatter_probe=formatter_probe,
@@ -989,7 +989,7 @@ def build(
             shutil.rmtree(target_root)
         target_root.mkdir(parents=True, exist_ok=True)
 
-    for emission in plan.emissions:
+    for emission in projection.emissions:
         if emission.action is EmissionAction.CONVERT_AGENT:
             _emit_converted_agent(emission, dist_root=dist_root, src_root=src_root)
             continue
@@ -997,7 +997,7 @@ def build(
             _emit_placement_manifest(emission, dist_root=dist_root)
             continue
         if emission.action is EmissionAction.FAN_OUT:
-            _emit_planned_fan_out(
+            _emit_projected_fan_out(
                 emission,
                 dist_root=dist_root,
                 src_root=src_root,
@@ -1230,20 +1230,20 @@ def _is_rendered_text(path: Path) -> bool:
 
 
 def _emit_rendered_file(
-    emission: PlannedEmission,
+    emission: ProjectedEmission,
     *,
     dist_root: Path,
     src_root: Path,
 ) -> None:
     destination = dist_root / emission.target.value / emission.relative_path
-    rendered = render_planned_emission_text(emission, src_root=src_root)
+    rendered = render_projected_emission_text(emission, src_root=src_root)
     translated = _translate_rendered_text(rendered, target=emission.target)
     _write_text(destination, translated)
     shutil.copymode(emission.source, destination)
 
 
 def _emit_converted_agent(
-    emission: PlannedEmission, *, dist_root: Path, src_root: Path
+    emission: ProjectedEmission, *, dist_root: Path, src_root: Path
 ) -> None:
     """Convert one agent into its target's native artifact and place it.
 
@@ -1258,7 +1258,7 @@ def _emit_converted_agent(
     target's tokens into every generated definition.
     """
     destination = dist_root / emission.target.value / emission.relative_path
-    rendered = render_planned_emission_text(emission, src_root=src_root)
+    rendered = render_projected_emission_text(emission, src_root=src_root)
     translated = _translate_rendered_text(rendered, target=emission.target)
     converted = convert_agent_markdown(
         translated,
@@ -1268,7 +1268,7 @@ def _emit_converted_agent(
     _write_text(destination, converted)
 
 
-def _emit_placement_manifest(emission: PlannedEmission, *, dist_root: Path) -> None:
+def _emit_placement_manifest(emission: ProjectedEmission, *, dist_root: Path) -> None:
     """Write the placement manifest a plugin's lifecycle skill reads."""
     capability = agent_capability(emission.target)
     if capability.checkout_directory is None:
@@ -1290,19 +1290,19 @@ def _emit_placement_manifest(emission: PlannedEmission, *, dist_root: Path) -> N
 
 
 def _copy_unrendered_file(
-    emission: PlannedEmission, *, dist_root: Path, src_root: Path
+    emission: ProjectedEmission, *, dist_root: Path, src_root: Path
 ) -> None:
     destination = dist_root / emission.target.value / emission.relative_path
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(emission.source, destination)
 
 
-def render_planned_emission_text(
-    emission: PlannedEmission,
+def render_projected_emission_text(
+    emission: ProjectedEmission,
     *,
     src_root: Path,
 ) -> str:
-    """Render one planned text emission before target-specific translation."""
+    """Render one projected text emission before target-specific translation."""
     return render_text(
         emission.source.read_text(encoding="utf-8"),
         shared_root=src_root / SHARED_DIR_NAME,
@@ -1323,8 +1323,8 @@ def _translate_rendered_text(rendered: str, *, target: _Target) -> str:
     return translated
 
 
-def _emit_planned_fan_out(
-    emission: PlannedEmission,
+def _emit_projected_fan_out(
+    emission: ProjectedEmission,
     *,
     dist_root: Path,
     src_root: Path,
@@ -1334,7 +1334,7 @@ def _emit_planned_fan_out(
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(emission.source, destination)
         return
-    rendered = render_planned_emission_text(emission, src_root=src_root)
+    rendered = render_projected_emission_text(emission, src_root=src_root)
     translated = _translate_rendered_text(rendered, target=emission.target)
     _write_text(destination, translated)
     shutil.copymode(emission.source, destination)
@@ -1526,12 +1526,12 @@ def template_relative_path(source_file: Path, *, src_root: Path, plugin: str) ->
     return Path(plugin) / SKILLS_SUBDIR_NAME / skill_dir / remainder
 
 
-def plan_emissions(src_root: Path) -> BuildPlan:
-    """Return the complete collision-free output plan for ``src_root``."""
+def project_emissions(src_root: Path) -> EmissionProjection:
+    """Return the complete collision-free output projection for ``src_root``."""
     _validate_source_tree(src_root)
     shared_root = src_root / SHARED_DIR_NAME
     plugin_sources = plugin_source_files(src_root)
-    emissions: list[PlannedEmission] = []
+    emissions: list[ProjectedEmission] = []
     for source_file in plugin_sources:
         relative_path = plugin_relative_path(source_file, src_root=src_root)
         action = (
@@ -1544,7 +1544,7 @@ def plan_emissions(src_root: Path) -> BuildPlan:
                 relative_path, action=action, target=target
             )
             emissions.append(
-                PlannedEmission(
+                ProjectedEmission(
                     source=source_file,
                     target=target,
                     relative_path=target_path,
@@ -1552,17 +1552,19 @@ def plan_emissions(src_root: Path) -> BuildPlan:
                 )
             )
             emissions.extend(
-                _planned_fan_out_emissions(
+                _projected_fan_out_emissions(
                     source_file,
                     target=target,
                     relative_path=relative_path,
                     shared_root=shared_root,
                 )
             )
-    emissions.extend(_planned_template_emissions(src_root, shared_root=shared_root))
-    emissions.extend(_planned_placement_emissions(src_root, emissions))
-    plan = BuildPlan(plugin_sources=plugin_sources, emissions=tuple(emissions))
-    collisions = plan.collisions()
+    emissions.extend(_projected_template_emissions(src_root, shared_root=shared_root))
+    emissions.extend(_projected_placement_emissions(src_root, emissions))
+    projection = EmissionProjection(
+        plugin_sources=plugin_sources, emissions=tuple(emissions)
+    )
+    collisions = projection.collisions()
     if collisions:
         details = ", ".join(
             f"{target.value}/{path}: {', '.join(map(str, sources))}"
@@ -1571,7 +1573,7 @@ def plan_emissions(src_root: Path) -> BuildPlan:
             )
         )
         raise SourceFormatError(f"multiple sources emit the same output: {details}")
-    return plan
+    return projection
 
 
 def agent_slug(plugin: str, stem: str, *, capability: AgentCapability) -> str:
@@ -1592,7 +1594,7 @@ def _agent_aware_destination(
 ) -> tuple[Path, EmissionAction]:
     """Return one source's destination and action for ``target``.
 
-    Every non-agent source keeps the mirrored path the plan computed. An agent
+    Every non-agent source keeps the mirrored path the projection computed. An agent
     source reaching a target whose manifest cannot declare agents is converted
     into that target's native artifact and placed inside the plugin's lifecycle
     skill, the one surface the manifest declares that can carry it.
@@ -1622,45 +1624,45 @@ def _agent_aware_destination(
     return destination, EmissionAction.CONVERT_AGENT
 
 
-def _planned_placement_emissions(
+def _projected_placement_emissions(
     src_root: Path,
-    emissions: Sequence[PlannedEmission],
-) -> tuple[PlannedEmission, ...]:
+    emissions: Sequence[ProjectedEmission],
+) -> tuple[ProjectedEmission, ...]:
     """Return one placement manifest per plugin whose agents need placement.
 
     The manifest tells a plugin's lifecycle skill which checkout directory its
     target reads agent definitions from and which namespace this plugin owns
-    there. It exists only where converted agents were planned, so a plugin that
+    there. It exists only where converted agents were projected, so a plugin that
     ships no agents carries no manifest and its lifecycle skill reports that.
     """
     template = src_root / TEMPLATES_DIR_NAME / LIFECYCLE_TEMPLATE_NAME / SKILL_FILENAME
-    planned: dict[tuple[_Target, Path], PlannedEmission] = {}
+    projected: dict[tuple[_Target, Path], ProjectedEmission] = {}
     for emission in emissions:
         if emission.action is not EmissionAction.CONVERT_AGENT:
             continue
         manifest_path = emission.relative_path.parent / PLACEMENT_MANIFEST_FILENAME
-        planned[(emission.target, manifest_path)] = PlannedEmission(
+        projected[(emission.target, manifest_path)] = ProjectedEmission(
             source=template,
             target=emission.target,
             relative_path=manifest_path,
             action=EmissionAction.PLACEMENT_MANIFEST,
         )
     return tuple(
-        planned[key] for key in sorted(planned, key=lambda k: (k[0].value, k[1]))
+        projected[key] for key in sorted(projected, key=lambda k: (k[0].value, k[1]))
     )
 
 
-def _planned_template_emissions(
+def _projected_template_emissions(
     src_root: Path,
     *,
     shared_root: Path,
-) -> tuple[PlannedEmission, ...]:
+) -> tuple[ProjectedEmission, ...]:
     """Return every per-plugin template output across plugins and targets.
 
     Each template source renders once per plugin per target, so one authored
     body reaches every plugin's generated tree without being copied per plugin.
     """
-    emissions: list[PlannedEmission] = []
+    emissions: list[ProjectedEmission] = []
     for source_file in template_source_files(src_root):
         action = (
             EmissionAction.RENDER
@@ -1673,7 +1675,7 @@ def _planned_template_emissions(
             )
             for target in _Target:
                 emissions.append(
-                    PlannedEmission(
+                    ProjectedEmission(
                         source=source_file,
                         target=target,
                         relative_path=relative_path,
@@ -1681,7 +1683,7 @@ def _planned_template_emissions(
                     )
                 )
                 emissions.extend(
-                    _planned_fan_out_emissions(
+                    _projected_fan_out_emissions(
                         source_file,
                         target=target,
                         relative_path=relative_path,
@@ -1691,13 +1693,13 @@ def _planned_template_emissions(
     return tuple(emissions)
 
 
-def _planned_fan_out_emissions(
+def _projected_fan_out_emissions(
     source_file: Path,
     *,
     target: _Target,
     relative_path: Path,
     shared_root: Path,
-) -> tuple[PlannedEmission, ...]:
+) -> tuple[ProjectedEmission, ...]:
     if (
         SKILLS_SUBDIR_NAME not in relative_path.parts
         or source_file.suffix not in _TEXT_FILE_SUFFIXES
@@ -1714,7 +1716,7 @@ def _planned_fan_out_emissions(
         dict.fromkeys(
             emission
             for directive in directives
-            for emission in _planned_include_emissions(
+            for emission in _projected_include_emissions(
                 directive,
                 target=target,
                 relative_path=relative_path,
@@ -1724,16 +1726,16 @@ def _planned_fan_out_emissions(
     )
 
 
-def _planned_include_emissions(
+def _projected_include_emissions(
     directive: IncludeDirective,
     *,
     target: _Target,
     relative_path: Path,
     shared_root: Path,
     include_stack: tuple[Path, ...] = (),
-) -> tuple[PlannedEmission, ...]:
+) -> tuple[ProjectedEmission, ...]:
     pending = [(directive, include_stack)]
-    emissions: list[PlannedEmission] = []
+    emissions: list[ProjectedEmission] = []
     while pending:
         current_directive, current_stack = pending.pop()
         fragment_path = _resolve_under_root(shared_root, current_directive.path)
@@ -1746,7 +1748,7 @@ def _planned_include_emissions(
         )
         topic_root = fragment_path.parent
         emissions.extend(
-            PlannedEmission(
+            ProjectedEmission(
                 source=child_file,
                 target=target,
                 relative_path=(
