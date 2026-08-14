@@ -2,7 +2,7 @@
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
 argument-hint: "[session-id | --list] [--auto-continue]"
-allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3 "${SKILL_DIR}/scripts/verify_session_claims.py":*), request_user_input, Glob, Skill
+allowed-tools: Read, Bash(spx spec status:*), Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3 "${SKILL_DIR}/scripts/verify_session_claims.py":*), request_user_input, Glob, Skill
 ---
 
 <objective>
@@ -207,6 +207,12 @@ Claude picked up a duplicate session, saw evidence that another active `doing` s
 
 How to avoid: Classify the session as `owned_elsewhere`, report the owning session, branch, or PR, and stop without archiving, releasing, handing off, or moving any session.
 
+**Failure 6: Claude made an empty node list operator homework**
+
+Claude claimed a valid session whose `<nodes>` section was empty, then asked the operator to find and supply a node path even though the goal, `next_step`, and affected skill name identified the product area and `spx spec status` exposed the current node tree.
+
+How to avoid: Run `spx spec status --format json`, match the session evidence against projected node ids and slugs, and contextualize the single valid candidate directly. Ask only when several concrete candidates remain or no product area can be derived, and never ask the operator to search the tree or provide a raw path.
+
 </failure_modes>
 
 <success_criteria>
@@ -230,7 +236,7 @@ A successful pickup:
 - [ ] When classification is `owned_elsewhere`, the owning session, branch, worktree, PR, or commit is reported and pickup stops without archiving, releasing, handing off, or otherwise mutating the claimed session
 - [ ] When classification is not `owned_elsewhere`, a no-surprises proposal is presented before any operator decision: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation
 - [ ] Any later unrepresented skill, evidence surface, external dependency, ownership conflict, or verification class stops at a safe checkpoint before continuation
-- [ ] When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 3 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
+- [ ] The `/contextualize` target is selected without operator search work: recorded-node multiplicity resolves by priority, while an empty or unreadable `<nodes>` section triggers `spx spec status --format json` discovery; one valid candidate is loaded directly, several concrete candidates produce a bounded choice, and no candidate produces a product-intent question rather than a raw-path request
 - [ ] When classification is not `owned_elsewhere`, canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
 - [ ] When classification is not `owned_elsewhere`, post-context decision captured via `request_user_input` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override

@@ -113,7 +113,17 @@ If the session references a single node, invoke `/contextualize` on it immediate
 2. The first `<nodes>` entry whose "Coordination notes" list a `PLAN.md` or `ISSUES.md` path.
 3. The first node listed in `<nodes>`.
 
-Rule 3 always resolves a single node, so node multiplicity never triggers a user question — selection is deterministic. Ask the user which node to start with only when `<nodes>` is empty or unreadable. After loading the first target, contextualize additional nodes only when the next action touches them.
+Rule 3 always resolves a single node, so node multiplicity never triggers a user question — selection is deterministic.
+
+When `<nodes>` is empty or unreadable, discover the target before asking the operator:
+
+1. Run `spx spec status --format json` and treat its node records as the current candidate set. A node's canonical address is `spx/` plus its projected `id`.
+2. Match current session evidence against projected node ids and slugs: explicit valid node addresses in session prose; workflow or skill names in `goal` and `next_step`; and affected or persisted paths whose segments name a projected node slug. A wording-only resemblance with no shared workflow, path, or product-area term is not a match.
+3. Keep only candidates present in the projection. When exactly one remains, select it and invoke `/contextualize` without an operator question.
+4. When several remain, use `AskUserQuestion` once with 2-3 concrete node choices, each naming the canonical full path and the session evidence that matched it. Include a pause-and-inspect option only when the runtime permits one beyond those candidates.
+5. When none remains, ask for the intended product area in plain language. Do not ask the operator to grep or search `spx/`, run `spx spec status`, or supply a raw node path; repository navigation is pickup's work.
+
+If `spx spec status --format json` fails or returns no valid node records, report that exact discovery failure and ask for product intent, not filesystem navigation. After loading the first target, contextualize additional nodes only when the next action touches them.
 
 Invoke on the selected node:
 
@@ -228,7 +238,7 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
-- [ ] When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 3 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
+- [ ] The `/contextualize` target is selected without operator search work: recorded-node multiplicity resolves by priority, while an empty or unreadable `<nodes>` section triggers `spx spec status --format json` discovery; one valid candidate is loaded directly, several concrete candidates produce a bounded choice, and no candidate produces a product-intent question rather than a raw-path request
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` with the full claimed-session set
 - [ ] Claimed session remains in `doing` after the checkpoint — pickup workflow never archives or releases
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
