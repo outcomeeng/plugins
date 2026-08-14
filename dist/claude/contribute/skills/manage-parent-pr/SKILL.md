@@ -121,7 +121,7 @@ Cut every sentence about the contribution's own process — attempts made, time 
 
 - The resolver returned `parent-contribution` before any write.
 - The pull request's state was read once, and `state`, `reviewDecision`, and each required check's conclusion appear verbatim.
-- Every confirmed finding is fixed as a defect class; every unconfirmed finding is answered with evidence.
+- Every confirmed finding is fixed as a defect class, and the Step 6 comment carries one disposition per finding Step 4 read — what changed for a confirmed one, the evidence for an unconfirmed one — so re-reading the posted comment against the review accounts for every finding.
 - The base repository's declared checks ran on the revised branch and reported success.
 - The revision reached the head branch by appending, never by force-push, and the pull request's `headRefOid` equals the commit that was pushed.
 - One comment states what changed, after a prose review, and stands as the re-request.

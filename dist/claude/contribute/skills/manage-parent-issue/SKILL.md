@@ -87,7 +87,7 @@ gh issue close "<number>" --repo "<base>"
 
 - The resolver returned `parent-contribution` or `fork-absent` before any write.
 - The thread was read once, and `state` plus the last maintainer comment appear verbatim.
-- The reply answers the question that was asked, with quoted evidence.
+- The reply's opening sentence answers the question Step 4 identified, and every claim after it is followed by quoted evidence rather than a description of that evidence.
 - Inference is marked as inference; an unreproduced condition is marked unverified.
 - The reply passed a prose review, reported as unassisted where the prose plugin is absent.
 - Any close was authorized in the same turn and applied only to an issue whose `author.login` equals the login `gh api user` reported.
