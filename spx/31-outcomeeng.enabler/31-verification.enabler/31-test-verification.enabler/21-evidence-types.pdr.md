@@ -22,7 +22,7 @@ Harness obligations follow the level's dependency class, identically for every a
 
 Unavailable required evidence never passes: a missing mandatory credential, endpoint, binary, or local service fails loudly, or skips only where the suite declares that evidence optional.
 
-Every cell of the cross-product is decided by composition. An assertion type's section states its artifact rules — case source, oracle, domain, and type-specific artifacts — and those rules hold at every execution level unchanged; the execution level contributes only the harness obligations, the level floor, the availability rule, and the Stage 5 relief above, identically for every type. A per-type section states a per-level delta only where the type changes the answer, as the scenario section's table does. A permission undecidable from this composition is an amendment to this decision, never an author's or auditor's inference.
+Every cell of the cross-product is decided by composition. An assertion type's section states its artifact rules — case source, oracle, domain, and type-specific artifacts — and those rules hold at every execution level unchanged; the execution level contributes only the harness obligations, the level floor, the availability rule, and the Stage 5 relief above, identically for every type. A per-type section states a per-level delta only where the type changes the answer, as the scenario section's level-paired cases do. A permission undecidable from this composition is an amendment to this decision, never an author's or auditor's inference.
 
 ## Test-File Declaration
 
