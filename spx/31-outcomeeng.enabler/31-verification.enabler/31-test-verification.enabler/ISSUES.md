@@ -7,3 +7,13 @@
 **Resolution shape** (fix deferred by operator decision, to be scoped in the skill and agent specialization work): add cross-sibling equivalence detection to the gate set — an `/align` check that every language test-standard node cites this node and declares only deltas, an audit assertion on each language node verifying delta-only content against the cited superset, or a review dimension that compares sibling language standards.
 
 **Evidence.** Named by the operator after observing that the seam specs of all three languages were extremely repetitive and that no auditor or changeset reviewer flagged the repetition across the changeset that carried it.
+
+## Accepted adversarial-review findings against the shipped test-skill families
+
+An adversarial review of the merged PR #519 changeset (`988af420b503b010d85bda6e0afa3a748b5929b5..c42fceef6ef807429e7047d043e517b5e468df0d`) produced nine valid findings; the closing verification of their spec-layer fixes is the sealed review run `2026-08-14_14-34-24-824-a1416573df24`, and the remaining findings below are verifiable directly in the shipped surfaces they name. The five spec-layer findings are resolved: the level discriminator with its boundary rewording of scenario cases 4 and 5, the provenance-bound construction laws with rejected mapping case 25, the default-runner obligation with the pytest and Vitest declarations, the assertion-type taxonomy word at the spec sites, and the realization-only rewrite of both language execution-level delta lines.
+
+The skill-family findings remain, routed as renderings of the decision:
+
+- The shipped Python standards and auditor grant an `Any (fixture)` permission approving fixture-backed Mapping and Property cells the decision forbids, and the shipped test skills still label the assertion-type axis "evidence type" — fold into the Python rendering (PLAN item 5), the Rust rendering (PLAN item 6, for the `audit-rust-tests` site), and the TypeScript rendering (PLAN item 7) respectively.
+- The shipped TypeScript family forbids every runner skip for credentialed tests, contradicting the decision's optional-evidence skip and the aligned TypeScript delta — fold into PLAN item 7.
+- The TypeScript predicate-in-harness sites and the blanket binding ban are already owned by `spx/43-typescript.enabler/25-typescript-standards.enabler/PLAN.md` and get no second record here.
