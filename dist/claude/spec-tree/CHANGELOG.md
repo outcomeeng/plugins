@@ -10,6 +10,18 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.89.0
+
+### Changed
+
+- **The shared test-evidence standard decides artifact permission per assertion type and execution level.** `test-evidence-standards` is restructured into a levels → artifacts → per-type order. Execution levels (`l1`/`l2`/`l3`) are defined by dependency class with an ordered executable discriminator: an artifact of the product under test is `l1` when the suite exercises the form the checkout carries (the in-cycle build among its forms) and `l2` for every other acquired form — installed, bootstrapped, preinstalled, or otherwise obtained — with every other executable classified by whether the declared environment or in-cycle toolchain supplies it; the level floor stays `l3` where the evidence run itself must reach a remote, shared, credentialed, or network-dependent system. Each assertion type's section now states its artifact permissions, with per-level deltas only where the type changes the answer, and every cell is decided by composing the type's rules with the level's harness obligations — a permission undecidable from that composition is an amendment to the product's governing evidence decision, never an author's or auditor's inference.
+
+### Added
+
+- **The canonical test-filename model is part of the shared standard.** Each executed test file declares exactly one assertion type and one execution level through `<subject>.<evidence>.<level>[.<runner>]`; a product's language test standard declares its filename instantiation and the default runner an omitted runner token names — or the deterministic rule, including any repository override, by which that default is derived.
+- **Cross-assertion value ownership has a decision procedure.** Two probes — negation and transplant — decide whether a value is harness-owned or the assertion's own; a cross-assertion value reaches the test only as a handle or observation, and the first executed test that touches a process, filesystem, clock, network, or randomness establishes the harness later tests reuse.
+- **Language deltas are expression only.** A language test standard cites its product's governing evidence decision by full path, realizes the categories this standard permits in its language's terms, and neither narrows nor widens any seam, provenance, oracle, level, or permission rule; a category a language cannot realize routes to a decision amendment, never a silent per-language subtraction.
+
 ## 0.88.10
 
 ### Changed
