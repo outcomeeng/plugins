@@ -10,6 +10,8 @@ This node is the single language-neutral superset of the test-evidence seam rule
 
 ### Compliance
 
+- ALWAYS: assertion-type and execution-level evidence semantics — the type × level artifact permissions, execution-level selection, the canonical test-filename model, and expression-only language deltas — derive from `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md` ([audit])
+
 - ALWAYS: harness, generator, fixture, source-contract, test-infrastructure-home, and full-chain audit semantics derive from `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` ([audit])
 - ALWAYS: source modules expose the observable contracts tests need — pure functions, typed dependency parameters, interfaces, protocols, traits, registries, constructors, schemas, enums, or typed factories — so behavior is testable through the production API, and the source contract is improved before a test accepts a workaround ([audit])
 - ALWAYS: command and script entrypoints stay thin boundaries around imported orchestrators or domain modules; tests verify parsing and dispatch at the boundary while deeper behavior is tested through reusable modules ([audit])

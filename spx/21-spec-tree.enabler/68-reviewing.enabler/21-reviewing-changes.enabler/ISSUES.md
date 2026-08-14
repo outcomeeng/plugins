@@ -138,3 +138,9 @@ The cost is not symmetric across the two surfaces. A review states findings and 
 **Evidence**: review run `2026-08-05_13-13-52-179-c96364b3dc5f`, one debt finding on an otherwise approved review. Then implementation-audit run `2026-08-05_21-52-18-042-b561b26753fb` on the same script, `terminalStatus: rejected` on the single finding `design-coherence: speculative dependency-injection seam with no consumer`, whose stated expectation — that a seam arrive with a consumer or be deferred — is the opposite of what `spx/12-shipped-scripting.adr.md` requires, and whose asked-for test consumer that same decision permits only under a `/test` Stage 5 exception no L1 git dependency opens. Both were dropped as unbacked after `/test` routing and the two decisions above.
 
 Revisit entries 5 and 6 when review moves from `spx journal --type review` to `spx verification run`. Exercise the migration with an in-progress inspection before seal, repeated inspection of one file, restored prior-run context, and a final projection whose unique covered-unit count equals the changeset scope.
+
+## `audit` is not an assertion-type token
+
+`tests/test_reviewing_changes.audit.l1.py` carries the evidence token `audit`, outside the five assertion types the canonical test-filename model in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md` recognizes (scenario, mapping, conformance, property, compliance), so the file declares no recognized cell.
+
+**Resolution shape**: route the file's assertions through `/test` to select the correct assertion type, rename the file to that token, and update the `[test]` links in this node's spec. Deferred from the decision changeset that bound the model because re-typing this node's evidence requires this node's context, `/test` routing, and the test-evidence gate.
