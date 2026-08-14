@@ -51,7 +51,9 @@ An issue the operator filed is the artifact they already authorized, and a reply
 
 This gate precedes Step 6's write. A comment notifies every watcher of a repository the operator does not control, and that cannot be taken back by deciding afterwards that the thread was someone else's.
 
-**Step 6 — GATE: Review the reply, then post it.** Draft per `<reply_shape>` and review — the prose plugin's `prose-auditor` agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such.
+**Step 6 — GATE: Review the reply, then post it.** A reply is posted only when the thread asked for one. An invocation that reports the thread's current state, and a thread where the maintainer has asked nothing since the last reply, both skip this step and continue to Step 7: a comment that answers no question is a notification the maintainer did not ask for, on a repository the operator does not control. Step 7 still runs, because closing depends on Step 5's author comparison and never on a comment having been posted — a thread that asks nothing is exactly the thread an operator may want closed.
+
+With a question to answer, draft per `<reply_shape>` and review — the prose plugin's `prose-auditor` agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such.
 
 ```bash
 printf '%s\n' '<line>' '<line>' | gh issue comment "<number>" --repo "<base>" --body-file -
@@ -82,6 +84,7 @@ gh issue close "<number>" --repo "<base>"
 - MUST read the thread exactly once per invocation and return without waiting.
 - MUST name the base repository with `--repo` on every `gh` write.
 - MUST answer the maintainer's question before adding anything else.
+- NEVER post a comment when the thread asked nothing — a state-only invocation returns what it read and writes nothing.
 - MUST establish the issue's author before the first write, and obtain authorization in the same turn before commenting on a thread the operator did not open.
 - MUST obtain authorization in the same turn before closing an issue.
 - MUST read `gh api user` only for the Step 5 authorship comparison. `/contribution-standards` `<invariants>` "Establish permission from the API" rules the authenticated account out as evidence of permission on the base; it is evidence of identity and nothing else.

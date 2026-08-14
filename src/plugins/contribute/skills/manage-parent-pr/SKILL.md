@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when continuing an open pull request against a repository the operator does not control — answering review, publishing a revision, or reporting its current state.
   NEVER comment on or push to such a pull request without this skill.
 argument-hint: "[pull request number or URL]"
-allowed-tools: Read, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(git fetch:*), Bash(git switch:*), Bash(git rev-list:*), Bash(git branch --show-current), Bash(git add:*), Bash(git commit:*), Bash(git push origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
+allowed-tools: Read, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(git status --porcelain), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(git fetch:*), Bash(git switch:*), Bash(git rev-list:*), Bash(git branch --show-current), Bash(git add:*), Bash(git commit:*), Bash(git push origin HEAD:refs/heads/*), Bash(printf:*)
 ---
 
 <objective>
@@ -37,7 +37,13 @@ gh pr list --repo "<base>" --head "$(git branch --show-current)" --json number,h
 gh pr view "<number>" --repo "<base>" --json state,isDraft,reviewDecision,mergeStateStatus,statusCheckRollup,comments,reviews,headRefName,headRepository,headRepositoryOwner,url
 ```
 
-Read review threads through the API when line-anchored comments matter. Read the state one time — a maintainer answers on their own schedule, and `/contribution-standards` forbids polling, watching, and sleeping on the artifact.
+Read review threads through the API when line-anchored comments matter, because `gh pr view` carries the PR-level conversation and not the comments tied to a file and line:
+
+```bash
+gh api repos/"<base>"/pulls/"<number>"/comments --paginate --jq '.[] | {path, line, body}'
+```
+
+Read the state one time — a maintainer answers on their own schedule, and `/contribution-standards` forbids polling, watching, and sleeping on the artifact.
 
 Report `state`, `reviewDecision`, and each required check's conclusion verbatim. `reviewDecision` stays `CHANGES_REQUESTED` until the maintainer looks again; nothing on the contributor's side clears it, and that is not a defect to work around.
 
@@ -45,16 +51,27 @@ Report `state`, `reviewDecision`, and each required check's conclusion verbatim.
 
 **STOP when `headRepositoryOwner`/`headRepository` do not equal the resolved `head`.** A number or URL names a pull request from any fork, and Step 5 pushes this checkout's `HEAD`; without this check a fix reaches an unrelated fork's branch while the reply claims this pull request was revised.
 
-When they do match, check out `headRefName` before editing, so the branch being fixed is the branch the pull request carries. `origin` is the resolved head, confirmed above, so the branch is fetched through it:
+When they do match, check out `headRefName` before editing, so the branch being fixed is the branch the pull request carries. That fetch reads through `origin`, so verify `origin` first per `/contribution-standards` `<resolution>` "Verify `origin` before pushing or fetching through it" — a remote name is a local label, and an `origin` pointing elsewhere fetches a same-named branch from an unrelated repository:
 
 ```bash
+gh repo view "$(git remote get-url origin)" --json nameWithOwner --jq '.nameWithOwner'
+```
+
+**STOP when that does not equal the resolved `head`.**
+
+Two conditions must hold before the branch moves. The checkout must carry no uncommitted work, because the reset below takes those edits onto the pull request's branch, where Step 4 reproduces findings against them and Step 5 can commit one that overlaps a fixed path:
+
+```bash
+git status --porcelain
 git fetch origin "<headRefName>"
 git rev-list --count FETCH_HEAD..refs/heads/"<headRefName>"
 ```
 
-The second command runs only when that branch already exists locally, and its count is the commits the local branch carries that the fetched pull-request tip does not. **STOP when the count is not zero**: those commits are work the pull request has never seen, and the next command discards them. Report them and let the operator decide.
+**STOP when `git status --porcelain` prints anything.** Report the paths; committing or setting aside someone's in-progress work is theirs to decide, not this flow's.
 
-With nothing to lose, base the branch on the fetched tip:
+The third command runs only when that branch already exists locally, and its count is the commits the local branch carries that the fetched pull-request tip does not. **STOP when the count is not zero**: those commits are work the pull request has never seen, and the next command discards them.
+
+With a clean tree and nothing unpushed to lose, base the branch on the fetched tip:
 
 ```bash
 git switch -C "<headRefName>" FETCH_HEAD
@@ -64,7 +81,9 @@ git switch -C "<headRefName>" FETCH_HEAD
 
 **Step 4 — GATE: Verify each finding before fixing it.** Reproduce the finding against the branch and report which findings confirmed. A finding the branch does not exhibit is answered with the evidence rather than with a change.
 
-**Step 5 — Fix, commit, verify, append.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` before the push. Apply every confirmed finding as a defect class: fix the cited site and every parallel instance the same rule reaches. Re-run the base repository's declared checks per `/contribution-standards`.
+**Step 5 — Fix, commit, verify, append.** Apply every confirmed finding as a defect class: fix the cited site and every parallel instance the same rule reaches. Re-run the base repository's declared checks per `/contribution-standards`.
+
+**When no finding produced a change, skip to Step 6.** A pass where every finding failed reproduction, and a pass invoked only to report the pull request's state, both reach this step with nothing to commit. `git commit` with no staged change exits non-zero, which would strand the evidence Step 6 owes the maintainer for the findings that did not reproduce. There is nothing to push either — the pull request already carries what it carried.
 
 Commit the fixes before pushing. A push transfers commits, so an uncommitted fix leaves the pull request exactly as the maintainer left it while Step 6 posts a reply announcing a revision that is not there:
 
@@ -102,7 +121,7 @@ That comment is the re-request. Requesting a reviewer is a maintainer-side actio
 
 A reply answers the review. Structure it by finding:
 
-- Open with what was confirmed and what was pushed, in one line.
+- Open with what was confirmed and, when a fix was pushed, what was pushed, in one line. A pass that changed nothing says what it verified, and claims no revision.
 - One section per finding, naming the finding and what changed. Quote the evidence rather than describing it.
 - A finding that did not reproduce gets the evidence that shows it did not, not an argument.
 - Close with what the maintainer is being asked to look at.
@@ -115,6 +134,9 @@ Cut every sentence about the contribution's own process — attempts made, time 
 
 - MUST read the pull request's state exactly once per invocation and return without waiting.
 - MUST verify a finding against the branch before changing code for it.
+- MUST confirm `origin` resolves to the resolved head before the Step 3 fetch, not only before the Step 5 push. The fetch reads through `origin` too, and the reset that follows it moves the branch to whatever that fetch returned.
+- MUST require a clean working tree before the Step 3 reset, and commit nothing the operator left in progress.
+- NEVER commit or push when no confirmed finding produced a change; Step 6 still owes the maintainer the evidence for what did not reproduce.
 - MUST name the base repository with `--repo` on every `gh` write.
 - NEVER force-push the head branch. The `Bash(git push origin HEAD:refs/heads/*)` grant matches by prefix, so it admits `--force` and `--force-with-lease` too; this constraint is the whole containment for those flags.
 - NEVER pass `--force` or `--discard-changes` to `git switch`. The `Bash(git switch:*)` grant matches by prefix and admits both, and either one drops uncommitted work in the invocation checkout. `-C` moves the branch pointer and is required by Step 3; neither of those flags is.
@@ -132,6 +154,8 @@ Cut every sentence about the contribution's own process — attempts made, time 
 
 **A structural permission failure was retried.** Claude ran `gh pr edit --add-reviewer` after pushing fixes, read `does not have the correct permissions to execute RequestReviewsByLogin`, and retried it. The call fails on every base the operator does not control. Post the comment stating what changed and stop.
 
+**A gate was described before it existed.** Step 3 told the pass that `origin` had been "confirmed above" and fetched the pull request's head branch through it. The confirmation sat in Step 5, two steps later — so the fetch, and the reset that moved the branch to whatever it returned, both ran on an unverified remote label. Place a gate before the command it protects, and state it there rather than asserting elsewhere that it already happened.
+
 **A finding was fixed without being reproduced.** Claude read a review comment, changed the cited line, and pushed. The finding described a case the branch did not exhibit, so the change answered nothing and added a diff the maintainer had to review. Reproduce first, then fix what confirmed.
 
 </failure_modes>
@@ -142,7 +166,8 @@ Cut every sentence about the contribution's own process — attempts made, time 
 - The pull request's state was read once, and `state`, `reviewDecision`, and each required check's conclusion appear verbatim.
 - Every confirmed finding is fixed as a defect class, and the Step 6 comment carries one disposition per finding Step 4 read — what changed for a confirmed one, the evidence for an unconfirmed one — so re-reading the posted comment against the review accounts for every finding.
 - The base repository's declared checks ran on the revised branch and reported success.
-- The revision reached the head branch by appending, never by force-push, and the pull request's `headRefOid` equals the commit that was pushed.
+- `origin` was confirmed to be the resolved head and the working tree was clean before the head branch was reset to the fetched tip.
+- A revision reached the head branch by appending, never by force-push, and the pull request's `headRefOid` equals the commit that was pushed; a pass that changed nothing committed and pushed nothing.
 - One comment states what changed, after a prose review, and stands as the re-request.
 - The pass returned without polling, watching, or sleeping.
 

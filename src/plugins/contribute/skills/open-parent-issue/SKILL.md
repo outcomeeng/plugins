@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when filing an issue in a repository the operator does not control — a fork's parent, or any base whose permission is READ, TRIAGE, or NONE.
   NEVER open an issue against such a repository without this skill.
 argument-hint: "[what was observed]"
-allowed-tools: Read, Glob, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(gh issue create:*), Bash(gh search issues:*), Bash(git log:*), Bash(printf:*)
+allowed-tools: Read, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(gh issue create:*), Bash(gh search issues:*), Bash(printf:*)
 ---
 
 <objective>
@@ -15,7 +15,7 @@ One issue open in a repository the operator does not control, carrying an observ
 
 **Step 1 — Load the standards and read the invocation input.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
 
-`$ARGUMENTS`, when non-empty, is the observation this report is built around: it supplies Step 3's distinguishing search terms, Step 4's claim to gather evidence for, and Step 5's one-sentence summary. When it is empty, ask the operator what was observed before Step 3, because a report has no subject without it.
+`$ARGUMENTS`, when non-empty, is the observation this report is built around: it supplies Step 3's distinguishing search terms, Step 4's claim to gather evidence for, and Step 5's one-sentence summary. When it is empty, present, through the runtime's structured-question tool, the request for what was observed, before Step 3, because a report has no subject without it.
 
 **Step 2 — GATE: Resolve the target.** Run the resolver named in `/contribution-standards` `<resolution>`. Report `base` and `permission` verbatim.
 
@@ -60,7 +60,13 @@ gh issue create --repo "<base>" --title "<title>" --body-file - <<'EOF'
 EOF
 ```
 
-Programmatic runners use one `printf` argument per output line piped into the same command. Never assemble the body through a temporary file, command substitution, or post-hoc repair.
+Programmatic runners that require one physical command line use one `printf` argument per output line piped into the same command:
+
+```bash
+printf '%s\n' '<what was observed>' '' '## Reproduction' '' '<versions, base commit, exact command>' '' '## Negative control' '' '<the same method reporting the opposite result>' | gh issue create --repo "<base>" --title "<title>" --body-file -
+```
+
+Never assemble the body through a temporary file, command substitution, or post-hoc repair.
 
 **Step 8 — Hand off.** Surface the issue URL. `/manage-parent-issue` owns every later pass on the thread.
 

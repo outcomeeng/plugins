@@ -57,7 +57,7 @@ An empty diff means the contribution was left behind; stop rather than opening a
 
 A conflict stops the replay mid-pick and leaves the checkout in that state. Run `git cherry-pick --abort` to return it to the branch tip, then report the conflicting commit and stop. The replay conflicts because the base moved under the change, and reconciling it is a decision about the contribution rather than a step of cutting the branch.
 
-**Step 5 — Conform to the base repository's conventions.** Before writing code, read what that repository declares: its contributing guide, the READMEs governing any fixture or test-data directory the change touches, metadata schemas, the documents a change of this kind updates, and the commit-message style of recent history. Shape the change to those conventions.
+**Step 5 — Conform to the base repository's conventions.** Before writing code, read what that repository declares: its contributing guide, the READMEs governing any fixture or test-data directory the change touches, metadata schemas, the documents a change of this kind updates, and the commit-message style of recent history. Locate them by pattern rather than by guessing at paths — `**/CONTRIBUTING*`, `**/README*`, and the directories the change touches — then read each one. Shape the change to those conventions.
 
 **Step 6 — GATE: Run the base repository's own verification.** Locate its declared checks — the commands its contributing guide names, its workflow files, and its build and test targets — and run them locally. They must report success.
 
@@ -80,7 +80,13 @@ git commit -m "<message in the base repository's commit style>"
 
 Confirm the branch carries a change before continuing. `git diff --stat FETCH_HEAD...HEAD` empty here means the pull request would be empty; stop rather than opening it.
 
-**Step 9 — Push, then open.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` "Verify `origin` before pushing or fetching through it", then push the branch with the explicit destination ref and open the pull request naming the base repository.
+**Step 9 — Push, then open.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` "Verify `origin` before pushing or fetching through it" — a remote name is a local label, and pushing through the wrong one publishes the contribution to a repository nobody named:
+
+```bash
+gh repo view "$(git remote get-url origin)" --json nameWithOwner --jq '.nameWithOwner'
+```
+
+**STOP when that does not equal the resolved `head`.** Then push the branch with the explicit destination ref and open the pull request naming the base repository.
 
 Derive `<head-owner>` from the resolved `head`, which the resolver reports as `owner/name`: take the portion before the `/`. `gh pr create --head` reads `owner:branch`, so passing the whole `owner/name` there names no head at all.
 

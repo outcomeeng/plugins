@@ -27,7 +27,13 @@ gh repo view "<head>" --json defaultBranchRef --jq '.defaultBranchRef.name'
 gh repo view "<base>" --json defaultBranchRef --jq '.defaultBranchRef.name'
 ```
 
-**Step 4 — GATE: Establish behind versus diverged.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` before fetching through it. Fetch the base default branch by URL, so the count never depends on a remote name the checkout may not carry, then count commits on each side:
+**Step 4 — GATE: Establish behind versus diverged.** Confirm `origin` resolves to the resolved head per `/contribution-standards` `<resolution>` before fetching through it — a remote name is a local label, and this step decides whether to discard commits:
+
+```bash
+gh repo view "$(git remote get-url origin)" --json nameWithOwner --jq '.nameWithOwner'
+```
+
+**STOP when that does not equal the resolved `head`.** Fetch the base default branch by URL, so the count never depends on a remote name the checkout may not carry, then count commits on each side:
 
 ```bash
 git fetch origin "<head-default-branch>"
@@ -37,7 +43,13 @@ git rev-list --left-right --count "origin/<head-default-branch>...FETCH_HEAD"
 
 The left count is commits the fork's default branch carries that the parent does not. When it is zero the fork is behind and Step 5 syncs it. When it is greater than zero the fork's default branch is **diverged**: someone committed there, and syncing would discard that work.
 
-A diverged default branch stops the flow. Report each commit on the left side with its subject and author, and the branch or pull request that could preserve it. Never resolve divergence by discarding.
+A diverged default branch stops the flow. Read the commits the count reported on the left, which is the side `origin/<head-default-branch>` carries and the parent does not:
+
+```bash
+git log --format='%h %s (%an)' "FETCH_HEAD..origin/<head-default-branch>"
+```
+
+Report each one with its subject and author, and the branch or pull request that could preserve it. Never resolve divergence by discarding.
 
 **Step 5 — Sync.**
 
