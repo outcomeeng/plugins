@@ -10,7 +10,7 @@
 
 ## Accepted adversarial-review findings against the shipped test-skill families
 
-An adversarial review of the merged PR #519 changeset (`988af420b503b010d85bda6e0afa3a748b5929b5..c42fceef6ef807429e7047d043e517b5e468df0d`), recorded at `.spx/reviews/2026-08-14-pr519-codex-adversarial.md` (pool-relative, beside the git common dir), produced nine valid findings. The five spec-layer findings are resolved: the level discriminator with its boundary rewording of scenario cases 4 and 5, the provenance-bound construction laws with rejected mapping case 25, the default-runner obligation with the pytest and Vitest declarations, the assertion-type taxonomy word at the spec sites, and the realization-only rewrite of both language execution-level delta lines.
+An adversarial review of the merged PR #519 changeset (`988af420b503b010d85bda6e0afa3a748b5929b5..c42fceef6ef807429e7047d043e517b5e468df0d`) produced nine valid findings; the closing verification of their spec-layer fixes is the sealed review run `2026-08-14_14-34-24-824-a1416573df24`, and the remaining findings below are verifiable directly in the shipped surfaces they name. The five spec-layer findings are resolved: the level discriminator with its boundary rewording of scenario cases 4 and 5, the provenance-bound construction laws with rejected mapping case 25, the default-runner obligation with the pytest and Vitest declarations, the assertion-type taxonomy word at the spec sites, and the realization-only rewrite of both language execution-level delta lines.
 
 The skill-family findings remain, routed as renderings of the decision:
 

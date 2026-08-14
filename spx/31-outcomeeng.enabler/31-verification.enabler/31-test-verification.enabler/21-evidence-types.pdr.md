@@ -85,9 +85,9 @@ A spec-declared value and the source complying with it admit no conformance evid
 
 Valid:
 
-26. `l1` — generated output validated by a repository-standard schema validator against a separately owned schema.
+26. `l1` — generated output validated against a separately owned schema by a repository-standard validator — one the declared environment supplies or the declared toolchain builds in-cycle.
 27. `l1` — a compile-fail harness passes a violating source fixture by path to the standard compiler; the compiler is the oracle.
-28. `l2` — an emitted artifact is validated by a product-specific binary's validator.
+28. `l2` — an emitted artifact is validated by a product-specific binary's validator — an installed or bootstrapped artifact per the executable discriminator.
 29. `l1` — captured whole-payload protocol fixtures, read by path, validated against the separately owned protocol schema.
 30. `l3` — the contract is verified against a remote reference implementation through credentialed harnesses, selected by necessity.
 
@@ -130,7 +130,7 @@ Valid:
 46. `l1` — an enforcement rule runs against a violating source fixture by path; the test asserts detection with the rule identifier imported from the rule's registry.
 47. `l1` — a NEVER-rule exercised with a real violating input; disabling the enforcement fails the test.
 48. `l1` — violating and conforming fixtures together, the conforming cases proving no false positive alongside the required violating cases.
-49. `l2` — enforcement shipped in a product-specific binary exercised against a violating fixture.
+49. `l2` — enforcement shipped in a product-specific binary — an installed or bootstrapped artifact per the executable discriminator — exercised against a violating fixture.
 
 Rejected:
 
