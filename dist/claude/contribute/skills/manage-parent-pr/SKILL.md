@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when continuing an open pull request against a repository the operator does not control — answering review, publishing a revision, or reporting its current state.
   NEVER comment on or push to such a pull request without this skill.
 argument-hint: "[pull request number or URL]"
-allowed-tools: Read, Skill, Agent, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --show-current), Bash(git add:*), Bash(git commit:*), Bash(git push origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
+allowed-tools: Read, Skill, Agent, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(git fetch:*), Bash(git switch:*), Bash(git rev-list:*), Bash(git branch --show-current), Bash(git add:*), Bash(git commit:*), Bash(git push origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
 ---
 
 <objective>
@@ -49,10 +49,18 @@ When they do match, check out `headRefName` before editing, so the branch being 
 
 ```bash
 git fetch origin "<headRefName>"
-git switch "<headRefName>"
+git rev-list --count FETCH_HEAD..refs/heads/"<headRefName>"
 ```
 
-An invocation that is already on that branch still runs this, because Step 5 pushes `HEAD` and a pass started from an unrelated branch would otherwise commit and push that branch's contents under this pull request's name.
+The second command runs only when that branch already exists locally, and its count is the commits the local branch carries that the fetched pull-request tip does not. **STOP when the count is not zero**: those commits are work the pull request has never seen, and the next command discards them. Report them and let the operator decide.
+
+With nothing to lose, base the branch on the fetched tip:
+
+```bash
+git switch -C "<headRefName>" FETCH_HEAD
+```
+
+`-C` is required. Plain `git switch` selects an existing local branch without moving it, so a branch left behind from an earlier pass verifies Step 4's findings against stale code and Step 5's push is rejected as non-fast-forward. An invocation already sitting on that branch still runs this, because Step 5 pushes `HEAD`.
 
 **Step 4 — GATE: Verify each finding before fixing it.** Reproduce the finding against the branch and report which findings confirmed. A finding the branch does not exhibit is answered with the evidence rather than with a change.
 
@@ -109,7 +117,8 @@ Cut every sentence about the contribution's own process — attempts made, time 
 - MUST verify a finding against the branch before changing code for it.
 - MUST name the base repository with `--repo` on every `gh` write.
 - NEVER force-push the head branch. The `Bash(git push origin HEAD:refs/heads/*)` grant matches by prefix, so it admits `--force` and `--force-with-lease` too; this constraint is the whole containment for those flags.
-- NEVER pass `--force` or `--discard-changes` to `git switch`. The `Bash(git switch:*)` grant matches by prefix and admits both, and either one drops uncommitted work in the invocation checkout. Checking out the pull request's head branch never needs them.
+- NEVER pass `--force` or `--discard-changes` to `git switch`. The `Bash(git switch:*)` grant matches by prefix and admits both, and either one drops uncommitted work in the invocation checkout. `-C` moves the branch pointer and is required by Step 3; neither of those flags is.
+- NEVER run the `-C` reset before the commit count proves the local branch carries nothing the fetched tip lacks. `-C` moves the branch to `FETCH_HEAD`, so a local commit the pull request has not seen is lost without that check.
 - NEVER stage by wildcard. The `Bash(git add:*)` grant matches by prefix, so it admits `-A` and `.`, either of which sweeps unrelated work in the invocation checkout into a commit destined for someone else's repository. Name the fixed paths.
 - NEVER pass `--no-verify` to `git commit`. The `Bash(git commit:*)` grant matches by prefix and admits it. Hooks run from this checkout's own configuration, which conforming to the base repository's conventions is what installs, so skipping them drops part of the verification `/contribution-standards` requires. No hook being configured right now is not a reason to pass the flag.
 - NEVER write through `gh api` — the `Bash(gh api repos/*/pulls/*/comments:*)` grant exists to read review threads, and matching by prefix it also admits `-X DELETE` and `-X PATCH` against a maintainer's comment. Read only.

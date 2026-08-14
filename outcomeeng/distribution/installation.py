@@ -202,6 +202,21 @@ class InstallationReport:
             entry.plugin for entry in self.pending_publication if entry.agent is agent
         )
 
+    def installed_for(self, agent: Agent) -> frozenset[str]:
+        """The plugins this agent installed: what it planned, less what is pending.
+
+        The plan carries the committed catalog, which is what the run intended
+        rather than what it achieved. Every reader of this report — the text
+        summary and the JSON document alike — answers from here, so the two
+        cannot disagree about whether a pending plugin was installed.
+        """
+        planned = (
+            self.plan.claude_plugins
+            if agent is Agent.CLAUDE
+            else self.plan.codex_plugins
+        )
+        return frozenset(planned) - self.pending_for(agent)
+
 
 class InstallationFailure(RuntimeError):
     """The first failed installation command and completed prefix."""
@@ -798,14 +813,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps({"error": str(error)}, sort_keys=True), file=sys.stderr)
         return 1
     if arguments.json_output:
-        print(json.dumps(_report_document(report), sort_keys=True))
+        print(json.dumps(report_document(report), sort_keys=True))
     else:
-        claude_pending = report.pending_for(Agent.CLAUDE)
-        codex_pending = report.pending_for(Agent.CODEX)
-        claude = [p for p in report.plan.claude_plugins if p not in claude_pending]
-        codex = [p for p in report.plan.codex_plugins if p not in codex_pending]
-        print(f"installed {len(claude)} Claude plugins")
-        print(f"installed {len(codex)} Codex plugins")
+        print(f"installed {len(report.installed_for(Agent.CLAUDE))} Claude plugins")
+        print(f"installed {len(report.installed_for(Agent.CODEX))} Codex plugins")
         for entry in report.pending_publication:
             print(
                 f"pending publication, not installed: {entry.plugin} ({entry.agent.value})"
@@ -1156,11 +1167,11 @@ def _failure_document(failure: InstallationFailure) -> dict[str, object]:
     }
 
 
-def _report_document(report: InstallationReport) -> dict[str, object]:
+def report_document(report: InstallationReport) -> dict[str, object]:
     return {
         "mode": report.plan.mode.value,
-        "claude_plugins": list(report.plan.claude_plugins),
-        "codex_plugins": list(report.plan.codex_plugins),
+        "claude_plugins": sorted(report.installed_for(Agent.CLAUDE)),
+        "codex_plugins": sorted(report.installed_for(Agent.CODEX)),
         "completed_operations": len(report.results),
         "state_root": (
             str(report.plan.roots.state) if report.plan.roots.state else None

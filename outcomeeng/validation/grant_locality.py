@@ -55,9 +55,20 @@ SKILL_DIR_VARIABLES: Final = ("CLAUDE_SKILL_DIR", "SKILL_DIR")
 # ``${SKILL_DIR}`` does not also match inside ``${CLAUDE_SKILL_DIR}`` and report
 # one violation twice.  Containment is decided from the trailing path, not from
 # this pattern, so every spelling reaches the same walk.
+#
+# The path runs to the grant's own delimiter rather than stopping at a quote,
+# because the shell concatenates adjacent quoted and unquoted pieces: the
+# command line ``"${VAR}"/../sibling/x.py`` reaches the same file as
+# ``"${VAR}/../sibling/x.py"``.  Stopping at the quote read the first spelling
+# as an empty path and passed it.  Quotes are stripped before the walk, so both
+# spellings reach the identical segment sequence.
 _SKILL_DIR_REFERENCE: Final[re.Pattern[str]] = re.compile(
-    r"\$\{(?:" + "|".join(SKILL_DIR_VARIABLES) + r")\}(?P<path>(?:/[^\"'\s:)]*)?)"
+    r"\$\{(?:" + "|".join(SKILL_DIR_VARIABLES) + r")\}(?P<path>[^\s:),]*)"
 )
+
+# The quote characters a shell concatenates across.  Removing them turns every
+# spelling of one path into the same segment sequence.
+_SHELL_QUOTES: Final = str.maketrans("", "", "\"'")
 
 # The ``allowed-tools`` declaration, matched at the start of a line so a body
 # mention of the field name is not read as a grant declaration.
@@ -73,9 +84,12 @@ def _escapes(path: str) -> bool:
     descends and each ``..`` ascends, so a reference escapes exactly when the
     walk ever rises above its starting directory. ``scripts/../scripts`` returns
     to itself and stays; ``scripts/../../sibling`` does not.
+
+    Shell quotes are removed first, so a path the shell assembles from adjacent
+    quoted and unquoted pieces walks as the single path it becomes.
     """
     depth = 0
-    for segment in path.split("/"):
+    for segment in path.translate(_SHELL_QUOTES).split("/"):
         if segment in ("", "."):
             continue
         if segment == "..":

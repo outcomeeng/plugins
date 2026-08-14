@@ -139,7 +139,7 @@ The body explains why; the diff already shows what.
 
 - MUST resolve the target through the bundled resolver before the first write — reading `isFork`, `parent`, and `viewerPermission` by eye is the failure this gate exists to prevent.
 - MUST obtain authorization naming the resolved base in the same turn before creating the pull request.
-- MUST name the base repository with `--repo` and the head with `--head <head-owner>:<branch>` on `gh pr create`.
+- MUST name the base repository with `--repo` on `gh pr create`, and name the head explicitly rather than letting `gh` resolve one: `--head <head-owner>:<branch>` for a user-owned head, `--head <branch>` from a checkout whose `origin` is the head repository when that head is organization-owned. `gh` documents the qualified form as `<user>:<branch>`, so requiring it unconditionally steers an organization-owned head back into the form that cannot select it.
 - MUST cut the contribution branch from the base repository's default branch, under a name derived in Step 4 before the first command that uses it.
 - NEVER force-push. The `Bash(git push -u origin HEAD:refs/heads/*)` grant matches by prefix, so it admits `--force` and `--force-with-lease` too; this constraint is the whole containment for those flags.
 - NEVER pass `--force` or `--discard-changes` to `git switch` — the `Bash(git switch:*)` grant matches by prefix and admits both, and either one drops uncommitted work in the invocation checkout. Cutting the contribution branch never needs them.
@@ -165,7 +165,7 @@ The body explains why; the diff already shows what.
 - The contribution branch was cut from the base repository's default branch.
 - The base repository's declared checks ran locally and reported success; any check that could not run is named in the body as unverified with its reason.
 - The title and body passed a prose review, and a review that ran unassisted is reported as such.
-- `gh pr create` named the base with `--repo` and the head with `--head <head-owner>:<branch>`, and the body arrived on stdin.
+- `gh pr create` named the base with `--repo` and named the head explicitly — `<head-owner>:<branch>`, or `<branch>` alone for an organization-owned head — and the body arrived on stdin.
 - The pull-request URL is surfaced and `/manage-parent-pr` has taken over.
 
 </success_criteria>

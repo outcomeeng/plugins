@@ -49,6 +49,19 @@ def escaping_grant_declarations() -> tuple[str, ...]:
             for variable in SKILL_DIR_VARIABLES
         )
         + tuple(
+            # The shell concatenates adjacent quoted and unquoted pieces, so
+            # closing the quote right after the variable reaches the same sibling
+            # file as quoting the whole path. Both spellings are one path.
+            _declaration(f'Bash(python3 "${{{variable}}}"/{sibling}:*)')
+            for variable in SKILL_DIR_VARIABLES
+        )
+        + tuple(
+            # The same concatenation with the trailing piece quoted separately,
+            # which is the spelling a copied command line most often carries.
+            _declaration(f'Bash(python3 "${{{variable}}}"/"{sibling}":*)')
+            for variable in SKILL_DIR_VARIABLES
+        )
+        + tuple(
             # The YAML list form of the same field, which carries each grant on its
             # own indented line rather than in the declaration's scalar.
             "\n".join(
@@ -76,6 +89,12 @@ def local_grant_declarations() -> tuple[str, ...]:
         _declaration(f'Bash(python3 "${{{variable}}}/scripts/../scripts/run.py":*)')
         for variable in SKILL_DIR_VARIABLES
     )
+    # The quote-split spelling of a path that stays inside the directory: the
+    # widened parse reads the concatenation, so it must accept this too.
+    split_quotes = tuple(
+        _declaration(f'Bash(python3 "${{{variable}}}"/scripts/{scenario.skill}.py:*)')
+        for variable in SKILL_DIR_VARIABLES
+    )
     # Grants that carry no path at all, and a reference file read.
     pathless = (
         _declaration("Bash(git status:*)", "Glob", "Skill"),
@@ -93,7 +112,7 @@ def local_grant_declarations() -> tuple[str, ...]:
         )
         for variable in SKILL_DIR_VARIABLES
     )
-    return (*own_entrypoint, *returning_descent, *pathless, *listed)
+    return (*own_entrypoint, *returning_descent, *split_quotes, *pathless, *listed)
 
 
 def body_mentions() -> tuple[str, ...]:
