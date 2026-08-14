@@ -8,7 +8,7 @@ allowed-tools: Read, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! 
 ---
 
 <objective>
-The maintainer's question answered with evidence, and one comment posted to the open issue.
+The maintainer's question answered with evidence in one comment on the open issue, or that thread's state reported when it asked nothing.
 </objective>
 
 <workflow>
@@ -65,7 +65,7 @@ printf '%s\n' '<line>' '<line>' | gh issue comment "<number>" --repo "<base>" --
 gh issue close "<number>" --repo "<base>"
 ```
 
-**Step 8 — Return.** Report the issue URL, the state read in Step 3, and what was answered. Do not wait for a response.
+**Step 8 — Return.** Report the issue URL, the state read in Step 3, and what was answered — or that the thread asked nothing this pass. Do not wait for a response.
 
 </workflow>
 
@@ -106,7 +106,7 @@ gh issue close "<number>" --repo "<base>"
 - The resolver returned `parent-contribution` or `fork-absent` before any write.
 - The thread was read once, and `state` plus the last maintainer comment appear verbatim.
 - The issue's `author.login` was compared against the authenticated login before the comment was posted, and a thread the operator did not open was authorized in that turn.
-- The reply's opening sentence answers the question Step 4 identified, and every claim after it is followed by quoted evidence rather than a description of that evidence.
+- Where the thread asked a question, the reply's opening sentence answers the one Step 4 identified and every claim after it is followed by quoted evidence rather than a description of that evidence; where it asked none, no comment was posted.
 - Inference is marked as inference; an unreproduced condition is marked unverified.
 - The reply passed a prose review, reported as unassisted where the prose plugin is absent.
 - Any close was authorized in the same turn and applied only to an issue whose `author.login` equals the login `gh api user` reported.

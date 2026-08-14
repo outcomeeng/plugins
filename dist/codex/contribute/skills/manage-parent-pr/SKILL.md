@@ -8,7 +8,7 @@ allowed-tools: Read, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agen
 ---
 
 <objective>
-Every valid review finding answered in the head branch, and one comment on the open pull request stating what changed.
+Every valid review finding answered in the head branch, and — when any finding needed a disposition — one comment on the open pull request stating what changed.
 </objective>
 
 <workflow>
@@ -115,7 +115,7 @@ printf '%s\n' '<line>' '<line>' | gh pr comment "<number>" --repo "<base>" --bod
 
 That comment is the re-request. Requesting a reviewer is a maintainer-side action; `gh pr edit --add-reviewer` fails on a base the operator does not control, and the failure is the expected path.
 
-**Step 7 — Return.** Report the pull-request URL, the state read in Step 3, what changed, and what the maintainer has been asked to look at. Do not wait for the response.
+**Step 7 — Return.** Report the pull-request URL, the state read in Step 3, what changed, and what the maintainer has been asked to look at — or, on a pass with no finding to answer, that nothing needed a reply. Do not wait for the response.
 
 </workflow>
 
@@ -171,7 +171,7 @@ Cut every sentence about the contribution's own process — attempts made, time 
 - The base repository's declared checks ran on the revised branch and reported success.
 - `origin` was confirmed to be the resolved head and the working tree was clean before the head branch was reset to the fetched tip.
 - A revision reached the head branch by appending, never by force-push, and the pull request's `headRefOid` equals the commit that was pushed; a pass that changed nothing committed and pushed nothing.
-- One comment states what changed, after a prose review, and stands as the re-request.
+- A pass carrying findings posted one comment, after a prose review, stating what changed and standing as the re-request; a pass with no finding to answer posted none.
 - The pass returned without polling, watching, or sleeping.
 
 </success_criteria>

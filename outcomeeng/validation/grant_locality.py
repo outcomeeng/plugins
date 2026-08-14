@@ -64,13 +64,13 @@ SKILL_DIR_VARIABLES: Final = ("CLAUDE_SKILL_DIR", "SKILL_DIR")
 # spellings reach the identical segment sequence.
 # The braces are optional because the shell reads ``$VAR/x`` and ``${VAR}/x``
 # identically; a rule matching only the braced spelling passes the other one.
-# The variable names are ordered longest-first so the alternation cannot match
-# ``SKILL_DIR`` inside ``CLAUDE_SKILL_DIR`` and report one violation twice.
+# The leading ``$`` anchors each attempt, so one reference yields one match
+# whatever order the alternation carries.
 _SKILL_DIR_REFERENCE: Final[re.Pattern[str]] = re.compile(
     r"\$(?:\{(?:"
-    + "|".join(sorted(SKILL_DIR_VARIABLES, key=len, reverse=True))
+    + "|".join(SKILL_DIR_VARIABLES)
     + r")\}|(?:"
-    + "|".join(sorted(SKILL_DIR_VARIABLES, key=len, reverse=True))
+    + "|".join(SKILL_DIR_VARIABLES)
     + r")\b)(?P<path>[^\s:),]*)"
 )
 

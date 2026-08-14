@@ -8,7 +8,7 @@ allowed-tools: Read, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agen
 ---
 
 <objective>
-One issue open in a repository the operator does not control, carrying an observation its maintainer can reproduce without access to the operator's machine.
+One issue open in a repository the operator does not control, carrying an observation its maintainer can reproduce without access to the operator's machine — or the existing issue that already reports it, named instead of duplicated.
 </objective>
 
 <workflow>
@@ -102,6 +102,7 @@ Leave the fix to the maintainer unless they asked for one. A report that prescri
 
 - The resolver returned `parent-contribution` or `fork-absent`, and `base` and `permission` appear verbatim.
 - A search for an existing issue ran and its result is reported.
+- A search that matched surfaced that issue's URL and filed nothing; every criterion below covers a pass that filed.
 - The operator authorized this issue against the resolved base in the turn it was filed.
 - The body carries tool versions, the base commit observed against, the exact command, and a negative control.
 - Every inference is marked as inference and every unreproduced condition as unverified.
