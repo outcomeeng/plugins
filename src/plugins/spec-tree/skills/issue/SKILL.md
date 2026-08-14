@@ -3,17 +3,8 @@ name: issue
 description: >-
   ALWAYS invoke this skill when filing a follow-up into the owning repository's session queue — including the invoking repository, the spec-tree plugin repository, the spx CLI repository, or another spec-tree dependency. NEVER edit installed dependency source or run the current work through full handoff closure merely to record a needed follow-up.
 argument-hint: "[target-dir-or-dependency]"
-allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(printenv CODEX_THREAD_ID), Bash(printenv CLAUDE_SESSION_ID), Bash(spx --version:*), Bash(spx session list:*), Bash(spx session show:*), Bash(spx -C:* diagnose*), Bash(spx -C:* session handoff*), Bash(spx -C:* session list*), Bash(spx -C:* session show*), Bash(git status:*), Bash(git rev-parse --path-format=absolute --git-common-dir), Bash(git remote get-url origin), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --path-format=absolute --git-common-dir), Bash(git -C:* rev-parse --show-toplevel), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(git -C:* remote get-url origin), {!% if target == 'codex' %!}Bash(codex plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% else %!}Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% endif %!} {{! tool('ask_user') !}}
+allowed-tools: Read, Grep, Glob, Bash(printenv CODEX_THREAD_ID), Bash(printenv CLAUDE_SESSION_ID), Bash(spx session list:*), Bash(spx session show:*), Bash(spx -C:* diagnose*), Bash(spx -C:* session handoff*), Bash(spx -C:* session list*), Bash(spx -C:* session show*), Bash(git status:*), Bash(git rev-parse --path-format=absolute --git-common-dir), Bash(git remote get-url origin), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --path-format=absolute --git-common-dir), Bash(git -C:* rev-parse --show-toplevel), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(git -C:* remote get-url origin), {!% if target == 'codex' %!}Bash(codex plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% else %!}Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% endif %!} {{! tool('ask_user') !}}
 ---
-
-<context>
-**Working Directory:**
-!`pwd`
-
-**spx CLI:**
-!`spx --version`
-
-</context>
 
 <objective>
 A minimal follow-up filed or reused in the owning spec-tree repository's active session queue — capturing Claude's observation without disturbing tracked work, the active branch, or unrelated sessions.
