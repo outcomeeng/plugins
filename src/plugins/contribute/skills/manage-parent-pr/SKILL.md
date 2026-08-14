@@ -105,7 +105,7 @@ Stop when it does not equal the commit just pushed. Step 6 would otherwise annou
 
 The push updates the open pull request in place and needs no fresh authorization, because it revises the artifact the operator already authorized. NEVER force-push a branch a reviewer has already read.
 
-**Step 6 — GATE: Review the reply, then post it.** A reply answers a review. An invocation that reports the pull request's current state, and the immediate handoff `/open-parent-pr` performs on a pull request nobody has reviewed yet, both reach this step with no finding to give a disposition to — they return after Step 7 without commenting, because a comment saying nothing notifies every watcher of a repository the operator does not control.
+**Step 6 — GATE: Review the reply, then post it.** A reply answers a review. An invocation that reports the pull request's current state, and the immediate handoff `/open-parent-pr` performs on a pull request nobody has reviewed yet, both reach this step with no finding to give a disposition to — they skip this step and continue to Step 7, because a comment saying nothing notifies every watcher of a repository the operator does not control.
 
 With findings to answer, draft the comment per `<reply_shape>` and review it per `/contribution-standards` `<invariants>` "Outward-facing text is permanent" — the prose plugin's `prose-auditor` agent where installed, `<outward_text>` unassisted where not.
 

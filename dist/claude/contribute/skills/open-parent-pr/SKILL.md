@@ -8,7 +8,7 @@ allowed-tools: Read, Glob, Skill, Agent, AskUserQuestion, Bash(python3 "${CLAUDE
 ---
 
 <objective>
-One pull request open against a repository the operator does not control, carrying a change already verified against that repository's own checks.
+One pull request open against a repository the operator does not control, carrying a change verified against every one of that repository's own checks that could run locally, with any that could not named in the body as unverified.
 </objective>
 
 <workflow>

@@ -34,7 +34,9 @@ gh search issues --repo "<base>" --state closed "<distinguishing terms>"
 
 Both states are searched because `gh search issues --state` accepts only `open` or `closed`; passing `all` fails the command and would stop the flow before duplicate detection runs. A closed issue matters as much as an open one — it may record that the maintainer already rejected this report.
 
-An existing issue takes a comment through `/manage-parent-issue`, not a duplicate. Report what both searches returned.
+Report what both searches returned.
+
+**STOP when either search matched this observation.** Surface that issue's URL and return; Steps 4 through 8 do not run. An existing issue takes a comment through `/manage-parent-issue`, never a duplicate, and a duplicate filed into a repository the operator does not control cannot be taken back by deciding afterwards that the search had already answered.
 
 **Step 4 — Assemble the evidence.** Per `/contribution-standards` `<invariants>` "Carry reproducible evidence", collect: the versions of every tool involved, the base repository commit the observation was made against, the exact command or interaction that produced it, and a negative control showing the same method reporting the opposite result. Those probes belong to the subject tool rather than to this skill, so they run per `/contribution-standards` `<capability_scope>`.
 
@@ -68,7 +70,7 @@ printf '%s\n' '<what was observed>' '' '## Reproduction' '' '<versions, base com
 
 Never assemble the body through a temporary file, command substitution, or post-hoc repair.
 
-**Step 8 — Hand off.** Surface the issue URL. `/manage-parent-issue` owns every later pass on the thread.
+**Step 8 — Hand off.** Surface the URL of the issue this pass filed. `/manage-parent-issue` owns every later pass on the thread, including the first one on an issue Step 3 found rather than filed.
 
 </workflow>
 
