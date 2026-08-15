@@ -4,44 +4,34 @@ Fifteen skills become five, over three kinds instead of four.
 
 ## Starting point
 
-`work/prose-kind-as-input` already carries the three-kind collapse: eleven commits replacing the `docs` and `internal-docs` skills with `author-document`, `audit-document`, and `document-standards`, making the kind an explicit router input, moving the ownership check ahead of kind resolution in both routers, and describing the three-kind taxonomy in the marketplace catalog. It stops at twelve skills.
+`work/prose-kind-as-input` carries the three-kind collapse, rebased onto the default branch: the `docs` and `internal-docs` skills replaced with `author-document`, `audit-document`, and `document-standards`, the kind an explicit router input, the ownership check ahead of kind resolution in both routers, and the three-kind taxonomy described in the marketplace catalog. It stops at twelve skills.
 
-Rebase it onto the default branch and extend it to five skills, `architect-prose`, and journal-backed audit delivery.
+Extend it to five skills, `architect-prose`, and journal-backed audit delivery.
 
 ## Target surface
 
 ```text
-architect-prose               produces the artifact's structure
-author-prose                  produces its text
+architect-prose               writes prose ADRs in the spec tree
+author-prose                  writes the artifact's text
 audit-prose                   audits the artifact
 
-prose-architecture-standards  structural conventions
+prose-architecture-standards  prose ADR conventions
   references/copy.md  interface.md  documentation.md
 prose-standards               anti-pattern catalog
   references/copy.md  interface.md  documentation.md
 ```
 
-The three workflow skills mirror the language triple: a skill produces or audits an artifact, and `/apply` drives producer then auditor. Which artifact a skill produces is that skill's own decision, not a property of the pattern. Each skill pulls the standards it needs through `require_skill` at the top of its body, as `architect-python` pulls `python-standards` and `python-architecture-standards`.
+The three workflow skills mirror the language triple: `architect-python` writes Python ADRs and `code-python` writes the code; `architect-prose` writes prose ADRs and `author-prose` writes the text. Each skill pulls the standards it needs through `require_skill` at the top of its body.
+
+## Structure ownership (resolved)
+
+`architect-prose` owns a prose ADR — driven by the governing spec node, located in the spec tree — and never writes the prose artifact. `author-prose` is the artifact's sole writer, complying with the governing ADR. Structural moves, including sequencing across sibling and descendant artifacts, are decision content, so nothing structural leaks into the artifact and no cross-skill mark exists. This supersedes the earlier seam in which architect mutated the artifact and marked moved sections; the open mark-carrier question is closed with it.
 
 ## Kinds
 
 Copy, interface, documentation. A kind varies on two axes, so it carries two reference files: its structure under `prose-architecture-standards`, its style overrides under `prose-standards`.
 
 Documentation is one kind. Sentence mechanics and page architecture are two layers of every document, not two audiences — which is why the former `docs` and `internal-docs` layers partitioned by level rather than by reader.
-
-## architect-prose
-
-Writes a scaffold on first invocation. Against an existing artifact it takes the change prompt, owns that artifact's structure, and mutates it into a shape `author-prose` completes.
-
-For prose the structure is not separable into its own document the way code architecture is, so the artifact `architect-prose` produces is the artifact itself.
-
-### The seam
-
-Architect moves, adds, removes, and renames sections. It leaves every moved section's bytes untouched and marks each section it moved. Author writes and re-fits, guided by those marks.
-
-Architect never writes prose. Author never decides structure. A section moved into a new position rarely reads there — its opening refers to what used to precede it — and the mark is how that crosses the seam instead of being silently left or silently repaired.
-
-Open: whether a mark is an in-artifact annotation or a return value, and what carries it in an artifact format with no comment syntax.
 
 ## Kind resolution
 
@@ -57,15 +47,9 @@ Resolved once, at whichever entry the caller invokes, and carried in the dispatc
 
 An `[eval]` assertion on this node waits for that run. A suite built against a prompt-imposed schema grades the prompt author rather than the skill, so eval evidence needs a verdict the skill itself emits; `ISSUES.md` carries the deferral until then.
 
-## The node's own assertions
+## Descriptions (resolved)
 
-`prose.md` carries nine assertions in one `### Compliance` subsection, above the decomposition guidance, and this refactor rewrites most of them. `/decompose` runs before they are rewritten, not after.
-
-## Descriptions
-
-A description names the artifact and the domain, and carries one NEVER clause. `architect-python`'s is 96 characters: `ALWAYS invoke this skill when writing ADRs for Python. NEVER author a Python ADR without this skill.` Kind, artifact enumeration, and exclusion classes are resolved inside the skill, not in the field the runtime matches.
-
-Open: the current surface states its exclusions in the description because the body runs after activation. Reconcile that against the length the model above sets.
+`architect-prose` takes the python-minimal form (~100 characters): `ALWAYS invoke this skill when writing ADRs for prose. NEVER author a prose ADR without this skill.` `author-prose` and `audit-prose` take a compact directive around 200 characters: the trigger in user speech with a few concrete examples, and one terse NEVER naming the exclusion classes — chat responses, code comments, commit messages, agent-facing instructions. The enumeration bags in the current 477- and 514-character descriptions do not survive.
 
 ## Removals
 
