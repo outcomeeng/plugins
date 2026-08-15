@@ -85,7 +85,7 @@ Execute these phases in order.
 
 <success_criteria>
 
-- The ADR conforms to the decision template loaded from the live `/understand` foundation, with structural rules as ALWAYS/NEVER rules carrying `([audit])`.
+- A structural comparison against the loaded decision template finds no missing, extra, or reordered section, and every structural rule is falsifiable by audit.
 - The ADR decides the artifact set, section architecture, ordering, cross-artifact sequencing, and terminology homes, and contains no drafted prose, no style rules, and no temporal narration.
 - The kind came from the invocation, the repository's map, or one asked question.
 - No prose artifact was written or annotated.
