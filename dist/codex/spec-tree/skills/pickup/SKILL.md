@@ -2,7 +2,7 @@
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
 argument-hint: "[session-id | --list] [--auto-continue]"
-allowed-tools: Read, Bash(spx spec status:*), Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3 "${SKILL_DIR}/scripts/verify_session_claims.py":*), request_user_input, Glob, Skill
+allowed-tools: Read, Bash(spx spec status:*), Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3 "${SKILL_DIR}/scripts/verify_session_claims.py":*), request_user_input, Glob, Skill
 ---
 
 <objective>
@@ -228,31 +228,11 @@ How to avoid: Run `spx spec status --format json` and traverse its projected tre
 </failure_modes>
 
 <success_criteria>
-A successful pickup:
 
-- [ ] Session claimed via `spx session pickup`
-- [ ] Canonical pickup claim marker emitted as `<PICKUP_CLAIM id="...">`
-- [ ] Running CLAIMED_SESSIONS marker emitted as `<CLAIMED_SESSIONS ids="...">` including the newly claimed session id
-- [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session
-- [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
-- [ ] `/understand` invoked immediately after claim markers and before session details are processed
-- [ ] Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work
-- [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind
-- [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created
-- [ ] Recorded claims reconciled by running `verify_session_claims.py`, with per-claim `Confirmed` / `Discrepancy` / `Unverifiable` verdicts presented in place of the recorded snapshot before the checkpoint
-- [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
-- [ ] Persisted artifacts acknowledged
-- [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
-- [ ] Session evidence reviewed after `/contextualize`: claim verdicts, persisted artifacts, loaded coordination notes, overlapping `doing` sessions, branch state, PR state, and expected verification
-- [ ] Session classified as `actionable_here`, `owned_elsewhere`, `stale_or_superseded`, `blocked_on_external_dependency`, or `needs_operator_direction`
-- [ ] When classification is `owned_elsewhere`, the owning session, branch, worktree, PR, or commit is reported and pickup stops without archiving, releasing, handing off, or otherwise mutating the claimed session
-- [ ] When classification is not `owned_elsewhere`, a no-surprises proposal is presented before any operator decision: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation
-- [ ] Any later unrepresented skill, evidence surface, external dependency, ownership conflict, or verification class stops at a safe checkpoint before continuation
-- [ ] When the session references multiple recorded nodes, the `/contextualize` target is selected deterministically by the priority order; when `<nodes>` is empty or unreadable, pickup traverses the `spx spec status --format json` projection top-down and contextualizes session-relevant nodes until the session is resume-ready, without asking the operator to choose or locate a node
-- [ ] When classification is not `owned_elsewhere`, canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
-- [ ] When classification is not `owned_elsewhere`, post-context decision captured via `request_user_input` response, or explicit `--auto-continue` override acknowledged
-- [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
-- [ ] Failures listed in coordination are verified against current state before triaging
-- [ ] When classification is not `owned_elsewhere`, Claude has the session `next_step`, current claim verdicts, loaded node context, and coordination-note paths needed to choose the next skill from current methodology
+- The claimed session remains in `doing`, and canonical claim, claimed-set, and post-context markers identify the exact sessions this conversation owns.
+- The report presents synchronized current state, one verdict per recorded claim, persisted artifacts, loaded coordination context, and the handoff's recommended first action.
+- The selected context target comes from recorded nodes or complete top-down projection traversal; projection failure preserves its exact diagnostic, and exhausted traversal yields `stale_or_superseded` without operator node-search work.
+- The post-context output names the session classification, evidence-based continuation proposal, selected or automatically resumed action, and every known owner or blocker.
+- Pickup itself performs no implementation edit and never archives, releases, replaces, or otherwise closes a claimed session.
 
 </success_criteria>

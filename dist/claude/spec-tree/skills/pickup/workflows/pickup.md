@@ -229,21 +229,9 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 
 <success_criteria>
 
-- [ ] `/understand` invoked immediately after claim markers and before session details are processed
-- [ ] Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work (Step 5b)
-- [ ] When the session `git_ref` names a feature branch, that branch is fetched and checked out before node context is loaded (Step 3)
-- [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created (Step 3)
-- [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind (Step 4)
-- [ ] Recorded claims reconciled by running `verify_session_claims.py`, and per-claim verdicts (`Confirmed` / `Discrepancy` / `Unverifiable`) presented in place of the recorded snapshot, before the checkpoint (Step 5)
-- [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
-- [ ] Persisted artifacts acknowledged
-- [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
-- [ ] The `/contextualize` target is selected without operator search work: recorded-node multiplicity resolves by priority, while an empty or unreadable `<nodes>` section triggers a top-down traversal of `spx spec status --format json`; session-relevant nodes are contextualized until the next workflow is established with no relevant branch unresolved, projection failure stops with its exact diagnostic, and projection exhaustion classifies the handoff as `stale_or_superseded` without asking the operator to choose or locate a node
-- [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` with the full claimed-session set
-- [ ] Claimed session remains in `doing` after the checkpoint — pickup workflow never archives or releases
-- [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
-- [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
-- [ ] Failures listed in coordination are verified against current state before triaging
-- [ ] Claude has the session `next_step`, current claim verdicts, loaded node context, and coordination-note paths needed to choose the next skill from current methodology
+- The pickup report carries canonical claim and checkpoint markers, synchronized repository state, reconciled claim verdicts, persisted artifacts, and loaded coordination context for the exact claimed session set.
+- The selected target is established without operator search work: recorded-node rules decide when available, and complete top-down projection traversal decides or returns the exact projection diagnostic or `stale_or_superseded` classification.
+- The post-context result states one canonical classification, the evidence supporting it, the recommended continuation, and the selected or automatically resumed action.
+- The claimed session remains in `doing`, and pickup performs no implementation edit, archive, release, replacement handoff, or session closure.
 
 </success_criteria>
