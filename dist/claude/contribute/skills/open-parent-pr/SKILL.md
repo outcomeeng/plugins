@@ -71,7 +71,7 @@ git diff --stat <base-tip>...HEAD
 
 The `^` is required. `A..B` means every commit reachable from `B` but not from `A`, so naming the first contribution commit as `A` excludes it: a multi-commit contribution silently loses its earliest commit, and a single-commit contribution replays nothing at all while the empty result still looks like a completed replay. `<first-commit>^` names that commit's parent, which is the range's exclusive end.
 
-An empty diff means the contribution was left behind; stop rather than opening a pull request with no change in it.
+An empty diff **from that replay** means the cherry-pick range named no commit and the contribution was left behind; stop rather than carrying an empty branch forward. This gate belongs to the replay and runs only when one ran. A contribution that exists as uncommitted edits enters no replay at all — `git switch -c` carries those edits onto the new branch — so it reaches Step 8, where the commit gate stages them and the same diff is read against a tree that now holds a commit.
 
 A conflict stops the replay mid-pick and leaves the checkout in that state. Run `git cherry-pick --abort` to return it to the branch tip, then report the conflicting commit and stop. The replay conflicts because the base moved under the change, and reconciling it is a decision about the contribution rather than a step of cutting the branch.
 
@@ -193,7 +193,7 @@ The body explains why; the diff already shows what.
 - NEVER stage by wildcard. The `Bash(git add:*)` grant matches by prefix, so it admits `-A` and `.`, either of which sweeps unrelated work in the invocation checkout into a commit bound for someone else's repository. Name the contribution's paths.
 - NEVER pass `--no-verify` to `git commit`. The `Bash(git commit:*)` grant matches by prefix and admits it. Hooks run from this checkout's own configuration, which conforming to the base repository's conventions is what installs, so skipping them drops part of the verification Step 6 requires.
 - NEVER cherry-pick a commit outside the invocation branch's own range. The `Bash(git cherry-pick:*)` grant matches by prefix, so it admits any revision the checkout can name; Step 4 replays that branch's commits and nothing else.
-- NEVER open a pull request whose diff against `<base-tip>` is empty. An empty diff after the replay in Step 4, or at the Step 8 commit gate, means the contribution was left on the invocation branch or never committed — the pull request would carry nothing.
+- NEVER open a pull request whose diff against `<base-tip>` is empty at the Step 8 commit gate — the pull request would carry nothing. Step 4's identical check belongs to the replay and applies only to a pass that ran one; an uncommitted contribution is empty there by construction and is committed in Step 8.
 - NEVER open against a base whose classification is `controlled`, `fork-absent`, or `blocked`.
 - NEVER create the fork — report the destination candidates and stop.
 - NEVER report an unrunnable check as passed, or omit it from the body.
