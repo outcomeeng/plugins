@@ -74,7 +74,7 @@ Resolve the target dependency's checkout directory — the working directory `sp
 
 - **The `spx` CLI, or another spec-tree dependency:** the dependency's own checkout. Accept the path from the user or the invoking repository's configuration.
 
-When the target is ambiguous or the path does not resolve, ask the user which dependency the follow-up concerns and for its checkout directory through the structured-question tool. NEVER guess a path. A target that resolves to the invoking repository by git common directory or normalized origin identity is valid and enters `<same_repository_filing>`.
+When the target is ambiguous or the path does not resolve, ask the user which dependency the follow-up concerns and for its checkout directory through the structured-question tool. NEVER guess a path. A target enters `<same_repository_filing>` only when its resolved absolute git common directory equals the invoking repository's; normalized origin identity identifies an external target for confirmation but never grants self-authorization.
 
 </target_resolution>
 
@@ -92,12 +92,12 @@ If the target checkout is detached or its current branch does not exist on origi
 
 <same_repository_filing>
 
-Treat equal absolute git common directories or equal normalized origin identities as one repository identity. This includes another linked worktree in the same pool and a separate clone of the same origin. Do not stop or redirect the observation into full `/handoff` closure.
+Treat equal resolved absolute git common directories as one repository identity. This includes another linked worktree in the same pool. A separate clone has its own queue and remains an external target even when its normalized origin identity matches. Do not stop or redirect a same-repository observation into full `/handoff` closure.
 
 Resolve a queue-safe `<queue-host>` before reading or writing sessions:
 
 - For a compliant single-working-tree target, use the target root.
-- For a compliant bare-repository pool, run `spx -C <target-dir> diagnose --format json`, read the sole `worktree-pool` record, and use its absolute `readings.mainCheckoutPath`. Require `verdict=compliant`, a non-empty absolute main-checkout path, and matching normalized origin identity. Do not switch, detach, commit, or otherwise move the invoking or target worktree.
+- For a compliant bare-repository pool, run `spx -C <target-dir> diagnose --format json`, read the sole `worktree-pool` record, and use its absolute `readings.mainCheckoutPath`. Require `verdict=compliant`, a non-empty absolute main-checkout path, and a resolved absolute git common directory matching `<target-dir>`. Do not switch, detach, commit, or otherwise move the invoking or target worktree.
 - If the topology cannot produce a queue-safe checkout, stop with the exact diagnostic. Never reformulate the write against the active feature worktree.
 
 Before mutation, run `spx -C <queue-host> session list --json`, which covers both `todo` and `doing`, then snapshot every returned record's complete body with `spx -C <queue-host> session show <id>`. Inspect those bodies for plausible matches. A match carries the dependency-followup body contract and describes the same observation and affected surfaces; a different title or wording does not make the observation distinct. When matches exist, reuse exactly one — prefer `doing` over `todo`, then the oldest full session id — report any additional matching ids as pre-existing duplicates, and create nothing. Deduplication is by reuse, never by archiving, releasing, deleting, editing, or moving an existing session.
@@ -108,7 +108,7 @@ When no match exists, create exactly one follow-up against `<queue-host>`. Snaps
 
 <workflow>
 
-**Step 1 — Resolve and classify the target.** When `$ARGUMENTS` names an existing checkout directory, take it as the target only after confirming it is the repository to receive the follow-up. When `$ARGUMENTS` names a dependency token such as `spx`, `spec-tree`, or a CLI/plugin name, resolve the dependency's checkout directory per `<target_resolution>` instead of treating the token as a path. Otherwise determine which component the observation concerns and resolve its checkout directory per `<target_resolution>`. Resolve both git common directories with `git rev-parse --path-format=absolute --git-common-dir` and `git -C <target-dir> rev-parse --path-format=absolute --git-common-dir`. Resolve both origin URLs with `git remote get-url origin` and `git -C <target-dir> remote get-url origin`, then normalize each to its lowercase host plus repository path by translating scp-style syntax to host/path form, removing the transport and user prefix, trimming leading and trailing slashes, and removing a terminal `.git`. Set `same_repository=true` when either the absolute common directories or normalized origin identities are equal; otherwise set `same_repository=false`. Equal identity is a valid same-repository filing, not a stop. Resolve `<queue-host>` through `<same_repository_filing>` when `same_repository=true`; otherwise `<queue-host>` is `<target-dir>`.
+**Step 1 — Resolve and classify the target.** When `$ARGUMENTS` names an existing checkout directory, take it as the target only after confirming it is the repository to receive the follow-up. When `$ARGUMENTS` names a dependency token such as `spx`, `spec-tree`, or a CLI/plugin name, resolve the dependency's checkout directory per `<target_resolution>` instead of treating the token as a path. Otherwise determine which component the observation concerns and resolve its checkout directory per `<target_resolution>`. Resolve both git common directories with `git rev-parse --path-format=absolute --git-common-dir` and `git -C <target-dir> rev-parse --path-format=absolute --git-common-dir`. Resolve both origin URLs with `git remote get-url origin` and `git -C <target-dir> remote get-url origin`, then normalize each to its lowercase host plus repository path by translating scp-style syntax to host/path form, removing the transport and user prefix, trimming leading and trailing slashes, and removing a terminal `.git`. Set `same_repository=true` only when the resolved absolute common directories are equal; otherwise set `same_repository=false`. Use normalized origin identity to identify and report the target, never to authorize its queue mutation. Resolve `<queue-host>` through `<same_repository_filing>` when `same_repository=true`; otherwise `<queue-host>` is `<target-dir>`.
 
 **Step 2 — Resolve `git_ref`.** For a different repository, resolve the target repository's stable pickup branch per `<git_ref_resolution>`. For the invoking repository, resolve the queue host's current branch and verify it exists on origin; the follow-up starts from the queue host's stable branch rather than the active feature branch. NEVER switch either checkout to obtain a branch.
 
@@ -124,14 +124,14 @@ When no match exists, create exactly one follow-up against `<queue-host>`. Snaps
 
 **Step 5 — Snapshot state and deduplicate.** Before filing, capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository. This is the before-state for the tracked-worktree mutation check. When `same_repository=true`, run the active-queue search and snapshot in `<same_repository_filing>`. If a matching session exists, record its full id as `<HANDOFF_ID>`, set `result=reused`, and skip Step 6's mutation.
 
-**Step 6 — GATE: Confirm an external target, then file when needed.** When `result=reused`, perform no mutation and continue to verification. When `same_repository=false`, the handoff writes into a repository the operator may not have named in this turn. Resolving a path is not authorization to write there, so obtain confirmation through `AskUserQuestion` before the first mutating command unless `$ARGUMENTS` named that checkout path directly, presenting:
+**Step 6 — GATE: Confirm an external target, then file when needed.** When `result=reused`, perform no mutation and continue to verification. When `same_repository=false`, the handoff writes into a different repository queue. Resolving or naming a path is not authorization to mutate that queue, so obtain confirmation through `AskUserQuestion` before the first mutating command, presenting:
 
 - the **absolute** `<target-dir>` verbatim, as `git -C <target-dir> rev-parse --show-toplevel` reports it;
 - that repository's normalized origin identity from step 1;
 - the resolved `git_ref` and the follow-up's `goal`;
 - two options — file the follow-up into that repository, or stop for inspection.
 
-Skip external-target confirmation only when `$ARGUMENTS` named the different checkout directly and step 1 already confirmed it. The explicit `/issue` invocation authorizes one deduplicated same-repository queue write, so `same_repository=true` does not add a second confirmation. STOP on anything but explicit approval, leaving both repositories unchanged.
+The explicit `/issue` invocation authorizes one deduplicated same-repository queue write, so `same_repository=true` does not add a second confirmation. Every `same_repository=false` target requires this confirmation, including a separate clone with the same normalized origin identity and a checkout path named directly in `$ARGUMENTS`. STOP on anything but explicit approval, leaving both repositories unchanged.
 
 Then resolve the current runtime identity verbatim (`printenv CODEX_THREAD_ID` in Codex; `printenv CLAUDE_SESSION_ID` in Claude Code) and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin:
 
@@ -195,16 +195,9 @@ How to avoid: Resolve the target dependency branch first, verify `refs/remotes/o
 
 <success_criteria>
 
-- [ ] Target resolution produced the exact owning checkout and the queue-safe checkout used by every `spx -C <queue-host>` session command.
-- [ ] Equal git common directories or normalized origin identities were classified as `same_repository=true`; unequal identities were classified as `same_repository=false`.
-- [ ] Same-repository filing resolved a queue-safe checkout without switching, detaching, committing, or handing off the active worktree.
-- [ ] Both `todo` and `doing` were searched before a same-repository write; one matching active follow-up was reused, or exactly one new `todo` follow-up was created when no match existed.
-- [ ] `git -C <target-dir> rev-parse --verify refs/remotes/origin/<branch>` succeeded for the stored `git_ref`.
-- [ ] Every different-repository target not named directly by `$ARGUMENTS` as a checkout path was approved by the operator through the Step 6 confirmation, which named the absolute target root verbatim, before mutation; a same-repository filing relied on the explicit `/issue` invocation and made at most one deduplicated queue write.
-- [ ] `spx -C <queue-host> session show --json <HANDOFF_ID>` found the handoff with `specs: []`, `files: []`, non-empty `git_ref`, non-empty `agent_session_id`, and non-empty `created_at`; a created handoff carried the resolved branch and current runtime identity, while a reused handoff stayed byte-identical to its snapshot.
-- [ ] The observation body contains no dependency node address, decision index, or assertion type.
-- [ ] For a different repository, `spx session show --json <HANDOFF_ID>` reports the target handoff id absent from the invoking repository; for the invoking repository, every pre-existing active session remains unchanged and the only permitted delta is one created `todo` id.
-- [ ] The invoking repository's `git status --porcelain=v1 --untracked-files=all` output matches the pre-handoff snapshot byte-for-byte.
-- [ ] `result=created|reused`, the verified `<HANDOFF_ID>`, and `<SESSION_FILE>` when available are reported with the owning repository.
+- The report names the exact owning checkout and queue host, classifies self-authorization solely by resolved git-common-directory equality, and records operator approval before any external-queue mutation.
+- The result is exactly `created` or `reused`, names the verified full session id and owning repository, and creates at most one new `todo` session after searching active `todo` and `doing` entries.
+- The stored or reused follow-up has the dependency-followup body, empty `specs` and `files`, a reachable branch `git_ref`, and complete session identity metadata without dependency taxonomy.
+- The invoking branch, tracked Git state, unrelated sessions, and every reused session remain unchanged; a separate repository receives no mutation beyond the approved follow-up.
 
 </success_criteria>
