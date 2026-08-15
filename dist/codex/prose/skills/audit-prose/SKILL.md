@@ -13,7 +13,7 @@ Invoke the `prose:prose-architecture-standards` skill before proceeding. If that
 
 <objective>
 
-A verdict on human-facing text, revealed as the run advances — a sealed audit run whose journal stream carries scope progress and each finding with pattern, category, quote, and rewrite, and whose raw run token is the final message.
+A verdict on human-facing text, revealed as the run advances — a sealed audit run whose journal stream carries scope progress and each finding as the projection's record of rule, location, severity, and message, and whose raw run token is the final message.
 
 </objective>
 
@@ -72,7 +72,7 @@ The verdict is the sealed audit run, produced through the `/project-run-journal`
 - Each finding maps onto the `/project-run-journal` finding record. `rule` carries the pattern name — the catalog anti-pattern, pack rule, or structural rule; a sentence carrying multiple co-occurring patterns produces one finding naming every pattern present. `file` and `line` carry the offending text's location — the audited path, or the dispatch-supplied label with the line inside pasted text, `line` null for a whole-text finding. `severity` carries the classification the rollup reads: `reject` for every violation. `message` pairs the catalog category with the offending quote verbatim and a rewrite ready to accept.
 - The rollup follows `/project-run-journal`: any `reject` finding makes the run's terminal status rejected; no findings, approved.
 - Ownership routes the text away: one finding with `rule` `governed-elsewhere` at `severity` `reject`, its message naming the governing workflow or the reason the text stays outside the prose surface when no workflow governs it; terminal status rejected.
-- No kind or no target supplied: one finding naming the missing input at `severity` `unknown` — a missing kind names the three-kind vocabulary — so the rollup yields the failed terminal status, the blocked run in the channel's status vocabulary; no text is read.
+- No kind or no target supplied: one finding at `severity` `unknown` whose `rule` is `missing-kind` or `missing-target`, whose `file` is the literal `<no target supplied>` when no target exists, and whose message names the missing input — a missing kind names the three-kind vocabulary — so the rollup yields the failed terminal status, the blocked run in the channel's status vocabulary; no text is read.
 - The final message is exactly the raw run token, so the sealed run is inspectable while it ran and after — scope progress, each finding, and the terminal status are read from the journal, not from a message.
 
 </verdict_format>
@@ -86,6 +86,10 @@ Claude read the text, recognized a runbook, audited it against the documentation
 **The ownership check was stated but never reached.**
 
 Claude placed the ownership rule after the sentence "Resolve it in this order and stop at the first that yields one". A dispatch naming a kind for an ADR resolved at step 1, stopped as instructed, and swept a governed artifact against that kind's standards. The rule was present and correct, and the reading order made it unreachable. A check that gates a resolution list precedes that list; a check positioned after one asserts its own precedence to a reader who has already stopped.
+
+**The finding vocabulary named fields the record does not carry.**
+
+Claude described each finding as carrying `pattern`, `category`, `quote`, and `rewrite` — the prose vocabulary — while the journal projection's record carries `file`, `line`, `rule`, `severity`, and `message`. A run built from the prose vocabulary appended events with no `severity` key, so the rollup read `None` for every finding and approved every run, and the rendered surface showed blank locations and messages. A skill that drives a shared projection states its output in that projection's field names and maps its domain vocabulary onto them explicitly.
 
 **A caller check survived a description-only fix.**
 
