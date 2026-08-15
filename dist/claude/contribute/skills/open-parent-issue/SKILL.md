@@ -44,7 +44,7 @@ A claim without a negative control cannot distinguish a defect from a broken mea
 
 **Step 5 — GATE: Obtain authorization.** Present, through the runtime's structured-question tool, the resolved `base`, the issue title, the observation in one sentence, and the choice to file it against that base or to stop and inspect. Create nothing until the operator authorizes it in this turn.
 
-**Step 6 — GATE: Review the outward text.** Draft the title and body per `<report_shape>`, then review them — the prose plugin's `prose-auditor` agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such in the report.
+**Step 6 — GATE: Review the outward text.** Draft the title and body per `<report_shape>`, then review them — the prose plugin's `prose-auditor` thin agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such in the report.
 
 **Step 7 — File it.** Interactive sessions pipe the body through a quoted heredoc:
 

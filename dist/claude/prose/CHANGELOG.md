@@ -6,6 +6,21 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.10.1
+
+### Changed
+
+- **`author-prose` no longer dispatches the audit.** It grants no agent-dispatch tool and no `Bash`, and its workflow ends at the written text. Dispatch policy belongs to the calling flow, which decides when the `prose-auditor` thin agent runs the audit in a separate verifier agent session. A caller that relied on `author-prose` to run and clear its own audit now dispatches `prose-auditor` itself.
+
+### Fixed
+
+- **The `prose-auditor` contract the router publishes matches what the agent returns.** The configured-verifier contract for a craft plugin's `{plugin}-auditor` states both output shapes — a structured verdict, or a sealed-run journal token rendered through `spx journal render` — so a caller no longer judges a correct raw-token result as malformed output.
+- **`prose-auditor` declares its output contract.** The definition carries an `<output_format>` section naming the raw run token and the load-diagnostic fallback, and its success criteria cover the no-nested-dispatch and no-invented-policy rules its constraints already impose.
+- **The documentation layer regained two structural-writing caps** the four-kind merge dropped: active voice, and the ban on `should`, `would`, `may`, and `might` across the whole page rather than only inside a numbered procedure.
+- **The interface and documentation structural conventions no longer restate style rules.** Element wording, heading case, and the one-term-one-meaning rule live in the style layer and the voice canon; the architecture references keep only what an ADR decides — element types, parallel sets, terminology homes, and where depth lives.
+- **`audit-prose`'s description names its subject and scope** without the run-journal delivery clause, matching the audit-skill description convention the language plugins follow.
+- **The voice canon bans end punctuation on a heading.** The rule previously reached only the documentation kind through a structural reference; it belongs beside the sentence-case rule the canon already carries, so it now binds the shipped `prose` output style and every kind alike.
+
 ## 0.10.0
 
 ### Breaking

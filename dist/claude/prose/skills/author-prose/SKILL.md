@@ -3,7 +3,7 @@ name: author-prose
 description: >-
   ALWAYS invoke this skill when writing text for human readers — docs pages, UI text, error messages, emails, release notes. NEVER invoke for chat responses, code comments, commit messages, or agent instructions.
 argument-hint: "[interface|documentation|copy] <what to write>"
-allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Skill, Agent
+allowed-tools: Read, Edit, Write, Glob, Grep, Skill
 ---
 
 Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -12,7 +12,7 @@ Invoke the `prose:prose-architecture-standards` skill before proceeding. If that
 
 <objective>
 
-Human-facing text drafted against the kind its caller supplied, complying with the governing prose ADR, and approved by a `prose-auditor` pass.
+Human-facing text drafted against the kind its caller supplied and complying with the governing prose ADR.
 
 </objective>
 
@@ -60,8 +60,6 @@ One text carries one kind. Register variation inside it is carried by the `/pros
 
 6. Apply every rule pack the text triggers. A numbered procedure triggers the instruction pack; a table triggers the table pack.
 
-7. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming the kind in the dispatch as `Kind: <kind>`. The dispatched audit reads nothing without it. The agent returns a raw run token; invoke the `project-run-journal` skill, read the sealed run's event prefix with `spx journal read --type audit --run <token> --from 0`, render it through that skill's projection, fix the findings it reports, and re-audit until the run completes approved.
-
 </workflow>
 
 <success_criteria>
@@ -69,7 +67,6 @@ One text carries one kind. Register variation inside it is carried by the `/pros
 - The delivered text carries exactly one kind — the supplied one — and conforms to that kind's style layer and structural conventions, with no base anti-pattern surviving outside the kind's declared overrides.
 - The text complies with the governing prose ADR where one exists; no structural decision was made against it while writing.
 - Every rule pack a feature of the text triggers holds where that feature appears.
-- A sealed `prose-auditor` run over the exact final text completed approved, dispatched with the kind.
 - Text another surface owns was never drafted here — a governed artifact reached its own workflow untouched.
 
 </success_criteria>
@@ -88,6 +85,5 @@ Claude read "write the onboarding page for the new export flow", recognized a pa
 | ------------------------------- | --------------------------------------------------------------------------- |
 | `/prose-standards`              | Always — voice canon, base catalog, rule packs, kind style layers           |
 | `/prose-architecture-standards` | The kind's structural conventions, and the ADR shape when structure changes |
-| `/project-run-journal`          | Rendering the audit run token the `prose-auditor` dispatch returns          |
 
 </reference_index>

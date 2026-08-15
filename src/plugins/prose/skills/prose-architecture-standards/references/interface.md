@@ -8,20 +8,14 @@ A surface is structured as an inventory of elements, not a sequence of sentences
 
 ## Terminology map
 
-One term per concept across the surface. The ADR records the surface's established term for each shared concept; a new element binds to that vocabulary, and a new term enters only for a concept the surface does not yet name.
+The ADR records the surface's established term for each shared concept, so a new element binds to that vocabulary and a new term enters only for a concept the surface does not yet name. One term per concept is the voice canon's rule; what the ADR decides is which term is the home.
 
 ## Element parallelism
 
-Parallel elements are phrased in parallel. The same phrase pattern and the same construction repeat across elements that play the same role, because variation across parallel elements reads as a difference in meaning. The parallel sets — which elements mirror which — are a structural decision.
+Which elements mirror which is a structural decision. The ADR names the parallel sets — the elements that play the same role and therefore carry one phrase pattern — because variation across parallel elements reads as a difference in meaning. How that pattern is worded belongs to the style layer.
 
 ## Element information shape
 
-Each element type carries a fixed information shape the wording fills:
+The ADR names each element's type. The type fixes how many parts the element carries and in what order; the style layer supplies the wording for each. A stepped sequence — onboarding, a multi-step empty state — is a procedure, so the instruction pack governs its steps wherever it appears.
 
-- An error carries two parts in order: what happened, then what to do next.
-- An empty state orients: what belongs here and how to add the first one.
-- A confirmation names the consequence, and its affirmative action repeats the action verb.
-- A notification leads with the event.
-- A stepped sequence — onboarding, a multi-step empty state — is a procedure and follows the instruction pack's step structure.
-
-When an element needs a second sentence, the second sentence is a candidate for a link to docs instead — the structural decision is where depth lives, on the surface or behind it.
+Where depth lives is structural: an element whose content outgrows its shape either splits or links out, and the ADR decides which. Absent an ADR, the style layer's per-element default guides that choice.

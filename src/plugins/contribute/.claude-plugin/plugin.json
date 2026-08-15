@@ -1,6 +1,6 @@
 {
   "name": "contribute",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Contributions to repositories you do not control: /open-parent-pr, /manage-parent-pr, /open-parent-issue, /manage-parent-issue, /sync-fork",
   "author": {
     "name": "Simon Heimlicher"

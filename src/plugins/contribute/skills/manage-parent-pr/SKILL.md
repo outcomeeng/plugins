@@ -125,7 +125,7 @@ The push updates the open pull request in place and needs no fresh authorization
 
 **Step 7 — GATE: Review the reply, then post it.** A reply answers a review. A pass where every finding failed reproduction still reaches this step with a disposition to give, because the maintainer is owed the evidence for what did not reproduce.
 
-With findings to answer, draft the comment per `<reply_shape>` and review it per `/contribution-standards` `<invariants>` "Outward-facing text is permanent" — the prose plugin's `prose-auditor` agent where installed, `<outward_text>` unassisted where not.
+With findings to answer, draft the comment per `<reply_shape>` and review it per `/contribution-standards` `<invariants>` "Outward-facing text is permanent" — the prose plugin's `prose-auditor` thin agent where installed, `<outward_text>` unassisted where not.
 
 ```bash
 printf '%s\n' '<line>' '<line>' | gh pr comment "<number>" --repo "<base>" --body-file -
