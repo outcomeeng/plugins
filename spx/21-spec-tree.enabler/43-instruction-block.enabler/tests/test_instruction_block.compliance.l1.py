@@ -66,3 +66,15 @@ def test_dropping_a_required_dispatch_literal_is_rejected() -> None:
                     source.validate_subagent_dispatch_policy(
                         {agent_harness: violating_document}
                     )
+
+
+def test_literal_branch_deletion_guidance_is_required() -> None:
+    documents = evidence.rendered_instruction_blocks()
+    source.validate_authority_hierarchy_policy(documents)
+    for agent_harness, document in documents.items():
+        for _, required_text in source.DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS:
+            violating_document = document.replace(required_text, "", 1)
+            with pytest.raises(source.AuthorityHierarchyPolicyError):
+                source.validate_authority_hierarchy_policy(
+                    {agent_harness: violating_document}
+                )

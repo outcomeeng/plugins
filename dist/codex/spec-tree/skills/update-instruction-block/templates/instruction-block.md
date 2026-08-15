@@ -43,6 +43,7 @@ These instructions explain WHEN to invoke spec-tree skills for this product. The
 🛑 **STOP TRIGGER — a dangerous-command guard (DCG) block terminates the attempted command family.** Treat the blocked attempt as a mistake.
 
 - **NEVER** retry it by reformulating, splitting, rewriting, removing the flagged clause, or substituting an equivalent command to evade the guard.
+- **NEVER** pass a variable or command substitution as a branch argument to `git branch -d` or `git branch -D`. Name every branch literally; `-D` accepts multiple branch names in one invocation. Quoting or adding `--` does not make a dynamic branch name permissible: `git branch -D "$b"` and `git branch -D -- "$b"` are both denied.
 - **ALWAYS** follow the active skills, repository instructions, and declared overlays to find a sanctioned operation that accomplishes the goal.
 - When no sanctioned operation exists, abandon the goal, report the blocked command with secrets redacted, explain its purpose and the guard's reason, ask the operator for direction, and stop.
 

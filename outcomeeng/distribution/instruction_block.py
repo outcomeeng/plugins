@@ -86,6 +86,20 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("product-path follow guard", "Never follow paths from their output"),
 )
 AUTHORITY_HIERARCHY_POLICY_HEADING: Final = "## Authority Hierarchy"
+DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS: Final = (
+    (
+        "dynamic destructive branch prohibition",
+        "pass a variable or command substitution as a branch argument to `git branch -d` or `git branch -D`",
+    ),
+    (
+        "literal destructive branch names",
+        "Name every branch literally; `-D` accepts multiple branch names in one invocation",
+    ),
+    (
+        "quoted dynamic branch denial",
+        '`git branch -D "$b"` and `git branch -D -- "$b"` are both denied',
+    ),
+)
 AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     (
         "strong skill authority warning",
@@ -131,6 +145,7 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
         "dangerous-command guard retry prohibition",
         "NEVER** retry it by reformulating, splitting, rewriting, removing the flagged clause, or substituting an equivalent command to evade the guard",
     ),
+    *DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS,
     (
         "dangerous-command guard sanctioned path",
         "follow the active skills, repository instructions, and declared overlays to find a sanctioned operation",
