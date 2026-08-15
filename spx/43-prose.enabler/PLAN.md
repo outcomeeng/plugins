@@ -35,7 +35,7 @@ Documentation is one kind. Sentence mechanics and page architecture are two laye
 
 ## Kind resolution
 
-Resolved once, at whichever entry the caller invokes, and carried in the dispatch. An audit resolves the kind only when invoked with no declared kind.
+Resolved once, at whichever entry the caller invokes, and carried in the dispatch. A dispatched audit never resolves a kind: a dispatch with no kind or no target records a blocked run and judges no text.
 
 ## Audit delivery
 
