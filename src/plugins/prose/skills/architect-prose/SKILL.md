@@ -12,13 +12,13 @@ allowed-tools: Read, Write, Glob, Grep, Skill
 {!% require_skill 'prose:prose-architecture-standards' %!}
 
 <objective>
-A binding prose ADR whose structural rules live as ALWAYS/NEVER rules under the `## Verification` section's `### Audit` subsection.
+A binding prose ADR, authored to the decision template the `/understand` foundation provides, whose structural rules are ALWAYS/NEVER rules carrying `([audit])`.
 </objective>
 
 <foundational_stance>
-Standards are pre-loaded by the `require_skill` directives above. `/prose-architecture-standards` defines the ADR sections, structure ownership, and per-kind structural conventions; `/prose-standards` defines the voice and the kind style layers the ADR never restates.
+Standards are pre-loaded by the `require_skill` directives above. `/prose-architecture-standards` names the template source and owns structure ownership and the per-kind structural conventions; `/prose-standards` defines the voice and the kind style layers the ADR never restates.
 
-- A prose ADR follows the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification.
+- The ADR's shape comes from the `/understand` foundation's decision template, loaded before authoring — no skill restates it.
 - The ADR decides structure — artifact set, section architecture, ordering, sequencing across sibling and descendant artifacts, terminology homes, cross-link topology — and never contains drafted prose or style rules.
 - The artifact's writer is `/author-prose`; this skill never writes a prose artifact, and no prose artifact carries a structural annotation.
 
@@ -66,7 +66,7 @@ Execute these phases in order.
 
 **Phase 2 — Select the kind's conventions.** Read the supplied kind's reference in `/prose-architecture-standards` `<kind_structures>` and select the shapes the artifact set commits to.
 
-**Phase 3 — Write the ADR.** Decision-first per `/prose-architecture-standards` `<prose_adr_sections>`: title + decision, Rationale, optional Invariants, then `## Verification` with `### Audit` rules carrying `([audit])`. State structure as rules, in atemporal voice — never as a draft, an outline of current pages, or a migration plan.
+**Phase 3 — Write the ADR.** Load the decision template through the live `/understand` foundation and author to it, applying `/prose-architecture-standards` `<prose_adr_content>`. State structure as ALWAYS/NEVER rules carrying `([audit])`, in atemporal voice — never as a draft, an outline of current pages, or a migration plan.
 
 **Phase 4 — Verify consistency.** The new ADR contradicts no ancestor or sibling decision, and every structural rule is one `/author-prose` can comply with and an audit can judge.
 
@@ -85,7 +85,7 @@ Execute these phases in order.
 
 <success_criteria>
 
-- The ADR follows the authoritative template: decision-first, Rationale, optional Invariants, Verification with `### Audit` rules carrying `([audit])`.
+- The ADR conforms to the decision template loaded from the live `/understand` foundation, with structural rules as ALWAYS/NEVER rules carrying `([audit])`.
 - The ADR decides the artifact set, section architecture, ordering, cross-artifact sequencing, and terminology homes, and contains no drafted prose, no style rules, and no temporal narration.
 - The kind came from the invocation, the repository's map, or one asked question.
 - No prose artifact was written or annotated.

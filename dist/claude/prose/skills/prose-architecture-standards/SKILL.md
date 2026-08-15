@@ -7,13 +7,13 @@ allowed-tools: Read
 ---
 
 <objective>
-The canonical prose ADR conventions — sections, structure ownership, atemporal voice — and the per-kind structural conventions a prose ADR draws its rules from.
+The prose ADR conventions — template source, structure ownership, atemporal voice — and the per-kind structural conventions a prose ADR draws its rules from.
 </objective>
 
 <success_criteria>
 
-- The ADR uses only the authoritative sections: title + decision, Rationale, optional Invariants, Verification.
-- Structural rules live in `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules carrying `([audit])`.
+- The ADR conforms to the decision template loaded from the live `/understand` foundation; no prose skill restates that template's shape.
+- Structural rules are ALWAYS/NEVER rules carrying `([audit])`.
 - The ADR decides structure — artifact set, section architecture, ordering, terminology homes, cross-link topology — and no prose artifact carries structural annotation.
 - Every sentence states permanent truth; no section narrates document history or a migration.
 
@@ -31,22 +31,15 @@ A structural change is an ADR change first. Reordering a document set, splitting
 
 </structure_ownership>
 
-<prose_adr_sections>
+<prose_adr_content>
 
-The ADR template (from `/understand`) is decision-first — the decision is stated directly under the title, with no `Purpose` heading and no preamble:
+The ADR's shape is owned by the `/understand` foundation's decision template. Begin by loading that template through the live foundation; this standard never restates its sections, because a restated shape drifts the moment the template advances. Structural conformance of prose is agent judgment, so a prose ADR's verification rules carry `([audit])`.
 
-1. **Title + decision** -- `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences: which artifacts it governs and what structure it decides.
-2. **Rationale** -- Why this structure is right for the artifact set's readers. Name a rejected alternative only when it sharpens the decision. Omit if self-evident.
-3. **Invariants** (optional) -- Properties that hold for every governed artifact. Omit if none apply.
-4. **Verification** -- Each rule is an ALWAYS guarantee or a NEVER boundary under `### Audit`, carrying `([audit])`. Structural conformance of prose is agent judgment, so prose ADRs rarely carry another subsection.
-
-**This is the complete list.** A prose ADR has no other sections: no `Context`, no `Trade-offs`, no `Status`, no outline of the artifacts themselves — the structure the ADR decides is stated as rules, not reproduced as a draft.
-
-**What a prose ADR decides:** the artifact set and each artifact's kind; each artifact's section architecture and ordering; sequencing and cross-references across sibling and descendant artifacts; terminology homes — which artifact canonically defines each shared concept; and the structural conventions from the kind's reference below that the set commits to.
+**What a prose ADR decides:** the artifact set and each artifact's kind; each artifact's section architecture and ordering; sequencing and cross-references across sibling and descendant artifacts; terminology homes — which artifact canonically defines each shared concept; and the structural conventions from the kind's reference below that the set commits to. The structure the ADR decides is stated as rules, never reproduced as a draft or an outline of the artifacts themselves.
 
 **What a prose ADR never contains:** drafted prose, style rules the kind layers already carry, or per-sentence guidance — style belongs to `/prose-standards` and its kind layers, and text belongs to the artifact's writer.
 
-</prose_adr_sections>
+</prose_adr_content>
 
 <atemporal_voice>
 
