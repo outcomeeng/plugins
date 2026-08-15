@@ -7,40 +7,74 @@ allowed-tools: Read
 ---
 
 <objective>
-The catalog of 30+ prose anti-patterns across 6 categories, plus the ordered kind-detection procedure the prose routers execute.
+The shared voice canon, the catalog of 30+ prose anti-patterns across 6 categories, the rule packs that bind on an observable feature inside any kind, and the per-kind style layers.
 </objective>
 
 <success_criteria>
-Prose follows these standards when no anti-pattern in this catalog survives in it — word choice, sentence structure, paragraph structure, tone, formatting, and composition each evaluated against the prose rather than assumed clean, and every match either rewritten to carry the same meaning without the pattern or kept for a reason the prose itself makes evident.
+Prose follows these standards when no anti-pattern in this catalog survives in it outside the supplied kind's declared overrides. Word choice, sentence structure, paragraph structure, tone, formatting, and composition are each evaluated against the prose. Every match is rewritten to carry the same meaning without the pattern, or kept for a reason the prose itself makes evident.
 
-The catalog itself is sound when every anti-pattern entry carries a name, the rule, and at least one worked avoid-example, and the kind-detection procedure's five tests are ordered, exhaustive, and mutually exclusive at first match.
+The catalog itself is sound when every anti-pattern entry carries a name, the rule, and at least one worked avoid-example. Each rule pack is sound when it names the observable feature that triggers it and the rules that then bind. Each kind layer is sound when every override it declares names the base rule it relaxes and the bounds of the relaxation.
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Composing prose skills load these patterns explicitly before writing or reviewing. It is not a standalone workflow.
+This is a reference skill. Composing prose skills load these patterns explicitly before writing or reviewing. It is not a standalone workflow. The kind a text carries is supplied to the prose workflow skills by their caller; this catalog states rules and never resolves a kind.
 </reference_note>
 
-<kind_detection>
+<voice_canon>
+The shared voice rules, transcluded from the authored canon every kind layer and the shipped `prose` output style render from — one source, every surface.
 
-One ordered procedure classifies any text into exactly one kind. `/author-prose` and `/audit-prose` execute it; first match decides.
+Lead with the substance. The first words carry the action, the answer, or the event — never a warm-up, a preamble, or a restatement of the question.
 
-1. **Ownership.** A repository or domain workflow governs the artifact — a spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide? Stop and route to that workflow. The prose surface never touches it.
-2. **Audience.** The reader is a team colleague with working context — one who skims and may return to a specific section later, wherever the team keeps it — a workspace tool or a repository? Kind: **internal-docs** -> `/internal-docs-standards`.
-3. **Function.** The text explains or instructs the use of a product — tutorial, how-to, reference, conceptual guide? Kind: **docs** -> `/docs-standards`.
-4. **Unit.** The text is a fragment embedded in a designed surface — app chrome, button, label, empty state, error message, tooltip, notification or email template, short web-page section? Kind: **interface** -> `/interface-standards`.
-5. **Otherwise.** The text is a self-contained piece read start to finish. Kind: **copy** -> `/copy-standards`.
+Plain words. The short common word over the long one; the concrete noun over the metaphorical one; the active voice over the passive. Cut every word that can be cut. No stock metaphors, no jargon where an everyday word exists.
 
-Chat responses to the user are excluded from the prose surface entirely. Operational prose — a code comment, a commit message, an agent-facing instruction — is excluded the same way; the workflow that owns it governs it.
+No filler words. "Please", "sorry", "successfully", "note that", and "in order to" are cut on sight; the remaining words carry the meaning.
 
-Boundary consequences:
+Assert only what is demonstrated. No significance adverbs ("deeply", "fundamentally"), no authenticity adverbs ("genuinely", "truly", "actually"), no stakes inflation. If a thing matters, the content shows it.
 
-- A web page routes by unit: its chrome and section fragments are interface; an article rendered on it is copy.
-- Documentation wins over unit: an error-message reference page is docs; the error message itself, in product, is interface.
-- Marketing splits the same way: long-form is copy; headlines, CTAs, and feature blurbs are interface.
-- A document whose parts differ in kind receives each part's own layer, and audit findings name the kind per finding.
-- Text the procedure leaves ambiguous is resolved by the interactive caller asking the user to select a kind from this list — never by guessing, never by inventing a style outside it. A dispatched audit honors a dispatch-declared kind only for text this procedure leaves ambiguous — ownership outranks a declared kind; when the dispatch declares none, the ambiguity is reported in the verdict and the plausible kinds' shared rules are audited.
+One term, one meaning. Each concept keeps one name throughout; one word never names two concepts.
 
-</kind_detection>
+Failures state what happened and what to do next — two parts, in that order, in plain language, without blame and without apology ritual.
+
+Sentence case for titles, headings, and labels: first word capitalized, the rest lowercase except proper nouns. No all-caps emphasis.
+
+Standard punctuation. Em dashes sparingly, straight quotes, no unicode decoration, no bold-first bullet scaffolding — structure and word choice carry emphasis, not typeface.
+
+</voice_canon>
+
+<kind_layers>
+
+A kind's style layer carries its overrides — the base rules it relaxes, each bounded — and the style rules only that kind carries. Read the supplied kind's file before writing or judging text of that kind; the base catalog binds everywhere the layer does not explicitly relax it.
+
+| Kind            | Style layer                                       |
+| --------------- | ------------------------------------------------- |
+| `copy`          | `${CLAUDE_SKILL_DIR}/references/copy.md`          |
+| `interface`     | `${CLAUDE_SKILL_DIR}/references/interface.md`     |
+| `documentation` | `${CLAUDE_SKILL_DIR}/references/documentation.md` |
+
+Each kind's structural conventions live in the matching reference of `/prose-architecture-standards`; structure is decided in a prose ADR, never restated here.
+
+</kind_layers>
+
+<rule_packs>
+
+A pack binds on a feature present in the text, inside every kind. One text carries one kind and as many packs as its features trigger, so a runbook's numbered procedure and an essay's comparison table are each governed where they appear.
+
+**Instructions** — triggered by numbered steps, a procedure, or any sentence telling the reader to perform an action.
+
+- An instruction sentence caps at 20 words. Over the cap, it splits.
+- One instruction per sentence. "Save the file and restart the server" is two instructions: two sentences or two steps.
+- Condition before command. "If the build fails, read the log", never "Read the log if the build fails". The reader executes in reading order.
+- No should, would, may, or might. An instructed action happens: "restart the server", not "the server should be restarted".
+- Each step leads with its action verb. "Open the file", never "First, you'll need to open the file".
+- Articles are never dropped. "Open the file", not telegraphic "Open file".
+
+**Tables** — triggered by any table.
+
+- A table earns its shape when two or more dimensions cross. A single-dimension table is a list.
+- Cells hold a phrase. Move a cell that runs to a paragraph into prose beneath the table.
+- The header row is visually distinct, and a first column acting as the row key may be bold.
+
+</rule_packs>
 
 <word_choice>
 

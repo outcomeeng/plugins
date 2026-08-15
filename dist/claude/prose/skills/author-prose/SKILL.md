@@ -1,54 +1,93 @@
 ---
 name: author-prose
 description: >-
-  ALWAYS invoke this skill when writing or editing any text for human readers — documents, web pages, articles, product docs, UI text, error messages, notifications, emails, READMEs, release notes, marketing copy, and internal team pages. NEVER invoke for chat responses to the user (no matter how long), code comments, commit messages, or agent-facing instructions like SKILL.md.
-allowed-tools: Read, Edit, Write, Glob, Grep, Skill, Agent
+  ALWAYS invoke this skill when writing text for human readers — docs pages, UI text, error messages, emails, release notes. NEVER invoke for chat responses, code comments, commit messages, or agent instructions.
+argument-hint: "[interface|documentation|copy] <what to write>"
+allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Skill, Agent
 ---
 
 Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
+Invoke the `prose:prose-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
 <objective>
 
-Human-facing text drafted against its kind's standards and approved by a `prose-auditor` pass.
+Human-facing text drafted against the kind its caller supplied, complying with the governing prose ADR, and approved by a `prose-auditor` pass.
 
 </objective>
 
 <constraints>
 
-- NEVER write the text before the kind is resolved — a draft against the wrong kind's standards reads wrong in ways later editing does not repair.
-- NEVER guess an ambiguous kind or invent a style outside the taxonomy — ask the user to select a kind.
-- NEVER author a repository- or domain-governed artifact here — ownership routes to the governing workflow before any other test runs.
+- NEVER derive the kind from the request, the destination, or a draft. Writing precedes the text, so no property of the text exists to read; a draft against the wrong kind's standards reads wrong in ways later editing does not repair.
+- NEVER guess when no kind arrives. Ask, from the three-kind list, once.
+- NEVER invent a style outside the taxonomy.
+- NEVER author a repository- or domain-governed artifact here — ownership outranks a supplied kind, and a governed artifact routes to its own workflow before anything else runs.
+- NEVER decide structure against the governing prose ADR. This skill is the artifact's sole writer, and the ADR owns the artifact set's structure; a structural change routes through `/architect-prose` first.
 
 </constraints>
 
+<kind_intake>
+
+Before any step below, check ownership. A spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is governed by its own workflow and never enters the prose surface, whatever kind the request supplies. Chat responses and operational prose — a code comment, a commit message, an agent-facing instruction — stay outside it the same way. Ownership outranks a supplied kind, so a kind arriving at step 1 never resolves past this check.
+
+The kind is an input. Resolve it in this order and stop at the first that yields one:
+
+1. **The invocation.** A kind named in the arguments or the request — `interface`, `documentation`, or `copy`.
+2. **The repository's map.** When the repository declares a path-to-kind map at `spx/local/prose.md` and the target path matches an entry, that entry is the kind. The map is a declaration its owner wrote, never an inference.
+3. **One question.** Ask the user to pick from the three kinds, presenting what each covers. Never guess and never proceed without an answer.
+
+| Kind            | The text goes into                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| `interface`     | A designed surface: buttons, labels, empty states, error messages, tooltips, notifications, email templates  |
+| `documentation` | A document set: product docs, wiki pages, runbooks, reference, policies, rubrics, onboarding guides, READMEs |
+| `copy`          | A standalone piece read start to finish: essays, articles, long-form landing narrative                       |
+
+One text carries one kind. Register variation inside it is carried by the `/prose-standards` `<rule_packs>`, which bind on a feature rather than on a kind, so a runbook's procedure and an essay's table are governed where they appear without a second kind.
+
+</kind_intake>
+
 <workflow>
 
-1. Classify the text through `/prose-standards` `<kind_detection>` — the ordered procedure is pre-loaded above. Ownership routes away; ambiguity asks the user; every other text resolves to exactly one kind: copy, interface, docs, or internal-docs.
+1. Check ownership through `<kind_intake>`. A governed artifact routes to its own workflow and stops here, whatever kind the request supplied.
 
-2. Invoke the kind's composed author skill via the Skill tool: `prose:author-copy`, `prose:author-interface`, `prose:author-docs`, or `prose:author-internal-docs`. That skill loads its standards layer and carries the kind's writing guidance and workflow.
+2. Resolve the kind through `<kind_intake>`. Nothing is written before it is settled.
 
-3. For a document whose parts differ in kind — a docs page with embedded UI strings, a landing page with an essay — apply each part's kind. Classify per part, not per file.
+3. Locate the governing prose ADR. When the repository's spec tree carries a prose ADR governing the target artifact, read it — it decides the artifact's structure, its place among sibling artifacts, and the terminology homes. When the request needs a structural change the ADR does not decide — a new artifact, a reordered set, a split page — route the structural decision through `/architect-prose` before writing. With no governing ADR, the kind's structural conventions in `/prose-architecture-standards` guide the artifact's shape directly.
 
-4. Write or edit the text applying the base catalog and the kind's layer together. Zero tolerance for the base anti-patterns; the kind's overrides are the only sanctioned relaxations.
+4. Read the kind's style layer — the supplied kind's file from `/prose-standards` `<kind_layers>` — and the kind's structural conventions from `/prose-architecture-standards` `<kind_structures>`.
 
-5. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming each user-resolved kind in the dispatch as `Kind: <kind> (user-selected) for <file-or-part>` — one declaration per ambiguous part, binding only the text it names. Fix findings and re-audit until the verdict is `APPROVED`.
+5. Write or edit the text applying the voice canon, the base catalog, and the kind's layers together. Zero tolerance for the base anti-patterns; the kind's overrides are the only sanctioned relaxations.
+
+6. Apply every rule pack the text triggers. A numbered procedure triggers the instruction pack; a table triggers the table pack.
+
+7. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming the kind in the dispatch as `Kind: <kind>`. The dispatched audit reads nothing without it. The agent returns a raw run token; invoke the `project-run-journal` skill, read the sealed run's event prefix with `spx journal read --type audit --run <token> --from 0`, render it through that skill's projection, fix the findings it reports, and re-audit until the run completes approved.
 
 </workflow>
 
 <success_criteria>
 
-- The kind was resolved by the detection procedure or an explicit user choice before drafting began.
-- The text was written through the kind's composed author skill, not from the router's own judgment.
-- Mixed documents received per-part classification.
-- A `prose-auditor` dispatch returned `APPROVED` on the final text.
+- The delivered text carries exactly one kind — the supplied one — and conforms to that kind's style layer and structural conventions, with no base anti-pattern surviving outside the kind's declared overrides.
+- The text complies with the governing prose ADR where one exists; no structural decision was made against it while writing.
+- Every rule pack a feature of the text triggers holds where that feature appears.
+- A sealed `prose-auditor` run over the exact final text completed approved, dispatched with the kind.
+- Text another surface owns was never drafted here — a governed artifact reached its own workflow untouched.
 
 </success_criteria>
 
+<failure_modes>
+
+**Drafting started before the kind was settled.**
+
+Claude read "write the onboarding page for the new export flow", recognized a page, and drafted against the documentation layer. The text was destined for a product-tour overlay, so every paragraph had to become a sequence of elements under the interface brevity caps. Nothing survived the conversion but the facts. The kind is not a property of a draft that can be corrected afterward; it selects the standards the draft is built from, so an unresolved kind stops the writing rather than steering it.
+
+</failure_modes>
+
 <reference_index>
 
-| Skill                                                                        | When to read                               |
-| ---------------------------------------------------------------------------- | ------------------------------------------ |
-| `/prose-standards`                                                           | Always — detection procedure and catalog   |
-| `/author-copy`, `/author-interface`, `/author-docs`, `/author-internal-docs` | The resolved kind's skill, after detection |
+| Skill                           | When to read                                                                |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| `/prose-standards`              | Always — voice canon, base catalog, rule packs, kind style layers           |
+| `/prose-architecture-standards` | The kind's structural conventions, and the ADR shape when structure changes |
+| `/project-run-journal`          | Rendering the audit run token the `prose-auditor` dispatch returns          |
 
 </reference_index>
