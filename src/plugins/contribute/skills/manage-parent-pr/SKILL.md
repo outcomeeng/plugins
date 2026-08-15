@@ -135,6 +135,8 @@ Cut every sentence about the contribution's own process — attempts made, time 
 <constraints>
 
 - MUST read the pull request's state exactly once per invocation and return without waiting.
+- NEVER fix, commit, push, or comment when `state` is `CLOSED` or `MERGED`. Report that outcome and return; nobody is going to act on a reply to a finished pull request.
+- NEVER move the branch or push when `headRepositoryOwner`/`headRepository` do not equal the resolved `head`. A number or URL names a pull request from any fork, and Step 5 pushes this checkout's `HEAD`.
 - MUST verify a finding against the branch before changing code for it.
 - MUST confirm `origin` resolves to the resolved head before the Step 3 fetch, not only before the Step 5 push. The fetch reads through `origin` too, and the reset that follows it moves the branch to whatever that fetch returned.
 - MUST require a clean working tree before the Step 3 reset, and commit nothing the operator left in progress.
@@ -167,6 +169,7 @@ Cut every sentence about the contribution's own process — attempts made, time 
 
 - The resolver returned `parent-contribution` before any write.
 - The pull request's state was read once, and `state`, `reviewDecision`, and each required check's conclusion appear verbatim.
+- A `state` of `CLOSED` or `MERGED`, and a head repository other than the resolved `head`, each returned that outcome and wrote nothing; every criterion below covers a pass that continued.
 - Every confirmed finding is fixed as a defect class, and the Step 6 comment carries one disposition per finding Step 4 read — what changed for a confirmed one, the evidence for an unconfirmed one — so re-reading the posted comment against the review accounts for every finding.
 - The base repository's declared checks ran on the revised branch and reported success.
 - `origin` was confirmed to be the resolved head and the working tree was clean before the head branch was reset to the fetched tip.

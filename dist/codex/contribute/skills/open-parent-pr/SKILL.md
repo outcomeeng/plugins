@@ -177,6 +177,7 @@ The body explains why; the diff already shows what.
 - NEVER stage by wildcard. The `Bash(git add:*)` grant matches by prefix, so it admits `-A` and `.`, either of which sweeps unrelated work in the invocation checkout into a commit bound for someone else's repository. Name the contribution's paths.
 - NEVER pass `--no-verify` to `git commit`. The `Bash(git commit:*)` grant matches by prefix and admits it. Hooks run from this checkout's own configuration, which conforming to the base repository's conventions is what installs, so skipping them drops part of the verification Step 6 requires.
 - NEVER cherry-pick a commit outside the invocation branch's own range. The `Bash(git cherry-pick:*)` grant matches by prefix, so it admits any revision the checkout can name; Step 4 replays that branch's commits and nothing else.
+- NEVER open a pull request whose diff against `<base-tip>` is empty. An empty diff after the replay in Step 4, or at the Step 8 commit gate, means the contribution was left on the invocation branch or never committed — the pull request would carry nothing.
 - NEVER open against a base whose classification is `controlled`, `fork-absent`, or `blocked`.
 - NEVER create the fork — report the destination candidates and stop.
 - NEVER report an unrunnable check as passed, or omit it from the body.
@@ -196,6 +197,7 @@ The body explains why; the diff already shows what.
 - The resolver returned `parent-contribution`, and `base`, `head`, and `permission` appear verbatim in the report.
 - The operator authorized this pull request against the resolved base in the turn it was created.
 - The contribution branch was cut from the base repository's default branch.
+- The branch's diff against `<base-tip>` carried the change before the push; an empty diff at either gate stopped the flow with nothing opened, and every criterion below covers a pass that opened.
 - The base repository's declared checks ran locally and reported success; any check that could not run is named in the body as unverified with its reason.
 - The title and body passed a prose review, and a review that ran unassisted is reported as such.
 - The head owner's account type was read before the head form was chosen, and `gh pr create` named the base with `--repo` and named the head explicitly — `<head-owner>:<branch>` for a user, `<branch>` alone for an organization — with the body arriving on stdin.

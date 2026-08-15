@@ -82,6 +82,7 @@ gh issue close "<number>" --repo "<base>"
 <constraints>
 
 - MUST read the thread exactly once per invocation and return without waiting.
+- NEVER comment on or close an issue whose `state` is `CLOSED`. Report that outcome and return; the decision is already made, and a comment notifies every watcher of it.
 - MUST name the base repository with `--repo` on every `gh` write.
 - MUST answer the maintainer's question before adding anything else.
 - NEVER post a comment when the thread asked nothing — a state-only invocation returns what it read and writes nothing.
@@ -105,6 +106,7 @@ gh issue close "<number>" --repo "<base>"
 
 - The resolver returned `parent-contribution` or `fork-absent` before any write.
 - The thread was read once, and `state` plus the last maintainer comment appear verbatim.
+- A `state` of `CLOSED` returned that outcome and wrote nothing; every criterion below covers a pass on an open thread.
 - The issue's `author.login` was compared against the authenticated login before the comment was posted, and a thread the operator did not open was authorized in that turn.
 - Where the thread asked a question, the reply's opening sentence answers the one Step 4 identified and every claim after it is followed by quoted evidence rather than a description of that evidence; where it asked none, no comment was posted.
 - Inference is marked as inference; an unreproduced condition is marked unverified.
