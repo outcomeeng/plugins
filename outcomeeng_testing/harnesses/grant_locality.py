@@ -20,8 +20,9 @@ from outcomeeng.validation.grant_locality import (
     scan_file,
 )
 from outcomeeng_testing.generators.grant_locality import (
-    escaping_grant_declarations,
     local_grant_declarations,
+    skill_file_whose_grant_escapes,
+    skill_files_whose_grants_are_local,
 )
 
 
@@ -53,15 +54,26 @@ def _observe(content: str, *, filename: str = SKILL_FILENAME) -> ScanObservation
 
 
 def observe_escaping_scan() -> ScanObservation:
-    """Observe the command over a skill whose last line escapes the directory."""
-    return _observe(
-        "\n".join((local_grant_declarations()[0], escaping_grant_declarations()[0]))
-    )
+    """Observe the command over a skill file whose frontmatter grant escapes."""
+    return _observe(skill_file_whose_grant_escapes())
 
 
 def observe_local_scan() -> ScanObservation:
-    """Observe the command over a skill carrying every local grant category."""
-    return _observe("\n".join(local_grant_declarations()))
+    """Observe the command over a skill file carrying every local grant category."""
+    return _observe(
+        "---\nname: example\n"
+        + "\n".join(local_grant_declarations())
+        + "\n---\n\n<objective>\nOne output.\n</objective>\n"
+    )
+
+
+def observe_local_skill_files() -> tuple[ScanObservation, ...]:
+    """Observe the command over each whole skill file whose grants are local.
+
+    One of them writes the prohibited declaration in its body at column zero,
+    which is the shape a standard uses to show what it rejects.
+    """
+    return tuple(_observe(content) for content in skill_files_whose_grants_are_local())
 
 
 def observe_content(content: str) -> ScanObservation:

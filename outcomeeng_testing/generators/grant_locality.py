@@ -134,16 +134,48 @@ def local_grant_declarations() -> tuple[str, ...]:
     )
 
 
+def _escaping_grant() -> str:
+    """One escaping grant, as every body and file category writes it."""
+    scenario = source_scenarios()[0]
+    return f'Bash(python3 "${{{SKILL_DIR_VARIABLES[0]}}}/../{scenario.plugin}/scripts/x.py":*)'
+
+
 def body_mentions() -> tuple[str, ...]:
     """Escaping grants written outside an `allowed-tools` field declaration.
 
     A standard documenting the prohibited shape, and a skill body quoting one,
     both carry the text without declaring the grant.
     """
-    scenario = source_scenarios()[0]
-    escaping = f'Bash(python3 "${{{SKILL_DIR_VARIABLES[0]}}}/../{scenario.plugin}/scripts/x.py":*)'
+    escaping = _escaping_grant()
     return (
         f"Never write {escaping} in frontmatter.",
         f"| {escaping} | rejected |",
         f"  {ALLOWED_TOOLS_FIELD}: {escaping}",
     )
+
+
+def skill_files_whose_grants_are_local() -> tuple[str, ...]:
+    """Whole skill files declaring only local grants, however the body reads.
+
+    The second file writes the prohibited declaration in its body at column
+    zero, inside a fence, which is how a standard shows the shape it rejects.
+    Its frontmatter grants are local, so the file complies — a rule reading past
+    the frontmatter fails the very skill that documents the rule.
+    """
+    local = local_grant_declarations()[0]
+    escaping = _escaping_grant()
+    compliant = (
+        f"---\nname: example\n{local}\n---\n\n<objective>\nOne output.\n</objective>\n"
+    )
+    documenting = (
+        f"---\nname: standards\n{local}\n---\n\n<constraints>\n\n"
+        f"NEVER write this declaration:\n\n"
+        f"```yaml\n{ALLOWED_TOOLS_FIELD}: {escaping}\n```\n\n</constraints>\n"
+    )
+    return (compliant, documenting)
+
+
+def skill_file_whose_grant_escapes() -> str:
+    """One whole skill file whose frontmatter declares an escaping grant."""
+    escaping = escaping_grant_declarations()[0]
+    return f"---\nname: example\n{escaping}\n---\n\n<objective>\nOne output.\n</objective>\n"

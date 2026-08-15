@@ -40,6 +40,16 @@ Read the default-branch name, then fetch and branch in a second block:
 ```bash
 git fetch "https://github.com/<base>.git" "<base-default-branch>"
 git rev-parse FETCH_HEAD
+git rev-parse --verify --quiet "refs/heads/<branch>"
+```
+
+The third command prints a SHA when an earlier pass already cut this branch — the name derives from the description, so a retry after a failed replay, an aborted cherry-pick, or a failed creation lands on the same one. `git switch -c` refuses an existing branch, so decide before the switch rather than stopping on its error with no instruction:
+
+- **Nothing printed.** The branch is new; cut it below.
+- **The printed SHA equals `<base-tip>`.** The earlier pass cut the branch and got no further. Take it with plain `git switch "<branch>"` and continue.
+- **Any other SHA.** The branch carries commits from an earlier attempt. Report the branch, that SHA, and `git log --format='%h %s' <base-tip>..<branch>`, then stop. Whether those commits are the contribution to keep or the wreckage of an aborted replay is a decision about the contribution; discarding them or building on them silently makes it for the operator.
+
+```bash
 git switch -c "<branch>" FETCH_HEAD
 ```
 
@@ -171,6 +181,7 @@ The body explains why; the diff already shows what.
 - MUST obtain authorization naming the resolved base in the same turn before creating the pull request.
 - MUST name the base repository with `--repo` on `gh pr create`, and name the head explicitly rather than letting `gh` resolve one: `--head <head-owner>:<branch>` for a user-owned head, `--head <branch>` from a checkout whose `origin` is the head repository when that head is organization-owned. `gh` documents the qualified form as `<user>:<branch>`, so requiring it unconditionally steers an organization-owned head back into the form that cannot select it.
 - MUST cut the contribution branch from the base repository's default branch, under a name derived in Step 4 before the first command that uses it.
+- NEVER discard or build on commits an earlier pass left on the derived branch. Read whether the branch exists before `git switch -c`, take it only when its tip is `<base-tip>`, and otherwise report its commits and stop.
 - NEVER force-push. The `Bash(git push -u origin HEAD:refs/heads/*)` grant matches by prefix, so it admits `--force` and `--force-with-lease` too; this constraint is the whole containment for those flags.
 - NEVER pass `--force` or `--discard-changes` to `git switch` — the `Bash(git switch:*)` grant matches by prefix and admits both, and either one drops uncommitted work in the invocation checkout. Cutting the contribution branch never needs them.
 - NEVER write through `gh api users`. The `Bash(gh api users/*)` grant matches by prefix, so it admits `-X PATCH` and `-X DELETE` after the owner segment; this constraint is the whole containment for those verbs. It reads the head owner's account type and nothing else.
@@ -196,7 +207,7 @@ The body explains why; the diff already shows what.
 
 - The resolver returned `parent-contribution`, and `base`, `head`, and `permission` appear verbatim in the report.
 - The operator authorized this pull request against the resolved base in the turn it was created.
-- The contribution branch was cut from the base repository's default branch.
+- The contribution branch was cut from the base repository's default branch, and a branch an earlier pass had already cut was taken only at `<base-tip>`; one carrying commits stopped the flow with those commits named.
 - The branch's diff against `<base-tip>` carried the change before the push; an empty diff at either gate stopped the flow with nothing opened, and every criterion below covers a pass that opened.
 - The base repository's declared checks ran locally and reported success; any check that could not run is named in the body as unverified with its reason.
 - The title and body passed a prose review, and a review that ran unassisted is reported as such.

@@ -52,6 +52,11 @@ def lifecycle_surface_changes() -> tuple[ChangedPath, ...]:
                 "foo",
                 f"{SKILLS_SUBDIR_NAME}/copied-skill/{SKILL_FILENAME}",
             ),
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "foo",
+                f"{SKILLS_SUBDIR_NAME}/source-skill/{SKILL_FILENAME}",
+            ),
         ),
         ChangedPath(
             FileStatus.DELETED,
@@ -125,8 +130,11 @@ def non_lifecycle_surface_changes() -> tuple[ChangedPath, ...]:
     """Changes that are either modifying or land outside a declared surface.
 
     The first three modify a declared surface; the rest touch a path no declared
-    surface covers, under both an authored and a generated root. These are inputs
-    only; the segment each one classifies to is asserted by the linked test.
+    surface covers, under both an authored and a generated root. One of them is a
+    copy whose git-detected source is another plugin's `SKILL.md`, which git
+    reports whenever a new file resembles an existing one: the copy leaves that
+    source untouched, so the destination alone decides the segment. These are
+    inputs only; the segment each one classifies to is asserted by the linked test.
     """
     return (
         ChangedPath(
@@ -163,6 +171,11 @@ def non_lifecycle_surface_changes() -> tuple[ChangedPath, ...]:
             FileStatus.COPIED,
             distribution_relpath(
                 SOURCE_PLUGINS_DIR, "foo", "skills/existing/scripts/copied_helper.py"
+            ),
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                "bar",
+                f"{SKILLS_SUBDIR_NAME}/donor/{SKILL_FILENAME}",
             ),
         ),
         ChangedPath(

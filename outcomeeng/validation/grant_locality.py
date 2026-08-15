@@ -22,6 +22,11 @@ is spelled: ``${VAR}/..`` and ``${VAR}/scripts/../../sibling`` both leave, while
 ``${VAR}/scripts/../scripts`` returns to itself and stays.  Containment is
 decided by walking the segments, never by matching one spelling.
 
+Only a skill's YAML frontmatter declares grants, so only the frontmatter is
+read.  A body may write the field name at the start of a line — a standard
+listing the shape it prohibits, a skill quoting one inside an unindented fence —
+and those are documentation, not permissions the runtime grants.
+
 Usage::
 
     uv run python -m outcomeeng.validation.grant_locality [SKILL.md ...]
@@ -78,11 +83,31 @@ _SKILL_DIR_REFERENCE: Final[re.Pattern[str]] = re.compile(
 # spelling of one path into the same segment sequence.
 _SHELL_QUOTES: Final = str.maketrans("", "", "\"'")
 
-# The ``allowed-tools`` declaration, matched at the start of a line so a body
-# mention of the field name is not read as a grant declaration.
+# The ``allowed-tools`` declaration, matched at the start of a line.
 _ALLOWED_TOOLS_LINE: Final[re.Pattern[str]] = re.compile(
     r"^" + re.escape(ALLOWED_TOOLS_FIELD) + r"\s*:(?P<value>.*)$"
 )
+
+# The delimiter opening and closing a skill file's YAML frontmatter.
+_FRONTMATTER_DELIMITER: Final = "---"
+
+
+def frontmatter(text: str) -> str:
+    """The YAML frontmatter of a skill file, or the empty string when absent.
+
+    Only the frontmatter declares grants, so only the frontmatter is scanned.
+    A body may write the field name at the start of a line — a standard listing
+    the prohibited shape, or a skill quoting one inside an unindented fence —
+    and reading the whole file turns that documentation into a gate failure on
+    a skill whose real grants are local.
+    """
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != _FRONTMATTER_DELIMITER:
+        return ""
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == _FRONTMATTER_DELIMITER:
+            return "\n".join(lines[1:index])
+    return ""
 
 
 def _escapes(path: str) -> bool:
@@ -142,7 +167,11 @@ class Violation:
 
 
 def find_escaping_grants(text: str) -> list[tuple[int, str]]:
-    """Return ``(line, reference)`` for each grant that escapes the skill directory."""
+    """Return ``(line, reference)`` for each grant in ``text`` that escapes.
+
+    ``text`` is frontmatter, not a whole file: `scan_file` extracts it with
+    `frontmatter` first. Line numbers are relative to ``text``.
+    """
     violations: list[tuple[int, str]] = []
     for lineno, value in _declaration_values(text):
         violations.extend(
@@ -159,11 +188,15 @@ def scan_file(path: Path) -> list[Violation]:
     The caller supplies the path: the gate step enumerates the shipped skill
     files, and a test supplies its own temporary file.  The read is the whole
     contract — this module opens nothing else and writes nothing.
+
+    Only the frontmatter is scanned, and its first line sits one line below the
+    file's own first line, so each reported line adds that opening delimiter
+    back and points at the declaration in the file.
     """
     text = path.read_text(encoding="utf-8")  # NOSONAR S8707 - read-only
     return [
-        Violation(path=path, line=lineno, reference=reference)
-        for lineno, reference in find_escaping_grants(text)
+        Violation(path=path, line=lineno + 1, reference=reference)
+        for lineno, reference in find_escaping_grants(frontmatter(text))
     ]
 
 

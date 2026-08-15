@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when continuing an open pull request against a repository the operator does not control — answering review, publishing a revision, or reporting its current state.
   NEVER comment on or push to such a pull request without this skill.
 argument-hint: "[pull request number or URL]"
-allowed-tools: Read, Skill, Agent, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(git status --porcelain), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(git fetch:*), Bash(git switch:*), Bash(git rev-list:*), Bash(git branch --show-current), Bash(git add:*), Bash(git commit:*), Bash(git push origin HEAD:refs/heads/*), Bash(printf:*)
+allowed-tools: Read, Skill, Agent, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*), Bash(git remote get-url origin), Bash(gh repo view:*), Bash(git status --porcelain), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api user:*), Bash(git fetch:*), Bash(git switch:*), Bash(git rev-list:*), Bash(git branch --show-current), Bash(git add:*), Bash(git commit:*), Bash(git push origin HEAD:refs/heads/*), Bash(printf:*)
 ---
 
 <objective>
@@ -40,8 +40,16 @@ gh pr view "<number>" --repo "<base>" --json state,isDraft,reviewDecision,mergeS
 Read review threads through the API when line-anchored comments matter, because `gh pr view` carries the PR-level conversation and not the comments tied to a file and line:
 
 ```bash
-gh api repos/"<base>"/pulls/"<number>"/comments --paginate --jq '.[] | {path, line, body}'
+gh api repos/"<base>"/pulls/"<number>"/comments --paginate --jq '.[] | {user: .user.login, in_reply_to_id, path, line, body}'
 ```
+
+That endpoint returns every line-anchored comment on the pull request, not only a reviewer's. Keeping `user` and `in_reply_to_id` is what separates the three kinds it mixes: a maintainer's finding, a reply this flow posted on an earlier pass, and a line comment from anyone else. Dropping them leaves Step 4 rereading its own answers as new findings and re-fixing what it already fixed, pass after pass, on a repository the operator does not control. Read the authenticated login, which is the only side of that comparison the pull request does not already supply:
+
+```bash
+gh api user --jq '.login'
+```
+
+Take as findings the comments carrying no `in_reply_to_id` from a login other than that one, and read the rest as the thread around them.
 
 Read the state one time — a maintainer answers on their own schedule, and `/contribution-standards` forbids polling, watching, and sleeping on the artifact.
 
@@ -148,7 +156,9 @@ Cut every sentence about the contribution's own process — attempts made, time 
 - NEVER run the `-C` reset before the commit count proves the local branch carries nothing the fetched tip lacks. `-C` moves the branch to `FETCH_HEAD`, so a local commit the pull request has not seen is lost without that check.
 - NEVER stage by wildcard. The `Bash(git add:*)` grant matches by prefix, so it admits `-A` and `.`, either of which sweeps unrelated work in the invocation checkout into a commit destined for someone else's repository. Name the fixed paths.
 - NEVER pass `--no-verify` to `git commit`. The `Bash(git commit:*)` grant matches by prefix and admits it. Hooks run from this checkout's own configuration, which conforming to the base repository's conventions is what installs, so skipping them drops part of the verification `/contribution-standards` requires. No hook being configured right now is not a reason to pass the flag.
-- NEVER write through `gh api` — the `Bash(gh api repos/*/pulls/*/comments:*)` grant exists to read review threads, and matching by prefix it also admits `-X DELETE` and `-X PATCH` against a maintainer's comment. Read only.
+- MUST keep `user` and `in_reply_to_id` in the review-thread projection, and select findings from them. A projection that drops either one cannot tell a maintainer's finding from a reply this flow already posted, so Step 4 re-fixes what it fixed on the previous pass.
+- MUST read `gh api user` only for that authorship comparison. `/contribution-standards` `<invariants>` "Establish permission from the API" rules the authenticated account out as evidence of permission on the base; it is evidence of identity and nothing else.
+- NEVER write through `gh api` — the `Bash(gh api repos/*/pulls/*/comments:*)` and `Bash(gh api user:*)` grants exist to read review threads and the authenticated login, and matching by prefix they also admit `-X DELETE` and `-X PATCH` against a maintainer's comment and against the operator's own GitHub account. Read only.
 - NEVER pass `--edit-last` or `--delete-last` to `gh pr comment`. The `Bash(gh pr comment:*)` grant matches by prefix and admits both, and either one rewrites or removes a comment a reviewer may already have read. `/contribution-standards` `<invariants>` "Iterate by appending" is the rule; this constraint is its containment here.
 - NEVER call `gh pr edit --add-reviewer`, `gh pr review`, or any maintainer-side action against a base the operator does not control.
 - NEVER treat `reviewDecision: CHANGES_REQUESTED` as a state the contributor can clear.
@@ -170,6 +180,7 @@ Cut every sentence about the contribution's own process — attempts made, time 
 - The resolver returned `parent-contribution` before any write.
 - The pull request's state was read once, and `state`, `reviewDecision`, and each required check's conclusion appear verbatim.
 - A `state` of `CLOSED` or `MERGED`, and a head repository other than the resolved `head`, each returned that outcome and wrote nothing; every criterion below covers a pass that continued.
+- The review-thread read kept each comment's author and reply parent, and the findings it selected exclude every reply this flow posted on an earlier pass.
 - Every confirmed finding is fixed as a defect class, and the Step 6 comment carries one disposition per finding Step 4 read — what changed for a confirmed one, the evidence for an unconfirmed one — so re-reading the posted comment against the review accounts for every finding.
 - The base repository's declared checks ran on the revised branch and reported success.
 - `origin` was confirmed to be the resolved head and the working tree was clean before the head branch was reset to the fetched tip.

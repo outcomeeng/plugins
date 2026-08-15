@@ -1,6 +1,7 @@
 from outcomeeng_testing.harnesses.grant_locality import (
     observe_escaping_scan,
     observe_local_scan,
+    observe_local_skill_files,
 )
 
 
@@ -34,3 +35,19 @@ def test_local_grants_report_nothing_and_succeed() -> None:
     assert observed.violations == (), (
         f"local grants produced violations {observed.violations!r}"
     )
+
+
+def test_a_body_declaration_is_not_read_as_a_grant() -> None:
+    """A skill whose body writes the prohibited declaration still passes.
+
+    Its frontmatter grants are local. A rule reading past the frontmatter fails
+    the standard that documents the rule, and a documented prohibition is the
+    one place the prohibited text is expected to appear.
+    """
+    for observed in observe_local_skill_files():
+        assert observed.exit_code == 0, (
+            f"{observed.path} exited {observed.exit_code}: {observed.stdout!r}"
+        )
+        assert observed.violations == (), (
+            f"{observed.path} produced violations {observed.violations!r}"
+        )

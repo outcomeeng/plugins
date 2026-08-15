@@ -236,8 +236,20 @@ def auto_segment(changes: Iterable[ChangedPath]) -> Segment:
 
 
 def _change_has_minor_triggering_path(change: ChangedPath) -> bool:
-    return _is_minor_triggering_path(change.path) or (
-        change.old_path is not None and _is_minor_triggering_path(change.old_path)
+    """Whether one change reaches a declared surface from either of its ends.
+
+    The source path counts only for a rename, matching `plugins_from_change`.
+    Git populates `old_path` for a copy too, but a copy leaves its source
+    byte-identical at `base_ref`, so that plugin lost nothing: reading it would
+    classify MINOR from a surface no change touched, and copy detection reports
+    a copy whenever a new file resembles an existing one.
+    """
+    if _is_minor_triggering_path(change.path):
+        return True
+    return (
+        change.status is FileStatus.RENAMED
+        and change.old_path is not None
+        and _is_minor_triggering_path(change.old_path)
     )
 
 
