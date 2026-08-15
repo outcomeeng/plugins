@@ -115,15 +115,15 @@ If the session references a single node, invoke `/contextualize` on it immediate
 
 Rule 3 always resolves a single node, so node multiplicity never triggers a user question — selection is deterministic.
 
-When `<nodes>` is empty or unreadable, discover the target before asking the operator:
+When `<nodes>` is empty or unreadable, discover the target without an operator question:
 
-1. Run `spx spec status --format json` and treat its node records as the current candidate set. A node's canonical address is `spx/` plus its projected `id`.
-2. Match current session evidence against projected node ids and slugs: explicit valid node addresses in session prose; workflow or skill names in `goal` and `next_step`; and affected or persisted paths whose segments name a projected node slug. A wording-only resemblance with no shared workflow, path, or product-area term is not a match.
-3. Keep only candidates present in the projection. When exactly one remains, select it and invoke `/contextualize` without an operator question.
-4. When several remain, use `{{! tool('ask_user') !}}` once with 2-3 concrete node choices, each naming the canonical full path and the session evidence that matched it. Include a pause-and-inspect option only when the runtime permits one beyond those candidates.
-5. When none remains, ask for the intended product area in plain language. Do not ask the operator to grep or search `spx/`, run `spx spec status`, or supply a raw node path; repository navigation is pickup's work.
+1. Run `spx spec status --format json`. If the command fails or returns no valid node projection, report the exact diagnostic and stop.
+2. Traverse the projected tree from the root downward in the order emitted by `spx`. A node's canonical address is `spx/` plus its projected `id`.
+3. At each node, compare the projected id and slug with current session evidence: explicit valid node addresses in session prose; workflow or skill names in `goal` and `next_step`; and affected or persisted paths whose segments name the projected node slug. A wording-only resemblance with no shared workflow, path, or product-area term does not make the node session-relevant.
+4. When a node is session-relevant, invoke `/contextualize` on it and evaluate whether the loaded authoritative context identifies the session's next workflow with no relevant projected branch unresolved. If it does, select that node and continue. If it does not, resume the top-down traversal.
+5. If traversal exhausts the projection without reaching that resume-ready state, report the handoff as stale or unsupported and include the session evidence checked. Stop without asking the operator to search the tree, run `spx spec status`, choose a node, or supply a raw node path.
 
-If `spx spec status --format json` fails or returns no valid node records, report that exact discovery failure and ask for product intent, not filesystem navigation. After loading the first target, contextualize additional nodes only when the next action touches them.
+After loading the selected target, contextualize additional nodes only when the next action touches them.
 
 Invoke on the selected node:
 
@@ -209,7 +209,7 @@ After emitting the checkpoint marker, report the result and the current session 
 
 - Continue work under the claimed session(s).
 - Invoke `/handoff` if the user asks to close or hand off.
-- Invoke `/handoff --no-session` if the user asks to close without creating a handoff. It archives the claimed sessions; pickup does not return them to the todo queue.
+- Invoke `/handoff --no-session` if the user asks to close without creating a handoff. It archives the claimed sessions; it does NOT put the claimed session back in the todo queue. If the user explicitly wants a claimed session returned to the shared queue, run `spx session release <id>` to move it from `doing/` back to `todo/`.
 
 **Invalid next steps:**
 
@@ -238,7 +238,7 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
-- [ ] The `/contextualize` target is selected without operator search work: recorded-node multiplicity resolves by priority, while an empty or unreadable `<nodes>` section triggers `spx spec status --format json` discovery; one valid candidate is loaded directly, several concrete candidates produce a bounded choice, and no candidate produces a product-intent question rather than a raw-path request
+- [ ] The `/contextualize` target is selected without operator search work: recorded-node multiplicity resolves by priority, while an empty or unreadable `<nodes>` section triggers a top-down traversal of `spx spec status --format json`; session-relevant nodes are contextualized until the next workflow is established with no relevant branch unresolved, projection failure stops with its exact diagnostic, and projection exhaustion reports a stale or unsupported handoff without asking the operator to choose or locate a node
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` with the full claimed-session set
 - [ ] Claimed session remains in `doing` after the checkpoint — pickup workflow never archives or releases
 - [ ] Post-context decision captured via `{{! tool('ask_user') !}}` response, or explicit `--auto-continue` override acknowledged

@@ -2,7 +2,7 @@
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
 argument-hint: "[session-id | --list] [--auto-continue]"
-allowed-tools: Read, Bash(spx spec status:*), Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3 "${SKILL_DIR}/scripts/verify_session_claims.py":*), request_user_input, Glob, Skill
+allowed-tools: Read, Bash(spx spec status:*), Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3 "${SKILL_DIR}/scripts/verify_session_claims.py":*), request_user_input, Glob, Skill
 ---
 
 <objective>
@@ -19,13 +19,19 @@ A claimed handoff session — loaded, reconciled against current repository stat
 </constraints>
 
 <claimed_sessions>
-Two rules govern a conversation's claimed-session set:
+Three rules govern a conversation's claimed-session set:
 
 1. **The claimed-session set grows only by user confirmation.** A session joins the set when the user instructs Claude via `/pickup`, or when the user confirms a suggested pickup. Nothing else adds to it.
 
 2. **Closure has acceptable end states only through `/handoff`.** Every claimed session becomes Claude's sole responsibility. Reflect, persist remaining validated relevant context, and end with zero, one, or several session files — one canonical continuation per independent continuation thread in the resolved claimed-session set. Supplemental or sidecar handoffs for the same thread are never valid at closure.
 
-**Consequences of the two rules:**
+3. **Quick-exit shortcut.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
+   - Invoke `/handoff --no-session` to archive the wrongly-claimed session immediately. The session leaves the claimed-session set but is archived, not returned to the todo queue.
+   - Run `spx session release <id>` to move the session from `doing/` back to `todo/` for another context to claim.
+
+   Neither action counts toward the closure workload for the claimed-session set — the wrongly-claimed session leaves the set the moment the user confirms the quick exit.
+
+**Consequences of the three rules:**
 
 - Every successful `spx session pickup` adds that session id to the CLAIMED_SESSIONS marker for this conversation. A later pickup does not replace earlier entries — the set is additive.
 - The pickup workflow MUST NOT archive, release, delete, or manually move any session. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
@@ -49,6 +55,9 @@ spx session pickup [ids...] [--auto]
 
 # Show session content
 spx session show <id...>
+
+# Return claimed sessions to the todo queue (move doing -> todo)
+spx session release [ids...]
 
 # Create a handoff session (JSON header + body on stdin)
 spx session handoff
@@ -83,12 +92,12 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
    ```bash
    spx session todo --json
    ```
-2. Parse each session to extract session ID, `priority`, `goal`, `next_step`, and `git_ref` from frontmatter, plus nodes from the `<nodes>` section. Sort by priority (`high` > `medium` > `low`) and then by oldest full session id, and retain the first three. When exactly one remains, select it directly without asking.
-3. When two or three remain, present all retained sessions in one single-select question with `request_user_input`:
+2. Parse each session to extract session ID, `priority`, `goal`, `next_step`, and `git_ref` from frontmatter, plus nodes from the `<nodes>` section. Limit to most recent 10.
+3. Present one single-select question with `request_user_input`:
    - Stable question id when the runtime schema exposes one: `handoff`
    - Header: `Handoff`
    - Question: `Which handoff would you like to load?`
-   - Options: every retained session, each labeled with its full session id, priority, and branch context and described by its goal and next step
+   - Options: 2-3 mutually exclusive sessions, each labeled with its full session id, priority, and branch context and described by its goal and next step
 4. Claim the chosen session:
    ```bash
    spx session pickup <selected-session-id>
@@ -190,7 +199,7 @@ What happened: Claude picked up session A, ran `spx session handoff` mid-work to
 
 Why it failed: Claude treated queue state as closure authority and bypassed the reflection and claimed-session accounting owned by `/handoff`.
 
-How to avoid: Treat the two rules in `<claimed_sessions>` and completion of `/handoff` as the only closure authority. The existence of a self-created or inherited session grants no permission to archive a claimed session. Pickup never archives.
+How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive a claimed session. Permission flows from the three claimed-session rules: the set grows only by user confirmation; closure writes one canonical continuation per independent thread; a quick-release shortcut exists only within a few turns of pickup. Pickup never archives.
 
 **Failure 4: Claude asked the operator to choose without reviewing session evidence**
 
@@ -214,7 +223,7 @@ What happened: Claude claimed a valid session whose `<nodes>` section was empty,
 
 Why it failed: Claude treated missing recorded nodes as missing product context and failed to query the current node projection through `spx spec status`.
 
-How to avoid: Run `spx spec status --format json`, match the session evidence against projected node ids and slugs, and contextualize the single valid candidate directly. Ask only when several concrete candidates remain or no product area can be derived, and never ask the operator to search the tree or provide a raw path.
+How to avoid: Run `spx spec status --format json` and traverse its projected tree from the root downward. Contextualize session-relevant nodes as encountered until authoritative context identifies the next workflow with no relevant branch unresolved. Never ask the operator to search the tree, choose a node, or provide a raw path.
 
 </failure_modes>
 
@@ -222,9 +231,28 @@ How to avoid: Run `spx spec status --format json`, match the session evidence ag
 A successful pickup:
 
 - [ ] Session claimed via `spx session pickup`
-- [ ] Canonical `<PICKUP_CLAIM>` and `<CLAIMED_SESSIONS>` markers emitted with every full claimed session id
-- [ ] The detailed workflow and its completion checklist in `workflows/pickup.md` completed
-- [ ] Claimed sessions remain in `doing`; pickup never archives, releases, replaces, or otherwise closes them
+- [ ] Canonical pickup claim marker emitted as `<PICKUP_CLAIM id="...">`
+- [ ] Running CLAIMED_SESSIONS marker emitted as `<CLAIMED_SESSIONS ids="...">` including the newly claimed session id
+- [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session
+- [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
+- [ ] `/understand` invoked immediately after claim markers and before session details are processed
+- [ ] Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work
+- [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind
+- [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created
+- [ ] Recorded claims reconciled by running `verify_session_claims.py`, with per-claim `Confirmed` / `Discrepancy` / `Unverifiable` verdicts presented in place of the recorded snapshot before the checkpoint
+- [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
+- [ ] Persisted artifacts acknowledged
+- [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
+- [ ] Session evidence reviewed after `/contextualize`: claim verdicts, persisted artifacts, loaded coordination notes, overlapping `doing` sessions, branch state, PR state, and expected verification
+- [ ] Session classified as `actionable_here`, `owned_elsewhere`, `stale_or_superseded`, `blocked_on_external_dependency`, or `needs_operator_direction`
+- [ ] When classification is `owned_elsewhere`, the owning session, branch, worktree, PR, or commit is reported and pickup stops without archiving, releasing, handing off, or otherwise mutating the claimed session
+- [ ] When classification is not `owned_elsewhere`, a no-surprises proposal is presented before any operator decision: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation
+- [ ] Any later unrepresented skill, evidence surface, external dependency, ownership conflict, or verification class stops at a safe checkpoint before continuation
+- [ ] When the session references multiple recorded nodes, the `/contextualize` target is selected deterministically by the priority order; when `<nodes>` is empty or unreadable, pickup traverses the `spx spec status --format json` projection top-down and contextualizes session-relevant nodes until the session is resume-ready, without asking the operator to choose or locate a node
+- [ ] When classification is not `owned_elsewhere`, canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
+- [ ] When classification is not `owned_elsewhere`, post-context decision captured via `request_user_input` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
+- [ ] Failures listed in coordination are verified against current state before triaging
+- [ ] When classification is not `owned_elsewhere`, Claude has the session `next_step`, current claim verdicts, loaded node context, and coordination-note paths needed to choose the next skill from current methodology
 
 </success_criteria>

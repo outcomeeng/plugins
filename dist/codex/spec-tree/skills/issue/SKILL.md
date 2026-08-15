@@ -78,20 +78,6 @@ When the target is ambiguous or the path does not resolve, ask the user which de
 
 </target_resolution>
 
-<script_testing>
-
-`${SKILL_DIR}/scripts/resolve_marketplace.py` is covered by this plugin's mapping-level marketplace-resolution test suite.
-
-Tested inputs:
-
-- Claude marketplace JSON with a Directory source returns the registered path.
-- Codex marketplace JSON with a local `marketplaceSource` returns the registered path.
-- Malformed marketplace JSON returns a clear invalid-JSON error.
-- A missing local marketplace returns a clear target-resolution error.
-- No temporary files are created.
-
-</script_testing>
-
 <git_ref_resolution>
 Resolve the target dependency's stable pickup anchor before filing the handoff. Use the target repository's current branch only when it exists on origin:
 
