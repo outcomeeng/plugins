@@ -19,7 +19,7 @@ A verdict on human-facing text, revealed as the run advances — a sealed audit 
 
 - NEVER modify the text under review — this audit produces a verdict only.
 - NEVER derive the kind from the text. Judging against an inferred kind confirms text written for the wrong slot as correct, which is the error this surface exists to catch. No question is asked; a dispatch with no kind records the blocked outcome in `<verdict_format>` and reads nothing.
-- NEVER audit a repository- or domain-governed artifact here — a spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is answered with the `governed-elsewhere` finding, whatever kind the dispatch supplied. Ownership outranks a supplied kind.
+- NEVER audit text another surface owns — a repository- or domain-governed artifact (spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, root agent guide), a chat response, or operational prose (a code comment, a commit message, an agent-facing instruction) is answered with the `governed-elsewhere` finding, whatever kind the dispatch supplied. Ownership outranks a supplied kind.
 - NEVER flag a pattern the supplied kind's overrides explicitly permit — an override is the catalog's decision, not an oversight. A use outside an override's bounds stays a finding.
 - NEVER excuse a base-catalog match as "single use" or "it works here" — every match outside an override is a finding.
 - NEVER gather a finished result and dump its events at the end — each finding is appended the instant it is raised, per the streaming rule in `/project-run-journal`.
@@ -28,7 +28,7 @@ A verdict on human-facing text, revealed as the run advances — a sealed audit 
 
 <kind_intake>
 
-Before either step below, check ownership. A spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is governed by its own workflow, and a dispatch naming one is answered with the `governed-elsewhere` finding rather than an audit against the kind it supplied. Ownership outranks a supplied kind, so a kind arriving at step 1 never resolves past this check.
+Before either step below, check ownership. A spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is governed by its own workflow, and chat responses and operational prose — a code comment, a commit message, an agent-facing instruction — stay outside the prose surface the same way; a dispatch naming any of these is answered with the `governed-elsewhere` finding rather than an audit against the kind it supplied. Ownership outranks a supplied kind, so a kind arriving at step 1 never resolves past this check.
 
 The kind is an input. Resolve it in this order and stop at the first that yields one:
 

@@ -58,18 +58,17 @@ One text carries one kind. Register variation inside it is carried by the `/pros
 
 6. Apply every rule pack the text triggers. A numbered procedure triggers the instruction pack; a table triggers the table pack.
 
-7. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming the kind in the dispatch as `Kind: <kind>`. The dispatched audit reads nothing without it. The agent returns a raw run token; read the sealed run's event prefix with `spx journal read --type audit --run <token> --from 0` and render it through the `/project-run-journal` projection, fix the findings it reports, and re-audit until the run completes approved.
+7. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming the kind in the dispatch as `Kind: <kind>`. The dispatched audit reads nothing without it. The agent returns a raw run token; invoke the `project-run-journal` skill, read the sealed run's event prefix with `spx journal read --type audit --run <token> --from 0`, render it through that skill's projection, fix the findings it reports, and re-audit until the run completes approved.
 
 </workflow>
 
 <success_criteria>
 
-- Ownership was checked before the kind resolved, and a governed artifact routed to its own workflow without drafting, whatever kind the request supplied.
-- The kind came from the invocation, the repository's map, or one asked question, and was settled before drafting began.
-- The text complies with the governing prose ADR where one exists, and any needed structural change routed through `/architect-prose` rather than being decided while writing.
-- The kind's style layer and structural conventions were both read and applied.
-- Every rule pack the text triggers was applied where its feature appears.
-- The `prose-auditor` dispatch carried the kind and its final run completed approved on the final text.
+- The delivered text carries exactly one kind — the supplied one — and conforms to that kind's style layer and structural conventions, with no base anti-pattern surviving outside the kind's declared overrides.
+- The text complies with the governing prose ADR where one exists; no structural decision was made against it while writing.
+- Every rule pack a feature of the text triggers holds where that feature appears.
+- A sealed `prose-auditor` run over the exact final text completed approved, dispatched with the kind.
+- Text another surface owns was never drafted here — a governed artifact reached its own workflow untouched.
 
 </success_criteria>
 
