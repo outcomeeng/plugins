@@ -18,4 +18,4 @@ Which elements mirror which is a structural decision. The ADR names the parallel
 
 The ADR names each element's type. The type fixes how many parts the element carries and in what order; the style layer supplies the wording for each. A stepped sequence — onboarding, a multi-step empty state — is a procedure, so the instruction pack governs its steps wherever it appears.
 
-Where depth lives is structural: an element whose content outgrows its shape either splits or links out, and the ADR decides which.
+Where depth lives is structural: an element whose content outgrows its shape either splits or links out, and the ADR decides which. Absent an ADR, the style layer's per-element default guides that choice.

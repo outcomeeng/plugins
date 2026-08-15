@@ -19,6 +19,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 - **The documentation layer regained two structural-writing caps** the four-kind merge dropped: active voice, and the ban on `should`, `would`, `may`, and `might` across the whole page rather than only inside a numbered procedure.
 - **The interface and documentation structural conventions no longer restate style rules.** Element wording, heading case, and the one-term-one-meaning rule live in the style layer and the voice canon; the architecture references keep only what an ADR decides — element types, parallel sets, terminology homes, and where depth lives.
 - **`audit-prose`'s description names its subject and scope** without the run-journal delivery clause, matching the audit-skill description convention the language plugins follow.
+- **The voice canon bans end punctuation on a heading.** The rule previously reached only the documentation kind through a structural reference; it belongs beside the sentence-case rule the canon already carries, so it now binds the shipped `prose` output style and every kind alike.
 
 ## 0.10.0
 
