@@ -58,7 +58,7 @@ One text carries one kind. Register variation inside it is carried by the `/pros
 
 6. Apply every rule pack the text triggers. A numbered procedure triggers the instruction pack; a table triggers the table pack.
 
-7. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming the kind in the dispatch as `Kind: <kind>`. The dispatched audit reads nothing without it. The agent returns a raw run token; render the sealed run through the `/project-run-journal` inspection helper, fix the findings it reports, and re-audit until the run completes approved.
+7. Direct an audit pass: dispatch the `prose-auditor` agent on the result, naming the kind in the dispatch as `Kind: <kind>`. The dispatched audit reads nothing without it. The agent returns a raw run token; read the sealed run's event prefix with `spx journal read --type audit --run <token> --from 0` and render it through the `/project-run-journal` projection, fix the findings it reports, and re-audit until the run completes approved.
 
 </workflow>
 

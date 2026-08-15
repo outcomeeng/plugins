@@ -69,21 +69,10 @@ The verdict is the sealed audit run, produced through the `/project-run-journal`
 - Each finding event carries `pattern` (the catalog anti-pattern, pack rule, or structural rule name), `category` (its catalog section, layer, or pack name), `quote` (the offending text verbatim), `rewrite` (fixed text ready to accept), and the finding's classification for the rollup. A sentence carrying multiple co-occurring patterns produces one finding naming every pattern present.
 - The rollup follows `/project-run-journal`: any rejecting finding makes the run's terminal status rejected; no findings, approved.
 - Ownership routes the text away: one `governed-elsewhere` finding naming the governing workflow, terminal status rejected.
-- No kind resolved: one finding naming the missing kind and the three-kind vocabulary, classified so the rollup yields the unknown terminal status; no text is read.
+- No kind resolved: one finding naming the missing kind and the three-kind vocabulary, classified so the rollup yields the failed terminal status — the blocked run in the channel's status vocabulary; no text is read.
 - The final message is exactly the raw run token, so the sealed run is inspectable while it ran and after — scope progress, each finding, and the terminal status are read from the journal, not from a message.
 
 </verdict_format>
-
-<success_criteria>
-
-- Every applicable rule was judged — base categories, voice canon, kind style layer, kind structural conventions, and every triggered pack — none skipped as unlikely.
-- The sealed run states its terminal status, and every finding is falsifiable: pattern, category, verbatim quote, and a rewrite showing fixed text.
-- Scope progress and each finding were appended as the run advanced; the same text and kind yield the same findings.
-- A dispatch naming a governed artifact produced the `governed-elsewhere` finding without reading the text; a dispatch carrying no kind produced the unknown terminal status without reading the text.
-- The kind judged is the supplied kind, never one this skill concluded, and the kind's overrides produced no false-positive findings.
-- The final message is exactly the raw run token of a sealed run.
-
-</success_criteria>
 
 <failure_modes>
 
@@ -100,3 +89,14 @@ Claude placed the ownership rule after the sentence "Resolve it in this order an
 Claude removed dispatch language from this skill's description to satisfy the audit-description standard, but left a dispatch gate in the body and a dispatch-tool grant in the frontmatter — the same caller-coupling defect in two other places. A skill never detects, constrains, or branches on the context that invokes it; context placement and dispatch policy belong to the caller. When removing caller coupling, check the description, the frontmatter grants, and the body together — the pattern recurs across all three surfaces.
 
 </failure_modes>
+
+<success_criteria>
+
+- Every applicable rule was judged — base categories, voice canon, kind style layer, kind structural conventions, and every triggered pack — none skipped as unlikely.
+- The sealed run states its terminal status, and every finding is falsifiable: pattern, category, verbatim quote, and a rewrite showing fixed text.
+- Scope progress and each finding were appended as the run advanced; the same text and kind yield the same findings.
+- A dispatch naming a governed artifact produced the `governed-elsewhere` finding without reading the text; a dispatch carrying no kind produced the failed terminal status naming the missing kind without reading the text.
+- The kind judged is the supplied kind, never one this skill concluded, and the kind's overrides produced no false-positive findings.
+- The final message is exactly the raw run token of a sealed run.
+
+</success_criteria>

@@ -26,7 +26,7 @@ Standards are pre-loaded by the `require_skill` directives above. `/prose-archit
 
 <kind_intake>
 
-Before anything below, check ownership. A spec, decision record other than the one being authored, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is governed by its own workflow and never enters the prose surface as a governed artifact, whatever kind the request supplies.
+Before anything below, check ownership. A spec, decision record other than the one being authored, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is governed by its own workflow and never enters the prose surface as a governed artifact, whatever kind the request supplies. Chat responses and operational prose — a code comment, a commit message, an agent-facing instruction — stay outside it the same way.
 
 The kind of the governed artifacts is an input. Resolve it in this order and stop at the first that yields one:
 
@@ -59,6 +59,8 @@ The skill produces prose ADRs at the scope of the decision, placed and indexed p
 
 <adr_creation_protocol>
 Execute these phases in order.
+
+**Phase 0 — Check ownership and resolve the kind.** Run `<kind_intake>`: confirm every governed artifact is prose the surface owns, then resolve the kind through the invocation, the repository's map, or one question. Nothing below runs before both are settled.
 
 **Phase 1 — Identify the structural decisions.** For the governed artifact set, list what needs deciding: which artifacts exist and their kinds, each artifact's section architecture and ordering, the sequencing and cross-references across artifacts, and the terminology homes.
 
