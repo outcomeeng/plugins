@@ -45,7 +45,3 @@ An auditor's `<success_criteria>` states verdict soundness, never a re-list of t
 
 The ordered steps ("`/contextualize` invoked", "artifact read", "tests run") belong in `<audit_workflow>`, not here — listing them as success criteria is the activity/output confusion the output framing removes.
 </success_criteria_shape>
-
-<prose_variant>
-The prose auditors (`audit-prose`, `audit-document`) may name their procedure section to fit their domain. They keep the verdict-as-output `<objective>` and the `<success_criteria>` soundness shape.
-</prose_variant>

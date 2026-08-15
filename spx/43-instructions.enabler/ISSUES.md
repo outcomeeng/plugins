@@ -8,7 +8,7 @@ The canonical auditor shape lives in `src/plugins/instructions/skills/skill-stan
 
 Open work: sweep the remaining `audit-*` skills onto that skeleton. Keep the post-collapse composition exception: generic composing auditors that invoke language audits require `Skill` in `allowed-tools`.
 
-`audit-prose` and `audit-document` are the furthest from the skeleton — `audit-document` is the merged successor to the retired `audit-internal-docs`, and it inherited that skill's `<what_to_check>` plus `<workflow>` shape rather than `<audit_workflow>`. `audit-prose` has since gained `<constraints>`, `<verdict_format>`, and `<failure_modes>`, so its remaining divergence is the procedure-name only, which `<prose_variant>` already exempts. Both descriptions are now the passive `X audit methodology — judges Y` form the standard prescribes, and both skills are reached through the `prose-auditor` agent or the `/audit-prose` router rather than by description-match, so the agentless-entry-point carve-out this entry proposed has no subject left. What remains of the entry for the prose pair is the procedure-name question: keep the `<prose_variant>` exemption, or bring both onto `<audit_workflow>`.
+The prose pair is resolved: `audit-prose` uses `<audit_workflow>` directly, the composed per-kind auditors are removed with the five-skill prose surface, and the skeleton's `<prose_variant>` exemption is deleted — no `audit-*` skill holds a procedure-name exemption.
 
 Before starting, reconcile this work with:
 

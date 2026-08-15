@@ -8,9 +8,9 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ## 0.17.2
 
-### Fixed
+### Removed
 
-- The auditor-skeleton procedure-name exemption named `audit-internal-docs`, a skill the prose plugin retired at 0.10.0. It now names `audit-document`, the merged successor that inherited the same `<what_to_check>` and `<workflow>` shape, so a strict reading of `auditor_skeleton_violation` no longer flags a skill the exemption was written to cover. Corrected in both `skill-standards/references/auditor-skeleton.md` and the `audit-skill` anti-pattern that restates it.
+- **The auditor-skeleton `<prose_variant>` exemption.** Every `audit-*` skill now uses `<audit_workflow>` as its procedure name; the prose auditor the exemption accommodated conforms to the skeleton directly. Removed from `skill-standards/references/auditor-skeleton.md` and from the `auditor_skeleton_violation` anti-pattern in `audit-skill` that restated it.
 
 ## 0.17.0
 
