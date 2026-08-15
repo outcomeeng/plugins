@@ -14,6 +14,14 @@ The `/understand` artifact-placement table's Product spec row declares product-l
 
 **Evidence.** Surfaced by the CI changeset review on the closed-taxonomy change (PR #517), which compared the new Product spec row's verification claim against the untagged root-spec assertions.
 
+## Architecture standards restate the /understand decision template
+
+A standard begins by loading the matching `/understand` template when one exists; no skill encodes the template's shape, because a restated shape drifts the moment the template advances. The prose plugin conforms. Six language-plugin files still restate the ADR section list inline: `src/plugins/python/skills/python-architecture-standards/SKILL.md` and `src/plugins/python/skills/architect-python/SKILL.md`, the TypeScript pair `src/plugins/typescript/skills/typescript-architecture-standards/SKILL.md` and `src/plugins/typescript/skills/architect-typescript/SKILL.md`, and the Rust pair `src/plugins/rust/skills/rust-architecture-standards/SKILL.md` and `src/plugins/rust/skills/architect-rust/SKILL.md`.
+
+**Resolution shape**: replace each restated section list with a pointer that loads the decision template through the live `/understand` foundation, keeping only language-specific content rules (DI patterns, testability constraints, per-language verification routing). One sweep across the three language plugins, gated by `instructions:skill-auditor` per plugin.
+
+**Evidence**: operator directive during the prose five-skill refactor (PR #523): template shape lives only in the `/understand` templates, and every standard begins by loading its template.
+
 ## Govern Go test conventions before a Go language plugin ships
 
 The methodology documents Go's test-infrastructure home (`internal/testinfra/`) in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` and Go test-file naming (`<subject>.<evidence>.<level>[.<runner>]_test.go`) in the testing and understanding skill references. No decision governs Go test-runner selection (`go test`), subtest conventions, `t.Helper()` policy, or the per-language `[test]` runner the way `spx/15-test-language.adr.md` does for this product's own pytest suite — and that ADR does not mention Go.
