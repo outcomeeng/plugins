@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.1.1
+
+### Fixed
+
+- **The outward-text review rule states a rationale the prose plugin still supports.** It justified dispatching `prose-auditor` by claiming that plugin produces a verdict only in a dispatched verifier context. The prose plugin no longer asserts that exclusivity, so the rule now names the reason that holds: the verdict comes from a separate verifier agent session rather than the session that wrote the text.
+
 ## 0.1.0
 
 ### Added
