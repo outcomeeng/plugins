@@ -9,6 +9,8 @@ allowed-tools: Read, Glob, Grep, Skill, Bash
 
 {!% require_skill 'prose:prose-standards' %!}
 
+{!% require_skill 'prose:prose-architecture-standards' %!}
+
 <objective>
 
 A verdict on human-facing text, revealed as the run advances — a sealed audit run whose journal stream carries scope progress and each finding with pattern, category, quote, and rewrite, and whose raw run token is the final message.

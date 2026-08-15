@@ -8,6 +8,8 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Skill, multi_agent_v1.spawn_agent,
 
 Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
+Invoke the `prose:prose-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
 <objective>
 
 Human-facing text drafted against the kind its caller supplied, complying with the governing prose ADR, and approved by a `prose-auditor` pass.

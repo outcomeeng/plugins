@@ -8,6 +8,8 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Skill,{!% if target == 'claude' %!
 
 {!% require_skill 'prose:prose-standards' %!}
 
+{!% require_skill 'prose:prose-architecture-standards' %!}
+
 <objective>
 
 Human-facing text drafted against the kind its caller supplied, complying with the governing prose ADR, and approved by a `prose-auditor` pass.

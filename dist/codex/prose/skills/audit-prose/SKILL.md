@@ -9,6 +9,8 @@ allowed-tools: Read, Glob, Grep, Skill, Bash
 
 Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
+Invoke the `prose:prose-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
 <objective>
 
 A verdict on human-facing text, revealed as the run advances — a sealed audit run whose journal stream carries scope progress and each finding with pattern, category, quote, and rewrite, and whose raw run token is the final message.
