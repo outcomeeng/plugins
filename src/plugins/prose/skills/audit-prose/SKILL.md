@@ -1,28 +1,28 @@
 ---
 name: audit-prose
 description: >-
-  Prose audit methodology — judges human-facing text against the base anti-pattern catalog, the supplied kind's standards layer, and every triggered rule pack, emitting a structured verdict whose findings carry pattern, category, quote, and rewrite.
+  Prose audit methodology — judges human-facing text against the anti-pattern catalog, the supplied kind's style and structure layers, and every triggered rule pack, streaming each finding through the run journal as the run advances.
 model: "{{! term('configured_agent_craft_model') !}}"
-argument-hint: "<interface|document|copy> <text or paths>"
-allowed-tools: Read, Glob, Grep, Skill
+argument-hint: "<interface|documentation|copy> <text or paths>"
+allowed-tools: Read, Glob, Grep, Skill, Bash
 ---
 
 {!% require_skill 'prose:prose-standards' %!}
 
 <objective>
 
-A structured verdict on human-facing text — `APPROVED`, `REJECTED` with findings carrying pattern, category, quote, and rewrite, or `UNKNOWN` when no kind was supplied.
+A verdict on human-facing text, revealed as the run advances — a sealed audit run whose journal stream carries scope progress and each finding with pattern, category, quote, and rewrite, and whose raw run token is the final message.
 
 </objective>
 
 <constraints>
 
 - NEVER modify the text under review — this audit produces a verdict only.
-- NEVER derive the kind from the text. Judging against an inferred kind confirms text written for the wrong slot as correct, which is the error this surface exists to catch.
+- NEVER derive the kind from the text. Judging against an inferred kind confirms text written for the wrong slot as correct, which is the error this surface exists to catch. No question is asked; a dispatch with no kind records the blocked outcome in `<verdict_format>` and reads nothing.
 - NEVER audit a repository- or domain-governed artifact here — a spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide is answered with the `governed-elsewhere` finding, whatever kind the dispatch supplied. Ownership outranks a supplied kind.
-- NEVER audit without a kind. Emit `UNKNOWN` and read nothing.
-- NEVER flag a pattern the supplied kind's overrides explicitly permit — an override is the catalog's decision, not an oversight.
+- NEVER flag a pattern the supplied kind's overrides explicitly permit — an override is the catalog's decision, not an oversight. A use outside an override's bounds stays a finding.
 - NEVER excuse a base-catalog match as "single use" or "it works here" — every match outside an override is a finding.
+- NEVER gather a finished result and dump its events at the end — each finding is appended the instant it is raised, per the streaming rule in `/project-run-journal`.
 
 </constraints>
 
@@ -32,77 +32,56 @@ Before either step below, check ownership. A spec, ADR, PDR, `SKILL.md`, `PLAN.m
 
 The kind is an input. Resolve it in this order and stop at the first that yields one:
 
-1. **The invocation.** A kind named in the arguments or the caller's request — `interface`, `document`, or `copy`.
+1. **The invocation.** A kind named in the arguments or the caller's request — `interface`, `documentation`, or `copy`.
 2. **The repository's map.** When the repository declares a path-to-kind map at `spx/local/prose.md` and the target path matches an entry, that entry is the kind.
 
-Neither yields one, so no audit runs: emit the `UNKNOWN` verdict in `<verdict_format>` and stop. Asking is unavailable here, because this skill runs inside a dispatched verifier context with no user to ask.
+Neither yields one, so no text is read: record the blocked outcome per `<verdict_format>` and stop.
 
 One text carries one kind. Register variation inside it is judged by the `/prose-standards` `<rule_packs>`, which bind on a feature rather than on a kind.
 
 </kind_intake>
 
-<workflow>
+<audit_workflow>
 
-1. Check ownership through `<kind_intake>`. A governed artifact is answered with the `governed-elsewhere` finding and stops here, whatever kind the dispatch supplied.
+1. Check ownership through `<kind_intake>`. A governed artifact is answered with the `governed-elsewhere` finding — open the run, append that one finding, complete rejected, seal, and return the token.
 
-2. Resolve the kind through `<kind_intake>`. Without one, emit `UNKNOWN` and stop before reading the text.
+2. Resolve the kind through `<kind_intake>`. Without one, record the blocked outcome per `<verdict_format>` before reading any text.
 
-3. Read the text under audit — whatever the dispatch names, pastes, or points to.
+3. Open the run. Invoke the `project-run-journal` skill, then `spx journal open --type audit`; capture the run token and append the scope-entered event carrying the run's identity.
 
-4. Invoke the supplied kind's composed audit skill via the Skill tool: `prose:audit-interface`, `prose:audit-document`, or `prose:audit-copy`. That skill loads the kind's standards and sweeps its categories; collect its findings.
+4. Read the text under audit — whatever the dispatch names, pastes, or points to — and read the supplied kind's style layer from `/prose-standards` `<kind_layers>` and structural conventions from `/prose-architecture-standards` `<kind_structures>`, plus the governing prose ADR when the repository's spec tree carries one for the target.
 
-5. Identify every feature that triggers a rule pack and confirm the composed skill swept each triggered pack over the passages carrying that feature.
+5. Sweep, streaming as the run advances. One scope-advanced event per unit swept, one finding-reported event the instant each finding is raised:
+   - the base catalog — word choice, sentence structure, paragraph structure, tone, formatting, composition — against the full `/prose-standards` descriptions, applying the kind's overrides;
+   - the voice canon, rule by rule;
+   - the kind's style layer — every cap that is a count is checked by count;
+   - the kind's structural conventions, and conformance to the governing prose ADR where one exists;
+   - every rule pack a feature of the text triggers, over the passages carrying that feature.
 
-6. Emit the structured verdict in the `<verdict_format>` shape as the final message — no prose outside the JSON object.
+6. Complete and seal. Append the run-completed event with the terminal status the rollup yields, seal the run, and end with the raw run token as the final message — no prose after it.
 
-</workflow>
+</audit_workflow>
 
 <verdict_format>
 
-```json
-{
-  "schema_version": 1,
-  "skill": "audit-prose",
-  "overall": "APPROVED",
-  "kind": "copy",
-  "findings": [],
-  "summary": { "violations": 0, "most_frequent_category": null }
-}
-```
+The verdict is the sealed audit run, produced through the `/project-run-journal` projection — never a terminal JSON object.
 
-- `overall` is `REJECTED` when at least one finding exists; `APPROVED` means zero findings.
-- Each finding carries `pattern` (the catalog anti-pattern or pack rule name), `category` (its catalog section or pack name), `quote` (the offending text verbatim), and `rewrite` (fixed text ready to accept).
-- `kind` is the supplied kind, verbatim.
-- A sentence carrying multiple co-occurring patterns produces one finding naming every pattern present, listed before single-pattern findings.
-- When ownership routes the text away, `overall` is `REJECTED` with a single finding whose `pattern` is `governed-elsewhere` naming the governing workflow.
-
-No kind resolved, so the verdict is blocked instead:
-
-```json
-{
-  "schema_version": 1,
-  "skill": "audit-prose",
-  "overall": "UNKNOWN",
-  "kind": null,
-  "reason": "no kind supplied; the dispatcher supplies one of interface, document, copy",
-  "findings": [],
-  "summary": { "violations": 0, "most_frequent_category": null }
-}
-```
-
-- `UNKNOWN` carries `reason` and an empty `findings` array. It judges no text, so it is neither an approval nor a rejection.
+- Each finding event carries `pattern` (the catalog anti-pattern, pack rule, or structural rule name), `category` (its catalog section, layer, or pack name), `quote` (the offending text verbatim), `rewrite` (fixed text ready to accept), and the finding's classification for the rollup. A sentence carrying multiple co-occurring patterns produces one finding naming every pattern present.
+- The rollup follows `/project-run-journal`: any rejecting finding makes the run's terminal status rejected; no findings, approved.
+- Ownership routes the text away: one `governed-elsewhere` finding naming the governing workflow, terminal status rejected.
+- No kind resolved: one finding naming the missing kind and the three-kind vocabulary, classified so the rollup yields the unknown terminal status; no text is read.
+- The final message is exactly the raw run token, so the sealed run is inspectable while it ran and after — scope progress, each finding, and the terminal status are read from the journal, not from a message.
 
 </verdict_format>
 
 <success_criteria>
 
-- The final message is exactly the `<verdict_format>` JSON object.
-- A dispatch naming a governed artifact — a spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, or root agent guide — produced the `governed-elsewhere` finding without reading the text or invoking `prose:audit-interface`, `prose:audit-document`, or `prose:audit-copy`, whatever kind it supplied.
-- The kind in the verdict is the supplied kind, never one this skill concluded.
-- A dispatch carrying no kind produced `UNKNOWN` with its reason, and no text was read.
-- Every finding carries all four fields, and the rewrite shows fixed text rather than an instruction.
-- `summary.violations` equals the findings count, and `most_frequent_category` is the category those findings carry most often.
-- Kind overrides produced no false-positive findings.
+- Every applicable rule was judged — base categories, voice canon, kind style layer, kind structural conventions, and every triggered pack — none skipped as unlikely.
+- The sealed run states its terminal status, and every finding is falsifiable: pattern, category, verbatim quote, and a rewrite showing fixed text.
+- Scope progress and each finding were appended as the run advanced; the same text and kind yield the same findings.
+- A dispatch naming a governed artifact produced the `governed-elsewhere` finding without reading the text; a dispatch carrying no kind produced the unknown terminal status without reading the text.
+- The kind judged is the supplied kind, never one this skill concluded, and the kind's overrides produced no false-positive findings.
+- The final message is exactly the raw run token of a sealed run.
 
 </success_criteria>
 
@@ -110,11 +89,11 @@ No kind resolved, so the verdict is blocked instead:
 
 **The kind was inferred from the text.**
 
-Claude read the text, recognized a runbook, audited it against the document layer, and returned `APPROVED`. The text had been written as marketing copy for a docs site and was wrong for its slot in exactly the way the audit existed to catch — inferring the kind from the artifact makes the artifact its own standard, so any text is correct for the kind it already resembles. The kind is supplied or the audit does not run.
+Claude read the text, recognized a runbook, audited it against the documentation layer, and approved it. The text had been written as marketing copy for a docs site and was wrong for its slot in exactly the way the audit existed to catch — inferring the kind from the artifact makes the artifact its own standard, so any text is correct for the kind it already resembles. The kind is supplied or the audit does not run.
 
 **The ownership check was stated but never reached.**
 
-Claude placed the ownership rule after the sentence "Resolve it in this order and stop at the first that yields one". A dispatch naming `document` for an ADR resolved at step 1, stopped as instructed, and swept a governed artifact against the document standards. The rule was present and correct, and the reading order made it unreachable. A check that gates a resolution list precedes that list; a check positioned after one asserts its own precedence to a reader who has already stopped.
+Claude placed the ownership rule after the sentence "Resolve it in this order and stop at the first that yields one". A dispatch naming a kind for an ADR resolved at step 1, stopped as instructed, and swept a governed artifact against that kind's standards. The rule was present and correct, and the reading order made it unreachable. A check that gates a resolution list precedes that list; a check positioned after one asserts its own precedence to a reader who has already stopped.
 
 **A caller check survived a description-only fix.**
 

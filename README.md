@@ -277,23 +277,16 @@ Instruction authoring: /create-skill, /create-subagent
 
 ### prose
 
-Prose craft through one routed surface (/author-prose, /audit-prose) over caller-supplied kind layers: interface, document, copy
+Prose craft through a matched triple (/architect-prose, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy
 
-| Type  | Name                   | Purpose                                                                                                                                                                                                        |
-| ----- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/audit-copy`          | Copy audit methodology                                                                                                                                                                                         |
-| Skill | `/audit-document`      | Document audit methodology                                                                                                                                                                                     |
-| Skill | `/audit-interface`     | Interface audit methodology                                                                                                                                                                                    |
-| Skill | `/audit-prose`         | Prose audit methodology                                                                                                                                                                                        |
-| Skill | `/author-copy`         | Copy authoring guidance — essays, articles, and other self-contained pieces — composed by author-prose for the copy kind                                                                                       |
-| Skill | `/author-document`     | Document authoring guidance — product documentation, wiki pages, runbooks, reference, policies, rubrics, onboarding guides, READMEs — composed by author-prose for the document kind                           |
-| Skill | `/author-interface`    | Interface authoring guidance — app chrome, UI text, product messages, notifications, and email templates — composed by author-prose for the interface kind                                                     |
-| Skill | `/author-prose`        | Writing or editing any text for human readers — documents, web pages, articles, product docs, UI text, error messages, notifications, emails, READMEs, release notes, marketing copy, and internal team pages  |
-| Skill | `/copy-standards`      | Standards for the copy kind — self-contained pieces read start to finish: essays, articles, long-form landing-page narrative                                                                                   |
-| Skill | `/document-standards`  | Standards for the document kind — a page in a document set: product documentation, wiki pages, runbooks, reference, policies, rubrics, onboarding guides, READMEs                                              |
-| Skill | `/interface-standards` | Standards for the interface kind — text fragments embedded in a designed surface: app chrome, buttons, labels, empty states, error messages, tooltips, notifications, email templates, short web-page sections |
-| Skill | `/prose-standards`     | Prose anti-patterns enforced across all skills                                                                                                                                                                 |
-| Agent | `prose-auditor`        | Auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance                                            |
+| Type  | Name                            | Purpose                                                                                                                                                             |
+| ----- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/architect-prose`              | Writing ADRs for prose                                                                                                                                              |
+| Skill | `/audit-prose`                  | Prose audit methodology                                                                                                                                             |
+| Skill | `/author-prose`                 | Writing text for human readers — docs pages, UI text, error messages, emails, release notes                                                                         |
+| Skill | `/prose-architecture-standards` | Prose ADR conventions enforced across architect and auditor skills                                                                                                  |
+| Skill | `/prose-standards`              | Prose anti-patterns enforced across all skills                                                                                                                      |
+| Agent | `prose-auditor`                 | Auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance |
 
 ### python
 

@@ -1,6 +1,6 @@
 # Changelog — prose plugin
 
-Prose craft: writing and audit for interface text, documents, and standalone pieces.
+Prose craft: structure, writing, and audit for interface text, documentation, and standalone pieces.
 
 What changed in **this plugin**, for a consumer repository. An entry appears when a change alters what a consumer can rely on, must do, or must know.
 
@@ -10,19 +10,20 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Breaking
 
-- **The kind is supplied, never detected.** `/author-prose` and `/audit-prose` take the kind as an input. A caller names it, a repository declares a path-to-kind map at `spx/local/prose.md`, or an interactive router asks once. A dispatched `/audit-prose` that receives no kind emits `UNKNOWN` and reads nothing, where it previously classified the text itself. A dispatch that relied on automatic classification now supplies `Kind: <kind>`.
-- **Three kinds replace four.** `interface`, `document`, and `copy`. The `docs` and `internal-docs` kinds merge into `document`, because no rule distinguished a product-documentation page from a team page once the instruction caps and the page-architecture rules found their real triggers.
-- **Renamed skills.** `docs-standards` and `internal-docs-standards` become `document-standards`; `author-docs` and `author-internal-docs` become `author-document`; `audit-docs` and `audit-internal-docs` become `audit-document`. A consumer naming a removed skill updates the name.
-- **The verdict carries `kind`, not `kinds`.** One text carries one kind, so the field is singular, and `UNKNOWN` joins `APPROVED` and `REJECTED` in the `overall` vocabulary.
+- **Five skills replace fifteen.** The surface is three workflow skills — `/architect-prose`, `/author-prose`, `/audit-prose` — over two composed-only standards skills, `/prose-standards` and `/prose-architecture-standards`. The twelve per-kind skills are removed: `author-copy`, `author-docs`, `author-internal-docs`, `author-interface`, `audit-copy`, `audit-docs`, `audit-internal-docs`, `audit-interface`, `copy-standards`, `docs-standards`, `internal-docs-standards`, and `interface-standards`. Each kind's style rules live in a `prose-standards` reference and its structural conventions in a `prose-architecture-standards` reference.
+- **Three kinds replace four.** `interface`, `documentation`, and `copy`. The `docs` and `internal-docs` kinds merge into `documentation`, because no rule distinguished a product-documentation page from a team page once the instruction caps and the page-architecture rules found their real triggers.
+- **The kind is supplied, never detected.** Every workflow skill takes the kind as an input. A caller names it, a repository declares a path-to-kind map at `spx/local/prose.md`, or an interactive skill asks once. A dispatched `/audit-prose` that receives no kind records a blocked run and reads nothing, where it previously classified the text itself. A dispatch that relied on automatic classification now supplies `Kind: <kind>`.
+- **The audit verdict is a journal run, not a terminal JSON object.** `/audit-prose` streams scope progress and each finding — pattern, category, quote, rewrite — through `spx journal` as the run advances, and the `prose-auditor` agent's final message is the raw run token of the sealed run. A consumer that parsed the JSON verdict now renders the sealed run through the run-journal projection.
 
 ### Added
 
+- **`/architect-prose`.** Structure and text have separate owners: `/architect-prose` writes prose ADRs — structural decisions for the artifacts a spec node governs, located in the spec tree — and `/author-prose` is the artifact's sole writer, complying with the governing ADR. Structural moves, including sequencing across sibling and descendant artifacts, are decision content, so no artifact carries structural annotation.
+- **`/prose-architecture-standards`.** The prose ADR conventions and each kind's structural conventions, mirroring the language plugins' architecture-standards shape.
 - **Rule packs.** `/prose-standards` `<rule_packs>` declares rules that bind on an observable feature inside every kind. The instruction pack — 20-word steps, one instruction per sentence, condition before command, no modal hedging, action-leading steps, articles present — fires on any numbered procedure, so a runbook's steps are governed wherever the runbook lives. The table pack fires on any table. Register variation inside one text is carried by packs, so per-part kind declaration is gone.
 
 ### Changed
 
-- **Every kind layer transcludes the shared voice canon.** `copy-standards` and `document-standards` join `interface-standards` and the shipped `prose` output style in rendering from `prose/voice/fragment.md`. Three of four kinds previously stated no voice at all while claiming to carry the base voice.
-- **Kind intake lives in the routers.** `/prose-standards` no longer carries a classification procedure, and no kind layer restates one. The catalog states rules.
+- **One voice canon, every surface.** The shared voice canon renders into `/prose-standards` and the shipped `prose` output style from one authored fragment, and every kind's style layer derives from the shared catalog — kinds differ in register and composition, never in voice.
 
 ### Removed
 

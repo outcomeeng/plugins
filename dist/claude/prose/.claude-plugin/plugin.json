@@ -1,7 +1,7 @@
 {
   "name": "prose",
   "version": "0.10.0",
-  "description": "Prose craft through one routed surface (/author-prose, /audit-prose) over caller-supplied kind layers: interface, document, copy",
+  "description": "Prose craft through a matched triple (/architect-prose, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy",
   "author": {
     "name": "Simon Heimlicher"
   },

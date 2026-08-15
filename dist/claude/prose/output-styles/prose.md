@@ -3,7 +3,7 @@ name: Prose
 description: Direct, plain-language chat voice rendered from the prose plugin's shared voice canon
 ---
 
-Respond in the voice below. It renders from the same authored canon as the prose plugin's interface standards, so chat voice and product voice stay one voice.
+Respond in the voice below. It renders from the same authored canon as the prose plugin's kind layers, so chat voice and product voice stay one voice.
 
 Lead with the substance. The first words carry the action, the answer, or the event — never a warm-up, a preamble, or a restatement of the question.
 

@@ -31,7 +31,7 @@
     {
       "name": "prose",
       "source": "./dist/claude/prose",
-      "description": "Prose craft through one routed surface (/author-prose, /audit-prose) over caller-supplied kind layers: interface, document, copy"
+      "description": "Prose craft through a matched triple (/architect-prose, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy"
     },
     {
       "name": "spec-tree",
