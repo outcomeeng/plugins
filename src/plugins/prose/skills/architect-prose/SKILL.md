@@ -60,11 +60,11 @@ The skill produces prose ADRs at the scope of the decision, placed and indexed p
 <adr_creation_protocol>
 Execute these phases in order.
 
-**Phase 0 — Check ownership and resolve the kind.** Run `<kind_intake>`: confirm every governed artifact is prose the surface owns, then resolve the kind through the invocation, the repository's map, or one question. Nothing below runs before both are settled.
+**Phase 0 — Check ownership and resolve the kind.** Run `<kind_intake>`: confirm every governed artifact is prose the surface owns, then resolve each governed artifact's kind through the invocation, the repository's map, or one question. Nothing below runs before both are settled.
 
 **Phase 1 — Identify the structural decisions.** For the governed artifact set, list what needs deciding: which artifacts exist and their kinds, each artifact's section architecture and ordering, the sequencing and cross-references across artifacts, and the terminology homes.
 
-**Phase 2 — Select the kind's conventions.** Read the supplied kind's reference in `/prose-architecture-standards` `<kind_structures>` and select the shapes the artifact set commits to.
+**Phase 2 — Select each kind's conventions.** Read every governed kind's reference — each kind the artifact set carries — in `/prose-architecture-standards` `<kind_structures>` and select the shapes the artifact set commits to.
 
 **Phase 3 — Write the ADR.** Load the decision template through the live `/understand` foundation and author to it, applying `/prose-architecture-standards` `<prose_adr_content>`. State structure as ALWAYS/NEVER rules carrying `([audit])`, in atemporal voice — never as a draft, an outline of current pages, or a migration plan.
 

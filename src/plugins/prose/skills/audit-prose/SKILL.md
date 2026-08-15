@@ -20,7 +20,8 @@ A verdict on human-facing text, revealed as the run advances — a sealed audit 
 <constraints>
 
 - NEVER modify the text under review — this audit produces a verdict only.
-- NEVER derive the kind from the text. Judging against an inferred kind confirms text written for the wrong slot as correct, which is the error this surface exists to catch. No question is asked; a dispatch with no kind records the blocked outcome in `<verdict_format>` and reads nothing.
+- NEVER derive the kind from the text. Judging against an inferred kind confirms text written for the wrong slot as correct, which is the error this surface exists to catch. No question is asked; a dispatch with no kind — or no target — records the blocked outcome in `<verdict_format>` and reads nothing.
+- NEVER audit without the journal — when the `project-run-journal` skill or the `spx` CLI is unavailable, report the exact availability failure instead of auditing from memory or emitting an unjournaled verdict.
 - NEVER audit text another surface owns — a repository- or domain-governed artifact (spec, ADR, PDR, `SKILL.md`, `PLAN.md`, `ISSUES.md`, root agent guide), a chat response, or operational prose (a code comment, a commit message, an agent-facing instruction) is answered with the `governed-elsewhere` finding, whatever kind the dispatch supplied. Ownership outranks a supplied kind.
 - NEVER flag a pattern the supplied kind's overrides explicitly permit — an override is the catalog's decision, not an oversight. A use outside an override's bounds stays a finding.
 - NEVER excuse a base-catalog match as "single use" or "it works here" — every match outside an override is a finding.
@@ -47,7 +48,7 @@ One text carries one kind. Register variation inside it is judged by the `/prose
 
 1. Check ownership through `<kind_intake>`. A governed artifact is answered with the `governed-elsewhere` finding — open the run, append that one finding, complete rejected, seal, and return the token.
 
-2. Resolve the kind through `<kind_intake>`. Without one, record the blocked outcome per `<verdict_format>` before reading any text.
+2. Resolve the kind through `<kind_intake>`. Without one — or when the dispatch names no text, paths, or target at all — open the run, append one finding naming the missing input at `severity` `unknown`, complete with the terminal status the rollup yields, seal, and return the token; no text is read.
 
 3. Open the run. Invoke the `project-run-journal` skill, then `spx journal open --type audit`; capture the run token and append the scope-entered event carrying the run's identity.
 
@@ -68,10 +69,10 @@ One text carries one kind. Register variation inside it is judged by the `/prose
 
 The verdict is the sealed audit run, produced through the `/project-run-journal` projection — never a terminal JSON object.
 
-- Each finding event carries `pattern` (the catalog anti-pattern, pack rule, or structural rule name), `category` (its catalog section, layer, or pack name), `quote` (the offending text verbatim), `rewrite` (fixed text ready to accept), and the finding's classification for the rollup. A sentence carrying multiple co-occurring patterns produces one finding naming every pattern present.
-- The rollup follows `/project-run-journal`: any rejecting finding makes the run's terminal status rejected; no findings, approved.
-- Ownership routes the text away: one `governed-elsewhere` finding naming the governing workflow, or the reason the text stays outside the prose surface when no workflow governs it; terminal status rejected.
-- No kind resolved: one finding naming the missing kind and the three-kind vocabulary, classified so the rollup yields the failed terminal status — the blocked run in the channel's status vocabulary; no text is read.
+- Each finding maps onto the `/project-run-journal` finding record. `rule` carries the pattern name — the catalog anti-pattern, pack rule, or structural rule; a sentence carrying multiple co-occurring patterns produces one finding naming every pattern present. `file` and `line` carry the offending text's location — the audited path, or the dispatch-supplied label with the line inside pasted text, `line` null for a whole-text finding. `severity` carries the classification the rollup reads: `reject` for every violation. `message` pairs the catalog category with the offending quote verbatim and a rewrite ready to accept.
+- The rollup follows `/project-run-journal`: any `reject` finding makes the run's terminal status rejected; no findings, approved.
+- Ownership routes the text away: one finding with `rule` `governed-elsewhere` at `severity` `reject`, its message naming the governing workflow or the reason the text stays outside the prose surface when no workflow governs it; terminal status rejected.
+- No kind or no target supplied: one finding naming the missing input at `severity` `unknown` — a missing kind names the three-kind vocabulary — so the rollup yields the failed terminal status, the blocked run in the channel's status vocabulary; no text is read.
 - The final message is exactly the raw run token, so the sealed run is inspectable while it ran and after — scope progress, each finding, and the terminal status are read from the journal, not from a message.
 
 </verdict_format>
@@ -95,9 +96,9 @@ Claude removed dispatch language from this skill's description to satisfy the au
 <success_criteria>
 
 - Every applicable rule was judged — base categories, voice canon, kind style layer, kind structural conventions, and every triggered pack — none skipped as unlikely.
-- The sealed run states its terminal status, and every finding is falsifiable: pattern, category, verbatim quote, and a rewrite showing fixed text.
+- The sealed run states its terminal status, and every finding is falsifiable in the journal finding record per `<verdict_format>`: the pattern as its rule, a location, a severity the rollup reads, and a message pairing category, verbatim quote, and a rewrite showing fixed text.
 - Scope progress and each finding were appended as the run advanced; the same text and kind yield the same findings.
-- A dispatch naming a governed artifact produced the `governed-elsewhere` finding without reading the text; a dispatch carrying no kind produced the failed terminal status naming the missing kind without reading the text.
+- A dispatch naming a governed artifact produced the `governed-elsewhere` finding without reading the text; a dispatch carrying no kind or no target produced the failed terminal status naming the missing input without reading the text.
 - The kind judged is the supplied kind, never one this skill concluded, and the kind's overrides produced no false-positive findings.
 - The final message is exactly the raw run token of a sealed run.
 

@@ -29,6 +29,10 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **The kind-detection procedure.** Its audience and function tests asked for facts the artifact does not carry, and `/author-prose` runs before any text exists to read. An audit that infers the kind validates text against whatever kind it inferred, confirming text written for the wrong slot as correct.
 
+### Requires
+
+- **The `project-run-journal` skill and the `spx` CLI for audit delivery.** `/audit-prose` streams its run through `spx journal` using the projection the spec-tree plugin's `project-run-journal` skill carries. A run without either reports the exact availability failure instead of auditing.
+
 ## 0.9.1
 
 ### Changed
