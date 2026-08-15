@@ -40,20 +40,25 @@ Read the default-branch name, then fetch and branch in a second block:
 ```bash
 git fetch "https://github.com/<base>.git" "<base-default-branch>"
 git rev-parse FETCH_HEAD
+```
+
+Record what `git rev-parse` printed as `<base-tip>` and use that SHA in every later comparison, starting with the next command. `FETCH_HEAD` is overwritten by the next fetch from any source — one inside a check Step 6 runs, or inside a commit hook — so a later `FETCH_HEAD...HEAD` diff can silently compare against an unrelated commit and report a real contribution as empty.
+
+Read whether this branch already exists before creating it:
+
+```bash
 git rev-parse --verify --quiet "refs/heads/<branch>"
 ```
 
-The third command prints a SHA when an earlier pass already cut this branch — the name derives from the description, so a retry after a failed replay, an aborted cherry-pick, or a failed creation lands on the same one. `git switch -c` refuses an existing branch, so decide before the switch rather than stopping on its error with no instruction:
+It prints a SHA when an earlier pass already cut the branch — the name derives from the description, so a retry after a failed replay, an aborted cherry-pick, or a failed creation lands on the same one. `git switch -c` refuses an existing branch, so decide here rather than stopping on its error with no instruction:
 
 - **Nothing printed.** The branch is new; cut it below.
-- **The printed SHA equals `<base-tip>`.** The earlier pass cut the branch and got no further. Take it with plain `git switch "<branch>"` and continue.
+- **The printed SHA equals `<base-tip>`.** The earlier pass cut the branch and got no further. Take it with plain `git switch "<branch>"`, then continue at the replay below.
 - **Any other SHA.** The branch carries commits from an earlier attempt. Report the branch, that SHA, and `git log --format='%h %s' <base-tip>..<branch>`, then stop. Whether those commits are the contribution to keep or the wreckage of an aborted replay is a decision about the contribution; discarding them or building on them silently makes it for the operator.
 
 ```bash
 git switch -c "<branch>" FETCH_HEAD
 ```
-
-Record what `git rev-parse` printed as `<base-tip>` and use that SHA in every later comparison. `FETCH_HEAD` is overwritten by the next fetch from any source — one inside a check Step 6 runs, or inside a commit hook — so a later `FETCH_HEAD...HEAD` diff can silently compare against an unrelated commit and report a real contribution as empty.
 
 Branch from `FETCH_HEAD`, never from the head repository's default branch, which is behind by however long since the last sync.
 
