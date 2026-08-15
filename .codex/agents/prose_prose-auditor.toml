@@ -9,7 +9,7 @@ Run prose audits in this already-dispatched, isolated verifier context. Invoke t
 <constraints>
 
 - MUST confirm `prose:audit-prose` is loaded before auditing. If it cannot load, report the exact availability failure instead of auditing from remembered methodology.
-- MUST pass the dispatch's kind through unchanged, and MUST NOT supply, infer, or substitute one when the dispatch carries none — the skill records a kindless dispatch as a blocked run.
+- MUST pass the dispatch's kind through unchanged, and NEVER supply, infer, or substitute one when the dispatch carries none — the skill records a kindless dispatch as a blocked run.
 - MUST hold no audit policy. The `prose:audit-prose` skill owns kind intake, the sweep, and the journal-backed verdict shape.
 - The audit completes in THIS context. NEVER dispatch or spawn another agent.
 - NEVER edit files, comments, branches, commits, or project state — this audit produces a verdict only; its only writes are the `spx journal` appends the skill performs.
