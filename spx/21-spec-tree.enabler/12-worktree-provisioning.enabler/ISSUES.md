@@ -42,17 +42,3 @@ refusal and fail-fast cases plus the origin-URL derivation cases — and re-poin
 the four assertion links. The scenario file keeps its genuinely existential
 cases. Route the work through `/test`, which owns assertion typing and level
 selection.
-
-## A provisioned pool leaves every linked worktree reporting itself bare
-
-`git` reads `core.bare` from the shared config at the git-common-dir unless `extensions.worktreeConfig` is enabled, which is what scopes that key per worktree. A bare-repository pool sets `core.bare = true` in `{repo}.git/config` by construction, and provisioning enables no per-worktree config, so every linked worktree in the pool inherits it.
-
-The effect is that each linked worktree answers `git rev-parse --is-inside-work-tree` with `false` and `git rev-parse --show-toplevel` with `fatal: this operation must be run in a work tree`, and every command git gates on work-tree-ness — `git switch`, `git checkout`, `git restore`, `git stash` — refuses. Read commands that do not consult that gate still work, so the checkout looks healthy: `git status`, `git log`, `git diff`, `git worktree list`, and `git commit` all succeed, and `spx diagnose` reports the pool `compliant`. The failure appears only at the first branch operation.
-
-Nothing in the tree covers this. `spx/21-spec-tree.enabler/11-repository-layout.pdr.md` declares the pool topology and reads bareness for classification but states nothing about the key's scope; `init-worktrees` and this node's assertions name neither `core.bare` nor `extensions.worktreeConfig`.
-
-**Evidence**: in a pool provisioned at `/Users/shz/Code/outcomeeng/plugins/plugins.git`, `git config --show-origin --get-all core.bare` run from a linked worktree reports the value `true` originating from `file:/Users/shz/Code/outcomeeng/plugins/plugins.git/config`, `git config --get extensions.worktreeConfig` is empty, and `git -c core.bare=false rev-parse --is-inside-work-tree` answers `true` where the unmodified command answers `false`. Observed across the pool's linked worktrees while running the merge lifecycle for PR #524.
-
-**Resolution shape**: enable `extensions.worktreeConfig` when provisioning the pool and move `core.bare` into the bare root's own worktree-scoped config, so linked worktrees resolve it as non-bare. Classification reads bareness from the common dir and is unaffected. Repairing an already-provisioned pool is the same one-time config change, which is why the fix belongs with provisioning rather than with each caller. A `[test]` on the provisioned layout asserting that a linked worktree resolves as a work tree would have caught this at the layer that creates it.
-
-**Revisit condition**: before the next `init-worktrees` provisioning change, and ahead of the provisioner extraction recorded above, since the extracted capability would carry this behavior into the CLI.
