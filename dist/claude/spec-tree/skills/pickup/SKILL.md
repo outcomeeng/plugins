@@ -166,41 +166,66 @@ Showing raw content:
 
 </error_handling>
 
+<testing>
+
+The claim verifier's L1 suite records this tested-input matrix:
+
+| Input class              | Tested inputs                                                                                                                                                                                                                           | Expected result                                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Current-state claims     | Every claim kind; origin branch present or absent, including a commit-shaped branch name; claimed path present or missing; projected node present or absent; clean or dirty tracked state; external pull request present or unavailable | Each claim emits exactly one `Confirmed`, `Discrepancy`, or `Unverifiable` verdict with the observed current value |
+| Invalid session metadata | Unparseable JSON; empty, multiple, or non-object record lists; missing required fields; wrong `git_ref`, list, or path types; absolute paths; parent traversal; empty paths                                                             | Exactly one `session_metadata` claim emits `Unverifiable` with the rejected field or shape identified              |
+| Unavailable commands     | Default runner with an empty `PATH`; git launch or fatal failure; unavailable `spx spec status`; unavailable `gh`                                                                                                                       | The affected claim emits `Unverifiable` and never reports false confirmation                                       |
+| Read-only cleanup        | Invocation-unique temporary real-git repositories; source-owned read commands; git status captured before and after verification; success and failure exits                                                                             | Git status remains unchanged, and the context manager removes every temporary repository on exit                   |
+
+</testing>
+
 <failure_modes>
 
 **Failure 1: Claude resumed implementation immediately after `/contextualize`**
 
-Claude loaded `/contextualize`, then invoked `/apply` or started writing ADRs, tests, or code without a user checkpoint. The pre-context gate passed, but the workflow left the post-context transition as a suggestion instead of a requirement.
+What happened: Claude loaded `/contextualize`, then invoked `/apply` or started writing ADRs, tests, or code without a user checkpoint.
+
+Why it failed: Claude treated successful context loading as continuation authority because the post-context checkpoint was expressed as guidance instead of a required transition.
 
 How to avoid: After `/contextualize`, present the loaded state and stop. Use `AskUserQuestion` unless `$ARGUMENTS` explicitly includes `--auto-continue`. Do not invoke `/apply` or edit files before that checkpoint completes.
 
 **Failure 2: Claude orphaned earlier pickups by archiving only the most recent doing session at handoff**
 
-Claude picked up more than one session in the same conversation. The later handoff workflow archived only the most recent pickup, leaving earlier in-conversation pickups stranded in `doing/`. The next Claude context then had to read multiple handoff files to reconstruct the continuation.
+What happened: Claude picked up more than one session in the same conversation. The later handoff workflow archived only the most recent pickup, leaving earlier in-conversation pickups stranded in `doing/`.
+
+Why it failed: Claude keyed closure to one current session id instead of the additive claimed-session set, so the next context had to reconstruct one continuation from several session files.
 
 How to avoid: Emit (or extend) `<CLAIMED_SESSIONS ids="...">` on every pickup so the latest marker names the full claimed-session set. Handoff workflow 04 reads the set and archives every id. Closure writes one canonical continuation per independent thread — never a sidecar for the same thread.
 
 **Failure 3: Claude treated the existence of a new handoff session as permission to close a claimed session**
 
-Claude picked up session A, then ran `spx session handoff` mid-work to create session B, then proposed archiving A because B existed. The queue state was treated as the permission source, not the completion of the reflection workflow.
+What happened: Claude picked up session A, ran `spx session handoff` mid-work to create session B, then proposed archiving A because B existed.
 
-How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive a claimed session. Permission flows from the three claimed-session rules: the set grows only by user confirmation; closure writes one canonical continuation per independent thread; a quick-release shortcut exists only within a few turns of pickup. Pickup never archives.
+Why it failed: Claude treated queue state as closure authority and bypassed the reflection and claimed-session accounting owned by `/handoff`.
+
+How to avoid: Treat the two rules in `<claimed_sessions>` and completion of `/handoff` as the only closure authority. The existence of a self-created or inherited session grants no permission to archive a claimed session. Pickup never archives.
 
 **Failure 4: Claude asked the operator to choose without reviewing session evidence**
 
-Claude loaded context, then asked the operator whether to continue, review artifacts, or take a different approach before classifying the session from claim verdicts, persisted artifacts, coordination notes, overlapping `doing` sessions, branch state, PR state, and expected verification. The operator had to choose from raw session metadata rather than an evaluated proposal.
+What happened: Claude loaded context, then asked the operator whether to continue, review artifacts, or take a different approach before classifying the session from claim verdicts, persisted artifacts, coordination notes, overlapping `doing` sessions, branch state, PR state, and expected verification.
+
+Why it failed: Claude presented raw session metadata as a decision surface, leaving the operator to perform the evidence review and classification the pickup workflow owns.
 
 How to avoid: Review the session evidence after `/contextualize`, classify the session, and present a no-surprises proposal before asking. The operator approves a represented course of work; if a new skill, evidence surface, external dependency, ownership conflict, or verification class appears later that the proposal did not represent, stop at the next safe checkpoint and present the delta.
 
 **Failure 5: Claude tried to close a session whose work was owned elsewhere**
 
-Claude picked up a duplicate session, saw evidence that another active `doing` session, branch, or PR already owned the objective, then drifted toward archive, release, or handoff because the workflow only modeled "wrongly claimed" as the current context's own session to close.
+What happened: Claude picked up a duplicate session, saw evidence that another active `doing` session, branch, or PR already owned the objective, then drifted toward archive, release, or handoff.
+
+Why it failed: Claude treated `owned_elsewhere` as an intermediate observation instead of a terminal classification that forbids further session mutation.
 
 How to avoid: Classify the session as `owned_elsewhere`, report the owning session, branch, or PR, and stop without archiving, releasing, handing off, or moving any session.
 
 **Failure 6: Claude made an empty node list operator homework**
 
-Claude claimed a valid session whose `<nodes>` section was empty, then asked the operator to find and supply a node path even though the goal, `next_step`, and affected skill name identified the product area and `spx spec status` exposed the current node tree.
+What happened: Claude claimed a valid session whose `<nodes>` section was empty, then asked the operator to find and supply a node path even though the goal, `next_step`, and affected skill name identified the product area.
+
+Why it failed: Claude treated missing recorded nodes as missing product context and failed to query the current node projection through `spx spec status`.
 
 How to avoid: Run `spx spec status --format json`, match the session evidence against projected node ids and slugs, and contextualize the single valid candidate directly. Ask only when several concrete candidates remain or no product area can be derived, and never ask the operator to search the tree or provide a raw path.
 
