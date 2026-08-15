@@ -166,19 +166,6 @@ Showing raw content:
 
 </error_handling>
 
-<testing>
-
-The claim verifier's L1 suite records this tested-input matrix:
-
-| Input class              | Tested inputs                                                                                                                                                                                                                           | Expected result                                                                                                    |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Current-state claims     | Every claim kind; origin branch present or absent, including a commit-shaped branch name; claimed path present or missing; projected node present or absent; clean or dirty tracked state; external pull request present or unavailable | Each claim emits exactly one `Confirmed`, `Discrepancy`, or `Unverifiable` verdict with the observed current value |
-| Invalid session metadata | Unparseable JSON; empty, multiple, or non-object record lists; missing required fields; wrong `git_ref`, list, or path types; absolute paths; parent traversal; empty paths                                                             | Exactly one `session_metadata` claim emits `Unverifiable` with the rejected field or shape identified              |
-| Unavailable commands     | Default runner with an empty `PATH`; git launch or fatal failure; unavailable `spx spec status`; unavailable `gh`                                                                                                                       | The affected claim emits `Unverifiable` and never reports false confirmation                                       |
-| Read-only cleanup        | Invocation-unique temporary real-git repositories; source-owned read commands; git status captured before and after verification; success and failure exits                                                                             | Git status remains unchanged, and the context manager removes every temporary repository on exit                   |
-
-</testing>
-
 <failure_modes>
 
 **Failure 1: Claude resumed implementation immediately after `/contextualize`**
