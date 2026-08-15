@@ -48,11 +48,13 @@ from outcomeeng.distribution.bump import (
     ManifestRecord,
     ManifestWriter,
     Mode,
+    SHARED_SOURCE_DIR,
     SOURCE_PLUGINS_DIR,
     ToolProbe,
     REQUIRED_TOOLS,
     Segment,
     _real_change_probe,
+    _real_include_index_probe,
     bump,
     main,
 )
@@ -867,6 +869,28 @@ def observe_cross_plugin_rename_changes() -> tuple[
         return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
 
 
+def observe_shared_fragment_changes() -> tuple[
+    SharedFragmentRepo, Mapping[str, tuple[ChangedPath, ...]]
+]:
+    """Build a real repo with a shared-fragment edit and probe its changes."""
+    with TemporaryDirectory() as directory:
+        handle = build_repo_with_shared_fragment_change(
+            pathlib.Path(directory) / "repo"
+        )
+        return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
+
+
+def observe_real_include_index() -> tuple[
+    SharedFragmentRepo, Mapping[str, frozenset[str]]
+]:
+    """Build a real repo and derive its include index from authored sources."""
+    with TemporaryDirectory() as directory:
+        handle = build_repo_with_shared_fragment_change(
+            pathlib.Path(directory) / "repo"
+        )
+        return handle, _real_include_index_probe(cwd=handle.repo)
+
+
 def _observe_manifest_against_base_source_path(
     status: FileStatus,
 ) -> tuple[str, str, BumpOutcome]:
@@ -943,6 +967,23 @@ class RenamedStructuralRepo:
     plugin: str
     structural_path: str
     renamed_path: str
+
+
+@dataclass(frozen=True)
+class SharedFragmentRepo:
+    """A real git repo whose working tree edits a shared authored fragment
+    that one plugin's source includes and another plugin's source does not.
+
+    No path under either plugin changes, so prefix attribution alone reaches
+    neither plugin; only include-directive resolution reaches ``including_plugin``.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    including_plugin: str
+    unrelated_plugin: str
+    fragment_path: str
+    include_target: str
 
 
 @dataclass(frozen=True)
@@ -1053,6 +1094,50 @@ def build_repo_with_renamed_structural_path(
         plugin=plugin,
         structural_path=structural_path,
         renamed_path=renamed_path,
+    )
+
+
+def build_repo_with_shared_fragment_change(
+    repo: pathlib.Path,
+) -> SharedFragmentRepo:
+    """Commit two plugins and a shared fragment, then edit only the fragment."""
+    including_plugin = "consumer"
+    unrelated_plugin = "bystander"
+    include_target = "voice/fragment.md"
+    fragment_path = f"{SHARED_SOURCE_DIR}/{include_target}"
+    repo.mkdir(parents=True, exist_ok=True)
+    _run_git(repo, "init", "-q", "-b", "main")
+    _run_git(repo, "config", "commit.gpgsign", "false")
+    for plugin in (including_plugin, unrelated_plugin):
+        _write(
+            repo,
+            f"{SOURCE_PLUGINS_DIR}/{plugin}/.claude-plugin/plugin.json",
+            f'{{\n  "name": "{plugin}",\n  "version": "0.1.0"\n}}\n',
+        )
+    _write(
+        repo,
+        f"{SOURCE_PLUGINS_DIR}/{including_plugin}/skills/voiced/SKILL.md",
+        f"---\nname: voiced\n---\n\n{{!% include '{include_target}' %!}}\n",
+    )
+    _write(
+        repo,
+        f"{SOURCE_PLUGINS_DIR}/{unrelated_plugin}/skills/plain/SKILL.md",
+        "---\nname: plain\n---\n\nno directive here\n",
+    )
+    _write(repo, fragment_path, "canon v1\n")
+    _run_git(repo, "add", "-A")
+    _run_git(repo, "commit", "-q", "-m", "base")
+    base_ref = "HEAD"
+
+    _write(repo, fragment_path, "canon v2\n")
+
+    return SharedFragmentRepo(
+        repo=repo,
+        base_ref=base_ref,
+        including_plugin=including_plugin,
+        unrelated_plugin=unrelated_plugin,
+        fragment_path=fragment_path,
+        include_target=include_target,
     )
 
 

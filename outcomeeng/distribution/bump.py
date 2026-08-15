@@ -1,8 +1,8 @@
 """Manifest version-bumping orchestration.
 
-Bumps the manifest version of every plugin whose authored source tree or
-generated runtime tree has changes since a base reference (default
-`origin/main`). Each changed plugin's version is incremented exactly once
+Bumps the manifest version of every plugin whose authored source tree,
+generated runtime tree, or included shared fragment has changes since a
+base reference (default `origin/main`). Each changed plugin's version is incremented exactly once
 across every manifest it owns (`.claude-plugin/plugin.json` always;
 `.codex-plugin/plugin.json` when present). The increment segment is
 auto-detected per plugin unless the caller explicitly selects `patch`,
@@ -15,12 +15,15 @@ The module's contract:
   the path prefixes and manifest filenames the orchestration recognizes.
 - `REQUIRED_TOOLS` names the external binaries `main()` shells out to.
 - `Version`, `Segment`, and `ManifestRecord` are the domain dataclasses.
-- `ChangeProbe`, `ContentProbe`, `ManifestReader`, `ManifestWriter`,
-  `ToolProbe` Protocols describe the injected side-effecting boundaries.
+- `ChangeProbe`, `ContentProbe`, `IncludeIndexProbe`, `ManifestReader`,
+  `ManifestWriter`, `ToolProbe` Protocols describe the injected
+  side-effecting boundaries.
 - `bump()` runs the orchestration; tests substitute controlled Protocol
   implementations.
 - `changed_plugins_from_diff()` is the pure path-prefix filter the
-  production `_real_change_probe` adapter delegates to.
+  production `_real_change_probe` adapter delegates to, and
+  `plugins_from_shared_change()` resolves a change under
+  `SHARED_SOURCE_DIR` through the include index.
 - `main()` wires real `git diff` / `git show` / `Path` adapters.
 """
 
@@ -55,11 +58,14 @@ DIST_CODEX_PLUGINS_DIR: str = DIST_CODEX_PLUGINS_PATH.as_posix()
 CLAUDE_MANIFEST: str = f"{CLAUDE_PLUGIN_SUBDIR_NAME}/plugin.json"
 CODEX_MANIFEST: str = f"{CODEX_PLUGIN_SUBDIR_NAME}/plugin.json"
 
+SHARED_SOURCE_DIR: str = "src/_shared"
+
 _PLUGIN_CHANGE_ROOTS: tuple[str, ...] = (
     SOURCE_PLUGINS_DIR,
     DIST_CLAUDE_PLUGINS_DIR,
     DIST_CODEX_PLUGINS_DIR,
 )
+_INCLUDE_DIRECTIVE = re.compile(r"\{!%\s*include\s*'([^']+)'\s*%!\}")
 _KNOWN_MANIFESTS: tuple[str, ...] = (CLAUDE_MANIFEST, CODEX_MANIFEST)
 _DEFAULT_BASE_REF: str = "origin/main"
 
@@ -186,6 +192,13 @@ class ToolProbe(Protocol):
     """Returns True when `name` resolves to an executable on PATH."""
 
     def __call__(self, name: str) -> bool: ...
+
+
+class IncludeIndexProbe(Protocol):
+    """Returns a mapping from a shared fragment's include target to the
+    plugins whose authored sources name it in an include directive."""
+
+    def __call__(self) -> Mapping[str, frozenset[str]]: ...
 
 
 class ManifestVersionError(ValueError):
@@ -477,8 +490,39 @@ def _replace_version(content: str, new_version: str) -> str:
     return new_content
 
 
+def _real_include_index_probe(
+    *,
+    cwd: Path | None = None,
+) -> Mapping[str, frozenset[str]]:
+    """Map each include target to the plugins whose authored sources name it.
+
+    The build resolves an include directive's quoted path against the shared
+    source root, so scanning authored plugin sources for those directives
+    reaches the same fragment-to-plugin relation the build renders, from the
+    same source of truth and without running the build.
+    """
+    root = (cwd or Path.cwd()) / SOURCE_PLUGINS_DIR
+    index: dict[str, set[str]] = {}
+    if not root.is_dir():
+        return {}
+    for plugin_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+        for source in sorted(plugin_dir.rglob("*")):
+            if not source.is_file():
+                continue
+            try:
+                text = source.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            for target in _INCLUDE_DIRECTIVE.findall(text):
+                index.setdefault(target, set()).add(plugin_dir.name)
+    return {target: frozenset(plugins) for target, plugins in index.items()}
+
+
 def _real_change_probe(
-    base_ref: str, *, cwd: Path | None = None
+    base_ref: str,
+    *,
+    cwd: Path | None = None,
+    include_index_probe: IncludeIndexProbe | None = None,
 ) -> Mapping[str, tuple[ChangedPath, ...]]:
     diff = subprocess.run(
         [
@@ -514,6 +558,7 @@ def _real_change_probe(
             "--exclude-standard",
             "--",
             *_PLUGIN_CHANGE_ROOTS,
+            SHARED_SOURCE_DIR,
         ],
         cwd=cwd,
         capture_output=True,
@@ -525,14 +570,55 @@ def _real_change_probe(
         for line in others.stdout.splitlines()
         if (path := line.strip())
     )
+    probe = include_index_probe or (lambda: _real_include_index_probe(cwd=cwd))
+    include_index = probe()
     changes: dict[str, list[ChangedPath]] = {}
     for parsed_change in (*tracked, *untracked):
-        plugins = plugins_from_change(parsed_change)
+        plugins = plugins_from_change(parsed_change) | plugins_from_shared_change(
+            parsed_change, include_index
+        )
         if not plugins:
             continue
         for plugin in plugins:
             changes.setdefault(plugin, []).append(parsed_change)
     return {plugin: tuple(paths) for plugin, paths in changes.items()}
+
+
+def plugins_from_shared_change(
+    change: ChangedPath, include_index: Mapping[str, frozenset[str]]
+) -> frozenset[str]:
+    """Plugins a shared-root change alters, resolved through `include_index`.
+
+    A shared fragment renders into the shipped surface of every plugin whose
+    authored source includes it, so the change alters those plugins even though
+    no path yet carries their name. The index is supplied rather than derived
+    here: this function reads no repository content, so its resolution is
+    verifiable against an in-memory index.
+
+    A rename resolves both its destination and its source include target — the
+    fragment left one address and arrived at another, and both addresses reach
+    the plugins that named them. A copy resolves its destination alone, because
+    its source is byte-identical at `base_ref` and nothing there changed —
+    matching the source attribution `plugins_from_change` performs.
+    """
+    paths = [change.path]
+    if change.status is FileStatus.RENAMED and change.old_path is not None:
+        paths.append(change.old_path)
+    plugins: set[str] = set()
+    for path in paths:
+        if (target := _include_target_from_shared_path(path)) is None:
+            continue
+        plugins |= include_index.get(target, frozenset())
+    return frozenset(plugins)
+
+
+def _include_target_from_shared_path(path: str) -> str | None:
+    """The include target a shared-root path is named by, or None."""
+    prefix = f"{SHARED_SOURCE_DIR}/"
+    if not path.startswith(prefix):
+        return None
+    target = path.removeprefix(prefix)
+    return target or None
 
 
 def plugins_from_change(change: ChangedPath) -> frozenset[str]:
@@ -660,11 +746,13 @@ __all__ = [
     "CODEX_MANIFEST",
     "DIST_CLAUDE_PLUGINS_DIR",
     "DIST_CODEX_PLUGINS_DIR",
+    "SHARED_SOURCE_DIR",
     "SOURCE_PLUGINS_DIR",
     "REQUIRED_TOOLS",
     "ChangeProbe",
     "ChangedPath",
     "ContentProbe",
+    "IncludeIndexProbe",
     "FileStatus",
     "ManifestReader",
     "ManifestRecord",
@@ -678,6 +766,7 @@ __all__ = [
     "changed_plugins_from_diff",
     "main",
     "plugins_from_change",
+    "plugins_from_shared_change",
 ]
 
 

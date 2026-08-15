@@ -8,9 +8,6 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under th
 
 ## Assertions
 
-- ALWAYS: the consumer set of a changed shared fragment is resolved from the include directives in authored plugin sources, naming the same plugins the build renders that fragment into, so attribution needs no build run and no separately maintained mapping
-- NEVER: a shared fragment reaches a plugin's shipped surface without that plugin's version advancing in the same bump pass — a version that does not move when the surface moves misreports what the plugin ships
-
 ### Scenarios
 
 - Given a working tree with changes under `src/plugins/foo/**` and no changes under `src/plugins/bar/**` since `base_ref`, when bump runs, then only `foo`'s manifests are written ([test](tests/test_bump.scenario.l1.py))
@@ -33,6 +30,10 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under th
 - Auto-detection maps each `(file-status, path-pattern)` pair to a segment within any recognized distribution-surface root: an `A`/`C`/`D`/`R` change to `skills/{slug}/SKILL.md`, `agents/{slug}.md`, or `{.claude,.codex}-plugin/plugin.json` yields `minor`; every other path or any `M` change yields `patch` ([test](tests/test_bump.mapping.l1.py))
 - Each file status maps to the plugins one change attributes to: an `R` change attributes both its destination and its source plugin, and every other status attributes its destination plugin alone — a `C` change leaves its source untouched at `base_ref` ([test](tests/test_bump.mapping.l1.py))
 
+### Conformance
+
+- The include index the change-detection adapter derives conforms to the include directives present in authored plugin sources — a directive's target names the plugin whose source carries it, and a plugin naming no directive appears under no target ([test](tests/test_bump.conformance.l1.py))
+
 ### Properties
 
 - For every semantic `Version` triple, `--segment patch` increments the third component; `--segment minor` increments the second and resets the third to 0; `--segment major` increments the first and resets the second and third to 0 ([test](tests/test_bump.property.l1.py))
@@ -44,6 +45,7 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under th
 - ALWAYS: check availability of `git` before any orchestration step — missing tools fail fast with a diagnostic rather than partway through the sequence ([test](tests/test_bump.compliance.l1.py))
 - NEVER: bump a plugin whose working-tree version is already ahead of its `base_ref` version — the branch already carries a valid bump for that plugin (re-bumping during PR review is the failure `spx/local/commit-changes.md` prohibits); outside CHECK mode, that plugin is skipped with a diagnostic while every other changed-but-unbumped plugin is still bumped — or, under `--dry-run`, reported — in the same pass ([test](tests/test_bump.compliance.l1.py))
 - NEVER: write a manifest for a plugin with no changes under an authored source or generated runtime root since `base_ref` — change detection is the sole trigger for writing ([test](tests/test_bump.compliance.l1.py))
+- NEVER: a shared fragment reaches a plugin's shipped surface without that plugin's version advancing in the same bump pass — a version that does not move when the surface moves misreports what the plugin ships ([test](tests/test_bump.compliance.l1.py))
 - NEVER: reformat manifest content beyond the version field — every byte outside the `"version": "{old}"` substring is preserved character-for-character, so version bumps produce minimal diffs and do not churn manifest authors' formatting choices ([test](tests/test_bump.compliance.l1.py))
 - NEVER: write any manifest when `--dry-run` or `--check` is selected — both modes are read-only regardless of plugin state ([test](tests/test_bump.compliance.l1.py))
 - NEVER: combine `--dry-run` with `--check` — the modes are mutually exclusive and the CLI parser rejects their combined use ([test](tests/test_bump.compliance.l1.py))

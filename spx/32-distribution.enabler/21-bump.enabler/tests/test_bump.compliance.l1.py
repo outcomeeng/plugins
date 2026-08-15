@@ -17,6 +17,7 @@ from outcomeeng_testing.harnesses.bump import (
     observe_mixed_dual_manifest_plugin,
     observe_modification_only_changes_run,
     observe_probe_ordering,
+    observe_shared_fragment_changes,
     observe_read_only_mode_runs,
     observe_unchanged_plugins_run,
 )
@@ -167,3 +168,13 @@ def test_explicit_segment_patch_overrides_detected_minor_with_warning() -> None:
     assert version_of(outcome.written[path]) == "0.4.2"
     assert plugin in outcome.stderr
     assert "minor" in outcome.stderr
+
+
+def test_shared_fragment_change_reaches_its_including_plugin() -> None:
+    handle, changed = observe_shared_fragment_changes()
+
+    assert handle.including_plugin in changed
+    assert handle.unrelated_plugin not in changed
+    assert handle.fragment_path in {
+        change.path for change in changed[handle.including_plugin]
+    }
