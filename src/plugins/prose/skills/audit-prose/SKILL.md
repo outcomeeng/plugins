@@ -68,7 +68,7 @@ The verdict is the sealed audit run, produced through the `/project-run-journal`
 
 - Each finding event carries `pattern` (the catalog anti-pattern, pack rule, or structural rule name), `category` (its catalog section, layer, or pack name), `quote` (the offending text verbatim), `rewrite` (fixed text ready to accept), and the finding's classification for the rollup. A sentence carrying multiple co-occurring patterns produces one finding naming every pattern present.
 - The rollup follows `/project-run-journal`: any rejecting finding makes the run's terminal status rejected; no findings, approved.
-- Ownership routes the text away: one `governed-elsewhere` finding naming the governing workflow, terminal status rejected.
+- Ownership routes the text away: one `governed-elsewhere` finding naming the governing workflow, or the reason the text stays outside the prose surface when no workflow governs it; terminal status rejected.
 - No kind resolved: one finding naming the missing kind and the three-kind vocabulary, classified so the rollup yields the failed terminal status — the blocked run in the channel's status vocabulary; no text is read.
 - The final message is exactly the raw run token, so the sealed run is inspectable while it ran and after — scope progress, each finding, and the terminal status are read from the journal, not from a message.
 
