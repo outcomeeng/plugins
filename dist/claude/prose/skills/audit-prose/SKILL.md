@@ -48,7 +48,7 @@ One text carries one kind. Register variation inside it is judged by the `/prose
 
 1. Check ownership through `<kind_intake>`. A governed artifact is answered with the `governed-elsewhere` finding — open the run, append that one finding, complete rejected, seal, and return the token.
 
-2. Resolve the kind through `<kind_intake>`. Without one — or when the dispatch names no text, paths, or target at all — open the run, append one finding naming the missing input at `severity` `unknown`, complete with the terminal status the rollup yields, seal, and return the token; no text is read.
+2. Resolve the kind through `<kind_intake>`. Without one — or when the dispatch names no text, paths, or target at all — open the run, append one `severity` `unknown` finding with `rule` `missing-kind` or `missing-target` and `file` `<no target supplied>` when no target exists, complete with the terminal status the rollup yields, seal, and return the token; no text is read.
 
 3. Open the run. Invoke the `project-run-journal` skill, then `spx journal open --type audit`; capture the run token and append the scope-entered event carrying the run's identity.
 
