@@ -121,7 +121,7 @@ When `<nodes>` is empty or unreadable, discover the target without an operator q
 2. Traverse the projected tree from the root downward in the order emitted by `spx`. A node's canonical address is `spx/` plus its projected `id`.
 3. At each node, compare the projected id and slug with current session evidence: explicit valid node addresses in session prose; workflow or skill names in `goal` and `next_step`; and affected or persisted paths whose segments name the projected node slug. A wording-only resemblance with no shared workflow, path, or product-area term does not make the node session-relevant.
 4. When a node is session-relevant, invoke `/contextualize` on it and evaluate whether the loaded authoritative context identifies the session's next workflow with no relevant projected branch unresolved. If it does, select that node and continue. If it does not, resume the top-down traversal.
-5. If traversal exhausts the projection without reaching that resume-ready state, report the handoff as stale or unsupported and include the session evidence checked. Stop without asking the operator to search the tree, run `spx spec status`, choose a node, or supply a raw node path.
+5. If traversal exhausts the projection without reaching that resume-ready state, classify the handoff as `stale_or_superseded` and include the session evidence checked. Stop without asking the operator to search the tree, run `spx spec status`, choose a node, or supply a raw node path.
 
 After loading the selected target, contextualize additional nodes only when the next action touches them.
 
@@ -238,7 +238,7 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
-- [ ] The `/contextualize` target is selected without operator search work: recorded-node multiplicity resolves by priority, while an empty or unreadable `<nodes>` section triggers a top-down traversal of `spx spec status --format json`; session-relevant nodes are contextualized until the next workflow is established with no relevant branch unresolved, projection failure stops with its exact diagnostic, and projection exhaustion reports a stale or unsupported handoff without asking the operator to choose or locate a node
+- [ ] The `/contextualize` target is selected without operator search work: recorded-node multiplicity resolves by priority, while an empty or unreadable `<nodes>` section triggers a top-down traversal of `spx spec status --format json`; session-relevant nodes are contextualized until the next workflow is established with no relevant branch unresolved, projection failure stops with its exact diagnostic, and projection exhaustion classifies the handoff as `stale_or_superseded` without asking the operator to choose or locate a node
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` with the full claimed-session set
 - [ ] Claimed session remains in `doing` after the checkpoint — pickup workflow never archives or releases
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
