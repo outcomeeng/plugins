@@ -23,6 +23,8 @@ from outcomeeng.distribution.installation import (
     Agent,
     CANONICAL_CODEX_SOURCE,
     CANONICAL_MARKETPLACE_SOURCE,
+    CATALOG_PLUGIN_NAME_FIELD,
+    CATALOG_PLUGINS_FIELD,
     CLAUDE_CATALOG_PATH,
     CLAUDE_CONFIG_ENV,
     CLAUDE_ENABLED_PLUGINS_FIELD,
@@ -48,14 +50,17 @@ from outcomeeng.distribution.installation import (
     MARKETPLACE_NAME,
     Operation,
     PersistentPreflight,
+    PLUGIN_OPERATIONS,
     PYTHON_EXECUTABLE,
     SourceAction,
     STATE_ENV_NAMES,
+    UNPUBLISHED_PLUGIN_FRAGMENT,
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
     claude_marketplace_settings,
     codex_marketplace_listing_payload,
+    catalog_plugin_names,
     codex_source_action,
     execute_installation,
     execute_persistent_installation,
@@ -223,6 +228,10 @@ class RecordingRunner:
             stdout=stdout,
             stderr=command.operation.value if exit_code else "",
         )
+
+
+BASE_REF_BRANCH = "main"
+BASE_REF = "origin/main"
 
 
 def repository_root() -> Path:
@@ -1164,11 +1173,18 @@ __all__ = [
     "PersistentExecutionObservation",
     "PersistentPlanObservation",
     "PlanObservation",
+    "DesignatedFailureRunner",
     "RealInstallationObservation",
     "RecordingRunner",
+    "UnpublishedPluginObservation",
+    "UnpublishedPluginRunner",
     "VerificationRecipeObservation",
+    "canonical_catalog_plugin_names",
+    "committed_catalog_plugin_names",
+    "designated_failure_operations",
     "observe_claude_user_collision",
     "observe_codex_config_independence",
+    "observe_designated_failure",
     "observe_first_failure",
     "observe_failed_run_restore",
     "observe_inspection_failure",
@@ -1178,5 +1194,248 @@ __all__ = [
     "observe_planned_operations",
     "observe_real_installation",
     "observe_repository_plan",
+    "absent_from_every_agent",
+    "observe_unpublished_plugin",
     "observe_verification_recipe",
 ]
+
+
+@dataclass
+class UnpublishedPluginRunner:
+    """Installation runner whose marketplace has not published a named plugin set.
+
+    Controlled under `/test` Stage 5 Failure simulation: a real marketplace
+    reports a plugin absent only while that plugin is genuinely unpublished, a
+    state that disappears the moment the plugin merges, so it cannot be produced
+    on demand against the canonical source.
+    """
+
+    unpublished: Mapping[Agent, frozenset[str]]
+    calls: list[InstallationCommand] = field(default_factory=list)
+
+    def __call__(self, command: InstallationCommand) -> CommandResult:
+        self.calls.append(command)
+        plugin_operation = command.operation in PLUGIN_OPERATIONS
+        absent = self.unpublished.get(command.agent, frozenset())
+        if plugin_operation and command.plugin in absent:
+            return CommandResult(
+                argv=command.argv,
+                exit_code=1,
+                stdout="",
+                stderr=(
+                    f"Error: plugin `{command.plugin}` was "
+                    f"{UNPUBLISHED_PLUGIN_FRAGMENT} `{MARKETPLACE_NAME}`"
+                ),
+            )
+        stdout = (
+            codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+            if command.operation is Operation.MARKETPLACE_INSPECT
+            else ""
+        )
+        return CommandResult(argv=command.argv, exit_code=0, stdout=stdout, stderr="")
+
+
+@dataclass(frozen=True)
+class UnpublishedPluginObservation:
+    """What one installation run did when the marketplace lacked a plugin."""
+
+    report: InstallationReport | None
+    failure: InstallationFailure | None
+    calls: tuple[InstallationCommand, ...]
+
+
+@dataclass
+class DesignatedFailureRunner:
+    """Installation runner that fails one designated command with a given stderr.
+
+    Controlled under `/test` Stage 5 Failure simulation: the classification a
+    run applies to a failed command depends on that command's operation and on
+    the wording its agent CLI emitted, and a real CLI produces neither on
+    demand for an arbitrary operation.
+
+    The stderr is supplied by the caller so the executed test owns which
+    wording each case carries; this runner selects nothing.
+    """
+
+    operation: Operation
+    stderr: str
+    plugin: str | None = None
+    calls: list[InstallationCommand] = field(default_factory=list)
+
+    def __call__(self, command: InstallationCommand) -> CommandResult:
+        self.calls.append(command)
+        designated = command.operation is self.operation and (
+            self.plugin is None or command.plugin == self.plugin
+        )
+        if designated:
+            return CommandResult(
+                argv=command.argv, exit_code=1, stdout="", stderr=self.stderr
+            )
+        stdout = (
+            codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+            if command.operation is Operation.MARKETPLACE_INSPECT
+            else ""
+        )
+        return CommandResult(argv=command.argv, exit_code=0, stdout=stdout, stderr="")
+
+
+def _build_run_plan(
+    temporary_root: Path, *, isolated: bool, source: str
+) -> InstallationPlan:
+    """One installation plan of the selected mode and configured source."""
+    mirror = temporary_root / "checkout"
+    _mirror_installation_inputs(repository_root(), mirror)
+    if isolated:
+        return build_isolated_installation_plan(
+            mirror, temporary_root / "state", os.environ
+        )
+    _write_project_marketplace(mirror, source)
+    environment = _persistent_environment(temporary_root)
+    preflight = build_persistent_preflight(mirror, environment)
+    codex_source = (
+        CANONICAL_CODEX_SOURCE if source == CANONICAL_MARKETPLACE_SOURCE else source
+    )
+    return build_persistent_installation_plan(
+        preflight, codex_marketplace_listing_payload(codex_source)
+    )
+
+
+def designated_failure_operations(
+    *, isolated: bool, source: str = CANONICAL_MARKETPLACE_SOURCE
+) -> tuple[Operation, ...]:
+    """Distinct operations the plan `observe_designated_failure` drives performs.
+
+    Exposes the reachable operation domain for one mode and source so a linked
+    test enumerates what a run can actually fail at, rather than naming
+    operations by hand.
+    """
+    with TemporaryDirectory() as temporary_directory:
+        plan = _build_run_plan(
+            Path(temporary_directory), isolated=isolated, source=source
+        )
+    return tuple(dict.fromkeys(command.operation for command in plan.commands))
+
+
+def _observe_installation_run(
+    runner: UnpublishedPluginRunner | DesignatedFailureRunner,
+    *,
+    isolated: bool,
+    source: str = CANONICAL_MARKETPLACE_SOURCE,
+) -> UnpublishedPluginObservation:
+    """Execute one installation plan of the selected mode through `runner`."""
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        plan = _build_run_plan(temporary_root, isolated=isolated, source=source)
+        try:
+            report = execute_installation(plan, runner)
+        except InstallationFailure as failure:
+            return UnpublishedPluginObservation(
+                report=None, failure=failure, calls=tuple(runner.calls)
+            )
+    return UnpublishedPluginObservation(
+        report=report, failure=None, calls=tuple(runner.calls)
+    )
+
+
+def absent_from_every_agent(names: frozenset[str]) -> Mapping[Agent, frozenset[str]]:
+    """The named plugins missing from every agent's marketplace.
+
+    The agent set comes from `Agent` itself, so an agent the source adds enters
+    this mapping without the callers naming it.
+    """
+    return {agent: names for agent in Agent}
+
+
+def observe_unpublished_plugin(
+    *,
+    isolated: bool,
+    unpublished: Mapping[Agent, frozenset[str]],
+) -> UnpublishedPluginObservation:
+    """Run one installation whose marketplaces lack the named plugins.
+
+    The mapping is per agent because the two marketplaces refresh separately: a
+    plugin can be absent from one and installable from the other.
+    """
+    return _observe_installation_run(
+        UnpublishedPluginRunner(unpublished), isolated=isolated
+    )
+
+
+def observe_designated_failure(
+    *,
+    isolated: bool,
+    operation: Operation,
+    stderr: str,
+    plugin: str | None = None,
+    source: str = CANONICAL_MARKETPLACE_SOURCE,
+) -> UnpublishedPluginObservation:
+    """Run one installation in which the designated command fails with `stderr`."""
+    return _observe_installation_run(
+        DesignatedFailureRunner(operation=operation, stderr=stderr, plugin=plugin),
+        isolated=isolated,
+        source=source,
+    )
+
+
+def canonical_catalog_plugin_names() -> frozenset[str]:
+    """Plugins the canonical marketplace publishes, read from the base ref.
+
+    An independent oracle: the published branch's own committed catalogs, read
+    through git rather than through the installation run whose classification is
+    under test. A missing base ref raises rather than reporting an empty set,
+    because an empty oracle would make every pending claim vacuously true.
+    """
+    root = repository_root()
+    names: set[str] = set()
+    for path in (CLAUDE_CATALOG_PATH, CODEX_CATALOG_PATH):
+        names.update(_base_ref_catalog_names(root, path))
+    return frozenset(names)
+
+
+def _base_ref_catalog_names(root: Path, path: Path) -> set[str]:
+    """Read one catalog at the base ref, fetching that ref when absent.
+
+    A shallow checkout has no `origin/main`, which is how the governing CI job
+    checks out. Fetching the ref keeps the oracle available there rather than
+    turning an absent ref into an unrelated failure of every assertion this
+    test carries.
+    """
+    for fetch_first in (False, True):
+        if fetch_first:
+            fetched = subprocess.run(
+                ("git", "fetch", "--depth=1", "origin", BASE_REF_BRANCH),
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if fetched.returncode != 0:
+                raise RuntimeError(
+                    f"cannot read the canonical catalog: fetching "
+                    f"{BASE_REF_BRANCH} failed with {fetched.stderr.strip()}"
+                )
+        shown = subprocess.run(
+            ("git", "show", f"{BASE_REF}:{path.as_posix()}"),
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if shown.returncode == 0:
+            document = json.loads(shown.stdout)
+            return {
+                entry[CATALOG_PLUGIN_NAME_FIELD]
+                for entry in document[CATALOG_PLUGINS_FIELD]
+            }
+    raise RuntimeError(
+        f"cannot read {path.as_posix()} at {BASE_REF}: {shown.stderr.strip()}"
+    )
+
+
+def committed_catalog_plugin_names() -> frozenset[str]:
+    """Plugins this checkout's own committed catalogs declare."""
+    root = repository_root()
+    names: set[str] = set()
+    for path in (CLAUDE_CATALOG_PATH, CODEX_CATALOG_PATH):
+        names.update(catalog_plugin_names(root / path))
+    return frozenset(names)

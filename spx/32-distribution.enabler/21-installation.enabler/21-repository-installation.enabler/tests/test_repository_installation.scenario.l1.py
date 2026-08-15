@@ -1,9 +1,11 @@
 """Controlled first-failure evidence for repository installation."""
 
 import json
+from typing import cast
 
 from outcomeeng.distribution.installation import (
     Agent,
+    report_document,
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
     CANONICAL_MARKETPLACE_SOURCE,
@@ -13,6 +15,9 @@ from outcomeeng.distribution.installation import (
     VERIFICATION_RECIPE_COMMAND,
 )
 from outcomeeng_testing.harnesses.installation import (
+    absent_from_every_agent,
+    committed_catalog_plugin_names,
+    observe_unpublished_plugin,
     NONCANONICAL_MARKETPLACE_SOURCE,
     observe_claude_user_collision,
     observe_inspection_failure,
@@ -122,3 +127,79 @@ def test_claude_user_scope_collision_stops_before_mutation() -> None:
     assert str(observation.settings_path) in observation.error
     assert USER_SCOPE_COLLISION_DIAGNOSTIC in observation.error
     assert observation.attempted == ()
+
+
+def test_persistent_installation_reports_an_unpublished_plugin_and_completes() -> None:
+    absent = sorted(committed_catalog_plugin_names())[0]
+
+    observation = observe_unpublished_plugin(
+        isolated=False, unpublished=absent_from_every_agent(frozenset({absent}))
+    )
+
+    assert observation.failure is None
+    assert observation.report is not None
+    assert {entry.plugin for entry in observation.report.pending_publication} == {
+        absent
+    }
+    installed = {
+        call.plugin
+        for call in observation.calls
+        if call.operation is Operation.PLUGIN_INSTALL
+    }
+    # Every catalog plugin, not merely more than one: "every other plugin still
+    # installs" fails the moment the run stops early, and a count threshold
+    # passes a run that stopped after the second plugin.
+    assert installed == committed_catalog_plugin_names()
+
+
+def test_isolated_installation_treats_an_absent_plugin_as_terminal() -> None:
+    absent = sorted(committed_catalog_plugin_names())[0]
+
+    observation = observe_unpublished_plugin(
+        isolated=True, unpublished=absent_from_every_agent(frozenset({absent}))
+    )
+
+    assert observation.report is None
+    assert observation.failure is not None
+    assert observation.failure.command.plugin == absent
+    assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
+
+
+def test_the_json_report_never_lists_a_pending_plugin_as_installed() -> None:
+    absent = sorted(committed_catalog_plugin_names())[0]
+
+    observation = observe_unpublished_plugin(
+        isolated=False, unpublished={Agent.CLAUDE: frozenset({absent})}
+    )
+
+    assert observation.report is not None
+    document = report_document(observation.report)
+    pending = {
+        cast(str, entry["plugin"])
+        for entry in cast(list[dict[str, str]], document["pending_publication"])
+    }
+
+    # The text summary and this document answer from the same accessor. Reading
+    # the plan directly here reported a plugin as installed in one field while
+    # the next field reported it unpublished, and the two disagreed inside one
+    # document.
+    assert pending == {absent}
+    assert not pending & set(cast(list[str], document["claude_plugins"]))
+    assert absent in cast(list[str], document["codex_plugins"])
+
+
+def test_a_plugin_absent_from_one_agent_stays_installed_for_the_other() -> None:
+    absent = sorted(committed_catalog_plugin_names())[0]
+
+    observation = observe_unpublished_plugin(
+        isolated=False, unpublished={Agent.CLAUDE: frozenset({absent})}
+    )
+
+    assert observation.failure is None
+    assert observation.report is not None
+    # The two marketplaces refresh separately, so one agent reporting a plugin
+    # unpublished says nothing about the other. A pending record carrying only
+    # the plugin name cannot express that, and drops the plugin from both
+    # agents' installed counts on either one's failure.
+    assert observation.report.pending_for(Agent.CLAUDE) == frozenset({absent})
+    assert observation.report.pending_for(Agent.CODEX) == frozenset()

@@ -54,6 +54,7 @@ CODEX_MARKETPLACE_LIST_COMMAND = (
 )
 PLACEMENT_SCRIPT_RELATIVE_PATH = Path("scripts/place_agents.py")
 CLAUDE_ALREADY_INSTALLED_FRAGMENT = "already installed"
+UNPUBLISHED_PLUGIN_FRAGMENT = "not found in marketplace"
 CLAUDE_ALREADY_ENABLED_FRAGMENT = "already enabled"
 EXTRA_MARKETPLACES_FIELD = "extraKnownMarketplaces"
 CLAUDE_SOURCE_FIELD = "source"
@@ -101,6 +102,12 @@ class Operation(StrEnum):
     PLUGIN_ENABLE = "plugin-enable"
     LIFECYCLE_PLACE = "lifecycle-place"
     PLUGIN_LIST = "plugin-list"
+
+
+PLUGIN_OPERATIONS: frozenset[Operation] = frozenset(
+    {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+)
+"""Operations that name one plugin, as opposed to a marketplace or the checkout."""
 
 
 class SourceAction(StrEnum):
@@ -168,12 +175,47 @@ class InstallationPlan:
     commands: tuple[InstallationCommand, ...]
 
 
+@dataclass(frozen=True, order=True)
+class PendingPublication:
+    """One plugin the agent's own refreshed marketplace has not published.
+
+    The agent is carried because the two marketplaces refresh separately: the
+    canonical branch can advance between them, leaving a plugin absent from one
+    and installed by the other. A plugin name alone cannot say which.
+    """
+
+    agent: Agent
+    plugin: str
+
+
 @dataclass(frozen=True)
 class InstallationReport:
     """Completed commands from one successful installation."""
 
     plan: InstallationPlan
     results: tuple[CommandResult, ...]
+    pending_publication: tuple[PendingPublication, ...] = ()
+
+    def pending_for(self, agent: Agent) -> frozenset[str]:
+        """The plugins this agent could not install because they are unpublished."""
+        return frozenset(
+            entry.plugin for entry in self.pending_publication if entry.agent is agent
+        )
+
+    def installed_for(self, agent: Agent) -> frozenset[str]:
+        """The plugins this agent installed: what it planned, less what is pending.
+
+        The plan carries the committed catalog, which is what the run intended
+        rather than what it achieved. Every reader of this report — the text
+        summary and the JSON document alike — answers from here, so the two
+        cannot disagree about whether a pending plugin was installed.
+        """
+        planned = (
+            self.plan.claude_plugins
+            if agent is Agent.CLAUDE
+            else self.plan.codex_plugins
+        )
+        return frozenset(planned) - self.pending_for(agent)
 
 
 class InstallationFailure(RuntimeError):
@@ -690,6 +732,30 @@ def persistent_environment(
     return tuple(sorted(environment.items()))
 
 
+def _is_pending_publication(
+    plan: InstallationPlan,
+    command: InstallationCommand,
+    result: CommandResult,
+) -> bool:
+    """Whether a failed plugin operation names a plugin the source has not published.
+
+    A persistent run installs from the canonical marketplace, so a checkout whose
+    committed catalog is ahead of that marketplace declares plugins it cannot yet
+    install — every changeset that adds a plugin is in exactly that state until it
+    merges. That is the checkout leading its published source, not a failure.
+
+    An isolated run registers the checkout itself as the marketplace, so the same
+    message there means the catalog and the built tree disagree, which is a defect
+    and stays terminal.
+    """
+    return (
+        plan.mode is InstallationMode.PERSISTENT
+        and command.operation in PLUGIN_OPERATIONS
+        and command.plugin is not None
+        and UNPUBLISHED_PLUGIN_FRAGMENT in result.stderr.lower()
+    )
+
+
 def execute_installation(
     plan: InstallationPlan,
     runner: CommandRunner,
@@ -700,13 +766,23 @@ def execute_installation(
     if plan.mode is InstallationMode.ISOLATED:
         _create_isolated_roots(plan.roots)
     results = list(completed)
+    pending: list[PendingPublication] = []
     for command in plan.commands:
         result = _checked_result(command, runner(command))
         result = _agent_adapter(command.agent).normalize_result(command, result)
         if result.exit_code != 0:
-            raise InstallationFailure(command, result, tuple(results))
+            if not _is_pending_publication(plan, command, result):
+                raise InstallationFailure(command, result, tuple(results))
+            if command.plugin is not None:
+                entry = PendingPublication(command.agent, command.plugin)
+                if entry not in pending:
+                    pending.append(entry)
         results.append(result)
-    return InstallationReport(plan=plan, results=tuple(results))
+    return InstallationReport(
+        plan=plan,
+        results=tuple(results),
+        pending_publication=tuple(pending),
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -737,10 +813,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps({"error": str(error)}, sort_keys=True), file=sys.stderr)
         return 1
     if arguments.json_output:
-        print(json.dumps(_report_document(report), sort_keys=True))
+        print(json.dumps(report_document(report), sort_keys=True))
     else:
-        print(f"installed {len(report.plan.claude_plugins)} Claude plugins")
-        print(f"installed {len(report.plan.codex_plugins)} Codex plugins")
+        print(f"installed {len(report.installed_for(Agent.CLAUDE))} Claude plugins")
+        print(f"installed {len(report.installed_for(Agent.CODEX))} Codex plugins")
+        for entry in report.pending_publication:
+            print(
+                f"pending publication, not installed: {entry.plugin} ({entry.agent.value})"
+            )
     return 0
 
 
@@ -1087,17 +1167,21 @@ def _failure_document(failure: InstallationFailure) -> dict[str, object]:
     }
 
 
-def _report_document(report: InstallationReport) -> dict[str, object]:
+def report_document(report: InstallationReport) -> dict[str, object]:
     return {
         "mode": report.plan.mode.value,
-        "claude_plugins": list(report.plan.claude_plugins),
-        "codex_plugins": list(report.plan.codex_plugins),
+        "claude_plugins": sorted(report.installed_for(Agent.CLAUDE)),
+        "codex_plugins": sorted(report.installed_for(Agent.CODEX)),
         "completed_operations": len(report.results),
         "state_root": (
             str(report.plan.roots.state) if report.plan.roots.state else None
         ),
         "checkout": str(report.plan.roots.checkout),
         "codex_home": str(report.plan.roots.codex_home),
+        "pending_publication": [
+            {"agent": entry.agent.value, "plugin": entry.plugin}
+            for entry in report.pending_publication
+        ],
     }
 
 
@@ -1107,6 +1191,8 @@ __all__ = [
     "AgentAdapter",
     "CANONICAL_CODEX_SOURCE",
     "CANONICAL_MARKETPLACE_SOURCE",
+    "PLUGIN_OPERATIONS",
+    "UNPUBLISHED_PLUGIN_FRAGMENT",
     "CATALOG_PLUGIN_NAME_FIELD",
     "CATALOG_PLUGINS_FIELD",
     "CLAUDE_CATALOG_PATH",

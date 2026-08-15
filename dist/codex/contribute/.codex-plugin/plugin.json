@@ -1,0 +1,32 @@
+{
+  "name": "contribute",
+  "version": "0.1.0",
+  "description": "Contributions to repositories you do not control: /open-parent-pr, /manage-parent-pr, /open-parent-issue, /manage-parent-issue, /sync-fork",
+  "author": {
+    "name": "Simon Heimlicher",
+    "url": "https://github.com/outcomeeng"
+  },
+  "homepage": "https://github.com/outcomeeng/plugins",
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": [
+    "contributing",
+    "fork",
+    "upstream",
+    "pull-request",
+    "github"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Contribute",
+    "shortDescription": "Open and manage pull requests and issues in repositories you do not control",
+    "longDescription": "Resolves the base repository, head repository, and your permission before the first write, then drives pull requests and issues against another party's repository under explicit authorization.",
+    "developerName": "Outcome Engineering",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://outcome.engineering"
+  }
+}

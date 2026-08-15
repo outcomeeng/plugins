@@ -3,7 +3,7 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and the first management pass. Invoked by exact name as a composed lifecycle protocol.
-allowed-tools: Read, Glob, Grep, Agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git remote get-url origin), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch --show-current), Bash(git push -u origin HEAD:refs/heads/*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(printf:*), Skill
+allowed-tools: Read, Glob, Grep, Agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git remote get-url origin), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch --show-current), Bash(git push -u origin HEAD:refs/heads/*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(mktemp -d), Bash(printf:*), Skill
 ---
 
 <objective>

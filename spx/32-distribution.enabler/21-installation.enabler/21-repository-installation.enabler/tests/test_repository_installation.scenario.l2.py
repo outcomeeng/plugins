@@ -4,11 +4,15 @@ import json
 from typing import cast
 
 from outcomeeng.distribution.installation import (
+    Agent,
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
     SourceAction,
 )
-from outcomeeng_testing.harnesses.installation import observe_real_installation
+from outcomeeng_testing.harnesses.installation import (
+    canonical_catalog_plugin_names,
+    observe_real_installation,
+)
 
 
 def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
@@ -28,17 +32,46 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
         for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
     )
 
+    persistent_report = cast(
+        dict[str, list[dict[str, str]]], json.loads(observation.persistent_stdout)
+    )
+    pending_entries = persistent_report["pending_publication"]
+
+    def pending_for(agent: Agent) -> frozenset[str]:
+        """What this agent's own marketplace reported unpublished.
+
+        Each agent's installed set is compared against its own pending set. The
+        union would subtract one agent's absence from the other's expectation,
+        which is the behavior the report stopped producing.
+        """
+        return frozenset(
+            entry["plugin"]
+            for entry in pending_entries
+            if entry["agent"] == agent.value
+        )
+
+    pending = frozenset(entry["plugin"] for entry in pending_entries)
+
+    published = canonical_catalog_plugin_names()
+
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
-    assert observation.persistent_claude_plugins.installed == claude_plugins
+    assert pending == (claude_plugins | codex_plugins) - published
+    assert (
+        observation.persistent_claude_plugins.installed
+        == claude_plugins - pending_for(Agent.CLAUDE)
+    )
     assert (
         observation.persistent_claude_plugins.enabled
-        == observation.persistent_selection
+        == observation.persistent_selection - pending_for(Agent.CLAUDE)
     )
     assert observation.persistent_selection < claude_plugins
     assert (
         observation.persistent_settings_after == observation.persistent_settings_before
     )
-    assert observation.persistent_codex_plugins.installed == codex_plugins
+    assert (
+        observation.persistent_codex_plugins.installed
+        == codex_plugins - pending_for(Agent.CODEX)
+    )
     assert observation.persistent_claude_source_action is SourceAction.REFRESH
     assert observation.persistent_codex_source_action is SourceAction.REFRESH
     assert observation.first_exit_code == 0, observation.first_stderr

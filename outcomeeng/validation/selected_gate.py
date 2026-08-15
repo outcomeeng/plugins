@@ -77,6 +77,7 @@ SKILL_STEP_LABELS: Final = (
     "reference-portability",
     "runtime-token",
     "scratch-paths",
+    "grant-locality",
     "hook-safety",
     "foundation-manifest",
     "docs-check",
