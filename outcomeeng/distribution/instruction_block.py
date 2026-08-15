@@ -89,16 +89,17 @@ AUTHORITY_HIERARCHY_POLICY_HEADING: Final = "## Authority Hierarchy"
 DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS: Final = (
     (
         "dynamic destructive branch prohibition",
-        "pass a variable or command substitution as a branch argument to `git branch -d` or `git branch -D`",
+        "NEVER** build `git branch -d/-D` arguments from variables or command substitutions",
     ),
     (
         "literal destructive branch names",
-        "Name every branch literally; `-D` accepts multiple branch names in one invocation",
+        "Name branches literally",
     ),
     (
         "quoted dynamic branch denial",
-        '`git branch -D "$b"` and `git branch -D -- "$b"` are both denied',
+        "quoting and `--` change nothing",
     ),
+    ("multi-branch destructive invocation", "list several together"),
 )
 AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     (
