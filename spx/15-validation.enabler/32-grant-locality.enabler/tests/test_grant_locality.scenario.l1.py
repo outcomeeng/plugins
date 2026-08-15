@@ -6,22 +6,29 @@ from outcomeeng_testing.harnesses.grant_locality import (
 
 
 def test_escaping_grant_reports_file_line_reference_and_failure() -> None:
-    observed = observe_escaping_scan()
+    observed, expected = observe_escaping_scan()
 
     assert observed.exit_code != 0, (
         f"a skill granting a path outside its directory exited {observed.exit_code}"
     )
-    (violation,) = observed.violations
-    # Check the printed diagnostic literally carries each part the assertion
-    # names, rather than comparing it to the formatter that produced it.
+    assert len(observed.violations) == 1, (
+        f"one escaping grant produced {observed.violations!r}"
+    )
+    # Every expectation comes from the generator's own composition of the file,
+    # never from the scan that produced the diagnostic: a line count or a
+    # captured reference the validator gets wrong would otherwise satisfy the
+    # check by being wrong in both places at once.
     assert str(observed.path) in observed.stdout, (
         f"file missing from diagnostic: {observed.stdout!r}"
     )
-    assert f":{violation.line}:" in observed.stdout, (
-        f"line {violation.line} missing from diagnostic: {observed.stdout!r}"
+    assert f":{expected.declaration_line}:" in observed.stdout, (
+        f"line {expected.declaration_line} missing from diagnostic: {observed.stdout!r}"
     )
-    assert violation.reference in observed.stdout, (
-        f"grant {violation.reference!r} missing from diagnostic: {observed.stdout!r}"
+    assert expected.variable in observed.stdout, (
+        f"variable {expected.variable!r} missing from diagnostic: {observed.stdout!r}"
+    )
+    assert expected.parent_segment in observed.stdout, (
+        f"escaping segment missing from diagnostic: {observed.stdout!r}"
     )
 
 

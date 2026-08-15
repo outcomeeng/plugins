@@ -20,8 +20,10 @@ from outcomeeng.validation.grant_locality import (
     scan_file,
 )
 from outcomeeng_testing.generators.grant_locality import (
+    EscapingSkillFile,
     local_grant_declarations,
     skill_file_whose_grant_escapes,
+    skill_files_whose_body_mentions_an_escaping_grant,
     skill_files_whose_grants_are_local,
 )
 
@@ -53,9 +55,23 @@ def _observe(content: str, *, filename: str = SKILL_FILENAME) -> ScanObservation
         )
 
 
-def observe_escaping_scan() -> ScanObservation:
-    """Observe the command over a skill file whose frontmatter grant escapes."""
-    return _observe(skill_file_whose_grant_escapes())
+def observe_escaping_scan() -> tuple[ScanObservation, EscapingSkillFile]:
+    """Observe the command over a skill file whose frontmatter grant escapes.
+
+    The generator's record travels with the observation so the linked test
+    compares the diagnostic against what the file was composed to contain,
+    rather than against what the scan reported about it.
+    """
+    escaping = skill_file_whose_grant_escapes()
+    return _observe(escaping.content), escaping
+
+
+def observe_body_mention_files() -> tuple[ScanObservation, ...]:
+    """Observe the command over each skill file whose body mentions a grant."""
+    return tuple(
+        _observe(content)
+        for content in skill_files_whose_body_mentions_an_escaping_grant()
+    )
 
 
 def observe_local_scan() -> ScanObservation:

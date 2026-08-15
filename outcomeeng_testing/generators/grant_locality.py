@@ -8,6 +8,8 @@ body mention — is this module's own construction.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from outcomeeng.validation.grant_locality import (
     ALLOWED_TOOLS_FIELD,
     SKILL_DIR_VARIABLES,
@@ -143,14 +145,32 @@ def _escaping_grant() -> str:
 def body_mentions() -> tuple[str, ...]:
     """Escaping grants written outside an `allowed-tools` field declaration.
 
-    A standard documenting the prohibited shape, and a skill body quoting one,
-    both carry the text without declaring the grant.
+    A standard documenting the prohibited shape, a table row rejecting it, an
+    indented quotation, and the column-zero spelling a fenced example carries.
+    The last one is indistinguishable from a declaration line by itself, so it
+    is what makes the frontmatter boundary the thing under test rather than the
+    leading whitespace.
     """
     escaping = _escaping_grant()
     return (
         f"Never write {escaping} in frontmatter.",
         f"| {escaping} | rejected |",
         f"  {ALLOWED_TOOLS_FIELD}: {escaping}",
+        f"{ALLOWED_TOOLS_FIELD}: {escaping}",
+    )
+
+
+def skill_files_whose_body_mentions_an_escaping_grant() -> tuple[str, ...]:
+    """One whole skill file per body spelling of a prohibited grant.
+
+    Each file's frontmatter declares only local grants and its body carries one
+    `body_mentions` category, so scanning the whole file rather than the
+    frontmatter turns each of them into a violation the skill does not commit.
+    """
+    local = local_grant_declarations()[0]
+    return tuple(
+        f"---\nname: standards\n{local}\n---\n\n<constraints>\n\n{mention}\n\n</constraints>\n"
+        for mention in body_mentions()
     )
 
 
@@ -175,7 +195,32 @@ def skill_files_whose_grants_are_local() -> tuple[str, ...]:
     return (compliant, documenting)
 
 
-def skill_file_whose_grant_escapes() -> str:
+@dataclass(frozen=True)
+class EscapingSkillFile:
+    """A skill file whose frontmatter escapes, with what its diagnostic must say.
+
+    `declaration_line` is counted from this module's own composition, and
+    `variable` and `parent_segment` are the tokens it wrote into the grant. None
+    of the three is read back from the validator, so a diagnostic that disagrees
+    with them fails rather than agreeing with a defect twice.
+    """
+
+    content: str
+    declaration_line: int
+    variable: str
+    parent_segment: str
+
+
+def skill_file_whose_grant_escapes() -> EscapingSkillFile:
     """One whole skill file whose frontmatter declares an escaping grant."""
-    escaping = escaping_grant_declarations()[0]
-    return f"---\nname: example\n{escaping}\n---\n\n<objective>\nOne output.\n</objective>\n"
+    variable = SKILL_DIR_VARIABLES[0]
+    scenario = source_scenarios()[0]
+    grant = f'Bash(python3 "${{{variable}}}/../{scenario.plugin}/scripts/x.py":*)'
+    preamble = ("---", "name: example")
+    body = ("---", "", "<objective>", "One output.", "</objective>", "")
+    return EscapingSkillFile(
+        content="\n".join((*preamble, _declaration(grant), *body)),
+        declaration_line=len(preamble) + 1,
+        variable=variable,
+        parent_segment="..",
+    )
