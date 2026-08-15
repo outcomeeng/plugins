@@ -53,7 +53,7 @@ This gate precedes Step 6's write. A comment notifies every watcher of a reposit
 
 **Step 6 — GATE: Review the reply, then post it.** A reply is posted only when the thread asked for one. An invocation that reports the thread's current state, and a thread where the maintainer has asked nothing since the last reply, both skip this step and continue to Step 7: a comment that answers no question is a notification the maintainer did not ask for, on a repository the operator does not control. Step 7 still runs, because closing depends on Step 5's author comparison and never on a comment having been posted — a thread that asks nothing is exactly the thread an operator may want closed.
 
-With a question to answer, draft per `<reply_shape>` and review — the prose plugin's `prose-auditor` agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such.
+With a question to answer, draft per `<reply_shape>` and review — the prose plugin's `prose-auditor` thin agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such.
 
 ```bash
 printf '%s\n' '<line>' '<line>' | gh issue comment "<number>" --repo "<base>" --body-file -

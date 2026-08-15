@@ -81,7 +81,7 @@ A conflict stops the replay mid-pick and leaves the checkout in that state. Run 
 
 Capture verbose output in a directory from `mktemp -d`, inspect the exit status and failing sections, and remove the directory on every exit path. Fix failures and re-run until green. A check that cannot run locally is recorded for Step 9's body with the reason it could not run; never report it as passed and never drop it silently.
 
-**Step 7 — GATE: Review the outward text.** Draft the title and body per `<title_and_body>`, then review them per `/contribution-standards` `<invariants>` "Outward-facing text is permanent". Where the prose plugin is installed, dispatch its `prose-auditor` agent through the runtime's agent-dispatch surface and apply its findings. Where it is not, review against `/contribution-standards` `<outward_text>` and state in the report that the review ran unassisted.
+**Step 7 — GATE: Review the outward text.** Draft the title and body per `<title_and_body>`, then review them per `/contribution-standards` `<invariants>` "Outward-facing text is permanent". Where the prose plugin is installed, dispatch its `prose-auditor` thin agent through the runtime's agent-dispatch surface and apply its findings. Where it is not, review against `/contribution-standards` `<outward_text>` and state in the report that the review ran unassisted.
 
 **Step 8 — GATE: Commit what the push will carry.** A push transfers commits. Everything above — the branch cut, the conventions, the base repository's own checks, the outward-text review — can run against edits sitting in the working tree, and none of them reach the pull request. Read the tree before pushing:
 
