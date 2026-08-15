@@ -11,7 +11,7 @@ The structural conventions for the documentation kind — a page in a document s
 
 ## Set architecture
 
-A document set has one canonical home per concept. Each shared concept is defined on exactly one page; every other page links to that home and summarizes only what its own reader needs. The set's terminology is collected before a page is structured: a new page uses the set's established term for every concept it touches and introduces a new term only for a concept the set does not yet name.
+A document set has one canonical home per concept. Each shared concept is defined on exactly one page; every other page links to that home and summarizes only what its own reader needs. The set's terminology is collected before a page is structured, and the ADR records which page is each concept's home. One term per concept is the voice canon's rule; what the ADR decides is where each term lives.
 
 Sequencing across pages is a set-level decision. Which page precedes which, which pages are siblings, and where a new page enters the hierarchy are decided in the governing ADR, not improvised per page.
 
@@ -46,8 +46,6 @@ Status pages. Lead with the current status in one sentence. Then context, then n
 Lead with the gist. The page opens with the substantive lead sentence — not metadata, not a "what this page is about" boilerplate, not a fractal summary. "Living document. Status: DRAFT. Owner: ..." at the top of a page is the canonical violation.
 
 Status, owner, and dates belong in metadata. Page properties, frontmatter, headers, or sidebar metadata carry them. When they must stay visible in-document, use a small structured callout a reader can skim past.
-
-Headings are sentence case with no end punctuation. "How this layer is used" is correct. "How This Layer Is Used:" is title-cased and ends with a colon, both wrong. Proper nouns keep their canonical capitalization.
 
 Each section orients in its first sentence. When sections cover separate concerns, the opening sentence of each names that section's concern.
 

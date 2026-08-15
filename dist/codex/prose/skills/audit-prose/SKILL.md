@@ -1,7 +1,7 @@
 ---
 name: audit-prose
 description: >-
-  Prose audit methodology — judges human-facing text against the anti-pattern catalog, the supplied kind's style and structure layers, and every triggered rule pack, streaming each finding through the run journal as the run advances.
+  Prose audit methodology — judges the human-facing text in scope against the anti-pattern catalog, the supplied kind's style and structure layers, and every triggered rule pack.
 model: "gpt-5.5"
 argument-hint: "<interface|documentation|copy> <text or paths>"
 allowed-tools: Read, Glob, Grep, Skill, Bash

@@ -28,6 +28,10 @@ Italics for structural labels in repeated patterns are allowed. When a page has 
 
 ## Sentence shape
 
+Active voice. "The parser rejects invalid input", never "invalid input is rejected". A passive that hides the actor hides who the reader must act on.
+
+No should, would, may, or might. A behavior happens or it does not: "the server restarts", not "the server should restart". "Can" states capability and "will" states a promised future — both survive. This binds every sentence on the page, not only its steps.
+
 A descriptive sentence caps at 25 words and splits over the cap. Simple tenses only: present for facts, imperative for instructions, simple past for a prerequisite already performed. No perfect tenses and no progressive forms. No verbal "-ing" clauses: "the command exits and prints a summary", never "the command exits, printing a summary" — nouns ending in -ing ("the setting", "a warning") are words, not violations. Noun clusters cap at three nouns; break a longer one with a preposition. Paragraphs cap at six sentences and carry one topic.
 
 ## Typography
