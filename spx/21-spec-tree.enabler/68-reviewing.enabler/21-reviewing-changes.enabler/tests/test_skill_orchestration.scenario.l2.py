@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import pathlib
 import subprocess
 
@@ -46,7 +45,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     run_git,
     run_journal_emit_in_process,
     run_script,
-    write_fake_spx,
+    runner_env,
 )
 
 
@@ -239,16 +238,7 @@ class TestReviewRunnerBoundary:
         repo = tmp_path / "repo"
         repo.mkdir()
         base_ref = init_repo_with_branch(repo)
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        journal_path = tmp_path / "journal.json"
-        write_fake_spx(bin_dir, journal_path)
-
-        env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
-        env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
-        env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
-        env["SPX_FAKE_NAMESPACE_KEYS"] = json.dumps(review_run_journal_env_keys())
+        env, journal_path = runner_env(tmp_path, repo, base_ref)
         env.update(journal_selector)
 
         later_env = env.copy()
@@ -335,16 +325,7 @@ class TestReviewRunnerBoundary:
         repo = tmp_path / "repo"
         repo.mkdir()
         base_ref = init_repo_with_branch(repo)
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        journal_path = tmp_path / "journal.json"
-        write_fake_spx(bin_dir, journal_path)
-
-        env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
-        env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
-        env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
-        env["SPX_FAKE_NAMESPACE_KEYS"] = json.dumps(review_run_journal_env_keys())
+        env, journal_path = runner_env(tmp_path, repo, base_ref)
 
         started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
         assert started.returncode == 0, started.stderr
@@ -372,16 +353,7 @@ class TestReviewRunnerBoundary:
         repo = tmp_path / "repo"
         repo.mkdir()
         base_ref = init_repo_with_committed_rename(repo)
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        journal_path = tmp_path / "journal.json"
-        write_fake_spx(bin_dir, journal_path)
-
-        env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
-        env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
-        env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
-        env["SPX_FAKE_NAMESPACE_KEYS"] = json.dumps(review_run_journal_env_keys())
+        env, journal_path = runner_env(tmp_path, repo, base_ref)
 
         started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
         assert started.returncode == 0, started.stderr
