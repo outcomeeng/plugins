@@ -36,7 +36,7 @@
     {
       "name": "spec-tree",
       "source": "./dist/claude/spec-tree",
-      "description": "Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-eval-evidence, /audit-adr, /audit-pdr, /audit-implementation, /audit-specs, /audit-changeset-coherence, /apply, /commit-changes, /handoff, /pickup, /refocus, /diagnose, /issue"
+      "description": "Spec Tree methodology for declaration, context loading, evidence, implementation, review, sessions, and delivery"
     },
     {
       "name": "coding-agents",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -12,17 +13,19 @@ from outcomeeng.catalog.plugin_catalog import (
     BEGIN_SENTINEL,
     CATALOG_AGENT_KIND,
     CATALOG_SKILL_KIND,
+    CATALOG_TARGET_LABELS,
     END_SENTINEL,
     MARKETPLACE_CATALOG_RELATIVE,
     MARKETPLACE_PLUGINS_FIELD,
+    PLUGIN_LIFECYCLE_TEMPLATE_RELATIVE,
     SOURCE_PLUGINS_ROOT,
     STRIP_PREFIXES,
     collect_plugins,
     collect_skills,
     main,
     render_catalog,
-    render_target_values,
     shorten_purpose,
+    splice_catalog,
 )
 from outcomeeng.distribution.build import (
     SHARED_DIR_NAME,
@@ -47,10 +50,53 @@ from outcomeeng.distribution.contracts import (
 from outcomeeng_testing.generators.source_and_templating import source_scenarios
 
 
-def generated_catalog_is_deterministic() -> bool:
+@dataclass(frozen=True)
+class CatalogRenderObservation:
+    first_render: str
+    second_render: str
+    entry_kinds: frozenset[str]
+
+
+@dataclass(frozen=True)
+class CatalogSentinelObservation:
+    catalog: str
+
+
+@dataclass(frozen=True)
+class CatalogCheckObservation:
+    exit_code: int
+
+
+@dataclass(frozen=True)
+class CatalogPurposeObservation:
+    actual: str
+    target_purposes: tuple[tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
+class PurposeShorteningObservation:
+    source: str
+    shortened: str
+
+
+@dataclass(frozen=True)
+class CatalogInventoryObservation:
+    skill_entries_by_plugin: tuple[tuple[str, tuple[tuple[str, str], ...]], ...]
+
+
+@dataclass(frozen=True)
+class CatalogSpliceObservation:
+    quoted_prefix: str
+    stale_catalog_body: str
+    catalog: str
+    spliced_readme: str
+
+
+def observe_generated_catalog() -> CatalogRenderObservation:
     first, second = source_scenarios()[:2]
     with TemporaryDirectory() as temporary_directory:
         repo_root = Path(temporary_directory)
+        _write_lifecycle_template(repo_root)
         _write_manifest(repo_root, first.plugin, second.plugin)
         first_plugin = repo_root / SOURCE_PLUGINS_ROOT / first.plugin
         _write_skill(first_plugin / SKILLS_SUBDIR_NAME / first.skill)
@@ -63,28 +109,47 @@ def generated_catalog_is_deterministic() -> bool:
         entry_kinds = {
             entry.kind for plugin in first_catalog for entry in plugin.entries
         }
-        return render_catalog(first_catalog) == render_catalog(
-            second_catalog
-        ) and entry_kinds == {CATALOG_SKILL_KIND, CATALOG_AGENT_KIND}
+        return CatalogRenderObservation(
+            first_render=render_catalog(first_catalog),
+            second_render=render_catalog(second_catalog),
+            entry_kinds=frozenset(entry_kinds),
+        )
 
 
-def generated_catalog_uses_declared_sentinels() -> bool:
-    catalog = render_catalog([])
-    return catalog.startswith(f"{BEGIN_SENTINEL}\n\n") and catalog.endswith(
-        f"{END_SENTINEL}\n",
-    )
+def observe_generated_catalog_sentinels() -> CatalogSentinelObservation:
+    return CatalogSentinelObservation(catalog=render_catalog([]))
 
 
-def check_mode_fails_when_readme_catalog_drifts() -> bool:
+def observe_check_mode_with_drift() -> CatalogCheckObservation:
     first, second = source_scenarios()[:2]
     with TemporaryDirectory() as temporary_directory:
         repo_root = Path(temporary_directory)
+        _write_lifecycle_template(repo_root)
         _write_manifest(repo_root, first.plugin, second.plugin)
         _write_drifted_readme(repo_root, first.fragment_body)
-        return main(["--root", str(repo_root), "--check"]) == 1
+        return CatalogCheckObservation(
+            exit_code=main(["--root", str(repo_root), "--check"]),
+        )
 
 
-def runtime_divergent_skill_descriptions_name_each_target() -> bool:
+def observe_repository_catalog_inventory() -> CatalogInventoryObservation:
+    repo_root = Path(__file__).resolve().parents[2]
+    return CatalogInventoryObservation(
+        skill_entries_by_plugin=tuple(
+            (
+                plugin.name,
+                tuple(
+                    (entry.name, entry.purpose)
+                    for entry in plugin.entries
+                    if entry.kind == CATALOG_SKILL_KIND
+                ),
+            )
+            for plugin in collect_plugins(repo_root)
+        ),
+    )
+
+
+def observe_runtime_divergent_skill_purpose() -> CatalogPurposeObservation:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         scenario = source_scenarios()[0]
@@ -94,20 +159,24 @@ def runtime_divergent_skill_descriptions_name_each_target() -> bool:
         _write_skill(skill_dir, coordinate=coordinate)
 
         (entry,) = collect_skills(plugin_dir)
-        expected = render_target_values(
-            {
-                target: shorten_purpose(
+        target_purposes = tuple(
+            (
+                CATALOG_TARGET_LABELS[target],
+                shorten_purpose(
                     f"{STRIP_PREFIXES[0]}"
                     f"{resolve_runtime_token(coordinate.kind, coordinate.capability, target.value)}"
-                    f"{SENTENCE_TERMINATOR}"
-                )
-                for target in Target
-            }
+                    f"{SENTENCE_TERMINATOR}",
+                ),
+            )
+            for target in Target
         )
-        return entry.purpose == expected
+        return CatalogPurposeObservation(
+            actual=entry.purpose,
+            target_purposes=target_purposes,
+        )
 
 
-def catalog_frontmatter_includes_use_shared_root() -> bool:
+def observe_catalog_frontmatter_include_purpose() -> CatalogPurposeObservation:
     with TemporaryDirectory() as temporary_directory:
         repo_root = Path(temporary_directory)
         scenario = source_scenarios()[0]
@@ -130,23 +199,47 @@ def catalog_frontmatter_includes_use_shared_root() -> bool:
         )
 
         (entry,) = collect_skills(plugin_dir)
-        expected = render_target_values(
-            {
-                target: shorten_purpose(
+        target_purposes = tuple(
+            (
+                CATALOG_TARGET_LABELS[target],
+                shorten_purpose(
                     f"{STRIP_PREFIXES[0]}"
                     f"{resolve_runtime_token(coordinate.kind, coordinate.capability, target.value)}"
-                    f"{SENTENCE_TERMINATOR}"
-                )
-                for target in Target
-            }
+                    f"{SENTENCE_TERMINATOR}",
+                ),
+            )
+            for target in Target
         )
-        return entry.purpose == expected
+        return CatalogPurposeObservation(
+            actual=entry.purpose,
+            target_purposes=target_purposes,
+        )
 
 
-def purpose_shortening_preserves_untrimmed_em_dash() -> bool:
+def observe_purpose_shortening_with_em_dash() -> PurposeShorteningObservation:
     scenario = source_scenarios()[0]
     purpose = f"{scenario.skill} — {scenario.fragment_body.strip()}"
-    return shorten_purpose(purpose) == purpose
+    return PurposeShorteningObservation(
+        source=purpose,
+        shortened=shorten_purpose(purpose),
+    )
+
+
+def observe_catalog_splice_with_quoted_sentinels() -> CatalogSpliceObservation:
+    scenario = source_scenarios()[0]
+    quoted_prefix = (
+        f"{scenario.fragment_body.strip()} {BEGIN_SENTINEL}\n"
+        f"{scenario.fragment_body.strip()} {END_SENTINEL}\n"
+    )
+    stale_catalog_body = scenario.skill
+    catalog = render_catalog([])
+    readme = f"{quoted_prefix}{BEGIN_SENTINEL}\n{stale_catalog_body}\n{END_SENTINEL}\n"
+    return CatalogSpliceObservation(
+        quoted_prefix=quoted_prefix,
+        stale_catalog_body=stale_catalog_body,
+        catalog=catalog,
+        spliced_readme=splice_catalog(readme, catalog),
+    )
 
 
 def _write_manifest(repo_root: Path, first_plugin: str, second_plugin: str) -> None:
@@ -168,6 +261,17 @@ def _write_manifest(repo_root: Path, first_plugin: str, second_plugin: str) -> N
             }
         ),
         encoding="utf-8",
+    )
+
+
+def _write_lifecycle_template(repo_root: Path) -> None:
+    source_template = (
+        Path(__file__).resolve().parents[2] / PLUGIN_LIFECYCLE_TEMPLATE_RELATIVE
+    )
+    destination = repo_root / PLUGIN_LIFECYCLE_TEMPLATE_RELATIVE
+    destination.parent.mkdir(parents=True)
+    destination.write_text(
+        source_template.read_text(encoding="utf-8"), encoding="utf-8"
     )
 
 

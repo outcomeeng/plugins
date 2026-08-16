@@ -4,6 +4,7 @@ Reads the marketplace catalog at ``.claude-plugin/marketplace.json`` and, for
 each plugin listed there, walks the authored source directory to collect:
 
   - skills from ``src/plugins/<name>/skills/*/SKILL.md``
+  - the lifecycle skill emitted from ``src/templates/plugin/SKILL.md``
   - agents from ``src/plugins/<name>/agents/*.md``
 
 Emits a Markdown block bounded by the sentinel comments
@@ -54,8 +55,15 @@ END_SENTINEL = "<!-- END PLUGIN CATALOG -->"
 SOURCE_PLUGINS_ROOT = Path("src") / "plugins"
 MARKETPLACE_CATALOG_RELATIVE = Path(".claude-plugin") / "marketplace.json"
 MARKETPLACE_PLUGINS_FIELD = "plugins"
+PLUGIN_LIFECYCLE_TEMPLATE_RELATIVE = (
+    Path("src") / "templates" / "plugin" / SKILL_FILENAME
+)
+PLUGIN_LIFECYCLE_SKILL_NAME_PATTERN = "{plugin_name}-plugin"
 CATALOG_SKILL_KIND = "Skill"
 CATALOG_AGENT_KIND = "Agent"
+CATALOG_SUCCESS_EXIT_CODE = 0
+CATALOG_DRIFT_EXIT_CODE = 1
+LIFECYCLE_SKILL_DESCRIPTION_PREFIX = "ALWAYS invoke this skill to "
 CATALOG_TARGET_LABELS: dict[Target, str] = {
     Target.CLAUDE: "Claude",
     Target.CODEX: "Codex",
@@ -66,6 +74,7 @@ CATALOG_TARGET_LABELS: dict[Target, str] = {
 # stripped form is then capitalized so the table cell starts with an uppercase
 # letter.
 STRIP_PREFIXES: tuple[str, ...] = (
+    LIFECYCLE_SKILL_DESCRIPTION_PREFIX,
     "ALWAYS invoke this skill when ",
     "ALWAYS invoke this skill before ",
     "ALWAYS invoke this skill BEFORE ",
@@ -109,11 +118,12 @@ def _render_catalog_frontmatter(
     target: Target,
     *,
     shared_root: Path | None,
+    plugin_name: str | None = None,
 ) -> str:
     return render_text(
         _frontmatter_text(text),
         shared_root=shared_root,
-        variables=_render_variables(target),
+        variables=_render_variables(target, plugin_name=plugin_name),
     )
 
 
@@ -121,10 +131,16 @@ def _catalog_frontmatter_variants(
     text: str,
     *,
     shared_root: Path | None,
+    plugin_name: str | None = None,
 ) -> dict[Target, dict[str, str]]:
     return {
         target: parse_frontmatter(
-            _render_catalog_frontmatter(text, target, shared_root=shared_root),
+            _render_catalog_frontmatter(
+                text,
+                target,
+                shared_root=shared_root,
+                plugin_name=plugin_name,
+            ),
         )
         for target in Target
     }
@@ -232,13 +248,16 @@ def shorten_purpose(description: str) -> str:
     # Trim at the first sentence boundary so the cell stays narrow. Skip
     # boundaries inside an unclosed parenthetical so the cell never ends with a
     # dangling "(".
+    boundary_indexes: list[int] = []
     for terminator in (". ", " — ", "—", "; "):
         idx = flat.find(terminator)
-        while idx != -1 and idx <= 20:
+        while idx != -1:
+            if idx > 20 and flat[:idx].count("(") == flat[:idx].count(")"):
+                boundary_indexes.append(idx)
+                break
             idx = flat.find(terminator, idx + 1)
-        if idx != -1 and flat[:idx].count("(") == flat[:idx].count(")"):
-            flat = flat[:idx]
-            break
+    if boundary_indexes:
+        flat = flat[: min(boundary_indexes)]
     return flat.rstrip(" .")
 
 
@@ -261,6 +280,28 @@ def collect_skills(plugin_dir: Path) -> list[CatalogEntry]:
             CatalogEntry(kind=CATALOG_SKILL_KIND, name=f"`/{name}`", purpose=purpose)
         )
     return entries
+
+
+def collect_lifecycle_skill(
+    repo_root: Path,
+    plugin_dir: Path,
+    plugin_name: str,
+) -> CatalogEntry:
+    template_path = repo_root / PLUGIN_LIFECYCLE_TEMPLATE_RELATIVE
+    variants = _catalog_frontmatter_variants(
+        template_path.read_text(encoding="utf-8"),
+        shared_root=_shared_root_for_plugin(plugin_dir),
+        plugin_name=plugin_name,
+    )
+    name = _catalog_name(
+        variants,
+        PLUGIN_LIFECYCLE_SKILL_NAME_PATTERN.format(plugin_name=plugin_name),
+    )
+    return CatalogEntry(
+        kind=CATALOG_SKILL_KIND,
+        name=f"`/{name}`",
+        purpose=_catalog_purpose(variants),
+    )
 
 
 def collect_agents(plugin_dir: Path) -> list[CatalogEntry]:
@@ -290,11 +331,14 @@ def collect_plugins(repo_root: Path) -> list[PluginCatalog]:
     for entry in manifest.get(MARKETPLACE_PLUGINS_FIELD, []):
         name = entry[SKILL_NAME_FIELD]
         plugin_dir = repo_root / SOURCE_PLUGINS_ROOT / name
+        skills = collect_skills(plugin_dir)
+        skills.append(collect_lifecycle_skill(repo_root, plugin_dir, name))
+        skills.sort(key=lambda catalog_entry: catalog_entry.name)
         catalog = PluginCatalog(
             name=name,
             description=entry.get(SKILL_DESCRIPTION_FIELD, ""),
             entries=tuple(
-                collect_skills(plugin_dir) + collect_agents(plugin_dir),
+                skills + collect_agents(plugin_dir),
             ),
         )
         plugins.append(catalog)
@@ -338,8 +382,12 @@ def render_catalog(plugins: list[PluginCatalog]) -> str:
 
 
 def splice_catalog(readme: str, catalog: str) -> str:
-    begin = readme.find(BEGIN_SENTINEL)
-    end = readme.find(END_SENTINEL)
+    begin = _find_line_start(readme, BEGIN_SENTINEL)
+    end = _find_line_start(
+        readme,
+        END_SENTINEL,
+        start=begin + len(BEGIN_SENTINEL) if begin != -1 else 0,
+    )
     if begin == -1 or end == -1 or end < begin:
         raise SystemExit(
             "README.md is missing the catalog sentinels. "
@@ -349,6 +397,15 @@ def splice_catalog(readme: str, catalog: str) -> str:
     end_line_break = readme.find("\n", end)
     suffix_start = end_line_break + 1 if end_line_break != -1 else len(readme)
     return readme[:begin] + catalog + readme[suffix_start:]
+
+
+def _find_line_start(text: str, marker: str, *, start: int = 0) -> int:
+    index = text.find(marker, start)
+    while index != -1:
+        if index == 0 or text[index - 1] == "\n":
+            return index
+        index = text.find(marker, index + 1)
+    return -1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -373,7 +430,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.write and not args.check:
         sys.stdout.write(catalog)
-        return 0
+        return CATALOG_SUCCESS_EXIT_CODE
 
     new_readme = splice_catalog(readme, catalog)
 
@@ -382,15 +439,15 @@ def main(argv: list[str] | None = None) -> int:
             sys.stderr.write(
                 "README.md plugin catalog is stale. Run `just docs` to regenerate.\n",
             )
-            return 1
-        return 0
+            return CATALOG_DRIFT_EXIT_CODE
+        return CATALOG_SUCCESS_EXIT_CODE
 
     if new_readme != readme:
         readme_path.write_text(new_readme, encoding="utf-8")
         sys.stdout.write(f"updated {readme_path}\n")
     else:
         sys.stdout.write("README.md catalog already up to date\n")
-    return 0
+    return CATALOG_SUCCESS_EXIT_CODE
 
 
 if __name__ == "__main__":

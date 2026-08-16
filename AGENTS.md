@@ -629,7 +629,7 @@ When documenting XML-like syntax that isn't valid XML (pseudo-XML with text cont
 
 ## Plugin Catalog
 
-Every skill and thin agent across every plugin is listed in the auto-generated catalog in [`README.md`](README.md#plugins), sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md` and `agents/*.md`. Run `just docs` to regenerate; `just check-full` enforces freshness in CI. Do not maintain plugin tables in this file.
+Every skill and thin agent across every plugin is listed in the auto-generated catalog in [`README.md`](README.md#plugins), sourced from `.claude-plugin/marketplace.json`, the YAML frontmatter of each plugin's authored `SKILL.md` and `agents/*.md`, and the lifecycle skill template at `src/templates/plugin/SKILL.md`. Run `just docs` to regenerate; `just check-full` enforces freshness in CI. Do not maintain plugin tables in this file.
 
 ## Spec Tree Methodology
 
