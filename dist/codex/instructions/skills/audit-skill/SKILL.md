@@ -7,9 +7,9 @@ model: sonnet
 allowed-tools: Read, Grep, Glob, Bash(python3 -c:*), Skill
 ---
 
-Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
-Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 An `APPROVED` or `REJECTED` verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`, with findings grouped as keep-these-aspects, worth-improving, and must-fix; every rejected finding names the artifact location, violated rule, and evidence.

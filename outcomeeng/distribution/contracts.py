@@ -59,8 +59,7 @@ PLUGIN_SUBDIRS: Final = frozenset(
 )
 REQUIRE_SKILL_GUIDANCE_TEMPLATE: Final = (
     "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
-    "unavailable, report the missing skill and continue with the closest "
-    "available workflow."
+    "unavailable, report the missing skill and stop."
 )
 
 

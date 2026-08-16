@@ -5,7 +5,7 @@ description: >-
 allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 
-Invoke the `typescript:typescript-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `typescript:typescript-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 A binding TypeScript ADR whose testability constraints live as ALWAYS/NEVER rules under the `## Verification` section's `### Audit` subsection.

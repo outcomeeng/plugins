@@ -23,11 +23,11 @@ from outcomeeng_testing.harnesses.source_and_templating import (
     implementation_is_ready,
     include_uses_fragment_file_contract,
     observe_build_comment_outputs,
+    observe_required_skill_guidance,
     jinja_environment_uses_custom_delimiters,
     malformed_source_tree_is_rejected,
     ordinary_plugin_root_file_is_accepted,
     require_skill_emits_identically_across_targets,
-    require_skill_expands_to_neutral_guidance,
     require_skill_locality_oracle_rejects_inlined_content,
     require_skill_neutrality_oracle_rejects_runtime_specific_guidance,
     require_skill_renders_inline,
@@ -71,8 +71,19 @@ def test_jinja_environment_uses_custom_delimiters() -> None:
     assert jinja_environment_uses_custom_delimiters()
 
 
-def test_require_skill_expands_to_neutral_guidance() -> None:
-    assert require_skill_expands_to_neutral_guidance()
+def test_require_skill_expands_to_neutral_terminal_guidance() -> None:
+    for observation in observe_required_skill_guidance():
+        assert observation.skill_ref in observation.guidance
+        assert all(
+            runtime_name
+            not in observation.guidance.replace(
+                observation.skill_ref,
+                "",
+            )
+            for runtime_name in observation.runtime_names
+        )
+        assert observation.guidance.endswith("report the missing skill and stop.")
+        assert "continue with" not in observation.guidance
 
 
 def test_neutral_guidance_oracle_rejects_runtime_specific_wording() -> None:

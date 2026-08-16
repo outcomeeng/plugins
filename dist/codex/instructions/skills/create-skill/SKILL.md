@@ -5,9 +5,9 @@ description: >-
 allowed-tools: Read, Glob, Grep, Edit, Write, Bash, Skill, WebFetch, WebSearch
 ---
 
-Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
-Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 A skill-authoring request routed to its matching typed workflow.

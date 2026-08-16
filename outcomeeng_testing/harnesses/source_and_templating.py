@@ -99,6 +99,15 @@ class MissingFragmentCase:
     src_root: Path
 
 
+@dataclass(frozen=True)
+class RequiredSkillGuidanceObservation:
+    """Rendered required-skill guidance and its source-owned runtime names."""
+
+    skill_ref: str
+    guidance: str
+    runtime_names: tuple[str, ...]
+
+
 def implementation_is_ready() -> bool:
     return IMPLEMENTED
 
@@ -383,8 +392,16 @@ def jinja_environment_uses_custom_delimiters() -> bool:
         )
 
 
-def require_skill_expands_to_neutral_guidance() -> bool:
-    return all(_require_expands_neutrally(case) for case in source_scenarios())
+def observe_required_skill_guidance() -> tuple[RequiredSkillGuidanceObservation, ...]:
+    runtime_names = _runtime_specific_names()
+    return tuple(
+        RequiredSkillGuidanceObservation(
+            skill_ref=case.skill_ref,
+            guidance=expand_require_skill(RequireSkillDirective(case.skill_ref)),
+            runtime_names=runtime_names,
+        )
+        for case in source_scenarios()
+    )
 
 
 def require_skill_neutrality_oracle_rejects_runtime_specific_guidance() -> bool:
@@ -605,15 +622,6 @@ def _fragment_required(case: SourceScenario) -> bool:
         except SourceFormatError:
             return True
         return False
-
-
-def _require_expands_neutrally(case: SourceScenario) -> bool:
-    rendered = expand_require_skill(RequireSkillDirective(case.skill_ref))
-    return _require_guidance_is_neutral(
-        rendered,
-        skill_ref=case.skill_ref,
-        runtime_names=_runtime_specific_names(),
-    )
 
 
 def _runtime_specific_names() -> tuple[str, ...]:

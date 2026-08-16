@@ -4,11 +4,11 @@ description: ALWAYS invoke this skill when writing or fixing tests for Rust. NEV
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo check:*), Bash(cargo clippy:*), Bash(cargo fmt --check:*), Bash(cargo llvm-cov:*), Bash(spx validation:*), Bash(just test:*), Bash(just check:*), Bash(just verify:*), Bash(just validate:*)
 ---
 
-Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
-Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 Rust tests for what the `/test` router selected, at the chosen level.

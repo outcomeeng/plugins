@@ -6,11 +6,11 @@ description: >-
 allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(python3 -m pytest:*), Bash(python3 -m ruff check:*), Bash(python3 -m mypy:*)
 ---
 
-Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
-Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 Python test files that supply evidence for a spec-tree node's assertions.

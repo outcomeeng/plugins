@@ -7,7 +7,7 @@ model: sonnet
 allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
-Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 

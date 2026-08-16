@@ -4,9 +4,9 @@ description: ALWAYS invoke this skill when writing or fixing implementation code
 allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(cargo fmt --check:*), Bash(cargo clippy:*), Bash(cargo test:*)
 ---
 
-Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
-Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 Rust implementation code with spec-driven behavior, explicit seams, and full validation passing.

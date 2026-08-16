@@ -8,7 +8,7 @@ model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
-Invoke the `python:python-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `python:python-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 A JSON verdict on a Python architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, Python anti-patterns, ancestor consistency, and test-double exception cases.

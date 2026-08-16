@@ -8,9 +8,9 @@ model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
-Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
-Invoke the `rust:rust-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `rust:rust-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 A JSON verdict on a Rust architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, Rust anti-patterns, and ancestor consistency.

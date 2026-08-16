@@ -4,9 +4,9 @@ description: ALWAYS invoke this skill when writing ADRs for Rust.
 allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 
-Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
-Invoke the `rust:rust-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `rust:rust-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 A Rust ADR that follows the standard Rust architecture template, preserves spec-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.

@@ -6,7 +6,7 @@ description: >-
 allowed-tools: Read, Glob, Write, Edit, Skill
 ---
 
-Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 A subagent configured for an isolated, focused role — its system prompt, tool access, and isolated-workflow orchestration.

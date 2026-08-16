@@ -8,9 +8,9 @@ model: sonnet
 allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
-Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
-Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 A verdict on Rust implementation code — `APPROVED`, or `REJECTED` with each finding naming the design flaw, boundary violation, ADR/PDR drift, or unsafe/FFI soundness issue; the violated rule; and the evidence.
