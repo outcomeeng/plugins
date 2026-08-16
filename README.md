@@ -232,7 +232,7 @@ Coding-agent environments and coordination: /operate-prowl, /message-agents, /co
 
 ### contribute
 
-Contributions to repositories you do not control: /open-parent-pr, /manage-parent-pr, /open-parent-issue, /manage-parent-issue, /sync-fork
+Contributions to repositories you do not control: /upstream, /open-upstream-pr, /manage-upstream-pr, /open-upstream-issue, /manage-upstream-issue, /sync-fork
 
 | Type  | Name                      | Purpose                                                                                                                                                                                                  |
 | ----- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
