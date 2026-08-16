@@ -17,13 +17,7 @@ def test_dangerous_branch_deletion_policy_rejects_every_missing_rule() -> None:
     )
     source.validate_authority_hierarchy_policy(documents)
 
-    for required_text in (
-        "NEVER** pass dynamic branch names to `git branch -d` or `git branch -D`",
-        "variables, command substitutions, arrays, and globs are denied",
-        "including when quoted or placed after `--`",
-        "Type every branch name literally",
-        "delete several literal names in one command",
-    ):
+    for _, required_text in source.DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS:
         for agent_harness, document in documents.items():
             violating_document = document.replace(required_text, "", 1)
             with pytest.raises(source.AuthorityHierarchyPolicyError):
@@ -32,15 +26,13 @@ def test_dangerous_branch_deletion_policy_rejects_every_missing_rule() -> None:
                 )
 
     for agent_harness, document in documents.items():
-        guard_start = document.index("### Dangerous-command guard")
-        guard_end = document.index("\n---", guard_start)
+        guard_section = source._markdown_section(
+            document, source.DANGEROUS_COMMAND_GUARD_POLICY_HEADING
+        )
         quoted_guard = "\n".join(
-            f"> {line}" if line else ">"
-            for line in document[guard_start:guard_end].splitlines()
+            f"> {line}" if line else ">" for line in guard_section.splitlines()
         )
-        violating_document = (
-            f"{document[:guard_start]}{quoted_guard}{document[guard_end:]}"
-        )
+        violating_document = document.replace(guard_section, quoted_guard, 1)
         with pytest.raises(source.AuthorityHierarchyPolicyError):
             source.validate_authority_hierarchy_policy(
                 {agent_harness: violating_document}
