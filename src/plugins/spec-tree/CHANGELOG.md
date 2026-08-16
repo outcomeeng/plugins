@@ -12,12 +12,21 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ## 0.91.0
 
+### Added
+
+- **Product content is a defined term.** The `/understand` foundation defines product content as every product artifact a spec node governs or must govern — source, tests, evals, generated output, specs, decisions, coordination notes, spec-declared configuration, implementation being its code layer — with the governing node found by search under the live foundation marker: a path under a node directory belongs to that node; any other path to the node whose test file names it and whose spec links that test; several matching nodes resolve to their lowest common ancestor. Product content with no governing spec is not read or modified; the gap is recorded. The agent harness's own instruction and settings files, tool output, the session store, and scratch space are not product content.
+
 ### Changed
 
-- **Post-compaction recovery reloads at the first product-content access.** After compaction, `/understand` precedes the next product-content access and `/contextualize` on the governing spec node precedes any product content that node governs being read or modified, and any discussion of that node; a compaction empties the set of contextualized nodes. An operational continuation — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — touches no product content and triggers neither reload. `/manage-pr`, `/merge`, and `/manage-github-pr` invoke both at the first product-content access in the pass and at no earlier step; `/handoff` contextualizes each node whose coordination notes or other governed product content it reads or edits.
-- **Product content is a defined term.** The `/understand` foundation defines product content as every product artifact a spec node governs or must govern — source, tests, evals, generated output, specs, decisions, coordination notes, spec-declared configuration, implementation being its code layer — with the governing node found by search under the live foundation marker: a path under a node directory belongs to that node; any other path to the node whose test file names it and whose spec links that test; several matching nodes resolve to their lowest common ancestor. Product content with no governing spec is not read or modified; the gap is recorded. The agent harness's own instruction and settings files, tool output, the session store, and scratch space are not product content.
+- **Post-compaction recovery reloads at the first product-content access.** After compaction, `/understand` precedes the next product-content access and `/contextualize` on the governing spec node precedes any product content that node governs being read or modified, and any discussion of that node; a compaction empties the set of contextualized nodes. An operational continuation — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — touches no product content and triggers neither reload.
+- **`/manage-pr`, `/merge`, and `/manage-github-pr` reload at the first product-content access in the pass and at no earlier step.** PR inspection, check wait, merge, deploy, and release proceed on live PR and repository state alone; each skill carries the matching success criterion and failure mode.
+- **`/handoff` reloads only immediately before it reads or edits coordination notes or other governed product content.** Claimed-session and marker recovery from conversation markers and `spx session` output needs no reload.
 - **`/understand` reads the root instruction file from disk only when the live conversation does not already carry it complete.** A harness that injects the whole file satisfies the step; a truncated or absent injection requires the read.
-- **The managed router's post-compaction STOP TRIGGER states the same rule.** Re-render the root instruction files with `/update-instruction-block` to carry it.
+- **The managed router's `/contextualize` rule and post-compaction STOP TRIGGER state the per-node product-content rule** (template 0.35.0).
+
+### Requires
+
+- Re-render the root instruction files with `/update-instruction-block` so the router block carries the product-content definition and the new STOP TRIGGER.
 
 ## 0.90.0
 
