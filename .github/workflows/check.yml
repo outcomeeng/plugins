@@ -27,7 +27,7 @@ jobs:
       JUST_VERSION: "1.53.0" # renovate: datasource=github-releases depName=casey/just
       CLAUDE_CLI_VERSION: "2.1.168" # renovate: datasource=npm depName=@anthropic-ai/claude-code
       CODEX_CLI_VERSION: "0.145.0" # renovate: datasource=npm depName=@openai/codex
-      DPRINT_VERSION: "0.54.0" # renovate: datasource=npm depName=dprint
+      DPRINT_VERSION: "0.55.2" # renovate: datasource=npm depName=dprint
       SPX_VERSION: "0.6.15" # renovate: datasource=npm depName=@outcomeeng/spx
       ACTIONLINT_VERSION: "1.7.12" # renovate: datasource=github-releases depName=rhysd/actionlint
       SHELLCHECK_VERSION: "0.11.0" # renovate: datasource=github-releases depName=koalaman/shellcheck

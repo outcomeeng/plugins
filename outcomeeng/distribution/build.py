@@ -168,7 +168,7 @@ SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
 SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER: Final = "__OUTCOMEENG_SKILL_DIR_REWRITE_ESCAPE__"
 
 FORMATTER_COMMAND_NAME: Final = "dprint"
-FORMATTER_VERSION: Final = "0.54.0"  # renovate: datasource=npm depName=dprint
+FORMATTER_VERSION: Final = "0.55.2"  # renovate: datasource=npm depName=dprint
 FORMATTER_VERSION_OUTPUT: Final = f"{FORMATTER_COMMAND_NAME} {FORMATTER_VERSION}"
 FORMATTER_FILE_GLOB: Final = "**/*.{md,json,toml,py,yaml,yml,js,html}"
 FORMATTER_CONFIG_PATH: Final = Path(__file__).resolve().parents[2] / "dprint.jsonc"
