@@ -5,36 +5,38 @@ from typing import cast
 
 from outcomeeng.distribution.installation import (
     Agent,
-    FIRST_INSTALL_WARNING,
-    SPEC_TREE_PLUGIN,
-    report_document,
     CANONICAL_MARKETPLACE_SOURCE,
+    FIRST_INSTALL_WARNING,
     Operation,
+    SPEC_TREE_PLUGIN,
     SourceAction,
     USER_SCOPE_COLLISION_DIAGNOSTIC,
-    VERIFICATION_RECIPE_COMMAND,
+    report_document,
 )
 from outcomeeng_testing.harnesses.installation import (
+    NONCANONICAL_MARKETPLACE_SOURCE,
     absent_from_every_agent,
     committed_catalog_plugin_names,
-    observe_unpublished_plugin,
-    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_claude_user_collision,
+    observe_first_persistent_cli,
     observe_inspection_failure,
     observe_invalid_isolated_selection,
     observe_invalid_persistent_selection,
-    observe_first_persistent_cli,
     observe_persistent_plan,
+    observe_unpublished_plugin,
     observe_verification_recipe,
 )
 
 
-def test_verification_recipe_aliases_the_exact_installation_evidence() -> None:
+def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
     observation = observe_verification_recipe()
 
     assert observation.exit_code == 0, observation.stderr
-    assert observation.invoked == VERIFICATION_RECIPE_COMMAND
-    assert observation.invoked[1:] == observation.evidence_files
+    assert observation.invoked == (
+        "test",
+        "spx/32-distribution.enabler/21-installation.enabler/"
+        "21-repository-installation.enabler/tests",
+    )
 
 
 def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
