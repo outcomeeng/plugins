@@ -159,6 +159,24 @@ def test_no_local_codex_marketplace_maps_to_none_available(tmp_path: Path) -> No
     ) in result.stderr
 
 
+def test_claude_non_directory_source_maps_to_none_available(tmp_path: Path) -> None:
+    payload = [
+        {
+            RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+            RESOLVER.SOURCE_FIELD: "github",
+            RESOLVER.PATH_FIELD: str(tmp_path / "github-cache"),
+        }
+    ]
+
+    result = _run_resolver(payload, runtime=RESOLVER.RUNTIME_CLAUDE)
+
+    assert result.returncode == RESOLVER.EXIT_MARKETPLACE_NOT_FOUND
+    assert result.stdout == ""
+    assert (
+        f"available local marketplaces: {RESOLVER.NO_LOCAL_MARKETPLACES}"
+    ) in result.stderr
+
+
 def test_malformed_marketplace_json_maps_to_invalid_json_error() -> None:
     result = _run_resolver("{", runtime=RESOLVER.RUNTIME_CLAUDE)
 

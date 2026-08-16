@@ -9,8 +9,10 @@ fields are resolved, `source` first; no other Codex field carries the path, and
 
 Tested with:
 - Claude marketplace JSON using a Directory source -> prints path.
+- Claude marketplace JSON using another source -> names none as available.
 - Codex marketplace JSON using a local marketplaceSource -> prints path.
 - Codex marketplace JSON carrying only top-level root -> prints root.
+- Codex marketplace JSON carrying source and root -> prefers source.
 - Malformed JSON -> returns a clear invalid-JSON error.
 - Missing local marketplace -> returns a clear target-resolution error.
 - No local marketplace registered at all -> names none as available.

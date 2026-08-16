@@ -33,7 +33,7 @@ NEVER assign the dependency's node addresses, decision indices, or assertion typ
 
 <dependency_followup_body>
 
-Dependency follow-ups use a minimal body contract because Claude assigns none of the target dependency's node taxonomy. Include each section exactly once, in this order:
+Dependency follow-ups use a minimal body contract because Claude assigns none of the target dependency's node taxonomy. Include each section exactly once, in this order. Step 6 spells this line sequence twice, once per stdin form, so a change to the section order or count updates both blocks in the same edit.
 
 ```text
 # <short title>
@@ -102,6 +102,24 @@ Resolve a queue-safe `<queue-host>` before writing the session. Classify the lay
 - `core.bare` is `true` — a bare-repository pool: run `spx -C <target-dir> diagnose --format json`, read the sole `worktree-pool` record, and require `verdict=compliant` and a non-empty absolute `readings.mainCheckoutPath`; `<queue-host>` is that path. Require that `git -C <queue-host> rev-parse --path-format=absolute --git-common-dir` equals the common directory resolved in Step 1. Do not switch, detach, commit, or otherwise move the invoking or target worktree.
 - `core.bare` is `false` with more than one `worktree` line, a `core.bare` value outside `true`/`false`, a non-compliant or missing `worktree-pool` record, or a main-checkout path whose common directory differs: the topology cannot produce a queue-safe checkout. Stop with the exact command output. Never reformulate the write against the active feature worktree.
 
+A compliant pool record and the `<queue-host>` it yields:
+
+```json
+{
+  "name": "worktree-pool",
+  "verdict": "compliant",
+  "readings": {
+    "bare": "true",
+    "mainCheckoutPath": "/Users/example/Code/acme/widgets/widgets",
+    "defaultBranch": "main",
+    "mainCheckoutBranch": "main",
+    "mainCheckoutBranchRead": "true"
+  }
+}
+```
+
+`<queue-host>` is `/Users/example/Code/acme/widgets/widgets`, whatever branch the invoking feature worktree carries.
+
 Create exactly one fresh `todo` follow-up for every authorized invocation. Before the write, run `spx -C <queue-host> session list --json` once and read only the header fields it returns for `todo` and `doing` sessions — `id`, `status`, `goal`, `next_step`. Collect as `<overlap-ids>` the full ids whose `goal` or `next_step` names an affected path or skill from `<captured_fields>`. Never run `spx session show` on a listed session, never compare bodies, never probe origin for a stored branch, and never reuse or suppress the write because an overlap exists; queue consumers reconcile overlapping observations at pickup. The report names `<overlap-ids>` so the reader sees them beside the new record.
 
 </same_repository_filing>
@@ -133,9 +151,11 @@ Create exactly one fresh `todo` follow-up for every authorized invocation. Befor
 
 The explicit `/issue` invocation authorizes one fresh same-repository queue write, so `same_repository=true` does not add a second confirmation. Every `same_repository=false` target requires this confirmation, including a separate clone with the same normalized origin identity and a checkout path named directly in `$ARGUMENTS`. STOP on anything but explicit approval, leaving both repositories unchanged.
 
-Then resolve the current agent session identity verbatim from the variable the agent publishes with `printenv CLAUDE_CODE_SESSION_ID` and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin. Both forms below send the same bytes; select by harness. Never assemble the body through a temporary file, a helper file, command substitution, or post-hoc text substitution.
+Then resolve the current agent session identity verbatim from the variable the agent publishes with `printenv CLAUDE_CODE_SESSION_ID` and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin. Both forms below send the same bytes and enumerate the same `<dependency_followup_body>` lines in the same order; an edit to that section's shape updates both. Never assemble the body through a temporary file, a helper file, command substitution, or post-hoc text substitution.
 
-In an interactive Claude Code or Codex session, use a quoted heredoc:
+Select the form by whether the harness accepts a multiline command. Use the heredoc by default, and use the one-line form when the harness rejects a multiline command or the heredoc attempt returns a shell parse error — the case a programmatic Claude Code or Codex run and a hosted runner such as GitHub Actions produce.
+
+The default multiline form:
 
 ```bash
 spx -C <queue-host> session handoff <<'EOF'
@@ -164,7 +184,7 @@ spx -C <queue-host> session handoff <<'EOF'
 EOF
 ```
 
-In a programmatic Claude Code or Codex run, or a hosted runner such as GitHub Actions, whose parser requires one physical command line, use `printf '%s\n'` with one argument per output line:
+The one-line form, `printf '%s\n'` with one argument per output line:
 
 ```bash
 printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","git_ref":"<target-branch-on-origin>","specs":[],"files":[]}' '# <short title>' '' '<observation>' '...' '</observation>' '' '<uncertainty>' '...' '</uncertainty>' '' '<checked_facts>' '...' '</checked_facts>' '' '<affected_paths>' '...' '</affected_paths>' '' '<next_workflow_context>' '...' '</next_workflow_context>' | spx -C <queue-host> session handoff
