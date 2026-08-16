@@ -48,7 +48,7 @@ The `reviews` field carries formal review submissions. The `comments` field carr
 
 Walk these steps on each management pass. Routine steps — inspect, classify, rebase, re-review, push, and foreground PR-check wait — run directly. The only pauses are the autonomous merge after `MERGE_READINESS` holds and the mutation-point guard returns `MERGE_READY:<head-sha>`, plus the action-token emissions when a gate withholds.
 
-**Step 0 — Load references.** Invoke `/understand` and the governing node's `/contextualize` immediately before the first product content this pass reads or modifies — a finding fix, base-sync conflict reconciliation, `/commit-changes` of edited product content, a coordination-note edit — and at no earlier step. PR inspection, check wait, merge, deploy, and release touch no product content and proceed without either reload. Invoke /merging-standards (shared vocabulary) and /commit-changes (commit format for any follow-up commits) via the Skill tool. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
+**Step 0 — Load references.** Invoke `/understand` and the governing node's `/contextualize` immediately before the first product content this pass reads or modifies — a finding fix, base-sync conflict reconciliation, `/commit-changes` of edited product content, a coordination-note edit — or the first node this pass discusses, and at no earlier step. PR inspection, check wait, merge, deploy, and release touch no product content and proceed without either reload. Invoke /merging-standards (shared vocabulary) and /commit-changes (commit format for any follow-up commits) via the Skill tool. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
 
 **Step 1 — Identify the PR.** When `$ARGUMENTS` is non-empty, resolve the PR from that pointer before inspecting state. Use the `<pr_identity_fields>` command field set. Use bare `gh pr view` only when `$ARGUMENTS` is empty and the current branch is the intended PR branch.
 
@@ -259,7 +259,7 @@ The managing flow satisfies its contract when, at minimum:
 - The foreground PR-check wait inspects the terminal check result, then re-runs the full Step 1/Step 2 inspection before deciding the next action.
 - `gh pr merge` is never run as a probe for mergeability; `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and command acceptance are not merge predicates.
 - Each pass that does not fire an autonomous action emits exactly one token from /merging-standards `<action_tokens>`, except a base-sync conflict, which stops with `/sync-base`'s structured conflict report and active rebase state.
-- `/understand` and the governing node's `/contextualize` were invoked before every product-content read or modification in the pass, only immediately before the first such access, never earlier, and not at all in a pass that touched no product content.
+- `/understand` and the governing node's `/contextualize` were invoked before every product-content read or modification and every node discussion in the pass, only immediately before the first such access or discussion, never earlier, and not at all in a pass that touched no product content and discussed no node.
 - No `<self_reference>` violation per /merging-standards.
 
 </success_criteria>
