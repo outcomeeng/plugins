@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.92.3
+
+### Fixed
+
+- **`/issue` files its follow-up from a programmatic runner.** The handoff payload previously reached `spx session handoff` through a quoted heredoc alone, so a programmatic Claude Code or Codex run, or a hosted runner whose parser requires one physical command line, had no supported form. The skill now names both stdin forms and which harness selects each, and grants `printf`, matching `/handoff`'s existing treatment of the same payload.
+- **Codex marketplace resolution reads only the fields Codex emits.** `/issue`'s marketplace resolver looked for a local checkout path at a top-level `path` field and a `sourceType` at the entry level; neither appears in `codex plugin marketplace list --json` output. Resolution now reads `marketplaceSource.sourceType`, then `marketplaceSource.source`, then the top-level `root` every entry carries, so a marketplace registered from a local directory resolves from `root` when `source` is absent.
+
 ## 0.92.2
 
 ### Changed

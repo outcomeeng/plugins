@@ -93,6 +93,72 @@ def test_codex_local_marketplace_json_maps_to_path(tmp_path: Path) -> None:
     assert result.stderr == ""
 
 
+def test_codex_local_marketplace_root_only_maps_to_root(tmp_path: Path) -> None:
+    materialized_root = tmp_path / "codex-root"
+    payload = {
+        RESOLVER.MARKETPLACES_FIELD: [
+            {
+                RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+                RESOLVER.ROOT_FIELD: str(materialized_root),
+                RESOLVER.MARKETPLACE_SOURCE_FIELD: {
+                    RESOLVER.SOURCE_TYPE_FIELD: RESOLVER.CODEX_LOCAL_SOURCE_TYPE,
+                },
+            }
+        ]
+    }
+
+    result = _run_resolver(payload, runtime=RESOLVER.RUNTIME_CODEX)
+
+    assert result.returncode == 0
+    assert result.stdout == f"{materialized_root}\n"
+    assert result.stderr == ""
+
+
+def test_codex_local_marketplace_maps_both_fields_to_source(tmp_path: Path) -> None:
+    registered_source = tmp_path / "codex-source"
+    materialized_root = tmp_path / "codex-root"
+    payload = {
+        RESOLVER.MARKETPLACES_FIELD: [
+            {
+                RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+                RESOLVER.ROOT_FIELD: str(materialized_root),
+                RESOLVER.MARKETPLACE_SOURCE_FIELD: {
+                    RESOLVER.SOURCE_TYPE_FIELD: RESOLVER.CODEX_LOCAL_SOURCE_TYPE,
+                    RESOLVER.SOURCE_FIELD: str(registered_source),
+                },
+            }
+        ]
+    }
+
+    result = _run_resolver(payload, runtime=RESOLVER.RUNTIME_CODEX)
+
+    assert result.returncode == 0
+    assert result.stdout == f"{registered_source}\n"
+
+
+def test_no_local_codex_marketplace_maps_to_none_available(tmp_path: Path) -> None:
+    payload = {
+        RESOLVER.MARKETPLACES_FIELD: [
+            {
+                RESOLVER.NAME_FIELD: "git-marketplace",
+                RESOLVER.ROOT_FIELD: str(tmp_path / "git-cache"),
+                RESOLVER.MARKETPLACE_SOURCE_FIELD: {
+                    RESOLVER.SOURCE_TYPE_FIELD: "git",
+                    RESOLVER.SOURCE_FIELD: "https://example.invalid/plugins.git",
+                },
+            }
+        ]
+    }
+
+    result = _run_resolver(payload, runtime=RESOLVER.RUNTIME_CODEX)
+
+    assert result.returncode == RESOLVER.EXIT_MARKETPLACE_NOT_FOUND
+    assert result.stdout == ""
+    assert (
+        f"available local marketplaces: {RESOLVER.NO_LOCAL_MARKETPLACES}"
+    ) in result.stderr
+
+
 def test_malformed_marketplace_json_maps_to_invalid_json_error() -> None:
     result = _run_resolver("{", runtime=RESOLVER.RUNTIME_CLAUDE)
 

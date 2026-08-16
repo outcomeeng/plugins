@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 """Resolve the registered local source for a marketplace entry from JSON stdin.
 
+A Codex entry carries the materialized checkout at top-level `root` and, when the
+marketplace was registered from a local directory, the same path at
+`marketplaceSource.source` with `marketplaceSource.sourceType` of `local`. Both
+fields are resolved, `source` first; no other Codex field carries the path, and
+`sourceType` appears only inside `marketplaceSource`.
+
 Tested with:
 - Claude marketplace JSON using a Directory source -> prints path.
 - Codex marketplace JSON using a local marketplaceSource -> prints path.
+- Codex marketplace JSON carrying only top-level root -> prints root.
 - Malformed JSON -> returns a clear invalid-JSON error.
 - Missing local marketplace -> returns a clear target-resolution error.
+- No local marketplace registered at all -> names none as available.
 - No temporary files are created.
 """
 
@@ -29,6 +37,7 @@ CLAUDE_DIRECTORY_SOURCE: Final = "directory"
 CODEX_LOCAL_SOURCE_TYPE: Final = "local"
 RUNTIME_CLAUDE: Final = "claude"
 RUNTIME_CODEX: Final = "codex"
+NO_LOCAL_MARKETPLACES: Final = "none"
 EXIT_INVALID_JSON: Final = 2
 EXIT_MARKETPLACE_NOT_FOUND: Final = 3
 
@@ -59,13 +68,11 @@ def _claude_path(entry: dict[str, Any]) -> str:
 def _codex_path(entry: dict[str, Any]) -> str:
     source = entry.get(MARKETPLACE_SOURCE_FIELD, {})
     source = source if isinstance(source, dict) else {}
-    source_type = source.get(SOURCE_TYPE_FIELD) or entry.get(SOURCE_TYPE_FIELD)
-    if source_type != CODEX_LOCAL_SOURCE_TYPE:
+    if source.get(SOURCE_TYPE_FIELD) != CODEX_LOCAL_SOURCE_TYPE:
         return ""
 
     for key_owner, key in (
         (source, SOURCE_FIELD),
-        (entry, PATH_FIELD),
         (entry, ROOT_FIELD),
     ):
         value = key_owner.get(key)
@@ -95,7 +102,7 @@ def _available_local_marketplaces(entries: list[dict[str, Any]], runtime: str) -
         for entry in entries
         if isinstance(entry.get(NAME_FIELD), str) and path_for(entry)
     )
-    return ", ".join(names) if names else "none"
+    return ", ".join(names) if names else NO_LOCAL_MARKETPLACES
 
 
 def main() -> int:
