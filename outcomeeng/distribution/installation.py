@@ -22,10 +22,19 @@ CLAUDE_CATALOG_PATH = Path(".claude-plugin/marketplace.json")
 VERIFICATION_TESTS = (
     "spx/32-distribution.enabler/21-installation.enabler/"
     "21-repository-installation.enabler/tests/"
-    "test_repository_installation.scenario.l1.py",
+    "test_repository_installation.compliance.l1.py",
+    "spx/32-distribution.enabler/21-installation.enabler/"
+    "21-repository-installation.enabler/tests/"
+    "test_repository_installation.compliance.l3.py",
+    "spx/32-distribution.enabler/21-installation.enabler/"
+    "21-repository-installation.enabler/tests/"
+    "test_repository_installation.mapping.l1.py",
     "spx/32-distribution.enabler/21-installation.enabler/"
     "21-repository-installation.enabler/tests/"
     "test_repository_installation.mapping.l3.py",
+    "spx/32-distribution.enabler/21-installation.enabler/"
+    "21-repository-installation.enabler/tests/"
+    "test_repository_installation.scenario.l1.py",
     "spx/32-distribution.enabler/21-installation.enabler/"
     "21-repository-installation.enabler/tests/"
     "test_repository_installation.scenario.l3.py",

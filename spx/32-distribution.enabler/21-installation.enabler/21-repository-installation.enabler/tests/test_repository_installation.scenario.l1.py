@@ -34,6 +34,7 @@ def test_verification_recipe_aliases_the_exact_installation_evidence() -> None:
 
     assert observation.exit_code == 0, observation.stderr
     assert observation.invoked == VERIFICATION_RECIPE_COMMAND
+    assert observation.invoked[1:] == observation.evidence_files
 
 
 def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:

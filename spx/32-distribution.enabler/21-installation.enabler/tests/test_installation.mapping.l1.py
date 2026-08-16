@@ -6,6 +6,7 @@ from typing import cast
 from outcomeeng.distribution.installation import (
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
+    SPEC_TREE_PLUGIN,
 )
 from outcomeeng_testing.harnesses.installation import (
     observe_persistent_catalog_subset_plans,
@@ -34,6 +35,10 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
     assert isolated.plan.codex_plugins == expected_codex
     for observation in observe_persistent_catalog_subset_plans():
         for selected, planned in observation.mappings:
-            assert planned == tuple(
-                plugin for plugin in observation.catalog if plugin in selected
+            assert planned == (
+                (SPEC_TREE_PLUGIN,)
+                if not selected
+                else tuple(
+                    plugin for plugin in observation.catalog if plugin in selected
+                )
             )

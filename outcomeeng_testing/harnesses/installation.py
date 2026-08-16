@@ -77,7 +77,7 @@ from outcomeeng_testing.generators.installation import (
     catalog_plugin_names_from_document,
     generated_agent_subsets,
     generated_invalid_catalog_subsets,
-    generated_valid_catalog_subsets,
+    generated_persistent_catalog_selections,
 )
 
 UNOWNED_AGENT_FILENAME = "developer-owned.toml"
@@ -186,6 +186,7 @@ class VerificationRecipeObservation:
 
     exit_code: int
     invoked: tuple[str, ...]
+    evidence_files: tuple[str, ...]
     stdout: str
     stderr: str
 
@@ -485,7 +486,7 @@ def observe_persistent_catalog_subset_plans() -> tuple[
         observations: list[CatalogSubsetPlanObservation] = []
         for agent in Agent:
             mappings: list[tuple[frozenset[str], tuple[str, ...]]] = []
-            for selected in generated_valid_catalog_subsets(catalogs[agent]):
+            for selected in generated_persistent_catalog_selections(catalogs[agent]):
                 installed = {
                     candidate: frozenset({SPEC_TREE_PLUGIN}) for candidate in Agent
                 }
@@ -969,9 +970,20 @@ def observe_verification_recipe() -> VerificationRecipeObservation:
         ):
             raise RuntimeError("recorded just invocation must be a string array")
         invoked = tuple(recorded)
+        evidence_files = tuple(
+            str(path.relative_to(repository_root()))
+            for path in sorted(
+                (
+                    repository_root()
+                    / "spx/32-distribution.enabler/21-installation.enabler/"
+                    "21-repository-installation.enabler/tests"
+                ).glob("test_repository_installation.*.py")
+            )
+        )
     return VerificationRecipeObservation(
         exit_code=result.returncode,
         invoked=invoked,
+        evidence_files=evidence_files,
         stdout=result.stdout,
         stderr=result.stderr,
     )

@@ -94,10 +94,18 @@ def generated_invalid_catalog_subsets(
     )
 
 
+def generated_persistent_catalog_selections(
+    catalog: Sequence[str],
+) -> tuple[frozenset[str], ...]:
+    """Enumerate empty bootstrap state and every valid installed subset."""
+    return (frozenset(), *generated_valid_catalog_subsets(catalog))
+
+
 __all__ = [
     "catalog_plugin_names_from_document",
     "generated_agent_subsets",
     "generated_catalog_subset",
     "generated_invalid_catalog_subsets",
+    "generated_persistent_catalog_selections",
     "generated_valid_catalog_subsets",
 ]
