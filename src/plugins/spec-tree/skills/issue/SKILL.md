@@ -100,11 +100,11 @@ For an external target whose checkout is detached or whose current branch does n
 
 Treat equal resolved absolute git common directories as one repository identity. This includes another linked worktree in the same pool. A separate clone has its own queue and remains an external target even when its normalized origin identity matches. Do not stop or redirect a same-repository observation into full `/handoff` closure.
 
-Resolve a queue-safe `<queue-host>` before writing the session:
+Resolve a queue-safe `<queue-host>` before writing the session. Run `spx -C <target-dir> diagnose --format json` once, read the sole `worktree-pool` record, and require `verdict=compliant`; the record's `readings.bare` selects the branch:
 
-- For a compliant single-working-tree target, use the target root.
-- For a compliant bare-repository pool, run `spx -C <target-dir> diagnose --format json`, read the sole `worktree-pool` record, and use its absolute `readings.mainCheckoutPath`. Require `verdict=compliant`, a non-empty absolute main-checkout path, and that `git -C <main-checkout-path> rev-parse --path-format=absolute --git-common-dir` equals the absolute git common directory resolved for `<target-dir>` in Step 1. Do not switch, detach, commit, or otherwise move the invoking or target worktree.
-- If the topology cannot produce a queue-safe checkout, stop with the exact diagnostic. Never reformulate the write against the active feature worktree.
+- `readings.bare` is `false` — a compliant single working tree: `<queue-host>` is the target root `git -C <target-dir> rev-parse --show-toplevel` reports.
+- `readings.bare` is `true` — a compliant bare-repository pool: `<queue-host>` is the absolute `readings.mainCheckoutPath`. Require a non-empty absolute main-checkout path and that `git -C <main-checkout-path> rev-parse --path-format=absolute --git-common-dir` equals the absolute git common directory resolved for `<target-dir>` in Step 1. Do not switch, detach, commit, or otherwise move the invoking or target worktree.
+- Any other verdict, a missing or duplicated `worktree-pool` record, or a `readings.bare` value outside `true`/`false` means the topology cannot produce a queue-safe checkout: stop with the exact diagnostic. Never reformulate the write against the active feature worktree.
 
 Create exactly one fresh `todo` follow-up for every authorized invocation. Before the write, run `spx -C <queue-host> session list --json` once and read only the header fields it returns for `todo` and `doing` sessions — `id`, `status`, `goal`, `next_step`. Collect as `<overlap-ids>` the full ids whose `goal` or `next_step` names an affected path or skill from `<captured_fields>`. Never run `spx session show` on a listed session, never compare bodies, never probe origin for a stored branch, and never reuse or suppress the write because an overlap exists; queue consumers reconcile overlapping observations at pickup. The report names `<overlap-ids>` so the reader sees them beside the new record.
 
