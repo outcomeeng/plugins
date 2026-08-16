@@ -9,6 +9,9 @@ from outcomeeng.distribution.installation import (
     CATALOG_PLUGINS_FIELD,
     SPEC_TREE_PLUGIN,
 )
+from outcomeeng_testing.generators.installation import (
+    generated_persistent_catalog_selections,
+)
 from outcomeeng_testing.harnesses.installation import (
     observe_persistent_catalog_subset_plans,
     observe_repository_plan,
@@ -34,7 +37,12 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
 
     assert isolated.plan.claude_plugins == expected_claude
     assert isolated.plan.codex_plugins == expected_codex
-    for observation in observe_persistent_catalog_subset_plans():
+    observations = observe_persistent_catalog_subset_plans()
+    assert tuple(observation.agent for observation in observations) == tuple(Agent)
+    for observation in observations:
+        assert tuple(mapping.selected for mapping in observation.mappings) == (
+            generated_persistent_catalog_selections(observation.catalog)
+        )
         for mapping in observation.mappings:
             assert mapping.planned == (
                 (SPEC_TREE_PLUGIN,)

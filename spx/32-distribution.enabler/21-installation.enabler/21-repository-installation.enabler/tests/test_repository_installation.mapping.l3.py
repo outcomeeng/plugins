@@ -31,7 +31,9 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
         cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
         for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
     )
-    persistent_report = cast(dict[str, object], json.loads(observation.persistent_stdout))
+    persistent_report = cast(
+        dict[str, object], json.loads(observation.persistent_stdout)
+    )
     pending_entries = cast(
         list[dict[str, str]], persistent_report["pending_publication"]
     )
@@ -117,6 +119,7 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
     assert observation.subset_codex_registration_target == str(
         observation.subset_invocation_checkout
     )
+    assert observation.state_roots
     assert all(
         root.is_relative_to(observation.invocation_checkout.parent)
         for root in observation.state_roots

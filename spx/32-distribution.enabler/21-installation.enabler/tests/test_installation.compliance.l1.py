@@ -152,6 +152,7 @@ def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
     assert observation.failure.command.operation is Operation.LIFECYCLE_PLACE
     assert observation.failure.command.plugin is not None
     assert observation.failure.result.exit_code != 0
+    assert observation.failure.completed
     assert all(result.exit_code == 0 for result in observation.failure.completed)
     assert observation.attempted[-1] == observation.failure.command
     assert (
@@ -168,6 +169,7 @@ def test_first_agent_cli_failure_reports_the_operation_and_stops() -> None:
     assert observation.failure.command.plugin is not None
     assert observation.failure.result.exit_code != 0
     assert observation.failure.result.stderr == Operation.PLUGIN_INSTALL.value
+    assert observation.failure.completed
     assert all(result.exit_code == 0 for result in observation.failure.completed)
     assert observation.attempted[-1] == observation.failure.command
     assert len(observation.attempted) < len(observation.plan.commands)
