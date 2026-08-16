@@ -7,7 +7,7 @@ allowed-tools: Read, Grep, Glob,{!% if target == 'codex' %!} Bash(printenv CODEX
 ---
 
 <objective>
-A minimal follow-up filed in the owning spec-tree repository's active session queue — capturing Claude's observation, naming possible overlaps from queue headers, and disturbing neither tracked work, the active branch, nor existing sessions.
+A minimal follow-up filed in the owning spec-tree repository's active session queue — capturing Claude's observation and naming possible overlaps from queue headers.
 
 </objective>
 
@@ -64,7 +64,7 @@ This is the sanctioned dependency-followup body contract. It intentionally diffe
 </dependency_followup_body>
 
 <target_resolution>
-Resolve the target dependency's checkout directory — the working directory `spx -C <target-dir> session handoff` runs against. When `$ARGUMENTS` names a checkout directory or a dependency, take it as the target; otherwise resolve it:
+Resolve the target repository's checkout directory `<target-dir>` — the input to identity classification in Step 1; the checkout the handoff command writes into is `<queue-host>`, which Step 1 derives from `<target-dir>` through `<same_repository_filing>` for the invoking repository and equals `<target-dir>` for any other. When `$ARGUMENTS` names a checkout directory or a dependency, take it as the target; otherwise resolve it:
 
 - **The spec-tree plugin, when the invoking repository is the plugins marketplace itself:** run `git rev-parse --show-toplevel` and read `<root>/.claude-plugin/marketplace.json`. When that file parses as JSON, its `name` is `outcomeeng`, and one entry of its `plugins` array has `name` equal to `spec-tree`, the invoking repository is the target — set `<target-dir>` to `<root>` and skip marketplace resolution. This identification runs before any marketplace lookup and never asks the operator for a path.
 - **The spec-tree plugin (marketplace):** the registered Directory source. Resolve it from the marketplace registration:
