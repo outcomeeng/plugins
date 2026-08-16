@@ -17,7 +17,13 @@ def test_dangerous_branch_deletion_policy_rejects_every_missing_rule() -> None:
     )
     source.validate_authority_hierarchy_policy(documents)
 
-    for _, required_text in source.DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS:
+    for required_text in (
+        "NEVER** pass dynamic branch names to `git branch -d` or `git branch -D`",
+        "variables, command substitutions, arrays, and globs are denied",
+        "including when quoted or placed after `--`",
+        "Type every branch name literally",
+        "delete several literal names in one command",
+    ):
         for agent_harness, document in documents.items():
             violating_document = document.replace(required_text, "", 1)
             with pytest.raises(source.AuthorityHierarchyPolicyError):
