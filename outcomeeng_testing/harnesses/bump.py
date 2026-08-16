@@ -2,7 +2,9 @@
 
 Implements the `ChangeProbe`, `ContentProbe`, `ManifestReader`,
 `ManifestWriter`, and `ToolProbe` Protocols declared in
-`outcomeeng.distribution.bump`.
+`outcomeeng.distribution.bump`, and wires that module's real
+`IncludeIndexProbe` adapter where an observation drives real change
+detection against a temporary repository.
 
 The doubles are spies (recording calls) and stubs (returning scripted
 content), used by `l1` tests to verify bump's orchestration without
@@ -24,6 +26,7 @@ Protocol boundaries (per-probe `queries`/`writes` lists are local).
 from __future__ import annotations
 
 import contextlib
+import functools
 import io
 import os
 import pathlib
@@ -48,11 +51,16 @@ from outcomeeng.distribution.bump import (
     ManifestRecord,
     ManifestWriter,
     Mode,
+    SHARED_SOURCE_DIR,
     SOURCE_PLUGINS_DIR,
     ToolProbe,
     REQUIRED_TOOLS,
     Segment,
     _real_change_probe,
+    _real_content_probe,
+    _real_include_index_probe,
+    _real_manifest_reader,
+    _real_tool_probe,
     bump,
     main,
 )
@@ -65,6 +73,8 @@ from outcomeeng.distribution.contracts import (
 )
 from outcomeeng_testing.generators.bump import (
     arbitrary_diff_paths,
+    indexed_targets,
+    shared_include_indexes,
     distribution_roots,
     manifest_fixture_path,
     manifest_relpath,
@@ -842,7 +852,13 @@ def observe_untracked_new_skill_changes() -> tuple[
     """Build a real repo with an untracked new skill and probe its changes."""
     with TemporaryDirectory() as directory:
         handle = build_repo_with_untracked_new_skill(pathlib.Path(directory) / "repo")
-        return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
+        return handle, _real_change_probe(
+            handle.base_ref,
+            cwd=handle.repo,
+            include_index_probe=functools.partial(
+                _real_include_index_probe, cwd=handle.repo
+            ),
+        )
 
 
 def observe_renamed_structural_path_changes() -> tuple[
@@ -853,7 +869,13 @@ def observe_renamed_structural_path_changes() -> tuple[
         handle = build_repo_with_renamed_structural_path(
             pathlib.Path(directory) / "repo"
         )
-        return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
+        return handle, _real_change_probe(
+            handle.base_ref,
+            cwd=handle.repo,
+            include_index_probe=functools.partial(
+                _real_include_index_probe, cwd=handle.repo
+            ),
+        )
 
 
 def observe_cross_plugin_rename_changes() -> tuple[
@@ -864,7 +886,78 @@ def observe_cross_plugin_rename_changes() -> tuple[
         handle = build_repo_with_cross_plugin_structural_rename(
             pathlib.Path(directory) / "repo"
         )
-        return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
+        return handle, _real_change_probe(
+            handle.base_ref,
+            cwd=handle.repo,
+            include_index_probe=functools.partial(
+                _real_include_index_probe, cwd=handle.repo
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class SharedFragmentBumpOutcome:
+    """A full bump pass over a repo whose only change is a shared fragment."""
+
+    exit_code: int
+    writes: tuple[tuple[str, str], ...]
+    stdout: str
+    stderr: str
+
+
+def observe_shared_fragment_bump() -> tuple[
+    SharedFragmentRepo, SharedFragmentBumpOutcome
+]:
+    """Run the whole bump pipeline over a real shared-fragment-only change.
+
+    Change detection, manifest reading, and the write phase all run against the
+    real repository, so the observation reaches the manifest write rather than
+    stopping at attribution.
+    """
+    with TemporaryDirectory() as directory:
+        handle = build_repo_with_shared_fragment_change(
+            pathlib.Path(directory) / "repo"
+        )
+        writer = RecordingManifestWriter()
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with contextlib.chdir(handle.repo):
+            with (
+                contextlib.redirect_stdout(stdout),
+                contextlib.redirect_stderr(stderr),
+            ):
+                exit_code = bump(
+                    handle.base_ref,
+                    None,
+                    mode=Mode.WRITE,
+                    change_probe=functools.partial(
+                        _real_change_probe,
+                        cwd=handle.repo,
+                        include_index_probe=functools.partial(
+                            _real_include_index_probe, cwd=handle.repo
+                        ),
+                    ),
+                    content_probe=_real_content_probe,
+                    manifest_reader=_real_manifest_reader,
+                    manifest_writer=writer,
+                    tool_probe=_real_tool_probe,
+                )
+        return handle, SharedFragmentBumpOutcome(
+            exit_code=exit_code,
+            writes=tuple(writer.writes),
+            stdout=stdout.getvalue(),
+            stderr=stderr.getvalue(),
+        )
+
+
+def observe_real_include_index() -> tuple[
+    SharedFragmentRepo, Mapping[str, frozenset[str]]
+]:
+    """Build a real repo and derive its include index from authored sources."""
+    with TemporaryDirectory() as directory:
+        handle = build_repo_with_shared_fragment_change(
+            pathlib.Path(directory) / "repo"
+        )
+        return handle, _real_include_index_probe(cwd=handle.repo)
 
 
 def _observe_manifest_against_base_source_path(
@@ -943,6 +1036,24 @@ class RenamedStructuralRepo:
     plugin: str
     structural_path: str
     renamed_path: str
+
+
+@dataclass(frozen=True)
+class SharedFragmentRepo:
+    """A real git repo whose working tree edits a shared authored fragment
+    that one plugin's source includes and another plugin's source does not.
+
+    No path under either plugin changes, so prefix attribution alone reaches
+    neither plugin; only include-directive resolution reaches ``including_plugin``.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    including_plugin: str
+    unrelated_plugin: str
+    fragment_path: str
+    include_target: str
+    base_version: str
 
 
 @dataclass(frozen=True)
@@ -1056,6 +1167,52 @@ def build_repo_with_renamed_structural_path(
     )
 
 
+def build_repo_with_shared_fragment_change(
+    repo: pathlib.Path,
+) -> SharedFragmentRepo:
+    """Commit two plugins and a shared fragment, then edit only the fragment."""
+    including_plugin = "consumer"
+    unrelated_plugin = "bystander"
+    include_target = "voice/fragment.md"
+    fragment_path = f"{SHARED_SOURCE_DIR}/{include_target}"
+    base_version = "0.1.0"
+    repo.mkdir(parents=True, exist_ok=True)
+    _run_git(repo, "init", "-q", "-b", "main")
+    _run_git(repo, "config", "commit.gpgsign", "false")
+    for plugin in (including_plugin, unrelated_plugin):
+        _write(
+            repo,
+            f"{SOURCE_PLUGINS_DIR}/{plugin}/.claude-plugin/plugin.json",
+            f'{{\n  "name": "{plugin}",\n  "version": "{base_version}"\n}}\n',
+        )
+    _write(
+        repo,
+        f"{SOURCE_PLUGINS_DIR}/{including_plugin}/skills/voiced/SKILL.md",
+        f"---\nname: voiced\n---\n\n{{!% include '{include_target}' %!}}\n",
+    )
+    _write(
+        repo,
+        f"{SOURCE_PLUGINS_DIR}/{unrelated_plugin}/skills/plain/SKILL.md",
+        "---\nname: plain\n---\n\nno directive here\n",
+    )
+    _write(repo, fragment_path, "canon v1\n")
+    _run_git(repo, "add", "-A")
+    _run_git(repo, "commit", "-q", "-m", "base")
+    base_ref = "HEAD"
+
+    _write(repo, fragment_path, "canon v2\n")
+
+    return SharedFragmentRepo(
+        repo=repo,
+        base_ref=base_ref,
+        including_plugin=including_plugin,
+        unrelated_plugin=unrelated_plugin,
+        fragment_path=fragment_path,
+        include_target=include_target,
+        base_version=base_version,
+    )
+
+
 def build_repo_with_cross_plugin_structural_rename(
     repo: pathlib.Path,
 ) -> CrossPluginRenameRepo:
@@ -1154,6 +1311,32 @@ def run_single_diff_path_property(check: Callable[[str], None]) -> None:
     run()
 
 
+def run_shared_change_property(
+    check: Callable[[str, Mapping[str, frozenset[str]]], None],
+) -> None:
+    """Drive `check` over a generated include target and include index."""
+
+    @bump_property
+    @given(pair=indexed_targets())
+    def run(pair: tuple[str, Mapping[str, frozenset[str]]]) -> None:
+        check(*pair)
+
+    run()
+
+
+def run_non_shared_path_property(
+    check: Callable[[str, Mapping[str, frozenset[str]]], None],
+) -> None:
+    """Drive `check` over arbitrary diff paths and a generated include index."""
+
+    @bump_property
+    @given(path=arbitrary_diff_paths(), index=shared_include_indexes())
+    def run(path: str, index: Mapping[str, frozenset[str]]) -> None:
+        check(path, index)
+
+    run()
+
+
 def run_diff_path_list_property(check: Callable[[list[str]], None]) -> None:
     """Drive `check` over generated lists of arbitrary diff paths."""
 
@@ -1182,6 +1365,8 @@ __all__ = [
     "ScriptedChangeProbe",
     "ScriptedContentProbe",
     "ScriptedManifestReader",
+    "SharedFragmentBumpOutcome",
+    "SharedFragmentRepo",
     "SingleManifestCase",
     "SingleManifestOutcome",
     "TOOL_EVENT_PREFIX",
@@ -1191,6 +1376,7 @@ __all__ = [
     "base_ref",
     "build_repo_with_cross_plugin_structural_rename",
     "build_repo_with_renamed_structural_path",
+    "build_repo_with_shared_fragment_change",
     "build_repo_with_untracked_new_skill",
     "bump_property",
     "dual_manifest_case",
@@ -1216,8 +1402,10 @@ __all__ = [
     "observe_new_skill_addition_run",
     "observe_no_changed_plugins_run",
     "observe_probe_ordering",
+    "observe_real_include_index",
     "observe_property_failure_notes",
     "observe_read_only_mode_runs",
+    "observe_shared_fragment_bump",
     "observe_renamed_structural_path_changes",
     "observe_segment_selection_runs",
     "observe_single_changed_plugin_run",
@@ -1225,6 +1413,7 @@ __all__ = [
     "observe_untracked_new_skill_changes",
     "run_diff_path_list_property",
     "run_distribution_path_property",
+    "run_non_shared_path_property",
     "run_single_diff_path_property",
     "single_manifest_case",
 ]

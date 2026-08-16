@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from outcomeeng.distribution.bump import Mode, REQUIRED_TOOLS
+from outcomeeng.distribution.bump import Mode, REQUIRED_TOOLS, Version
 from outcomeeng_testing.generators.bump import version_of
 from outcomeeng_testing.harnesses.bump import (
     TOOL_EVENT_PREFIX,
@@ -17,6 +17,7 @@ from outcomeeng_testing.harnesses.bump import (
     observe_mixed_dual_manifest_plugin,
     observe_modification_only_changes_run,
     observe_probe_ordering,
+    observe_shared_fragment_bump,
     observe_read_only_mode_runs,
     observe_unchanged_plugins_run,
 )
@@ -167,3 +168,17 @@ def test_explicit_segment_patch_overrides_detected_minor_with_warning() -> None:
     assert version_of(outcome.written[path]) == "0.4.2"
     assert plugin in outcome.stderr
     assert "minor" in outcome.stderr
+
+
+def test_shared_fragment_change_advances_its_including_plugin_version() -> None:
+    handle, outcome = observe_shared_fragment_bump()
+    written = {path for path, _ in outcome.writes}
+
+    assert outcome.exit_code == 0
+    assert any(f"/{handle.including_plugin}/" in path for path in written)
+    assert not any(f"/{handle.unrelated_plugin}/" in path for path in written)
+    for path, content in outcome.writes:
+        if f"/{handle.including_plugin}/" in path:
+            assert Version.parse(version_of(content)) > Version.parse(
+                handle.base_version
+            )

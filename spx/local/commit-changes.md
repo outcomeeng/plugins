@@ -6,8 +6,9 @@ This file is loaded by the `/commit-changes` skill when working in this reposito
 
 Plugin version bumps happen only when a commit changes a plugin distribution
 surface: authored files under `src/plugins/{plugin-name}/`, generated runtime
-files under `dist/{runtime}/{plugin-name}/`, or marketplace catalog fields that
-change how a plugin is discovered. The first commit on a branch that changes a
+files under `dist/{runtime}/{plugin-name}/`, a shared authored fragment under
+`src/_shared/` that the plugin's source includes, or marketplace catalog fields
+that change how a plugin is discovered. The first commit on a branch that changes a
 plugin distribution surface bumps that plugin's source manifests relative to the
 target base branch, normally `origin/main`. That version then stays fixed for
 the entire PR phase.
@@ -61,7 +62,7 @@ validation-config-only commits do not refresh local marketplace caches.
 
 ## How to Bump: `just bump`
 
-NEVER hand-edit a `version` field in a manifest. `just bump` is the sanctioned way to write plugin versions — it detects every plugin with changes under `src/plugins/<name>/**` since the base branch, classifies each plugin's change into a semver segment, and writes the new version into every manifest that plugin owns (`.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`) in lockstep, so the dual manifests can never drift.
+NEVER hand-edit a `version` field in a manifest. `just bump` is the sanctioned way to write plugin versions — it detects every plugin with changes under `src/plugins/<name>/**` or `dist/{runtime}/<name>/**` since the base branch, plus every plugin whose authored source includes a changed `src/_shared/` fragment, classifies each plugin's change into a semver segment, and writes the new version into every manifest that plugin owns (`.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`) in lockstep, so the dual manifests can never drift.
 
 ```bash
 just bump-dry      # preview what would be written; touches nothing

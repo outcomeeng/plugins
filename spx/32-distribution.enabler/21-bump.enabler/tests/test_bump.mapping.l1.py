@@ -7,11 +7,16 @@ from outcomeeng.distribution.bump import (
     Segment,
     auto_segment,
     plugins_from_change,
+    plugins_from_shared_change,
 )
 from outcomeeng_testing.generators.bump_mapping import (
     ATTRIBUTION_DESTINATION_PLUGIN,
     ATTRIBUTION_SOURCE_PLUGIN,
+    SHARED_INCLUDING_PLUGIN,
+    SHARED_SOURCE_PLUGIN,
     change_attribution_inputs,
+    shared_change_attribution_inputs,
+    shared_include_index,
     lifecycle_surface_changes,
     mixed_minor_triggering_changes,
     non_lifecycle_surface_changes,
@@ -52,3 +57,16 @@ def test_each_file_status_attributes_its_change_to_the_expected_plugins() -> Non
 def test_auto_segment_never_returns_major() -> None:
     for change in lifecycle_surface_changes() + non_lifecycle_surface_changes():
         assert auto_segment([change]) is not Segment.MAJOR, change
+
+
+def test_shared_change_maps_each_status_to_its_include_targets_plugins() -> None:
+    index = shared_include_index()
+    carries_source = {FileStatus.COPIED, FileStatus.RENAMED}
+
+    for change in shared_change_attribution_inputs():
+        resolved = plugins_from_shared_change(change, index)
+        expected = {SHARED_INCLUDING_PLUGIN}
+        if change.status is FileStatus.RENAMED:
+            expected |= {SHARED_SOURCE_PLUGIN}
+        assert resolved == frozenset(expected), change.status
+        assert (change.old_path is not None) == (change.status in carries_source)

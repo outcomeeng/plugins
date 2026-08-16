@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
@@ -11,6 +13,7 @@ from outcomeeng.distribution.bump import (
     DIST_CODEX_PLUGINS_DIR,
     FileStatus,
     Segment,
+    SHARED_SOURCE_DIR,
     SOURCE_PLUGINS_DIR,
     Version,
 )
@@ -255,6 +258,43 @@ def change_attribution_inputs() -> tuple[ChangedPath, ...]:
         ATTRIBUTION_SOURCE_PLUGIN,
         f"{SKILLS_SUBDIR_NAME}/old-skill/{SKILL_FILENAME}",
     )
+    carries_source = {FileStatus.COPIED, FileStatus.RENAMED}
+    return tuple(
+        ChangedPath(status, destination, source if status in carries_source else None)
+        for status in FileStatus
+    )
+
+
+SHARED_INCLUDING_PLUGIN: str = "consumer"
+SHARED_DESTINATION_TARGET: str = "voice/fragment.md"
+SHARED_SOURCE_TARGET: str = "voice/retired.md"
+SHARED_SOURCE_PLUGIN: str = "predecessor"
+
+
+def shared_include_index() -> Mapping[str, frozenset[str]]:
+    """The source-owned include index the shared-change domain resolves against.
+
+    The destination target names one plugin and the source target names a
+    different one, so an attribution that reaches only the destination is
+    distinguishable from one that reaches both.
+    """
+    return {
+        SHARED_DESTINATION_TARGET: frozenset({SHARED_INCLUDING_PLUGIN}),
+        SHARED_SOURCE_TARGET: frozenset({SHARED_SOURCE_PLUGIN}),
+    }
+
+
+def shared_change_attribution_inputs() -> tuple[ChangedPath, ...]:
+    """One shared-root change per `FileStatus`, spanning the status domain.
+
+    Every change lands on the destination include target and carries a source
+    target wherever git reports one, so an attribution that reaches the source
+    is visible as `SHARED_SOURCE_PLUGIN` appearing in the result. The domain
+    enumerates `FileStatus` itself, so a status added to the source contract
+    enters the domain rather than needing a case written for it here.
+    """
+    destination = f"{SHARED_SOURCE_DIR}/{SHARED_DESTINATION_TARGET}"
+    source = f"{SHARED_SOURCE_DIR}/{SHARED_SOURCE_TARGET}"
     carries_source = {FileStatus.COPIED, FileStatus.RENAMED}
     return tuple(
         ChangedPath(status, destination, source if status in carries_source else None)
