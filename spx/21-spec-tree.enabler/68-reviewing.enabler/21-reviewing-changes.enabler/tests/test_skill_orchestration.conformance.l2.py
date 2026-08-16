@@ -22,6 +22,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_RUN_SCRIPT,
     init_repo_with_branch,
     make_finding_dict,
+    open_scoped_review_run,
     run_script,
     runner_env,
 )
@@ -36,19 +37,7 @@ def test_finish_stdout_is_exactly_the_journal_run_token(
     base_ref = init_repo_with_branch(repo)
     env, journal_path = runner_env(tmp_path, repo, base_ref)
 
-    started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
-    assert started.returncode == 0, started.stderr
-    state_path = json.loads(started.stdout)["statePath"]
-    scoped = run_script(
-        REVIEW_RUN_SCRIPT,
-        "append-scope",
-        "--state",
-        state_path,
-        "README.md",
-        env=env,
-        cwd=repo,
-    )
-    assert scoped.returncode == 0, scoped.stderr
+    state_path = open_scoped_review_run(env, repo)
     for _ in range(finding_count):
         appended = run_script(
             REVIEW_RUN_SCRIPT,

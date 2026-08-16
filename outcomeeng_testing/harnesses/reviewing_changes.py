@@ -350,6 +350,33 @@ def runner_env(
     return env, journal_path
 
 
+def open_scoped_review_run(
+    env: dict[str, str], repo: pathlib.Path, *, unit: str = "README.md"
+) -> str:
+    """Start a review run and record ``unit`` as examined; return the state path.
+
+    Drives ``review_run.py start`` and ``append-scope`` so a test that judges a
+    later verb starts from an opened, fully covered run. A non-zero exit is a
+    setup failure and raises with the runner's stderr.
+    """
+    started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+    if started.returncode != 0:
+        raise RuntimeError(f"review_run.py start failed: {started.stderr}")
+    state_path = str(json.loads(started.stdout)["statePath"])
+    scoped = run_script(
+        REVIEW_RUN_SCRIPT,
+        "append-scope",
+        "--state",
+        state_path,
+        unit,
+        env=env,
+        cwd=repo,
+    )
+    if scoped.returncode != 0:
+        raise RuntimeError(f"review_run.py append-scope failed: {scoped.stderr}")
+    return state_path
+
+
 def run_script(
     script: pathlib.Path,
     *args: str,

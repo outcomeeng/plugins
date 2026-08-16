@@ -23,6 +23,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     init_repo_with_branch,
     load_review_result_module,
     make_finding_dict,
+    open_scoped_review_run,
     run_script,
     runner_env,
 )
@@ -41,19 +42,7 @@ def test_finish_counts_one_finding_under_the_count_named_by_its_severity(
     base_ref = init_repo_with_branch(repo)
     env, journal_path = runner_env(tmp_path, repo, base_ref)
 
-    started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
-    assert started.returncode == 0, started.stderr
-    state_path = json.loads(started.stdout)["statePath"]
-    scoped = run_script(
-        REVIEW_RUN_SCRIPT,
-        "append-scope",
-        "--state",
-        state_path,
-        "README.md",
-        env=env,
-        cwd=repo,
-    )
-    assert scoped.returncode == 0, scoped.stderr
+    state_path = open_scoped_review_run(env, repo)
     finding = make_finding_dict(file="README.md", line=2, severity=severity.value)
     appended = run_script(
         REVIEW_RUN_SCRIPT,
