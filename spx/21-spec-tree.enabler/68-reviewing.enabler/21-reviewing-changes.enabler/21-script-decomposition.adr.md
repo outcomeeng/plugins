@@ -20,8 +20,8 @@ The prompt remains one bundled reference file because prompt iteration is orthog
 - ALWAYS: `review_run.py append-scope` and `review_run.py append-finding` append the live journal events for examined scope and findings ([test](tests/test_skill_orchestration.scenario.l2.py))
 - ALWAYS: `review_run.py finish` appends a terminal run-completed event carrying review status and finding counts, seals the run, cleans scratch state, and returns only `runToken` ([test](tests/test_skill_orchestration.scenario.l2.py))
 - ALWAYS: `compute_diff.py` resolves `base_ref` and `head_ref` through their precedence chains, scopes git-derived bases through the remote-tracking ref, and emits committed, staged, unstaged, and untracked diff sections into a caller-owned bundle outside the git worktree ([test](tests/test_skill_orchestration.scenario.l2.py))
-- ALWAYS: review finding citations use the audit vocabulary in path-style spec citations (`AUDIT`) ([test](tests/test_review_result.scenario.l1.py))
-- NEVER: scripts under `plugins/spec-tree/skills/review-changes/scripts/` import third-party packages, depend on `uv` at runtime, or import `outcomeeng_*` modules ([test](tests/test_reviewing_changes.audit.l1.py))
+- ALWAYS: review finding citations use the audit vocabulary in path-style spec citations (`AUDIT`) ([test](tests/test_review_result.mapping.l1.py))
+- NEVER: scripts under `plugins/spec-tree/skills/review-changes/scripts/` import third-party packages, depend on `uv` at runtime, or import `outcomeeng_*` modules ([test](tests/test_reviewing_changes.compliance.l1.py))
 
 ### Audit
 
