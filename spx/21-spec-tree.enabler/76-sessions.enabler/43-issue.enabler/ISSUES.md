@@ -1,5 +1,45 @@
 # Issues: Issue Filing
 
+## Two Compliance assertions bundle roughly seven rules each
+
+`spx/21-spec-tree.enabler/76-sessions.enabler/43-issue.enabler/issue.md` carries two Compliance
+bullets that each decompose into about seven independently falsifiable rules: the resolution
+assertion (invoking-repository self-identification, the marketplace Directory source, the `spx` CLI
+checkout, the invoking repository for its own product, the queue-safe-checkout run target, and two
+NEVER clauses) and the one-fresh-record assertion (one fresh `todo`, header-only reading, overlap
+reporting, and four NEVER clauses).
+
+Every sub-clause is a well-formed universal `[audit]` claim, so `/audit-specs` passes the node on
+section structure, atemporal voice, and tag fitness; its closed violation vocabulary carries no
+compound-assertion pattern. Splitting a bullet into separately verifiable assertions is a
+composition decision.
+
+**Resolution shape**: run `/decompose` over this node, splitting each bundle into assertions with
+their own validation boundary, and settle the assertion count below against the same pass.
+
+**Evidence**: surfaced by an adversarial `spec-auditor` pass over the merged PR #528 changeset
+(range `9b55d438eb0223b0d78ed6e300d18292da1ec8b0..c7cd1e650adc59d915f3417cfa6ee7b7367b0591`), which
+confirmed the rule counts and recorded them as outside its own REJECT vocabulary.
+
+## The node's assertion count carries no recorded disposition
+
+The node carries 14 assertions. `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`
+treats more than roughly seven as a signal requiring decomposition analysis. The parent's
+`spx/21-spec-tree.enabler/76-sessions.enabler/PLAN.md` records an assertion-count disposition for
+`spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler`,
+`spx/21-spec-tree.enabler/76-sessions.enabler/25-handoff.enabler/40-continuation-disposition.enabler`,
+`spx/21-spec-tree.enabler/76-sessions.enabler/25-handoff.enabler/20-closure.enabler`, and
+`spx/21-spec-tree.enabler/76-sessions.enabler/28-pickup.enabler/30-claim-verification.enabler`, and
+does not list this node. The signal is therefore open and unrecorded rather than analyzed and
+accepted.
+
+**Resolution shape**: in the same `/decompose` pass as the entry above, either split the node or
+record the accepted count and its reasoning in the parent's assertion-count disposition table,
+alongside the four nodes already dispositioned there.
+
+**Evidence**: same adversarial `spec-auditor` pass; both counts confirmed against the node spec and
+the parent `PLAN.md`.
+
 ## Marketplace-resolver extraction awaits a published SPX CLI capability
 
 `src/plugins/spec-tree/skills/issue/scripts/resolve_marketplace.py` runs to 133
