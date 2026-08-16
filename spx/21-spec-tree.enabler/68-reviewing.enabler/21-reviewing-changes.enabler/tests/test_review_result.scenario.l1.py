@@ -2,10 +2,12 @@
 
 Covers these clauses in ``../reviewing-changes.md``:
 
-- ``review_result.parse_json`` returns a ``ReviewResult`` dataclass on a
-  conforming document and raises ``ReviewResultValidationError`` on a
-  violation — a missing required key, an unknown ``severity`` or ``concern``
-  value, or a malformed citation — naming the offending value.
+- Given a conforming document, ``review_result.parse_json`` returns a
+  ``ReviewResult`` dataclass.
+- Given a document that omits a required key, ``parse_json`` raises
+  ``ReviewResultValidationError`` naming the missing key.
+- Given a finding whose ``severity`` or ``concern`` is outside its enum,
+  ``parse_json`` raises naming the offending value and the allowed set.
 - ``review_result.to_json_dict`` and ``review_result.from_json_dict``
   round-trip a ``ReviewResult`` instance without loss.
 
