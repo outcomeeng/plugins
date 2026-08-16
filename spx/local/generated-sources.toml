@@ -6,11 +6,11 @@
 # trailing content only where the begin or end is a prefix of a version- or
 # name-bearing marker line (router and shared fences). A marker quoted in
 # prose or an example fence bounds nothing, and a relation's generator fence
-# matching is authoritative where stricter. The eval-trigger and README
-# plugin-catalog generators do not themselves enforce line-start anchoring;
-# the declared line-start rule governs attribution for those relations, with
-# each generator's anchor gap tracked at its owning node. Extents span begin
-# through end inclusive, for every such pair in the file.
+# matching is authoritative where stricter. The eval-trigger generator does
+# not itself enforce line-start anchoring; the declared line-start rule governs
+# attribution for that relation, with the generator's anchor gap tracked at its
+# owning node. Extents span begin through end inclusive, for every such pair in
+# the file.
 
 [[relation]]
 outputs = ["dist/claude/**", "dist/codex/**"]
@@ -79,6 +79,7 @@ sources = [
   ".claude-plugin/marketplace.json",
   "src/plugins/*/skills/*/SKILL.md",
   "src/plugins/*/agents/*.md",
+  "src/templates/plugin/SKILL.md",
 ]
 generator = ["outcomeeng/catalog/plugin_catalog.py"]
 regenerate = "just docs"
