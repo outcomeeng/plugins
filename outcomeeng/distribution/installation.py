@@ -133,6 +133,21 @@ PLUGIN_OPERATIONS: frozenset[Operation] = frozenset(
 )
 """Operations that name one plugin, as opposed to a marketplace or the checkout."""
 
+CLAUDE_SCOPE_BEARING_OPERATIONS: frozenset[Operation] = frozenset(
+    {
+        Operation.MARKETPLACE_REMOVE,
+        Operation.MARKETPLACE_ADD,
+        Operation.PLUGIN_INSTALL,
+        Operation.PLUGIN_ENABLE,
+    }
+)
+"""Claude operations whose public CLI accepts an explicit installation scope."""
+
+CLAUDE_SCOPELESS_OPERATIONS: frozenset[Operation] = frozenset(
+    {Operation.MARKETPLACE_REFRESH, Operation.PLUGIN_LIST}
+)
+"""Claude operations whose public CLI has no installation-scope argument."""
+
 
 class SourceAction(StrEnum):
     """Reconciliation required for one configured marketplace source."""
@@ -1443,6 +1458,8 @@ __all__ = [
     "CLAUDE_PLUGIN_PROJECT_PATH_FIELD",
     "CLAUDE_PLUGIN_SCOPE_FIELD",
     "CLAUDE_PROJECT_SCOPE",
+    "CLAUDE_SCOPE_BEARING_OPERATIONS",
+    "CLAUDE_SCOPELESS_OPERATIONS",
     "CLAUDE_USER_SCOPE",
     "CLAUDE_ENABLED_PLUGINS_FIELD",
     "EXTRA_MARKETPLACES_FIELD",
