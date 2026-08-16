@@ -4,6 +4,8 @@ description: ALWAYS invoke this skill when reviewing working changes on a branch
 allowed-tools:
   - Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py":*)
   - Read
+  - Grep
+  - Glob
 ---
 
 <objective>
@@ -48,7 +50,7 @@ ${CLAUDE_SKILL_DIR}/references/review-prompt.md
 <diffPath>
 ```
 
-Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `AGENTS.md` or `CLAUDE.md`, and loaded governing skill files.
+Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. `Grep` and `Glob` serve one purpose: read-only discovery of the unchanged consumers that `<review_scope>` item 5 of the prompt bounds to declared relationships — full-path citations of a changed decision or spec, the repository's declared generated-source relations, and consumers the loaded governance names. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `AGENTS.md` or `CLAUDE.md`, and loaded governing skill files.
 
 </review_materials>
 
@@ -56,10 +58,11 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 
 1. Run `start` and parse the returned JSON.
 2. Load the prompt reference and diff bundle.
-3. Examine every changed file and every emitted diff section. After each changed file has been examined, call `append-scope` for that file.
-4. When a finding is raised, immediately pass that one finding JSON object to `append-finding` on stdin. Do not collect findings into a later batch.
-5. When review is complete, call `finish`.
-6. Report only the raw `runToken` to the caller.
+3. Examine every changed file and every emitted diff section, applying the prompt's `<adversarial_probes>` before treating a file as clean. After each changed file has been examined, call `append-scope` for that file.
+4. For each changed governing declaration, discover and read its unchanged consumers per `<review_scope>` item 5. A contradiction there is a finding cited at the consumer's location; consumers are not `append-scope` units — the journal's scope coverage remains the changed-file set.
+5. When a finding is raised, immediately pass that one finding JSON object to `append-finding` on stdin. Do not collect findings into a later batch.
+6. When review is complete, call `finish`.
+7. Report only the raw `runToken` to the caller.
 
 </workflow>
 
@@ -82,6 +85,10 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 **A clean review became a finding.** Claude appended a no-findings comment or synthetic finding before `finish`. Append no finding object for a clean review; `finish` records zero finding counts in the terminal event and returns the raw run token.
 
 **A partial run was reported as complete.** `finish` failed before sealing, and Claude returned the earlier `runToken`. Report the non-zero exit and stderr; only the token printed by a successful `finish` is a completed review result.
+
+**A universal claim was read without being executed.** Claude inspected every changed line and accepted "exhaustive" and "mutually exclusive" as prose. The claim failed for constructed boundary members absent from the corpus. Apply the counterexample probe in `<adversarial_probes>` before completing that file's scope.
+
+**Changed governing truth stopped at the diff boundary.** Claude compared changed specifications with their governors while leaving unchanged language renderings and shipped auditors unread. Those consumers contradicted the new rule. Follow declared derivation edges outward per `<review_scope>` item 5 and report each contradiction at the consumer.
 
 </failure_modes>
 
