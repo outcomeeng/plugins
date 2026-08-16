@@ -3,16 +3,16 @@ name: issue
 description: >-
   ALWAYS invoke this skill when filing a follow-up into the owning repository's session queue — including the invoking repository, the spec-tree plugin repository, the spx CLI repository, or another spec-tree dependency. NEVER edit installed dependency source or run the current work through full handoff closure merely to record a needed follow-up.
 argument-hint: "[target-dir-or-dependency]"
-allowed-tools: Read, Grep, Glob, Bash(printenv CLAUDE_SESSION_ID), Bash(spx session list:*), Bash(spx session show:*), Bash(spx -C:* diagnose*), Bash(spx -C:* session handoff*), Bash(spx -C:* session list*), Bash(spx -C:* session show*), Bash(git status:*), Bash(git rev-parse --path-format=absolute --git-common-dir), Bash(git remote get-url origin), Bash(git -C:* branch --show-current), Bash(git -C:* symbolic-ref --short refs/remotes/origin/HEAD), Bash(git -C:* rev-parse --path-format=absolute --git-common-dir), Bash(git -C:* rev-parse --show-toplevel), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(git -C:* ls-remote --exit-code --heads origin:*), Bash(git -C:* remote get-url origin), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash(printenv CLAUDE_SESSION_ID), Bash(spx -C:* diagnose*), Bash(spx -C:* session handoff*), Bash(spx -C:* session show*), Bash(git rev-parse --path-format=absolute --git-common-dir), Bash(git remote get-url origin), Bash(git -C:* branch --show-current), Bash(git -C:* symbolic-ref --short refs/remotes/origin/HEAD), Bash(git -C:* rev-parse --path-format=absolute --git-common-dir), Bash(git -C:* rev-parse --show-toplevel), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(git -C:* remote get-url origin), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
 ---
 
 <objective>
-A minimal follow-up filed or reused in the owning spec-tree repository's active session queue — capturing Claude's observation without disturbing tracked work, the active branch, or unrelated sessions.
+A minimal follow-up filed in the owning spec-tree repository's active session queue — capturing Claude's observation without disturbing tracked work, the active branch, or existing sessions.
 
 </objective>
 
 <when_to_invoke>
-Editing a spec-tree component's installed source directly to record a needed change rewrites shared infrastructure for every consumer session that uses it, with no review. The `/issue` skill files or reuses the observation in the owning repository's session queue instead, where that repository's workflow triages and acts on it. The owning repository may be the invoking repository; recording a proportional follow-up never requires closing the current work.
+Editing a spec-tree component's installed source directly to record a needed change rewrites shared infrastructure for every consumer session that uses it, with no review. The `/issue` skill files the observation in the owning repository's session queue instead, where that repository's workflow triages and acts on it. The owning repository may be the invoking repository; recording a proportional follow-up never requires closing the current work.
 
 </when_to_invoke>
 
@@ -94,25 +94,13 @@ For an external target whose checkout is detached or whose current branch does n
 
 Treat equal resolved absolute git common directories as one repository identity. This includes another linked worktree in the same pool. A separate clone has its own queue and remains an external target even when its normalized origin identity matches. Do not stop or redirect a same-repository observation into full `/handoff` closure.
 
-Resolve a queue-safe `<queue-host>` before reading or writing sessions:
+Resolve a queue-safe `<queue-host>` before writing the session:
 
 - For a compliant single-working-tree target, use the target root.
 - For a compliant bare-repository pool, run `spx -C <target-dir> diagnose --format json`, read the sole `worktree-pool` record, and use its absolute `readings.mainCheckoutPath`. Require `verdict=compliant`, a non-empty absolute main-checkout path, and a resolved absolute git common directory matching `<target-dir>`. Do not switch, detach, commit, or otherwise move the invoking or target worktree.
 - If the topology cannot produce a queue-safe checkout, stop with the exact diagnostic. Never reformulate the write against the active feature worktree.
 
-Before mutation, run `spx -C <queue-host> session list --json`, which covers both `todo` and `doing`, then snapshot every returned record's complete body with `spx -C <queue-host> session show <id>`. Inspect those bodies for plausible matches. A match carries the dependency-followup body contract and describes the same observation and affected surfaces; a different title or wording does not make the observation distinct.
-
-Order every semantic match with `doing` before `todo`, then by oldest full session id. Check candidates in that order before selecting a reuse result:
-
-1. An empty or non-string stored `git_ref` makes the candidate stale. Record its full id and stored value, preserve it unchanged, and continue.
-2. For a non-empty stored `git_ref`, run `git -C <queue-host> ls-remote --exit-code --heads origin "refs/heads/<stored-git-ref>"`.
-3. Exactly one output record whose ref field equals `refs/heads/<stored-git-ref>` makes that candidate reusable. Select the first reusable candidate, report every other semantic match as a pre-existing duplicate, and create nothing.
-4. Exit 2 or empty output makes the candidate stale. Record its full id and stored `git_ref`, preserve it unchanged, and continue to the next candidate.
-5. Any other non-zero exit or malformed output is `unverifiable_reused_git_ref`. Report the full candidate id, exact command, exit code, and stderr, then stop with no queue mutation.
-
-When the ordered scan exhausts every match without a reusable candidate, report every stale match and create exactly one fresh follow-up. Deduplication never archives, releases, deletes, edits, or moves an existing session.
-
-When no match exists, create exactly one follow-up against `<queue-host>`. Snapshot every active session record first and require all pre-existing ids, statuses, metadata, and bodies to remain unchanged afterward. The only permitted queue delta is the one new `todo` session.
+Create exactly one fresh `todo` follow-up for every authorized invocation. Do not list, read, compare, or reuse existing `todo` or `doing` sessions; queue consumers reconcile overlapping observations while reading the queue in order.
 
 </same_repository_filing>
 
@@ -132,16 +120,14 @@ When no match exists, create exactly one follow-up against `<queue-host>`. Snaps
 
 **Step 4 — Compose the body.** Write the observation from `<captured_fields>` using `<dependency_followup_body>` exactly. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
-**Step 5 — Snapshot state and deduplicate.** Before filing, capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository. This is the before-state for the tracked-worktree mutation check. When `same_repository=true`, run the active-queue search, snapshot, and ordered branch-reachability scan in `<same_repository_filing>`. If the scan finds a reusable candidate, record its full id as `<HANDOFF_ID>`, set `result=reused`, and skip Step 6's mutation. If every semantic match is stale, preserve and report those matches, leave `result` unset, and continue so Step 6 creates exactly one fresh follow-up. An unverifiable origin check stops here without queue mutation.
-
-**Step 6 — GATE: Confirm an external target, then file when needed.** When `result=reused`, perform no mutation and continue to verification. When `same_repository=false`, the handoff writes into a different repository queue. Resolving or naming a path is not authorization to mutate that queue, so obtain confirmation through `AskUserQuestion` before the first mutating command, presenting:
+**Step 5 — GATE: Confirm an external target, then file.** When `same_repository=false`, the handoff writes into a different repository queue. Resolving or naming a path is not authorization to mutate that queue, so obtain confirmation through `AskUserQuestion` before the first mutating command, presenting:
 
 - the **absolute** `<target-dir>` verbatim, as `git -C <target-dir> rev-parse --show-toplevel` reports it;
 - that repository's normalized origin identity from step 1;
 - the resolved `git_ref` and the follow-up's `goal`;
 - two options — file the follow-up into that repository, or stop for inspection.
 
-The explicit `/issue` invocation authorizes one deduplicated same-repository queue write, so `same_repository=true` does not add a second confirmation. Every `same_repository=false` target requires this confirmation, including a separate clone with the same normalized origin identity and a checkout path named directly in `$ARGUMENTS`. STOP on anything but explicit approval, leaving both repositories unchanged.
+The explicit `/issue` invocation authorizes one fresh same-repository queue write, so `same_repository=true` does not add a second confirmation. Every `same_repository=false` target requires this confirmation, including a separate clone with the same normalized origin identity and a checkout path named directly in `$ARGUMENTS`. STOP on anything but explicit approval, leaving both repositories unchanged.
 
 Then resolve the current runtime identity verbatim (`printenv CODEX_THREAD_ID` in Codex; `printenv CLAUDE_SESSION_ID` in Claude Code) and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin:
 
@@ -174,20 +160,20 @@ EOF
 
 `-C <queue-host>` runs the handoff against the owning repository's queue without moving the active checkout. For a different repository, the invoking session queue stays untouched. For the invoking repository, the only permitted queue delta is this one new `todo` follow-up.
 
-**Step 7 — Verify the stored or reused follow-up.** For `result=created`, parse `<HANDOFF_ID>` and `<SESSION_FILE>` from the command output. For either result, run `spx -C <queue-host> session show --json <HANDOFF_ID>` and require the session to exist in the owning repository with empty `specs` and `files`, non-empty `git_ref`, non-empty `agent_session_id`, and non-empty `created_at`. A created session must carry the Step 2 `git_ref` and the runtime identity resolved in Step 6; a reused session must remain byte-identical to its Step 5 snapshot rather than being rewritten to the newly resolved branch or runtime identity, and its origin reachability is already established by Step 5. When `same_repository=false`, run `spx session show --json <HANDOFF_ID>` from the invoking repository and require the id to be absent there. When `same_repository=true`, require every pre-existing active-session record and body to be unchanged for either result; for `result=created`, additionally require exactly one new `todo` id equal to `<HANDOFF_ID>`. Re-run `git status --porcelain=v1 --untracked-files=all` and require it to match the Step 5 snapshot byte-for-byte. A missing follow-up, field mismatch, unexpected queue delta, external-target copy in the invoking queue, or git-state difference blocks success and is reported with the observed values.
+**Step 6 — Verify the created follow-up.** Parse `<HANDOFF_ID>` and `<SESSION_FILE>` from the handoff output. Read that returned record once with `spx -C <queue-host> session show --json <HANDOFF_ID>`. Require `status=todo`; the Step 3 `goal`, `next_step`, `priority`, `git_ref`, empty `specs`, and empty `files`; the runtime identity resolved in Step 5 as a non-empty `agent_session_id`; and a non-empty `created_at`. A missing record or field mismatch blocks success and is reported with the observed values. Do not read any other session.
 
-**Step 8 — Report.** Surface `result=created|reused`, the verified `<HANDOFF_ID>`, and `<SESSION_FILE>` when the command supplies it, naming the repository whose queue owns the follow-up. When pre-existing duplicates were observed, list their full ids without mutating them.
+**Step 7 — Report.** Surface `result=created`, the verified `<HANDOFF_ID>`, and `<SESSION_FILE>` when the command supplies it, naming the repository whose queue owns the follow-up.
 
 </workflow>
 
 <constraints>
 
-- NEVER edit, commit to, or push the owning repository's tracked source — the only possible effect is one session document `spx -C <queue-host> session handoff` writes into its `.spx/sessions/todo/` when no active semantic match exists.
-- NEVER alter the invoking repository's tracked git state or active branch. A same-repository filing may add one deduplicated `todo` session and makes no other queue change.
+- NEVER edit, commit to, or push the owning repository's tracked source — the only possible effect is one session document `spx -C <queue-host> session handoff` writes into its `.spx/sessions/todo/`.
+- NEVER alter the invoking repository's tracked git state or active branch. A same-repository filing adds exactly one fresh `todo` session.
 - NEVER record the dependency's internal taxonomy (node address, decision index, assertion type) — capture observations; the dependency workflow classifies.
 - NEVER guess the target checkout directory — resolve it deterministically or ask.
 - NEVER guess `git_ref` — use a target branch that exists on origin or ask.
-- NEVER archive, release, delete, edit, replace, or move an existing session while deduplicating — reuse is the only deduplication mutation policy.
+- NEVER list, read, compare, archive, release, delete, edit, replace, move, or reuse an existing active session while filing the follow-up.
 
 </constraints>
 
@@ -201,21 +187,21 @@ Why it failed: The target repository's `/pickup` workflow uses `git_ref` as the 
 
 How to avoid: Resolve the target dependency branch first, verify `refs/remotes/origin/<branch>` exists, and include that branch in the header's `git_ref`. Ask the user for a pushed target branch when the checkout is detached or the branch is not on origin.
 
-**Failure 2: Claude stopped at a stale duplicate instead of continuing the ordered scan.**
+**Failure 2: Claude turned filing into queue triage.**
 
-What happened: Claude found the preferred semantic match in the active queue, discovered that its branch had disappeared from origin, and stopped without checking the remaining matches or creating a recoverable replacement.
+What happened: Claude listed active sessions, read their bodies, and tried to decide whether an existing observation was semantically equivalent before filing.
 
-Why it failed: A stale session is unusable for cold pickup and cannot suppress a live lower-preference match or the one fresh follow-up required when every match is stale.
+Why it failed: Filing one timestamped record became a second issue-triage workflow and delayed recording the observation. Queue consumers already reconcile overlap while reading in order.
 
-How to avoid: Check semantic matches in preference order. Preserve and report stale candidates, reuse the first exact origin branch, create one fresh follow-up after stale-candidate exhaustion, and stop without mutation only when origin state cannot be verified.
+How to avoid: Compose the record, run `spx session handoff` once, read only the returned record once, and finish.
 
 </failure_modes>
 
 <success_criteria>
 
 - The report names the exact owning checkout and queue host, classifies self-authorization solely by resolved git-common-directory equality, and records operator approval before any external-queue mutation.
-- The result is exactly `created` or `reused`, names the verified full session id and owning repository, reuses only a semantic match whose stored branch is reachable on origin, and creates exactly one new `todo` session when no reachable match remains after searching active `todo` and `doing` entries.
-- The stored or reused follow-up has the dependency-followup body, empty `specs` and `files`, a reachable branch `git_ref`, and complete session identity metadata without dependency taxonomy.
-- The invoking branch, tracked Git state, unrelated sessions, stale semantic matches, and every reused session remain unchanged; a separate repository receives no mutation beyond the approved follow-up.
+- The result is exactly `created`, names the verified full session id and owning repository, and each authorized invocation creates exactly one new `todo` session.
+- The stored follow-up has the dependency-followup body, empty `specs` and `files`, the resolved branch `git_ref`, and complete session identity metadata without dependency taxonomy.
+- Filing reads no existing active-session record and performs no semantic deduplication; a separate repository receives no mutation beyond the approved follow-up.
 
 </success_criteria>
