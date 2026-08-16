@@ -147,6 +147,33 @@ def account_lookups() -> Responses:
     }
 
 
+def account_key() -> tuple[str, ...]:
+    """The authenticated-account read the head search makes, read from the resolver."""
+    return tuple(load_resolver().ACCOUNT_COMMAND)
+
+
+def organizations_key() -> tuple[str, ...]:
+    """The organization read the head search makes, read from the resolver."""
+    return tuple(load_resolver().ORGANIZATIONS_COMMAND)
+
+
+def command_failure(message: str) -> tuple[int, str, str]:
+    """What a `gh` command reports when it fails."""
+    return (1, "", message)
+
+
+def full_fork_page(owner: str) -> tuple[int, str, str]:
+    """A fork listing that fills the page the resolver reads.
+
+    The listing carries no fork of PARENT, so a resolver that read the page's
+    contents instead of its length would find nothing and report absence.
+    """
+    limit: int = load_resolver().FORK_LIST_LIMIT
+    return fork_list_response(
+        [(f"{owner}/other-{index}", "elsewhere/other") for index in range(limit)]
+    )
+
+
 def fork_list_key(owner: str) -> tuple[str, ...]:
     """The fork-listing command the resolver issues for `owner`, read from it."""
     return tuple(load_resolver().fork_list_command(owner))

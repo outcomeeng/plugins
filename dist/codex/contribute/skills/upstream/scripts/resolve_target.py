@@ -154,25 +154,45 @@ def _json_field(
     return payload, ""
 
 
-def _fork_candidates(runner: CommandRunner) -> list[str]:
-    """Accounts and organizations that could hold a fork, best effort."""
-    candidates: list[str] = []
-    user, _ = _json_field(runner, list(ACCOUNT_COMMAND))
-    if user and isinstance(user.get("login"), str):
-        candidates.append(user["login"])
+def _fork_candidates(runner: CommandRunner) -> tuple[list[str], str]:
+    """Accounts and organizations that could hold a fork, and why enumeration stopped.
+
+    A failed lookup leaves the search domain unknown rather than smaller. Dropping
+    an unreadable account would let the search conclude absence from the accounts
+    it happened to read, which is the inference the absence rule forbids, so the
+    failure travels back and blocks instead.
+    """
+    user, detail = _json_field(runner, list(ACCOUNT_COMMAND))
+    if user is None:
+        return [], detail
+    login = user.get("login")
+    if not isinstance(login, str) or not login:
+        return [], "gh reported no login for the authenticated account"
+    candidates = [login]
+
     result = runner.run(list(ORGANIZATIONS_COMMAND))
-    if result.returncode == 0:
-        try:
-            orgs = json.loads(result.stdout)
-        except json.JSONDecodeError:
-            orgs = []
-        if isinstance(orgs, list):
-            candidates.extend(
-                org["login"]
-                for org in orgs
-                if isinstance(org, dict) and isinstance(org.get("login"), str)
-            )
-    return candidates
+    if result.returncode != 0:
+        return candidates, (
+            result.stderr or result.stdout
+        ).strip() or f"{' '.join(ORGANIZATIONS_COMMAND)} failed"
+    try:
+        orgs = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return (
+            candidates,
+            f"{' '.join(ORGANIZATIONS_COMMAND)} returned output that is not JSON",
+        )
+    if not isinstance(orgs, list):
+        return (
+            candidates,
+            f"{' '.join(ORGANIZATIONS_COMMAND)} returned {type(orgs).__name__}, expected a list",
+        )
+    candidates.extend(
+        org["login"]
+        for org in orgs
+        if isinstance(org, dict) and isinstance(org.get("login"), str)
+    )
+    return candidates, ""
 
 
 def _forked_from(entry: object) -> str | None:
@@ -195,22 +215,36 @@ def _forked_from(entry: object) -> str | None:
     return f"{login}/{name}"
 
 
-def _forks_of(runner: CommandRunner, owner: str, base: str) -> list[str]:
-    """Every fork of `base` that `owner` holds.
+def _forks_of(runner: CommandRunner, owner: str, base: str) -> tuple[list[str], str]:
+    """Every fork of `base` that `owner` holds, and why the listing stopped short.
 
     GitHub preserves a repository's case and matches it without one, so a fork of
     `onevcat/Prowl` is the same repository an operator names `onevcat/prowl`.
     Comparing case-sensitively would report a real fork as absent.
+
+    A listing that fills the page is indistinguishable from one that overflows it,
+    so a full page reports incompleteness rather than the matches it happened to
+    contain.
     """
     result = runner.run(list(fork_list_command(owner)))
     if result.returncode != 0:
-        return []
+        return [], (
+            result.stderr or result.stdout
+        ).strip() or f"listing {owner}'s forks failed"
     try:
         listing = json.loads(result.stdout)
     except json.JSONDecodeError:
-        return []
+        return [], f"listing {owner}'s forks returned output that is not JSON"
     if not isinstance(listing, list):
-        return []
+        return (
+            [],
+            f"listing {owner}'s forks returned {type(listing).__name__}, expected a list",
+        )
+    if len(listing) >= FORK_LIST_LIMIT:
+        return [], (
+            f"{owner} holds at least {FORK_LIST_LIMIT} forks, which is the whole page "
+            f"this search reads, so a fork of {base} beyond it would go unseen"
+        )
     wanted = base.casefold()
     matches: list[str] = []
     for entry in listing:
@@ -220,21 +254,31 @@ def _forks_of(runner: CommandRunner, owner: str, base: str) -> list[str]:
         name = entry.get("nameWithOwner") if isinstance(entry, dict) else None
         if isinstance(name, str) and name:
             matches.append(name)
-    return matches
+    return matches, ""
 
 
-def _search_for_head(runner: CommandRunner, base: str) -> tuple[list[str], list[str]]:
-    """Forks of `base` the operator holds, and the owners searched for them.
+def _search_for_head(
+    runner: CommandRunner, base: str
+) -> tuple[list[str], list[str], str]:
+    """Forks of `base` the operator holds, the owners searched, and why the search stopped.
 
     The owners are the search domain and double as the destinations a fork could
     be created in, so one enumeration answers both "where is the head" and, when
     nothing matches, "where could one go".
+
+    A non-empty third value means the search did not cover its domain, so its
+    matches establish nothing about absence.
     """
-    owners = _fork_candidates(runner)
+    owners, detail = _fork_candidates(runner)
+    if detail:
+        return [], owners, detail
     matches: list[str] = []
     for owner in owners:
-        matches.extend(_forks_of(runner, owner, base))
-    return matches, owners
+        found, failure = _forks_of(runner, owner, base)
+        if failure:
+            return [], owners, failure
+        matches.extend(found)
+    return matches, owners, ""
 
 
 def resolve(runner: CommandRunner) -> Resolution:
@@ -317,7 +361,23 @@ def resolve(runner: CommandRunner) -> Resolution:
     # The checkout is the base itself, which is an ordinary way to arrive: a clone
     # of the upstream carries no head. Search the operator's accounts for one
     # rather than reporting absence the checkout cannot establish.
-    matches, owners = _search_for_head(runner, base)
+    matches, owners, search_detail = _search_for_head(runner, base)
+
+    if search_detail:
+        # A search that did not cover its domain proves nothing about absence, and
+        # reporting `fork-absent` here would hand the operator a `gh repo fork`
+        # command GitHub rejects whenever the unread account already holds one.
+        return Resolution(
+            Classification.BLOCKED,
+            base=base,
+            head=None,
+            permission=permission,
+            fork_candidates=owners,
+            detail=(
+                f"the search for a fork of {base} did not cover the operator's "
+                f"accounts, so absence is unestablished: {search_detail}"
+            ),
+        )
 
     if len(matches) == 1:
         return Resolution(

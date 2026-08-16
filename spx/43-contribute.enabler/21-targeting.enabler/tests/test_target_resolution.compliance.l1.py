@@ -1,13 +1,19 @@
+import pytest
+
 from outcomeeng_testing.harnesses.contribution_targeting import (
     FORK,
     OWNERS,
     PARENT,
     Responses,
+    account_key,
     checkout_response,
     checkout_view_key,
+    command_failure,
     fork_list_key,
+    full_fork_page,
     head_search_lookups,
     load_resolver,
+    organizations_key,
     orphan_fork_response,
     permission_key,
     permission_response,
@@ -81,6 +87,77 @@ def test_absence_of_a_head_is_searched_for_never_inferred() -> None:
         command for command in runner.commands if command[:3] == ("gh", "repo", "list")
     ]
     assert [fork_list_key(owner) for owner in OWNERS] == searched
+
+
+# Each way the search can fail to cover its domain. Absence claimed from any of
+# them would be inference, so each blocks instead.
+INCOMPLETE_SEARCHES: tuple[tuple[str, Responses], ...] = (
+    (
+        "the authenticated account is unreadable",
+        {account_key(): command_failure("HTTP 401: Bad credentials")},
+    ),
+    (
+        "the organization listing fails",
+        {organizations_key(): command_failure("HTTP 502: Bad gateway")},
+    ),
+    (
+        "one owner's fork listing fails",
+        {fork_list_key(OWNERS[1]): command_failure("HTTP 403: Forbidden")},
+    ),
+    (
+        "one owner's fork listing fills the page",
+        {fork_list_key(OWNERS[0]): full_fork_page(OWNERS[0])},
+    ),
+)
+
+
+@pytest.mark.parametrize(
+    ("condition", "override"),
+    INCOMPLETE_SEARCHES,
+    ids=[condition for condition, _ in INCOMPLETE_SEARCHES],
+)
+def test_a_search_that_did_not_cover_its_domain_blocks_instead_of_reporting_absence(
+    condition: str, override: Responses
+) -> None:
+    """Absence is what the search establishes, so an incomplete search establishes none.
+
+    Every case below would otherwise reach `fork-absent`: each leaves the resolver
+    holding zero matches, which is the same state a completed search of an operator
+    who holds no fork produces. Reporting absence there hands back a `gh repo fork`
+    command GitHub rejects whenever the unread account already holds one.
+    """
+    responses: Responses = {
+        checkout_view_key(): checkout_response(False),
+        permission_key(PARENT): permission_response("READ"),
+        **head_search_lookups(0),
+        **override,
+    }
+
+    resolution, _ = resolve_with(responses)
+
+    assert resolution.classification is _RESOLVER.Classification.BLOCKED
+    assert resolution.classification is not _RESOLVER.Classification.FORK_ABSENT
+    assert resolution.head is None
+
+
+def test_a_full_fork_page_blocks_even_though_its_entries_match_nothing() -> None:
+    """Page length decides, not the entries a truncated page happens to carry.
+
+    The full page holds forks of an unrelated repository, so a resolver reading
+    contents alone would find no match and call the fork absent. The page being
+    full is the whole signal: the match may sit on the page that was never read.
+    """
+    responses: Responses = {
+        checkout_view_key(): checkout_response(False),
+        permission_key(PARENT): permission_response("READ"),
+        **head_search_lookups(0),
+        fork_list_key(OWNERS[0]): full_fork_page(OWNERS[0]),
+    }
+
+    resolution, _ = resolve_with(responses)
+
+    assert resolution.classification is _RESOLVER.Classification.BLOCKED
+    assert str(_RESOLVER.FORK_LIST_LIMIT) in resolution.detail
 
 
 def test_several_forks_are_named_and_none_is_selected() -> None:

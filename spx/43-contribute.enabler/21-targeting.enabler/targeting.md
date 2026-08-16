@@ -16,7 +16,7 @@ A search that matches once yields the head. A search that matches several times 
 
 ### Mappings
 
-- The observed fork state, resolved parent, `viewerPermission` value, and fork-search result map to exactly one classification — a controlled base, an upstream contribution, an ambiguous-head target, an absent-fork target, or a blocked target ([test](tests/test_target_resolution.mapping.l1.py))
+- The observed fork state, resolved parent, permission class, and fork-search result map to exactly one classification — a controlled base, an upstream contribution, an ambiguous-head target, an absent-fork target, or a blocked target ([test](tests/test_target_resolution.mapping.l1.py))
 - Each fork the search reports maps to the base it was forked from by that fork's own parent owner and name, matched without regard to case, because GitHub preserves a repository's case while matching it without one ([test](tests/test_fork_search.mapping.l1.py))
 
 ### Properties
@@ -27,6 +27,8 @@ A search that matches once yields the head. A search that matches several times 
 
 - ALWAYS: every write to the base repository names it explicitly, because a command that omits the repository publishes wherever `gh` resolves the default ([audit])
 - ALWAYS: the operator's permission on the base comes from `viewerPermission` on the resolved base repository ([audit])
+- ALWAYS: the controlling permission class is exactly `ADMIN`, `MAINTAIN`, and `WRITE`, and the contributing class is exactly `READ`, `TRIAGE`, and `NONE`; the resolver complies with this declaration, and the mapping evidence quantifies over the two classes rather than their members, because an oracle for the membership itself would restate the declaration in an artifact with no authority to make one ([audit])
+- ALWAYS: a fork search that does not cover the accounts and organizations it enumerates blocks the target — a failed account read, a failed organization read, a failed owner listing, and a listing filling the page the search reads each leave absence unestablished ([test](tests/test_target_resolution.compliance.l1.py))
 - ALWAYS: a base repository whose permission is `READ`, `TRIAGE`, or `NONE` requires authorization naming that base in the same turn before any artifact is created there ([audit])
 - ALWAYS: authorization covers the artifact it named and that artifact's later revisions; a new pull request, a new issue, or a comment on an unrelated thread each require their own ([audit])
 - ALWAYS: an absent fork stops the flow with the resolved base, the accounts and organizations that could hold the fork, and the exact fork command — the destination is the operator's choice, never resolution's ([audit])
