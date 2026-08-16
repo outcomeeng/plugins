@@ -36,17 +36,19 @@ When layers disagree, the lower layer is in violation.
 
 </layer_precedence>
 
-<implementation>
+<product_content>
 
-- ALWAYS: treat as implementation every product artifact a spec node governs or must govern, and derive its governing node before reading or modifying it.
+- ALWAYS: treat as product content every product artifact a spec node governs or must govern, and derive its governing node before reading or modifying it.
+- ALWAYS: contextualize a node before discussing it and before reading or modifying any product content it governs; a compaction empties the set of contextualized nodes.
+- NEVER: read or modify product content that has no governing node — record the coverage gap.
 
-Implementation is every artifact of the product a spec node governs or must govern: source, tests, evals, generated output, specs, decisions, coordination notes, and configuration a spec declares. Governance is derived, never assumed: a path under `spx/<node>/` is governed by that node; any other path is governed by the node whose `spx/**/tests/` file names it and whose spec links that test, several nodes resolving to their lowest common ancestor. That lookup is a search under the live foundation marker and opens no file body. Implementation with no governing node is a coverage gap: it is not read or modified, and the gap is recorded.
+Product content is every artifact of the product a spec node governs or must govern: source, tests, evals, generated output, specs, decisions, coordination notes, and configuration a spec declares. Implementation — the code layer that complies with evidence — is one kind of product content; the term keeps its narrower meaning in `<node_states>` and the placement table. Governance is derived, never assumed: a path under `spx/<node>/` is governed by that node; any other path is governed by the node whose `spx/**/tests/` file names it and whose spec links that test; several matching nodes resolve to their lowest common ancestor. That lookup is a search under the live foundation marker and opens no file body. Product content with no governing node is a coverage gap: it is not read or modified, and the gap is recorded.
 
-Not implementation: the agent harness's own instruction and settings files it is told to read, tool and command output, the session store, and scratch space.
+Not product content: the agent harness's own instruction and settings files it is told to read, tool and command output, the session store, and scratch space.
 
-No implementation is read or modified before its governing spec node has been contextualized in the conversation since the last compaction, and `/contextualize` on a node precedes any discussion of that node. A compaction empties the set of contextualized nodes. Work that opens no implementation — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — is an operational continuation and triggers neither `/understand` nor `/contextualize`.
+Work that touches no product content — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — is an operational continuation and triggers neither `/understand` nor `/contextualize`.
 
-</implementation>
+</product_content>
 
 <future_product_truth>
 
