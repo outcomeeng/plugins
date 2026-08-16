@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Resolve the registered local source for a marketplace entry from JSON stdin."""
+"""Resolve the registered local source for a marketplace entry from JSON stdin.
+
+Tested with:
+- Claude marketplace JSON using a Directory source -> prints path.
+- Codex marketplace JSON using a local marketplaceSource -> prints path.
+- Malformed JSON -> returns a clear invalid-JSON error.
+- Missing local marketplace -> returns a clear target-resolution error.
+- No temporary files are created.
+"""
 
 from __future__ import annotations
 
