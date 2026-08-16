@@ -226,7 +226,7 @@ The opening line states what was confirmed and what was pushed, in that order, a
 
 <success_criteria>
 
-- The `<UPSTREAM_TARGET>` marker read for this pass carries `upstream-contribution`, established before any write.
+- The `<UPSTREAM_TARGET>` marker read for this pass carries `classification="upstream-contribution"`, established before any write.
 - The pull request's state was read once, and `state`, `reviewDecision`, and each required check's conclusion appear verbatim.
 - A `state` of `CLOSED` or `MERGED`, a head repository other than the resolved `head`, and a pass with no finding to verify each returned what Step 3 read, left this checkout's branch where it was, and wrote nothing; every criterion below covers a pass that continued.
 - The pull request's `author.login` was compared against the authenticated login before the branch moved, and one the operator did not open was authorized in that turn.

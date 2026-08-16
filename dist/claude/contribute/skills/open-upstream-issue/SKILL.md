@@ -137,7 +137,7 @@ The title names what the run observed rather than the precedence bug it suspects
 
 <success_criteria>
 
-- The `<UPSTREAM_TARGET>` marker read for this pass carries `upstream-contribution`, `head-ambiguous`, or `fork-absent`, and `base` and `permission` appear verbatim.
+- The `<UPSTREAM_TARGET>` marker read for this pass carries `classification="upstream-contribution"`, `"head-ambiguous"`, or `"fork-absent"`, and its `base` and `permission` values appear verbatim.
 - A search for an existing issue ran and its result is reported.
 - A search that matched surfaced that issue's URL and filed nothing; every criterion below covers a pass that filed.
 - The operator authorized this issue against the resolved base in the turn it was filed.

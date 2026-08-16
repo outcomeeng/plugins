@@ -130,7 +130,7 @@ The first sentence answers the question asked, before anything else. The command
 
 <success_criteria>
 
-- The `<UPSTREAM_TARGET>` marker read for this pass carries `upstream-contribution`, `head-ambiguous`, or `fork-absent`, established before any write.
+- The `<UPSTREAM_TARGET>` marker read for this pass carries `classification="upstream-contribution"`, `"head-ambiguous"`, or `"fork-absent"`, established before any write.
 - The thread was read once, and `state` plus the last maintainer comment appear verbatim.
 - A `state` of `CLOSED` returned that outcome and wrote nothing; every criterion below covers a pass on an open thread.
 - The issue's `author.login` was compared against the authenticated login before the comment was posted, and a thread the operator did not open was authorized in that turn.
