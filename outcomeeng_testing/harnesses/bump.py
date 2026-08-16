@@ -949,23 +949,6 @@ def observe_shared_fragment_bump() -> tuple[
         )
 
 
-def observe_shared_fragment_changes() -> tuple[
-    SharedFragmentRepo, Mapping[str, tuple[ChangedPath, ...]]
-]:
-    """Build a real repo with a shared-fragment edit and probe its changes."""
-    with TemporaryDirectory() as directory:
-        handle = build_repo_with_shared_fragment_change(
-            pathlib.Path(directory) / "repo"
-        )
-        return handle, _real_change_probe(
-            handle.base_ref,
-            cwd=handle.repo,
-            include_index_probe=functools.partial(
-                _real_include_index_probe, cwd=handle.repo
-            ),
-        )
-
-
 def observe_real_include_index() -> tuple[
     SharedFragmentRepo, Mapping[str, frozenset[str]]
 ]:
@@ -1423,7 +1406,6 @@ __all__ = [
     "observe_property_failure_notes",
     "observe_read_only_mode_runs",
     "observe_shared_fragment_bump",
-    "observe_shared_fragment_changes",
     "observe_renamed_structural_path_changes",
     "observe_segment_selection_runs",
     "observe_single_changed_plugin_run",

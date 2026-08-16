@@ -512,11 +512,11 @@ def _real_include_index_probe(
 ) -> Mapping[str, frozenset[str]]:
     """Map each include target to the plugins whose authored sources name it.
 
-    The relation is read through the build's own `plugin_source_files` and
-    `parse_directives`, so the index names exactly the plugins the build
-    renders each fragment into. Re-deriving either the authored-source filter
-    or the directive grammar here would drift from the build the moment it
-    changed, which is the drift this probe exists to avoid.
+    The scan and the directive pattern are re-derived here rather than read
+    from the build, because reaching the build's own `plugin_source_files` and
+    `parse_directives` would take its third-party dependency into this module.
+    Two implementations of one grammar drift; closing that is recorded at this
+    module's governing node as a cross-node change to the build's declarations.
     """
     root = (cwd or Path.cwd()) / SOURCE_PLUGINS_DIR
     if not root.is_dir():
