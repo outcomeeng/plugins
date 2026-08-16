@@ -30,6 +30,7 @@ The module's contract:
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import re
 import shutil
@@ -43,6 +44,8 @@ from typing import Protocol
 
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
+    BUILD_BLOCK_DELIMITER_END,
+    BUILD_BLOCK_DELIMITER_START,
     CLAUDE_PLUGIN_SUBDIR_NAME,
     CODEX_PLUGIN_SUBDIR_NAME,
     DIST_CODEX_PLUGINS_DIR as DIST_CODEX_PLUGINS_PATH,
@@ -65,7 +68,18 @@ _PLUGIN_CHANGE_ROOTS: tuple[str, ...] = (
     DIST_CLAUDE_PLUGINS_DIR,
     DIST_CODEX_PLUGINS_DIR,
 )
-_INCLUDE_DIRECTIVE = re.compile(r"\{!%\s*include\s*'([^']+)'\s*%!\}")
+_IGNORED_SOURCE_DIRECTORIES: frozenset[str] = frozenset({"__pycache__"})
+_IGNORED_SOURCE_SUFFIXES: tuple[str, ...] = (".pyc",)
+# Accepts either quote style, matching the literal `format_directive` emits
+# through `repr()`. The authoritative grammar lives in
+# `outcomeeng.distribution.build`, which this module cannot import without
+# taking that module's third-party dependency; extracting the grammar into
+# the shared stdlib-only contracts module is recorded at this node.
+_INCLUDE_DIRECTIVE = re.compile(
+    re.escape(BUILD_BLOCK_DELIMITER_START)
+    + r"\s*include\s+(?:'([^']+)'|\"([^\"]+)\")\s*"
+    + re.escape(BUILD_BLOCK_DELIMITER_END)
+)
 _KNOWN_MANIFESTS: tuple[str, ...] = (CLAUDE_MANIFEST, CODEX_MANIFEST)
 _DEFAULT_BASE_REF: str = "origin/main"
 
@@ -435,7 +449,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.base_ref,
         segment,
         mode=mode,
-        change_probe=_real_change_probe,
+        change_probe=functools.partial(
+            _real_change_probe, include_index_probe=_real_include_index_probe
+        ),
         content_probe=_real_content_probe,
         manifest_reader=_real_manifest_reader,
         manifest_writer=_real_manifest_writer,
@@ -496,25 +512,28 @@ def _real_include_index_probe(
 ) -> Mapping[str, frozenset[str]]:
     """Map each include target to the plugins whose authored sources name it.
 
-    The build resolves an include directive's quoted path against the shared
-    source root, so scanning authored plugin sources for those directives
-    reaches the same fragment-to-plugin relation the build renders, from the
-    same source of truth and without running the build.
+    The relation is read through the build's own `plugin_source_files` and
+    `parse_directives`, so the index names exactly the plugins the build
+    renders each fragment into. Re-deriving either the authored-source filter
+    or the directive grammar here would drift from the build the moment it
+    changed, which is the drift this probe exists to avoid.
     """
     root = (cwd or Path.cwd()) / SOURCE_PLUGINS_DIR
-    index: dict[str, set[str]] = {}
     if not root.is_dir():
         return {}
+    index: dict[str, set[str]] = {}
     for plugin_dir in sorted(p for p in root.iterdir() if p.is_dir()):
         for source in sorted(plugin_dir.rglob("*")):
-            if not source.is_file():
+            if not source.is_file() or source.suffix in _IGNORED_SOURCE_SUFFIXES:
+                continue
+            if _IGNORED_SOURCE_DIRECTORIES.intersection(source.parts):
                 continue
             try:
                 text = source.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
-            for target in _INCLUDE_DIRECTIVE.findall(text):
-                index.setdefault(target, set()).add(plugin_dir.name)
+            for single, double in _INCLUDE_DIRECTIVE.findall(text):
+                index.setdefault(single or double, set()).add(plugin_dir.name)
     return {target: frozenset(plugins) for target, plugins in index.items()}
 
 
@@ -522,7 +541,7 @@ def _real_change_probe(
     base_ref: str,
     *,
     cwd: Path | None = None,
-    include_index_probe: IncludeIndexProbe | None = None,
+    include_index_probe: IncludeIndexProbe,
 ) -> Mapping[str, tuple[ChangedPath, ...]]:
     diff = subprocess.run(
         [
@@ -570,10 +589,16 @@ def _real_change_probe(
         for line in others.stdout.splitlines()
         if (path := line.strip())
     )
-    probe = include_index_probe or (lambda: _real_include_index_probe(cwd=cwd))
-    include_index = probe()
+    parsed = (*tracked, *untracked)
+    shared_prefix = f"{SHARED_SOURCE_DIR}/"
+    touches_shared = any(
+        (change.path.startswith(shared_prefix))
+        or (change.old_path or "").startswith(shared_prefix)
+        for change in parsed
+    )
+    include_index = include_index_probe() if touches_shared else {}
     changes: dict[str, list[ChangedPath]] = {}
-    for parsed_change in (*tracked, *untracked):
+    for parsed_change in parsed:
         plugins = plugins_from_change(parsed_change) | plugins_from_shared_change(
             parsed_change, include_index
         )

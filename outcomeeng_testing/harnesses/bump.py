@@ -2,7 +2,9 @@
 
 Implements the `ChangeProbe`, `ContentProbe`, `ManifestReader`,
 `ManifestWriter`, and `ToolProbe` Protocols declared in
-`outcomeeng.distribution.bump`.
+`outcomeeng.distribution.bump`, and wires that module's real
+`IncludeIndexProbe` adapter where an observation drives real change
+detection against a temporary repository.
 
 The doubles are spies (recording calls) and stubs (returning scripted
 content), used by `l1` tests to verify bump's orchestration without
@@ -24,6 +26,7 @@ Protocol boundaries (per-probe `queries`/`writes` lists are local).
 from __future__ import annotations
 
 import contextlib
+import functools
 import io
 import os
 import pathlib
@@ -849,7 +852,13 @@ def observe_untracked_new_skill_changes() -> tuple[
     """Build a real repo with an untracked new skill and probe its changes."""
     with TemporaryDirectory() as directory:
         handle = build_repo_with_untracked_new_skill(pathlib.Path(directory) / "repo")
-        return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
+        return handle, _real_change_probe(
+            handle.base_ref,
+            cwd=handle.repo,
+            include_index_probe=functools.partial(
+                _real_include_index_probe, cwd=handle.repo
+            ),
+        )
 
 
 def observe_renamed_structural_path_changes() -> tuple[
@@ -860,7 +869,13 @@ def observe_renamed_structural_path_changes() -> tuple[
         handle = build_repo_with_renamed_structural_path(
             pathlib.Path(directory) / "repo"
         )
-        return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
+        return handle, _real_change_probe(
+            handle.base_ref,
+            cwd=handle.repo,
+            include_index_probe=functools.partial(
+                _real_include_index_probe, cwd=handle.repo
+            ),
+        )
 
 
 def observe_cross_plugin_rename_changes() -> tuple[
@@ -871,7 +886,13 @@ def observe_cross_plugin_rename_changes() -> tuple[
         handle = build_repo_with_cross_plugin_structural_rename(
             pathlib.Path(directory) / "repo"
         )
-        return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
+        return handle, _real_change_probe(
+            handle.base_ref,
+            cwd=handle.repo,
+            include_index_probe=functools.partial(
+                _real_include_index_probe, cwd=handle.repo
+            ),
+        )
 
 
 @dataclass(frozen=True)
@@ -908,8 +929,12 @@ def observe_shared_fragment_bump() -> tuple[
                     handle.base_ref,
                     None,
                     mode=Mode.WRITE,
-                    change_probe=lambda base_ref: _real_change_probe(
-                        base_ref, cwd=handle.repo
+                    change_probe=functools.partial(
+                        _real_change_probe,
+                        cwd=handle.repo,
+                        include_index_probe=functools.partial(
+                            _real_include_index_probe, cwd=handle.repo
+                        ),
                     ),
                     content_probe=_real_content_probe,
                     manifest_reader=_real_manifest_reader,
@@ -932,7 +957,13 @@ def observe_shared_fragment_changes() -> tuple[
         handle = build_repo_with_shared_fragment_change(
             pathlib.Path(directory) / "repo"
         )
-        return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
+        return handle, _real_change_probe(
+            handle.base_ref,
+            cwd=handle.repo,
+            include_index_probe=functools.partial(
+                _real_include_index_probe, cwd=handle.repo
+            ),
+        )
 
 
 def observe_real_include_index() -> tuple[
@@ -1351,6 +1382,8 @@ __all__ = [
     "ScriptedChangeProbe",
     "ScriptedContentProbe",
     "ScriptedManifestReader",
+    "SharedFragmentBumpOutcome",
+    "SharedFragmentRepo",
     "SingleManifestCase",
     "SingleManifestOutcome",
     "TOOL_EVENT_PREFIX",
@@ -1360,6 +1393,7 @@ __all__ = [
     "base_ref",
     "build_repo_with_cross_plugin_structural_rename",
     "build_repo_with_renamed_structural_path",
+    "build_repo_with_shared_fragment_change",
     "build_repo_with_untracked_new_skill",
     "bump_property",
     "dual_manifest_case",
@@ -1385,8 +1419,11 @@ __all__ = [
     "observe_new_skill_addition_run",
     "observe_no_changed_plugins_run",
     "observe_probe_ordering",
+    "observe_real_include_index",
     "observe_property_failure_notes",
     "observe_read_only_mode_runs",
+    "observe_shared_fragment_bump",
+    "observe_shared_fragment_changes",
     "observe_renamed_structural_path_changes",
     "observe_segment_selection_runs",
     "observe_single_changed_plugin_run",
@@ -1394,6 +1431,7 @@ __all__ = [
     "observe_untracked_new_skill_changes",
     "run_diff_path_list_property",
     "run_distribution_path_property",
+    "run_non_shared_path_property",
     "run_single_diff_path_property",
     "single_manifest_case",
 ]
