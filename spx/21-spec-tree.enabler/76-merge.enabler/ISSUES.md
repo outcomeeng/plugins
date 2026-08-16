@@ -124,3 +124,19 @@ genuinely changes a case outcome.
 **Resolution shape**: add one short example per mode naming the observed repository state and the resulting step sequence, gated by `instructions:skill-auditor`. The examples are a content addition to the skill's routing surface, separate from the reload-timing rule.
 
 **Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/manage-github-pr/SKILL.md` on the post-compaction reload-timing change (finding `no_examples_section`).
+
+## The PR-management skill restates its post-watch re-entry rule twice
+
+`src/plugins/spec-tree/skills/manage-pr/SKILL.md` carries the sentence "and immediately return to Step 1 in the same turn. Do not merge or emit a final token from pre-watch state. The post-watch pass must re-read PR state, check rollup, PR-level comments, formal reviews, and review-thread comments before deciding the next action." verbatim at two sites (the wait step and the merge-readiness evaluation).
+
+**Resolution shape**: state the rule once at the merge-readiness evaluation and cross-reference it from the wait step, gated by `instructions:skill-auditor`.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` on the post-compaction reload-timing change (finding `duplicate_content`).
+
+## The merge-readiness decision table carries no worked trace
+
+`src/plugins/spec-tree/skills/manage-pr/SKILL.md` `<merge_readiness_decision_table>` enumerates eleven rules over named predicate fields with no example tracing one concrete `gh pr view --json` field set through a matched rule to its emitted guard verdict.
+
+**Resolution shape**: add one worked trace — sample JSON fragment, matched rule number, emitted `guard_verdict` — gated by `instructions:skill-auditor`.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` on the post-compaction reload-timing change (finding `abstract_examples`).
