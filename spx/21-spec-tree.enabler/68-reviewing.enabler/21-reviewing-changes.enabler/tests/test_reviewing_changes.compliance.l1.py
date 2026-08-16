@@ -1,44 +1,82 @@
+"""Compliance evidence for the review-changes shipped-script boundaries.
+
+Covers two universal rules in ``../reviewing-changes.md`` and the matching
+Testing rule in ``../21-script-decomposition.adr.md``:
+
+- ALWAYS: scripts under the skill's ``scripts/`` directory write no durable
+  review state directly; ``compute_diff.py`` may write only the caller-owned
+  scratch review-input bundle and ``review_run.py`` only runner-owned scratch
+  state.
+- NEVER: any script imports a third-party package, depends on ``uv`` at
+  runtime, or imports any ``outcomeeng_*`` module.
+
+Each rule is exercised against the real shipped scripts (the conforming side)
+and against a violating fixture read by path (the detecting side), so a
+disabled observer fails the linked test.
+"""
+
+from __future__ import annotations
+
+import pathlib
+
+import pytest
+
 from outcomeeng_testing.harnesses.reviewing_changes_audit import (
-    TestComputeDiffHasNoPersistenceAddressing as _ComputeDiffHasNoPersistenceAddressing,
-    TestNoParallelReviewResultRenderer as _NoParallelReviewResultRenderer,
-    TestNoSecondSchemaRepresentation as _NoSecondSchemaRepresentation,
-    TestScriptsAreStdlibOnly as _ScriptsAreStdlibOnly,
-    render_command_projects_from_journal_events,
-    scripts_use_no_direct_write_primitives,
+    DIRECT_WRITE_FIXTURE,
+    OUTCOMEENG_IMPORT_FIXTURE,
+    RUNTIME_UV_FIXTURE,
+    THIRD_PARTY_IMPORT_FIXTURE,
+    direct_write_violations,
+    non_stdlib_imports,
+    outcomeeng_imports,
+    runtime_uv_references,
+    script_files,
 )
 
-
-def test_scripts_use_no_direct_write_primitives() -> None:
-    scripts_use_no_direct_write_primitives()
+SHIPPED_SCRIPTS = script_files()
 
 
-def test_scripts_import_only_stdlib_and_local_modules() -> None:
-    _ScriptsAreStdlibOnly().test_no_third_party_or_outcomeeng_imports()
+class TestScriptsWriteNoDurableState:
+    """Scripts write no durable review state through direct primitives."""
+
+    @pytest.mark.parametrize("script_path", SHIPPED_SCRIPTS, ids=lambda p: p.name)
+    def test_shipped_script_uses_no_direct_write_primitive(
+        self, script_path: pathlib.Path
+    ) -> None:
+        assert direct_write_violations(script_path) == []
+
+    def test_direct_write_fixture_is_detected(self) -> None:
+        violations = direct_write_violations(DIRECT_WRITE_FIXTURE)
+        assert any("open(" in violation for violation in violations)
+        assert any(".write_text()" in violation for violation in violations)
 
 
-def test_scripts_do_not_import_outcomeeng() -> None:
-    _ScriptsAreStdlibOnly().test_no_outcomeeng_imports()
+class TestScriptsAreStdlibOnly:
+    """No script imports third-party or ``outcomeeng_*`` modules or references ``uv``."""
 
+    @pytest.mark.parametrize("script_path", SHIPPED_SCRIPTS, ids=lambda p: p.name)
+    def test_shipped_script_imports_only_stdlib_and_local_modules(
+        self, script_path: pathlib.Path
+    ) -> None:
+        assert non_stdlib_imports(script_path) == []
 
-def test_scripts_do_not_reference_uv_at_runtime() -> None:
-    _ScriptsAreStdlibOnly().test_no_runtime_uv_references()
+    @pytest.mark.parametrize("script_path", SHIPPED_SCRIPTS, ids=lambda p: p.name)
+    def test_shipped_script_imports_no_outcomeeng_module(
+        self, script_path: pathlib.Path
+    ) -> None:
+        assert outcomeeng_imports(script_path) == []
 
+    @pytest.mark.parametrize("script_path", SHIPPED_SCRIPTS, ids=lambda p: p.name)
+    def test_shipped_script_references_no_runtime_uv(
+        self, script_path: pathlib.Path
+    ) -> None:
+        assert runtime_uv_references(script_path) == []
 
-def test_no_alternate_schema_file_exists() -> None:
-    _NoSecondSchemaRepresentation().test_no_alternate_schema_file_exists()
+    def test_third_party_import_fixture_is_detected(self) -> None:
+        assert non_stdlib_imports(THIRD_PARTY_IMPORT_FIXTURE) == ["requests"]
 
+    def test_outcomeeng_import_fixture_is_detected(self) -> None:
+        assert outcomeeng_imports(OUTCOMEENG_IMPORT_FIXTURE) == ["outcomeeng_testing"]
 
-def test_compute_diff_has_no_persistence_addressing() -> None:
-    _ComputeDiffHasNoPersistenceAddressing().test_compute_diff_has_no_slug_argument()
-
-
-def test_script_set_has_no_parallel_renderer() -> None:
-    _NoParallelReviewResultRenderer().test_script_set_is_the_audit_parity_set()
-
-
-def test_no_render_templates_directory() -> None:
-    _NoParallelReviewResultRenderer().test_no_render_templates_directory()
-
-
-def test_render_command_projects_from_journal_events() -> None:
-    render_command_projects_from_journal_events()
+    def test_runtime_uv_fixture_is_detected(self) -> None:
+        assert runtime_uv_references(RUNTIME_UV_FIXTURE) != []

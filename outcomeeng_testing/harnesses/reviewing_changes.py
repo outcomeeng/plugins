@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 import os
 import pathlib
 import subprocess
@@ -80,6 +81,17 @@ FIXTURE_SKILL_RULE_CITATION = (
     "plugins/spec-tree/skills/review-changes/SKILL.md:api-surface"
 )
 FIXTURE_MALFORMED_RULE_CITATION = "record this in ISSUES.md"
+
+# One real citation per accepted family, keyed by the family name the
+# ``review_result`` module declares in ``RULE_CITATION_FAMILIES``. Each value
+# resolves against this checkout, so acceptance exercises the parser's file and
+# slug verification, not only its grammar.
+RULE_CITATION_EXEMPLARS: dict[str, str] = {
+    "spec-assertion": FIXTURE_RULE_CITATION,
+    "decision": FIXTURE_ADR_RULE_CITATION,
+    "plugin-skill": FIXTURE_SKILL_RULE_CITATION,
+    "root-rule": FIXTURE_AGENTS_RULE_CITATION,
+}
 
 
 def load_review_result_module() -> ModuleType:
@@ -249,6 +261,93 @@ def run_journal_emit_in_process(
         stdout=stdout.getvalue(),
         stderr=stderr.getvalue(),
     )
+
+
+def run_git(*args: str, cwd: pathlib.Path) -> subprocess.CompletedProcess[str]:
+    """Run ``git`` rooted at ``cwd`` with workstation configuration suppressed.
+
+    The invocation blanks global and system config and pins the author and
+    committer identity so a synthetic repository never inherits operator
+    identity or commit-signing settings.
+    """
+    env = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+        "GIT_AUTHOR_NAME": "test",
+        "GIT_AUTHOR_EMAIL": "test@example.invalid",
+        "GIT_COMMITTER_NAME": "test",
+        "GIT_COMMITTER_EMAIL": "test@example.invalid",
+    }
+    return subprocess.run(  # noqa: S603 — args come from the harness, not user input
+        ["git", *args],
+        cwd=cwd,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+
+def init_repo_with_branch(repo: pathlib.Path) -> str:
+    """Create a synthetic repository with ``main`` and a feature branch.
+
+    The feature branch changes ``README.md``. Returns the base ref name.
+    """
+    run_git("init", "-q", "-b", "main", str(repo), cwd=pathlib.Path.cwd())
+    run_git("config", "commit.gpgsign", "false", cwd=repo)
+    (repo / "README.md").write_text("hello\n", encoding="utf-8")
+    run_git("add", "README.md", cwd=repo)
+    run_git("commit", "-q", "-m", "initial", cwd=repo)
+    run_git("switch", "-c", "feature/x", cwd=repo)
+    (repo / "README.md").write_text("hello\nworld\n", encoding="utf-8")
+    run_git("add", "README.md", cwd=repo)
+    run_git("commit", "-q", "-m", "add world", cwd=repo)
+    return "main"
+
+
+def init_repo_with_committed_rename(repo: pathlib.Path) -> str:
+    """Create a synthetic repository whose feature branch renames a tracked file."""
+    run_git("init", "-q", "-b", "main", str(repo), cwd=pathlib.Path.cwd())
+    run_git("config", "commit.gpgsign", "false", cwd=repo)
+    (repo / "README.md").write_text("hello\n", encoding="utf-8")
+    run_git("add", "README.md", cwd=repo)
+    run_git("commit", "-q", "-m", "initial", cwd=repo)
+    run_git("switch", "-c", "feature/x", cwd=repo)
+    run_git("mv", "README.md", "RENAMED.md", cwd=repo)
+    run_git("commit", "-q", "-m", "rename readme", cwd=repo)
+    return "main"
+
+
+def isolated_git_env(cwd: pathlib.Path) -> dict[str, str]:
+    """Return a subprocess environment whose git reads no workstation config."""
+    return {
+        **os.environ,
+        "PWD": str(cwd),
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+    }
+
+
+def runner_env(
+    tmp_path: pathlib.Path, repo: pathlib.Path, base_ref: str
+) -> tuple[dict[str, str], pathlib.Path]:
+    """Return an environment that routes ``review_run.py`` at a fake ``spx``.
+
+    Writes the fake ``spx`` under ``tmp_path/bin`` and points it at a fresh
+    journal file; returns the environment and that journal path. The caller
+    owns cleanup through the ``tmp_path`` fixture.
+    """
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    journal_path = tmp_path / "journal.json"
+    write_fake_spx(bin_dir, journal_path)
+    env = isolated_git_env(repo)
+    env["SPX_VERIFY_BASE_REF"] = base_ref
+    env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+    env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
+    env["SPX_FAKE_NAMESPACE_KEYS"] = json.dumps(review_run_journal_env_keys())
+    return env, journal_path
 
 
 def run_script(

@@ -1,0 +1,8 @@
+"""A shipped-script shape that imports a third-party package."""
+
+import json
+import requests
+
+
+def main() -> int:
+    return json.loads(requests.get("https://example.invalid").text)["code"]

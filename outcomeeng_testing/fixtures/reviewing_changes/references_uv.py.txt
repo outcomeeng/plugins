@@ -1,0 +1,7 @@
+"""A shipped-script shape that depends on ``uv`` at runtime."""
+
+import subprocess
+
+
+def main() -> int:
+    return subprocess.run(["uv", "run", "python", "-c", "pass"]).returncode

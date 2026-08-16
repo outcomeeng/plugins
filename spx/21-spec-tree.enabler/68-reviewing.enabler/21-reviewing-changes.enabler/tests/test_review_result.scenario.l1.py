@@ -1,103 +1,34 @@
-"""Scenario and mapping tests for the ``review_result`` policy module.
+"""Scenario evidence for the ``review_result`` policy module.
 
 Covers these clauses in ``../reviewing-changes.md``:
 
-Scenarios
 - ``review_result.parse_json`` returns a ``ReviewResult`` dataclass on a
-  conforming document and raises ``ReviewResultValidationError`` on
-  every schema violation.
+  conforming document and raises ``ReviewResultValidationError`` on a
+  violation — a missing required key, an unknown ``severity`` or ``concern``
+  value, or a malformed citation — naming the offending value.
 - ``review_result.to_json_dict`` and ``review_result.from_json_dict``
   round-trip a ``ReviewResult`` instance without loss.
 
-Mappings
-- ``Severity`` enum members map to the wire values ``blocking``,
-  ``debt``.
-- ``Concern`` enum members map to exactly the five wire values
-  ``consistency``, ``security``, ``performance``, ``evidence``,
-  ``architecture``.
-
-Audit (subset)
-- The policy module declares ``SCHEMA_VERSION``, frozen ``Finding`` and
-  ``ReviewResult`` dataclasses, the ``Severity`` / ``Concern`` enums.
-- The schema carries no ``decision``/verdict field — the reviewer emits
-  findings only.
+Each test is one existential interaction; the universal wire-value, citation
+family, and citation-rejection claims live in the sibling mapping and
+compliance files.
 """
 
 from __future__ import annotations
 
-import dataclasses
 import json
 import pathlib
 
 import pytest
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
-    FIXTURE_ADR_RULE_CITATION,
     FIXTURE_AGENTS_RULE_CITATION,
-    FIXTURE_MALFORMED_RULE_CITATION,
     FIXTURE_RULE_CITATION,
     FIXTURE_SKILL_RULE_CITATION,
     REPO_ROOT,
     load_review_result_module,
     make_review_result_dict,
 )
-
-
-class TestModuleSurface:
-    """The policy module declares the canonical schema surface."""
-
-    def test_schema_version_is_a_positive_integer(self) -> None:
-        review_result = load_review_result_module()
-        assert isinstance(review_result.SCHEMA_VERSION, int)
-        assert review_result.SCHEMA_VERSION >= 1
-
-    def test_severity_and_concern_enums_exist_and_no_decision(self) -> None:
-        review_result = load_review_result_module()
-        assert hasattr(review_result, "Severity")
-        assert hasattr(review_result, "Concern")
-        # The reviewer emits findings only — there is no decision/verdict
-        # enum on the schema.
-        assert not hasattr(review_result, "Decision")
-
-    def test_finding_and_review_result_are_frozen_dataclasses(self) -> None:
-        review_result = load_review_result_module()
-        for cls in (review_result.Finding, review_result.ReviewResult):
-            assert dataclasses.is_dataclass(cls)
-            # ``params`` is set by ``@dataclass(frozen=True)``; without
-            # ``frozen=True`` the attribute is missing or ``frozen=False``.
-            params = getattr(cls, "__dataclass_params__", None)
-            assert params is not None
-            assert getattr(params, "frozen", False) is True
-
-    def test_validation_error_subclass_of_exception(self) -> None:
-        review_result = load_review_result_module()
-        assert issubclass(review_result.ReviewResultValidationError, Exception)
-
-
-class TestSeverityMapping:
-    """``Severity`` members map to the wire values ``blocking``,
-    ``debt``."""
-
-    def test_severity_members_map_to_wire_values(self) -> None:
-        review_result = load_review_result_module()
-        wire_values = {member.value for member in review_result.Severity}
-        assert wire_values == {"blocking", "debt"}
-
-
-class TestConcernMapping:
-    """``Concern`` members map to exactly the five wire values
-    declared in the spec."""
-
-    def test_concern_members_map_to_five_wire_values(self) -> None:
-        review_result = load_review_result_module()
-        wire_values = {member.value for member in review_result.Concern}
-        assert wire_values == {
-            "consistency",
-            "security",
-            "performance",
-            "evidence",
-            "architecture",
-        }
 
 
 class TestParseJsonConforming:
@@ -193,60 +124,6 @@ class TestParseJsonRejection:
             review_result.parse_json("{not valid json")
 
 
-class TestRuleCitationValidation:
-    """``Finding.rule`` accepts declared citation families and rejects prose."""
-
-    @pytest.mark.parametrize(
-        "rule_citation",
-        (
-            FIXTURE_RULE_CITATION,
-            FIXTURE_ADR_RULE_CITATION,
-            FIXTURE_AGENTS_RULE_CITATION,
-        ),
-    )
-    def test_parse_json_accepts_declared_rule_citation_forms(
-        self,
-        rule_citation: str,
-    ) -> None:
-        review_result = load_review_result_module()
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": rule_citation,
-            "message": "m",
-            "action": "a",
-        }
-        payload = json.dumps(make_review_result_dict(findings=[finding]))
-
-        result = review_result.parse_json(payload)
-
-        assert result.findings[0].rule == rule_citation
-
-    def test_parse_json_rejects_free_form_rule_text(self) -> None:
-        review_result = load_review_result_module()
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_MALFORMED_RULE_CITATION,
-            "message": "m",
-            "action": "a",
-        }
-        payload = json.dumps(make_review_result_dict(findings=[finding]))
-
-        with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
-            review_result.parse_json(payload)
-
-        message = str(excinfo.value)
-        assert "rule" in message
-        assert FIXTURE_MALFORMED_RULE_CITATION in message
-
-
 class TestRoundTrip:
     """``to_json_dict`` and ``from_json_dict`` round-trip a
     ``ReviewResult`` without loss."""
@@ -303,55 +180,8 @@ class TestRoundTrip:
         assert "action" in str(excinfo.value)
 
 
-class TestRuleCitationForm:
-    """``Finding.rule`` must be a path-style citation; the parser rejects others.
-
-    Accepted forms: ``spx/<path>.md:<assertion-kind>:<n>``,
-    ``spx/<path>/<n>-<slug>.adr.md``,
-    ``spx/<path>/<n>-<slug>.pdr.md``,
-    ``plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>``,
-    ``AGENTS.md:<rule-slug>``, and ``CLAUDE.md:<rule-slug>``.
-    The parser rejects citations whose file or rule slug cannot be
-    verified mechanically.
-    """
-
-    @pytest.mark.parametrize(
-        "rule",
-        [
-            FIXTURE_RULE_CITATION,
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:NEVER:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:2",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:2",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:PROPERTY:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:AUDIT:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:AUDIT:2",
-            "spx/21-spec-tree.enabler/spec-tree.md:CONFORMANCE:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
-            "spx/15-merging.pdr.md",
-            FIXTURE_SKILL_RULE_CITATION,
-            "plugins/spec-tree/skills/understand/SKILL.md:artifact-placement",
-            "CLAUDE.md:critical-rules",
-            FIXTURE_AGENTS_RULE_CITATION,
-        ],
-    )
-    def test_parser_accepts_path_style_rule(self, rule: str) -> None:
-        review_result = load_review_result_module()
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": rule,
-            "message": "m",
-            "action": "a",
-        }
-        # parse_json should not raise on a conforming rule citation.
-        review_result.parse_json(
-            json.dumps(make_review_result_dict(findings=[finding]))
-        )
+class TestRuleCitationResolution:
+    """A cited rule resolves against the runtime layout and the repository root."""
 
     def test_plugin_skill_rule_can_resolve_absolute_runtime_path(self) -> None:
         review_result = load_review_result_module()
@@ -441,61 +271,3 @@ ALWAYS: pseudo-XML sections are rule-bearing surfaces.
         assert "critical-rules" in slugs
         assert "principles" in slugs
         assert "rules" not in slugs
-
-    @pytest.mark.parametrize(
-        "rule",
-        [
-            "",
-            "naming",
-            "fix the typo",
-            "Track under: ISSUES.md",
-            "r",
-            "spec/auth.md:ALWAYS:1",  # wrong prefix (spec/ not spx/)
-            "spx/",
-            "spx/rules.md",
-            "spx/rules.md:ALWAYS",
-            "spx/rules.md:SCENARIO",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:999",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:PROPERTY:2",
-            "plugins/foo",
-            "plugins/foo/skills/bar",
-            "plugins/foo/skills/bar/SKILL.md",
-            "plugins/python/skills/standardizing-python/SKILL.md:atemporal-voice",
-            "plugins/spec-tree/skills/review-changes/SKILL.md:objective",
-            "plugins/spec-tree/skills/review-changes/SKILL.md:review",
-            "plugins/spec-tree/skills/review-changes/SKILL.md:workflow",
-            "AGENTS.md",
-            "AGENTS.md:plugins",
-            "AGENTS.md:two-audiences-two-design-surfaces",
-            "AGENTS.md:documentation",
-            "AGENTS.md:plugin-catalog",
-            "AGENTS.md:why",
-            "AGENTS.md:not-a-real-rule-slug",
-            "CLAUDE.md",
-            "CLAUDE.md:plugins",
-            "CLAUDE.md:never-use",
-            "REVIEW.md",
-            "REVIEW.md:not-a-real-rule-slug",
-            "SKILL.md",
-            "SKILL.md:render-templates-as-data",
-        ],
-    )
-    def test_parser_rejects_non_citation_rule(self, rule: str) -> None:
-        review_result = load_review_result_module()
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": rule,
-            "message": "m",
-            "action": "a",
-        }
-        with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
-            review_result.parse_json(
-                json.dumps(make_review_result_dict(findings=[finding]))
-            )
-        # The error message must name the offending value so the wrapper
-        # agent can correlate the rejection with the finding it emitted.
-        assert "rule" in str(excinfo.value)
