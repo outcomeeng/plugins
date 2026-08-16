@@ -13,6 +13,7 @@ Tested with:
 - Codex marketplace JSON using a local marketplaceSource -> prints path.
 - Codex marketplace JSON carrying only top-level root -> prints root.
 - Codex marketplace JSON carrying source and root -> prefers source.
+- Codex marketplace JSON carrying an empty source and root -> prints root.
 - Malformed JSON -> returns a clear invalid-JSON error.
 - Missing local marketplace -> returns a clear target-resolution error.
 - No local marketplace registered at all -> names none as available.

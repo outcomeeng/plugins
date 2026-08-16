@@ -309,6 +309,27 @@ def test_unresolvable_payload_shape_maps_to_none_available(
     ) in result.stderr
 
 
+def test_codex_empty_source_maps_to_root(tmp_path: Path) -> None:
+    materialized_root = tmp_path / "codex-root"
+    payload = {
+        RESOLVER.MARKETPLACES_FIELD: [
+            {
+                RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+                RESOLVER.ROOT_FIELD: str(materialized_root),
+                RESOLVER.MARKETPLACE_SOURCE_FIELD: {
+                    RESOLVER.SOURCE_TYPE_FIELD: RESOLVER.CODEX_LOCAL_SOURCE_TYPE,
+                    RESOLVER.SOURCE_FIELD: "",
+                },
+            }
+        ]
+    }
+
+    result = _run_resolver(payload, runtime=RESOLVER.RUNTIME_CODEX)
+
+    assert result.returncode == 0
+    assert result.stdout == f"{materialized_root}\n"
+
+
 def test_same_name_entries_map_to_the_first_resolvable_one(tmp_path: Path) -> None:
     resolvable_path = tmp_path / "second-registration"
     payload = [
