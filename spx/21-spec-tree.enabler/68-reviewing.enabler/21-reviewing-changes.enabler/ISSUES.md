@@ -106,20 +106,6 @@ Required handling:
 - Consume the declared attribution in this node's scope derivation as the reviewer's own derivation, never a caller filter, preserving the caller-independence rule this node already carries; the skip-and-record mechanics arrive with the `spx` verification scope projection tracked in `spx/31-outcomeeng.enabler/31-verification.enabler/PLAN.md`.
 - Keep base-sync scope on the real changed-file set — the governing decision widens no exclusion beyond agentic verification.
 
-## 8. The review-changes skill omits an explicit model pin
-
-`src/plugins/spec-tree/skills/review-changes/SKILL.md` declares no `model` field, so a direct skill invocation inherits the session model. `skill-standards` states that marketplace verification-sensitive surfaces use explicit `sonnet` and never use session inheritance, and every `audit-*` skill in the spec-tree plugin pins `model: sonnet`. Review is a verification type whose findings decide `VERIFICATION_READINESS`, so an inherited model makes the review verdict depend on whichever model the invoking session happens to run.
-
-The primary path is already pinned: the `changes-reviewer` agent declares `model: sonnet`, so agent-dispatched reviews are reproducible today. The gap is the direct skill-invocation path.
-
-Required handling:
-
-- Add `model: sonnet` to the `review-changes` skill frontmatter, matching the `audit-*` sibling convention.
-- Regenerate the plugin runtime trees and the catalog so the pin reaches `dist/`.
-- Re-run the skill auditor for the node after the change.
-
-The sibling reference skill `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler` needs no pin: `scope-changeset` is `user-invocable: false` with `allowed-tools: Read`, supplying deterministic script primitives rather than a model-judged verdict.
-
 ## 9. Four shipped review scripts await extraction into the SPX CLI
 
 The `review-changes` skill ships four scripts past the fifty-line threshold:
@@ -132,6 +118,8 @@ The `review-changes` skill ships four scripts past the fifty-line threshold:
 Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; all four have proven their value in use, so extraction is what they owe. `21-script-decomposition.adr.md` already names `compute_diff.py`, `journal_emit.py`, and `review_result.py` as stop-gap modules, so their extraction completes a decomposition this node has already decided rather than opening a new one.
 
 The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, and the plugins product may depend on the resulting capability only once it is published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts the fix outside any changeset confined to this repository.
+
+`review_result.py` also probes this repository's own `src/plugins/`, `dist/claude/`, and `dist/codex/` layout before its portable runtime-relative candidates when resolving a plugin-skill citation; those authoring-layout candidates never exist in a consumer checkout and leave with the extraction.
 
 **Resolution shape**: port the runner, the result schema, the journal adapter, and diff computation into the SPX CLI, publish it, advance the floor, and reduce the shipped skill to its instruction with no scripts. Entry 3 above already routes review-finding validation to that boundary, and the projection scripts extract with it per `spx/21-spec-tree.enabler/16-verification.enabler/18-journal-projection.enabler/ISSUES.md`, so the four move as one surface rather than piecemeal. Revisit when the capability publishes.
 
