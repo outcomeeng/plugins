@@ -124,9 +124,15 @@ A compliant pool record and the `<queue-host>` it yields:
 
 `<queue-host>` is `/Users/example/Code/acme/widgets/widgets`, whatever branch the invoking feature worktree carries. Every `readings` value is a JSON string, `bare` included; compare them as strings.
 
+</same_repository_filing>
+
+<overlap_derivation>
+
+This rule governs every target, same-repository or external. The step that owns the `<queue-host>` listing differs by path; what it derives does not.
+
 Create exactly one fresh `todo` follow-up for every authorized invocation. Read only the header fields the `<queue-host>` listing returns for `todo` and `doing` sessions — `id`, `status`, `goal`, `next_step`. Collect as `<overlap-ids>` the full ids whose `goal` or `next_step` names an affected path or skill from `<captured_fields>`. Never run `spx session show` on a listed session, never compare bodies, never probe origin for a stored branch, and never reuse or suppress the write because an overlap exists; queue consumers reconcile overlapping observations at pickup. The report names `<overlap-ids>` so the reader sees them beside the new record.
 
-</same_repository_filing>
+</overlap_derivation>
 
 <workflow>
 
@@ -144,7 +150,7 @@ Create exactly one fresh `todo` follow-up for every authorized invocation. Read 
 
 **Step 4 — Compose the body.** Write the observation from `<captured_fields>` using `<dependency_followup_body>` exactly. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
-**Step 5 — Snapshot state and list overlaps.** Capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository as the before-state for the tracked-worktree mutation check. When `same_repository=true`, run `spx -C <queue-host> session list --json` once, record its `todo` and `doing` ids as `<baseline-ids>`, and derive `<overlap-ids>` from that same listing per `<same_repository_filing>`, possibly empty. When `same_repository=false`, defer the listing to Step 6 and take both values there, immediately after confirmation and before the first attempt — an unconfirmed repository's queue is not read at all until the operator approves contact with it. Either way, one header listing per invocation yields both values before the write, and Step 6's fallback compares against `<baseline-ids>` to prove a failed first attempt wrote nothing.
+**Step 5 — Snapshot state and list overlaps.** Capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository as the before-state for the tracked-worktree mutation check. When `same_repository=true`, run `spx -C <queue-host> session list --json` once, record its `todo` and `doing` ids as `<baseline-ids>`, and derive `<overlap-ids>` from that same listing per `<overlap_derivation>`, possibly empty. When `same_repository=false`, defer the listing to Step 6 and take both values there, immediately after confirmation and before the first attempt — an unconfirmed repository's queue is not read at all until the operator approves contact with it. Either way, one header listing per invocation yields both values before the write, and Step 6's fallback compares against `<baseline-ids>` to prove a failed first attempt wrote nothing.
 
 **Step 6 — GATE: Confirm an external target, then file.** When `same_repository=false`, the handoff writes into a different repository queue. Resolving or naming a path is not authorization to mutate that queue, so obtain confirmation through `{{! tool('ask_user') !}}` before the first mutating command, presenting:
 
@@ -155,7 +161,7 @@ Create exactly one fresh `todo` follow-up for every authorized invocation. Read 
 
 The explicit `/issue` invocation authorizes one fresh same-repository queue write, so `same_repository=true` does not add a second confirmation. Every `same_repository=false` target requires this confirmation, including a separate clone with the same normalized origin identity and a checkout path named directly in `$ARGUMENTS`. STOP on anything but explicit approval, leaving both repositories unchanged.
 
-Once a `same_repository=false` target is approved, run `spx -C <queue-host> session list --json` before the first attempt. Record its `todo` and `doing` ids as `<baseline-ids>`, and derive `<overlap-ids>` from the same listing by the rule in `<same_repository_filing>` — the full ids whose `goal` or `next_step` names an affected path or skill from `<captured_fields>`. Both values are defined on every path by the time Step 6 attempts the write.
+Once a `same_repository=false` target is approved, run `spx -C <queue-host> session list --json` before the first attempt. Record its `todo` and `doing` ids as `<baseline-ids>`, and derive `<overlap-ids>` from the same listing per `<overlap_derivation>`. Both values are defined on every path by the time Step 6 attempts the write.
 
 Then resolve the current agent session identity verbatim from the variable the agent publishes with {!% if target == 'codex' %!}`printenv CODEX_THREAD_ID`{!% else %!}`printenv CLAUDE_CODE_SESSION_ID`{!% endif %!} and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin. Both forms below send the same bytes and enumerate the same `<dependency_followup_body>` lines in the same order; an edit to that section's shape updates both. Never assemble the body through a temporary file, a helper file, command substitution, or post-hoc text substitution.
 
