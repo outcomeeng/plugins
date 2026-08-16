@@ -43,7 +43,7 @@ confirmed the rule counts and recorded them as outside its own REJECT vocabulary
 
 ## The node's assertion count carries no recorded disposition
 
-The node carries 14 assertions. `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`
+The node carries 16 assertions. `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`
 treats more than roughly seven as a signal requiring decomposition analysis. The parent's
 `spx/21-spec-tree.enabler/76-sessions.enabler/PLAN.md` records an assertion-count disposition for
 `spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler`,
