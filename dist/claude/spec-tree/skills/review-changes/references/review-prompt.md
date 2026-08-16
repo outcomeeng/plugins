@@ -49,7 +49,7 @@ Apply every relevant probe before deciding that a reviewed unit is clean. Each p
 
 2. Conjunct completeness for derived text. When changed text cites, renders, restates, or claims derivation from a governing rule, align it condition by condition with the source. Report every dropped, weakened, narrowed, strengthened, or newly introduced conjunct even when each surviving sentence remains true on its own.
 
-3. Definite-description resolution. Resolve every definite description or category name the changeset introduces or binds — "the default runner", "a recorded exception", "the declared toolchain", a new taxonomy label — to a surface in the loaded truth chain that declares or owns it. Report an unresolved referent with the missing owner, an undefined synonym, or a category that collides with an existing taxonomy.
+3. Definite-description resolution. Resolve every definite description or category name the changeset introduces or binds — "the default backend", "a recorded exception", "the primary owner", a new taxonomy label — to a surface in the loaded truth chain that declares or owns it. Report an unresolved referent with the missing owner, an undefined synonym, or a category that collides with an existing taxonomy.
 
 4. Blast-radius consistency for changed truth. Follow a changed governing declaration outward through the consumers `<review_scope>` item 5 enumerates and report each contradiction as a finding at the consumer. Check the changed files themselves — titles and headings included — for terminology the change retires. Verify every "resolved", "complete", or routed closure claim the changeset makes against the resulting files.
 

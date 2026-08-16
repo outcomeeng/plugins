@@ -50,7 +50,7 @@ ${CLAUDE_SKILL_DIR}/references/review-prompt.md
 <diffPath>
 ```
 
-Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. `Grep` and `Glob` serve one purpose: read-only discovery of the unchanged consumers that `<review_scope>` item 5 of the prompt bounds to declared relationships — full-path citations of a changed decision or spec, the repository's declared generated-source relations, and consumers the loaded governance names. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `{{! file('root_guide', 'codex') !}}` or `{{! file('root_guide', 'claude') !}}`, and loaded governing skill files.
+Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. `Grep` and `Glob` serve one purpose: read-only discovery of the unchanged consumers of a changed governing declaration, bounded to exactly the declared relationships `<review_scope>` item 5 of the prompt enumerates. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `{{! file('root_guide', 'codex') !}}` or `{{! file('root_guide', 'claude') !}}`, and loaded governing skill files.
 
 </review_materials>
 
