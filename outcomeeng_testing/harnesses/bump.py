@@ -54,7 +54,10 @@ from outcomeeng.distribution.bump import (
     REQUIRED_TOOLS,
     Segment,
     _real_change_probe,
+    _real_content_probe,
     _real_include_index_probe,
+    _real_manifest_reader,
+    _real_tool_probe,
     bump,
     main,
 )
@@ -67,6 +70,8 @@ from outcomeeng.distribution.contracts import (
 )
 from outcomeeng_testing.generators.bump import (
     arbitrary_diff_paths,
+    indexed_targets,
+    shared_include_indexes,
     distribution_roots,
     manifest_fixture_path,
     manifest_relpath,
@@ -869,6 +874,56 @@ def observe_cross_plugin_rename_changes() -> tuple[
         return handle, _real_change_probe(handle.base_ref, cwd=handle.repo)
 
 
+@dataclass(frozen=True)
+class SharedFragmentBumpOutcome:
+    """A full bump pass over a repo whose only change is a shared fragment."""
+
+    exit_code: int
+    writes: tuple[tuple[str, str], ...]
+    stdout: str
+    stderr: str
+
+
+def observe_shared_fragment_bump() -> tuple[
+    SharedFragmentRepo, SharedFragmentBumpOutcome
+]:
+    """Run the whole bump pipeline over a real shared-fragment-only change.
+
+    Change detection, manifest reading, and the write phase all run against the
+    real repository, so the observation reaches the manifest write rather than
+    stopping at attribution.
+    """
+    with TemporaryDirectory() as directory:
+        handle = build_repo_with_shared_fragment_change(
+            pathlib.Path(directory) / "repo"
+        )
+        writer = RecordingManifestWriter()
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with contextlib.chdir(handle.repo):
+            with (
+                contextlib.redirect_stdout(stdout),
+                contextlib.redirect_stderr(stderr),
+            ):
+                exit_code = bump(
+                    handle.base_ref,
+                    None,
+                    mode=Mode.WRITE,
+                    change_probe=lambda base_ref: _real_change_probe(
+                        base_ref, cwd=handle.repo
+                    ),
+                    content_probe=_real_content_probe,
+                    manifest_reader=_real_manifest_reader,
+                    manifest_writer=writer,
+                    tool_probe=_real_tool_probe,
+                )
+        return handle, SharedFragmentBumpOutcome(
+            exit_code=exit_code,
+            writes=tuple(writer.writes),
+            stdout=stdout.getvalue(),
+            stderr=stderr.getvalue(),
+        )
+
+
 def observe_shared_fragment_changes() -> tuple[
     SharedFragmentRepo, Mapping[str, tuple[ChangedPath, ...]]
 ]:
@@ -984,6 +1039,7 @@ class SharedFragmentRepo:
     unrelated_plugin: str
     fragment_path: str
     include_target: str
+    base_version: str
 
 
 @dataclass(frozen=True)
@@ -1105,6 +1161,7 @@ def build_repo_with_shared_fragment_change(
     unrelated_plugin = "bystander"
     include_target = "voice/fragment.md"
     fragment_path = f"{SHARED_SOURCE_DIR}/{include_target}"
+    base_version = "0.1.0"
     repo.mkdir(parents=True, exist_ok=True)
     _run_git(repo, "init", "-q", "-b", "main")
     _run_git(repo, "config", "commit.gpgsign", "false")
@@ -1112,7 +1169,7 @@ def build_repo_with_shared_fragment_change(
         _write(
             repo,
             f"{SOURCE_PLUGINS_DIR}/{plugin}/.claude-plugin/plugin.json",
-            f'{{\n  "name": "{plugin}",\n  "version": "0.1.0"\n}}\n',
+            f'{{\n  "name": "{plugin}",\n  "version": "{base_version}"\n}}\n',
         )
     _write(
         repo,
@@ -1138,6 +1195,7 @@ def build_repo_with_shared_fragment_change(
         unrelated_plugin=unrelated_plugin,
         fragment_path=fragment_path,
         include_target=include_target,
+        base_version=base_version,
     )
 
 
@@ -1235,6 +1293,32 @@ def run_single_diff_path_property(check: Callable[[str], None]) -> None:
     @given(path=arbitrary_diff_paths())
     def run(path: str) -> None:
         check(path)
+
+    run()
+
+
+def run_shared_change_property(
+    check: Callable[[str, Mapping[str, frozenset[str]]], None],
+) -> None:
+    """Drive `check` over a generated include target and include index."""
+
+    @bump_property
+    @given(pair=indexed_targets())
+    def run(pair: tuple[str, Mapping[str, frozenset[str]]]) -> None:
+        check(*pair)
+
+    run()
+
+
+def run_non_shared_path_property(
+    check: Callable[[str, Mapping[str, frozenset[str]]], None],
+) -> None:
+    """Drive `check` over arbitrary diff paths and a generated include index."""
+
+    @bump_property
+    @given(path=arbitrary_diff_paths(), index=shared_include_indexes())
+    def run(path: str, index: Mapping[str, frozenset[str]]) -> None:
+        check(path, index)
 
     run()
 

@@ -6,7 +6,11 @@ from outcomeeng.distribution.bump import (
     Segment,
     Version,
     bump_version,
+    ChangedPath,
+    FileStatus,
+    SHARED_SOURCE_DIR,
     changed_plugins_from_diff,
+    plugins_from_shared_change,
 )
 from outcomeeng_testing.generators.bump import distribution_relpath, distribution_roots
 from outcomeeng_testing.harnesses.bump import (
@@ -15,6 +19,8 @@ from outcomeeng_testing.harnesses.bump import (
     observe_property_failure_notes,
     run_diff_path_list_property,
     run_distribution_path_property,
+    run_non_shared_path_property,
+    run_shared_change_property,
     run_single_diff_path_property,
 )
 from outcomeeng_testing.harnesses.bump_mapping import run_segment_increment_property
@@ -84,3 +90,25 @@ def test_bump_property_failure_notes_include_seed_and_replay() -> None:
 
     assert f"Hypothesis seed: {BUMP_PROPERTY_SEED}" in notes
     assert f"Replay path: {BUMP_PROPERTY_REPLAY_PATH}" in notes
+
+
+def test_shared_root_change_resolves_to_the_plugins_its_target_names() -> None:
+    def check(target: str, index: dict[str, frozenset[str]]) -> None:
+        change = ChangedPath(FileStatus.MODIFIED, f"{SHARED_SOURCE_DIR}/{target}")
+
+        assert plugins_from_shared_change(change, index) == index.get(
+            target, frozenset()
+        )
+
+    run_shared_change_property(check)
+
+
+def test_a_path_outside_the_shared_root_resolves_to_no_plugin() -> None:
+    def check(path: str, index: dict[str, frozenset[str]]) -> None:
+        if path.startswith(f"{SHARED_SOURCE_DIR}/"):
+            return
+        change = ChangedPath(FileStatus.MODIFIED, path)
+
+        assert plugins_from_shared_change(change, index) == frozenset()
+
+    run_non_shared_path_property(check)

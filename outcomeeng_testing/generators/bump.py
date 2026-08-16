@@ -16,6 +16,8 @@ the source module `outcomeeng.distribution.bump`.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -152,6 +154,52 @@ def relative_subpaths() -> st.SearchStrategy[str]:
         alphabet=st.characters(blacklist_characters=("\x00",)),
         min_size=1,
     )
+
+
+def include_targets() -> st.SearchStrategy[str]:
+    """Non-empty include targets a shared fragment can be addressed by.
+
+    A target is the path a build include directive quotes, resolved relative
+    to the shared authored root, so it may nest (`prose/voice/fragment.md`)
+    but never starts or ends empty.
+    """
+    return st.text(
+        alphabet=st.characters(blacklist_characters=("\x00",)),
+        min_size=1,
+    )
+
+
+def shared_include_indexes() -> st.SearchStrategy[Mapping[str, frozenset[str]]]:
+    """Arbitrary include indexes mapping a target to the plugins naming it.
+
+    The domain spans empty indexes, single-consumer targets, and targets
+    several plugins include, so the resolution under test is exercised against
+    an index shape it did not choose.
+    """
+    return st.dictionaries(
+        keys=include_targets(),
+        values=st.frozensets(plugin_names(), min_size=1, max_size=3),
+        max_size=4,
+    )
+
+
+@st.composite
+def indexed_targets(
+    draw: st.DrawFn,
+) -> tuple[str, Mapping[str, frozenset[str]]]:
+    """An include index paired with a target that is usually one of its keys.
+
+    Drawing the target independently of the index would make a hit vanishingly
+    rare, so a resolution that always returned the empty set would satisfy the
+    property almost every run. Sampling the index's own keys when it has any
+    keeps the covered domain spanning both hits and misses.
+    """
+    index = draw(shared_include_indexes())
+    if index:
+        target = draw(st.one_of(st.sampled_from(sorted(index)), include_targets()))
+    else:
+        target = draw(include_targets())
+    return target, index
 
 
 def arbitrary_diff_paths() -> st.SearchStrategy[str]:
