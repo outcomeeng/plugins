@@ -10,6 +10,6 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 
 ### Compliance
 
-- ALWAYS: after compaction, the managed root instruction block identifies that the loaded methodology authority expired and directs `/understand` followed by `/contextualize` for every spec node still in scope, while the `SessionStart` hook remains limited to delegated session-environment and worktree-occupancy behavior ([audit])
+- ALWAYS: after compaction, the managed root instruction block requires `/understand` before the next implementation access and `/contextualize` on the governing spec node before any implementation it governs is read or modified and before that node is discussed, with a compaction emptying the set of contextualized nodes and an operational continuation — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — triggering neither, while the `SessionStart` hook remains limited to delegated session-environment and worktree-occupancy behavior ([audit])
 - NEVER: `.claude/settings.json` defines a `compactPrompt` override; Claude Code's standard compact summary remains the state record the resuming agent interprets ([audit])
 - NEVER: a compaction event creates a `/handoff` session file — compaction continuity is carried by the standard compact summary and the managed root instruction directive, distinct from the `todo`/`doing`/`archive` handoff queue; a session file is written only by a deliberate `/handoff` ([audit])
