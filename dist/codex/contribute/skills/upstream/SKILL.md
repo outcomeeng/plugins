@@ -3,8 +3,7 @@ name: upstream
 description: >-
   ALWAYS invoke this skill to establish the contribution target for a repository the operator does not control — the upstream a fork came from, the head to push from, and the operator's permission on it.
   NEVER read that target from a git remote, an account name, or a successful push.
-argument-hint: ""
-allowed-tools: Read, Skill, Bash(python3 "${SKILL_DIR}/scripts/resolve_target.py":*)
+allowed-tools: Skill, Bash(python3 "${SKILL_DIR}/scripts/resolve_target.py":*)
 ---
 
 <objective>
@@ -55,8 +54,8 @@ A later stage reads this marker instead of resolving again. Emit it for every cl
 
 <success_criteria>
 
-- The resolver ran once and its `base`, `head`, and `permission` appear verbatim.
-- One `<UPSTREAM_TARGET>` marker carries the resolved values and the classification.
+- The resolver ran once, and the `base`, `head`, and `permission` reported match its JSON output field for field.
+- One `<UPSTREAM_TARGET>` marker carries those same values and the classification the resolver printed.
 - A `head-ambiguous` result named every match and selected none.
 - A `fork-absent` result named the candidate destinations and the fork command.
 - `controlled` and `blocked` each stopped, and `blocked` reported the resolver's `detail` verbatim.
