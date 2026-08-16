@@ -10,7 +10,7 @@ import subprocess
 from typing import Any
 
 from outcomeeng_testing.harnesses.journal_projection import (
-    RENDER_REVIEW_RUN_SCRIPT,
+    INSPECT_REVIEW_RUN_SCRIPT,
     load_journal_projection_module,
     load_render_review_run_module,
 )
@@ -161,7 +161,7 @@ def _run_helper(
     env["SPX_LIST_STDOUT"] = list_stdout
     env["SPX_LIST_STDERR"] = list_stderr
     env["SPX_LIST_EXIT_CODE"] = str(list_exit_code)
-    command = ["python3", str(RENDER_REVIEW_RUN_SCRIPT), RUN_TOKEN]
+    command = ["python3", str(INSPECT_REVIEW_RUN_SCRIPT), RUN_TOKEN]
     if pass_branch_slug:
         command.extend(["--branch-slug", branch_slug])
     return subprocess.run(  # noqa: S603,S607
@@ -422,7 +422,7 @@ def test_invalid_run_token_is_rejected_before_spx_invocation(
     env["EXPECTED_RUN_TOKEN"] = RUN_TOKEN
 
     result = subprocess.run(  # noqa: S603,S607
-        ["python3", str(RENDER_REVIEW_RUN_SCRIPT), "../bad"],
+        ["python3", str(INSPECT_REVIEW_RUN_SCRIPT), "../bad"],
         capture_output=True,
         text=True,
         check=False,
