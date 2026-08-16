@@ -1,106 +1,13 @@
-"""Network-backed real-agent evidence for repository installation."""
+"""Network-backed real-agent scenarios for repository installation."""
 
-import json
-from typing import cast
-
-from outcomeeng.distribution.installation import (
-    Agent,
-    CATALOG_PLUGIN_NAME_FIELD,
-    CATALOG_PLUGINS_FIELD,
-    SourceAction,
-)
-from outcomeeng_testing.harnesses.installation import (
-    canonical_catalog_plugin_names,
-    observe_real_installation,
-)
+from outcomeeng_testing.harnesses.installation import observe_real_installation
 
 
-def test_real_agent_clis_install_full_and_generated_subsets() -> None:
+def test_real_agent_clis_materialize_and_repeat_full_installation() -> None:
     observation = observe_real_installation()
-    claude_catalog = cast(
-        dict[str, list[dict[str, object]]], json.loads(observation.claude_catalog)
-    )
-    codex_catalog = cast(
-        dict[str, list[dict[str, object]]], json.loads(observation.codex_catalog)
-    )
-    claude_plugins = frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in claude_catalog[CATALOG_PLUGINS_FIELD]
-    )
-    codex_plugins = frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
-    )
-
-    persistent_report = cast(
-        dict[str, list[dict[str, str]]], json.loads(observation.persistent_stdout)
-    )
-    pending_entries = persistent_report["pending_publication"]
-
-    def pending_for(agent: Agent) -> frozenset[str]:
-        """What this agent's own marketplace reported unpublished.
-
-        Each agent's installed set is compared against its own pending set. The
-        union would subtract one agent's absence from the other's expectation,
-        which is the behavior the report stopped producing.
-        """
-        return frozenset(
-            entry["plugin"]
-            for entry in pending_entries
-            if entry["agent"] == agent.value
-        )
-
-    pending = frozenset(entry["plugin"] for entry in pending_entries)
-
-    published = canonical_catalog_plugin_names()
-
-    assert observation.persistent_exit_code == 0, observation.persistent_stderr
-    assert (
-        pending
-        == (
-            observation.persistent_claude_selected
-            | observation.persistent_codex_selected
-        )
-        - published
-    )
-    assert (
-        observation.persistent_claude_plugins.installed
-        == observation.persistent_claude_selected - pending_for(Agent.CLAUDE)
-    )
-    assert observation.persistent_claude_plugins.enabled == (
-        observation.persistent_selection & observation.persistent_claude_selected
-    ) - pending_for(Agent.CLAUDE)
-    assert observation.persistent_selection < claude_plugins
-    assert (
-        observation.persistent_settings_after == observation.persistent_settings_before
-    )
-    assert (
-        observation.persistent_codex_plugins.installed
-        == observation.persistent_codex_selected - pending_for(Agent.CODEX)
-    )
-    assert not observation.persistent_claude_plugins.installed & (
-        claude_plugins - observation.persistent_claude_selected
-    )
-    assert not observation.persistent_codex_plugins.installed & (
-        codex_plugins - observation.persistent_codex_selected
-    )
-    assert observation.persistent_claude_source_action is SourceAction.REFRESH
-    assert observation.persistent_codex_source_action is SourceAction.REFRESH
     assert observation.first_exit_code == 0, observation.first_stderr
     assert observation.second_exit_code == 0, observation.second_stderr
-    assert (
-        observation.claude_registration_target == observation.codex_registration_target
-    )
-    assert observation.claude_registration_target == str(
-        observation.invocation_checkout
-    )
-    state_root = observation.state_roots[0].parent
-    assert all(root.is_relative_to(state_root) for root in observation.state_roots)
-    assert observation.claude_plugins_first.installed == claude_plugins
-    assert observation.claude_plugins_first.enabled == claude_plugins
     assert observation.claude_plugins_second == observation.claude_plugins_first
-    assert observation.codex_plugins_first.installed == codex_plugins
-    assert observation.codex_plugins_first.enabled == codex_plugins
     assert observation.codex_plugins_second == observation.codex_plugins_first
     assert set(observation.placed_first) == (
         set(observation.placed_initial) | set(observation.shipped_agents)
@@ -108,24 +15,3 @@ def test_real_agent_clis_install_full_and_generated_subsets() -> None:
     assert observation.placed_first == observation.placed_second
     assert observation.unowned_first == observation.unowned_initial
     assert observation.unowned_second == observation.unowned_initial
-    subset_claude_catalog = cast(
-        dict[str, list[dict[str, object]]],
-        json.loads(observation.subset_claude_catalog),
-    )
-    subset_codex_catalog = cast(
-        dict[str, list[dict[str, object]]],
-        json.loads(observation.subset_codex_catalog),
-    )
-    subset_claude_plugins = frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in subset_claude_catalog[CATALOG_PLUGINS_FIELD]
-    )
-    subset_codex_plugins = frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in subset_codex_catalog[CATALOG_PLUGINS_FIELD]
-    )
-    assert observation.subset_exit_code == 0, observation.subset_stderr
-    assert observation.subset_claude_plugins.installed == subset_claude_plugins
-    assert observation.subset_claude_plugins.enabled == subset_claude_plugins
-    assert observation.subset_codex_plugins.installed == subset_codex_plugins
-    assert observation.subset_codex_plugins.enabled == subset_codex_plugins

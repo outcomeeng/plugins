@@ -107,7 +107,9 @@ def test_an_enable_failure_stops_the_run_rather_than_reading_as_idempotent() -> 
     observation = observe_first_failure(Operation.PLUGIN_ENABLE)
 
     assert observation.failure is not None
+    assert observation.failure.command.agent is Agent.CLAUDE
     assert observation.failure.command.operation is Operation.PLUGIN_ENABLE
+    assert observation.failure.command.plugin is not None
     assert observation.failure.result.exit_code != 0
     assert observation.attempted[-1] == observation.failure.command
     assert (
@@ -144,6 +146,7 @@ def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
     assert observation.failure is not None
     assert observation.failure.command.agent is Agent.CODEX
     assert observation.failure.command.operation is Operation.LIFECYCLE_PLACE
+    assert observation.failure.command.plugin is not None
     assert observation.failure.result.exit_code != 0
     assert all(result.exit_code == 0 for result in observation.failure.completed)
     assert observation.attempted[-1] == observation.failure.command

@@ -167,11 +167,11 @@ hooks-run:
 
 # Refresh the installed marketplace plugins in selected persistent agent state
 install-marketplace *install_args:
-    uv run python -m outcomeeng.distribution.installation {{install_args}}
+    @uv run python -m outcomeeng.distribution.installation {{install_args}}
 
 # Verify installation with real agent CLIs in disposable homes
 verify-marketplace-installation:
-    just test spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/tests/test_repository_installation.scenario.l3.py
+    just test spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/tests/test_repository_installation.scenario.l1.py spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/tests/test_repository_installation.mapping.l3.py spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/tests/test_repository_installation.scenario.l3.py
 
 # Bump the manifest version of every plugin with changes under src/plugins/<name>/** since base_ref
 # Segment defaults to per-plugin auto-detection; pass an explicit segment to override every changed plugin.

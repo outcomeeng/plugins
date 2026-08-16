@@ -1,7 +1,6 @@
 """Controlled CLI and first-failure evidence for repository installation."""
 
 import json
-
 from typing import cast
 
 from outcomeeng.distribution.installation import (
@@ -25,54 +24,12 @@ from outcomeeng_testing.harnesses.installation import (
     observe_invalid_isolated_selection,
     observe_invalid_persistent_selection,
     observe_first_persistent_cli,
-    observe_persistent_execution,
     observe_persistent_plan,
     observe_verification_recipe,
-    repository_root,
 )
-from outcomeeng_testing.generators.installation import generated_agent_subsets
 
 
-def test_persistent_installation_refreshes_canonical_sources_and_catalogs() -> None:
-    selected = generated_agent_subsets(repository_root(), include_spec_tree=True)
-    observation = observe_persistent_execution(selected)
-    plan = observation.report.plan
-
-    assert observation.preflight.claude_source_action is SourceAction.REFRESH
-    assert any(
-        command.agent is Agent.CLAUDE
-        and command.operation is Operation.MARKETPLACE_REFRESH
-        for command in plan.commands
-    )
-    assert any(
-        command.agent is Agent.CODEX
-        and command.operation is Operation.MARKETPLACE_REFRESH
-        for command in plan.commands
-    )
-    assert {
-        command.plugin
-        for command in plan.commands
-        if command.agent is Agent.CLAUDE
-        and command.operation is Operation.PLUGIN_INSTALL
-    } == selected[Agent.CLAUDE]
-    assert {
-        command.plugin
-        for command in plan.commands
-        if command.agent is Agent.CLAUDE
-        and command.operation is Operation.PLUGIN_ENABLE
-    } == selected[Agent.CLAUDE]
-    assert {
-        command.plugin
-        for command in plan.commands
-        if command.agent is Agent.CODEX
-        and command.operation is Operation.PLUGIN_INSTALL
-    } == selected[Agent.CODEX]
-    assert (
-        observation.attempted[len(observation.preflight.inspections) :] == plan.commands
-    )
-
-
-def test_verification_recipe_aliases_the_exact_l3_evidence() -> None:
+def test_verification_recipe_aliases_the_exact_installation_evidence() -> None:
     observation = observe_verification_recipe()
 
     assert observation.exit_code == 0, observation.stderr

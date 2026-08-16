@@ -158,10 +158,7 @@ def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
         source=source,
         operation=operation,
         plugin=plugin if carries_plugin else None,
-        stderr=(
-            f"Error: plugin `{plugin}` was "
-            f"{UNPUBLISHED_PLUGIN_FRAGMENT} `{MARKETPLACE_NAME}`"
-        ),
+        stderr=UNPUBLISHED_PLUGIN_FRAGMENT,
     )
 
     if pending:

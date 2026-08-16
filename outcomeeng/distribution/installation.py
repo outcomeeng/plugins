@@ -19,12 +19,18 @@ CANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins"
 CANONICAL_CODEX_SOURCE = "https://github.com/outcomeeng/plugins"
 CODEX_CATALOG_PATH = Path(".agents/plugins/marketplace.json")
 CLAUDE_CATALOG_PATH = Path(".claude-plugin/marketplace.json")
-VERIFICATION_TEST = (
+VERIFICATION_TESTS = (
     "spx/32-distribution.enabler/21-installation.enabler/"
     "21-repository-installation.enabler/tests/"
-    "test_repository_installation.scenario.l3.py"
+    "test_repository_installation.scenario.l1.py",
+    "spx/32-distribution.enabler/21-installation.enabler/"
+    "21-repository-installation.enabler/tests/"
+    "test_repository_installation.mapping.l3.py",
+    "spx/32-distribution.enabler/21-installation.enabler/"
+    "21-repository-installation.enabler/tests/"
+    "test_repository_installation.scenario.l3.py",
 )
-VERIFICATION_RECIPE_COMMAND = ("test", VERIFICATION_TEST)
+VERIFICATION_RECIPE_COMMAND = ("test", *VERIFICATION_TESTS)
 CLAUDE_PROJECT_SETTINGS_PATH = Path(".claude/settings.json")
 CODEX_CONFIG_PATH = Path(".codex/config.toml")
 CODEX_AGENTS_PATH = Path(".codex/agents")
@@ -1478,7 +1484,7 @@ __all__ = [
     "SourceAction",
     "STATE_ENV_NAMES",
     "SPEC_TREE_PLUGIN",
-    "VERIFICATION_TEST",
+    "VERIFICATION_TESTS",
     "VERIFICATION_RECIPE_COMMAND",
     "build_isolated_installation_plan",
     "build_persistent_installation_plan",

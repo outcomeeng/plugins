@@ -8,21 +8,13 @@ from outcomeeng.distribution.installation import (
     CATALOG_PLUGINS_FIELD,
 )
 from outcomeeng_testing.harnesses.installation import (
-    observe_persistent_execution,
+    observe_persistent_catalog_subset_plans,
     observe_repository_plan,
-    repository_root,
 )
-from outcomeeng_testing.generators.installation import generated_agent_subsets
-from outcomeeng.distribution.installation import Agent
 
 
 def test_each_mode_maps_its_selection_to_catalog_order() -> None:
     isolated = observe_repository_plan()
-    selected = generated_agent_subsets(
-        repository_root(),
-        include_spec_tree=True,
-    )
-    persistent = observe_persistent_execution(selected)
     claude_catalog = cast(
         dict[str, list[dict[str, object]]], json.loads(isolated.claude_catalog)
     )
@@ -40,9 +32,8 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
 
     assert isolated.plan.claude_plugins == expected_claude
     assert isolated.plan.codex_plugins == expected_codex
-    assert persistent.report.plan.claude_plugins == tuple(
-        plugin for plugin in expected_claude if plugin in selected[Agent.CLAUDE]
-    )
-    assert persistent.report.plan.codex_plugins == tuple(
-        plugin for plugin in expected_codex if plugin in selected[Agent.CODEX]
-    )
+    for observation in observe_persistent_catalog_subset_plans():
+        for selected, planned in observation.mappings:
+            assert planned == tuple(
+                plugin for plugin in observation.catalog if plugin in selected
+            )

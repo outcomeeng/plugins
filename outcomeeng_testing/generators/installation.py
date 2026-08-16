@@ -1,6 +1,7 @@
 """Generated finite plugin selections for installation evidence."""
 
 from collections.abc import Mapping, Sequence
+from itertools import combinations
 from pathlib import Path
 
 from outcomeeng.distribution.installation import (
@@ -51,4 +52,22 @@ def generated_agent_subsets(
     }
 
 
-__all__ = ["generated_agent_subsets", "generated_catalog_subset"]
+def generated_valid_catalog_subsets(
+    catalog: Sequence[str],
+) -> tuple[frozenset[str], ...]:
+    """Enumerate every catalog subset containing the required plugin."""
+    if SPEC_TREE_PLUGIN not in catalog:
+        raise ValueError("catalog must contain spec-tree")
+    optional = tuple(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
+    return tuple(
+        frozenset((SPEC_TREE_PLUGIN, *selected))
+        for size in range(len(optional) + 1)
+        for selected in combinations(optional, size)
+    )
+
+
+__all__ = [
+    "generated_agent_subsets",
+    "generated_catalog_subset",
+    "generated_valid_catalog_subsets",
+]

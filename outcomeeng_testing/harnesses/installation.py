@@ -10,6 +10,7 @@ import subprocess
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
+from functools import cache
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -58,6 +59,7 @@ from outcomeeng.distribution.installation import (
     PLUGIN_OPERATIONS,
     PYTHON_EXECUTABLE,
     SourceAction,
+    SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
     UNPUBLISHED_PLUGIN_FRAGMENT,
     build_isolated_installation_plan,
@@ -71,7 +73,10 @@ from outcomeeng.distribution.installation import (
     execute_persistent_installation,
     main,
 )
-from outcomeeng_testing.generators.installation import generated_agent_subsets
+from outcomeeng_testing.generators.installation import (
+    generated_agent_subsets,
+    generated_valid_catalog_subsets,
+)
 
 UNOWNED_AGENT_FILENAME = "developer-owned.toml"
 UNOWNED_AGENT_CONTENT = 'name = "developer-owned"\n'
@@ -115,6 +120,15 @@ class PersistentExecutionObservation:
     attempted: tuple[InstallationCommand, ...]
     claude_catalog: bytes
     codex_catalog: bytes
+
+
+@dataclass(frozen=True)
+class CatalogSubsetPlanObservation:
+    """Persistent plans for every valid subset of one agent's catalog."""
+
+    agent: Agent
+    catalog: tuple[str, ...]
+    mappings: tuple[tuple[frozenset[str], tuple[str, ...]], ...]
 
 
 @dataclass(frozen=True)
@@ -235,6 +249,9 @@ class RealInstallationObservation:
     subset_codex_plugins: PluginListing
     subset_claude_catalog: bytes
     subset_codex_catalog: bytes
+    subset_invocation_checkout: Path
+    subset_claude_registration_target: str
+    subset_codex_registration_target: str
     subset_stdout: str
     subset_stderr: str
 
@@ -438,6 +455,60 @@ def observe_persistent_execution(
         claude_catalog=claude_catalog,
         codex_catalog=codex_catalog,
     )
+
+
+def observe_persistent_catalog_subset_plans() -> tuple[
+    CatalogSubsetPlanObservation, ...
+]:
+    """Build persistent plans for every valid subset of each agent catalog."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        preflight = build_persistent_preflight(mirror, environment)
+        catalogs = {
+            Agent.CLAUDE: catalog_plugin_names(mirror / CLAUDE_CATALOG_PATH),
+            Agent.CODEX: catalog_plugin_names(mirror / CODEX_CATALOG_PATH),
+        }
+        observations: list[CatalogSubsetPlanObservation] = []
+        for agent in Agent:
+            mappings: list[tuple[frozenset[str], tuple[str, ...]]] = []
+            for selected in generated_valid_catalog_subsets(catalogs[agent]):
+                installed = {
+                    candidate: frozenset({SPEC_TREE_PLUGIN}) for candidate in Agent
+                }
+                installed[agent] = selected
+                plan = build_persistent_installation_plan(
+                    preflight,
+                    claude_plugins_payload=_plugin_listing_payload(
+                        Agent.CLAUDE,
+                        mirror,
+                        installed[Agent.CLAUDE],
+                    ),
+                    codex_marketplace_payload=codex_marketplace_listing_payload(
+                        CANONICAL_CODEX_SOURCE
+                    ),
+                    codex_plugins_payload=_plugin_listing_payload(
+                        Agent.CODEX,
+                        mirror,
+                        installed[Agent.CODEX],
+                    ),
+                )
+                planned = (
+                    plan.claude_plugins if agent is Agent.CLAUDE else plan.codex_plugins
+                )
+                mappings.append((selected, planned))
+            observations.append(
+                CatalogSubsetPlanObservation(
+                    agent=agent,
+                    catalog=catalogs[agent],
+                    mappings=tuple(mappings),
+                )
+            )
+    return tuple(observations)
 
 
 def observe_first_persistent_cli() -> PersistentCliObservation:
@@ -863,6 +934,7 @@ def observe_verification_recipe() -> VerificationRecipeObservation:
     )
 
 
+@cache
 def observe_real_installation() -> RealInstallationObservation:
     """Run persistent and isolated installation with real agent CLIs.
 
@@ -981,6 +1053,8 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_environment,
         )
         subset_environment = dict(subset_plan.commands[0].environment)
+        subset_claude_target = _registration_target(subset_plan, Agent.CLAUDE)
+        subset_codex_target = _registration_target(subset_plan, Agent.CODEX)
         subset = _run_recipe(
             checkout,
             subset_mirror,
@@ -1030,7 +1104,7 @@ def observe_real_installation() -> RealInstallationObservation:
         claude_registration_target=claude_target,
         codex_registration_target=codex_target,
         invocation_checkout=mirror.resolve(),
-        state_roots=state_roots,
+        state_roots=(*state_roots, *_state_roots(subset_plan)),
         placed_initial=placed_initial,
         placed_first=placed_first,
         placed_second=placed_second,
@@ -1052,6 +1126,9 @@ def observe_real_installation() -> RealInstallationObservation:
         subset_codex_plugins=_listed_plugins(Agent.CODEX, subset_codex.stdout),
         subset_claude_catalog=subset_claude_catalog,
         subset_codex_catalog=subset_codex_catalog,
+        subset_invocation_checkout=subset_mirror.resolve(),
+        subset_claude_registration_target=subset_claude_target,
+        subset_codex_registration_target=subset_codex_target,
         subset_stdout=subset.stdout,
         subset_stderr=subset.stderr,
     )
@@ -1468,6 +1545,7 @@ def _tree_snapshot(root: Path) -> tuple[tuple[str, bytes], ...]:
 
 
 __all__ = [
+    "CatalogSubsetPlanObservation",
     "CollisionObservation",
     "ConfigObservation",
     "FailureObservation",
@@ -1493,6 +1571,7 @@ __all__ = [
     "observe_invalid_persistent_selection",
     "observe_missing_codex_home",
     "observe_persistent_execution",
+    "observe_persistent_catalog_subset_plans",
     "observe_persistent_plan",
     "observe_planned_operations",
     "observe_real_installation",
