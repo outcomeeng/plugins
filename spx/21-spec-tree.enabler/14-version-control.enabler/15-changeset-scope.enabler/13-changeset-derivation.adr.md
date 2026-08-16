@@ -18,4 +18,4 @@ Rejected: keeping the derivation in the audit skill with re-exports — it leave
 - ALWAYS: the changeset-derivation primitives are defined once in the changeset-scope skill's `scripts/changeset_scope.py`; implementation-audit orchestration, review-changes, and sync-base reach them only by import ([audit])
 - ALWAYS: each changeset-derivation primitive that invokes git accepts a dependency-injected runner typed by a source-owned protocol, and composed primitives forward that runner through the complete call path ([audit])
 - NEVER: a consumer skill re-implements a changeset-derivation primitive in its own `scripts/` ([audit])
-- NEVER: tests replace git behavior through framework mocking; runner doubles cross the declared protocol boundary ([audit])
+- NEVER: tests replace git behavior through framework mocking; a controlled runner implementation is permitted only when its linked test records the Stage 5 `Failure simulation` or `Interaction protocols` exception and preserves the declared protocol boundary ([audit])
