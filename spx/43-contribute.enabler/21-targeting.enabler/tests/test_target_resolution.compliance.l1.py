@@ -1,9 +1,12 @@
 from outcomeeng_testing.harnesses.contribution_targeting import (
-    checkout_view_key,
     FORK,
+    OWNERS,
     PARENT,
     Responses,
     checkout_response,
+    checkout_view_key,
+    fork_list_key,
+    head_search_lookups,
     load_resolver,
     orphan_fork_response,
     permission_key,
@@ -56,6 +59,45 @@ def test_an_unavailable_gh_blocks_before_reading_permission() -> None:
 
     assert resolution.classification is _RESOLVER.Classification.BLOCKED
     assert runner.commands == [checkout_view_key()]
+
+
+def test_absence_of_a_head_is_searched_for_never_inferred() -> None:
+    """A non-fork checkout is where the head must be found, not ruled out.
+
+    Reporting absence from `isFork` alone is the defect: an operator working from
+    a clone of the base holds the fork elsewhere. The search must reach every
+    owner before absence is claimed.
+    """
+    responses: Responses = {
+        checkout_view_key(): checkout_response(False),
+        permission_key(PARENT): permission_response("READ"),
+        **head_search_lookups(0),
+    }
+
+    resolution, runner = resolve_with(responses)
+
+    assert resolution.classification is _RESOLVER.Classification.FORK_ABSENT
+    searched = [
+        command for command in runner.commands if command[:3] == ("gh", "repo", "list")
+    ]
+    assert [fork_list_key(owner) for owner in OWNERS] == searched
+
+
+def test_several_forks_are_named_and_none_is_selected() -> None:
+    """Choosing among them is the operator's, so resolution carries no head."""
+    responses: Responses = {
+        checkout_view_key(): checkout_response(False),
+        permission_key(PARENT): permission_response("READ"),
+        **head_search_lookups(2),
+    }
+
+    resolution, _ = resolve_with(responses)
+
+    assert resolution.classification is _RESOLVER.Classification.HEAD_AMBIGUOUS
+    assert resolution.head is None
+    assert len(resolution.fork_matches) == 2
+    for match in resolution.fork_matches:
+        assert match in resolution.detail
 
 
 def test_a_fork_reported_without_a_parent_blocks() -> None:

@@ -24,46 +24,43 @@ The invariants every artifact obeys on its way to a repository the operator does
 
 <terms>
 
-Use GitHub's vocabulary, not git's.
+| Term         | Meaning                                                                       |
+| ------------ | ----------------------------------------------------------------------------- |
+| **upstream** | The repository a fork came from. `gh` calls the same thing `parent`.          |
+| **base**     | The repository receiving the contribution. `--repo`, `--base`.                |
+| **head**     | The repository and branch the contribution comes from. `--head owner:branch`. |
 
-| Term       | Meaning                                                                       |
-| ---------- | ----------------------------------------------------------------------------- |
-| **base**   | The repository receiving the contribution. `--repo`, `--base`.                |
-| **head**   | The repository and branch the contribution comes from. `--head owner:branch`. |
-| **parent** | What `gh repo view --json parent` returns: the repository a fork came from.   |
+Name the relationship as upstream where an operator reads it. Carry `base` and `head` in every command, because a relationship name identifies no repository.
 
-`upstream` names a git remote and nothing else. It is relative — the base repository has a parent of its own — so it never identifies a target.
+A git remote is a local label. `origin` and `upstream` each point wherever the checkout was configured to point, so confirm what a remote resolves to before pushing or fetching through it.
 
 </terms>
 
 <resolution>
 
-Every skill in this plugin resolves its target before its first write, by running the `scripts/resolve_target.py` entrypoint bundled in **that skill's own directory** — the command each skill's own body spells out, and the only resolver path that skill's `allowed-tools` grants.
+`/upstream` resolves the target once per contribution and emits an `<UPSTREAM_TARGET>` marker carrying `base`, `head`, `permission`, and `classification`. Read that marker. Invoke `/upstream` only when no marker is live — after a compaction, or as the first stage of a contribution.
 
-Each skill carries that entrypoint, and the entrypoint loads this skill's resolver by a path resolved relative to its own file. A skill therefore names only its own directory in its grants, so this skill's name and script layout stay out of five permission strings and a move breaks loudly at load rather than silently degrading to a permission prompt.
+One contribution is one arc: resolve, cut the branch, publish, answer review. Re-resolving per stage would repeat the fork search across every account and organization the operator holds, for an answer that has not changed.
 
-This paragraph deliberately spells no runnable command. The skill-directory variable is substituted when *this* file loads, so a command written here would resolve to this skill's directory rather than the invoking skill's — the one path no consuming skill grants.
+Substitute every resolved value **literally** into later commands, written in this plugin's skills as a `<placeholder>`. Never carry a resolved value in a shell variable across steps: shell state does not persist between commands here, so a variable no step assigns silently expands to nothing and the command that names the empty string still runs. Within one command block a value the block itself resolves may be captured in a variable, because those lines share one shell; resolve a value the block has not yet produced in an earlier block.
 
-It prints one JSON object carrying `base`, `head`, `permission`, `classification`, and `fork`. Run it once per invocation. Every value any step resolves — from this resolver or from that step's own lookup — is substituted **literally** into later commands, written in this plugin's skills as a `<placeholder>`. Never carry a resolved value in a shell variable across steps: shell state does not persist between commands here, so a variable no step assigns silently expands to nothing and the command that names the empty string still runs. Within one command block a value the block itself resolves may be captured in a variable, because those lines share one shell; a value the block has not yet produced is resolved in an earlier block.
+Act on the classification:
 
-Read the classification and act on it:
+| `classification`        | Meaning                                                            | Action                                                                |
+| ----------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| `upstream-contribution` | `READ`, `TRIAGE`, or `NONE` on the base, and one head to push from | Continue under `<invariants>`, starting with authorization.           |
+| `head-ambiguous`        | Several forks of the base across the operator's accounts           | STOP per `<invariants>` "Never choose the fork destination".          |
+| `fork-absent`           | No fork of the base under any account the operator holds           | STOP per `<invariants>` "Never choose the fork destination".          |
+| `controlled`            | `ADMIN`, `MAINTAIN`, or `WRITE` on the base                        | STOP. A repository the operator controls belongs to its own workflow. |
+| `blocked`               | Permission unreadable, or `gh` unavailable or unauthenticated      | STOP and report the resolver's `detail` verbatim.                     |
 
-| `classification`      | Meaning                                                                      | Action                                                                               |
-| --------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `controlled`          | `ADMIN`, `MAINTAIN`, or `WRITE` on the resolved base, fork or not            | STOP. This is a controlled-repository contribution; the plugin's flows do not apply. |
-| `parent-contribution` | `READ`, `TRIAGE`, or `NONE` on a base resolved through the checkout's parent | Continue under `<invariants>`, starting with authorization.                          |
-| `fork-absent`         | A parent contribution with no head repository to push to                     | STOP per `<invariants>` "Never choose the fork destination".                         |
-| `blocked`             | Permission unreadable, or `gh` unavailable or unauthenticated                | STOP and report the resolver's `detail` verbatim.                                    |
-
-**Verify `origin` before pushing or fetching through it.** The resolver names the head repository; `origin` is a local label that may point somewhere else entirely. Before the first `git push` or `git fetch` that names `origin`, confirm it resolves to the resolved head, and stop when it does not:
+**Verify `origin` before pushing or fetching through it.** The marker names the head repository; `origin` is a local label that may point somewhere else entirely. Before the first `git push` or `git fetch` that names `origin`, confirm it resolves to the resolved head, and stop when it does not:
 
 ```bash
 gh repo view "$(git remote get-url origin)" --json nameWithOwner --jq '.nameWithOwner'
 ```
 
-A remote name proves nothing on its own — the same reason `upstream` never identifies a target. The base repository is always fetched by URL, so only the head side needs this check.
-
-Never reconstruct the classification from `gh` output read by eye. The resolver exists because reading `isFork`, `parent`, and `viewerPermission` correctly is the one step whose failure sends an artifact to the wrong organization.
+Fetch the base repository by URL, so only the head side needs this check.
 
 </resolution>
 
@@ -95,7 +92,7 @@ Never reconstruct the classification from `gh` output read by eye. The resolver 
 
 **The review loop runs on comments, not on API state.** Requesting a reviewer, dismissing a review, and clearing a changes-requested decision are maintainer-side actions. `gh pr edit --add-reviewer` fails on a base the operator does not control, and `reviewDecision` stays `CHANGES_REQUESTED` until the maintainer chooses to look again. A comment stating what changed is the re-request. Treat the permission failure as the expected path, never as an error to retry.
 
-**Never choose the fork destination.** When no head repository exists, report the resolved parent, the accounts and organizations that could hold the fork, and the exact `gh repo fork` command — then stop. `gh repo fork` defaults to the personal account, and an operator holding repositories across several organizations has a destination decision no resolution can make.
+**Never choose the fork destination.** When no head repository exists, report the resolved base, the accounts and organizations that could hold the fork, and the exact `gh repo fork` command — then stop. `gh repo fork` defaults to the personal account, and an operator holding repositories across several organizations has a destination decision no resolution can make.
 
 **Never wait on the artifact.** A management pass reads current state once, acts on it, and returns. A maintainer answers on their own schedule, so polling, watching, and sleeping accumulate cost against a signal that arrives when it arrives.
 

@@ -17,20 +17,14 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import shutil
 import sys
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
-from dataclasses import dataclass
+from collections.abc import Callable
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Final, Protocol
 
 from hypothesis import given, seed, settings
 
-from outcomeeng.distribution.contracts import SKILL_FILENAME
-from outcomeeng.validation.grant_locality import ALLOWED_TOOLS_FIELD
 from outcomeeng_testing.generators.contribution_targeting import (
     fork_states,
     unrecognized_permissions,
@@ -39,9 +33,9 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SKILLS_DIR = REPO_ROOT / "src" / "plugins" / "contribute" / "skills"
-PROVIDER_SKILL = "contribution-standards"
-ENTRYPOINT_RELPATH = ("scripts", "resolve_target.py")
-SCRIPT = SKILLS_DIR.joinpath(PROVIDER_SKILL, *ENTRYPOINT_RELPATH)
+RESOLVER_SKILL = "upstream"
+RESOLVER_RELPATH = ("scripts", "resolve_target.py")
+SCRIPT = SKILLS_DIR.joinpath(RESOLVER_SKILL, *RESOLVER_RELPATH)
 
 FORK = "silvarbor/example"
 PARENT = "someone/example"
@@ -135,17 +129,68 @@ def permission_response(value: str | None) -> tuple[int, str, str]:
     return (0, json.dumps(payload), "")
 
 
+OWNERS: Final = ("operator", "silvarbor")
+
+
 def account_lookups() -> Responses:
-    """The account and organization reads the fork-absent path makes."""
+    """The account and organization reads the head search makes."""
     resolver = load_resolver()
     return {
-        tuple(resolver.ACCOUNT_COMMAND): (0, json.dumps({"login": "operator"}), ""),
+        tuple(resolver.ACCOUNT_COMMAND): (0, json.dumps({"login": OWNERS[0]}), ""),
         tuple(resolver.ORGANIZATIONS_COMMAND): (
             0,
-            json.dumps([{"login": "silvarbor"}]),
+            json.dumps([{"login": OWNERS[1]}]),
             "",
         ),
     }
+
+
+def fork_list_key(owner: str) -> tuple[str, ...]:
+    """The fork-listing command the resolver issues for `owner`, read from it."""
+    return tuple(load_resolver().fork_list_command(owner))
+
+
+def fork_list_response(forks: list[tuple[str, str]]) -> tuple[int, str, str]:
+    """What one owner's fork listing reports.
+
+    Each entry is the fork's own `owner/name` paired with the `owner/name` it was
+    forked from. `gh` reports that source as separate `owner.login` and `name`
+    fields, which is the shape the resolver reads.
+    """
+    payload = [
+        {
+            "nameWithOwner": fork,
+            "parent": {
+                "owner": {"login": source.split("/")[0]},
+                "name": source.split("/")[1],
+            },
+        }
+        for fork, source in forks
+    ]
+    return (0, json.dumps(payload), "")
+
+
+def head_search_lookups(matches: int) -> Responses:
+    """Account, organization, and fork-listing reads yielding `matches` forks of PARENT.
+
+    Matches are spread across the owners so a count above one is genuinely found
+    in more than one place, which is the state the ambiguous classification names.
+    Every owner also holds one fork of an unrelated repository, so a listing that
+    matched on presence rather than on the source would classify wrongly.
+    """
+    lookups: Responses = dict(account_lookups())
+    remaining = matches
+    for index, owner in enumerate(OWNERS):
+        forks = [(f"{owner}/unrelated", "someone-else/unrelated")]
+        if remaining > 0:
+            forks.append((f"{owner}/example", PARENT))
+            remaining -= 1
+        lookups[fork_list_key(owner)] = fork_list_response(forks)
+        if index == len(OWNERS) - 1 and remaining > 0:
+            raise ValueError(
+                f"cannot place {matches} matches across {len(OWNERS)} owners"
+            )
+    return lookups
 
 
 def resolve_with(responses: Responses) -> tuple[ResolutionLike, RecordingRunner]:
@@ -153,100 +198,6 @@ def resolve_with(responses: Responses) -> tuple[ResolutionLike, RecordingRunner]
     runner = RecordingRunner(responses)
     resolution: ResolutionLike = load_resolver().resolve(runner)
     return resolution, runner
-
-
-def target_resolving_skills() -> tuple[Path, ...]:
-    """Skill directories whose own frontmatter grants a resolver entrypoint.
-
-    The grant is how a skill declares that it resolves a target, and it is
-    independent of whether the entrypoint file exists. Deriving the domain from
-    the script instead would make a deleted entrypoint shrink the domain rather
-    than fail a case, so the absence it should expose would be invisible.
-
-    Matched against the `allowed-tools` declaration rather than the file text:
-    the provider skill names the same relative path in its own prose while
-    granting nothing, and belongs outside this domain.
-    """
-    needle = "/".join(ENTRYPOINT_RELPATH)
-    skills: list[Path] = []
-    for skill_file in sorted(SKILLS_DIR.glob(f"*/{SKILL_FILENAME}")):
-        for line in skill_file.read_text(encoding="utf-8").splitlines():
-            if line.startswith(f"{ALLOWED_TOOLS_FIELD}:") and needle in line:
-                skills.append(skill_file.parent)
-                break
-    return tuple(skills)
-
-
-def consumer_entrypoints() -> tuple[Path, ...]:
-    """The entrypoint path each target-resolving skill is expected to carry.
-
-    A path here may not exist — that is the point. Existence is the linked
-    test's assertion, not this function's filter.
-    """
-    return tuple(
-        skill.joinpath(*ENTRYPOINT_RELPATH) for skill in target_resolving_skills()
-    )
-
-
-@contextmanager
-def _isolated_module_state() -> Iterator[None]:
-    """Restore `sys.modules` so one entrypoint's load cannot satisfy the next."""
-    before = dict(sys.modules)
-    try:
-        yield
-    finally:
-        sys.modules.clear()
-        sys.modules.update(before)
-
-
-def _load_entrypoint(path: Path) -> ModuleType:
-    """Load one entrypoint under a name unique to its skill directory."""
-    name = f"entrypoint_{path.parent.parent.name.replace('-', '_')}"
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load the entrypoint at {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-@dataclass(frozen=True)
-class EntrypointObservation:
-    """What one entrypoint produced when asked for the shared resolver."""
-
-    path: Path
-    resolver_file: Path | None
-    error: str | None
-
-
-def observe_entrypoint(path: Path) -> EntrypointObservation:
-    """Load `path` from the real tree and ask it for the shared resolver."""
-    with _isolated_module_state():
-        module = _load_entrypoint(path)
-        sys.modules.pop(module.RESOLVER_MODULE, None)
-        try:
-            resolver = module.load_resolver()
-        except RuntimeError as error:
-            return EntrypointObservation(path, None, str(error))
-        resolver_file = getattr(resolver, "__file__", None)
-        return EntrypointObservation(
-            path, Path(resolver_file) if resolver_file else None, None
-        )
-
-
-def observe_entrypoint_without_provider(path: Path) -> EntrypointObservation:
-    """Load a copy of `path`'s skill placed where no provider skill exists.
-
-    The consuming skill directory is copied alone into a temporary skills tree,
-    so the sibling the entrypoint reaches for is genuinely absent rather than
-    stubbed. This is the failure the entrypoint exists to make loud.
-    """
-    with TemporaryDirectory() as temporary_directory:
-        skills = Path(temporary_directory) / "skills"
-        skill = path.parent.parent
-        shutil.copytree(skill, skills / skill.name)
-        return observe_entrypoint(skills.joinpath(skill.name, *ENTRYPOINT_RELPATH))
 
 
 TARGETING_PROPERTY_EXAMPLES: Final = 100
