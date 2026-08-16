@@ -37,3 +37,11 @@ The trigger judgment itself is separately asserted in `spx/21-spec-tree.enabler/
 **Why this is not resolved in the changeset that surfaced it**: that changeset is a decomposition. A narrowed Scenario was written there and the changeset review rejected it as an assertion whose subject changed mid-refactor, consistently with the same review rejecting a deleted assertion and a repointed citation in the same changeset. `spx/21-spec-tree.enabler/54-refactoring.enabler/refactoring.md` moves structure, not meaning.
 
 **Resolution shape**: narrow the Scenario to the CLI behavior its test establishes — a payload naming tree state and an active node path yields a document in `.spx/sessions/todo/` carrying that path — in a changeset whose subject is that correction, confirming the closure precondition still carries the trigger judgment.
+
+## 5. The handoff recovery paths state the reload gate unevenly
+
+`src/plugins/spec-tree/skills/handoff/references/claimed-session-resolution.md` line 16 attaches the reload gate ("invoke `/understand`, then `/contextualize` on the governing node, only immediately before the recovery reads or edits coordination notes or other governed product content") to a recovery step that reads only conversation markers and `spx session` output, so the clause names a trigger that step never fires; `workflows/02-reflect.md` line 20 states the same gate without the word "only" the other three sites use; the reference's `<objective>` carries a second paragraph narrating workflow 04's use of the output; and `SKILL.md` `<failure_modes>` has no entry for reloading on every compaction-recovery entry.
+
+**Resolution shape**: drop or forward-point the line-16 clause, align the 02-reflect wording, reduce the objective to its output sentence, and add the eager-reload failure mode — one editorial pass over the handoff skill gated by `instructions:skill-auditor`.
+
+**Evidence.** Surfaced by the `skill-auditor` review of the handoff skill on the post-compaction reload-timing change (findings `unclear_conditional_trigger`, `phrasing_drift`, `objective_bloat`, `no_failure_modes`).
