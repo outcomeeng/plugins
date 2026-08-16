@@ -466,7 +466,7 @@ Use this shape for one subagent audit. When several custom-agent configurations 
 
 <!-- /harness:claude -->
 
-**Inspect every successful `changes-reviewer` result through the sealed journal.** Invoke the `spec-tree:verification-run-journal-standards` skill and use its `render_review_run.py <run-token>` helper. The helper calls `spx journal render --type review --run <run-token>`, resolves a not-found current-scope miss through `spx journal list --type review --sealed sealed --limit 200`, re-renders with the listed branch slug when exactly one sealed run matches the token, reads the sealed event prefix, and prints the raw token, terminal status, full head/base identity, scope coverage, blocking/debt counts, and any findings through `render_surface(events)`. Treat this as journal inspection; the sealed prefix remains the only review result.
+**Inspect every successful `changes-reviewer` result through the sealed journal.** Invoke `spec-tree:inspect-review-run` with the raw run token. Its skill-local entrypoint calls `spx journal render --type review --run <run-token>`, resolves a not-found current-scope miss through `spx journal list --type review --sealed sealed --limit 200`, re-renders with the listed branch slug when exactly one sealed run matches the token, reads the sealed event prefix, and prints the raw token, terminal status, full head/base identity, scope coverage, blocking/debt counts, and any findings through the shared projection. Treat this as journal inspection; the sealed prefix remains the only review result.
 
 **Configured verifier and reviewer role-task contracts.** Supply only the fields named for the role:
 

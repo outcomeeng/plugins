@@ -33,7 +33,13 @@ PROJECTION_MODULE_PATH = (
     / "scripts"
     / "journal_projection.py"
 )
-RENDER_REVIEW_RUN_SCRIPT = PROJECTION_MODULE_PATH.with_name("render_review_run.py")
+RENDER_REVIEW_RUN_MODULE_PATH = PROJECTION_MODULE_PATH.with_name("render_review_run.py")
+INSPECT_REVIEW_RUN_SCRIPT = (
+    PROJECTION_MODULE_PATH.parents[2]
+    / "inspect-review-run"
+    / "scripts"
+    / "inspect_review_run.py"
+)
 
 
 def load_journal_projection_module() -> ModuleType:
@@ -63,10 +69,10 @@ def load_render_review_run_module() -> ModuleType:
     if cached is not None:
         return cached
     spec = importlib.util.spec_from_file_location(
-        "render_review_run", RENDER_REVIEW_RUN_SCRIPT
+        "render_review_run", RENDER_REVIEW_RUN_MODULE_PATH
     )
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load module from {RENDER_REVIEW_RUN_SCRIPT}")
+        raise RuntimeError(f"Cannot load module from {RENDER_REVIEW_RUN_MODULE_PATH}")
     module = importlib.util.module_from_spec(spec)
     sys.modules["render_review_run"] = module
     spec.loader.exec_module(module)
