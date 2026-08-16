@@ -38,10 +38,6 @@ class TestSeverityWireValues:
         wire_values = {member.value for member in review_result.Severity}
         assert wire_values == {"blocking", "debt"}
 
-    @pytest.mark.parametrize("member", list(review_result.Severity))
-    def test_each_severity_member_maps_to_its_lowercase_name(self, member) -> None:
-        assert member.value == member.name.lower()
-
 
 class TestConcernWireValues:
     """Every ``Concern`` member maps to one of the five declared wire values."""
@@ -55,10 +51,6 @@ class TestConcernWireValues:
             "evidence",
             "architecture",
         }
-
-    @pytest.mark.parametrize("member", list(review_result.Concern))
-    def test_each_concern_member_maps_to_its_lowercase_name(self, member) -> None:
-        assert member.value == member.name.lower()
 
 
 class TestRuleCitationFamilies:

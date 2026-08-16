@@ -18,14 +18,6 @@ These patterns span the **entire** audit-skill family — every `audit-*` SKILL.
 - **Audit verdict vocabulary.** Every audit skill states a human conclusion as `APPROVED`/`REJECT` in prose while the SPX verification-run payload contract owns the machine verdict and terminal projection. The dual vocabulary must either be reconciled at the verification-run payload boundary or applied consistently across every audit skill, not as a per-skill edit. This is the same reconciliation as the finding-severity enum in `spx/21-spec-tree.enabler/68-audit.enabler/ISSUES.md`, and lands with the verification-run migration that rewrites the same skills.
 - **Auditor-skeleton shape.** The language auditors (`audit-{python,typescript,rust}-{code|tests|architecture}`) do not yet carry the auditor-skeleton shape: verdict-shaped `<objective>` naming its finding categories, soundness `<success_criteria>`, a read-only/verdict-only `<constraints>` block, and the canonical section names (`<audit_workflow>`, `<verdict_format>`, `<failure_modes>`, no `<quick_start>`). Sequenced after reconciling with the audit verification-run migration in `spx/21-spec-tree.enabler/68-audit.enabler/PLAN.md`.
 
-## ADR `### Audit` rules mirror implementing-spec `[test]`/`[eval]` lanes (deferred)
-
-The `/audit-adr` pass on `21-script-decomposition.adr.md` surfaced a cross-spec lane divergence (an observation, not a tag-validity finding — the audit-adr skill validates the tag against its subsection, not against the implementing spec's lane). One rule under `### Audit` in that ADR mirrors an assertion whose implementing lane in `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md` is not `[audit]`:
-
-- ADR "reviewer emits no `decision`/verdict" (`[audit]`) mirrors spec line tagged `[test](tests/test_review_result.scenario.l1.py)`.
-
-The ADR's other `### Audit` rules have no corresponding assertion under a non-`[audit]` lane in `reviewing-changes.md`, so they are not part of this divergence. Reconcile whether the mirrored ADR rule belongs under `### Testing` (mirroring the implementing spec's lane) rather than `### Audit`. Audit gate: `/audit-adr` on the record clean after any move.
-
 ## Verdict-row keys in `audit-{lang}-architecture` skills lack conformance evidence (FOLLOW-UP)
 
 The `audit-{lang}-architecture` skills declare their verdict-row keys (`section-structure`, `testability-in-verification`, `atemporal-voice`, …) as prose in the JSON output schema, with no conformance test or eval pinning the key names — a rename or revert (such as a `testability-in-compliance` → `testability-in-verification` rename) would go undetected. This is the same class as the `[eval]`-migration candidates tracked in `spx/43-typescript.enabler/25-typescript-standards.enabler/ISSUES.md`; fold verdict-row-key assertions into that language-auditor eval work rather than testing one renamed key in isolation.

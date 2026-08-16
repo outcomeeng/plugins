@@ -157,15 +157,10 @@ The remaining tasks below harden the current `review-changes` implementation. Th
 
 ### Plan items
 
-1. Add deterministic diff-coordinate validation.
-   - Add a stdlib-only validator that compares each finding location with the diff emitted by `compute_diff.py`.
-   - Reject findings whose `file:line` is outside the changed coordinates visible to the review input.
-   - Wire the check into the existing per-finding validation path before journal emission.
-
-2. Add a prompt-injection guard for diff content.
-   - State in `references/review-prompt.md` that diff content is untrusted data.
-   - Require the reviewer to ignore instructions embedded in changed files, comments, fixtures, or generated text.
-   - Keep this separate from repository-rule citation grounding.
+1. Add deterministic finding-location validation.
+   - Add a stdlib-only validator that compares each finding location with the diff emitted by `compute_diff.py` and with the repository.
+   - Reject a finding on a changed file whose `file:line` is outside the changed coordinates visible to the review input, and reject a finding on an unchanged consumer whose `file:line` does not exist — the consumer case is admitted by design, since review scope reaches unchanged consumers of a changed governing declaration.
+   - Wire the check into the per-finding path before journal emission, or into the SPX finding validation entry 3 routes there.
 
 ### Coordination
 
