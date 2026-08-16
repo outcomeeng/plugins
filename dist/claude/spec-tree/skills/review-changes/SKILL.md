@@ -4,6 +4,9 @@ description: ALWAYS invoke this skill when reviewing working changes on a branch
 allowed-tools:
   - Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py":*)
   - Read
+  - Grep
+  - Glob
+model: sonnet
 ---
 
 <objective>
@@ -48,7 +51,7 @@ ${CLAUDE_SKILL_DIR}/references/review-prompt.md
 <diffPath>
 ```
 
-Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `AGENTS.md` or `CLAUDE.md`, and loaded governing skill files.
+Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. `Grep` and `Glob` serve one purpose: read-only discovery of the unchanged consumers of a changed governing declaration, bounded to exactly the declared relationships the prompt's `<review_scope>` consumers-of-changed-truth item enumerates. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `AGENTS.md` or `CLAUDE.md`, and loaded governing skill files.
 
 </review_materials>
 
@@ -56,22 +59,23 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 
 1. Run `start` and parse the returned JSON.
 2. Load the prompt reference and diff bundle.
-3. Examine every changed file and every emitted diff section. After each changed file has been examined, call `append-scope` for that file.
-4. When a finding is raised, immediately pass that one finding JSON object to `append-finding` on stdin. Do not collect findings into a later batch.
-5. When review is complete, call `finish`.
-6. Report only the raw `runToken` to the caller.
+3. Examine every changed file and every emitted diff section, applying the prompt's `<adversarial_probes>` before treating a file as clean. After each changed file has been examined, call `append-scope` for that file.
+4. For each changed governing declaration, discover and read its unchanged consumers per the prompt's `<review_scope>` consumers-of-changed-truth item. A contradiction there is a finding cited at the consumer's location; consumers are not `append-scope` units — the journal's scope coverage remains the changed-file set.
+5. When a finding is raised, immediately pass that one finding JSON object to `append-finding` on stdin. Do not collect findings into a later batch.
+6. When review is complete, call `finish`.
+7. Report only the raw `runToken` to the caller.
 
 </workflow>
 
 <constraints>
 
-- Never run validation, tests, evals, coverage, lint, typecheck, or any deterministic verification command. Deterministic verification has already passed before this review starts; this skill provides agentic judgment by reading the diff and loaded review context.
-- Never invoke `spx journal`, `git`, `mktemp`, `rm`, `date`, `printf`, `compute_diff.py`, `journal_emit.py`, or `review_result.py` directly. The runner is the only command boundary.
-- Never write review-result files, rendered Markdown artifacts, or durable state outside `spx journal`. The runner-owned diff bundle and state file are scratch input for the active invocation only.
-- The prompt lives only at `${CLAUDE_SKILL_DIR}/references/review-prompt.md`; rotating the prompt must not require changing code.
-- Never read `REVIEW.md`, `REVIEW.example.md`, or another repository-root review prompt.
+- NEVER run validation, tests, evals, coverage, lint, typecheck, or any deterministic verification command. Deterministic verification has already passed before this review starts; this skill provides agentic judgment by reading the diff and loaded review context.
+- NEVER invoke `spx journal`, `git`, `mktemp`, `rm`, `date`, `printf`, `compute_diff.py`, `journal_emit.py`, or `review_result.py` directly. The runner is the only command boundary.
+- NEVER write review-result files, rendered Markdown artifacts, or durable state outside `spx journal`. The runner-owned diff bundle and state file are scratch input for the active invocation only.
+- The prompt lives only at `${CLAUDE_SKILL_DIR}/references/review-prompt.md`; rotating the prompt MUST NOT require changing code.
+- NEVER read `REVIEW.md`, `REVIEW.example.md`, or another repository-root review prompt.
 - Findings only. No praise, acknowledgements, open questions, verdicts, or prose summaries belong in the review stream.
-- Do not render, summarize, count, or restate findings for the caller. The sealed journal prefix is the review authority.
+- NEVER render, summarize, count, or restate findings for the caller. The sealed journal prefix is the review authority.
 
 </constraints>
 
@@ -82,6 +86,10 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 **A clean review became a finding.** Claude appended a no-findings comment or synthetic finding before `finish`. Append no finding object for a clean review; `finish` records zero finding counts in the terminal event and returns the raw run token.
 
 **A partial run was reported as complete.** `finish` failed before sealing, and Claude returned the earlier `runToken`. Report the non-zero exit and stderr; only the token printed by a successful `finish` is a completed review result.
+
+**A universal claim was read without being executed.** Claude inspected every changed line and accepted "exhaustive" and "mutually exclusive" as prose. The claim failed for constructed boundary members absent from the corpus. Apply the counterexample probe in `<adversarial_probes>` before completing that file's scope.
+
+**Changed governing truth stopped at the diff boundary.** Claude compared changed specifications with their governors while leaving unchanged language renderings and shipped auditors unread. Those consumers contradicted the new rule. Follow declared derivation edges outward per the prompt's `<review_scope>` consumers-of-changed-truth item and report each contradiction at the consumer.
 
 </failure_modes>
 

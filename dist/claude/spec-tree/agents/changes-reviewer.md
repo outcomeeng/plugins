@@ -2,7 +2,7 @@
 name: changes-reviewer
 description: >-
   ALWAYS invoke when reviewing working changes against a base ref. Accepts an optional input naming the scope to review — a PR reference (`#N`, URL, or `owner/repo#N`), a branch reference, a `from...to` git rev range, or nothing (defaults to the current branch vs `origin/HEAD`). NEVER invoke for posting review comments to a GitHub PR thread.
-tools: Bash, Read, Skill
+tools: Bash, Read, Grep, Glob, Skill
 model: sonnet
 skills:
   - spec-tree:review-changes
@@ -31,7 +31,7 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 <workflow>
 
-1. **Parse the input.** Identify the form and resolve `(from_ref, to_ref, branch_name)` using the table above. For PR forms, run `gh pr view <n> --json baseRefName,headRefName` once and read both fields plus the PR number, then run `git fetch origin pull/<n>/head` so `FETCH_HEAD` resolves to the reviewed PR head without requiring an `origin/<headRefName>` remote-tracking branch. For ranges, split on the first `...`. For branch tokens, verify with `git rev-parse --verify <token>`; if verification fails, report the failure and stop.
+1. **Parse the input.** Identify the form and resolve `(from_ref, to_ref, branch_name)` using the table above. For PR forms, run `gh pr view <n> --json baseRefName,headRefName` once and read both fields plus the PR number, then run `git fetch origin pull/<n>/head` so `FETCH_HEAD` resolves to the reviewed PR head without requiring an `origin/<headRefName>` remote-tracking branch. For ranges, split on the first `...` and verify each token with `git rev-parse --verify <token>`. For branch tokens, verify with `git rev-parse --verify <token>`. When `gh pr view` returns no PR, the fetch of `pull/<n>/head` fails, or any token fails verification, report the failure and stop without exporting refs or invoking the skill.
 
 2. **Export the refs and branch identity for non-empty inputs.** Export `SPX_VERIFY_BASE_REF=<from_ref>`, `SPX_VERIFY_HEAD_REF=<to_ref>`, and `SPX_VERIFY_BRANCH=<branch_name>`. For PR inputs, also export `SPX_VERIFY_TARGET_KIND=pull-request` and `SPX_VERIFY_PULL_REQUEST_NUMBER=<n>` so the review journal terminal event records PR identity. For empty input, export nothing — the skill auto-resolves both refs and records a branch-target run.
 

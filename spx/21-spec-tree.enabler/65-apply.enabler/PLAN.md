@@ -1,6 +1,6 @@
 # Plan: drain the preserved aggregate through merge cycles
 
-`/apply` coordinates the dependency-ordered merge cycles that drain `origin/work/strict-finding-disposition`; each affected node owns the concrete branch work and revisit condition in its own `PLAN.md`.
+`/apply` coordinates the dependency-ordered merge cycles that drain `origin/work/strict-finding-disposition`; each affected node owns the concrete branch work and revisit condition in its node-local coordination note.
 
 ## Recovery boundary
 
@@ -10,11 +10,11 @@ The changeset-coherence auditor on `origin/work/changeset-coherence-auditor` rem
 
 ## Merge-cycle index
 
-Run one independently mergeable cycle at a time. Load the target node's plan before reconstructing its patch from current `origin/main`.
+Run one independently mergeable cycle at a time. Load the target node's coordination note before reconstructing its patch from current `origin/main`.
 
 1. `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/PLAN.md`
 2. `spx/13-infrastructure.enabler/25-eval-harness.enabler/PLAN.md`
-3. `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/PLAN.md`
+3. `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/ISSUES.md`
 4. `spx/21-spec-tree.enabler/68-audit.enabler/PLAN.md`
 5. `spx/43-typescript.enabler/25-typescript-standards.enabler/29-typescript-code.enabler/PLAN.md`
 6. `spx/21-spec-tree.enabler/76-merge.enabler/PLAN.md`

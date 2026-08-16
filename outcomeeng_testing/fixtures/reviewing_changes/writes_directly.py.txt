@@ -1,0 +1,9 @@
+"""A shipped-script shape that writes durable state through direct primitives."""
+
+import pathlib
+
+
+def main(target: pathlib.Path) -> None:
+    with open(target, "w") as handle:
+        handle.write("review state")
+    target.with_suffix(".bak").write_text("copy")

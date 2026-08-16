@@ -2,6 +2,18 @@
 
 Known issues for `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler`.
 
+## Consumer inspections are not journaled as review scope
+
+The review prompt's scope reaches unchanged consumers of a changed governing declaration, but `review_run.py finish` rejects a scope-advanced event whose unit is outside `changedFiles`, so an inspected consumer is recorded only when it yields a finding. Coverage of consumers that were inspected and found clean is invisible to the journal projection.
+
+**Resolution shape**: when review moves into the SPX CLI (entry 9), generalize the scope unit from "changed file" to "reviewed unit" with a `scopeKind` of `changed`, `consumer`, or `governance`, project authoritative coverage from the changed-file units, and record consumer units as inspected without making them a `finish` precondition. Not a bounded fix here: it changes the runner's scope contract in a script owed to extraction.
+
+## Eval lane suspended while the node is `tier: prototype`
+
+The node's LLM-behavior assertions — rule-citation grounding, absence-claim discipline, severity rubric fit, wrapper protocol, findings direction, and the adversarial probes — carry `[audit]` evidence while the spec declares `tier: prototype`; the eval harness is unavailable for producer-coupled evidence. The `tier` frontmatter field is ahead of its declaration: `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/PLAN.md` defers tier until the CLI projects the frontmatter field and spec-audit recognizes it, so this node carries the key by operator direction before that schema lands (review run `2026-08-16_20-27-53-613-16cfc8848697`, one debt finding, tracked here).
+
+**Resolution shape**: when the eval facility runs again, author one producer-coupled eval per assertion class through `prompt_source.producer` pointing at the shipped review prompt, relink the assertions as `[eval]`, and drop the tier marker. Cases for the probes: a diff asserting an exhaustive or mutually exclusive partition with a constructible hole; a restated rule with a dropped conjunct; a newly bound definite description with no owner; an unchanged cited consumer the change contradicts.
+
 ## 1. Review nodes use gerunds
 
 `spx/21-spec-tree.enabler/68-reviewing.enabler` and `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` use gerund slugs. The nodes must be `review` and `review-changes`.
@@ -94,20 +106,6 @@ Required handling:
 - Consume the declared attribution in this node's scope derivation as the reviewer's own derivation, never a caller filter, preserving the caller-independence rule this node already carries; the skip-and-record mechanics arrive with the `spx` verification scope projection tracked in `spx/31-outcomeeng.enabler/31-verification.enabler/PLAN.md`.
 - Keep base-sync scope on the real changed-file set — the governing decision widens no exclusion beyond agentic verification.
 
-## 8. The review-changes skill omits an explicit model pin
-
-`src/plugins/spec-tree/skills/review-changes/SKILL.md` declares no `model` field, so a direct skill invocation inherits the session model. `skill-standards` states that marketplace verification-sensitive surfaces use explicit `sonnet` and never use session inheritance, and every `audit-*` skill in the spec-tree plugin pins `model: sonnet`. Review is a verification type whose findings decide `VERIFICATION_READINESS`, so an inherited model makes the review verdict depend on whichever model the invoking session happens to run.
-
-The primary path is already pinned: the `changes-reviewer` agent declares `model: sonnet`, so agent-dispatched reviews are reproducible today. The gap is the direct skill-invocation path.
-
-Required handling:
-
-- Add `model: sonnet` to the `review-changes` skill frontmatter, matching the `audit-*` sibling convention.
-- Regenerate the plugin runtime trees and the catalog so the pin reaches `dist/`.
-- Re-run the skill auditor for the node after the change.
-
-The sibling reference skill `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler` needs no pin: `scope-changeset` is `user-invocable: false` with `allowed-tools: Read`, supplying deterministic script primitives rather than a model-judged verdict.
-
 ## 9. Four shipped review scripts await extraction into the SPX CLI
 
 The `review-changes` skill ships four scripts past the fifty-line threshold:
@@ -120,6 +118,8 @@ The `review-changes` skill ships four scripts past the fifty-line threshold:
 Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; all four have proven their value in use, so extraction is what they owe. `21-script-decomposition.adr.md` already names `compute_diff.py`, `journal_emit.py`, and `review_result.py` as stop-gap modules, so their extraction completes a decomposition this node has already decided rather than opening a new one.
 
 The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, and the plugins product may depend on the resulting capability only once it is published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts the fix outside any changeset confined to this repository.
+
+`review_result.py` also probes this repository's own `src/plugins/`, `dist/claude/`, and `dist/codex/` layout before its portable runtime-relative candidates when resolving a plugin-skill citation; those authoring-layout candidates never exist in a consumer checkout and leave with the extraction.
 
 **Resolution shape**: port the runner, the result schema, the journal adapter, and diff computation into the SPX CLI, publish it, advance the floor, and reduce the shipped skill to its instruction with no scripts. Entry 3 above already routes review-finding validation to that boundary, and the projection scripts extract with it per `spx/21-spec-tree.enabler/16-verification.enabler/18-journal-projection.enabler/ISSUES.md`, so the four move as one surface rather than piecemeal. Revisit when the capability publishes.
 
@@ -139,8 +139,72 @@ The cost is not symmetric across the two surfaces. A review states findings and 
 
 Revisit entries 5 and 6 when review moves from `spx journal --type review` to `spx verification run`. Exercise the migration with an in-progress inspection before seal, repeated inspection of one file, restored prior-run context, and a final projection whose unique covered-unit count equals the changeset scope.
 
-## `audit` is not an assertion-type token
+## Consolidated implementation plan
 
-`tests/test_reviewing_changes.audit.l1.py` carries the evidence token `audit`, outside the five assertion types the canonical test-filename model in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md` recognizes (scenario, mapping, conformance, property, compliance), so the file declares no recognized cell.
+The remaining tasks below harden the current `review-changes` implementation. They are implementation work, not active issue-driven defects.
 
-**Resolution shape**: route the file's assertions through `/test` to select the correct assertion type, rename the file to that token, and update the `[test]` links in this node's spec. Deferred from the decision changeset that bound the model because re-typing this node's evidence requires this node's context, `/test` routing, and the test-evidence gate.
+### Plan items
+
+1. Add deterministic finding-location validation.
+   - Add a stdlib-only validator that compares each finding location with the diff emitted by `compute_diff.py` and with the repository.
+   - Reject a finding on a changed file whose `file:line` is outside the changed coordinates visible to the review input, and reject a finding on an unchanged consumer whose `file:line` does not exist — the consumer case is admitted by design, since review scope reaches unchanged consumers of a changed governing declaration.
+   - Wire the check into the per-finding path before journal emission, or into the SPX finding validation entry 3 routes there.
+
+### Coordination
+
+Run `/understand`, then `/contextualize spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` before acting. Verify each item against the current review prompt, policy module, journal adapter, and tests before implementation.
+
+### Salvage plan for prompt single-source cleanup
+
+Source branch: `work/review-prompt-single-source`
+
+Source PR: `https://github.com/outcomeeng/plugins/pull/387`
+
+Source head: `a3d65439c501a0f53bf7a8971fa0539e0cd5013b`
+
+Current replacement branch: `work/review-prompt-single-source-v2`
+
+Objective: merge the review prompt single-source cleanup without carrying the local hand-rolled preview workflow from the discarded branch.
+
+#### Keep
+
+- `REVIEW.md`: remove the repository-root review override so the shipped skill reference prompt is the only live review prompt authority.
+- `REVIEW.example.md`: remove the unused example prompt so consumers do not copy a parallel prompt contract.
+- `methodology/research/review-prompt.md`: remove the duplicate research prompt when it repeats the live prompt content.
+- `src/plugins/spec-tree/skills/review-changes/SKILL.md`: preserve the runner-only workflow and raw-run-token caller output; remove `REVIEW.md` from review materials and workflow steps.
+- `src/plugins/spec-tree/skills/review-changes/references/review-prompt.md`: preserve the tightened review prompt that forbids deterministic verification, requires streaming single-finding objects, rejects caller steering, and keeps rule citations grounded in loaded context.
+- `src/plugins/spec-tree/skills/review-changes/scripts/review_run.py`: preserve scope-coverage enforcement before `finish` when the implementation still needs it on current `origin/main`.
+- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md`: update assertions so the bundled prompt is the sole review context and repository-root prompt files are not loaded.
+- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`: keep the decision aligned with the single runner and journal-only durable state.
+- Co-located tests for the retained behavior: preserve only the assertions required for bundled-prompt single source, raw token output, no root prompt loading, scope coverage, and journal event behavior.
+- Generated `dist/claude/spec-tree/**` and `dist/codex/spec-tree/**`: regenerate from `src/plugins/spec-tree/**` with `just build-skills`; do not hand-copy generated content from the discarded branch.
+
+#### Inspect Before Keep
+
+- `src/plugins/spec-tree/skills/review-changes/scripts/journal_emit.py` and `review_result.py`: keep only changes still required by current tests and the live runner contract; avoid restoring review-specific finding validation into the skill path because `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/ISSUES.md` records that validation belongs in SPX.
+- `outcomeeng_testing/harnesses/reviewing_changes.py`: keep only fixture cleanup directly tied to removed root prompt policy or obsolete citation domains.
+- `spx/local/merging.md`: keep only review lifecycle wording that remains correct without the local preview workflow.
+
+#### Discard
+
+- `.github/workflows/review-changes-preview.yml`: discard the hand-rolled local workflow. The wanted preview is a thin caller of the reusable verification host from `outcomeeng/gh-actions`.
+- `.github/workflows/spec-tree-review.yml`: discard comments or behavior that make the local `review-changes-preview.yml` workflow canonical.
+- Commits `b5f5682742b22f8121d7d6b13d795b0aa10e5e7b`, `73fd856a16c32890769028746b794a0fd82e6986`, `82e96b29e1acfb27c452ed51118f2a14580125e1`, `bad2a8d58fe038f656281b86f792df62ca15c2dc`, `59ae3dbfc79865e2eadf0a0144863dbbb8f93526`, `c610caa2d1f27eaa20ae7c3469ad71f44911d927`, and `a3d65439c501a0f53bf7a8971fa0539e0cd5013b`: discard the local preview implementation and permission-envelope churn.
+- Any generated root guide or unrelated marketplace-wide distribution churn visible only because `work/review-prompt-single-source` is stale against current `origin/main`.
+
+#### Merge Path
+
+1. Apply the retained source changes onto `origin/main` on `work/review-prompt-single-source-v2`.
+2. Regenerate plugin distributions with `just build-skills`.
+3. Run scoped deterministic verification for the touched review-changes tests and skill/doc checks.
+4. Run `changes-reviewer` on the exact final tree and fix valid findings.
+5. Open and manage a replacement PR through the standard merge lifecycle.
+6. Close PR #387 after the replacement PR is open and carries the retained prompt work.
+
+### Strict-finding-disposition extraction
+
+Reconstruct the preserved review-journal and result-contract work from current `origin/main` as one review-owned merge cycle only when the patch has one observable result: the review skill records grounded findings in a sealed journal and returns one raw run token through source-owned evidence infrastructure.
+
+The extraction includes this node's spec, review prompt, journal runner and result contracts, co-located tests and evals, and the smallest review-specific harness or generator changes they require. Eval-harness capabilities that can merge independently remain in `spx/13-infrastructure.enabler/25-eval-harness.enabler/PLAN.md`; merge policy that consumes the token remains in `spx/21-spec-tree.enabler/76-merge.enabler/PLAN.md`.
+
+**Revisit condition:** replace this section with the extracted branch and PR identity after focused tests, evidence audits, and rollback analysis establish one review-owned cluster.

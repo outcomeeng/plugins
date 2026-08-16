@@ -1,0 +1,7 @@
+"""A shipped-script shape that imports this repository's toolchain package."""
+
+from outcomeeng_testing.harnesses.reviewing_changes import REPO_ROOT
+
+
+def main() -> int:
+    return len(str(REPO_ROOT))
