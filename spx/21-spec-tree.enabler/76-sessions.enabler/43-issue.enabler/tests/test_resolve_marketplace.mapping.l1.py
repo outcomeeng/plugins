@@ -245,6 +245,35 @@ def _unresolvable_payloads() -> list[tuple[str, str, object]]:
             },
         ),
         (
+            "marketplaces-field-absent",
+            RESOLVER.RUNTIME_CLAUDE,
+            {"version": 1},
+        ),
+        (
+            "claude-entry-without-source",
+            RESOLVER.RUNTIME_CLAUDE,
+            [
+                {
+                    RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+                    RESOLVER.PATH_FIELD: "/somewhere",
+                }
+            ],
+        ),
+        (
+            # The shape Codex emits for a marketplace it materialized without
+            # a recorded source: a top-level root and no marketplaceSource.
+            "codex-entry-without-marketplace-source",
+            RESOLVER.RUNTIME_CODEX,
+            {
+                RESOLVER.MARKETPLACES_FIELD: [
+                    {
+                        RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+                        RESOLVER.ROOT_FIELD: "/somewhere",
+                    }
+                ]
+            },
+        ),
+        (
             "codex-marketplace-source-not-a-mapping",
             RESOLVER.RUNTIME_CODEX,
             {
@@ -260,10 +289,13 @@ def _unresolvable_payloads() -> list[tuple[str, str, object]]:
     ]
 
 
+UNRESOLVABLE_PAYLOADS = _unresolvable_payloads()
+
+
 @pytest.mark.parametrize(
     ("shape", "runtime", "payload"),
-    _unresolvable_payloads(),
-    ids=[case[0] for case in _unresolvable_payloads()],
+    UNRESOLVABLE_PAYLOADS,
+    ids=[case[0] for case in UNRESOLVABLE_PAYLOADS],
 )
 def test_unresolvable_payload_shape_maps_to_none_available(
     shape: str, runtime: str, payload: object
@@ -275,6 +307,26 @@ def test_unresolvable_payload_shape_maps_to_none_available(
     assert (
         f"available local marketplaces: {RESOLVER.NO_LOCAL_MARKETPLACES}"
     ) in result.stderr
+
+
+def test_same_name_entries_map_to_the_first_resolvable_one(tmp_path: Path) -> None:
+    resolvable_path = tmp_path / "second-registration"
+    payload = [
+        {
+            RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+            RESOLVER.SOURCE_FIELD: RESOLVER.CLAUDE_DIRECTORY_SOURCE,
+        },
+        {
+            RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+            RESOLVER.SOURCE_FIELD: RESOLVER.CLAUDE_DIRECTORY_SOURCE,
+            RESOLVER.PATH_FIELD: str(resolvable_path),
+        },
+    ]
+
+    result = _run_resolver(payload, runtime=RESOLVER.RUNTIME_CLAUDE)
+
+    assert result.returncode == 0
+    assert result.stdout == f"{resolvable_path}\n"
 
 
 def test_omitted_name_maps_to_the_default_marketplace(tmp_path: Path) -> None:

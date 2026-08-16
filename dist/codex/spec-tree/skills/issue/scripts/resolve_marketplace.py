@@ -17,10 +17,12 @@ Tested with:
 - Missing local marketplace -> returns a clear target-resolution error.
 - No local marketplace registered at all -> names none as available.
 - Valid JSON in a shape that resolves no path -> names none as available:
-  a scalar payload, a non-list marketplaces field, a non-mapping entry in
-  either payload shape, a non-string entry name, a Directory entry without
-  a path, a local Codex entry without source or root, and a non-mapping
-  marketplaceSource.
+  a scalar payload, an absent or non-list marketplaces field, a non-mapping
+  entry in either payload shape, a non-string entry name, a Claude entry
+  without a source, a Directory entry without a path, a Codex entry without
+  a marketplaceSource, a local Codex entry without source or root, and a
+  non-mapping marketplaceSource.
+- Two entries sharing the name -> resolves the first with a path.
 - An omitted --name -> resolves the default marketplace.
 - No temporary files are created.
 """
