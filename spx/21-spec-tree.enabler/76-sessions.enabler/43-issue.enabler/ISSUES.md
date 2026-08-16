@@ -1,5 +1,25 @@
 # Issues: Issue Filing
 
+## The two handoff stdin forms are coupled by prose alone
+
+`src/plugins/spec-tree/skills/issue/SKILL.md` Step 6 spells the
+`<dependency_followup_body>` line sequence twice — once as heredoc lines, once as
+`printf` arguments — because `spx/15-agent-tools.pdr.md` requires a named form per
+harness. Two notes state the coupling, one at the body contract and one at the forms,
+but nothing enforces it: an edit to the section order or count in one block can ship
+while the other keeps the old sequence, and the resulting handoff body differs by
+harness.
+
+**Resolution shape**: render both blocks from one ordered section list at build time, or
+add a deterministic check asserting the two blocks enumerate the same tag sequence and
+wire it into the skill checks. Either is verification machinery this changeset does not
+carry — a build-step or gate change with its own evidence and its own auditor pass —
+rather than an edit to the skill body.
+
+**Evidence**: raised by `instructions:skill-auditor` across two rounds on
+`work/issue-harness-command-form-and-mapping-domain`; the prose notes it accepted close
+the reader-facing half, and it kept the enforcement gap open as worth-improving.
+
 ## Two Compliance assertions bundle roughly seven rules each
 
 `spx/21-spec-tree.enabler/76-sessions.enabler/43-issue.enabler/issue.md` carries two Compliance
