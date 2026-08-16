@@ -67,7 +67,7 @@ The touched-scope principle is `/merging-standards` `<local_deterministic_scope>
 - Skill/doc Markdown under `src/plugins/` or `dist/`: `just check-skills` and `just docs-check`.
 - Implementation, test, validation-config, or broad changes: the focused node/package/module tests plus the narrow validation lane that covers the changed files, widening to full `just check-full` for shared validation/test infrastructure, package-manager files, generated catalog output, or distribution build machinery.
 
-Marketplace installation changes include `just verify-marketplace-installation` in the focused deterministic scope. This command runs the repository-installation invalid-selection and L3 evidence files in disposable homes and performs no persistent installation.
+Marketplace installation changes include `just verify-marketplace-installation` in the focused deterministic scope. This command runs the repository-installation node's complete pytest-discovered evidence in disposable homes and performs no persistent installation.
 
 When the full `just check-full` bundle is required, it is the terminal local deterministic gate. Run the focused lane first, then all applicable evidence auditors and agentic reviews to convergence, then run `just check-full` once against the clean committed head. Never run `just check-full` before those agentic checks, inside an agent, or concurrently with another heavy command. Any change after it invalidates the result and reopens the affected agentic gates before the next full-gate run.
 

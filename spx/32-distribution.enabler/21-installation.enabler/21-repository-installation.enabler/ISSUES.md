@@ -4,14 +4,14 @@ Known defects in the repository-installation evidence. Each entry names the arti
 
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
-`test_real_agent_clis_map_full_and_generated_subsets` fails at the `marketplace-refresh` operation. `codex plugin marketplace upgrade outcomeeng --json` exits 1 with:
+`test_real_agent_clis_map_full_and_generated_subsets` can fail at the `marketplace-refresh` operation. `codex plugin marketplace upgrade outcomeeng --json` then exits 1 with:
 
 ```text
 Failed to upgrade marketplace `outcomeeng`: git clone marketplace source timed out after 30s
 fatal: early EOF
 ```
 
-`test_verification_recipe_aliases_the_exact_installation_evidence` fails only as a consequence, because it asserts `just verify-marketplace-installation` runs the declared installation evidence files.
+`test_verification_recipe_uses_pytest_discovery_for_the_node` fails only as a consequence, because it asserts `just verify-marketplace-installation` runs the node's complete pytest-discovered installation evidence.
 
 The same bound breaks the declared RELEASE action. `just install-marketplace`, which `spx/local/merging.md` declares under `RELEASE_READINESS`, fails at the identical operation and recipe line, so a merge lifecycle cannot complete its release phase on a host where the clone exceeds the bound. The run's 23-operation prefix — the Claude marketplace replace, ten install and enable pairs, and the list — completes first, so Claude Code project scope is refreshed while the Codex marketplace is not. That is a partial release reporting failure, never a cosmetic non-zero exit.
 
