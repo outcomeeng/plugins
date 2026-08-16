@@ -22,7 +22,7 @@ CLAUDE_CATALOG_PATH = Path(".claude-plugin/marketplace.json")
 VERIFICATION_TEST = (
     "spx/32-distribution.enabler/21-installation.enabler/"
     "21-repository-installation.enabler/tests/"
-    "test_repository_installation.scenario.l2.py"
+    "test_repository_installation.scenario.l3.py"
 )
 VERIFICATION_RECIPE_COMMAND = ("test", VERIFICATION_TEST)
 CLAUDE_PROJECT_SETTINGS_PATH = Path(".claude/settings.json")
@@ -44,7 +44,14 @@ CLAUDE_EXECUTABLE = "claude"
 CODEX_EXECUTABLE = "codex"
 PYTHON_EXECUTABLE = "python3"
 CLAUDE_LIST_COMMAND = (CLAUDE_EXECUTABLE, "plugin", "list", "--json")
-CODEX_LIST_COMMAND = (CODEX_EXECUTABLE, "plugin", "list", "--json")
+CODEX_LIST_COMMAND = (
+    CODEX_EXECUTABLE,
+    "plugin",
+    "list",
+    "--marketplace",
+    MARKETPLACE_NAME,
+    "--json",
+)
 CODEX_MARKETPLACE_LIST_COMMAND = (
     CODEX_EXECUTABLE,
     "plugin",
@@ -71,10 +78,20 @@ CODEX_GIT_SOURCE_TYPE = "git"
 CODEX_LOCAL_SOURCE_TYPE = "local"
 CLAUDE_PLUGIN_ID_FIELD = "id"
 CLAUDE_PLUGIN_ENABLED_FIELD = "enabled"
+CLAUDE_PLUGIN_SCOPE_FIELD = "scope"
+CLAUDE_PLUGIN_PROJECT_PATH_FIELD = "projectPath"
+CLAUDE_PROJECT_SCOPE = "project"
+CLAUDE_USER_SCOPE = "user"
 CLAUDE_ENABLED_PLUGINS_FIELD = "enabledPlugins"
 CODEX_PLUGIN_ENTRIES_FIELD = "installed"
 CODEX_PLUGIN_ID_FIELD = "pluginId"
 CODEX_PLUGIN_ENABLED_FIELD = "enabled"
+CODEX_PLUGIN_MARKETPLACE_FIELD = "marketplaceName"
+SPEC_TREE_PLUGIN = "spec-tree"
+FIRST_INSTALL_WARNING = (
+    "No outcomeeng plugins are installed for {agent}; installing only spec-tree. "
+    "You probably want to install more plugins."
+)
 
 
 class Agent(StrEnum):
@@ -95,6 +112,7 @@ class Operation(StrEnum):
     """External operations exposed in reports and diagnostics."""
 
     MARKETPLACE_INSPECT = "marketplace-inspect"
+    PLUGIN_INSPECT = "plugin-inspect"
     MARKETPLACE_REMOVE = "marketplace-remove"
     MARKETPLACE_ADD = "marketplace-add"
     MARKETPLACE_REFRESH = "marketplace-refresh"
@@ -154,14 +172,22 @@ class CommandResult:
 
 @dataclass(frozen=True)
 class PersistentPreflight:
-    """Validated persistent inputs before Codex source inspection."""
+    """Validated persistent inputs and read-only inspection commands."""
 
     roots: InstallationRoots
     environment: tuple[tuple[str, str], ...]
     claude_plugins: tuple[str, ...]
     codex_plugins: tuple[str, ...]
     claude_source_action: SourceAction
-    codex_inspection: InstallationCommand
+    inspections: tuple[InstallationCommand, ...]
+
+
+@dataclass(frozen=True, order=True)
+class InstallationWarning:
+    """One non-terminal warning produced while selecting plugins."""
+
+    agent: Agent
+    message: str
 
 
 @dataclass(frozen=True)
@@ -173,6 +199,7 @@ class InstallationPlan:
     claude_plugins: tuple[str, ...]
     codex_plugins: tuple[str, ...]
     commands: tuple[InstallationCommand, ...]
+    warnings: tuple[InstallationWarning, ...] = ()
 
 
 @dataclass(frozen=True, order=True)
@@ -422,6 +449,9 @@ def build_isolated_installation_plan(
     checkout: Path,
     state_root: Path,
     base_environment: Mapping[str, str],
+    *,
+    claude_plugins: Sequence[str] | None = None,
+    codex_plugins: Sequence[str] | None = None,
 ) -> InstallationPlan:
     """Build an isolated plan rooted beneath caller-selected disposable state."""
     resolved_checkout = checkout.resolve(strict=True)
@@ -435,12 +465,26 @@ def build_isolated_installation_plan(
         codex_sqlite_home=resolved_state / "codex-sqlite",
     )
     environment = isolated_environment(roots, base_environment)
+    claude_catalog = catalog_plugin_names(roots.checkout / CLAUDE_CATALOG_PATH)
+    codex_catalog = catalog_plugin_names(roots.checkout / CODEX_CATALOG_PATH)
+    selected_claude = _isolated_selection(
+        Agent.CLAUDE,
+        claude_catalog,
+        claude_plugins,
+    )
+    selected_codex = _isolated_selection(
+        Agent.CODEX,
+        codex_catalog,
+        codex_plugins,
+    )
     return _build_plan(
         InstallationMode.ISOLATED,
         roots,
         environment,
         SourceAction.ADD,
         SourceAction.ADD,
+        claude_plugins=selected_claude,
+        codex_plugins=selected_codex,
     )
 
 
@@ -461,13 +505,31 @@ def build_persistent_preflight(
     project_document = _settings_document(roots.checkout / CLAUDE_PROJECT_SETTINGS_PATH)
     project_source_action = claude_source_action(project_document)
     environment = persistent_environment(roots, base_environment)
-    inspection = _command(
-        Agent.CODEX,
-        Operation.MARKETPLACE_INSPECT,
-        None,
-        CODEX_MARKETPLACE_LIST_COMMAND,
-        roots,
-        environment,
+    inspections = (
+        _command(
+            Agent.CLAUDE,
+            Operation.PLUGIN_INSPECT,
+            None,
+            CLAUDE_LIST_COMMAND,
+            roots,
+            environment,
+        ),
+        _command(
+            Agent.CODEX,
+            Operation.MARKETPLACE_INSPECT,
+            None,
+            CODEX_MARKETPLACE_LIST_COMMAND,
+            roots,
+            environment,
+        ),
+        _command(
+            Agent.CODEX,
+            Operation.PLUGIN_INSPECT,
+            None,
+            CODEX_LIST_COMMAND,
+            roots,
+            environment,
+        ),
     )
     return PersistentPreflight(
         roots=roots,
@@ -475,24 +537,50 @@ def build_persistent_preflight(
         claude_plugins=catalog_plugin_names(roots.checkout / CLAUDE_CATALOG_PATH),
         codex_plugins=catalog_plugin_names(roots.checkout / CODEX_CATALOG_PATH),
         claude_source_action=project_source_action,
-        codex_inspection=inspection,
+        inspections=inspections,
     )
 
 
 def build_persistent_installation_plan(
     preflight: PersistentPreflight,
+    *,
+    claude_plugins_payload: str,
     codex_marketplace_payload: str,
+    codex_plugins_payload: str,
 ) -> InstallationPlan:
     """Build a persistent plan from validated inputs and Codex CLI state."""
     codex_action = codex_source_action(codex_marketplace_payload)
+    claude_selection, claude_warning = _persistent_selection(
+        Agent.CLAUDE,
+        preflight.claude_plugins,
+        installed_plugin_names(
+            Agent.CLAUDE,
+            claude_plugins_payload,
+            checkout=preflight.roots.checkout,
+        ),
+    )
+    codex_selection, codex_warning = _persistent_selection(
+        Agent.CODEX,
+        preflight.codex_plugins,
+        installed_plugin_names(
+            Agent.CODEX,
+            codex_plugins_payload,
+            checkout=preflight.roots.checkout,
+        ),
+    )
     return _build_plan(
         InstallationMode.PERSISTENT,
         preflight.roots,
         preflight.environment,
         preflight.claude_source_action,
         codex_action,
-        claude_plugins=preflight.claude_plugins,
-        codex_plugins=preflight.codex_plugins,
+        claude_plugins=claude_selection,
+        codex_plugins=codex_selection,
+        warnings=tuple(
+            warning
+            for warning in (claude_warning, codex_warning)
+            if warning is not None
+        ),
     )
 
 
@@ -511,21 +599,34 @@ def execute_persistent_installation(
     must survive.
     """
     preflight = build_persistent_preflight(checkout, base_environment)
-    inspection_result = _checked_result(
-        preflight.codex_inspection,
-        runner(preflight.codex_inspection),
+    inspection_results: list[CommandResult] = []
+    inspection_payloads: dict[tuple[Agent, Operation], str] = {}
+    for inspection in preflight.inspections:
+        result = _checked_result(inspection, runner(inspection))
+        if result.exit_code != 0:
+            raise InstallationFailure(
+                inspection,
+                result,
+                tuple(inspection_results),
+            )
+        inspection_results.append(result)
+        inspection_payloads[(inspection.agent, inspection.operation)] = result.stdout
+    plan = build_persistent_installation_plan(
+        preflight,
+        claude_plugins_payload=inspection_payloads[
+            (Agent.CLAUDE, Operation.PLUGIN_INSPECT)
+        ],
+        codex_marketplace_payload=inspection_payloads[
+            (Agent.CODEX, Operation.MARKETPLACE_INSPECT)
+        ],
+        codex_plugins_payload=inspection_payloads[
+            (Agent.CODEX, Operation.PLUGIN_INSPECT)
+        ],
     )
-    if inspection_result.exit_code != 0:
-        raise InstallationFailure(
-            preflight.codex_inspection,
-            inspection_result,
-            (),
-        )
-    plan = build_persistent_installation_plan(preflight, inspection_result.stdout)
     settings = checkout / CLAUDE_PROJECT_SETTINGS_PATH
     declared = _declared_plugin_selection(settings)
     try:
-        return execute_installation(plan, runner, completed=(inspection_result,))
+        return execute_installation(plan, runner, completed=tuple(inspection_results))
     finally:
         _restore_plugin_selection(settings, declared)
 
@@ -578,12 +679,17 @@ def _build_plan(
     *,
     claude_plugins: tuple[str, ...] | None = None,
     codex_plugins: tuple[str, ...] | None = None,
+    warnings: tuple[InstallationWarning, ...] = (),
 ) -> InstallationPlan:
-    selected_claude_plugins = claude_plugins or catalog_plugin_names(
-        roots.checkout / CLAUDE_CATALOG_PATH
+    selected_claude_plugins = (
+        catalog_plugin_names(roots.checkout / CLAUDE_CATALOG_PATH)
+        if claude_plugins is None
+        else claude_plugins
     )
-    selected_codex_plugins = codex_plugins or catalog_plugin_names(
-        roots.checkout / CODEX_CATALOG_PATH
+    selected_codex_plugins = (
+        catalog_plugin_names(roots.checkout / CODEX_CATALOG_PATH)
+        if codex_plugins is None
+        else codex_plugins
     )
     plugins_by_agent = {
         Agent.CLAUDE: selected_claude_plugins,
@@ -607,6 +713,119 @@ def _build_plan(
         claude_plugins=selected_claude_plugins,
         codex_plugins=selected_codex_plugins,
         commands=commands,
+        warnings=warnings,
+    )
+
+
+def installed_plugin_names(
+    agent: Agent,
+    payload: str,
+    *,
+    checkout: Path,
+) -> frozenset[str]:
+    """Parse one agent's installed outcomeeng inventory for its selected scope."""
+    try:
+        document = cast(object, json.loads(payload))
+    except json.JSONDecodeError as error:
+        raise ValueError(f"invalid {agent.value} plugin listing: {error}") from error
+    entries: object = document
+    if agent is Agent.CODEX:
+        if not isinstance(document, dict):
+            raise ValueError("Codex plugin listing must be a JSON object")
+        entries = document.get(CODEX_PLUGIN_ENTRIES_FIELD)
+    if not isinstance(entries, list):
+        raise ValueError(f"{agent.value} plugin listing must contain an array")
+
+    marketplace_suffix = f"@{MARKETPLACE_NAME}"
+    resolved_checkout = checkout.resolve()
+    installed: set[str] = set()
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise ValueError(
+                f"{agent.value} plugin listing entry {index} must be an object"
+            )
+        identifier_field = (
+            CLAUDE_PLUGIN_ID_FIELD if agent is Agent.CLAUDE else CODEX_PLUGIN_ID_FIELD
+        )
+        identifier = entry.get(identifier_field)
+        if not isinstance(identifier, str):
+            raise ValueError(
+                f"{agent.value} plugin listing entry {index} has no typed identity"
+            )
+        if not identifier.endswith(marketplace_suffix):
+            continue
+        if agent is Agent.CLAUDE:
+            scope = entry.get(CLAUDE_PLUGIN_SCOPE_FIELD)
+            if not isinstance(scope, str):
+                raise ValueError(
+                    f"Claude plugin listing entry {index} has no typed scope"
+                )
+            if scope != CLAUDE_PROJECT_SCOPE:
+                continue
+            project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
+            if not isinstance(project_path, str):
+                raise ValueError(
+                    f"Claude plugin listing entry {index} has no typed project path"
+                )
+            if Path(project_path).expanduser().resolve() != resolved_checkout:
+                continue
+        else:
+            marketplace = entry.get(CODEX_PLUGIN_MARKETPLACE_FIELD)
+            if not isinstance(marketplace, str):
+                raise ValueError(
+                    f"Codex plugin listing entry {index} has no typed marketplace"
+                )
+            if marketplace != MARKETPLACE_NAME:
+                continue
+        installed.add(identifier.removesuffix(marketplace_suffix))
+    return frozenset(installed)
+
+
+def _isolated_selection(
+    agent: Agent,
+    catalog: tuple[str, ...],
+    requested: Sequence[str] | None,
+) -> tuple[str, ...]:
+    selection = catalog if requested is None else tuple(requested)
+    unknown = frozenset(selection) - frozenset(catalog)
+    if unknown:
+        raise ValueError(
+            f"invalid {agent.value} isolated selection: plugins absent from the "
+            f"committed catalog: {', '.join(sorted(unknown))}"
+        )
+    if SPEC_TREE_PLUGIN not in selection:
+        raise ValueError(
+            f"invalid {agent.value} isolated selection: `{SPEC_TREE_PLUGIN}` is required"
+        )
+    selected = frozenset(selection)
+    return tuple(plugin for plugin in catalog if plugin in selected)
+
+
+def _persistent_selection(
+    agent: Agent,
+    catalog: tuple[str, ...],
+    installed: frozenset[str],
+) -> tuple[tuple[str, ...], InstallationWarning | None]:
+    if SPEC_TREE_PLUGIN not in catalog:
+        raise ValueError(
+            f"invalid {agent.value} catalog: `{SPEC_TREE_PLUGIN}` is required"
+        )
+    if not installed:
+        return (
+            (SPEC_TREE_PLUGIN,),
+            InstallationWarning(
+                agent=agent,
+                message=FIRST_INSTALL_WARNING.format(agent=agent.value),
+            ),
+        )
+    if SPEC_TREE_PLUGIN not in installed:
+        raise ValueError(
+            f"invalid {agent.value} installed selection: nonempty outcomeeng "
+            f"inventory must include `{SPEC_TREE_PLUGIN}`"
+        )
+    return (
+        tuple(plugin for plugin in catalog if plugin in installed),
+        None,
     )
 
 
@@ -785,33 +1004,42 @@ def execute_installation(
     )
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    base_environment: Mapping[str, str] | None = None,
+    runner: CommandRunner | None = None,
+) -> int:
     """Install persistently by default or verify in an explicit isolated root."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkout", type=Path, default=Path.cwd())
     parser.add_argument("--state-root", type=Path)
     parser.add_argument("--json", action="store_true", dest="json_output")
     arguments = parser.parse_args(argv)
+    environment = os.environ if base_environment is None else base_environment
+    command_runner = _real_runner if runner is None else runner
     try:
         if arguments.state_root is None:
             report = execute_persistent_installation(
                 arguments.checkout,
-                os.environ,
-                _real_runner,
+                environment,
+                command_runner,
             )
         else:
             plan = build_isolated_installation_plan(
                 arguments.checkout,
                 arguments.state_root,
-                os.environ,
+                environment,
             )
-            report = execute_installation(plan, _real_runner)
+            report = execute_installation(plan, command_runner)
     except InstallationFailure as failure:
         print(json.dumps(_failure_document(failure), sort_keys=True), file=sys.stderr)
         return failure.result.exit_code
     except (OSError, ValueError) as error:
         print(json.dumps({"error": str(error)}, sort_keys=True), file=sys.stderr)
         return 1
+    for warning in report.plan.warnings:
+        print(f"warning: {warning.message}", file=sys.stderr)
     if arguments.json_output:
         print(json.dumps(report_document(report), sort_keys=True))
     else:
@@ -1182,6 +1410,10 @@ def report_document(report: InstallationReport) -> dict[str, object]:
             {"agent": entry.agent.value, "plugin": entry.plugin}
             for entry in report.pending_publication
         ],
+        "warnings": [
+            {"agent": warning.agent.value, "message": warning.message}
+            for warning in report.plan.warnings
+        ],
     }
 
 
@@ -1202,6 +1434,10 @@ __all__ = [
     "CLAUDE_GITHUB_SOURCE_TYPE",
     "CLAUDE_PLUGIN_ENABLED_FIELD",
     "CLAUDE_PLUGIN_ID_FIELD",
+    "CLAUDE_PLUGIN_PROJECT_PATH_FIELD",
+    "CLAUDE_PLUGIN_SCOPE_FIELD",
+    "CLAUDE_PROJECT_SCOPE",
+    "CLAUDE_USER_SCOPE",
     "CLAUDE_ENABLED_PLUGINS_FIELD",
     "EXTRA_MARKETPLACES_FIELD",
     "CLAUDE_PROJECT_SETTINGS_PATH",
@@ -1220,6 +1456,7 @@ __all__ = [
     "CODEX_PLUGIN_ENABLED_FIELD",
     "CODEX_PLUGIN_ENTRIES_FIELD",
     "CODEX_PLUGIN_ID_FIELD",
+    "CODEX_PLUGIN_MARKETPLACE_FIELD",
     "CODEX_SQLITE_HOME_ENV",
     "CODEX_SOURCE_FIELD",
     "CODEX_SOURCE_TYPE_FIELD",
@@ -1232,12 +1469,15 @@ __all__ = [
     "InstallationPlan",
     "InstallationReport",
     "InstallationRoots",
+    "InstallationWarning",
+    "FIRST_INSTALL_WARNING",
     "MARKETPLACE_NAME",
     "Operation",
     "PersistentPreflight",
     "PYTHON_EXECUTABLE",
     "SourceAction",
     "STATE_ENV_NAMES",
+    "SPEC_TREE_PLUGIN",
     "VERIFICATION_TEST",
     "VERIFICATION_RECIPE_COMMAND",
     "build_isolated_installation_plan",
@@ -1251,6 +1491,7 @@ __all__ = [
     "execute_installation",
     "execute_persistent_installation",
     "isolated_environment",
+    "installed_plugin_names",
     "main",
     "persistent_environment",
     "persistent_roots",

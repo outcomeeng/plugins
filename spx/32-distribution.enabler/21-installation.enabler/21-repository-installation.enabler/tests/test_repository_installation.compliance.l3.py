@@ -1,4 +1,4 @@
-"""Real isolated-state boundary evidence for repository installation."""
+"""Network-backed real isolated-state boundary evidence."""
 
 from outcomeeng_testing.harnesses.installation import observe_real_installation
 

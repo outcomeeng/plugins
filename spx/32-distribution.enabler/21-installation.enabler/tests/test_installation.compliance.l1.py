@@ -13,6 +13,7 @@ from outcomeeng_testing.harnesses.installation import (
     NONCANONICAL_MARKETPLACE_SOURCE,
     observe_first_failure,
     observe_inspection_failure,
+    observe_invalid_persistent_selection,
     observe_missing_codex_home,
     observe_persistent_execution,
     observe_persistent_plan,
@@ -96,7 +97,10 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         for command in plan.commands
         if command.agent is Agent.CODEX
     )
-    assert refreshing.attempted[1:] == refreshing.report.plan.commands
+    assert (
+        refreshing.attempted[len(refreshing.preflight.inspections) :]
+        == refreshing.report.plan.commands
+    )
 
 
 def test_an_enable_failure_stops_the_run_rather_than_reading_as_idempotent() -> None:
@@ -116,9 +120,21 @@ def test_a_failed_inspection_stops_before_any_planned_operation() -> None:
 
     assert observation.failure is not None
     assert observation.failure.command.operation is Operation.MARKETPLACE_INSPECT
-    assert observation.attempted == (observation.failure.command,)
+    assert observation.attempted[-1] == observation.failure.command
     assert not any(
         command in observation.attempted for command in observation.plan.commands
+    )
+
+
+def test_invalid_installed_selection_never_reaches_a_state_changing_operation() -> None:
+    observation = observe_invalid_persistent_selection()
+
+    assert observation.error is not None
+    assert "spec-tree" in observation.error
+    assert observation.attempted
+    assert all(
+        command.operation in {Operation.MARKETPLACE_INSPECT, Operation.PLUGIN_INSPECT}
+        for command in observation.attempted
     )
 
 

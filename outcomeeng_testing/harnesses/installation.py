@@ -8,8 +8,9 @@ import shutil
 import stat
 import subprocess
 from collections.abc import Iterator, Mapping, Sequence
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import cast
@@ -30,6 +31,9 @@ from outcomeeng.distribution.installation import (
     CLAUDE_ENABLED_PLUGINS_FIELD,
     CLAUDE_PLUGIN_ENABLED_FIELD,
     CLAUDE_PLUGIN_ID_FIELD,
+    CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
+    CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PROJECT_SCOPE,
     CLAUDE_PROJECT_SETTINGS_PATH,
     CODEX_AGENTS_PATH,
     CODEX_CATALOG_PATH,
@@ -39,6 +43,7 @@ from outcomeeng.distribution.installation import (
     CODEX_PLUGIN_ENABLED_FIELD,
     CODEX_PLUGIN_ENTRIES_FIELD,
     CODEX_PLUGIN_ID_FIELD,
+    CODEX_PLUGIN_MARKETPLACE_FIELD,
     CODEX_SQLITE_HOME_ENV,
     CommandResult,
     EXTRA_MARKETPLACES_FIELD,
@@ -64,15 +69,14 @@ from outcomeeng.distribution.installation import (
     codex_source_action,
     execute_installation,
     execute_persistent_installation,
+    main,
 )
+from outcomeeng_testing.generators.installation import generated_agent_subsets
 
 UNOWNED_AGENT_FILENAME = "developer-owned.toml"
 UNOWNED_AGENT_CONTENT = 'name = "developer-owned"\n'
 REQUIRED_BINARIES: tuple[str, ...] = ("just", "claude", "codex", PYTHON_EXECUTABLE)
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
-_REAL_JUST_ENV = "OUTCOMEENG_REAL_JUST"
-
-
 NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
 PLUGIN_DISABLING_CODEX_CONFIG = b"[plugins]\nenabled = false\n"
 
@@ -114,6 +118,15 @@ class PersistentExecutionObservation:
 
 
 @dataclass(frozen=True)
+class PersistentCliObservation:
+    """Exit status and streams from one controlled persistent CLI run."""
+
+    exit_code: int
+    stdout: str
+    stderr: str
+
+
+@dataclass(frozen=True)
 class FailureObservation:
     """The attempted prefix and the first failure, absent when none was raised."""
 
@@ -127,6 +140,14 @@ class CollisionObservation:
     """A user-scope collision, absent when the run was not rejected."""
 
     settings_path: Path
+    error: str | None
+    attempted: tuple[InstallationCommand, ...]
+
+
+@dataclass(frozen=True)
+class SelectionRejectionObservation:
+    """An invalid selection rejection and any read-only commands attempted."""
+
     error: str | None
     attempted: tuple[InstallationCommand, ...]
 
@@ -172,6 +193,8 @@ class RealInstallationObservation:
     persistent_exit_code: int
     persistent_claude_plugins: PluginListing
     persistent_codex_plugins: PluginListing
+    persistent_claude_selected: frozenset[str]
+    persistent_codex_selected: frozenset[str]
     persistent_selection: frozenset[str]
     persistent_settings_before: bytes
     persistent_settings_after: bytes
@@ -207,6 +230,13 @@ class RealInstallationObservation:
     first_stderr: str
     second_stdout: str
     second_stderr: str
+    subset_exit_code: int
+    subset_claude_plugins: PluginListing
+    subset_codex_plugins: PluginListing
+    subset_claude_catalog: bytes
+    subset_codex_catalog: bytes
+    subset_stdout: str
+    subset_stderr: str
 
 
 @dataclass
@@ -214,14 +244,13 @@ class RecordingRunner:
     """Installation runner that records commands and can fail one operation."""
 
     failed_operation: Operation | None = None
+    installed: Mapping[Agent, frozenset[str]] | None = None
     calls: list[InstallationCommand] = field(default_factory=list)
 
     def __call__(self, command: InstallationCommand) -> CommandResult:
         self.calls.append(command)
         exit_code = 1 if command.operation is self.failed_operation else 0
-        stdout = codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
-        if command.operation is not Operation.MARKETPLACE_INSPECT:
-            stdout = ""
+        stdout = _successful_command_payload(command, self.installed)
         return CommandResult(
             argv=command.argv,
             exit_code=exit_code,
@@ -237,6 +266,87 @@ BASE_REF = "origin/main"
 def repository_root() -> Path:
     """Return the checkout containing this installed harness package."""
     return Path(__file__).resolve().parents[2]
+
+
+def _installed_or_catalog_plugins(
+    checkout: Path,
+    installed: Mapping[Agent, frozenset[str]] | None,
+) -> dict[Agent, frozenset[str]]:
+    if installed is not None:
+        return {agent: installed.get(agent, frozenset()) for agent in Agent}
+    return {
+        Agent.CLAUDE: frozenset(catalog_plugin_names(checkout / CLAUDE_CATALOG_PATH)),
+        Agent.CODEX: frozenset(catalog_plugin_names(checkout / CODEX_CATALOG_PATH)),
+    }
+
+
+def _plugin_listing_payload(
+    agent: Agent,
+    checkout: Path,
+    plugins: frozenset[str],
+) -> str:
+    identifiers = sorted(plugins)
+    if agent is Agent.CLAUDE:
+        return json.dumps(
+            [
+                {
+                    CLAUDE_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
+                    CLAUDE_PLUGIN_ENABLED_FIELD: True,
+                    CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                    CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout.resolve()),
+                }
+                for plugin in identifiers
+            ]
+        )
+    return json.dumps(
+        {
+            CODEX_PLUGIN_ENTRIES_FIELD: [
+                {
+                    CODEX_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
+                    CODEX_PLUGIN_ENABLED_FIELD: True,
+                    CODEX_PLUGIN_MARKETPLACE_FIELD: MARKETPLACE_NAME,
+                }
+                for plugin in identifiers
+            ]
+        }
+    )
+
+
+def _successful_command_payload(
+    command: InstallationCommand,
+    installed: Mapping[Agent, frozenset[str]] | None,
+) -> str:
+    if command.operation is Operation.MARKETPLACE_INSPECT:
+        return codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+    if command.operation is Operation.PLUGIN_INSPECT:
+        inventories = _installed_or_catalog_plugins(command.cwd, installed)
+        return _plugin_listing_payload(
+            command.agent,
+            command.cwd,
+            inventories[command.agent],
+        )
+    return ""
+
+
+def _persistent_plan_with_catalog_inventories(
+    preflight: PersistentPreflight,
+    codex_source: str,
+) -> InstallationPlan:
+    inventories = _installed_or_catalog_plugins(preflight.roots.checkout, None)
+    return build_persistent_installation_plan(
+        preflight,
+        claude_plugins_payload=_plugin_listing_payload(
+            Agent.CLAUDE,
+            preflight.roots.checkout,
+            inventories[Agent.CLAUDE],
+        ),
+        codex_marketplace_payload=codex_marketplace_listing_payload(codex_source),
+        codex_plugins_payload=_plugin_listing_payload(
+            Agent.CODEX,
+            preflight.roots.checkout,
+            inventories[Agent.CODEX],
+        ),
+    )
 
 
 def observe_repository_plan() -> PlanObservation:
@@ -269,6 +379,7 @@ def observe_persistent_plan(
     *,
     claude_repository: str = CANONICAL_MARKETPLACE_SOURCE,
     codex_source: str = CANONICAL_CODEX_SOURCE,
+    installed: Mapping[Agent, frozenset[str]] | None = None,
 ) -> PersistentPlanObservation:
     """Build a persistent plan in caller-selected temporary homes."""
     checkout = repository_root()
@@ -281,9 +392,20 @@ def observe_persistent_plan(
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
         codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
         preflight = build_persistent_preflight(mirror, environment)
+        inventories = _installed_or_catalog_plugins(mirror, installed)
         plan = build_persistent_installation_plan(
             preflight,
-            codex_marketplace_listing_payload(codex_source),
+            claude_plugins_payload=_plugin_listing_payload(
+                Agent.CLAUDE,
+                mirror,
+                inventories[Agent.CLAUDE],
+            ),
+            codex_marketplace_payload=codex_marketplace_listing_payload(codex_source),
+            codex_plugins_payload=_plugin_listing_payload(
+                Agent.CODEX,
+                mirror,
+                inventories[Agent.CODEX],
+            ),
         )
     return PersistentPlanObservation(
         preflight=preflight,
@@ -293,7 +415,9 @@ def observe_persistent_plan(
     )
 
 
-def observe_persistent_execution() -> PersistentExecutionObservation:
+def observe_persistent_execution(
+    installed: Mapping[Agent, frozenset[str]] | None = None,
+) -> PersistentExecutionObservation:
     """Execute the persistent path through a recording command collaborator."""
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -305,7 +429,7 @@ def observe_persistent_execution() -> PersistentExecutionObservation:
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
         codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
         preflight = build_persistent_preflight(mirror, environment)
-        runner = RecordingRunner()
+        runner = RecordingRunner(installed=installed)
         report = execute_persistent_installation(mirror, environment, runner)
     return PersistentExecutionObservation(
         preflight=preflight,
@@ -313,6 +437,31 @@ def observe_persistent_execution() -> PersistentExecutionObservation:
         attempted=tuple(runner.calls),
         claude_catalog=claude_catalog,
         codex_catalog=codex_catalog,
+    )
+
+
+def observe_first_persistent_cli() -> PersistentCliObservation:
+    """Run the public persistent CLI against empty controlled agent inventories."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        runner = RecordingRunner(installed={agent: frozenset() for agent in Agent})
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(
+                ("--checkout", str(mirror), "--json"),
+                base_environment=environment,
+                runner=runner,
+            )
+    return PersistentCliObservation(
+        exit_code=exit_code,
+        stdout=stdout.getvalue(),
+        stderr=stderr.getvalue(),
     )
 
 
@@ -342,6 +491,47 @@ def observe_claude_user_collision() -> CollisionObservation:
             error=rejection,
             attempted=tuple(runner.calls),
         )
+
+
+def observe_invalid_persistent_selection() -> SelectionRejectionObservation:
+    """Expose nonempty selections without spec-tree at the mutation boundary."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        installed = generated_agent_subsets(mirror, include_spec_tree=False)
+        runner = RecordingRunner(installed=installed)
+        rejection: str | None = None
+        try:
+            execute_persistent_installation(mirror, environment, runner)
+        except ValueError as error:
+            rejection = str(error)
+        return SelectionRejectionObservation(
+            error=rejection,
+            attempted=tuple(runner.calls),
+        )
+
+
+def observe_invalid_isolated_selection() -> SelectionRejectionObservation:
+    """Expose invalid isolated planning before any command can execute."""
+    checkout = repository_root()
+    invalid = generated_agent_subsets(checkout, include_spec_tree=False)
+    rejection: str | None = None
+    with TemporaryDirectory() as temporary_directory:
+        try:
+            build_isolated_installation_plan(
+                checkout,
+                Path(temporary_directory) / "state",
+                os.environ,
+                claude_plugins=tuple(invalid[Agent.CLAUDE]),
+                codex_plugins=tuple(invalid[Agent.CODEX]),
+            )
+        except ValueError as error:
+            rejection = str(error)
+    return SelectionRejectionObservation(error=rejection, attempted=())
 
 
 def observe_missing_codex_home() -> str | None:
@@ -383,12 +573,7 @@ def _installation_plans(temporary_root: Path) -> tuple[InstallationPlan, ...]:
         _write_project_marketplace(mirror, source)
         environment = _persistent_environment(temporary_root / f"state-{index}")
         preflight = build_persistent_preflight(mirror, environment)
-        plans.append(
-            build_persistent_installation_plan(
-                preflight,
-                codex_marketplace_listing_payload(source),
-            )
-        )
+        plans.append(_persistent_plan_with_catalog_inventories(preflight, source))
     return tuple(plans)
 
 
@@ -458,9 +643,7 @@ class SettingsMutatingRunner:
             self._seen += 1
             if self._seen == self.failed_occurrence:
                 return CommandResult(command.argv, 1, "", command.operation.value)
-        stdout = ""
-        if command.operation is Operation.MARKETPLACE_INSPECT:
-            stdout = codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+        stdout = _successful_command_payload(command, None)
         return CommandResult(command.argv, 0, stdout, "")
 
     def _document(self) -> dict[str, object]:
@@ -562,9 +745,9 @@ def observe_inspection_failure() -> FailureObservation:
         except InstallationFailure as raised:
             failure = raised
         return FailureObservation(
-            plan=build_persistent_installation_plan(
+            plan=_persistent_plan_with_catalog_inventories(
                 build_persistent_preflight(mirror, environment),
-                codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE),
+                CANONICAL_MARKETPLACE_SOURCE,
             ),
             attempted=tuple(runner.calls),
             failure=failure,
@@ -644,8 +827,7 @@ def observe_verification_recipe() -> VerificationRecipeObservation:
             "if not invocation_path.exists():\n"
             "    invocation_path.write_text("
             "json.dumps(sys.argv[1:]), encoding='utf-8')\n"
-            f"real_just = os.environ[{_REAL_JUST_ENV!r}]\n"
-            "os.execv(real_just, [real_just, *sys.argv[1:]])\n",
+            "raise SystemExit(0)\n",
             encoding="utf-8",
         )
         shim.chmod(shim.stat().st_mode | stat.S_IXUSR)
@@ -653,7 +835,6 @@ def observe_verification_recipe() -> VerificationRecipeObservation:
         environment.update(
             {
                 _RECORDED_JUST_INVOCATION_ENV: str(invocation_path),
-                _REAL_JUST_ENV: real_just,
                 "PATH": f"{shim_directory}{os.pathsep}{environment['PATH']}",
             }
         )
@@ -706,6 +887,15 @@ def observe_real_installation() -> RealInstallationObservation:
         _register_persistent_codex_marketplace(
             persistent_mirror,
             selected_environment,
+        )
+        persistent_subsets = generated_agent_subsets(
+            persistent_mirror,
+            include_spec_tree=True,
+        )
+        _seed_persistent_plugins(
+            persistent_mirror,
+            selected_environment,
+            persistent_subsets,
         )
         persistent_settings = persistent_mirror / CLAUDE_PROJECT_SETTINGS_PATH
         _copy_committed_project_settings(checkout, persistent_settings)
@@ -768,6 +958,45 @@ def observe_real_installation() -> RealInstallationObservation:
         placed_second = _agent_snapshot(mirror)
         unowned_second = unowned.read_bytes()
         persistent_second = _tree_snapshot(persistent_root)
+        subset_mirror = temporary_root / "subset-checkout"
+        subset_state = temporary_root / "subset-state"
+        _mirror_installation_inputs(checkout, subset_mirror)
+        subset_selections = generated_agent_subsets(
+            subset_mirror,
+            include_spec_tree=True,
+        )
+        _write_catalog_selection(
+            subset_mirror / CLAUDE_CATALOG_PATH,
+            subset_selections[Agent.CLAUDE],
+        )
+        _write_catalog_selection(
+            subset_mirror / CODEX_CATALOG_PATH,
+            subset_selections[Agent.CODEX],
+        )
+        subset_claude_catalog = (subset_mirror / CLAUDE_CATALOG_PATH).read_bytes()
+        subset_codex_catalog = (subset_mirror / CODEX_CATALOG_PATH).read_bytes()
+        subset_plan = build_isolated_installation_plan(
+            subset_mirror,
+            subset_state,
+            persistent_environment,
+        )
+        subset_environment = dict(subset_plan.commands[0].environment)
+        subset = _run_recipe(
+            checkout,
+            subset_mirror,
+            subset_state,
+            subset_environment,
+        )
+        subset_claude = _run_listing(
+            Agent.CLAUDE,
+            subset_mirror,
+            subset_environment,
+        )
+        subset_codex = _run_listing(
+            Agent.CODEX,
+            subset_mirror,
+            subset_environment,
+        )
         persistent_settings_after = persistent_settings.read_bytes()
     return RealInstallationObservation(
         persistent_exit_code=persistent.returncode,
@@ -779,6 +1008,8 @@ def observe_real_installation() -> RealInstallationObservation:
             Agent.CODEX,
             persistent_codex.stdout,
         ),
+        persistent_claude_selected=persistent_subsets[Agent.CLAUDE],
+        persistent_codex_selected=persistent_subsets[Agent.CODEX],
         persistent_selection=persistent_selection,
         persistent_settings_before=persistent_settings_before,
         persistent_settings_after=persistent_settings_after,
@@ -816,6 +1047,13 @@ def observe_real_installation() -> RealInstallationObservation:
         first_stderr=first.stderr,
         second_stdout=second.stdout,
         second_stderr=second.stderr,
+        subset_exit_code=subset.returncode,
+        subset_claude_plugins=_listed_plugins(Agent.CLAUDE, subset_claude.stdout),
+        subset_codex_plugins=_listed_plugins(Agent.CODEX, subset_codex.stdout),
+        subset_claude_catalog=subset_claude_catalog,
+        subset_codex_catalog=subset_codex_catalog,
+        subset_stdout=subset.stdout,
+        subset_stderr=subset.stderr,
     )
 
 
@@ -878,6 +1116,15 @@ def _mirror_installation_inputs(source: Path, destination: Path) -> None:
         shutil.copy2(source / relative_path, target)
     shutil.copytree(source / "dist/codex", destination / "dist/codex")
     shutil.copytree(source / "dist/claude", destination / "dist/claude")
+
+
+def _write_catalog_selection(path: Path, selected: frozenset[str]) -> None:
+    document = cast("dict[str, object]", json.loads(path.read_text(encoding="utf-8")))
+    entries = cast("list[dict[str, object]]", document[CATALOG_PLUGINS_FIELD])
+    document[CATALOG_PLUGINS_FIELD] = [
+        entry for entry in entries if entry[CATALOG_PLUGIN_NAME_FIELD] in selected
+    ]
+    path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
 
 def _copy_committed_project_settings(checkout: Path, destination: Path) -> None:
@@ -1065,6 +1312,53 @@ def _register_persistent_codex_marketplace(
         )
 
 
+def _seed_persistent_plugins(
+    checkout: Path,
+    environment: Mapping[str, str],
+    selections: Mapping[Agent, frozenset[str]],
+) -> None:
+    commands = tuple(
+        (
+            Agent.CLAUDE,
+            (
+                "claude",
+                "plugin",
+                "install",
+                f"{plugin}@{MARKETPLACE_NAME}",
+                "--scope",
+                CLAUDE_PROJECT_SCOPE,
+            ),
+        )
+        for plugin in sorted(selections[Agent.CLAUDE])
+    ) + tuple(
+        (
+            Agent.CODEX,
+            (
+                "codex",
+                "plugin",
+                "add",
+                f"{plugin}@{MARKETPLACE_NAME}",
+                "--json",
+            ),
+        )
+        for plugin in sorted(selections[Agent.CODEX])
+    )
+    for agent, argv in commands:
+        result = subprocess.run(
+            argv,
+            cwd=checkout,
+            env=dict(environment),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"{agent.value} persistent plugin seed failed with exit "
+                f"{result.returncode}: {result.stderr}"
+            )
+
+
 def _run_listing(
     agent: Agent,
     checkout: Path,
@@ -1073,7 +1367,14 @@ def _run_listing(
     argv = (
         ("claude", "plugin", "list", "--json")
         if agent is Agent.CLAUDE
-        else ("codex", "plugin", "list", "--json")
+        else (
+            "codex",
+            "plugin",
+            "list",
+            "--marketplace",
+            MARKETPLACE_NAME,
+            "--json",
+        )
     )
     result = subprocess.run(
         argv,
@@ -1188,6 +1489,8 @@ __all__ = [
     "observe_first_failure",
     "observe_failed_run_restore",
     "observe_inspection_failure",
+    "observe_invalid_isolated_selection",
+    "observe_invalid_persistent_selection",
     "observe_missing_codex_home",
     "observe_persistent_execution",
     "observe_persistent_plan",
@@ -1295,9 +1598,7 @@ def _build_run_plan(
     codex_source = (
         CANONICAL_CODEX_SOURCE if source == CANONICAL_MARKETPLACE_SOURCE else source
     )
-    return build_persistent_installation_plan(
-        preflight, codex_marketplace_listing_payload(codex_source)
-    )
+    return _persistent_plan_with_catalog_inventories(preflight, codex_source)
 
 
 def designated_failure_operations(

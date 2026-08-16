@@ -1,13 +1,28 @@
 """First-failure evidence across every operation a repository plan performs."""
 
+import json
+
 import pytest
 
 from outcomeeng.distribution.installation import (
+    Agent,
     CANONICAL_MARKETPLACE_SOURCE,
+    CLAUDE_CATALOG_PATH,
+    CLAUDE_PLUGIN_ID_FIELD,
+    CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
+    CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PROJECT_SCOPE,
+    CLAUDE_USER_SCOPE,
+    CODEX_CATALOG_PATH,
+    CODEX_PLUGIN_ENTRIES_FIELD,
+    CODEX_PLUGIN_ID_FIELD,
+    CODEX_PLUGIN_MARKETPLACE_FIELD,
     MARKETPLACE_NAME,
     PLUGIN_OPERATIONS,
     UNPUBLISHED_PLUGIN_FRAGMENT,
     Operation,
+    catalog_plugin_names,
+    installed_plugin_names,
 )
 from outcomeeng_testing.harnesses.installation import (
     NONCANONICAL_MARKETPLACE_SOURCE,
@@ -16,6 +31,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_designated_failure,
     observe_first_failure,
     observe_planned_operations,
+    repository_root,
 )
 
 CARVE_OUT_SOURCES = (CANONICAL_MARKETPLACE_SOURCE, NONCANONICAL_MARKETPLACE_SOURCE)
@@ -44,6 +60,58 @@ def _carve_out_domain() -> tuple[tuple[bool, str, Operation], ...]:
 
 
 CARVE_OUT_DOMAIN = _carve_out_domain()
+
+
+def test_claude_inventory_maps_only_the_invocation_checkout_project_scope() -> None:
+    checkout = repository_root()
+    catalog = catalog_plugin_names(checkout / CLAUDE_CATALOG_PATH)
+    entries = []
+    for index, plugin in enumerate(catalog):
+        entry = {
+            CLAUDE_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
+            CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+            CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
+        }
+        if index % 3 == 1:
+            entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] = str(checkout.parent)
+        elif index % 3 == 2:
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD] = CLAUDE_USER_SCOPE
+            del entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        entries.append(entry)
+
+    observed = installed_plugin_names(
+        Agent.CLAUDE,
+        json.dumps(entries),
+        checkout=checkout,
+    )
+
+    assert observed == frozenset(
+        plugin for index, plugin in enumerate(catalog) if index % 3 == 0
+    )
+
+
+def test_codex_inventory_maps_only_outcomeeng_marketplace_entries() -> None:
+    checkout = repository_root()
+    catalog = catalog_plugin_names(checkout / CODEX_CATALOG_PATH)
+    entries = [
+        {
+            CODEX_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
+            CODEX_PLUGIN_MARKETPLACE_FIELD: (
+                MARKETPLACE_NAME if index % 2 == 0 else f"{MARKETPLACE_NAME}-other"
+            ),
+        }
+        for index, plugin in enumerate(catalog)
+    ]
+
+    observed = installed_plugin_names(
+        Agent.CODEX,
+        json.dumps({CODEX_PLUGIN_ENTRIES_FIELD: entries}),
+        checkout=checkout,
+    )
+
+    assert observed == frozenset(
+        plugin for index, plugin in enumerate(catalog) if index % 2 == 0
+    )
 
 
 def test_every_planned_operation_reports_its_failure_and_stops_installation() -> None:

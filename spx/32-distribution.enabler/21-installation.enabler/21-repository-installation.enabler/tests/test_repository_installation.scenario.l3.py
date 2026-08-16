@@ -1,4 +1,4 @@
-"""Real-agent end-to-end evidence for repository installation."""
+"""Network-backed real-agent evidence for repository installation."""
 
 import json
 from typing import cast
@@ -15,7 +15,7 @@ from outcomeeng_testing.harnesses.installation import (
 )
 
 
-def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
+def test_real_agent_clis_install_full_and_generated_subsets() -> None:
     observation = observe_real_installation()
     claude_catalog = cast(
         dict[str, list[dict[str, object]]], json.loads(observation.claude_catalog)
@@ -55,22 +55,34 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     published = canonical_catalog_plugin_names()
 
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
-    assert pending == (claude_plugins | codex_plugins) - published
+    assert (
+        pending
+        == (
+            observation.persistent_claude_selected
+            | observation.persistent_codex_selected
+        )
+        - published
+    )
     assert (
         observation.persistent_claude_plugins.installed
-        == claude_plugins - pending_for(Agent.CLAUDE)
+        == observation.persistent_claude_selected - pending_for(Agent.CLAUDE)
     )
-    assert (
-        observation.persistent_claude_plugins.enabled
-        == observation.persistent_selection - pending_for(Agent.CLAUDE)
-    )
+    assert observation.persistent_claude_plugins.enabled == (
+        observation.persistent_selection & observation.persistent_claude_selected
+    ) - pending_for(Agent.CLAUDE)
     assert observation.persistent_selection < claude_plugins
     assert (
         observation.persistent_settings_after == observation.persistent_settings_before
     )
     assert (
         observation.persistent_codex_plugins.installed
-        == codex_plugins - pending_for(Agent.CODEX)
+        == observation.persistent_codex_selected - pending_for(Agent.CODEX)
+    )
+    assert not observation.persistent_claude_plugins.installed & (
+        claude_plugins - observation.persistent_claude_selected
+    )
+    assert not observation.persistent_codex_plugins.installed & (
+        codex_plugins - observation.persistent_codex_selected
     )
     assert observation.persistent_claude_source_action is SourceAction.REFRESH
     assert observation.persistent_codex_source_action is SourceAction.REFRESH
@@ -96,3 +108,24 @@ def test_real_agent_clis_install_every_catalog_plugin_idempotently() -> None:
     assert observation.placed_first == observation.placed_second
     assert observation.unowned_first == observation.unowned_initial
     assert observation.unowned_second == observation.unowned_initial
+    subset_claude_catalog = cast(
+        dict[str, list[dict[str, object]]],
+        json.loads(observation.subset_claude_catalog),
+    )
+    subset_codex_catalog = cast(
+        dict[str, list[dict[str, object]]],
+        json.loads(observation.subset_codex_catalog),
+    )
+    subset_claude_plugins = frozenset(
+        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
+        for plugin in subset_claude_catalog[CATALOG_PLUGINS_FIELD]
+    )
+    subset_codex_plugins = frozenset(
+        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
+        for plugin in subset_codex_catalog[CATALOG_PLUGINS_FIELD]
+    )
+    assert observation.subset_exit_code == 0, observation.subset_stderr
+    assert observation.subset_claude_plugins.installed == subset_claude_plugins
+    assert observation.subset_claude_plugins.enabled == subset_claude_plugins
+    assert observation.subset_codex_plugins.installed == subset_codex_plugins
+    assert observation.subset_codex_plugins.enabled == subset_codex_plugins

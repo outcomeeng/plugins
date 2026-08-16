@@ -1,13 +1,14 @@
-"""Controlled first-failure evidence for repository installation."""
+"""Controlled CLI and first-failure evidence for repository installation."""
 
 import json
+
 from typing import cast
 
 from outcomeeng.distribution.installation import (
     Agent,
+    FIRST_INSTALL_WARNING,
+    SPEC_TREE_PLUGIN,
     report_document,
-    CATALOG_PLUGIN_NAME_FIELD,
-    CATALOG_PLUGINS_FIELD,
     CANONICAL_MARKETPLACE_SOURCE,
     Operation,
     SourceAction,
@@ -21,14 +22,20 @@ from outcomeeng_testing.harnesses.installation import (
     NONCANONICAL_MARKETPLACE_SOURCE,
     observe_claude_user_collision,
     observe_inspection_failure,
+    observe_invalid_isolated_selection,
+    observe_invalid_persistent_selection,
+    observe_first_persistent_cli,
     observe_persistent_execution,
     observe_persistent_plan,
     observe_verification_recipe,
+    repository_root,
 )
+from outcomeeng_testing.generators.installation import generated_agent_subsets
 
 
 def test_persistent_installation_refreshes_canonical_sources_and_catalogs() -> None:
-    observation = observe_persistent_execution()
+    selected = generated_agent_subsets(repository_root(), include_spec_tree=True)
+    observation = observe_persistent_execution(selected)
     plan = observation.report.plan
 
     assert observation.preflight.claude_source_action is SourceAction.REFRESH
@@ -47,36 +54,67 @@ def test_persistent_installation_refreshes_canonical_sources_and_catalogs() -> N
         for command in plan.commands
         if command.agent is Agent.CLAUDE
         and command.operation is Operation.PLUGIN_INSTALL
-    } == {
-        plugin[CATALOG_PLUGIN_NAME_FIELD]
-        for plugin in json.loads(observation.claude_catalog)[CATALOG_PLUGINS_FIELD]
-    }
+    } == selected[Agent.CLAUDE]
     assert {
         command.plugin
         for command in plan.commands
         if command.agent is Agent.CLAUDE
         and command.operation is Operation.PLUGIN_ENABLE
-    } == {
-        plugin[CATALOG_PLUGIN_NAME_FIELD]
-        for plugin in json.loads(observation.claude_catalog)[CATALOG_PLUGINS_FIELD]
-    }
+    } == selected[Agent.CLAUDE]
     assert {
         command.plugin
         for command in plan.commands
         if command.agent is Agent.CODEX
         and command.operation is Operation.PLUGIN_INSTALL
-    } == {
-        plugin[CATALOG_PLUGIN_NAME_FIELD]
-        for plugin in json.loads(observation.codex_catalog)[CATALOG_PLUGINS_FIELD]
-    }
-    assert observation.attempted[1:] == plan.commands
+    } == selected[Agent.CODEX]
+    assert (
+        observation.attempted[len(observation.preflight.inspections) :] == plan.commands
+    )
 
 
-def test_verification_recipe_aliases_the_exact_l2_evidence() -> None:
+def test_verification_recipe_aliases_the_exact_l3_evidence() -> None:
     observation = observe_verification_recipe()
 
     assert observation.exit_code == 0, observation.stderr
     assert observation.invoked == VERIFICATION_RECIPE_COMMAND
+
+
+def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
+    observation = observe_first_persistent_cli()
+    document = json.loads(observation.stdout)
+
+    assert observation.exit_code == 0
+    assert document["claude_plugins"] == [SPEC_TREE_PLUGIN]
+    assert document["codex_plugins"] == [SPEC_TREE_PLUGIN]
+    assert document["warnings"] == [
+        {
+            "agent": agent.value,
+            "message": FIRST_INSTALL_WARNING.format(agent=agent.value),
+        }
+        for agent in Agent
+    ]
+    assert observation.stderr.splitlines() == [
+        f"warning: {FIRST_INSTALL_WARNING.format(agent=agent.value)}" for agent in Agent
+    ]
+
+
+def test_invalid_persistent_subset_is_rejected_before_mutation() -> None:
+    observation = observe_invalid_persistent_selection()
+
+    assert observation.error is not None
+    assert SPEC_TREE_PLUGIN in observation.error
+    assert all(
+        command.operation in {Operation.MARKETPLACE_INSPECT, Operation.PLUGIN_INSPECT}
+        for command in observation.attempted
+    )
+
+
+def test_invalid_isolated_subset_is_rejected_before_mutation() -> None:
+    observation = observe_invalid_isolated_selection()
+
+    assert observation.error is not None
+    assert SPEC_TREE_PLUGIN in observation.error
+    assert observation.attempted == ()
 
 
 def test_persistent_installation_replaces_noncanonical_sources() -> None:
@@ -113,8 +151,8 @@ def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> Non
     assert observation.failure is not None
     assert observation.failure.command.operation is Operation.MARKETPLACE_INSPECT
     assert observation.failure.command.agent is not None
-    assert observation.failure.completed == ()
-    assert observation.attempted == (observation.failure.command,)
+    assert observation.failure.completed
+    assert observation.attempted[-1] == observation.failure.command
     assert not any(
         command in observation.attempted for command in observation.plan.commands
     )
