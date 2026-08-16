@@ -116,3 +116,11 @@ genuinely changes a case outcome.
 **Resolution shape**: add one worked before/after example to `<direct_push_lifecycle>`, gated by `instructions:skill-auditor`. The example is a content addition to a section the reload-timing changeset does not touch, so it ships as its own change.
 
 **Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/merge/SKILL.md` on the post-compaction reload-timing change (finding `abstract_examples`).
+
+## The GitHub-PR lifecycle skill carries no worked mode-to-step example
+
+`src/plugins/spec-tree/skills/manage-github-pr/SKILL.md` routes four modes (Open PR, Instructed, Existing changeset, Empty) through a seven-step lifecycle and states how the mode is detected, with no `<examples>` block showing one concrete state signal per mode and the step sequence it produces.
+
+**Resolution shape**: add one short example per mode naming the observed repository state and the resulting step sequence, gated by `instructions:skill-auditor`. The examples are a content addition to the skill's routing surface, separate from the reload-timing rule.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/manage-github-pr/SKILL.md` on the post-compaction reload-timing change (finding `no_examples_section`).
