@@ -10,7 +10,7 @@ The review prompt's scope reaches unchanged consumers of a changed governing dec
 
 ## Eval lane suspended while the node is `tier: prototype`
 
-The node's LLM-behavior assertions — rule-citation grounding, absence-claim discipline, severity rubric fit, wrapper protocol, findings direction, and the adversarial probes — carry `[audit]` evidence while the spec declares `tier: prototype`; the eval harness is unavailable for producer-coupled evidence.
+The node's LLM-behavior assertions — rule-citation grounding, absence-claim discipline, severity rubric fit, wrapper protocol, findings direction, and the adversarial probes — carry `[audit]` evidence while the spec declares `tier: prototype`; the eval harness is unavailable for producer-coupled evidence. The `tier` frontmatter field is ahead of its declaration: `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/PLAN.md` defers tier until the CLI projects the frontmatter field and spec-audit recognizes it, so this node carries the key by operator direction before that schema lands (review run `2026-08-16_20-27-53-613-16cfc8848697`, one debt finding, tracked here).
 
 **Resolution shape**: when the eval facility runs again, author one producer-coupled eval per assertion class through `prompt_source.producer` pointing at the shipped review prompt, relink the assertions as `[eval]`, and drop the tier marker. Cases for the probes: a diff asserting an exhaustive or mutually exclusive partition with a constructible hole; a restated rule with a dropped conjunct; a newly bound definite description with no owner; an unchanged cited consumer the change contradicts.
 
