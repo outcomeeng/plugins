@@ -13,7 +13,7 @@ Invoke the `prose:prose-architecture-standards` skill before proceeding. If that
 
 <objective>
 
-A verdict on human-facing text, revealed as the run advances — a sealed audit run whose journal stream carries scope progress and each finding as the projection's record of rule, location, severity, and message, and whose raw run token is the final message.
+A verdict on human-facing text against the prose standards — APPROVED, or REJECTED with each journal finding naming the rule, location, severity, and message; the final message is the sealed run's raw token.
 
 </objective>
 
