@@ -4,7 +4,7 @@ description: Review changes.
 model: sonnet
 skills:
   - spec-tree:review-changes
-  - spec-tree:project-run-journal
+  - spec-tree:verification-run-journal-standards
 tools: Read, Bash
 ---
 

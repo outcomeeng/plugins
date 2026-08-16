@@ -2,13 +2,13 @@
 
 ## Two shipped projection scripts await extraction into the SPX CLI
 
-The `project-run-journal` skill ships two scripts past the fifty-line threshold:
+The `verification-run-journal-standards` skill ships two scripts past the fifty-line threshold:
 
-- `src/plugins/spec-tree/skills/project-run-journal/scripts/journal_projection.py`
+- `src/plugins/spec-tree/skills/verification-run-journal-standards/scripts/journal_projection.py`
   (496 lines) — channel event construction from a run's results, the rollup
   computation over an event prefix, and the human-readable surface rendered from
   that prefix, all pure and backend-free.
-- `src/plugins/spec-tree/skills/project-run-journal/scripts/render_review_run.py`
+- `src/plugins/spec-tree/skills/verification-run-journal-standards/scripts/render_review_run.py`
   (346 lines) — the compact inspection surface for a sealed review journal run.
 
 Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt

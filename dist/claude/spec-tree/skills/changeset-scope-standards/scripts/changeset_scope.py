@@ -14,13 +14,6 @@ Portability: stdlib only — no third-party packages, no ``uv``, no
 ``outcomeeng_*`` imports. This script ships into consumer plugin trees where
 only the standard library is available.
 
-Tested inputs and error cases: changeset-scope and dependent
-verification-run suites exercise origin/HEAD base detection, missing-origin
-rejection, named-branch detection, detached-HEAD refusal, branch slug collision
-suffixes, diff-range expansion with and without pathspec filters, empty diff
-matches, staged and unstaged changes, remote-tracking three-dot branch scope,
-arbitrary base refs, base-advanced-after-branch-off exclusion, and git failure
-propagation before this script is bundled.
 """
 
 from __future__ import annotations

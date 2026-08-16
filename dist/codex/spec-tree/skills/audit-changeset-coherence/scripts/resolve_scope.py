@@ -7,7 +7,7 @@ requiring a caller-prepared packet.
 
 Base-ref resolution, remote-tracking-ref composition, commit-identity
 resolution, and diff scope route through the canonical `changeset_scope`
-module — never re-implemented here — per the `scope-changeset` skill's
+module — never re-implemented here — per the `changeset-scope-standards` skill's
 contract. Composing against `origin/<base>` keeps the merge base at the true
 branch point, so commits already merged into the base never re-enter the
 scope of a multi-worktree checkout.
@@ -27,7 +27,11 @@ import subprocess
 import sys
 from types import ModuleType
 
-_CHANGESET_SCOPE_RELPATH = ("scope-changeset", "scripts", "changeset_scope.py")
+_CHANGESET_SCOPE_RELPATH = (
+    "changeset-scope-standards",
+    "scripts",
+    "changeset_scope.py",
+)
 ERROR_PREFIX = "error: coherence scope resolution failed"
 RANGE_SEPARATOR = "..."
 
@@ -39,10 +43,10 @@ class ScopeResolutionError(RuntimeError):
 def _load_changeset_scope() -> ModuleType:
     """Load the sibling `changeset_scope` module via the co-location convention.
 
-    The module lives at `plugins/spec-tree/skills/scope-changeset/scripts/
-    changeset_scope.py`, resolved relative to this script so no path is
-    hard-coded in agent prose. Cached in `sys.modules` so repeated loads in one
-    process reuse the same module object.
+    The module lives in the sibling
+    `changeset-scope-standards/scripts/changeset_scope.py` bundle, resolved
+    relative to this script so no checkout path is hard-coded. Cached in
+    `sys.modules` so repeated loads in one process reuse the same module object.
     """
     cached = sys.modules.get("changeset_scope")
     if cached is not None:

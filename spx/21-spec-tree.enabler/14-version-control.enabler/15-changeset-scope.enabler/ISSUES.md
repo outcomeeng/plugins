@@ -2,7 +2,7 @@
 
 ## Changeset-primitive extraction awaits a published SPX CLI capability
 
-`src/plugins/spec-tree/skills/scope-changeset/scripts/changeset_scope.py` runs
+`src/plugins/spec-tree/skills/changeset-scope-standards/scripts/changeset_scope.py` runs
 to 344 lines — branch identity, the on-disk addressing slug, base-ref
 resolution, the remote-tracking ref form, and merge-base diff scope. Past fifty
 lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic

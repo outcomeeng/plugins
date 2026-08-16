@@ -59,11 +59,14 @@ def _load_module(name: str, path: pathlib.Path) -> ModuleType:
 compute_diff = _load_module("compute_diff", _HERE / "compute_diff.py")
 jp = _load_module(
     "journal_projection",
-    _SKILLS_DIR / "project-run-journal" / "scripts" / "journal_projection.py",
+    _SKILLS_DIR
+    / "verification-run-journal-standards"
+    / "scripts"
+    / "journal_projection.py",
 )
 changeset_scope = _load_module(
     "changeset_scope",
-    _SKILLS_DIR / "scope-changeset" / "scripts" / "changeset_scope.py",
+    _SKILLS_DIR / "changeset-scope-standards" / "scripts" / "changeset_scope.py",
 )
 
 

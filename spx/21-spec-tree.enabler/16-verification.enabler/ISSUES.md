@@ -2,7 +2,7 @@
 
 ## Review still uses the legacy journal surface
 
-Audit implementation moves to `spx verification run` in the active slice. Review still has source and tests that refer to `spx journal --type review`, including the review-run inspection helper and project-run-journal skill.
+Audit implementation moves to `spx verification run` in the active slice. Review still has source and tests that refer to `spx journal --type review`, including the review-run inspection helper and verification-run-journal-standards skill.
 
 Required handling:
 

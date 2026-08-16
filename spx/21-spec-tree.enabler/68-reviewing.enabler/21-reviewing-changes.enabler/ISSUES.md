@@ -106,7 +106,7 @@ Required handling:
 - Regenerate the plugin runtime trees and the catalog so the pin reaches `dist/`.
 - Re-run the skill auditor for the node after the change.
 
-The sibling reference skill `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler` needs no pin: `scope-changeset` is `user-invocable: false` with `allowed-tools: Read`, supplying deterministic script primitives rather than a model-judged verdict.
+The sibling reference skill `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler` needs no pin: `changeset-scope-standards` is `user-invocable: false` with `allowed-tools: Read`, supplying deterministic script primitives rather than a model-judged verdict.
 
 ## 9. Four shipped review scripts await extraction into the SPX CLI
 

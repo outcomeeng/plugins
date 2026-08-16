@@ -7,7 +7,7 @@ whole set so a large changeset is never misclassified from a truncated sample.
 
 Base-ref resolution and committed branch-scope derivation route through the
 canonical `changeset_scope` module — never re-implemented here — per the
-`scope-changeset` skill's contract.
+`changeset-scope-standards` skill's contract.
 Working-tree status is /merge's own concern: `changeset_scope` owns committed
 diff scope against the remote-tracking base only, not the uncommitted index.
 
@@ -15,12 +15,6 @@ Portability: stdlib only — no third-party packages, no `uv`, no `outcomeeng_*`
 imports. This script ships into consumer plugin trees where only the standard
 library is available.
 
-Tested inputs and error cases: the co-located classifier scenario and mapping
-evidence exercises importlib loading of `changeset_scope.py`, end-to-end
-changed-path delegation through `detect_base_ref` and `branch_scope`, finite
-coordination-note classification, git porcelain records for paths containing
-spaces, and unconfigured remote-default diagnostics before this script is
-bundled.
 """
 
 from __future__ import annotations
@@ -43,7 +37,11 @@ _COORDINATION_NOTE = re.compile(
     + "|".join(re.escape(name) for name in COORDINATION_NOTE_BASENAMES)
     + r")$"
 )
-_CHANGESET_SCOPE_RELPATH = ("scope-changeset", "scripts", "changeset_scope.py")
+_CHANGESET_SCOPE_RELPATH = (
+    "changeset-scope-standards",
+    "scripts",
+    "changeset_scope.py",
+)
 _PREVIEW_LIMIT = 40
 BASE_REF_ERROR_PREFIX = "error: merge changeset classification failed"
 
@@ -55,10 +53,10 @@ class ChangesetClassificationError(RuntimeError):
 def _load_changeset_scope() -> ModuleType:
     """Load the sibling `changeset_scope` module via the co-location convention.
 
-    The module lives at `plugins/spec-tree/skills/scope-changeset/scripts/
-    changeset_scope.py`, resolved relative to this script so no path is
-    hard-coded in agent prose. Cached in `sys.modules` so repeated loads in one
-    process reuse the same module object.
+    The module lives in the sibling
+    `changeset-scope-standards/scripts/changeset_scope.py` bundle, resolved
+    relative to this script so no checkout path is hard-coded. Cached in
+    `sys.modules` so repeated loads in one process reuse the same module object.
     """
     cached = sys.modules.get("changeset_scope")
     if cached is not None:

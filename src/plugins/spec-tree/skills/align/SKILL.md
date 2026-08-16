@@ -20,7 +20,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, invoke `spec-tree:understand` before continuing.
-6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — When checking downstream alignment for a branch changeset, consume the supplied changed-file set derived through `/scope-changeset`. Do not hand-roll base-ref or git-diff derivation in this skill.
+6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — When checking downstream alignment for a branch changeset, consume the supplied changed-file set derived through `/changeset-scope-standards`. Do not hand-roll base-ref or git-diff derivation in this skill.
 
 </principles>
 
@@ -150,7 +150,7 @@ Read the live `/understand` `<common_misplacements>` table. For each row, check 
 
 <downstream_alignment_conformance>
 
-Use the live `/understand` `<decision_to_spec_alignment>` section. For changeset checks, use the exact changed-file set derived through `/scope-changeset`. Stop and request that derived set when it is absent; never derive git scope inside `/align`.
+Use the live `/understand` `<decision_to_spec_alignment>` section. For changeset checks, use the exact changed-file set derived through `/changeset-scope-standards`. Stop and request that derived set when it is absent; never derive git scope inside `/align`.
 
 For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 
@@ -173,7 +173,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 1. **Gate**: Check the conversation for a live `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `spec-tree:understand` and resume only after it emits the marker.
 2. **Load rules**: Read every inline leaf and sibling-relative template named in `<required_references>`.
-3. **Scope**: Read `$ARGUMENTS` as the complete scope input. When it names one Markdown file, use that file directly; when it names a directory, use that directory; when it is empty, default to `spx/` in the product root. For a branch changeset, consume the exact changed-file set supplied in `$ARGUMENTS` after derivation through `/scope-changeset`; stop with that requirement when the set is absent.
+3. **Scope**: Read `$ARGUMENTS` as the complete scope input. When it names one Markdown file, use that file directly; when it names a directory, use that directory; when it is empty, default to `spx/` in the product root. For a branch changeset, consume the exact changed-file set supplied in `$ARGUMENTS` after derivation through `/changeset-scope-standards`; stop with that requirement when the set is absent.
 4. **Discover**: For a file scope, use that file directly. For a directory scope, glob `{scope}/**/*.md`. For a changeset scope, use every Markdown path in the supplied changed-file set directly. In every mode, exclude `{{! file('root_guide', 'claude') !}}` and `{{! file('root_guide', 'codex') !}}`, `PLAN.md`, `ISSUES.md`, files inside `tests/`, files inside `spx/local/`, files inside an `evals/` directory sitting directly under a node directory, and files inside a `knowledge/` directory sitting directly under a node directory or the product root.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:

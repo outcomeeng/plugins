@@ -1,10 +1,9 @@
 ---
-name: scope-changeset
+name: changeset-scope-standards
 user-invocable: false
 description: >-
-  Canonical git-derived changeset primitives loaded by verification and lifecycle
-  skills instead of re-implementing branch, base-ref, commit-identity, slug, or
-  diff-scope derivation.
+  Changeset-scope standards enforced across verification and lifecycle skills.
+  Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 

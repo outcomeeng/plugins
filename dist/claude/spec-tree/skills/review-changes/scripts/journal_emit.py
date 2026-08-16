@@ -68,11 +68,14 @@ review_result = _load_module("review_result", _HERE / "review_result.py")
 compute_diff = _load_module("compute_diff", _HERE / "compute_diff.py")
 jp = _load_module(
     "journal_projection",
-    _HERE.parents[1] / "project-run-journal" / "scripts" / "journal_projection.py",
+    _HERE.parents[1]
+    / "verification-run-journal-standards"
+    / "scripts"
+    / "journal_projection.py",
 )
 changeset_scope = _load_module(
     "changeset_scope",
-    _HERE.parents[1] / "scope-changeset" / "scripts" / "changeset_scope.py",
+    _HERE.parents[1] / "changeset-scope-standards" / "scripts" / "changeset_scope.py",
 )
 
 ENV_BASE_REF = "SPX_VERIFY_BASE_REF"

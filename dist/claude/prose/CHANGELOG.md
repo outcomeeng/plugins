@@ -46,7 +46,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Requires
 
-- **The `project-run-journal` skill and the `spx` CLI for audit delivery.** `/audit-prose` streams its run through `spx journal` using the projection the spec-tree plugin's `project-run-journal` skill carries. A run without either reports the exact availability failure instead of auditing.
+- **The `verification-run-journal-standards` skill and the `spx` CLI for audit delivery.** `/audit-prose` streams its run through `spx journal` using the projection the spec-tree plugin's `verification-run-journal-standards` skill carries. A run without either reports the exact availability failure instead of auditing.
 
 ## 0.9.1
 

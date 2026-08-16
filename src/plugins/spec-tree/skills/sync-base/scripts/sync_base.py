@@ -64,7 +64,7 @@ from types import ModuleType
 
 _CHANGESET_SCOPE_PATH = (
     pathlib.Path(__file__).resolve().parent.parent.parent
-    / "scope-changeset"
+    / "changeset-scope-standards"
     / "scripts"
     / "changeset_scope.py"
 )

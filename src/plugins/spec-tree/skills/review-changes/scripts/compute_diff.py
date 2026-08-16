@@ -72,7 +72,7 @@ class SectionManifest:
 def _load_changeset_scope() -> ModuleType:
     """Load the ``changeset_scope`` module via ``importlib``.
 
-    The canonical git-derivation home is the sibling ``scope-changeset``
+    The canonical git-derivation home is the sibling ``changeset-scope-standards``
     skill's bundled module, which surfaces ``detect_base_ref``,
     ``remote_tracking_ref``, and
     ``BaseRefNotConfiguredError``. Loading here keeps authoritative base-ref
@@ -84,7 +84,7 @@ def _load_changeset_scope() -> ModuleType:
         return cached
     path = (
         pathlib.Path(__file__).resolve().parent.parent.parent
-        / "scope-changeset"
+        / "changeset-scope-standards"
         / "scripts"
         / "changeset_scope.py"
     )

@@ -1,11 +1,10 @@
 ---
-name: project-run-journal
+name: verification-run-journal-standards
 user-invocable: false
 description: >-
-  Verification run-journal projection methodology loaded by audit and review
-  skills when building spx journal events, computing rollups, or rendering verdict
-  surfaces.
-allowed-tools: Bash, Read
+  Verification run-journal projection standards enforced across audit and review
+  skills. Loaded by other skills, not invoked directly.
+allowed-tools: Read
 ---
 
 <objective>

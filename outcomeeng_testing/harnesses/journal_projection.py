@@ -29,7 +29,7 @@ PROJECTION_MODULE_PATH = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "project-run-journal"
+    / "verification-run-journal-standards"
     / "scripts"
     / "journal_projection.py"
 )

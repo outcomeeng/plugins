@@ -42,7 +42,7 @@ CHANGESET_SCOPE_SCRIPT: Final = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "scope-changeset"
+    / "changeset-scope-standards"
     / "scripts"
     / "changeset_scope.py"
 )
