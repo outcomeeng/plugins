@@ -26,18 +26,18 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 <required_references>
 
-Invoke `spec-tree:understand` and use its live inline foundation. Read the conditional templates in full before checking conformance:
+Invoke `spec-tree:understand` and use its live inline foundation. Through that invoked capability, read the conditional templates it publishes in full before checking conformance:
 
 - Live `/understand` `<atemporal_voice>` and `<decision_to_spec_alignment>`
 - Live `/understand` `<assertion_types>` — the five assertion types and their canonical headings
 - Live `/understand` `<common_misplacements>`
 - Live `/understand` `<common_structure>` — the canonical node shape, including the skip targets it declares
 - Live `/understand` `<enabler>` and `<outcome>`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/product/product-name.product.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
+- Live `/understand` ADR template
+- Live `/understand` PDR template
+- Live `/understand` product template
+- Live `/understand` enabler template
+- Live `/understand` outcome template
 
 </required_references>
 
@@ -172,7 +172,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 <workflow>
 
 1. **Gate**: Check the conversation for a live `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `spec-tree:understand` and resume only after it emits the marker.
-2. **Load rules**: Read every inline leaf and sibling-relative template named in `<required_references>`.
+2. **Load rules**: Read every inline foundation leaf and every template exposed by the invoked `/understand` capability named in `<required_references>`.
 3. **Scope**: Read `$ARGUMENTS` as the complete scope input. When it names one Markdown file, use that file directly; when it names a directory, use that directory; when it is empty, default to `spx/` in the product root. For a branch changeset, consume the exact changed-file set supplied in `$ARGUMENTS` after derivation through `/changeset-scope-standards`; stop with that requirement when the set is absent.
 4. **Discover**: For a file scope, use that file directly. For a directory scope, glob `{scope}/**/*.md`. For a changeset scope, use every Markdown path in the supplied changed-file set directly. In every mode, exclude `CLAUDE.md` and `AGENTS.md`, `PLAN.md`, `ISSUES.md`, files inside `tests/`, files inside `spx/local/`, files inside an `evals/` directory sitting directly under a node directory, and files inside a `knowledge/` directory sitting directly under a node directory or the product root.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
