@@ -144,9 +144,19 @@ _REQUIRED_FINDING_KEYS = (
 # Accepted ``Finding.rule`` citation forms. A rule must cite an existing rule in
 # the spec-tree or skill ecosystem; the parser verifies both the cited file and
 # the cited assertion/rule slug where the citation carries one.
+SPEC_ASSERTION_KINDS: tuple[str, ...] = (
+    "ALWAYS",
+    "NEVER",
+    "MUST",
+    "SCENARIO",
+    "MAPPING",
+    "CONFORMANCE",
+    "PROPERTY",
+    "AUDIT",
+)
 _SPEC_ASSERTION_RE = re.compile(
     r"(?P<path>spx/[^\s:]+\.md):"
-    r"(?P<kind>ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|AUDIT):"
+    rf"(?P<kind>{'|'.join(SPEC_ASSERTION_KINDS)}):"
     r"(?P<index>[1-9][0-9]*)"
 )
 _DECISION_RE = re.compile(r"(?P<path>spx/[^\s:]+\.(?:adr|pdr)\.md)")
@@ -158,6 +168,35 @@ _ROOT_RULE_RE = re.compile(
     r"(?P<path>(?:AGENTS|CLAUDE)\.md):(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
 )
 _FINDING_ID_RE = re.compile(r"F-\d{3}", re.ASCII)
+# The accepted ``Finding.rule`` citation families, in the order the parser
+# tries them. Each family names one path-style form; every other value is a
+# rejected non-citation.
+RULE_CITATION_FAMILIES: tuple[str, ...] = (
+    "spec-assertion",
+    "decision",
+    "plugin-skill",
+    "root-rule",
+)
+_RULE_CITATION_FAMILY_RES: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("spec-assertion", _SPEC_ASSERTION_RE),
+    ("decision", _DECISION_RE),
+    ("plugin-skill", _PLUGIN_SKILL_RE),
+    ("root-rule", _ROOT_RULE_RE),
+)
+
+
+def rule_citation_family(rule: str) -> str | None:
+    """Return the citation family whose form ``rule`` matches, or ``None``.
+
+    Form classification only: a value in a family may still be rejected when
+    the cited file, assertion, or rule slug does not exist.
+    """
+    for family, pattern in _RULE_CITATION_FAMILY_RES:
+        if pattern.fullmatch(rule):
+            return family
+    return None
+
+
 _SECTION_TITLES = {
     "SCENARIO": "Scenarios",
     "MAPPING": "Mappings",
