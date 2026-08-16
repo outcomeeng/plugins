@@ -144,7 +144,7 @@ Create exactly one fresh `todo` follow-up for every authorized invocation. Read 
 
 **Step 4 — Compose the body.** Write the observation from `<captured_fields>` using `<dependency_followup_body>` exactly. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
-**Step 5 — Snapshot state and list overlaps.** Capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository as the before-state for the tracked-worktree mutation check. Run `spx -C <queue-host> session list --json` once and record its `todo` and `doing` ids as `<baseline-ids>`; Step 6's fallback compares against this set to prove a failed first attempt wrote nothing. When `same_repository=true`, derive `<overlap-ids>` from that same listing per `<same_repository_filing>`, possibly empty.
+**Step 5 — Snapshot state and list overlaps.** Capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository as the before-state for the tracked-worktree mutation check. When `same_repository=true`, run `spx -C <queue-host> session list --json` once, record its `todo` and `doing` ids as `<baseline-ids>`, and derive `<overlap-ids>` from that same listing per `<same_repository_filing>`, possibly empty. When `same_repository=false`, defer the listing to Step 6 and take `<baseline-ids>` there, immediately after confirmation and before the first attempt — an unconfirmed repository's queue is not read at all until the operator approves contact with it. Either way, Step 6's fallback compares against `<baseline-ids>` to prove a failed first attempt wrote nothing.
 
 **Step 6 — GATE: Confirm an external target, then file.** When `same_repository=false`, the handoff writes into a different repository queue. Resolving or naming a path is not authorization to mutate that queue, so obtain confirmation through `{{! tool('ask_user') !}}` before the first mutating command, presenting:
 
@@ -155,9 +155,11 @@ Create exactly one fresh `todo` follow-up for every authorized invocation. Read 
 
 The explicit `/issue` invocation authorizes one fresh same-repository queue write, so `same_repository=true` does not add a second confirmation. Every `same_repository=false` target requires this confirmation, including a separate clone with the same normalized origin identity and a checkout path named directly in `$ARGUMENTS`. STOP on anything but explicit approval, leaving both repositories unchanged.
 
+Once a `same_repository=false` target is approved, run `spx -C <queue-host> session list --json` and record its `todo` and `doing` ids as `<baseline-ids>` before the first attempt.
+
 Then resolve the current agent session identity verbatim from the variable the agent publishes with {!% if target == 'codex' %!}`printenv CODEX_THREAD_ID`{!% else %!}`printenv CLAUDE_CODE_SESSION_ID`{!% endif %!} and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin. Both forms below send the same bytes and enumerate the same `<dependency_followup_body>` lines in the same order; an edit to that section's shape updates both. Never assemble the body through a temporary file, a helper file, command substitution, or post-hoc text substitution.
 
-Attempt the multiline form first. Use the one-line form only as its fallback, and only after proving the first attempt wrote nothing: a heredoc the shell cannot terminate emits a warning rather than a blocking parse error, so `spx` still runs and may already have created the record. Before any fallback write, re-run `spx -C <queue-host> session list --json` and compare the `todo` and `doing` ids against `<baseline-ids>` from Step 5. A new id means the first attempt wrote — verify that record through Step 7 and report it; never write again. Only an unchanged id set authorizes the one-line form.
+Attempt the multiline form first. Use the one-line form only as its fallback, and only after proving the first attempt wrote nothing: a heredoc the shell cannot terminate emits a warning rather than a blocking parse error, so `spx` still runs and may already have created the record. Before any fallback write, re-run `spx -C <queue-host> session list --json` and compare the `todo` and `doing` ids against `<baseline-ids>` from Step 5. A new id means the first attempt wrote — take that id as `<HANDOFF_ID>`, verify the record through Step 7, and report it; never write again. When that listing itself fails, stop with the exact command, exit code, and stderr; an unobtained id set proves nothing and never authorizes a write. Only an unchanged id set authorizes the one-line form.
 
 The multiline form:
 
@@ -212,6 +214,7 @@ Keep that pipeline on one physical shell line. A literal apostrophe inside a sin
 - NEVER guess the target checkout directory — resolve it deterministically or ask.
 - NEVER guess `git_ref` — use a target branch that exists on origin or ask.
 - NEVER read the body of, compare, archive, release, delete, edit, replace, move, or reuse an existing active session while filing the follow-up — the header listing is the only read of other sessions, and it only names possible overlaps.
+- NEVER attempt the one-line fallback unless a fresh listing proves the queue's `todo` and `doing` ids still equal `<baseline-ids>` — a new id, or a listing that fails, forbids the second write.
 
 </constraints>
 
@@ -240,6 +243,14 @@ What happened: Marketplace resolution returned no local source, so Claude asked 
 Why it failed: The invoking checkout already identified itself as the target; the question pushed a deterministic check onto the operator.
 
 How to avoid: Read `<root>/.claude-plugin/marketplace.json` before any marketplace lookup and take the invoking repository as the target when it names the `outcomeeng` marketplace with the `spec-tree` plugin.
+
+**Failure 4: Claude retried the write after a heredoc it read as failed.**
+
+What happened: The multiline attempt ended in an error, so Claude switched to the one-line form and wrote again.
+
+Why it failed: A heredoc the shell cannot terminate emits a warning, not a blocking parse error. The shell still dispatched `spx session handoff` with whatever stdin it collected, so the error Claude read came from a command that had already run and may have created the record. The retry left two records where the queue owner expects one, in a repository the invoking session does not watch.
+
+How to avoid: Treat a failed attempt as unknown rather than failed. Re-list the queue, compare against `<baseline-ids>`, and write again only on an unchanged id set. A new id is the first attempt's record — verify and report it. A listing that fails proves nothing and forbids the write. The rule is unconditional: a concurrent session's unrelated new id also forbids the second write, and that cost is smaller than a duplicate record.
 
 </failure_modes>
 

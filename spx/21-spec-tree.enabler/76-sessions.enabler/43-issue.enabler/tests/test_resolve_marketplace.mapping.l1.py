@@ -37,17 +37,22 @@ RESOLVER = _load_resolver()
 
 
 def _run_resolver(
-    payload: object | str, *, runtime: str, cwd: Path | None = None
+    payload: object | str,
+    *,
+    runtime: str,
+    cwd: Path | None = None,
+    name: str | None = RESOLVER.DEFAULT_MARKETPLACE_NAME,
 ) -> subprocess.CompletedProcess[str]:
+    """Drive the resolver; `name=None` omits `--name` to take the CLI default."""
     stdin = payload if isinstance(payload, str) else json.dumps(payload)
+    name_argv = [] if name is None else ["--name", name]
     return subprocess.run(
         [
             sys.executable,
             str(SCRIPT_PATH),
             "--runtime",
             runtime,
-            "--name",
-            RESOLVER.DEFAULT_MARKETPLACE_NAME,
+            *name_argv,
         ],
         input=stdin,
         capture_output=True,
@@ -193,9 +198,14 @@ def _unresolvable_payloads() -> list[tuple[str, str, object]]:
             {RESOLVER.MARKETPLACES_FIELD: 17},
         ),
         (
-            "non-dict-entry",
+            "non-dict-entry-in-list-payload",
             RESOLVER.RUNTIME_CLAUDE,
             [["not", "a", "mapping"]],
+        ),
+        (
+            "non-dict-entry-in-marketplaces-field",
+            RESOLVER.RUNTIME_CLAUDE,
+            {RESOLVER.MARKETPLACES_FIELD: [17]},
         ),
         (
             "entry-name-not-a-string",
@@ -265,6 +275,22 @@ def test_unresolvable_payload_shape_maps_to_none_available(
     assert (
         f"available local marketplaces: {RESOLVER.NO_LOCAL_MARKETPLACES}"
     ) in result.stderr
+
+
+def test_omitted_name_maps_to_the_default_marketplace(tmp_path: Path) -> None:
+    registered_path = tmp_path / "default-name-marketplace"
+    payload = [
+        {
+            RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+            RESOLVER.SOURCE_FIELD: RESOLVER.CLAUDE_DIRECTORY_SOURCE,
+            RESOLVER.PATH_FIELD: str(registered_path),
+        }
+    ]
+
+    result = _run_resolver(payload, runtime=RESOLVER.RUNTIME_CLAUDE, name=None)
+
+    assert result.returncode == 0
+    assert result.stdout == f"{registered_path}\n"
 
 
 def test_malformed_marketplace_json_maps_to_invalid_json_error() -> None:
