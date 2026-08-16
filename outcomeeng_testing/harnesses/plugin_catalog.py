@@ -85,7 +85,7 @@ class CatalogInventoryObservation:
 
 @dataclass(frozen=True)
 class CatalogSpliceObservation:
-    quoted_prefix: str
+    ignored_prefix: str
     stale_catalog_body: str
     catalog: str
     spliced_readme: str
@@ -224,17 +224,19 @@ def observe_purpose_shortening_with_em_dash() -> PurposeShorteningObservation:
     )
 
 
-def observe_catalog_splice_with_quoted_sentinels() -> CatalogSpliceObservation:
+def observe_catalog_splice_with_non_sentinel_markers() -> CatalogSpliceObservation:
     scenario = source_scenarios()[0]
-    quoted_prefix = (
+    ignored_prefix = (
         f"{scenario.fragment_body.strip()} {BEGIN_SENTINEL}\n"
         f"{scenario.fragment_body.strip()} {END_SENTINEL}\n"
+        f"{BEGIN_SENTINEL} {scenario.fragment_body.strip()}\n"
+        f"{END_SENTINEL} {scenario.fragment_body.strip()}\n"
     )
     stale_catalog_body = scenario.skill
     catalog = render_catalog([])
-    readme = f"{quoted_prefix}{BEGIN_SENTINEL}\n{stale_catalog_body}\n{END_SENTINEL}\n"
+    readme = f"{ignored_prefix}{BEGIN_SENTINEL}\n{stale_catalog_body}\n{END_SENTINEL}\n"
     return CatalogSpliceObservation(
-        quoted_prefix=quoted_prefix,
+        ignored_prefix=ignored_prefix,
         stale_catalog_body=stale_catalog_body,
         catalog=catalog,
         spliced_readme=splice_catalog(readme, catalog),

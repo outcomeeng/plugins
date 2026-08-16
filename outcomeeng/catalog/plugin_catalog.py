@@ -402,7 +402,14 @@ def splice_catalog(readme: str, catalog: str) -> str:
 def _find_line_start(text: str, marker: str, *, start: int = 0) -> int:
     index = text.find(marker, start)
     while index != -1:
-        if index == 0 or text[index - 1] == "\n":
+        marker_end = index + len(marker)
+        at_line_start = index == 0 or text[index - 1] == "\n"
+        at_line_end = (
+            marker_end == len(text)
+            or text[marker_end] == "\n"
+            or text.startswith("\r\n", marker_end)
+        )
+        if at_line_start and at_line_end:
             return index
         index = text.find(marker, index + 1)
     return -1

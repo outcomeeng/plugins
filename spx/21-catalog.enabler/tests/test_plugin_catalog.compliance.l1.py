@@ -14,7 +14,7 @@ from outcomeeng.catalog.plugin_catalog import (
 )
 from outcomeeng_testing.harnesses.plugin_catalog import (
     observe_catalog_frontmatter_include_purpose,
-    observe_catalog_splice_with_quoted_sentinels,
+    observe_catalog_splice_with_non_sentinel_markers,
     observe_check_mode_with_drift,
     observe_generated_catalog,
     observe_generated_catalog_sentinels,
@@ -38,10 +38,10 @@ def test_generated_catalog_uses_declared_sentinels() -> None:
     assert observation.catalog.endswith(f"{END_SENTINEL}\n")
 
 
-def test_catalog_splice_ignores_quoted_sentinels() -> None:
-    observation = observe_catalog_splice_with_quoted_sentinels()
+def test_catalog_splice_ignores_non_sentinel_markers() -> None:
+    observation = observe_catalog_splice_with_non_sentinel_markers()
 
-    assert observation.spliced_readme.startswith(observation.quoted_prefix)
+    assert observation.spliced_readme.startswith(observation.ignored_prefix)
     assert observation.stale_catalog_body not in observation.spliced_readme
     assert observation.catalog in observation.spliced_readme
 
