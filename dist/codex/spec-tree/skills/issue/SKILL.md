@@ -161,9 +161,11 @@ Once a `same_repository=false` target is approved, run `spx -C <queue-host> sess
 
 Then resolve the current agent session identity verbatim from the variable the agent publishes with `printenv CODEX_THREAD_ID` and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin. Both forms below send the same bytes and enumerate the same `<dependency_followup_body>` lines in the same order; an edit to that section's shape updates both. Never assemble the body through a temporary file, a helper file, command substitution, or post-hoc text substitution.
 
-Attempt the multiline form first. Use the one-line form only as its fallback, and only after proving the first attempt wrote nothing: a heredoc the shell cannot terminate emits a warning rather than a blocking parse error, so `spx` still runs and may already have created the record. Before any fallback write, re-run `spx -C <queue-host> session list --json` and compare the `todo` and `doing` ids against the `<baseline-ids>` captured above. A new id may be the first attempt's record — take that id as `<HANDOFF_ID>` and verify it through Step 7 before reporting it, and never write again whatever that verification returns. When that listing itself fails, stop with the exact command, exit code, and stderr; an unobtained id set proves nothing and never authorizes a write. Only an unchanged id set authorizes the one-line form.
+Select the form by harness before the first attempt. An interactive Claude Code or Codex session uses the quoted heredoc. A programmatic Claude Code or Codex run, or a hosted runner such as GitHub Actions — any harness whose parser requires one physical command line — uses the `printf` form directly, never attempting the heredoc first.
 
-The multiline form:
+A second attempt is governed whichever form ran first. A heredoc the shell cannot terminate emits a warning rather than a blocking parse error, so `spx` still runs and may already have created the record; a failed attempt is unknown, not failed. Before any second attempt, re-run `spx -C <queue-host> session list --json` and compare the `todo` and `doing` ids against the `<baseline-ids>` captured above. A new id may be the first attempt's record — take that id as `<HANDOFF_ID>` and verify it through Step 7 before reporting it, and never write again whatever that verification returns. When that listing itself fails, stop with the exact command, exit code, and stderr; an unobtained id set proves nothing and never authorizes a write. Only an unchanged id set authorizes a second attempt.
+
+The interactive form:
 
 ```bash
 spx -C <queue-host> session handoff <<'EOF'
@@ -192,7 +194,7 @@ spx -C <queue-host> session handoff <<'EOF'
 EOF
 ```
 
-The one-line form, `printf '%s\n'` with one argument per output line:
+The programmatic form, `printf '%s\n'` with one argument per output line:
 
 ```bash
 printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","git_ref":"<target-branch-on-origin>","specs":[],"files":[]}' '# <short title>' '' '<observation>' '...' '</observation>' '' '<uncertainty>' '...' '</uncertainty>' '' '<checked_facts>' '...' '</checked_facts>' '' '<affected_paths>' '...' '</affected_paths>' '' '<next_workflow_context>' '...' '</next_workflow_context>' | spx -C <queue-host> session handoff
@@ -216,7 +218,7 @@ Keep that pipeline on one physical shell line. A literal apostrophe inside a sin
 - NEVER guess the target checkout directory — resolve it deterministically or ask.
 - NEVER guess `git_ref` — use a target branch that exists on origin or ask.
 - NEVER read the body of, compare, archive, release, delete, edit, replace, move, or reuse an existing active session while filing the follow-up — the header listing is the only read of other sessions, and it only names possible overlaps.
-- NEVER attempt the one-line fallback unless a fresh listing proves the queue's `todo` and `doing` ids still equal `<baseline-ids>` — a new id, or a listing that fails, forbids the second write.
+- NEVER make a second handoff attempt unless a fresh listing proves the queue's `todo` and `doing` ids still equal `<baseline-ids>` — a new id, or a listing that fails, forbids the second write.
 
 </constraints>
 
@@ -248,7 +250,7 @@ How to avoid: Read `<root>/.claude-plugin/marketplace.json` before any marketpla
 
 **Failure 4: Claude retried the write after a heredoc it read as failed.**
 
-What happened: The multiline attempt ended in an error, so Claude switched to the one-line form and wrote again.
+What happened: The first attempt ended in an error, so Claude switched forms and wrote again.
 
 Why it failed: A heredoc the shell cannot terminate emits a warning, not a blocking parse error. The shell still dispatched `spx session handoff` with whatever stdin it collected, so the error Claude read came from a command that had already run and may have created the record. The retry left two records where the queue owner expects one, in a repository the invoking session does not watch.
 
