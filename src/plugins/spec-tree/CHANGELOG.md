@@ -23,7 +23,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 - **`/handoff` reloads only immediately before it reads or edits coordination notes or other governed product content.** Claimed-session and marker recovery from conversation markers and `spx session` output needs no reload.
 - **`/pickup` reloads at its first product-content access.** The claim, session presentation, checkout, base sync, and claim reconciliation touch no product content; `/understand` precedes the coordination-note path check under `spx/`, or `/contextualize` when the session names no node.
 - **`/understand` reads the root instruction file from disk only when the live conversation does not already carry it complete.** A harness that injects the whole file satisfies the step; a truncated or absent injection requires the read.
-- **The managed router's `/contextualize` rule and post-compaction STOP TRIGGER state the per-node product-content rule** (template 0.35.0).
+- **The managed router's `/contextualize` rule and post-compaction STOP TRIGGER state the per-node product-content rule** (template 0.36.0).
 
 ### Requires
 
