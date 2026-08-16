@@ -118,9 +118,9 @@ A compliant pool record and the `<queue-host>` it yields:
 }
 ```
 
-`<queue-host>` is `/Users/example/Code/acme/widgets/widgets`, whatever branch the invoking feature worktree carries.
+`<queue-host>` is `/Users/example/Code/acme/widgets/widgets`, whatever branch the invoking feature worktree carries. Every `readings` value is a JSON string, including `bare` and `mainCheckoutBranchRead`; compare them as strings.
 
-Create exactly one fresh `todo` follow-up for every authorized invocation. Before the write, run `spx -C <queue-host> session list --json` once and read only the header fields it returns for `todo` and `doing` sessions — `id`, `status`, `goal`, `next_step`. Collect as `<overlap-ids>` the full ids whose `goal` or `next_step` names an affected path or skill from `<captured_fields>`. Never run `spx session show` on a listed session, never compare bodies, never probe origin for a stored branch, and never reuse or suppress the write because an overlap exists; queue consumers reconcile overlapping observations at pickup. The report names `<overlap-ids>` so the reader sees them beside the new record.
+Create exactly one fresh `todo` follow-up for every authorized invocation. Read only the header fields Step 5's `spx -C <queue-host> session list --json` returns for `todo` and `doing` sessions — `id`, `status`, `goal`, `next_step`. Collect as `<overlap-ids>` the full ids whose `goal` or `next_step` names an affected path or skill from `<captured_fields>`. Never run `spx session show` on a listed session, never compare bodies, never probe origin for a stored branch, and never reuse or suppress the write because an overlap exists; queue consumers reconcile overlapping observations at pickup. The report names `<overlap-ids>` so the reader sees them beside the new record.
 
 </same_repository_filing>
 
@@ -140,7 +140,7 @@ Create exactly one fresh `todo` follow-up for every authorized invocation. Befor
 
 **Step 4 — Compose the body.** Write the observation from `<captured_fields>` using `<dependency_followup_body>` exactly. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
-**Step 5 — Snapshot state and list overlaps.** Capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository as the before-state for the tracked-worktree mutation check. When `same_repository=true`, run the header-only overlap listing in `<same_repository_filing>` and record `<overlap-ids>`, possibly empty.
+**Step 5 — Snapshot state and list overlaps.** Capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository as the before-state for the tracked-worktree mutation check. Run `spx -C <queue-host> session list --json` once and record its `todo` and `doing` ids as `<baseline-ids>`; Step 6's fallback compares against this set to prove a failed first attempt wrote nothing. When `same_repository=true`, derive `<overlap-ids>` from that same listing per `<same_repository_filing>`, possibly empty.
 
 **Step 6 — GATE: Confirm an external target, then file.** When `same_repository=false`, the handoff writes into a different repository queue. Resolving or naming a path is not authorization to mutate that queue, so obtain confirmation through `AskUserQuestion` before the first mutating command, presenting:
 
@@ -153,9 +153,9 @@ The explicit `/issue` invocation authorizes one fresh same-repository queue writ
 
 Then resolve the current agent session identity verbatim from the variable the agent publishes with `printenv CLAUDE_CODE_SESSION_ID` and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin. Both forms below send the same bytes and enumerate the same `<dependency_followup_body>` lines in the same order; an edit to that section's shape updates both. Never assemble the body through a temporary file, a helper file, command substitution, or post-hoc text substitution.
 
-Select the form by whether the harness accepts a multiline command. Use the heredoc by default, and use the one-line form when the harness rejects a multiline command or the heredoc attempt returns a shell parse error — the case a programmatic Claude Code or Codex run and a hosted runner such as GitHub Actions produce.
+Attempt the multiline form first. Use the one-line form only as its fallback, and only after proving the first attempt wrote nothing: a heredoc the shell cannot terminate emits a warning rather than a blocking parse error, so `spx` still runs and may already have created the record. Before any fallback write, re-run `spx -C <queue-host> session list --json` and compare the `todo` and `doing` ids against `<baseline-ids>` from Step 5. A new id means the first attempt wrote — verify that record through Step 7 and report it; never write again. Only an unchanged id set authorizes the one-line form.
 
-The default multiline form:
+The multiline form:
 
 ```bash
 spx -C <queue-host> session handoff <<'EOF'

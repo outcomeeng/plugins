@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[5]
 SCRIPT_PATH = (
     REPO_ROOT
@@ -169,6 +171,94 @@ def test_claude_non_directory_source_maps_to_none_available(tmp_path: Path) -> N
     ]
 
     result = _run_resolver(payload, runtime=RESOLVER.RUNTIME_CLAUDE)
+
+    assert result.returncode == RESOLVER.EXIT_MARKETPLACE_NOT_FOUND
+    assert result.stdout == ""
+    assert (
+        f"available local marketplaces: {RESOLVER.NO_LOCAL_MARKETPLACES}"
+    ) in result.stderr
+
+
+def _unresolvable_payloads() -> list[tuple[str, str, object]]:
+    """Registration payloads whose shape resolves no local checkout path."""
+    return [
+        # A str payload reaches _run_resolver as raw stdin, so this is the JSON
+        # text encoding a scalar rather than a registration object or array.
+        ("bare-scalar-payload", RESOLVER.RUNTIME_CLAUDE, '"not-a-registration"'),
+        (
+            "marketplaces-field-not-a-list",
+            RESOLVER.RUNTIME_CLAUDE,
+            # Non-iterable, so dropping the list guard raises rather than
+            # silently yielding nothing.
+            {RESOLVER.MARKETPLACES_FIELD: 17},
+        ),
+        (
+            "non-dict-entry",
+            RESOLVER.RUNTIME_CLAUDE,
+            [["not", "a", "mapping"]],
+        ),
+        (
+            "entry-name-not-a-string",
+            RESOLVER.RUNTIME_CLAUDE,
+            [
+                {
+                    RESOLVER.NAME_FIELD: 17,
+                    RESOLVER.SOURCE_FIELD: RESOLVER.CLAUDE_DIRECTORY_SOURCE,
+                    RESOLVER.PATH_FIELD: "/somewhere",
+                }
+            ],
+        ),
+        (
+            "claude-directory-without-path",
+            RESOLVER.RUNTIME_CLAUDE,
+            [
+                {
+                    RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+                    RESOLVER.SOURCE_FIELD: RESOLVER.CLAUDE_DIRECTORY_SOURCE,
+                }
+            ],
+        ),
+        (
+            "codex-local-without-source-or-root",
+            RESOLVER.RUNTIME_CODEX,
+            {
+                RESOLVER.MARKETPLACES_FIELD: [
+                    {
+                        RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+                        RESOLVER.MARKETPLACE_SOURCE_FIELD: {
+                            RESOLVER.SOURCE_TYPE_FIELD: (
+                                RESOLVER.CODEX_LOCAL_SOURCE_TYPE
+                            ),
+                        },
+                    }
+                ]
+            },
+        ),
+        (
+            "codex-marketplace-source-not-a-mapping",
+            RESOLVER.RUNTIME_CODEX,
+            {
+                RESOLVER.MARKETPLACES_FIELD: [
+                    {
+                        RESOLVER.NAME_FIELD: RESOLVER.DEFAULT_MARKETPLACE_NAME,
+                        RESOLVER.MARKETPLACE_SOURCE_FIELD: "local",
+                        RESOLVER.ROOT_FIELD: "/somewhere",
+                    }
+                ]
+            },
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("shape", "runtime", "payload"),
+    _unresolvable_payloads(),
+    ids=[case[0] for case in _unresolvable_payloads()],
+)
+def test_unresolvable_payload_shape_maps_to_none_available(
+    shape: str, runtime: str, payload: object
+) -> None:
+    result = _run_resolver(payload, runtime=runtime)
 
     assert result.returncode == RESOLVER.EXIT_MARKETPLACE_NOT_FOUND
     assert result.stdout == ""

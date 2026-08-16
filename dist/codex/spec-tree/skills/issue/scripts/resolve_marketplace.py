@@ -16,6 +16,10 @@ Tested with:
 - Malformed JSON -> returns a clear invalid-JSON error.
 - Missing local marketplace -> returns a clear target-resolution error.
 - No local marketplace registered at all -> names none as available.
+- Valid JSON in a shape that resolves no path -> names none as available:
+  a scalar payload, a non-list marketplaces field, a non-mapping entry, a
+  non-string entry name, a Directory entry without a path, a local Codex
+  entry without source or root, and a non-mapping marketplaceSource.
 - No temporary files are created.
 """
 
