@@ -75,6 +75,36 @@ gh issue close "<number>" --repo "<base>"
 
 </reply_shape>
 
+<worked_example>
+
+One reply on a fictional `acme/parser` issue reporting that `--strict` is ignored when the config file sets `strict: false`, to compare a draft against.
+
+The maintainer's comment, which is the question Step 4 identifies:
+
+```text
+Does this reproduce without a config file present?
+```
+
+The reply:
+
+```text
+No — with no config file the flag takes effect.
+
+$ rm parser.yml
+$ parser --strict sample.txt; echo "exit $?"
+sample.txt:1:5: unexpected '='
+exit 1
+
+parser 4.2.0, acme/parser at 4f9c2a1, the same sample.txt as the report.
+
+That reads as the file's value overriding the flag rather than the reverse —
+an inference from these two runs, not something I confirmed in the source.
+```
+
+The first sentence answers the question asked, before anything else. The command output stands quoted rather than summarized as "it worked". The precedence claim carries its own inference marker, because the run compared two exit codes and never read the merge. The reply thanks nobody, describes none of its own process, and proposes no fix.
+
+</worked_example>
+
 <constraints>
 
 - MUST read the thread exactly once per invocation and return without waiting.
@@ -100,7 +130,7 @@ gh issue close "<number>" --repo "<base>"
 
 <success_criteria>
 
-- The resolver returned `upstream-contribution` or `fork-absent` before any write.
+- The `<UPSTREAM_TARGET>` marker read for this pass carries `upstream-contribution`, `head-ambiguous`, or `fork-absent`, established before any write.
 - The thread was read once, and `state` plus the last maintainer comment appear verbatim.
 - A `state` of `CLOSED` returned that outcome and wrote nothing; every criterion below covers a pass on an open thread.
 - The issue's `author.login` was compared against the authenticated login before the comment was posted, and a thread the operator did not open was authorized in that turn.

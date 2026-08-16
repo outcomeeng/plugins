@@ -84,9 +84,48 @@ Leave the fix to the maintainer unless they asked for one. A report that prescri
 
 </report_shape>
 
+<worked_example>
+
+One report against a fictional base `acme/parser`, to compare a draft against.
+
+Title: `--strict is ignored when the config file sets strict: false`
+
+Body:
+
+```text
+`parser --strict` exits 0 on input that `strict: true` in the config file
+rejects. The flag is accepted and changes nothing.
+
+## Reproduction
+
+parser 4.2.0, Python 3.13.2, macOS 15.3
+acme/parser at 4f9c2a1
+
+$ printf 'strict: false\n' > parser.yml
+$ printf 'a = = 1\n' > sample.txt
+$ parser --strict sample.txt; echo "exit $?"
+exit 0
+
+## Negative control
+
+The same input with the flag's effect present:
+
+$ printf 'strict: true\n' > parser.yml
+$ parser sample.txt; echo "exit $?"
+sample.txt:1:5: unexpected '='
+exit 1
+
+The parse error exists and the config file surfaces it, so the exit 0 above is
+the flag failing rather than the input parsing cleanly.
+```
+
+The title names what the run observed rather than the precedence bug it suspects. The negative control is the same command and the same input with one value changed, so it separates a defect from a broken measurement. The report proposes no fix and names no line of source, because where the flag and the file merge is the maintainer's to decide.
+
+</worked_example>
+
 <constraints>
 
-- MUST resolve the target through the bundled resolver before the first write.
+- MUST read the resolved target from a live `<UPSTREAM_TARGET>` marker before the first write, invoking `/upstream` when none is live.
 - MUST search the base repository for an existing issue before filing a new one.
 - MUST obtain authorization naming the resolved base in the same turn.
 - MUST name the base repository with `--repo` on `gh issue create`.
@@ -98,7 +137,7 @@ Leave the fix to the maintainer unless they asked for one. A report that prescri
 
 <success_criteria>
 
-- The resolver returned `upstream-contribution` or `fork-absent`, and `base` and `permission` appear verbatim.
+- The `<UPSTREAM_TARGET>` marker read for this pass carries `upstream-contribution`, `head-ambiguous`, or `fork-absent`, and `base` and `permission` appear verbatim.
 - A search for an existing issue ran and its result is reported.
 - A search that matched surfaced that issue's URL and filed nothing; every criterion below covers a pass that filed.
 - The operator authorized this issue against the resolved base in the turn it was filed.

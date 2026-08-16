@@ -61,6 +61,41 @@ NEVER pass `--force`. The flag exists to make the fork's default branch match th
 
 </workflow>
 
+<worked_example>
+
+One diverged fork, `operator-org/parser` forked from `acme/parser`, to compare a report against. Step 4's count decides the whole flow:
+
+```console
+$ git rev-list --left-right --count "origin/main...FETCH_HEAD"
+2	17
+```
+
+The left number is 2, so `main` carries two commits `acme/parser` has never seen and Step 5 never runs. `0	17` would read as behind-only and sync. Name what the left side holds:
+
+```console
+$ git log --format='%h %s (%an)' "FETCH_HEAD..origin/main"
+c41d09e Pin the parser version for the demo (R. Ellis)
+8a2f7b1 Add local notes on the strict flag (R. Ellis)
+```
+
+The report:
+
+```text
+operator-org/parser's default branch `main` has diverged from acme/parser's. It
+carries 2 commits the upstream does not, and it is 17 behind:
+
+- c41d09e Pin the parser version for the demo (R. Ellis)
+- 8a2f7b1 Add local notes on the strict flag (R. Ellis)
+
+Syncing discards both. `git switch -c demo-pins main` in this checkout keeps
+them, and whichever belongs upstream can go through /open-upstream-pr. Neither
+repository was changed.
+```
+
+The report names every commit by subject and author, so the operator recognizes the work before deciding its fate. It offers the branch that preserves them rather than asking whether to discard, and it says plainly that nothing moved — a divergence report that ends without that sentence reads like a failed sync.
+
+</worked_example>
+
 <constraints>
 
 - MUST establish the upstream through `/upstream`, never from a remote carrying that name — a remote name is a local label that identifies no repository.
@@ -73,7 +108,7 @@ NEVER pass `--force`. The flag exists to make the fork's default branch match th
 
 <success_criteria>
 
-- The resolver returned `upstream-contribution`, and `base` and `head` appear verbatim.
+- The `<UPSTREAM_TARGET>` marker read for this pass carries `upstream-contribution`, and `base` and `head` appear verbatim.
 - Behind and diverged were distinguished by commit count before any mutation.
 - A behind fork's default branch matches its upstream's, and the advanced commit count is reported.
 - A diverged fork's default branch is untouched, with every commit unique to it named by subject and author.

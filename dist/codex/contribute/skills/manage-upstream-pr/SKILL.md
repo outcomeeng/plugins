@@ -146,6 +146,45 @@ Cut every sentence about the contribution's own process — attempts made, time 
 
 </reply_shape>
 
+<worked_example>
+
+One reply on a fictional `acme/parser` pull request that makes the config file yield to `--strict`, to compare a draft against. Two line-anchored findings arrived, one confirmed and one did not:
+
+```text
+src/config.py:88  This still reads the flag before the file — same bug one level up.
+src/cli.py:12     --strict needs to be in the help text.
+```
+
+The reply:
+
+```text
+Confirmed the precedence finding and pushed 9e1b330. The help-text finding did
+not reproduce.
+
+**src/config.py:88 — flag read before file.** Confirmed. `merge_options` read
+`args.strict` ahead of `file_opts`, and `merge_flags` at src/config.py:141 had
+the same order. Both read the file first now:
+
+$ printf 'strict: false\n' > parser.yml
+$ parser --strict sample.txt; echo "exit $?"
+sample.txt:1:5: unexpected '='
+exit 1
+
+**src/cli.py:12 — --strict missing from help text.** Did not reproduce on this
+branch:
+
+$ parser --help | grep -- --strict
+  --strict              Fail on any parse error
+
+That line landed in 4f9c2a1, which this branch is based on.
+
+Ready for another look at src/config.py.
+```
+
+The opening line states what was confirmed and what was pushed, in that order, and claims one commit rather than "the fixes". The confirmed finding names the parallel instance at `src/config.py:141` that the same rule reached, because Step 6 fixes a finding as a defect class rather than at its cited line. The unconfirmed finding receives the command output that shows it did not reproduce, with no argument about whether the reviewer misread. The close names one file for the maintainer to look at.
+
+</worked_example>
+
 <constraints>
 
 - MUST read the pull request's state exactly once per invocation and return without waiting.
@@ -187,7 +226,7 @@ Cut every sentence about the contribution's own process — attempts made, time 
 
 <success_criteria>
 
-- The resolver returned `upstream-contribution` before any write.
+- The `<UPSTREAM_TARGET>` marker read for this pass carries `upstream-contribution`, established before any write.
 - The pull request's state was read once, and `state`, `reviewDecision`, and each required check's conclusion appear verbatim.
 - A `state` of `CLOSED` or `MERGED`, a head repository other than the resolved `head`, and a pass with no finding to verify each returned what Step 3 read, left this checkout's branch where it was, and wrote nothing; every criterion below covers a pass that continued.
 - The pull request's `author.login` was compared against the authenticated login before the branch moved, and one the operator did not open was authorized in that turn.

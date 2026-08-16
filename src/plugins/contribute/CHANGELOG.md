@@ -6,12 +6,6 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
-## 0.1.1
-
-### Fixed
-
-- **The outward-text review rule states a rationale the prose plugin still supports.** It justified dispatching `prose-auditor` by claiming that plugin produces a verdict only in a dispatched verifier context. The prose plugin no longer asserts that exclusivity, so the rule now names the reason that holds: the verdict comes from a separate verifier agent session rather than the session that wrote the text.
-
 ## 0.2.0
 
 ### Breaking
@@ -24,9 +18,17 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 - **`/upstream` resolves the contribution target once per contribution.** It runs the resolver and emits an `<UPSTREAM_TARGET>` marker carrying `base`, `head`, `permission`, and `classification`; the five workflow skills read that marker and invoke `/upstream` only when none is live. Invoked on its own it answers what the contribution target is and whether you can push to it.
 - **An existing fork is found instead of assumed absent.** Working from a clone of the upstream is ordinary, and the checkout then supplies no head. Resolution now searches the authenticated account and its organizations for a fork of the resolved base, matching without regard to case because GitHub preserves a repository's case and matches it without one. One match becomes the head and the contribution proceeds where it previously dead-ended; several stop as `head-ambiguous` with every match named, because choosing among them is yours; none yields `fork-absent`, which now means verified absent rather than inferred from the checkout — so the `gh repo fork` command it reports is one GitHub will accept.
 
+- **Four skills carry a worked end-to-end example.** `/open-upstream-issue`, `/manage-upstream-issue`, `/manage-upstream-pr`, and `/sync-fork` each show one realistic case worked through to the text it produces — a defect report with its negative control, a maintainer's question and the reply that answers it, a two-finding review where one confirms and one does not, and a diverged fork's commit-by-commit report. A run compares its draft against the example instead of deriving the shape from prose alone.
+
 ### Removed
 
 - **The five per-skill resolver copies are gone.** Each workflow skill shipped a byte-identical `scripts/resolve_target.py` whose only job was reaching the shared resolver. The resolver now lives in `/upstream` alone, and no other skill carries a `scripts/` directory or grants a resolver path.
+
+## 0.1.1
+
+### Fixed
+
+- **The outward-text review rule states a rationale the prose plugin still supports.** It justified dispatching `prose-auditor` by claiming that plugin produces a verdict only in a dispatched verifier context. The prose plugin no longer asserts that exclusivity, so the rule now names the reason that holds: the verdict comes from a separate verifier agent session rather than the session that wrote the text.
 
 ## 0.1.0
 

@@ -208,7 +208,7 @@ The body explains why; the diff already shows what.
 
 <success_criteria>
 
-- The resolver returned `upstream-contribution`, and `base`, `head`, and `permission` appear verbatim in the report.
+- The `<UPSTREAM_TARGET>` marker read for this pass carries `upstream-contribution`, and `base`, `head`, and `permission` appear verbatim in the report.
 - The operator authorized this pull request against the resolved base in the turn it was created.
 - The contribution branch was cut from the base repository's default branch, and a branch an earlier pass had already cut was taken only at `<base-tip>`; one carrying commits stopped the flow with those commits named.
 - The branch's diff against `<base-tip>` carried the change before the push; an empty diff at either gate stopped the flow with nothing opened, and every criterion below covers a pass that opened.
