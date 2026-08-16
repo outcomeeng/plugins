@@ -20,12 +20,11 @@ These patterns span the **entire** audit-skill family — every `audit-*` SKILL.
 
 ## ADR `### Audit` rules mirror implementing-spec `[test]`/`[eval]` lanes (deferred)
 
-The `/audit-adr` pass on `21-script-decomposition.adr.md` surfaced a cross-spec lane divergence (an observation, not a tag-validity finding — the audit-adr skill validates the tag against its subsection, not against the implementing spec's lane). Two of the three rules under `### Audit` in that ADR mirror assertions whose implementing lanes in `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md` are not `[audit]`:
+The `/audit-adr` pass on `21-script-decomposition.adr.md` surfaced a cross-spec lane divergence (an observation, not a tag-validity finding — the audit-adr skill validates the tag against its subsection, not against the implementing spec's lane). One rule under `### Audit` in that ADR mirrors an assertion whose implementing lane in `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md` is not `[audit]`:
 
 - ADR "reviewer emits no `decision`/verdict" (`[audit]`) mirrors spec line tagged `[test](tests/test_review_result.scenario.l1.py)`.
-- ADR "wrapper agent never hand-validates emitted JSON" (`[audit]`) mirrors spec line tagged `[eval](evals/wrapper-protocol/eval.toml)`.
 
-The third `### Audit` rule (no intermediate file when stdin/stdout suffices) has no corresponding assertion under any non-`[audit]` lane in `reviewing-changes.md`, so it is not part of this divergence. Reconcile whether the two mirrored ADR rules belong under `### Testing` / `### Eval` (mirroring the implementing spec's lanes) rather than `### Audit`. Audit gate: `/audit-adr` on the record clean after any move.
+The ADR's other `### Audit` rules have no corresponding assertion under a non-`[audit]` lane in `reviewing-changes.md`, so they are not part of this divergence. Reconcile whether the mirrored ADR rule belongs under `### Testing` (mirroring the implementing spec's lane) rather than `### Audit`. Audit gate: `/audit-adr` on the record clean after any move.
 
 ## Verdict-row keys in `audit-{lang}-architecture` skills lack conformance evidence (FOLLOW-UP)
 
