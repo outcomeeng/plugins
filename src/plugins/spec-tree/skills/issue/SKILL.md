@@ -78,6 +78,7 @@ Resolve the target repository's checkout directory `<target-dir>` — the input 
   ```
   {!% endif %!}
 - **The `spx` CLI, or another spec-tree dependency:** the dependency's own checkout. Accept the path from the user or the invoking repository's configuration.
+- **The invoking repository's own product:** when the observation concerns the current product — its own specs, skills, scripts, or workflow rather than an installed dependency — set `<target-dir>` to the root `git rev-parse --show-toplevel` reports. Step 1 then classifies it as the same repository, so a self-observation never falls through to the ambiguous-target question.
 
 When the target is ambiguous or the path does not resolve, ask the user which dependency the follow-up concerns and for its checkout directory through the structured-question tool. NEVER guess a path. A target enters `<same_repository_filing>` only when its resolved absolute git common directory equals the invoking repository's; normalized origin identity identifies an external target for confirmation but never grants self-authorization.
 
