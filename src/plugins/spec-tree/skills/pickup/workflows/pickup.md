@@ -4,7 +4,7 @@
 
 **Step 2: Foundation timing**
 
-The claim, the session document, the checkout, base sync, and claim reconciliation are `spx session`, Git, and `gh` operations that touch no product content, so no foundation reload precedes them. `/understand` is invoked immediately before the first product-content access in this workflow — the coordination-note path check under `spx/` in Step 5, or `/contextualize` in Step 8 when the session names no node. Do not read node-local `PLAN.md` or `ISSUES.md` content before `/contextualize`.
+The claim, the session document, the checkout, base sync, and claim reconciliation are `spx session`, Git, and `gh` operations that touch no product content, so no foundation reload precedes them. `/understand` is invoked immediately before the first product-content access in this workflow — the coordination-note path check under `spx/` in Step 5 when the session names a node, otherwise the `/contextualize` invocation in Step 8 for the node the operator names. Do not read node-local `PLAN.md` or `ISSUES.md` content before `/contextualize`.
 
 **Step 2b: Hold the pickup proposal contract**
 
@@ -223,7 +223,7 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 
 <success_criteria>
 
-- [ ] `/understand` invoked immediately before the first product-content access — the coordination-note path check or `/contextualize` — and not before the claim, session presentation, checkout, base sync, or claim reconciliation
+- [ ] `/understand` invoked immediately before the first product-content access — the coordination-note path check when the session names a node, otherwise the `/contextualize` invocation for the node the operator names — and not before the claim, session presentation, checkout, base sync, or claim reconciliation
 - [ ] Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work (Step 5b)
 - [ ] When the session `git_ref` names a feature branch, that branch is fetched and checked out before node context is loaded (Step 3)
 - [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created (Step 3)
