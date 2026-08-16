@@ -4,11 +4,13 @@ from pathlib import Path
 
 from outcomeeng.distribution.installation import (
     Agent,
+    CLAUDE_PROJECT_SCOPE,
     CLAUDE_SCOPE_BEARING_OPERATIONS,
     CLAUDE_SCOPELESS_OPERATIONS,
     CODEX_HOME_ENV,
     InstallationMode,
     Operation,
+    SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
 )
 from outcomeeng_testing.harnesses.installation import (
@@ -72,7 +74,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         CLAUDE_SCOPE_BEARING_OPERATIONS | CLAUDE_SCOPELESS_OPERATIONS
     )
     assert all(
-        "--scope" in command.argv and "project" in command.argv
+        "--scope" in command.argv and CLAUDE_PROJECT_SCOPE in command.argv
         for command in claude_commands
         if command.operation in CLAUDE_SCOPE_BEARING_OPERATIONS
     )
@@ -122,7 +124,7 @@ def test_invalid_installed_selection_never_reaches_a_state_changing_operation() 
     observation = observe_invalid_persistent_selection()
 
     assert observation.error is not None
-    assert "spec-tree" in observation.error
+    assert SPEC_TREE_PLUGIN in observation.error
     assert observation.attempted
     assert all(
         command.operation in {Operation.MARKETPLACE_INSPECT, Operation.PLUGIN_INSPECT}
