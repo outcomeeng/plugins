@@ -11,7 +11,6 @@ import yaml
 
 from outcomeeng.catalog.plugin_catalog import (
     BEGIN_SENTINEL,
-    CATALOG_AGENT_KIND,
     CATALOG_SKILL_KIND,
     CATALOG_TARGET_LABELS,
     END_SENTINEL,
