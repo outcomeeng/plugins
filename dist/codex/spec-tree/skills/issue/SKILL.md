@@ -133,7 +133,7 @@ Create exactly one fresh `todo` follow-up for every authorized invocation. Befor
 
 The explicit `/issue` invocation authorizes one fresh same-repository queue write, so `same_repository=true` does not add a second confirmation. Every `same_repository=false` target requires this confirmation, including a separate clone with the same normalized origin identity and a checkout path named directly in `$ARGUMENTS`. STOP on anything but explicit approval, leaving both repositories unchanged.
 
-Then resolve the current runtime identity verbatim (`printenv CODEX_THREAD_ID` in Codex; `printenv CLAUDE_SESSION_ID` in Claude Code) and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin:
+Then resolve the current runtime identity verbatim with `printenv CODEX_THREAD_ID` and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin:
 
 ```bash
 spx -C <queue-host> session handoff <<'EOF'
