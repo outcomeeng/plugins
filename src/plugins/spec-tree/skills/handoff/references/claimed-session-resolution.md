@@ -13,7 +13,7 @@ Search the conversation for the most recent `<CLAIMED_SESSIONS ids="a,b,c">` mar
 
 **Step 2 — Fallback when no CLAIMED_SESSIONS marker exists.**
 
-A malformed or otherwise absent marker can drop `<CLAIMED_SESSIONS>`. When compaction occurred, first invoke `/understand` and `/contextualize` for every spec node still in scope; only then recover in this order:
+A malformed or otherwise absent marker can drop `<CLAIMED_SESSIONS>`. When compaction occurred, first invoke `/understand`, then `/contextualize` on each node whose coordination notes or governed implementation the recovery reads or edits; only then recover in this order:
 
 - **Step 2a — checkpoint claimed-sessions attribute (preferred).** If the most recent `<PICKUP_CHECKPOINT id="..." claimed="a,b,c">` exists, parse its `claimed` attribute. That attribute carries the full claimed-session set as of the latest post-context checkpoint — use it as the authoritative resolved claimed-session set. One surviving checkpoint can recover a multi-claimed-session set without needing every earlier claim marker.
 - **Step 2b — additive rebuild (no checkpoint claimed attribute available).** If no `<PICKUP_CHECKPOINT>` carries a `claimed` attribute, collect every `<PICKUP_CLAIM id="...">` and `<PICKUP_CHECKPOINT id="...">` emitted since the last closure marker. Deduplicate by id.

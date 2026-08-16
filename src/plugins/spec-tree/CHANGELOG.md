@@ -10,6 +10,15 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.90.1
+
+### Changed
+
+- **Post-compaction recovery reloads at the first implementation access.** After compaction, `/understand` precedes the next implementation access and `/contextualize` on the governing spec node precedes any implementation that node governs being read or modified, and any discussion of that node; a compaction empties the set of contextualized nodes. An operational continuation — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — opens no implementation and triggers neither reload. `/manage-pr`, `/merge`, and `/manage-github-pr` invoke both at the first implementation access in the pass and at no earlier step; `/handoff` contextualizes each node whose coordination notes or governed implementation it reads or edits.
+- **Implementation is a defined term.** The `/understand` foundation defines implementation as every product artifact a spec node governs or must govern — source, tests, evals, generated output, specs, decisions, coordination notes, spec-declared configuration — with the governing node found by search under the live foundation marker: a path under a node directory belongs to that node; any other path to the node whose test file names it and whose spec links that test, several nodes resolving to their lowest common ancestor. Implementation with no governing spec is not read or modified; the gap is recorded. The agent harness's own instruction and settings files, tool output, the session store, and scratch space are not implementation.
+- **`/understand` reads the root instruction file from disk only when the live conversation does not already carry it complete.** A harness that injects the whole file satisfies the step; a truncated or absent injection requires the read.
+- **The managed router's post-compaction STOP TRIGGER states the same rule.** Re-render the root instruction files with `/update-instruction-block` to carry it.
+
 ## 0.90.0
 
 ### Changed

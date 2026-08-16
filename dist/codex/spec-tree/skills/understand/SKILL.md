@@ -36,6 +36,18 @@ When layers disagree, the lower layer is in violation.
 
 </layer_precedence>
 
+<implementation>
+
+- ALWAYS: treat as implementation every product artifact a spec node governs or must govern, and derive its governing node before reading or modifying it.
+
+Implementation is every artifact of the product a spec node governs or must govern: source, tests, evals, generated output, specs, decisions, coordination notes, and configuration a spec declares. Governance is derived, never assumed: a path under `spx/<node>/` is governed by that node; any other path is governed by the node whose `spx/**/tests/` file names it and whose spec links that test, several nodes resolving to their lowest common ancestor. That lookup is a search under the live foundation marker and opens no file body. Implementation with no governing node is a coverage gap: it is not read or modified, and the gap is recorded.
+
+Not implementation: the agent harness's own instruction and settings files it is told to read, tool and command output, the session store, and scratch space.
+
+No implementation is read or modified before its governing spec node has been contextualized in the conversation since the last compaction, and `/contextualize` on a node precedes any discussion of that node. A compaction empties the set of contextualized nodes. Work that opens no implementation — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — is an operational continuation and triggers neither `/understand` nor `/contextualize`.
+
+</implementation>
+
 <future_product_truth>
 
 - ALWAYS: higher-level truth remains authoritative while coherent, even when lower layers have not caught up.
@@ -493,7 +505,7 @@ A blocker exists only when the immediate next action needs operator input or an 
    - `${SKILL_DIR}/templates/decisions/decision-name.pdr.md`
    - `${SKILL_DIR}/templates/nodes/enabler-name.md`
    - `${SKILL_DIR}/templates/nodes/outcome-name.md`
-6. Read the complete root `AGENTS.md` once when present. It routes skill invocation and carries product commands outside the managed router.
+6. Read the complete root `AGENTS.md` from disk only when the live conversation does not already carry it complete; a harness that injects the whole file satisfies this step, and a truncated or absent injection requires the read. It routes skill invocation and carries product commands outside the managed router.
 7. Emit the marker:
 
 ```text
@@ -502,7 +514,7 @@ Loaded inline: truth-hierarchy, artifact-placement, node-model, assertion-model,
 Operational references available: excluded-nodes, product-domain-shapes
 Local lifecycle route: changes route through /merge; spx/local/merging.md refines the route when present
 Default-branch completion boundary: delivered value reaches the default branch on origin through /merge; verified local work remains unfinished unless explicitly limited or stopped at an explicit gate with no independent action remaining
-Routing guide: loaded from AGENTS.md | absent
+Routing guide: AGENTS.md carried complete by the harness | read from disk | absent
 Templates available: product, adr, pdr, enabler, outcome
 Examples available: adr, enabler, outcome, pdr
 </SPEC_TREE_FOUNDATION>
