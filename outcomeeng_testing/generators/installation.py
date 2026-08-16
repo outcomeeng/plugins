@@ -1,16 +1,32 @@
 """Generated finite plugin selections for installation evidence."""
 
+import json
 from collections.abc import Mapping, Sequence
 from itertools import combinations
 from pathlib import Path
+from typing import cast
 
 from outcomeeng.distribution.installation import (
     Agent,
+    CATALOG_PLUGIN_NAME_FIELD,
+    CATALOG_PLUGINS_FIELD,
     CLAUDE_CATALOG_PATH,
     CODEX_CATALOG_PATH,
     SPEC_TREE_PLUGIN,
     catalog_plugin_names,
 )
+
+
+def catalog_plugin_names_from_document(catalog_path: Path) -> tuple[str, ...]:
+    """Read catalog order independently from the production catalog parser."""
+    document = cast(
+        "dict[str, list[dict[str, object]]]",
+        json.loads(catalog_path.read_bytes()),
+    )
+    return tuple(
+        cast("str", plugin[CATALOG_PLUGIN_NAME_FIELD])
+        for plugin in document[CATALOG_PLUGINS_FIELD]
+    )
 
 
 def generated_catalog_subset(
@@ -66,8 +82,22 @@ def generated_valid_catalog_subsets(
     )
 
 
+def generated_invalid_catalog_subsets(
+    catalog: Sequence[str],
+) -> tuple[frozenset[str], ...]:
+    """Enumerate every nonempty catalog subset omitting the required plugin."""
+    optional = tuple(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
+    return tuple(
+        frozenset(selected)
+        for size in range(1, len(optional) + 1)
+        for selected in combinations(optional, size)
+    )
+
+
 __all__ = [
+    "catalog_plugin_names_from_document",
     "generated_agent_subsets",
     "generated_catalog_subset",
+    "generated_invalid_catalog_subsets",
     "generated_valid_catalog_subsets",
 ]

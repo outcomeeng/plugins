@@ -17,7 +17,7 @@ from outcomeeng_testing.harnesses.installation import (
     NONCANONICAL_MARKETPLACE_SOURCE,
     observe_first_failure,
     observe_inspection_failure,
-    observe_invalid_persistent_selection,
+    observe_invalid_persistent_selections,
     observe_missing_codex_home,
     observe_persistent_execution,
     observe_persistent_plan,
@@ -121,15 +121,15 @@ def test_a_failed_inspection_stops_before_any_planned_operation() -> None:
 
 
 def test_invalid_installed_selection_never_reaches_a_state_changing_operation() -> None:
-    observation = observe_invalid_persistent_selection()
-
-    assert observation.error is not None
-    assert SPEC_TREE_PLUGIN in observation.error
-    assert observation.attempted
-    assert all(
-        command.operation in {Operation.MARKETPLACE_INSPECT, Operation.PLUGIN_INSPECT}
-        for command in observation.attempted
-    )
+    for observation in observe_invalid_persistent_selections():
+        assert observation.error is not None
+        assert SPEC_TREE_PLUGIN in observation.error
+        assert observation.attempted
+        assert all(
+            command.operation
+            in {Operation.MARKETPLACE_INSPECT, Operation.PLUGIN_INSPECT}
+            for command in observation.attempted
+        )
 
 
 def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:

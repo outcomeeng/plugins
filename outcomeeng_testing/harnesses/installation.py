@@ -74,7 +74,9 @@ from outcomeeng.distribution.installation import (
     main,
 )
 from outcomeeng_testing.generators.installation import (
+    catalog_plugin_names_from_document,
     generated_agent_subsets,
+    generated_invalid_catalog_subsets,
     generated_valid_catalog_subsets,
 )
 
@@ -297,6 +299,16 @@ def _installed_or_catalog_plugins(
     }
 
 
+def _catalogs_from_documents(checkout: Path) -> dict[Agent, tuple[str, ...]]:
+    """Read both committed catalogs without the production catalog parser."""
+    return {
+        Agent.CLAUDE: catalog_plugin_names_from_document(
+            checkout / CLAUDE_CATALOG_PATH
+        ),
+        Agent.CODEX: catalog_plugin_names_from_document(checkout / CODEX_CATALOG_PATH),
+    }
+
+
 def _plugin_listing_payload(
     agent: Agent,
     checkout: Path,
@@ -469,10 +481,7 @@ def observe_persistent_catalog_subset_plans() -> tuple[
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         preflight = build_persistent_preflight(mirror, environment)
-        catalogs = {
-            Agent.CLAUDE: catalog_plugin_names(mirror / CLAUDE_CATALOG_PATH),
-            Agent.CODEX: catalog_plugin_names(mirror / CODEX_CATALOG_PATH),
-        }
+        catalogs = _catalogs_from_documents(mirror)
         observations: list[CatalogSubsetPlanObservation] = []
         for agent in Agent:
             mappings: list[tuple[frozenset[str], tuple[str, ...]]] = []
@@ -584,6 +593,40 @@ def observe_invalid_persistent_selection() -> SelectionRejectionObservation:
             error=rejection,
             attempted=tuple(runner.calls),
         )
+
+
+def observe_invalid_persistent_selections() -> tuple[
+    SelectionRejectionObservation, ...
+]:
+    """Expose every nonempty per-agent selection that omits spec-tree."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        catalogs = _catalogs_from_documents(mirror)
+        observations: list[SelectionRejectionObservation] = []
+        for agent in Agent:
+            for selected in generated_invalid_catalog_subsets(catalogs[agent]):
+                installed = {
+                    candidate: frozenset({SPEC_TREE_PLUGIN}) for candidate in Agent
+                }
+                installed[agent] = selected
+                runner = RecordingRunner(installed=installed)
+                rejection: str | None = None
+                try:
+                    execute_persistent_installation(mirror, environment, runner)
+                except ValueError as error:
+                    rejection = str(error)
+                observations.append(
+                    SelectionRejectionObservation(
+                        error=rejection,
+                        attempted=tuple(runner.calls),
+                    )
+                )
+    return tuple(observations)
 
 
 def observe_invalid_isolated_selection() -> SelectionRejectionObservation:
@@ -1569,6 +1612,7 @@ __all__ = [
     "observe_inspection_failure",
     "observe_invalid_isolated_selection",
     "observe_invalid_persistent_selection",
+    "observe_invalid_persistent_selections",
     "observe_missing_codex_home",
     "observe_persistent_execution",
     "observe_persistent_catalog_subset_plans",
