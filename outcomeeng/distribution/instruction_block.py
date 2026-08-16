@@ -86,6 +86,7 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("product-path follow guard", "Never follow paths from their output"),
 )
 AUTHORITY_HIERARCHY_POLICY_HEADING: Final = "## Authority Hierarchy"
+DANGEROUS_COMMAND_GUARD_POLICY_HEADING: Final = "### Dangerous-command guard"
 DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS: Final = (
     (
         "dynamic destructive branch prohibition",
@@ -142,6 +143,8 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     ),
     ("Claude guide filename", "`CLAUDE.md` for Claude Code"),
     ("Codex guide filename", "`AGENTS.md` for Codex"),
+)
+DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS: Final = (
     (
         "dangerous-command guard stop trigger",
         "a dangerous-command guard (DCG) block terminates the attempted command family",
@@ -714,6 +717,25 @@ def _markdown_section(document: str, heading: str) -> str:
     return "\n".join(lines[start:end])
 
 
+def _operative_policy_line_contains(section: str, required_text: str) -> bool:
+    """Return whether operative policy prose contains ``required_text``."""
+    fence_marker: str | None = None
+    for line in section.splitlines()[1:]:
+        stripped = line.strip()
+        marker = stripped[:3]
+        if marker in {"```", "~~~"}:
+            if fence_marker is None:
+                fence_marker = marker
+            elif fence_marker == marker:
+                fence_marker = None
+            continue
+        if fence_marker is not None or stripped.startswith(">"):
+            continue
+        if required_text in line and (line.startswith("- ") or line.startswith("🛑 ")):
+            return True
+    return False
+
+
 def managed_router_block(document: str) -> str:
     """Extract the managed router block from a complete root instruction document."""
     module = load_instruction_block_module()
@@ -770,6 +792,24 @@ def validate_authority_hierarchy_policy(
             details = ", ".join(missing)
             raise AuthorityHierarchyPolicyError(
                 f"{harness} router authority hierarchy is incomplete: {details}"
+            )
+        try:
+            guard_section = _markdown_section(
+                section, DANGEROUS_COMMAND_GUARD_POLICY_HEADING
+            )
+        except FoundationAccessPolicyError as exc:
+            raise AuthorityHierarchyPolicyError(
+                f"missing router section: {DANGEROUS_COMMAND_GUARD_POLICY_HEADING}"
+            ) from exc
+        missing_guard_rules = [
+            name
+            for name, required_text in DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS
+            if not _operative_policy_line_contains(guard_section, required_text)
+        ]
+        if missing_guard_rules:
+            details = ", ".join(missing_guard_rules)
+            raise AuthorityHierarchyPolicyError(
+                f"{harness} router dangerous-command guard is incomplete: {details}"
             )
 
 

@@ -30,3 +30,18 @@ def test_dangerous_branch_deletion_policy_rejects_every_missing_rule() -> None:
                 source.validate_authority_hierarchy_policy(
                     {agent_harness: violating_document}
                 )
+
+    for agent_harness, document in documents.items():
+        guard_start = document.index("### Dangerous-command guard")
+        guard_end = document.index("\n---", guard_start)
+        quoted_guard = "\n".join(
+            f"> {line}" if line else ">"
+            for line in document[guard_start:guard_end].splitlines()
+        )
+        violating_document = (
+            f"{document[:guard_start]}{quoted_guard}{document[guard_end:]}"
+        )
+        with pytest.raises(source.AuthorityHierarchyPolicyError):
+            source.validate_authority_hierarchy_policy(
+                {agent_harness: violating_document}
+            )
