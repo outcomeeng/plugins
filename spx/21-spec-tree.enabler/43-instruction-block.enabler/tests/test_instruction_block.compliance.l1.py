@@ -15,6 +15,25 @@ def test_instruction_block_compliance_evidence() -> None:
     assert evidence.router_policy_evidence_run().executed == source.ROUTER_POLICY_NAMES
 
 
+def test_dangerous_branch_deletion_policy_rejects_every_missing_rule() -> None:
+    documents = evidence.rendered_instruction_blocks()
+    source.validate_authority_hierarchy_policy(documents)
+
+    for required_text in (
+        "NEVER** pass dynamic branch names to `git branch -d` or `git branch -D`",
+        "variables, command substitutions, arrays, and globs are denied",
+        "including when quoted or placed after `--`",
+        "Type every branch name literally",
+        "delete several literal names in one command",
+    ):
+        for agent_harness, document in documents.items():
+            violating_document = document.replace(required_text, "", 1)
+            with pytest.raises(source.AuthorityHierarchyPolicyError):
+                source.validate_authority_hierarchy_policy(
+                    {agent_harness: violating_document}
+                )
+
+
 def test_every_harness_router_authorizes_subagent_dispatch() -> None:
     for enabled_languages in harness.template_language_subsets():
         documents = evidence.rendered_instruction_blocks(enabled_languages)
