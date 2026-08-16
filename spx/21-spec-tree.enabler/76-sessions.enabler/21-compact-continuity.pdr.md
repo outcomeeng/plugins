@@ -10,7 +10,7 @@ Claude Code produces the compact summary that carries conversation state. A proj
 
 1. Claude Code's standard compact summary is the sole compact-summary prompt surface; the project defines no `compactPrompt` override.
 2. After compaction the managed root instruction block directs `/understand` before the next product-content access, and `/contextualize` on the governing spec node before any product content it governs is read or modified and before that node is discussed; a compaction empties the set of contextualized nodes; product content with no governing spec is not read or modified; an operational continuation — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — touches no product content and triggers neither reload.
-3. The `SessionStart` hook delegates session-environment and worktree-occupancy behavior to `spx hook run session-start` and carries no compact-summary or methodology-reload behavior.
+3. The `SessionStart` hook is limited to session-environment and worktree-occupancy behavior and carries no compact-summary or methodology-reload behavior; its delegation mechanism is governed by `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md`.
 
 ## Verification
 

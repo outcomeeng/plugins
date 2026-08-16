@@ -108,3 +108,11 @@ Revisit condition: this resolves with the prompt-only simulation above. Once
 producer, declare the producers the materialized prompt actually reads — then
 the generator derives their trigger paths, and a mutation to those skills
 genuinely changes a case outcome.
+
+## The direct-push lifecycle carries no worked example
+
+`src/plugins/spec-tree/skills/merge/SKILL.md` `<direct_push_lifecycle>` governs a push straight to the default branch on origin through named gates and predicates with no concrete trace — a selected transport, an overlay configuration, the push command, the resulting full SHA — that an in-progress run can be compared against before the push completes.
+
+**Resolution shape**: add one worked before/after example to `<direct_push_lifecycle>`, gated by `instructions:skill-auditor`. The example is a content addition to a section the reload-timing changeset does not touch, so it ships as its own change.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/merge/SKILL.md` on the post-compaction reload-timing change (finding `abstract_examples`).
