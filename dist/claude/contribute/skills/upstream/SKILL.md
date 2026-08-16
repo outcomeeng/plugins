@@ -7,20 +7,34 @@ allowed-tools: Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.p
 ---
 
 <objective>
-One `<UPSTREAM_TARGET>` marker carrying the resolved base repository, head repository, operator permission, and classification for this contribution, or the classification that stops it.
+One `<UPSTREAM_TARGET>` marker carrying the resolved base repository, head repository, operator permission, and classification for this contribution, whether it continues or stops.
 </objective>
 
 <workflow>
 
 **Step 1 — Load the standards.** Invoke `/contribution-standards` through the runtime's skill-composition surface. Its `<invariants>` govern every artifact the resolved target later receives.
 
-**Step 2 — Resolve the target.**
+**Step 2 — Resolve the target.** Run the resolver once per contribution.
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py"
 ```
 
-It prints one JSON object carrying `base`, `head`, `permission`, `classification`, `fork_matches`, and `fork_candidates`. Run it once. Reading `isFork`, `parent`, and `viewerPermission` by eye is the failure this resolver exists to prevent, so never reconstruct the classification from `gh` output.
+It prints one JSON object:
+
+```json
+{
+  "classification": "head-ambiguous",
+  "base": "someone/example",
+  "head": null,
+  "permission": "READ",
+  "fork": {
+    "matches": ["operator/example", "silvarbor/example"],
+    "candidates": ["operator", "silvarbor"]
+  },
+  "detail": "2 forks of someone/example to contribute from (operator/example, silvarbor/example); choosing among them is the operator's"
+}
+```
 
 **Step 3 — Emit the marker.** Report `base`, `head`, and `permission` verbatim, then emit:
 
