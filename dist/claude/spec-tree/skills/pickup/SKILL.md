@@ -25,11 +25,7 @@ Three rules govern a conversation's claimed-session set:
 
 2. **Closure has acceptable end states only through `/handoff`.** Every claimed session becomes Claude's sole responsibility. Reflect, persist remaining validated relevant context, and end with zero, one, or several session files — one canonical continuation per independent continuation thread in the resolved claimed-session set. Supplemental or sidecar handoffs for the same thread are never valid at closure.
 
-3. **Quick-exit shortcut.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
-   - Invoke `/handoff --no-session` to archive the wrongly-claimed session immediately. The session leaves the claimed-session set but is archived, not returned to the todo queue.
-   - Run `spx session release <id>` to move the session from `doing/` back to `todo/` for another context to claim.
-
-   Neither action counts toward the closure workload for the claimed-session set — the wrongly-claimed session leaves the set the moment the user confirms the quick exit.
+3. **Quick-exit closure.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user may invoke `/handoff --no-session` to archive the wrongly claimed session immediately. The session leaves the claimed-session set through the closure workflow and is not returned to the todo queue. This action does not count toward the remaining closure workload for the claimed-session set.
 
 **Consequences of the three rules:**
 
@@ -55,9 +51,6 @@ spx session pickup [ids...] [--auto]
 
 # Show session content
 spx session show <id...>
-
-# Return claimed sessions to the todo queue (move doing -> todo)
-spx session release [ids...]
 
 # Create a handoff session (JSON header + body on stdin)
 spx session handoff
@@ -92,13 +85,13 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
    ```bash
    spx session todo --json
    ```
-2. Parse each session to extract session ID, `priority`, `goal`, `next_step`, and `git_ref` from frontmatter, plus nodes from the `<nodes>` section. Limit to most recent 10.
-3. Present one single-select question with `AskUserQuestion`:
+2. Parse every returned session to extract session ID, `priority`, `goal`, `next_step`, and `git_ref` from frontmatter, plus nodes from the `<nodes>` section. Order them by priority (`high`, `medium`, `low`) and then oldest full session id first.
+3. When exactly one session exists, claim it directly. When several exist, present the first three ordered sessions in one single-select question with `AskUserQuestion`:
    - Stable question id when the runtime schema exposes one: `handoff`
    - Header: `Handoff`
    - Question: `Which handoff would you like to load?`
    - Options: 2-3 mutually exclusive sessions, each labeled with its full session id, priority, and branch context and described by its goal and next step
-4. Claim the chosen session:
+4. Claim the sole or selected session:
    ```bash
    spx session pickup <selected-session-id>
    ```
@@ -199,7 +192,7 @@ What happened: Claude picked up session A, ran `spx session handoff` mid-work to
 
 Why it failed: Claude treated queue state as closure authority and bypassed the reflection and claimed-session accounting owned by `/handoff`.
 
-How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive a claimed session. Permission flows from the three claimed-session rules: the set grows only by user confirmation; closure writes one canonical continuation per independent thread; a quick-release shortcut exists only within a few turns of pickup. Pickup never archives.
+How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive a claimed session. Permission flows from the three claimed-session rules: the set grows only by user confirmation; closure writes one canonical continuation per independent thread; a quick-exit closure remains available within a few turns of pickup. Pickup never archives.
 
 **Failure 4: Claude asked the operator to choose without reviewing session evidence**
 

@@ -209,12 +209,11 @@ After emitting the checkpoint marker, report the result and the current session 
 
 - Continue work under the claimed session(s).
 - Invoke `/handoff` if the user asks to close or hand off.
-- Invoke `/handoff --no-session` if the user asks to close without creating a handoff. It archives the claimed sessions; it does NOT put the claimed session back in the todo queue. If the user explicitly wants a claimed session returned to the shared queue, run `spx session release <id>` to move it from `doing/` back to `todo/`.
+- Invoke `/handoff --no-session` if the user asks to close without creating a handoff. It archives the claimed sessions and does not put them back in the todo queue.
 
 **Invalid next steps:**
 
 - `spx session archive` — pickup never archives.
-- `spx session release` as a substitute for the close workflow — skips claimed-session accounting, reflection, and archival; use `/handoff --no-session` for proper closure.
 - Creating a replacement handoff to justify closing the claimed session — no new session is permission to close an existing one.
 
 NEVER invoke `/apply`, author ADRs/tests/code, or edit files before this checkpoint completes.
