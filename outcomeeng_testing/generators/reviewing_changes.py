@@ -41,6 +41,14 @@ def rejected_rule_citation_cases() -> Iterator[RejectedRuleCitationCase]:
         "21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO",
     )
     yield RejectedRuleCitationCase(
+        "spec-assertion-nonexistent-file", "spx/does-not-exist.md:ALWAYS:1"
+    )
+    yield RejectedRuleCitationCase(
+        "decision-nonexistent-file",
+        "spx/21-spec-tree.enabler/68-reviewing.enabler/"
+        "21-reviewing-changes.enabler/99-nonexistent.adr.md",
+    )
+    yield RejectedRuleCitationCase(
         "spec-assertion-beyond-declared-count",
         "spx/21-spec-tree.enabler/68-reviewing.enabler/"
         "21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:999",
