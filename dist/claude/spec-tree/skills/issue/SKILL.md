@@ -1,27 +1,18 @@
 ---
 name: issue
 description: >-
-  ALWAYS invoke this skill when filing a follow-up into a spec-tree dependency's own session queue — for observations about the spec-tree plugin, the spx CLI, or another spec-tree dependency needing a change. NEVER edit a spec-tree dependency's installed source directly to record a needed fix; capture it as a handoff in that dependency's queue with this skill.
+  ALWAYS invoke this skill when filing a follow-up into the owning repository's session queue — including the invoking repository, the spec-tree plugin repository, the spx CLI repository, or another spec-tree dependency. NEVER edit installed dependency source or run the current work through full handoff closure merely to record a needed follow-up.
 argument-hint: "[target-dir-or-dependency]"
-allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(printenv CODEX_THREAD_ID), Bash(printenv CLAUDE_SESSION_ID), Bash(spx --version:*), Bash(spx session show:*), Bash(spx -C:* session handoff*), Bash(spx -C:* session show*), Bash(git status:*), Bash(git rev-parse --path-format=absolute --git-common-dir), Bash(git remote get-url origin), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --path-format=absolute --git-common-dir), Bash(git -C:* rev-parse --show-toplevel), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(git -C:* remote get-url origin), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash(printenv CLAUDE_SESSION_ID), Bash(spx -C:* diagnose*), Bash(spx -C:* session handoff*), Bash(spx -C:* session list*), Bash(spx -C:* session show*), Bash(spx session show:*), Bash(git status:*), Bash(git rev-parse --show-toplevel), Bash(git rev-parse --path-format=absolute --git-common-dir), Bash(git remote get-url origin), Bash(git -C:* branch --show-current), Bash(git -C:* config --get core.bare), Bash(git -C:* worktree list --porcelain), Bash(git -C:* symbolic-ref --short refs/remotes/origin/HEAD), Bash(git -C:* rev-parse --path-format=absolute --git-common-dir), Bash(git -C:* rev-parse --show-toplevel), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(git -C:* remote get-url origin), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
 ---
 
-<context>
-**Working Directory:**
-!`pwd`
-
-**spx CLI:**
-!`spx --version`
-
-</context>
-
 <objective>
-A follow-up recorded as a handoff session in a spec-tree dependency repository's own session queue — capturing Claude's observation and shaped so the dependency workflow resumes from it.
+A minimal follow-up filed in the owning spec-tree repository's active session queue — capturing Claude's observation and naming possible overlaps from queue headers.
 
 </objective>
 
 <when_to_invoke>
-Editing a spec-tree dependency's installed source directly to record a needed change rewrites shared infrastructure for every consumer session that uses it, with no review. The `/issue` skill files the observation as a handoff into the dependency's own session queue instead, where the dependency workflow triages and acts on it.
+Editing a spec-tree component's installed source directly to record a needed change rewrites shared infrastructure for every consumer session that uses it, with no review. The `/issue` skill files the observation in the owning repository's session queue instead, where that repository's workflow triages and acts on it. The owning repository may be the invoking repository; recording a proportional follow-up never requires closing the current work.
 
 </when_to_invoke>
 
@@ -73,8 +64,9 @@ This is the sanctioned dependency-followup body contract. It intentionally diffe
 </dependency_followup_body>
 
 <target_resolution>
-Resolve the target dependency's checkout directory — the working directory `spx -C <target-dir> session handoff` runs against. When `$ARGUMENTS` names a checkout directory or a dependency, take it as the target; otherwise resolve it:
+Resolve the target repository's checkout directory `<target-dir>` — the input to identity classification in Step 1; the checkout the handoff command writes into is `<queue-host>`, which Step 1 derives from `<target-dir>` through `<same_repository_filing>` for the invoking repository and equals `<target-dir>` for any other. When `$ARGUMENTS` names a checkout directory or a dependency, take it as the target; otherwise resolve it:
 
+- **The spec-tree plugin, when the invoking repository is the plugins marketplace itself:** run `git rev-parse --show-toplevel` and read `<root>/.claude-plugin/marketplace.json`. When that file parses as JSON, its `name` is `outcomeeng`, and one entry of its `plugins` array has `name` equal to `spec-tree`, the invoking repository is the target — set `<target-dir>` to `<root>` and skip marketplace resolution. This identification runs before any marketplace lookup and never asks the operator for a path.
 - **The spec-tree plugin (marketplace):** the registered Directory source. Resolve it from the marketplace registration:
 
   ```bash
@@ -82,24 +74,11 @@ Resolve the target dependency's checkout directory — the working directory `sp
   ```
 
 - **The `spx` CLI, or another spec-tree dependency:** the dependency's own checkout. Accept the path from the user or the invoking repository's configuration.
+- **The invoking repository's own product:** when the observation concerns the current product — its own specs, skills, scripts, or workflow rather than an installed dependency — set `<target-dir>` to the root `git rev-parse --show-toplevel` reports. Step 1 then classifies it as the same repository, so a self-observation never falls through to the ambiguous-target question.
 
-When the target is ambiguous or the path does not resolve, ask the user which dependency the follow-up concerns and for its checkout directory through the structured-question tool. NEVER guess a path.
+When the target is ambiguous or the path does not resolve, ask the user which dependency the follow-up concerns and for its checkout directory through the structured-question tool. NEVER guess a path. A target enters `<same_repository_filing>` only when its resolved absolute git common directory equals the invoking repository's; normalized origin identity identifies an external target for confirmation but never grants self-authorization.
 
 </target_resolution>
-
-<script_testing>
-
-`${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py` is covered by this plugin's mapping-level marketplace-resolution test suite.
-
-Tested inputs:
-
-- Claude marketplace JSON with a Directory source returns the registered path.
-- Codex marketplace JSON with a local `marketplaceSource` returns the registered path.
-- Malformed marketplace JSON returns a clear invalid-JSON error.
-- A missing local marketplace returns a clear target-resolution error.
-- No temporary files are created.
-
-</script_testing>
 
 <git_ref_resolution>
 Resolve the target dependency's stable pickup anchor before filing the handoff. Use the target repository's current branch only when it exists on origin:
@@ -109,15 +88,29 @@ git -C <target-dir> branch --show-current
 git -C <target-dir> rev-parse --verify refs/remotes/origin/<branch>
 ```
 
-If the target checkout is detached or its current branch does not exist on origin, ask the user for the pushed target branch that should own the follow-up. NEVER file a fresh-session handoff with an empty or guessed `git_ref`; `/pickup` uses `git_ref` as the branch it fetches and checks out in the dependency repository.
+For an external target whose checkout is detached or whose current branch does not exist on origin, ask the user for the pushed target branch that should own the follow-up. For the invoking repository, Step 2 resolves the queue host's origin default branch instead. NEVER file a fresh-session handoff with an empty or guessed `git_ref`; `/pickup` uses `git_ref` as the branch it fetches and checks out in the dependency repository.
 
 </git_ref_resolution>
 
+<same_repository_filing>
+
+Treat equal resolved absolute git common directories as one repository identity. This includes another linked worktree in the same pool. A separate clone has its own queue and remains an external target even when its normalized origin identity matches. Do not stop or redirect a same-repository observation into full `/handoff` closure.
+
+Resolve a queue-safe `<queue-host>` before writing the session. Classify the layout from git alone: run `git -C <common-dir> config --get core.bare` against the absolute git common directory resolved for `<target-dir>` in Step 1, and `git -C <target-dir> worktree list --porcelain`.
+
+- `core.bare` is `false` and the worktree listing carries exactly one `worktree` line — a single working tree: `<queue-host>` is the target root `git -C <target-dir> rev-parse --show-toplevel` reports.
+- `core.bare` is `true` — a bare-repository pool: run `spx -C <target-dir> diagnose --format json`, read the sole `worktree-pool` record, and require `verdict=compliant` and a non-empty absolute `readings.mainCheckoutPath`; `<queue-host>` is that path. Require that `git -C <queue-host> rev-parse --path-format=absolute --git-common-dir` equals the common directory resolved in Step 1. Do not switch, detach, commit, or otherwise move the invoking or target worktree.
+- `core.bare` is `false` with more than one `worktree` line, a `core.bare` value outside `true`/`false`, a non-compliant or missing `worktree-pool` record, or a main-checkout path whose common directory differs: the topology cannot produce a queue-safe checkout. Stop with the exact command output. Never reformulate the write against the active feature worktree.
+
+Create exactly one fresh `todo` follow-up for every authorized invocation. Before the write, run `spx -C <queue-host> session list --json` once and read only the header fields it returns for `todo` and `doing` sessions — `id`, `status`, `goal`, `next_step`. Collect as `<overlap-ids>` the full ids whose `goal` or `next_step` names an affected path or skill from `<captured_fields>`. Never run `spx session show` on a listed session, never compare bodies, never probe origin for a stored branch, and never reuse or suppress the write because an overlap exists; queue consumers reconcile overlapping observations at pickup. The report names `<overlap-ids>` so the reader sees them beside the new record.
+
+</same_repository_filing>
+
 <workflow>
 
-**Step 1 — Resolve the target.** When `$ARGUMENTS` names an existing checkout directory, take it as the target only after confirming it is the dependency checkout to receive the handoff. When `$ARGUMENTS` names a dependency token such as `spx`, `spec-tree`, or a CLI/plugin name, resolve the dependency's checkout directory per `<target_resolution>` instead of treating the token as a path. Otherwise determine which dependency the observation concerns and resolve its checkout directory per `<target_resolution>`. Resolve both git common directories with `git rev-parse --path-format=absolute --git-common-dir` and `git -C <target-dir> rev-parse --path-format=absolute --git-common-dir`. Resolve both origin URLs with `git remote get-url origin` and `git -C <target-dir> remote get-url origin`, then normalize each to its lowercase host plus repository path by translating scp-style syntax to host/path form, removing the transport and user prefix, trimming leading and trailing slashes, and removing a terminal `.git`. If either the absolute common directories or normalized origin identities are equal, STOP because `/issue` is only for a different dependency repository and the invoking repository must remain unchanged. The common-directory comparison rejects another worktree in the same pool; the origin comparison rejects a separate clone of the same product.
+**Step 1 — Resolve and classify the target.** When `$ARGUMENTS` names an existing checkout directory, take it as the target only after confirming it is the repository to receive the follow-up. When `$ARGUMENTS` names a dependency token such as `spx`, `spec-tree`, or a CLI/plugin name, resolve the dependency's checkout directory per `<target_resolution>` instead of treating the token as a path. Otherwise determine which component the observation concerns and resolve its checkout directory per `<target_resolution>`, applying its invoking-repository identification before any marketplace lookup. Resolve both git common directories with `git rev-parse --path-format=absolute --git-common-dir` and `git -C <target-dir> rev-parse --path-format=absolute --git-common-dir`. Resolve both origin URLs with `git remote get-url origin` and `git -C <target-dir> remote get-url origin`, then normalize each to its lowercase host plus repository path by translating scp-style syntax to host/path form, removing the transport and user prefix, trimming leading and trailing slashes, and removing a terminal `.git`. Set `same_repository=true` only when the resolved absolute common directories are equal; otherwise set `same_repository=false`. Use normalized origin identity to identify and report the target, never to authorize its queue mutation. Resolve `<queue-host>` through `<same_repository_filing>` when `same_repository=true`; otherwise `<queue-host>` is `<target-dir>`.
 
-**Step 2 — Resolve `git_ref`.** Resolve the target repository's stable pickup branch per `<git_ref_resolution>`.
+**Step 2 — Resolve `git_ref`.** For a different repository, resolve the target repository's stable pickup branch per `<git_ref_resolution>`. For the invoking repository, run `git -C <queue-host> symbolic-ref --short refs/remotes/origin/HEAD`, remove the leading `origin/`, and verify the resulting `refs/remotes/origin/<default-branch>` with `git -C <queue-host> rev-parse --verify` before using it. When the symbolic ref is unset or the verification fails, stop with the exact command, exit code, and stderr — never proceed with an empty or guessed `git_ref`, and never write `refs/remotes/origin/HEAD` to repair it. The follow-up starts from the origin default branch regardless of the branch attached to `<queue-host>`. NEVER switch either checkout to obtain a branch.
 
 **Step 3 — Compose the header.** Build the JSON header:
 
@@ -129,21 +122,21 @@ If the target checkout is detached or its current branch does not exist on origi
 
 **Step 4 — Compose the body.** Write the observation from `<captured_fields>` using `<dependency_followup_body>` exactly. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
-**Step 5 — Snapshot the invoking repository.** Before filing, capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository. This is the before-state for the tracked-worktree mutation check.
+**Step 5 — Snapshot state and list overlaps.** Capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository as the before-state for the tracked-worktree mutation check. When `same_repository=true`, run the header-only overlap listing in `<same_repository_filing>` and record `<overlap-ids>`, possibly empty.
 
-**Step 6 — GATE: Confirm the target, then file the follow-up.** The handoff writes into a repository the operator did not name in this turn, resolved from a marketplace registration rather than supplied as a path. Resolving a path is not authorization to write to it, so obtain confirmation through `AskUserQuestion` before the first mutating command, presenting:
+**Step 6 — GATE: Confirm an external target, then file.** When `same_repository=false`, the handoff writes into a different repository queue. Resolving or naming a path is not authorization to mutate that queue, so obtain confirmation through `AskUserQuestion` before the first mutating command, presenting:
 
 - the **absolute** `<target-dir>` verbatim, as `git -C <target-dir> rev-parse --show-toplevel` reports it;
 - that repository's normalized origin identity from step 1;
 - the resolved `git_ref` and the follow-up's `goal`;
 - two options — file the follow-up into that repository, or stop for inspection.
 
-Skip the confirmation only when `$ARGUMENTS` named the target checkout directly and step 1 already confirmed it; a target reached by marketplace resolution always asks. STOP on anything but explicit approval, leaving both repositories unchanged.
+The explicit `/issue` invocation authorizes one fresh same-repository queue write, so `same_repository=true` does not add a second confirmation. Every `same_repository=false` target requires this confirmation, including a separate clone with the same normalized origin identity and a checkout path named directly in `$ARGUMENTS`. STOP on anything but explicit approval, leaving both repositories unchanged.
 
-Then resolve the current runtime identity verbatim (`printenv CODEX_THREAD_ID` in Codex; `printenv CLAUDE_SESSION_ID` in Claude Code) and STOP when it is empty. Run `spx -C <target-dir> session handoff`, passing the JSON header line then the body on stdin:
+Then resolve the current runtime identity verbatim with `printenv CLAUDE_SESSION_ID` and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin:
 
 ```bash
-spx -C <target-dir> session handoff <<'EOF'
+spx -C <queue-host> session handoff <<'EOF'
 {"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","git_ref":"<target-branch-on-origin>","specs":[],"files":[]}
 # <short title>
 
@@ -169,22 +162,22 @@ spx -C <target-dir> session handoff <<'EOF'
 EOF
 ```
 
-`-C <target-dir>` runs the handoff against the dependency repository, so the recorded `git_ref` and the queued session belong to the target — the invoking repository's git state and session queue stay untouched.
+`-C <queue-host>` runs the handoff against the owning repository's queue without moving the active checkout. For a different repository, the invoking session queue stays untouched. For the invoking repository, the only permitted queue delta is this one new `todo` follow-up.
 
-**Step 7 — Verify the stored follow-up.** Parse `<HANDOFF_ID>` and `<SESSION_FILE>` from the command output, then run `spx -C <target-dir> session show --json <HANDOFF_ID>`. Require the command to find the handoff in that target repository and require its stored `git_ref` to equal the origin-backed branch resolved in step 2, with `specs` and `files` both empty arrays. Require its stored `agent_session_id` to equal the runtime identity resolved in step 6 and require a non-empty `created_at`. Run `spx session show --json <HANDOFF_ID>` from the invoking repository and require it to report that the target handoff id is absent there; unrelated invoking-repository queue changes are ignored. Re-run `git status --porcelain=v1 --untracked-files=all` and require it to match the step 5 snapshot byte-for-byte. A missing target handoff, field mismatch, invoking-repository copy of the handoff id, or git-state difference blocks success and is reported with the observed values.
+**Step 7 — Verify the created follow-up.** Parse `<HANDOFF_ID>` and `<SESSION_FILE>` from the handoff output. Read that returned record once with `spx -C <queue-host> session show --json <HANDOFF_ID>`. Require `status=todo`; the Step 3 `goal`, `next_step`, `priority`, `git_ref`, empty `specs`, and empty `files`; a non-empty `agent_session_id` equal to the runtime identity resolved in Step 6; and a non-empty `created_at`. When `same_repository=false`, run `spx session show --json <HANDOFF_ID>` from the invoking repository and require the id to be absent there. Re-run `git status --porcelain=v1 --untracked-files=all` and require it to match the Step 5 snapshot byte-for-byte. A missing record, field mismatch, external-target copy in the invoking queue, or git-state difference blocks success and is reported with the observed values. Do not read any other session.
 
-**Step 8 — Report.** Surface the verified `<HANDOFF_ID>` and `<SESSION_FILE>`, naming the target repository the follow-up was filed into.
+**Step 8 — Report.** Surface `result=created`, the verified `<HANDOFF_ID>`, and `<SESSION_FILE>` when the command supplies it, naming the repository whose queue owns the follow-up, and list `<overlap-ids>` verbatim as possible overlaps for the reader — or state that the header listing found none.
 
 </workflow>
 
 <constraints>
 
-- NEVER edit, commit to, or push the target dependency's tracked source — the only effect on the target is the session document `spx -C <target-dir> session handoff` writes into its `.spx/sessions/todo/`.
-- NEVER alter the invoking repository's git state or session queue — `-C <target-dir>` targets the dependency directly.
+- NEVER edit, commit to, or push the owning repository's tracked source — the only possible effect is one session document `spx -C <queue-host> session handoff` writes into its `.spx/sessions/todo/`.
+- NEVER alter the invoking repository's tracked git state or active branch. A same-repository filing adds exactly one fresh `todo` session.
 - NEVER record the dependency's internal taxonomy (node address, decision index, assertion type) — capture observations; the dependency workflow classifies.
 - NEVER guess the target checkout directory — resolve it deterministically or ask.
 - NEVER guess `git_ref` — use a target branch that exists on origin or ask.
-- NEVER target the invoking repository — current-product observations stay in that product's normal spec-tree workflow.
+- NEVER read the body of, compare, archive, release, delete, edit, replace, move, or reuse an existing active session while filing the follow-up — the header listing is the only read of other sessions, and it only names possible overlaps.
 
 </constraints>
 
@@ -198,18 +191,30 @@ Why it failed: The target repository's `/pickup` workflow uses `git_ref` as the 
 
 How to avoid: Resolve the target dependency branch first, verify `refs/remotes/origin/<branch>` exists, and include that branch in the header's `git_ref`. Ask the user for a pushed target branch when the checkout is detached or the branch is not on origin.
 
+**Failure 2: Claude turned filing into queue triage.**
+
+What happened: Claude listed active sessions, read their bodies, judged whether an existing observation was semantically equivalent, probed origin for each candidate's stored branch, and reused a match instead of writing.
+
+Why it failed: Filing one timestamped record became a second issue-triage workflow that delayed recording the observation, and a reused session carried none of the new facts. Queue consumers already reconcile overlap at pickup.
+
+How to avoid: Read only the header listing, name possible overlaps in the report, run `spx session handoff` once, read only the returned record, and finish.
+
+**Failure 3: Claude asked the operator for the plugins checkout it was standing in.**
+
+What happened: Marketplace resolution returned no local source, so Claude asked the operator which checkout owned the spec-tree follow-up although the invoking repository carried the marketplace catalog naming `spec-tree`.
+
+Why it failed: The invoking checkout already identified itself as the target; the question pushed a deterministic check onto the operator.
+
+How to avoid: Read `<root>/.claude-plugin/marketplace.json` before any marketplace lookup and take the invoking repository as the target when it names the `outcomeeng` marketplace with the `spec-tree` plugin.
+
 </failure_modes>
 
 <success_criteria>
 
-- [ ] Target resolution produced the exact checkout directory used by every `spx -C <target-dir>` command.
-- [ ] The invoking and target absolute git common directories differ.
-- [ ] The invoking and target normalized origin repository identities differ.
-- [ ] `git -C <target-dir> rev-parse --verify refs/remotes/origin/<branch>` succeeded for the stored `git_ref`.
-- [ ] Every target not named directly by `$ARGUMENTS` as a checkout path — whether marketplace-resolved or resolved from the invoking repository's configuration — was approved by the operator through the step 6 confirmation, which named the absolute target root verbatim, before any `spx -C <target-dir>` mutation ran.
-- [ ] `spx -C <target-dir> session show --json <HANDOFF_ID>` found the created handoff in the target queue and reported the expected `git_ref`, `specs: []`, `files: []`, runtime `agent_session_id`, and non-empty `created_at`.
-- [ ] The observation body contains no dependency node address, decision index, or assertion type.
-- [ ] `spx session show --json <HANDOFF_ID>` reports the target handoff id absent from the invoking repository, while its `git status --porcelain=v1 --untracked-files=all` output matches the pre-handoff snapshot byte-for-byte.
-- [ ] The verified `<HANDOFF_ID>` and `<SESSION_FILE>` are reported with the target repository.
+- The report names the exact owning checkout and queue host, classifies self-authorization solely by resolved git-common-directory equality, and records operator approval before any external-queue mutation.
+- The result is exactly `created`, names the verified full session id and owning repository, and each authorized invocation creates exactly one new `todo` session.
+- The stored follow-up has the dependency-followup body, empty `specs` and `files`, the resolved branch `git_ref`, and complete session identity metadata without dependency taxonomy.
+- The report lists possible overlaps by full id from the header listing alone; filing reads no other session's body, performs no semantic deduplication or origin probe, and leaves the invoking repository's tracked git state byte-identical; a separate repository receives no mutation beyond the approved follow-up.
+- An invoking checkout carrying the `outcomeeng` marketplace catalog with the `spec-tree` plugin is taken as the spec-tree target without a marketplace lookup or an operator-supplied path.
 
 </success_criteria>

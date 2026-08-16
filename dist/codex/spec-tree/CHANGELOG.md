@@ -10,6 +10,17 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.90.0
+
+### Changed
+
+- **`/issue` files into the invoking repository's own queue.** A same-repository observation no longer stops or routes into full `/handoff` closure. `/issue` recognizes the invoking repository by resolved absolute git-common-directory equality — a linked worktree in the same pool is the same repository, a separate clone with the same origin is not — files through a queue-safe checkout (the pool's main checkout from `spx diagnose`, or the single working tree), anchors the record to the origin default branch, and leaves the active worktree, its branch, and every existing session untouched. The explicit invocation authorizes that one write; every other repository still requires operator confirmation before mutation.
+- **One fresh record per invocation, with overlaps named rather than judged.** Each authorized invocation creates exactly one `todo` follow-up. Before a same-repository write it reads only the `spx session list --json` headers and reports the full ids whose `goal` or `next_step` names an affected path or skill as possible overlaps; it never reads another session's body, reuses a session, or probes origin for a stored branch. Queue consumers reconcile overlap at pickup.
+
+### Added
+
+- **The plugins marketplace checkout identifies itself as the spec-tree target.** When the invoking repository's root carries `.claude-plugin/marketplace.json` naming the `outcomeeng` marketplace with the `spec-tree` plugin, `/issue` takes that repository as the target before any marketplace lookup, so a missing local marketplace registration no longer turns into an operator question for a checkout path.
+
 ## 0.89.2
 
 ### Fixed
