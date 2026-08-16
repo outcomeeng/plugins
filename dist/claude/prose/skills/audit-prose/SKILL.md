@@ -4,12 +4,12 @@ description: >-
   Prose audit methodology — judges the human-facing text in scope against the anti-pattern catalog, the supplied kind's style and structure layers, and every triggered rule pack.
 model: "opus"
 argument-hint: "<interface|documentation|copy> <text or paths>"
-allowed-tools: Read, Glob, Grep, Skill, Bash
+allowed-tools: Read, Glob, Grep, Skill, Bash(spx journal open:*), Bash(spx journal append:*), Bash(spx journal seal:*), Bash(spx journal read:*)
 ---
 
-Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
-Invoke the `prose:prose-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `prose:prose-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop.
 
 <objective>
 
