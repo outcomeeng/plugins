@@ -33,6 +33,7 @@ Required handling:
 - Rewrite the test evidence through `/test` and run the required test-evidence audit before accepting it.
 - Align the evidence chain with `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`, `spx/15-test-language.adr.md`, and the Python test standards.
 - Keep `tests/` limited to typed assertion files; move harness, generator, fixture, and source-owned vocabulary responsibilities to their governed homes.
+- Re-type the universal claims currently linked to `tests/test_review_result.scenario.l1.py` and `tests/test_skill_orchestration.scenario.l2.py` — the `Severity` and `Concern` wire-value mappings, the `finish` severity-count mapping, the `Finding.rule` citation form, the schema-declaration and no-verdict-field rules, and the no-rendering rule — into `mapping`, `conformance`, or `compliance` files; a `scenario` file cannot carry a universal. The spec-auditor and adr-auditor both reject the node's spec and `21-script-decomposition.adr.md` on these links until the evidence is re-typed.
 
 ## 3. Review finding validation belongs in SPX
 

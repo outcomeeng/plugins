@@ -36,7 +36,7 @@ CAN project the sealed journal into the surface they own without duplicating rev
 
 - For every `ReviewResult` instance, `from_json_dict(to_json_dict(r)) == r` — serialization is lossless ([test](tests/test_review_result.property.l1.py))
 
-### Audit
+### Compliance
 
 - ALWAYS: the `review_result.py` policy module declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, and the `Severity` and `Concern` enums — the canonical legacy review-result schema lives in one Python module ([test](tests/test_review_result.scenario.l1.py))
 - NEVER: the review-result schema carries a `summary`, acknowledgement, `decision`, or verdict field — a review produces findings only; each consumer applies its own policy by validity and phase per `spx/15-merging.pdr.md`, never by severity ([test](tests/test_review_result.scenario.l1.py))
