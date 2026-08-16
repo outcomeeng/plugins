@@ -4,6 +4,7 @@ import json
 from typing import cast
 
 from outcomeeng.distribution.installation import (
+    Agent,
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
     SPEC_TREE_PLUGIN,
@@ -34,11 +35,17 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
     assert isolated.plan.claude_plugins == expected_claude
     assert isolated.plan.codex_plugins == expected_codex
     for observation in observe_persistent_catalog_subset_plans():
-        for selected, planned in observation.mappings:
-            assert planned == (
+        for mapping in observation.mappings:
+            assert mapping.planned == (
                 (SPEC_TREE_PLUGIN,)
-                if not selected
+                if not mapping.selected
                 else tuple(
-                    plugin for plugin in observation.catalog if plugin in selected
+                    plugin
+                    for plugin in observation.catalog
+                    if plugin in mapping.selected
                 )
+            )
+            assert mapping.installs == mapping.planned
+            assert mapping.enables == (
+                mapping.planned if observation.agent is Agent.CLAUDE else ()
             )

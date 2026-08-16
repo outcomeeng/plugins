@@ -42,8 +42,22 @@ def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
 def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
     observation = observe_first_persistent_cli()
     document = json.loads(observation.stdout)
+    install_commands = [
+        command
+        for command in observation.attempted
+        if command.operation is Operation.PLUGIN_INSTALL
+    ]
+    enable_commands = [
+        command
+        for command in observation.attempted
+        if command.operation is Operation.PLUGIN_ENABLE
+    ]
 
     assert observation.exit_code == 0
+    assert [command.agent for command in install_commands] == list(Agent)
+    assert {command.plugin for command in install_commands} == {SPEC_TREE_PLUGIN}
+    assert [command.agent for command in enable_commands] == [Agent.CLAUDE]
+    assert {command.plugin for command in enable_commands} == {SPEC_TREE_PLUGIN}
     assert document["claude_plugins"] == [SPEC_TREE_PLUGIN]
     assert document["codex_plugins"] == [SPEC_TREE_PLUGIN]
     assert document["warnings"] == [
@@ -63,6 +77,7 @@ def test_invalid_persistent_subset_is_rejected_before_mutation() -> None:
 
     assert observation.error is not None
     assert SPEC_TREE_PLUGIN in observation.error
+    assert observation.attempted
     assert all(
         command.operation in {Operation.MARKETPLACE_INSPECT, Operation.PLUGIN_INSPECT}
         for command in observation.attempted

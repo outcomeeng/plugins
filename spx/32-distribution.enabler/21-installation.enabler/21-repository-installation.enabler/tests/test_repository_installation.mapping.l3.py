@@ -31,10 +31,10 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
         cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
         for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
     )
-    persistent_report = cast(
-        dict[str, list[dict[str, str]]], json.loads(observation.persistent_stdout)
+    persistent_report = cast(dict[str, object], json.loads(observation.persistent_stdout))
+    pending_entries = cast(
+        list[dict[str, str]], persistent_report["pending_publication"]
     )
-    pending_entries = persistent_report["pending_publication"]
     claude_pending = frozenset(
         entry["plugin"]
         for entry in pending_entries
@@ -64,6 +64,10 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
     )
 
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
+    assert (
+        persistent_report["completed_operations"]
+        == observation.persistent_planned_operations
+    )
     assert (
         claude_pending | codex_pending
         == (

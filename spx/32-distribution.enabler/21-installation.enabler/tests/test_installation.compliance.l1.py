@@ -28,8 +28,13 @@ from outcomeeng_testing.harnesses.installation import (
 def test_every_command_uses_the_explicit_checkout_and_agent_homes() -> None:
     observation = observe_repository_plan()
 
+    assert observation.plan.commands
     assert all(
         command.cwd == observation.plan.roots.checkout
+        for command in observation.plan.commands
+    )
+    assert all(
+        set(STATE_ENV_NAMES) <= set(dict(command.environment))
         for command in observation.plan.commands
     )
     assert all(
@@ -68,6 +73,12 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         for command in plan.commands
         if command.agent is Agent.CLAUDE
     ]
+    codex_commands = [
+        command
+        for plan in plans
+        for command in plan.commands
+        if command.agent is Agent.CODEX
+    ]
 
     assert all(plan.mode is InstallationMode.PERSISTENT for plan in plans)
     assert {command.operation for command in claude_commands} == (
@@ -83,6 +94,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         for command in claude_commands
         if command.operation in CLAUDE_SCOPELESS_OPERATIONS
     )
+    assert codex_commands
     assert all(
         dict(command.environment)[CODEX_HOME_ENV] == str(plan.roots.codex_home)
         for plan in plans

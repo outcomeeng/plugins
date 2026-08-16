@@ -125,12 +125,22 @@ class PersistentExecutionObservation:
 
 
 @dataclass(frozen=True)
+class CatalogSubsetMapping:
+    """One installed selection and its planned plugin operations."""
+
+    selected: frozenset[str]
+    planned: tuple[str, ...]
+    installs: tuple[str, ...]
+    enables: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class CatalogSubsetPlanObservation:
-    """Persistent plans for every valid subset of one agent's catalog."""
+    """Persistent plan mappings for every valid subset of one agent's catalog."""
 
     agent: Agent
     catalog: tuple[str, ...]
-    mappings: tuple[tuple[frozenset[str], tuple[str, ...]], ...]
+    mappings: tuple[CatalogSubsetMapping, ...]
 
 
 @dataclass(frozen=True)
@@ -138,6 +148,7 @@ class PersistentCliObservation:
     """Exit status and streams from one controlled persistent CLI run."""
 
     exit_code: int
+    attempted: tuple[InstallationCommand, ...]
     stdout: str
     stderr: str
 
@@ -211,6 +222,7 @@ class RealInstallationObservation:
     persistent_codex_plugins: PluginListing
     persistent_claude_selected: frozenset[str]
     persistent_codex_selected: frozenset[str]
+    persistent_planned_operations: int
     persistent_selection: frozenset[str]
     persistent_settings_before: bytes
     persistent_settings_after: bytes
@@ -484,7 +496,7 @@ def observe_persistent_catalog_subset_plans() -> tuple[
         catalogs = _catalogs_from_documents(mirror)
         observations: list[CatalogSubsetPlanObservation] = []
         for agent in Agent:
-            mappings: list[tuple[frozenset[str], tuple[str, ...]]] = []
+            mappings: list[CatalogSubsetMapping] = []
             for selected in generated_persistent_catalog_selections(catalogs[agent]):
                 installed = {
                     candidate: frozenset({SPEC_TREE_PLUGIN}) for candidate in Agent
@@ -509,7 +521,26 @@ def observe_persistent_catalog_subset_plans() -> tuple[
                 planned = (
                     plan.claude_plugins if agent is Agent.CLAUDE else plan.codex_plugins
                 )
-                mappings.append((selected, planned))
+                mappings.append(
+                    CatalogSubsetMapping(
+                        selected=selected,
+                        planned=planned,
+                        installs=tuple(
+                            command.plugin
+                            for command in plan.commands
+                            if command.agent is agent
+                            and command.operation is Operation.PLUGIN_INSTALL
+                            and command.plugin is not None
+                        ),
+                        enables=tuple(
+                            command.plugin
+                            for command in plan.commands
+                            if command.agent is agent
+                            and command.operation is Operation.PLUGIN_ENABLE
+                            and command.plugin is not None
+                        ),
+                    )
+                )
             observations.append(
                 CatalogSubsetPlanObservation(
                     agent=agent,
@@ -540,6 +571,7 @@ def observe_first_persistent_cli() -> PersistentCliObservation:
             )
     return PersistentCliObservation(
         exit_code=exit_code,
+        attempted=tuple(runner.calls),
         stdout=stdout.getvalue(),
         stderr=stderr.getvalue(),
     )
@@ -1024,6 +1056,20 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mirror,
             selected_environment,
         )
+        persistent_plan = build_persistent_installation_plan(
+            persistent_preflight,
+            claude_plugins_payload=_plugin_listing_payload(
+                Agent.CLAUDE,
+                persistent_mirror,
+                persistent_subsets[Agent.CLAUDE],
+            ),
+            codex_marketplace_payload=persistent_codex_marketplaces.stdout,
+            codex_plugins_payload=_plugin_listing_payload(
+                Agent.CODEX,
+                persistent_mirror,
+                persistent_subsets[Agent.CODEX],
+            ),
+        )
         persistent = _run_persistent_recipe(
             checkout,
             persistent_mirror,
@@ -1127,6 +1173,9 @@ def observe_real_installation() -> RealInstallationObservation:
         ),
         persistent_claude_selected=persistent_subsets[Agent.CLAUDE],
         persistent_codex_selected=persistent_subsets[Agent.CODEX],
+        persistent_planned_operations=(
+            len(persistent_preflight.inspections) + len(persistent_plan.commands)
+        ),
         persistent_selection=persistent_selection,
         persistent_settings_before=persistent_settings_before,
         persistent_settings_after=persistent_settings_after,
@@ -1588,6 +1637,7 @@ def _tree_snapshot(root: Path) -> tuple[tuple[str, bytes], ...]:
 
 
 __all__ = [
+    "CatalogSubsetMapping",
     "CatalogSubsetPlanObservation",
     "CollisionObservation",
     "ConfigObservation",
