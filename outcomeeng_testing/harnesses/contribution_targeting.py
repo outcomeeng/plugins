@@ -58,6 +58,8 @@ class ResolutionLike(Protocol):
     base: str | None
     head: str | None
     permission: str | None
+    fork_matches: list[str]
+    fork_candidates: list[str]
     detail: str
 
 
