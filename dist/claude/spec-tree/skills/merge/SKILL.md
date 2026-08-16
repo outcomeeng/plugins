@@ -117,7 +117,7 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 - The GitHub-PR path delegated to `/manage-github-pr` without reimplementing its lifecycle; the direct-push path drove `<direct_push_lifecycle>` invoking the governing skills.
 - By default the flow proceeded autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, a proposal was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The four gates and the finding-disposition rule stayed transport-neutral; only the predicate bindings differed by transport.
-- `/understand` and the governing node's `/contextualize` were invoked only immediately before the first product content the pass read or modified, never earlier, and not at all in a pass that touched no product content.
+- `/understand` and the governing node's `/contextualize` were invoked before every product-content read or modification in the pass, only immediately before the first such access, never earlier, and not at all in a pass that touched no product content.
 - The changeset reached the default branch on origin through the selected transport's authority, then continued any remaining in-scope work or closed through a `/handoff` invoked after the merge — an earlier `/handoff` in the same conversation does not count, and no transport-authored closeout stood in for the invocation; the flow stopped only at an explicit gate surfaced to the user.
 
 </success_criteria>

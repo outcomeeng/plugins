@@ -259,7 +259,7 @@ The managing flow satisfies its contract when, at minimum:
 - The foreground PR-check wait inspects the terminal check result, then re-runs the full Step 1/Step 2 inspection before deciding the next action.
 - `gh pr merge` is never run as a probe for mergeability; `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and command acceptance are not merge predicates.
 - Each pass that does not fire an autonomous action emits exactly one token from /merging-standards `<action_tokens>`, except a base-sync conflict, which stops with `/sync-base`'s structured conflict report and active rebase state.
-- `/understand` and the governing node's `/contextualize` were invoked only immediately before the first product content the pass read or modified, never earlier, and not at all in a pass that touched no product content.
+- `/understand` and the governing node's `/contextualize` were invoked before every product-content read or modification in the pass, only immediately before the first such access, never earlier, and not at all in a pass that touched no product content.
 - No `<self_reference>` violation per /merging-standards.
 
 </success_criteria>
