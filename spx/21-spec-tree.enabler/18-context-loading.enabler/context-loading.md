@@ -9,6 +9,7 @@ CAN operate with complete, verified context before any work begins
 ### Conformance
 
 - The spec-tree plugin package ships the foundation-resource manifest governed by `spx/21-spec-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md` at `skills/understand/manifest.json` in every generated tree, naming exactly one core foundation document and the ordered references, templates, and examples catalogs as package-relative paths ([test](tests/test_foundation_manifest.conformance.l1.py))
+- NEVER: the authored foundation-resource manifest and its generated-tree copies diverge, per `spx/21-spec-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md` ([test](tests/test_foundation_manifest.conformance.l1.py))
 
 ### Properties
 
@@ -18,7 +19,6 @@ CAN operate with complete, verified context before any work begins
 
 - Package checks reject a shipped foundation-resource manifest whose declared paths do not all resolve, whose catalogs carry a duplicate path, or whose catalogs omit a shipped reference, template, or example file ([test](tests/test_foundation_manifest.compliance.l1.py))
 - NEVER: the foundation-resource manifest carries content beyond paths and schema metadata, per `spx/21-spec-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md` — package checks reject a content-bearing field ([test](tests/test_foundation_manifest.compliance.l1.py))
-- NEVER: the authored foundation-resource manifest and its generated-tree copies diverge, per `spx/21-spec-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md` ([test](tests/test_foundation_manifest.conformance.l1.py))
 - ALWAYS: a foundation-resource manifest shape change within a schema version is additive, and a breaking shape change increments `schema_version`, per `spx/21-spec-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md` ([audit])
 - ALWAYS: the `/contextualize` skill brings a behind-base branch current through sync-base (`spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md`) before reading product or spec context, so loaded context reflects current product truth rather than a stale branch ([audit])
 - ALWAYS: when sync-base reports `already_current` or `rebased`, the `/contextualize` skill records the sync status only as context-load state and continues directly to locating the same target before answering or doing branch lifecycle work; loading the skill and completing sync-base are prerequisites, not context ([audit])
