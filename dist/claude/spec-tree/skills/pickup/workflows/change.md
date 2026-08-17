@@ -14,7 +14,7 @@ Classify the argument:
 
 - An issue reference — `#N`, `owner/repo#N`, or an issue URL — names an existing Change.
 - A session id `YYYY-MM-DD_HH-MM-SS` (optional `.md`) names a legacy queue file awaiting a Change.
-- `--list` presents candidates. List open Changes of this Product from the store: `gh issue list --repo <store> --state open --json number,title,assignees,url --limit 50`, then read `Maturity` and `Product` from `gh project item-list <number> --owner <owner> --format json`. Offer up to three through the structured-question tool, Available (no assignee) Executable Changes first, then Available Changes at any Maturity, each labelled with number, title, and Maturity.
+- `--list` presents candidates. List open Changes of this Product from the store: `gh issue list --repo <store> --state open --json number,title,assignees,url --limit 50`, then read `Maturity` and `Product` from `gh project item-list <number> --owner <owner> --format json`. Offer up to three through `AskUserQuestion`, Available (no assignee) Executable Changes first, then Available Changes at any Maturity, each labelled with number, title, and Maturity.
 - No argument — the same listing as `--list`, then legacy `spx session todo` entries when no Available Change exists.
 
 </step>
@@ -28,7 +28,7 @@ Classify the argument:
 1. Write the body to a scratch file from `mktemp`: one line `Received input: handoff document <id> from the <Product> queue (.spx/sessions), reproduced verbatim.`, a blank line, then the complete file from `spx session show <id>` — frontmatter and body, none of the injected file bodies — inside a `text` code fence.
 2. `gh issue create --repo <store> --title "<goal frontmatter value>" --body-file <scratch> --assignee @me`.
 3. `gh project item-add <number> --owner <owner> --url <issue-url>`, then `gh project item-edit` setting `Product` to the overlay's Product and `Maturity` to `Proposed`, using the field and option ids from `gh project field-list <number> --owner <owner> --format json`.
-4. Archive the legacy file: `spx session archive <id>`. The Change now carries the input; the file has no reader.
+4. Only after steps 2 and 3 have each returned success — the issue URL exists and `gh project item-list` shows the item with `Product` and `Maturity` set — archive the legacy file: `spx session archive <id>`. The Change now carries the input; the file has no reader. When any of steps 1–3 fails, report the failed command and its output, leave the file in `doing`, and stop; the archive never runs on a partial migration.
 
 Delete the scratch file on every exit path.
 
@@ -60,7 +60,7 @@ When the Handoff names a branch or PR, fetch and switch to that branch in the as
 
 Read `Maturity` from the project item. The Change's Maturity decides what pickup does next; a Handoff's Next Activity is executed only at Executable.
 
-**Proposed.** Pickup triggers refinement. Invoke `/contextualize` on the node paths the received input names (the first `spx/...` node path in it, then others as they are needed). Draft a Frame from that context through `/interview`: `## Output` (the intended Output in one sentence), `## Nodes` (existing and intended, full `spx/...` paths), `## Assertions` (create, change, and remove operations, referencing existing assertions and stating each new one's node and truth), `## Decisions` (links only, full paths). Framed requires human judgment: present the drafted Frame through the structured-question tool and edit the issue body and set `Maturity` to `Framed` only on approval. Never execute an Activity from a Proposed Change, and never lift a task, plan item, or `next_step` out of the received input as if it were an Activity — the received input is history the Frame reinterprets against current truth.
+**Proposed.** Pickup triggers refinement. Invoke `/contextualize` on the node paths the received input names (the first `spx/...` node path in it, then others as they are needed). Draft a Frame from that context through `/interview`: `## Output` (the intended Output in one sentence), `## Nodes` (existing and intended, full `spx/...` paths), `## Assertions` (create, change, and remove operations, referencing existing assertions and stating each new one's node and truth), `## Decisions` (links only, full paths). Framed requires human judgment: present the drafted Frame through `AskUserQuestion` and edit the issue body and set `Maturity` to `Framed` only on approval. Never execute an Activity from a Proposed Change, and never lift a task, plan item, or `next_step` out of the received input as if it were an Activity — the received input is history the Frame reinterprets against current truth.
 
 **Framed.** Slice: state the target repository and one independently integrable unit; a person stays accountable, so present the Slice for approval before setting `Sliced`. Refinement may continue while blockers remain.
 
@@ -72,7 +72,7 @@ Read `Maturity` from the project item. The Change's Maturity decides what pickup
 
 <step name="checkpoint">
 
-Present the no-surprises proposal from the Change, never from the received input: governing truth (the Frame's Decisions and Assertions), expected outcome (the Output), changed product surface, skill path, evidence infrastructure, verification plan, inspection references (issue URL, branch, PR), and remaining-work expectation (which Activities remain, which blockers stand). Ask through the structured-question tool unless `--auto-continue` was given, then emit:
+Present the no-surprises proposal from the Change, never from the received input: governing truth (the Frame's Decisions and Assertions), expected outcome (the Output), changed product surface, skill path, evidence infrastructure, verification plan, inspection references (issue URL, branch, PR), and remaining-work expectation (which Activities remain, which blockers stand). Ask through `AskUserQuestion` unless `--auto-continue` was given, then emit:
 
 ```text
 <PICKUP_CHECKPOINT change="<issue-url>" claimed="<all urls>" maturity="<Maturity>" mode="[ask|auto-continue]">

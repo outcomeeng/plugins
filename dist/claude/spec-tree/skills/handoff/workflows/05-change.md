@@ -1,3 +1,7 @@
+<objective>
+Every held Change released Available with a current `Handoff:` comment, or closed Applied, Refined, or Abandoned with its authorized comment, and no session file written.
+</objective>
+
 <required_reading>
 
 Read `spx/local/coordination.md` for the Change store, project, and Product values.
@@ -8,21 +12,21 @@ Read `spx/local/coordination.md` for the Change store, project, and Product valu
 
 This workflow replaces `<write_canonical_continuation>` and `<archive_claimed_sessions>` in `${CLAUDE_SKILL_DIR}/workflows/04-execute.md` when `spx/local/coordination.md` exists. Every other step of 04 — approved writes, `<commit>`, `<record_state>`, `<release_work_branch>`, `<confirm>` — runs unchanged. A Change is the mutable coordination object for one Output; a Handoff is the latest persisted continuation for that Change; neither is a session file, and this workflow writes no session file.
 
-<step name="resolve_changes">
+<resolve_changes>
 
 The Changes this conversation holds are the `urls` of the most recent `<CLAIMED_CHANGES>` marker. A conversation that also carries a legacy `<CLAIMED_SESSIONS>` marker archives those ids through 04's `<archive_claimed_sessions>` exactly as before; the legacy path and this one are independent.
 
-A conversation that holds no Change and finds continuation for work that has no Change creates one Proposed Change instead of a session file: `gh issue create --repo <store> --title "<intended Output>" --body-file <scratch>` where the body is the received input — the operator's request or the observations that opened the work, verbatim, non-secret — then `gh project item-add` and `Product` / `Maturity: Proposed` through `gh project item-edit`. Leave it unassigned (Available). Received input is history; refinement happens on pickup.
+A conversation that holds no Change and finds continuation for work that has no Change creates one Proposed Change instead of a session file: `gh issue create --repo <store> --title "<intended Output>" --body-file <scratch>` where `<scratch>` comes from `mktemp` and holds the received input — the operator's request or the observations that opened the work, verbatim, non-secret — then `gh project item-add`, and `Product` / `Maturity: Proposed` through `gh project item-edit` with the field and option ids read once from `gh project field-list <number> --owner <owner> --format json`. Delete the scratch file on every exit path. Leave the Change unassigned (Available). Received input is history; refinement happens on pickup.
 
-</step>
+</resolve_changes>
 
-<step name="refine_before_handoff">
+<refine_before_handoff>
 
-What this conversation learned about the Output belongs in the Change body, not in the Handoff: edit `## Nodes`, `## Assertions`, `## Decisions`, `## Activities` (check completed Activities), and add hazards discovered as `## Activities` items or as Assertion operations when they change the Frame. When current facts made the recorded Maturity false, set `Maturity` to the truthful lower level through `gh project item-edit` and say why in a comment. Never advance Maturity past Framed without the human judgment the methodology requires; the closeout names the level and what refinement remains.
+What this conversation learned about the Output belongs in the Change body, not in the Handoff: edit `## Nodes`, `## Assertions`, `## Decisions`, `## Activities` (check completed Activities), and add hazards discovered as `## Activities` items or as Assertion operations when they change the Frame. When current facts made the recorded Maturity false, set `Maturity` to the truthful lower level through `gh project item-edit` — option ids from the same `gh project field-list` read — and say why in a comment. Never advance Maturity past Framed without the human judgment the methodology requires; the closeout names the level and what refinement remains.
 
-</step>
+</refine_before_handoff>
 
-<step name="post_handoff_or_close">
+<post_handoff_or_close>
 
 For each held Change, after `<release_work_branch>` has left the work committed, pushed, and the worktree stepped off the branch:
 
@@ -32,7 +36,7 @@ For each held Change, after `<release_work_branch>` has left the work committed,
 
 **Abandoned.** Only on the operator's explicit direction: close with `--reason "not planned"`.
 
-**Otherwise release.** Post the continuation as one comment and remove the assignee:
+**Otherwise release.** Write the continuation below to a `mktemp` scratch file, post it as one comment with `gh issue comment <N> --repo <store> --body-file <scratch>` — never an inline `--body` string, whose bullets and colons break shell quoting — delete the scratch file, then remove the assignee:
 
 ```markdown
 Handoff:
@@ -48,13 +52,13 @@ Optional context lines after the five: the agent session id and the assigned wor
 
 Secret values and credential payloads never enter a body, comment, or Handoff.
 
-</step>
+</post_handoff_or_close>
 
-<step name="closeout_rows">
+<closeout_rows>
 
 In `<confirm>`, the session-mechanics rows become Change rows: each Change URL with its Lifecycle after this closure (Available with a Handoff, Applied, Refined, Abandoned), its Maturity, and the released work branch. Legacy archived session ids keep their existing rows.
 
-</step>
+</closeout_rows>
 
 </process>
 

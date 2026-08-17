@@ -6,12 +6,12 @@ allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(sp
 ---
 
 <objective>
-A claimed handoff session — loaded, reconciled against current repository state, and marked with canonical pickup markers — ready to continue prior work without repeating earlier mistakes.
+A claimed handoff session — or, under `spx/local/coordination.md`, a claimed Change — loaded, reconciled against current repository state, and marked with canonical pickup markers, ready to continue prior work without repeating earlier mistakes.
 </objective>
 
 <constraints>
 
-- Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly.
+- Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly. The single exception is the legacy-file archive `<change_coordination>` authorizes once the Change carrying that file as received input exists.
 - NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.
 - Before asking the operator to continue, review the loaded session evidence and present a no-surprises proposal: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation.
 - If session evidence shows another active context already owns the objective, report the owning session, branch, or PR and stop without archiving, releasing, handing off, or otherwise mutating the claimed session.
@@ -40,7 +40,7 @@ Three rules govern a conversation's claimed-session set:
 **Consequences of the three rules:**
 
 - Every successful `spx session pickup` adds that session id to the CLAIMED_SESSIONS marker for this conversation. A later pickup does not replace earlier entries — the set is additive.
-- The pickup workflow MUST NOT archive, release, delete, or manually move any session. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
+- The pickup workflow MUST NOT archive, release, delete, or manually move any session, except the legacy-file archive `<change_coordination>` authorizes after its Change exists. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
 - A newly created handoff session is a workflow artifact, not a substitute for the claimed session. Its existence never grants permission to close any claimed session.
 - Queue inspection alone is never permission. Archival comes from completing the handoff workflow against the claimed-session set named in CLAIMED_SESSIONS.
 
@@ -179,6 +179,19 @@ Showing raw content:
 [show file content via spx session show <id>]
 ```
 
+**Change store unreachable or unauthenticated** (`spx/local/coordination.md` present):
+
+```
+gh could not reach <store>: <gh error>
+Authenticate gh (project scope) or fix the overlay; no Change was claimed or created.
+```
+
+**Overlay incomplete**: `spx/local/coordination.md` names no store repository, project owner and number, or Product value — report the missing value and stop; never guess a store.
+
+**Change closed or held elsewhere**: `owned_elsewhere` — report the terminal state or the current assignee and stop without mutating the Change.
+
+**Migration interrupted**: when `gh issue create`, `gh project item-add`, or `gh project item-edit` fails after `spx session pickup <id>`, report the failed command and its output; the legacy file stays in `doing` unarchived and no further Change write is attempted.
+
 </error_handling>
 
 <failure_modes>
@@ -221,7 +234,7 @@ A successful pickup:
 - [ ] Session claimed via `spx session pickup`
 - [ ] Canonical pickup claim marker emitted as `<PICKUP_CLAIM id="...">`
 - [ ] Running CLAIMED_SESSIONS marker emitted as `<CLAIMED_SESSIONS ids="...">` including the newly claimed session id
-- [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session
+- [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session, except the legacy-file archive `<change_coordination>` authorizes once its Change exists
 - [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
 - [ ] `/understand` invoked immediately before the first product-content access — the coordination-note path check when the session names a node, otherwise the `/contextualize` invocation for the node the operator names — and not before the claim, session presentation, checkout, base sync, or claim reconciliation
 - [ ] Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work

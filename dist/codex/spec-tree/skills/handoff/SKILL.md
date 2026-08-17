@@ -128,7 +128,7 @@ Read these bundled references before executing the workflows:
 </required_reading>
 
 <workflows_index>
-Execute all four workflows in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete. Workflow 04 persists all work and coordination notes, then writes a session file only when a continuation reader is needed.
+Execute workflows 01 through 04 in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete. Workflow 04 persists all work and coordination notes, then writes a session file only when a continuation reader is needed. Workflow 05 is not a fifth stage: when `spx/local/coordination.md` exists it runs inside 04, in place of 04's `<write_canonical_continuation>` and `<archive_claimed_sessions>` steps, so 04 never writes a session file under that overlay.
 
 1. `${SKILL_DIR}/workflows/01-anchor-to-nodes.md` — identify every node worked on this session
 2. `${SKILL_DIR}/workflows/02-reflect.md` — review imperfections, claimed sessions, and starting point
