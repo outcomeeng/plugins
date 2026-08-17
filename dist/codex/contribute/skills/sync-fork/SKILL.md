@@ -110,8 +110,8 @@ The report names every commit by subject and author, so the operator recognizes 
 
 - The `<UPSTREAM_TARGET>` marker read for this pass carries `classification="upstream-contribution"`, and its `base` and `head` values appear verbatim.
 - Behind and diverged were distinguished by commit count before any mutation.
-- A behind fork's default branch matches its upstream's, and the advanced commit count is reported.
-- A diverged fork's default branch is untouched, with every commit unique to it named by subject and author.
+- A behind fork's default branch matches its upstream's: `gh repo sync` reported the commits it advanced, and that count reaches the report.
+- A diverged fork's default branch is untouched: no `gh repo sync` ran, and every commit the Step 4 left count covers is named by subject and author.
 - No force flag and no reset appears in any executed command.
 
 </success_criteria>

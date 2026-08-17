@@ -49,7 +49,7 @@ Act on the classification:
 | `classification`        | Meaning                                                            | Action                                                                |
 | ----------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------- |
 | `upstream-contribution` | `READ`, `TRIAGE`, or `NONE` on the base, and one head to push from | Continue under `<invariants>`, starting with authorization.           |
-| `head-ambiguous`        | Several forks of the base across the operator's accounts           | STOP per `<invariants>` "Never choose the fork destination".          |
+| `head-ambiguous`        | Several forks of the base across the operator's accounts           | STOP per `<invariants>` "Never choose among several forks".           |
 | `fork-absent`           | No fork of the base under any account the operator holds           | STOP per `<invariants>` "Never choose the fork destination".          |
 | `controlled`            | `ADMIN`, `MAINTAIN`, or `WRITE` on the base                        | STOP. A repository the operator controls belongs to its own workflow. |
 | `blocked`               | Permission unreadable, or `gh` unavailable or unauthenticated      | STOP and report the resolver's `detail` verbatim.                     |
@@ -94,7 +94,9 @@ Fetch the base repository by URL, so only the head side needs this check.
 
 **The review loop runs on comments, not on API state.** Requesting a reviewer, dismissing a review, and clearing a changes-requested decision are maintainer-side actions. `gh pr edit --add-reviewer` fails on a base the operator does not control, and `reviewDecision` stays `CHANGES_REQUESTED` until the maintainer chooses to look again. A comment stating what changed is the re-request. Treat the permission failure as the expected path, never as an error to retry.
 
-**Never choose the fork destination.** When no head repository exists, report the resolved base, the accounts and organizations that could hold the fork, and the `gh repo fork` command quoted verbatim from the resolver's `detail` — then stop. Quote it rather than composing one: the resolver's command carries `--org <destination>` unfilled, and a composed replacement drops that placeholder and picks a destination. `gh repo fork` defaults to the personal account, and an operator holding repositories across several organizations has a destination decision no resolution can make.
+**Never choose among several forks.** When the search matches more than one fork of the resolved base, report every entry in `fork.matches` and stop. A fork already exists here — several do — so no fork command applies and none is offered; which of them a contribution runs from is a decision about the operator's own accounts that resolution has no basis to make.
+
+**Never choose the fork destination.** When no fork of the resolved base exists at all, report that base, the accounts and organizations that could hold one, and the `gh repo fork` command quoted verbatim from the resolver's `detail` — then stop. Quote it rather than composing one: the resolver's command carries `--org <destination>` unfilled, and a composed replacement drops that placeholder and picks a destination. `gh repo fork` defaults to the personal account, and an operator holding repositories across several organizations has a destination decision no resolution can make.
 
 **Never wait on the artifact.** A management pass reads current state once, acts on it, and returns. A maintainer answers on their own schedule, so polling, watching, and sleeping accumulate cost against a signal that arrives when it arrives.
 

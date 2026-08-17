@@ -65,6 +65,12 @@ A later stage reads this marker instead of resolving again. Emit it for every cl
 
 </constraints>
 
+<failure_modes>
+
+**An absent fork was reported from a search that never ran.** Claude handed the operator a `gh repo fork` command for a base whose fork already existed, because the search enumerating their accounts and organizations swallowed its own failures: a failed account read, a failed organization read, or a failed owner listing each contributed zero owners and zero matches, and resolution read that as established absence. A full first page of one owner's forks had the same shape at the other end, because the match could sit on the page the search never requested. Every one of those blocks now and names what did not complete, so `fork-absent` means a search that covered its domain and found nothing.
+
+</failure_modes>
+
 <success_criteria>
 
 - The resolver ran once, and the `base`, `head`, and `permission` reported match its JSON output field for field.
