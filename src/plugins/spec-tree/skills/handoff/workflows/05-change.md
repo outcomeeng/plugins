@@ -26,7 +26,7 @@ A conversation that holds no Change and finds continuation for work that has no 
 
 <refine_before_handoff>
 
-What this conversation learned about the Output belongs in the Change body, not in the Handoff: edit `## Nodes`, `## Assertions`, `## Decisions`, `## Activities` (check completed Activities), and add hazards discovered as `## Activities` items or as Assertion operations when they change the Frame, writing the edited body with `gh issue edit <N> --repo <store> --body-file -` per the rule above. When current facts made the recorded Maturity false, set `Maturity` to the truthful lower level through `gh project item-edit` — option ids from the same `gh project field-list` read — and say why in a comment. Never advance Maturity past Framed without the human judgment the methodology requires; the closeout names the level and what refinement remains.
+What this conversation learned about the Output belongs in the Change body, not in the Handoff: edit `## Nodes`, `## Assertions`, `## Decisions`, `## Activities` (check completed Activities), and add hazards discovered as `## Activities` items or as Assertion operations when they change the Frame, writing the edited body with `gh issue edit <N> --repo <store> --body-file -` per the rule above. When current facts made the recorded Maturity false, set `Maturity` to the truthful lower level through `gh project item-edit` — option ids from the same `gh project field-list` read — and say why in a comment. Never set `Framed` without the human judgment or `Sliced` without the human accountability the methodology requires; advancing `Sliced` to `Executable` inside an approved Frame is agent work. The closeout names the level and what refinement remains.
 
 </refine_before_handoff>
 

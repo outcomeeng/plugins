@@ -196,6 +196,8 @@ Authenticate gh (project scope) or fix the overlay; no Change was claimed or cre
 
 **Archive failed after the Change exists**: `spx session archive <id>` is retried once; on a second failure the created issue URL is reported beside the file id and the file stays in `doing`; the next pickup of that file finds the issue through the store search and resumes it rather than creating another.
 
+**Several Changes match a legacy file**: the store search finds more than one Change carrying the file as received input — classify `needs_operator_direction`, report every match, create nothing, and leave the file in `doing`.
+
 **Secret detected in legacy file**: report the file id and the kind of content found (never the value); the file stays in `doing` and no Change is created until the operator redacts it — after which the file is re-read and re-inspected — or abandons the migration.
 
 </error_handling>
