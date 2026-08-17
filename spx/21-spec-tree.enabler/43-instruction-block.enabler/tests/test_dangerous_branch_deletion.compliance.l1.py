@@ -1,13 +1,213 @@
-from pathlib import Path
-
 import pytest
 
 from outcomeeng.distribution import instruction_block as source
 
 
-def test_dangerous_command_guard_policy_rejects_every_missing_rule(
-    tmp_path: Path,
-) -> None:
+def test_dcg_policy_rejects_missing_stop_trigger() -> None:
+    module = source.load_instruction_block_module()
+    templates = source.load_harness_templates(module)
+    documents = source.render_instruction_blocks_from_harness_templates(
+        module,
+        templates,
+        module.template_languages(next(iter(templates.values()))),
+    )
+
+    for agent_harness, document in documents.items():
+        with pytest.raises(source.AuthorityHierarchyPolicyError):
+            source.validate_authority_hierarchy_policy(
+                {
+                    agent_harness: document.replace(
+                        "a dangerous-command guard (DCG) block terminates the "
+                        "attempted command family",
+                        "",
+                        1,
+                    )
+                }
+            )
+
+
+def test_dcg_policy_rejects_missing_retry_prohibition() -> None:
+    module = source.load_instruction_block_module()
+    templates = source.load_harness_templates(module)
+    documents = source.render_instruction_blocks_from_harness_templates(
+        module,
+        templates,
+        module.template_languages(next(iter(templates.values()))),
+    )
+
+    for agent_harness, document in documents.items():
+        with pytest.raises(source.AuthorityHierarchyPolicyError):
+            source.validate_authority_hierarchy_policy(
+                {
+                    agent_harness: document.replace(
+                        "retry it by reformulating, splitting, rewriting, removing "
+                        "the flagged clause, or substituting an equivalent command "
+                        "to evade the guard",
+                        "",
+                        1,
+                    )
+                }
+            )
+
+
+def test_dcg_policy_rejects_missing_dynamic_branch_prohibition() -> None:
+    module = source.load_instruction_block_module()
+    templates = source.load_harness_templates(module)
+    documents = source.render_instruction_blocks_from_harness_templates(
+        module,
+        templates,
+        module.template_languages(next(iter(templates.values()))),
+    )
+
+    for agent_harness, document in documents.items():
+        with pytest.raises(source.AuthorityHierarchyPolicyError):
+            source.validate_authority_hierarchy_policy(
+                {
+                    agent_harness: document.replace(
+                        "pass dynamic branch names to `git branch -d` or "
+                        "`git branch -D`",
+                        "",
+                        1,
+                    )
+                }
+            )
+
+
+def test_dcg_policy_rejects_missing_dynamic_branch_forms() -> None:
+    module = source.load_instruction_block_module()
+    templates = source.load_harness_templates(module)
+    documents = source.render_instruction_blocks_from_harness_templates(
+        module,
+        templates,
+        module.template_languages(next(iter(templates.values()))),
+    )
+
+    for agent_harness, document in documents.items():
+        with pytest.raises(source.AuthorityHierarchyPolicyError):
+            source.validate_authority_hierarchy_policy(
+                {
+                    agent_harness: document.replace(
+                        "variables, command substitutions, arrays, and globs are "
+                        "denied",
+                        "",
+                        1,
+                    )
+                }
+            )
+
+
+def test_dcg_policy_rejects_missing_quoted_form_denial() -> None:
+    module = source.load_instruction_block_module()
+    templates = source.load_harness_templates(module)
+    documents = source.render_instruction_blocks_from_harness_templates(
+        module,
+        templates,
+        module.template_languages(next(iter(templates.values()))),
+    )
+
+    for agent_harness, document in documents.items():
+        with pytest.raises(source.AuthorityHierarchyPolicyError):
+            source.validate_authority_hierarchy_policy(
+                {
+                    agent_harness: document.replace(
+                        "including when quoted or placed after `--`",
+                        "",
+                        1,
+                    )
+                }
+            )
+
+
+def test_dcg_policy_rejects_missing_literal_name_requirement() -> None:
+    module = source.load_instruction_block_module()
+    templates = source.load_harness_templates(module)
+    documents = source.render_instruction_blocks_from_harness_templates(
+        module,
+        templates,
+        module.template_languages(next(iter(templates.values()))),
+    )
+
+    for agent_harness, document in documents.items():
+        with pytest.raises(source.AuthorityHierarchyPolicyError):
+            source.validate_authority_hierarchy_policy(
+                {
+                    agent_harness: document.replace(
+                        "Type every branch name literally",
+                        "",
+                        1,
+                    )
+                }
+            )
+
+
+def test_dcg_policy_rejects_missing_multi_branch_permission() -> None:
+    module = source.load_instruction_block_module()
+    templates = source.load_harness_templates(module)
+    documents = source.render_instruction_blocks_from_harness_templates(
+        module,
+        templates,
+        module.template_languages(next(iter(templates.values()))),
+    )
+
+    for agent_harness, document in documents.items():
+        with pytest.raises(source.AuthorityHierarchyPolicyError):
+            source.validate_authority_hierarchy_policy(
+                {
+                    agent_harness: document.replace(
+                        "delete several literal names in one command",
+                        "",
+                        1,
+                    )
+                }
+            )
+
+
+def test_dcg_policy_rejects_missing_sanctioned_path() -> None:
+    module = source.load_instruction_block_module()
+    templates = source.load_harness_templates(module)
+    documents = source.render_instruction_blocks_from_harness_templates(
+        module,
+        templates,
+        module.template_languages(next(iter(templates.values()))),
+    )
+
+    for agent_harness, document in documents.items():
+        with pytest.raises(source.AuthorityHierarchyPolicyError):
+            source.validate_authority_hierarchy_policy(
+                {
+                    agent_harness: document.replace(
+                        "follow the active skills, repository instructions, and "
+                        "declared overlays to find a sanctioned operation",
+                        "",
+                        1,
+                    )
+                }
+            )
+
+
+def test_dcg_policy_rejects_missing_terminal_report() -> None:
+    module = source.load_instruction_block_module()
+    templates = source.load_harness_templates(module)
+    documents = source.render_instruction_blocks_from_harness_templates(
+        module,
+        templates,
+        module.template_languages(next(iter(templates.values()))),
+    )
+
+    for agent_harness, document in documents.items():
+        with pytest.raises(source.AuthorityHierarchyPolicyError):
+            source.validate_authority_hierarchy_policy(
+                {
+                    agent_harness: document.replace(
+                        "report the blocked command with secrets redacted",
+                        "",
+                        1,
+                    )
+                }
+            )
+
+
+def test_dcg_policy_rejects_quoted_guard_section() -> None:
     module = source.load_instruction_block_module()
     templates = source.load_harness_templates(module)
     documents = source.render_instruction_blocks_from_harness_templates(
@@ -16,24 +216,6 @@ def test_dangerous_command_guard_policy_rejects_every_missing_rule(
         module.template_languages(next(iter(templates.values()))),
     )
     source.validate_authority_hierarchy_policy(documents)
-
-    for (
-        requirement_name,
-        required_text,
-    ) in source.DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS:
-        for agent_harness in documents:
-            repo_root = tmp_path / requirement_name / agent_harness
-            for template_harness, template in templates.items():
-                template_path = source.dist_template_path(
-                    template_harness, repo_root=repo_root
-                )
-                template_path.parent.mkdir(parents=True)
-                if template_harness == agent_harness:
-                    template = template.replace(required_text, "", 1)
-                template_path.write_text(template, encoding="utf-8")
-
-            with pytest.raises(source.AuthorityHierarchyPolicyError):
-                source.regenerate_instruction_blocks(repo_root=repo_root)
 
     for agent_harness, document in documents.items():
         guard_section = source._markdown_section(
