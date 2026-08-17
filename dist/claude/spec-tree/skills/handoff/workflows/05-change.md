@@ -48,7 +48,7 @@ Handoff:
 - Branch or PR: <pushed work branch, or the PR URL, or `none`>
 - Completed Activities: <checked items, by their text>
 - Next Activity: <the first unchecked Activity, or `refinement: <Maturity> → <next level>` below Executable>
-- Blockers: <blocking Change URLs still active, or `none`>
+- Blockers: <blocking Change URLs still active per `gh api repos/<store>/issues/<N>/dependencies/blocked_by`, or `none` — a mirror of the dependency graph, never its source>
 - Hazards: <what the next holder cannot derive quickly: an unsealed run, a held checkout, a flaky check — each with the read-only command that re-confirms it>
 ```
 
