@@ -159,13 +159,13 @@ Create exactly one fresh `todo` follow-up for every authorized invocation. Read 
 - the resolved `git_ref` and the follow-up's `goal`;
 - two options — file the follow-up into that repository, or stop for inspection.
 
-A rendering of those four values for an `spx` CLI target:
+A rendering of those four values:
 
 ```text
-Target:  /Users/example/Code/outcomeeng/spx/spx
-Origin:  github.com/outcomeeng/spx
+Target:  /Users/example/Code/acme/widgets/widgets
+Origin:  github.com/acme/widgets
 Ref:     main
-Goal:    A session handoff that records the work branch as its git_ref
+Goal:    A parser that reports the column of an unterminated string
 Options: file the follow-up into that repository / stop for inspection
 ```
 
