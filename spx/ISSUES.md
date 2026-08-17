@@ -71,6 +71,18 @@ A table of contents is satisfied by a `## Contents` section, an XML `<contents>`
 
 **Revisit condition.** Resolve per plugin when that plugin next needs a reference-file change, or as one dedicated sweep. `create-subagent` is the highest-value single target: seven files, 4,646 lines, the largest partial-read exposure in the marketplace.
 
+## Auditors read a conforming absent `<failure_modes>` section as a gap
+
+`/agent-prompt-standards` `<failure_mode_writing>` prescribes omitting `<failure_modes>` from a skill that has not failed yet: "Never invent failure modes... Add failure modes as they occur in real usage." A new skill therefore conforms by carrying no such section. `instructions:audit-skill` nonetheless raises the absence as a `worth-improving` warning, and its own remedy then restates the standard back — "once a real near-miss occurs", "do not fabricate one if none has occurred". `spec-tree:changes-reviewer` reads the same absence as a coordination-note gap.
+
+Across the contribute-plugin consolidation this fired six times over three skills and four verification rounds, each costing a full re-audit or re-review cycle to answer with the same reasoning. The warning is unactionable by construction: no edit satisfies it, and declining it leaves the next verifier to raise it again.
+
+**Resolution shape**: teach the audit surface that the absence is conforming. Either `instructions:audit-skill` stops raising a bare missing-`<failure_modes>` as a finding for a skill whose history shows no observed failure, or it raises it only where a governing node, changelog, or commit history records one the skill omits. The reviewer's coordination-note rule needs the matching case: a note tracking work a standard declares complete-as-absent represents no future work, so its removal closes the item.
+
+**Why separate**: the fix belongs to the `instructions` plugin's audit skill and to the review prompt, neither of which any skill-content changeset touches. Fixing it inside a plugin's own changeset would leave the next plugin paying the same rounds.
+
+**Evidence**: `instructions:skill-auditor` warnings on `src/plugins/contribute/skills/open-upstream-issue/SKILL.md` and `src/plugins/contribute/skills/sync-fork/SKILL.md`, three rounds running, alongside `spec-tree:changes-reviewer` debt findings on the same absence in review runs `2026-08-17_00-39-40-323-2100d0f7fbde` and `2026-08-17_00-58-42-318-56d83c759ed7`.
+
 ## The non-interactive git guard sits on the command that cannot prompt
 
 `GIT_TERMINAL_PROMPT=0` guards `gh pr create` in both `src/plugins/spec-tree/skills/open-pr/SKILL.md` (lines 87 and 116) and `src/plugins/contribute/skills/open-upstream-pr/SKILL.md` (lines 125 and 149). `gh` authenticates through its own stored credential against the GitHub API, so the variable has little to act on there. The `git push` each skill runs immediately before is the command that blocks an unattended run on a credential or host-key prompt, and neither carries the guard.
