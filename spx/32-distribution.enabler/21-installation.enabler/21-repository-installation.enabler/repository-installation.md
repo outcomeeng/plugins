@@ -8,7 +8,7 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
 
 ### Scenarios
 
-- Given an agent state with no installed `outcomeeng` plugin, when persistent installation runs, then it installs only `spec-tree` for that agent and warns that the operator probably wants additional plugins. ([test](tests/test_repository_installation.scenario.l1.py))
+- Given an agent state with no installed `outcomeeng` plugin, when persistent installation runs, then it installs only `spec-tree` for that agent and warns that the operator probably wants additional plugins. ([test](tests/test_repository_installation.scenario.l3.py))
 - Given a nonempty installed subset that omits `spec-tree`, when persistent installation starts, then it reports the invalid selection and performs no state-changing operation. ([test](tests/test_repository_installation.scenario.l1.py))
 - Given a checkout whose committed catalog declares a plugin the marketplace has not published, when persistent installation runs, then that plugin is reported as pending publication and every other plugin still installs. ([test](tests/test_repository_installation.scenario.l1.py))
 - Given the same absent plugin, when isolated installation runs, then the absence is terminal at that plugin's install, because the marketplace an isolated run registers is the checkout itself. ([test](tests/test_repository_installation.scenario.l1.py))
