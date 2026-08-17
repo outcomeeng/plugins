@@ -190,7 +190,7 @@ Authenticate gh (project scope) or fix the overlay; no Change was claimed or cre
 
 **Overlay incomplete**: `spx/local/coordination.md` names no store repository, project owner and number, or Product value — report the missing value and stop; never guess a store.
 
-**Change closed or held elsewhere**: `owned_elsewhere` — report the terminal state or the current assignee and stop without mutating the Change.
+**Change closed, held elsewhere, or another Product's**: `owned_elsewhere` — report the terminal state, the current holder (assignee, or the winning `Claim:` comment's session id when two sessions raced), or the mismatched `product`, and stop without mutating the Change beyond removing this session's own losing assignee when the winner is a different account.
 
 **Migration interrupted**: when `gh issue create` or `gh project item-add` fails after `spx session pickup <id>`, report the failed command and its output; the legacy file stays in `doing` unarchived and no further Change write is attempted. A lone `gh project item-edit` failure gets one re-read of the item and one retry of the missing field; a second failure is reported the same way, with the created issue named as the Change to resume from.
 
