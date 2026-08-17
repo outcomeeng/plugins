@@ -38,7 +38,7 @@ For each held Change, after `<release_work_branch>` has left the work committed,
 
 **Refined.** When this conversation created every known successor (each carrying `## Refined from` with this Change's URL): post `Refinement complete: all known successors exist.` and close with `--reason completed`.
 
-**Abandoned.** Only on the operator's explicit direction: close with `--reason "not planned"`.
+**Abandoned.** Only on the operator's explicit direction: post the comment `Abandoned: <the operator's stated reason>` with `gh issue comment <N> --repo <store> --body-file -`, then close with `gh issue close <N> --repo <store> --reason "not planned"`.
 
 **Otherwise release.** Post the continuation below as one comment with `gh issue comment <N> --repo <store> --body-file -`, the body on stdin per the rule above, then remove the assignee:
 
