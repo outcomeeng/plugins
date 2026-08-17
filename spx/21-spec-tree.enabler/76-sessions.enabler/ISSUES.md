@@ -55,3 +55,11 @@ The trigger judgment itself is separately asserted in `spx/21-spec-tree.enabler/
 The same rule reaches `src/plugins/spec-tree/skills/open-pr/SKILL.md`, whose `gh pr create --title "…"` double-quotes an interpolated title; the extracted reference covers `--title` as well as `--body-file -`, and `open-pr` invokes it. The pull-request review of PR #535 (head `98b1ab9d114ab60f5da8ca11a6538c0fbd34f936`) surfaced that site as a DEBT finding; its fix changes a skill surface outside that changeset, so it is tracked here rather than carried there.
 
 **Evidence.** The `skill-auditor` verdict on the pickup bundle at `41b304b691460afca90c7b92559123fdc3e6a3a1` names the duplication (`reference_skill_extraction_candidate`).
+
+## 6. The Change-coordination mechanism has no decision record
+
+The overlay contract declared in `spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md`, `25-handoff.enabler/handoff.md`, and `28-pickup.enabler/pickup.md` — claim by assignee plus earliest `Claim:` comment, Maturity gating, the five-line Handoff comment, the authorized close comments, the secret inspection before every store write — is decided in the assertions and the two skill workflows, with no ADR or PDR under this node the way `13-handoff-persistence.adr.md` and `28-pickup.enabler/20-claim-verification.adr.md` decide their narrower mechanisms. The operator directed the GitHub realization to ship as a prototype without a PDR, following methodology 4.0.0 coordination (`versions/next/11-coordination.md` of `outcomeeng/methodology`) and its GitHub realization note directly.
+
+**Resolution shape**: when the prototype graduates, author the decision under this node — a PDR when the Maturity and Lifecycle vocabulary is user-observable product behaviour, otherwise an ADR — and repoint the three overlay assertions at it; `/decompose` places it.
+
+**Evidence.** The local review of `work/session-pointer-truth-derivation` at `488bd2e6c9c43d83d13c50b63029b903e2e03880` recorded the missing decision as a DEBT finding; the operator's prototype direction is the recorded reason it is tracked here rather than fixed in that changeset.
