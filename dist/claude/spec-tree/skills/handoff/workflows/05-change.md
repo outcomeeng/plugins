@@ -67,7 +67,7 @@ In `<confirm>`, the session-mechanics rows become Change rows: each Change URL w
 <success_criteria>
 
 - Every `gh issue create`, `gh issue edit --body-file`, and `gh issue comment` this workflow performs is inspected for secret values and credential payloads before it lands, and a hit writes nothing.
-- After the closure, `gh issue view <N> --json state,assignees` shows every held Change either open with an empty assignee list and a newest comment beginning `Handoff:`, or closed with its authorized comment; no Change stays Claimed by a conversation that has ended.
+- After the closure, `gh issue view <N> --repo <store> --json state,assignees,comments` shows every held Change either open with an empty assignee list and `.comments[-1].body` beginning `Handoff:`, or closed with its authorized comment as the last comment; no Change stays Claimed by a conversation that has ended.
 - A Handoff carries the five continuation lines and nothing that belongs in the body; refinement edits landed in the body before the Handoff was posted.
 - Applied is posted only after integration, evidence, and Output delivery all hold.
 - No session file is written when `spx/local/coordination.md` exists; new continuation without a Change becomes one Proposed, Available Change carrying its received input.
