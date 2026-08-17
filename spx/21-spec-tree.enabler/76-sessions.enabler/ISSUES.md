@@ -52,4 +52,6 @@ The trigger judgment itself is separately asserted in `spx/21-spec-tree.enabler/
 
 **Resolution shape**: extract the rule into a `{domain}-standards` reference skill both workflows invoke, per the reference-skill pattern in the skill-authoring standards. A new skill is a structural plugin change with its own audit and a minor bump, so it does not belong to the changeset that introduced the Change workflows.
 
+The same rule reaches `src/plugins/spec-tree/skills/open-pr/SKILL.md`, whose `gh pr create --title "…"` double-quotes an interpolated title; the extracted reference covers `--title` as well as `--body-file -`, and `open-pr` invokes it. The pull-request review of PR #535 (head `98b1ab9d114ab60f5da8ca11a6538c0fbd34f936`) surfaced that site as a DEBT finding; its fix changes a skill surface outside that changeset, so it is tracked here rather than carried there.
+
 **Evidence.** The `skill-auditor` verdict on the pickup bundle at `41b304b691460afca90c7b92559123fdc3e6a3a1` names the duplication (`reference_skill_extraction_candidate`).
