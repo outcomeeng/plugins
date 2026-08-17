@@ -785,6 +785,29 @@ def managed_router_block(document: str) -> str:
     return document[start:end]
 
 
+def dangerous_command_guard_policy_section(router: str) -> str:
+    """Extract the dangerous-command guard section from a managed router."""
+    authority_section = _markdown_section(router, AUTHORITY_HIERARCHY_POLICY_HEADING)
+    return _markdown_section(authority_section, DANGEROUS_COMMAND_GUARD_POLICY_HEADING)
+
+
+def validate_dangerous_command_guard_policy(
+    sections_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a dangerous-command guard section missing an operative rule."""
+    for harness, guard_section in sections_by_harness.items():
+        missing_guard_rules = [
+            name
+            for name, required_text in DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS
+            if not _operative_policy_line_contains(guard_section, required_text)
+        ]
+        if missing_guard_rules:
+            details = ", ".join(missing_guard_rules)
+            raise AuthorityHierarchyPolicyError(
+                f"{harness} router dangerous-command guard is incomplete: {details}"
+            )
+
+
 def validate_foundation_access_policy(
     blocks_by_harness: Mapping[str, str],
 ) -> None:
@@ -833,23 +856,12 @@ def validate_authority_hierarchy_policy(
                 f"{harness} router authority hierarchy is incomplete: {details}"
             )
         try:
-            guard_section = _markdown_section(
-                section, DANGEROUS_COMMAND_GUARD_POLICY_HEADING
-            )
+            guard_section = dangerous_command_guard_policy_section(router)
         except FoundationAccessPolicyError as exc:
             raise AuthorityHierarchyPolicyError(
                 f"missing router section: {DANGEROUS_COMMAND_GUARD_POLICY_HEADING}"
             ) from exc
-        missing_guard_rules = [
-            name
-            for name, required_text in DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS
-            if not _operative_policy_line_contains(guard_section, required_text)
-        ]
-        if missing_guard_rules:
-            details = ", ".join(missing_guard_rules)
-            raise AuthorityHierarchyPolicyError(
-                f"{harness} router dangerous-command guard is incomplete: {details}"
-            )
+        validate_dangerous_command_guard_policy({harness: guard_section})
 
 
 def validate_harness_dispatch_mechanics(blocks_by_harness: Mapping[str, str]) -> None:
