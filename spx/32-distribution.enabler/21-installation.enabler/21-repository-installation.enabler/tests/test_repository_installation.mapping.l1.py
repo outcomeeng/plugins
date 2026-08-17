@@ -19,6 +19,7 @@ from outcomeeng.distribution.installation import (
     InstallationMode,
     MARKETPLACE_NAME,
     PLUGIN_OPERATIONS,
+    ReportField,
     UNPUBLISHED_PLUGIN_FRAGMENT,
     Operation,
     catalog_plugin_names,
@@ -97,10 +98,10 @@ def test_every_planned_operation_reports_its_failure_and_stops_installation() ->
 
         assert observation.exit_code != 0
         assert observation.stdout == ""
-        assert document["operation"] == operation.value
-        assert document["agent"] == attempted[-1].agent.value
-        assert document["completed_operations"] == len(attempted) - 1
-        assert document["exit_code"] == observation.exit_code
+        assert document[ReportField.OPERATION] == operation.value
+        assert document[ReportField.AGENT] == attempted[-1].agent.value
+        assert document[ReportField.COMPLETED_OPERATIONS] == len(attempted) - 1
+        assert document[ReportField.EXIT_CODE] == observation.exit_code
         assert attempted == observation.command_sequence[: len(attempted)]
 
 

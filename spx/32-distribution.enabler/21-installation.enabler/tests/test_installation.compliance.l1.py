@@ -11,6 +11,7 @@ from outcomeeng.distribution.installation import (
     CODEX_HOME_ENV,
     InstallationMode,
     Operation,
+    ReportField,
     SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
 )
@@ -113,9 +114,9 @@ def test_an_enable_failure_stops_the_run_rather_than_reading_as_idempotent() -> 
     document = json.loads(observation.stderr)
 
     assert observation.exit_code != 0
-    assert document["agent"] == Agent.CLAUDE.value
-    assert document["operation"] == Operation.PLUGIN_ENABLE.value
-    assert document["plugin"] is not None
+    assert document[ReportField.AGENT] == Agent.CLAUDE.value
+    assert document[ReportField.OPERATION] == Operation.PLUGIN_ENABLE.value
+    assert document[ReportField.PLUGIN] is not None
     assert (
         observation.attempted
         == observation.command_sequence[: len(observation.attempted)]
@@ -127,8 +128,8 @@ def test_a_failed_inspection_stops_before_any_planned_operation() -> None:
     document = json.loads(observation.stderr)
 
     assert observation.exit_code != 0
-    assert document["operation"] == Operation.MARKETPLACE_INSPECT.value
-    assert document["agent"] == observation.attempted[-1].agent.value
+    assert document[ReportField.OPERATION] == Operation.MARKETPLACE_INSPECT.value
+    assert document[ReportField.AGENT] == observation.attempted[-1].agent.value
     assert (
         observation.attempted
         == observation.command_sequence[: len(observation.attempted)]
@@ -155,10 +156,10 @@ def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
     document = json.loads(observation.stderr)
 
     assert observation.exit_code != 0
-    assert document["agent"] == Agent.CODEX.value
-    assert document["operation"] == Operation.LIFECYCLE_PLACE.value
-    assert document["plugin"] is not None
-    assert document["completed_operations"] == len(observation.attempted) - 1
+    assert document[ReportField.AGENT] == Agent.CODEX.value
+    assert document[ReportField.OPERATION] == Operation.LIFECYCLE_PLACE.value
+    assert document[ReportField.PLUGIN] is not None
+    assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted) - 1
     assert (
         observation.attempted
         == observation.command_sequence[: len(observation.attempted)]
@@ -170,11 +171,11 @@ def test_first_agent_cli_failure_reports_the_operation_and_stops() -> None:
     document = json.loads(observation.stderr)
 
     assert observation.exit_code != 0
-    assert document["agent"] == Agent.CLAUDE.value
-    assert document["operation"] == Operation.PLUGIN_INSTALL.value
-    assert document["plugin"] is not None
-    assert document["stderr"] == Operation.PLUGIN_INSTALL.value
-    assert document["completed_operations"] == len(observation.attempted) - 1
+    assert document[ReportField.AGENT] == Agent.CLAUDE.value
+    assert document[ReportField.OPERATION] == Operation.PLUGIN_INSTALL.value
+    assert document[ReportField.PLUGIN] is not None
+    assert document[ReportField.STDERR] == Operation.PLUGIN_INSTALL.value
+    assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted) - 1
     assert (
         observation.attempted
         == observation.command_sequence[: len(observation.attempted)]

@@ -8,6 +8,7 @@ from outcomeeng.distribution.installation import (
     CANONICAL_MARKETPLACE_SOURCE,
     FIRST_INSTALL_WARNING,
     Operation,
+    ReportField,
     SPEC_TREE_PLUGIN,
     SourceAction,
     USER_SCOPE_COLLISION_DIAGNOSTIC,
@@ -58,12 +59,12 @@ def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
     assert {command.plugin for command in install_commands} == {SPEC_TREE_PLUGIN}
     assert [command.agent for command in enable_commands] == [Agent.CLAUDE]
     assert {command.plugin for command in enable_commands} == {SPEC_TREE_PLUGIN}
-    assert document["claude_plugins"] == [SPEC_TREE_PLUGIN]
-    assert document["codex_plugins"] == [SPEC_TREE_PLUGIN]
-    assert document["warnings"] == [
+    assert document[ReportField.CLAUDE_PLUGINS] == [SPEC_TREE_PLUGIN]
+    assert document[ReportField.CODEX_PLUGINS] == [SPEC_TREE_PLUGIN]
+    assert document[ReportField.WARNINGS] == [
         {
-            "agent": agent.value,
-            "message": FIRST_INSTALL_WARNING.format(agent=agent.value),
+            ReportField.AGENT: agent.value,
+            ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(agent=agent.value),
         }
         for agent in Agent
     ]
@@ -126,9 +127,9 @@ def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> Non
 
     assert observation.exit_code != 0
     assert observation.stdout == ""
-    assert document["operation"] == Operation.MARKETPLACE_INSPECT.value
-    assert document["agent"] == observation.attempted[-1].agent.value
-    assert document["completed_operations"] == len(observation.attempted) - 1
+    assert document[ReportField.OPERATION] == Operation.MARKETPLACE_INSPECT.value
+    assert document[ReportField.AGENT] == observation.attempted[-1].agent.value
+    assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted) - 1
     assert (
         observation.attempted
         == observation.command_sequence[: len(observation.attempted)]
@@ -193,8 +194,10 @@ def test_the_json_report_never_lists_a_pending_plugin_as_installed() -> None:
     assert observation.report is not None
     document = report_document(observation.report)
     pending = {
-        cast(str, entry["plugin"])
-        for entry in cast(list[dict[str, str]], document["pending_publication"])
+        cast(str, entry[ReportField.PLUGIN])
+        for entry in cast(
+            list[dict[str, str]], document[ReportField.PENDING_PUBLICATION]
+        )
     }
 
     # The text summary and this document answer from the same accessor. Reading
@@ -202,8 +205,8 @@ def test_the_json_report_never_lists_a_pending_plugin_as_installed() -> None:
     # the next field reported it unpublished, and the two disagreed inside one
     # document.
     assert pending == {absent}
-    assert not pending & set(cast(list[str], document["claude_plugins"]))
-    assert absent in cast(list[str], document["codex_plugins"])
+    assert not pending & set(cast(list[str], document[ReportField.CLAUDE_PLUGINS]))
+    assert absent in cast(list[str], document[ReportField.CODEX_PLUGINS])
 
 
 def test_a_plugin_absent_from_one_agent_stays_installed_for_the_other() -> None:

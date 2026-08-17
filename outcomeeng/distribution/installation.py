@@ -116,6 +116,28 @@ class Operation(StrEnum):
     PLUGIN_LIST = "plugin-list"
 
 
+class ReportField(StrEnum):
+    """Public JSON fields emitted by repository installation."""
+
+    AGENT = "agent"
+    PLUGIN = "plugin"
+    OPERATION = "operation"
+    ARGV = "argv"
+    EXIT_CODE = "exit_code"
+    STDOUT = "stdout"
+    STDERR = "stderr"
+    COMPLETED_OPERATIONS = "completed_operations"
+    MODE = "mode"
+    CLAUDE_PLUGINS = "claude_plugins"
+    CODEX_PLUGINS = "codex_plugins"
+    STATE_ROOT = "state_root"
+    CHECKOUT = "checkout"
+    CODEX_HOME = "codex_home"
+    PENDING_PUBLICATION = "pending_publication"
+    WARNINGS = "warnings"
+    MESSAGE = "message"
+
+
 PLUGIN_OPERATIONS: frozenset[Operation] = frozenset(
     {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
 )
@@ -1393,34 +1415,37 @@ def _real_runner(command: InstallationCommand) -> CommandResult:
 
 def _failure_document(failure: InstallationFailure) -> dict[str, object]:
     return {
-        "agent": failure.command.agent.value,
-        "plugin": failure.command.plugin,
-        "operation": failure.command.operation.value,
-        "argv": list(failure.result.argv),
-        "exit_code": failure.result.exit_code,
-        "stdout": failure.result.stdout,
-        "stderr": failure.result.stderr,
-        "completed_operations": len(failure.completed),
+        ReportField.AGENT: failure.command.agent.value,
+        ReportField.PLUGIN: failure.command.plugin,
+        ReportField.OPERATION: failure.command.operation.value,
+        ReportField.ARGV: list(failure.result.argv),
+        ReportField.EXIT_CODE: failure.result.exit_code,
+        ReportField.STDOUT: failure.result.stdout,
+        ReportField.STDERR: failure.result.stderr,
+        ReportField.COMPLETED_OPERATIONS: len(failure.completed),
     }
 
 
 def report_document(report: InstallationReport) -> dict[str, object]:
     return {
-        "mode": report.plan.mode.value,
-        "claude_plugins": sorted(report.installed_for(Agent.CLAUDE)),
-        "codex_plugins": sorted(report.installed_for(Agent.CODEX)),
-        "completed_operations": len(report.results),
-        "state_root": (
+        ReportField.MODE: report.plan.mode.value,
+        ReportField.CLAUDE_PLUGINS: sorted(report.installed_for(Agent.CLAUDE)),
+        ReportField.CODEX_PLUGINS: sorted(report.installed_for(Agent.CODEX)),
+        ReportField.COMPLETED_OPERATIONS: len(report.results),
+        ReportField.STATE_ROOT: (
             str(report.plan.roots.state) if report.plan.roots.state else None
         ),
-        "checkout": str(report.plan.roots.checkout),
-        "codex_home": str(report.plan.roots.codex_home),
-        "pending_publication": [
-            {"agent": entry.agent.value, "plugin": entry.plugin}
+        ReportField.CHECKOUT: str(report.plan.roots.checkout),
+        ReportField.CODEX_HOME: str(report.plan.roots.codex_home),
+        ReportField.PENDING_PUBLICATION: [
+            {ReportField.AGENT: entry.agent.value, ReportField.PLUGIN: entry.plugin}
             for entry in report.pending_publication
         ],
-        "warnings": [
-            {"agent": warning.agent.value, "message": warning.message}
+        ReportField.WARNINGS: [
+            {
+                ReportField.AGENT: warning.agent.value,
+                ReportField.MESSAGE: warning.message,
+            }
             for warning in report.plan.warnings
         ],
     }
@@ -1486,6 +1511,7 @@ __all__ = [
     "Operation",
     "PersistentPreflight",
     "PYTHON_EXECUTABLE",
+    "ReportField",
     "SourceAction",
     "STATE_ENV_NAMES",
     "SPEC_TREE_PLUGIN",

@@ -26,17 +26,14 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
     codex_catalog = cast(
         dict[str, list[dict[str, object]]], json.loads(isolated.codex_catalog)
     )
-    expected_claude = tuple(
+    assert isolated.plan.claude_plugins == tuple(
         cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
         for plugin in claude_catalog[CATALOG_PLUGINS_FIELD]
     )
-    expected_codex = tuple(
+    assert isolated.plan.codex_plugins == tuple(
         cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
         for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
     )
-
-    assert isolated.plan.claude_plugins == expected_claude
-    assert isolated.plan.codex_plugins == expected_codex
     observations = observe_persistent_catalog_subset_plans()
     assert tuple(observation.agent for observation in observations) == tuple(Agent)
     for observation in observations:

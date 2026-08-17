@@ -7,6 +7,7 @@ from outcomeeng.distribution.installation import (
     Agent,
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
+    ReportField,
     SourceAction,
 )
 from outcomeeng_testing.harnesses.installation import (
@@ -35,17 +36,17 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
         dict[str, object], json.loads(observation.persistent_stdout)
     )
     pending_entries = cast(
-        list[dict[str, str]], persistent_report["pending_publication"]
+        list[dict[str, str]], persistent_report[ReportField.PENDING_PUBLICATION]
     )
     claude_pending = frozenset(
-        entry["plugin"]
+        entry[ReportField.PLUGIN]
         for entry in pending_entries
-        if entry["agent"] == Agent.CLAUDE.value
+        if entry[ReportField.AGENT] == Agent.CLAUDE.value
     )
     codex_pending = frozenset(
-        entry["plugin"]
+        entry[ReportField.PLUGIN]
         for entry in pending_entries
-        if entry["agent"] == Agent.CODEX.value
+        if entry[ReportField.AGENT] == Agent.CODEX.value
     )
     published = canonical_catalog_plugin_names()
     subset_claude_catalog = cast(
@@ -67,7 +68,7 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
 
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
     assert (
-        persistent_report["completed_operations"]
+        persistent_report[ReportField.COMPLETED_OPERATIONS]
         == observation.persistent_planned_operations
     )
     assert (
