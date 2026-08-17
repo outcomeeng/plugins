@@ -229,7 +229,7 @@ How to avoid: Classify the session as `owned_elsewhere`, report the owning sessi
 </failure_modes>
 
 <success_criteria>
-A successful pickup:
+Under `spx/local/coordination.md`, a successful pickup satisfies `${SKILL_DIR}/workflows/change.md`'s success criteria — a Change claimed by sole assignee or created from a legacy file that carries no secret, `<PICKUP_CLAIM change="...">` and a cumulative `<CLAIMED_CHANGES urls="...">` emitted, execution only from a validated Executable Change continuing at the Handoff's Next Activity, and a proposal that names the Frame's governing truth first — together with the foundation, base-sync, worktree-claim, and no-work-before-checkpoint criteria below. Without the overlay, a successful pickup:
 
 - [ ] Session claimed via `spx session pickup`
 - [ ] Canonical pickup claim marker emitted as `<PICKUP_CLAIM id="...">`
