@@ -122,12 +122,17 @@ def test_persistent_installation_replaces_noncanonical_sources() -> None:
 
 def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> None:
     observation = observe_inspection_failure()
+    document = json.loads(observation.stderr)
 
-    assert observation.failure is not None
-    assert observation.failure.command.operation is Operation.MARKETPLACE_INSPECT
-    assert observation.failure.command.agent is not None
-    assert observation.failure.completed
-    assert observation.attempted[-1] == observation.failure.command
+    assert observation.exit_code != 0
+    assert observation.stdout == ""
+    assert document["operation"] == Operation.MARKETPLACE_INSPECT.value
+    assert document["agent"] == observation.attempted[-1].agent.value
+    assert document["completed_operations"] == len(observation.attempted) - 1
+    assert (
+        observation.attempted
+        == observation.command_sequence[: len(observation.attempted)]
+    )
     assert not any(
         command in observation.attempted for command in observation.plan.commands
     )

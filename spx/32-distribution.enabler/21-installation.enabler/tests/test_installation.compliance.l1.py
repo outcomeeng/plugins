@@ -1,5 +1,6 @@
 """State-boundary and failure evidence for repository installation."""
 
+import json
 from pathlib import Path
 
 from outcomeeng.distribution.installation import (
@@ -109,24 +110,29 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
 
 def test_an_enable_failure_stops_the_run_rather_than_reading_as_idempotent() -> None:
     observation = observe_first_failure(Operation.PLUGIN_ENABLE)
+    document = json.loads(observation.stderr)
 
-    assert observation.failure is not None
-    assert observation.failure.command.agent is Agent.CLAUDE
-    assert observation.failure.command.operation is Operation.PLUGIN_ENABLE
-    assert observation.failure.command.plugin is not None
-    assert observation.failure.result.exit_code != 0
-    assert observation.attempted[-1] == observation.failure.command
+    assert observation.exit_code != 0
+    assert document["agent"] == Agent.CLAUDE.value
+    assert document["operation"] == Operation.PLUGIN_ENABLE.value
+    assert document["plugin"] is not None
     assert (
-        observation.attempted == observation.plan.commands[: len(observation.attempted)]
+        observation.attempted
+        == observation.command_sequence[: len(observation.attempted)]
     )
 
 
 def test_a_failed_inspection_stops_before_any_planned_operation() -> None:
     observation = observe_inspection_failure()
+    document = json.loads(observation.stderr)
 
-    assert observation.failure is not None
-    assert observation.failure.command.operation is Operation.MARKETPLACE_INSPECT
-    assert observation.attempted[-1] == observation.failure.command
+    assert observation.exit_code != 0
+    assert document["operation"] == Operation.MARKETPLACE_INSPECT.value
+    assert document["agent"] == observation.attempted[-1].agent.value
+    assert (
+        observation.attempted
+        == observation.command_sequence[: len(observation.attempted)]
+    )
     assert not any(
         command in observation.attempted for command in observation.plan.commands
     )
@@ -146,30 +152,31 @@ def test_invalid_installed_selection_never_reaches_a_state_changing_operation() 
 
 def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
     observation = observe_first_failure(Operation.LIFECYCLE_PLACE)
+    document = json.loads(observation.stderr)
 
-    assert observation.failure is not None
-    assert observation.failure.command.agent is Agent.CODEX
-    assert observation.failure.command.operation is Operation.LIFECYCLE_PLACE
-    assert observation.failure.command.plugin is not None
-    assert observation.failure.result.exit_code != 0
-    assert observation.failure.completed
-    assert all(result.exit_code == 0 for result in observation.failure.completed)
-    assert observation.attempted[-1] == observation.failure.command
+    assert observation.exit_code != 0
+    assert document["agent"] == Agent.CODEX.value
+    assert document["operation"] == Operation.LIFECYCLE_PLACE.value
+    assert document["plugin"] is not None
+    assert document["completed_operations"] == len(observation.attempted) - 1
     assert (
-        observation.attempted == observation.plan.commands[: len(observation.attempted)]
+        observation.attempted
+        == observation.command_sequence[: len(observation.attempted)]
     )
 
 
 def test_first_agent_cli_failure_reports_the_operation_and_stops() -> None:
     observation = observe_first_failure(Operation.PLUGIN_INSTALL)
+    document = json.loads(observation.stderr)
 
-    assert observation.failure is not None
-    assert observation.failure.command.agent is Agent.CLAUDE
-    assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
-    assert observation.failure.command.plugin is not None
-    assert observation.failure.result.exit_code != 0
-    assert observation.failure.result.stderr == Operation.PLUGIN_INSTALL.value
-    assert observation.failure.completed
-    assert all(result.exit_code == 0 for result in observation.failure.completed)
-    assert observation.attempted[-1] == observation.failure.command
-    assert len(observation.attempted) < len(observation.plan.commands)
+    assert observation.exit_code != 0
+    assert document["agent"] == Agent.CLAUDE.value
+    assert document["operation"] == Operation.PLUGIN_INSTALL.value
+    assert document["plugin"] is not None
+    assert document["stderr"] == Operation.PLUGIN_INSTALL.value
+    assert document["completed_operations"] == len(observation.attempted) - 1
+    assert (
+        observation.attempted
+        == observation.command_sequence[: len(observation.attempted)]
+    )
+    assert len(observation.attempted) < len(observation.command_sequence)

@@ -51,6 +51,7 @@ from outcomeeng.distribution.installation import (
     HOME_ENV,
     InstallationCommand,
     InstallationFailure,
+    InstallationMode,
     InstallationPlan,
     InstallationReport,
     MARKETPLACE_NAME,
@@ -155,11 +156,14 @@ class PersistentCliObservation:
 
 @dataclass(frozen=True)
 class FailureObservation:
-    """The attempted prefix and the first failure, absent when none was raised."""
+    """Public CLI streams and command prefix from one terminal failure."""
 
     plan: InstallationPlan
+    command_sequence: tuple[InstallationCommand, ...]
     attempted: tuple[InstallationCommand, ...]
-    failure: InstallationFailure | None
+    exit_code: int
+    stdout: str
+    stderr: str
 
 
 @dataclass(frozen=True)
@@ -884,24 +888,32 @@ def observe_inspection_failure() -> FailureObservation:
         _mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
+        preflight = build_persistent_preflight(mirror, environment)
+        plan = _persistent_plan_with_catalog_inventories(
+            preflight,
+            CANONICAL_MARKETPLACE_SOURCE,
+        )
         runner = RecordingRunner(failed_operation=Operation.MARKETPLACE_INSPECT)
-        failure: InstallationFailure | None = None
-        try:
-            execute_persistent_installation(mirror, environment, runner)
-        except InstallationFailure as raised:
-            failure = raised
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(
+                ("--checkout", str(mirror), "--json"),
+                base_environment=environment,
+                runner=runner,
+            )
         return FailureObservation(
-            plan=_persistent_plan_with_catalog_inventories(
-                build_persistent_preflight(mirror, environment),
-                CANONICAL_MARKETPLACE_SOURCE,
-            ),
+            plan=plan,
+            command_sequence=(*preflight.inspections, *plan.commands),
             attempted=tuple(runner.calls),
-            failure=failure,
+            exit_code=exit_code,
+            stdout=stdout.getvalue(),
+            stderr=stderr.getvalue(),
         )
 
 
 def observe_first_failure(operation: Operation) -> FailureObservation:
-    """Fail the selected operation in the plan that performs it."""
+    """Fail a selected plan operation through the public CLI surface."""
     with TemporaryDirectory() as temporary_directory:
         plans = _installation_plans(Path(temporary_directory))
         plan = next(
@@ -910,15 +922,31 @@ def observe_first_failure(operation: Operation) -> FailureObservation:
             if any(command.operation is operation for command in candidate.commands)
         )
         runner = RecordingRunner(failed_operation=operation)
-        failure: InstallationFailure | None = None
-        try:
-            execute_installation(plan, runner)
-        except InstallationFailure as raised:
-            failure = raised
+        environment = dict(plan.commands[0].environment)
+        arguments = ["--checkout", str(plan.roots.checkout), "--json"]
+        if plan.mode is InstallationMode.ISOLATED:
+            if plan.roots.state is None:
+                raise RuntimeError("isolated plan must declare its state root")
+            arguments.extend(("--state-root", str(plan.roots.state)))
+            command_sequence = plan.commands
+        else:
+            preflight = build_persistent_preflight(plan.roots.checkout, environment)
+            command_sequence = (*preflight.inspections, *plan.commands)
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(
+                arguments,
+                base_environment=environment,
+                runner=runner,
+            )
         return FailureObservation(
             plan=plan,
+            command_sequence=command_sequence,
             attempted=tuple(runner.calls),
-            failure=failure,
+            exit_code=exit_code,
+            stdout=stdout.getvalue(),
+            stderr=stderr.getvalue(),
         )
 
 
@@ -1653,12 +1681,12 @@ __all__ = [
     "VerificationRecipeObservation",
     "canonical_catalog_plugin_names",
     "committed_catalog_plugin_names",
-    "designated_failure_operations",
     "observe_claude_user_collision",
     "observe_codex_config_independence",
     "observe_designated_failure",
     "observe_first_failure",
     "observe_failed_run_restore",
+    "observe_failure_operation_domains",
     "observe_inspection_failure",
     "observe_invalid_isolated_selection",
     "observe_invalid_persistent_selection",
@@ -1774,20 +1802,26 @@ def _build_run_plan(
     return _persistent_plan_with_catalog_inventories(preflight, codex_source)
 
 
-def designated_failure_operations(
-    *, isolated: bool, source: str = CANONICAL_MARKETPLACE_SOURCE
-) -> tuple[Operation, ...]:
-    """Distinct operations the plan `observe_designated_failure` drives performs.
-
-    Exposes the reachable operation domain for one mode and source so a linked
-    test enumerates what a run can actually fail at, rather than naming
-    operations by hand.
-    """
+def observe_failure_operation_domains() -> tuple[
+    tuple[InstallationMode, str, tuple[Operation, ...]], ...
+]:
+    """Expose reachable operations for every mode and source plan variant."""
+    sources = (NONCANONICAL_MARKETPLACE_SOURCE, CANONICAL_MARKETPLACE_SOURCE)
     with TemporaryDirectory() as temporary_directory:
-        plan = _build_run_plan(
-            Path(temporary_directory), isolated=isolated, source=source
-        )
-    return tuple(dict.fromkeys(command.operation for command in plan.commands))
+        temporary_root = Path(temporary_directory)
+        domains = []
+        for mode in InstallationMode:
+            for index, source in enumerate(sources):
+                plan = _build_run_plan(
+                    temporary_root / f"{mode.value}-{index}",
+                    isolated=mode is InstallationMode.ISOLATED,
+                    source=source,
+                )
+                operations = tuple(
+                    dict.fromkeys(command.operation for command in plan.commands)
+                )
+                domains.append((mode, source, operations))
+    return tuple(domains)
 
 
 def _observe_installation_run(

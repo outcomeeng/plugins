@@ -12,6 +12,8 @@ from outcomeeng.distribution.installation import (
     CATALOG_PLUGINS_FIELD,
     CLAUDE_CATALOG_PATH,
     CODEX_CATALOG_PATH,
+    InstallationMode,
+    Operation,
     SPEC_TREE_PLUGIN,
     catalog_plugin_names,
 )
@@ -101,10 +103,29 @@ def generated_persistent_catalog_selections(
     return (frozenset(), *generated_valid_catalog_subsets(catalog))
 
 
+def generated_failure_classification_cases(
+    operation_domains: Sequence[tuple[InstallationMode, str, Sequence[Operation]]],
+) -> tuple[tuple[InstallationMode, str, Operation], ...]:
+    """Compose each reachable mode-operation pair with a plan source.
+
+    Several source configurations can reach the same operation.  Keep the
+    first source that reaches each mode-operation pair so every finite mapping
+    case appears exactly once.
+    """
+    reached: dict[tuple[InstallationMode, Operation], str] = {}
+    for mode, source, operations in operation_domains:
+        for operation in operations:
+            reached.setdefault((mode, operation), source)
+    return tuple(
+        (mode, source, operation) for (mode, operation), source in reached.items()
+    )
+
+
 __all__ = [
     "catalog_plugin_names_from_document",
     "generated_agent_subsets",
     "generated_catalog_subset",
+    "generated_failure_classification_cases",
     "generated_invalid_catalog_subsets",
     "generated_persistent_catalog_selections",
     "generated_valid_catalog_subsets",
