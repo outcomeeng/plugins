@@ -16,9 +16,19 @@ wire it into the skill checks. Either is verification machinery this changeset d
 carry — a build-step or gate change with its own evidence and its own auditor pass —
 rather than an edit to the skill body.
 
-**Evidence**: raised by `instructions:skill-auditor` across two rounds on
+A fully worked `<dependency_followup_body>` — the section sequence filled with real
+values rather than placeholders — belongs to the same fix. The sequence is already
+spelled three times: once canonically under `<dependency_followup_body>` and once in
+each Step 6 stdin form. A hand-maintained fourth copy widens exactly the drift this
+entry records, so the worked example is emitted by whatever renders the other blocks
+from the ordered section list, never authored beside them.
+
+**Evidence**: raised by `instructions:skill-auditor` across three rounds on
 `work/issue-harness-command-form-and-mapping-domain`; the prose notes it accepted close
-the reader-facing half, and it kept the enforcement gap open as worth-improving.
+the reader-facing half, and it kept the enforcement gap open as worth-improving. The
+worked-example request is that auditor's `f-006` on the third round, which the
+higher-risk external-target confirmation example (`f-007`) was applied for because it
+duplicates nothing.
 
 ## Two Compliance assertions bundle roughly seven rules each
 
@@ -43,7 +53,7 @@ confirmed the rule counts and recorded them as outside its own REJECT vocabulary
 
 ## The node's assertion count carries no recorded disposition
 
-The node carries 16 assertions. `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`
+The node carries 17 assertions. `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`
 treats more than roughly seven as a signal requiring decomposition analysis. The parent's
 `spx/21-spec-tree.enabler/76-sessions.enabler/PLAN.md` records an assertion-count disposition for
 `spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler`,
@@ -62,7 +72,7 @@ the parent `PLAN.md`.
 
 ## Marketplace-resolver extraction awaits a published SPX CLI capability
 
-`src/plugins/spec-tree/skills/issue/scripts/resolve_marketplace.py` runs to 151
+`src/plugins/spec-tree/skills/issue/scripts/resolve_marketplace.py` runs to 144
 lines — resolution of a marketplace entry's registered local source from JSON on
 stdin, covering the Claude Directory-source and Codex local-marketplace-source
 shapes, with distinct errors for malformed JSON and an unresolvable target. Past
