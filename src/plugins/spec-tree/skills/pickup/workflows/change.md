@@ -10,7 +10,7 @@ This workflow replaces `${CLAUDE_SKILL_DIR}/workflows/pickup.md` when `spx/local
 
 <step name="resolve_target">
 
-Classify the argument:
+Classify `$ARGUMENTS`:
 
 - An issue reference — `#N`, `owner/repo#N`, or an issue URL — names an existing Change.
 - A session id `YYYY-MM-DD_HH-MM-SS` (optional `.md`) names a legacy queue file awaiting a Change.

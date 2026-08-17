@@ -134,7 +134,7 @@ Execute workflows 01 through 04 in sequence. Each workflow has its own success c
 2. `${CLAUDE_SKILL_DIR}/workflows/02-reflect.md` — review imperfections, claimed sessions, and starting point
 3. `${CLAUDE_SKILL_DIR}/workflows/03-propose.md` — present persistence proposal to user for approval
 4. `${CLAUDE_SKILL_DIR}/workflows/04-execute.md` — create or update coordination notes, commit, then write or omit each thread's canonical continuation session file
-5. `${CLAUDE_SKILL_DIR}/workflows/05-change.md` — when `spx/local/coordination.md` exists, post the Handoff on each held Change and release it, or close it as Applied, Refined, or Abandoned, in place of 04's session-file and archive steps
+   - Conditional, inside 04: `${CLAUDE_SKILL_DIR}/workflows/05-change.md` — when `spx/local/coordination.md` exists, post the Handoff on each held Change and release it, or close it as Applied, Refined, or Abandoned, in place of 04's session-file and archive steps
 
 </workflows_index>
 

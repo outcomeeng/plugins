@@ -48,7 +48,7 @@ Handoff:
 - Hazards: <what the next holder cannot derive quickly: an unsealed run, a held checkout, a flaky check — each with the read-only command that re-confirms it>
 ```
 
-Optional context lines after the five: the agent session id and the assigned worktree root. Nothing else — no insight, status, or restated plan; those live in the body. Then `gh issue edit <N> --repo <store> --remove-assignee @me`. Re-read `assignees`; the Change is released only when the list is empty.
+Optional context lines after the five: the agent session id and the assigned worktree root. Nothing else — no insight, status, or restated plan; those live in the body. Then `gh issue edit <N> --repo <store> --remove-assignee @me`. Re-read with `gh issue view <N> --repo <store> --json assignees`; the Change is released only when the list is empty.
 
 Secret values and credential payloads never enter a body, comment, or Handoff.
 
