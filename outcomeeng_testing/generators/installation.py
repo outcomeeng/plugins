@@ -15,7 +15,6 @@ from outcomeeng.distribution.installation import (
     InstallationMode,
     Operation,
     SPEC_TREE_PLUGIN,
-    catalog_plugin_names,
 )
 
 
@@ -58,8 +57,10 @@ def generated_agent_subsets(
 ) -> Mapping[Agent, frozenset[str]]:
     """Generate one catalog-bounded subset for every supported agent."""
     catalogs = {
-        Agent.CLAUDE: catalog_plugin_names(checkout / CLAUDE_CATALOG_PATH),
-        Agent.CODEX: catalog_plugin_names(checkout / CODEX_CATALOG_PATH),
+        Agent.CLAUDE: catalog_plugin_names_from_document(
+            checkout / CLAUDE_CATALOG_PATH
+        ),
+        Agent.CODEX: catalog_plugin_names_from_document(checkout / CODEX_CATALOG_PATH),
     }
     return {
         agent: generated_catalog_subset(

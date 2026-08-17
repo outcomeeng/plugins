@@ -22,10 +22,10 @@ from outcomeeng.distribution.installation import (
     ReportField,
     UNPUBLISHED_PLUGIN_FRAGMENT,
     Operation,
-    catalog_plugin_names,
     installed_plugin_names,
 )
 from outcomeeng_testing.generators.installation import (
+    catalog_plugin_names_from_document,
     generated_failure_classification_cases,
 )
 from outcomeeng_testing.harnesses.installation import (
@@ -40,7 +40,7 @@ from outcomeeng_testing.harnesses.installation import (
 
 def test_claude_inventory_maps_only_the_invocation_checkout_project_scope() -> None:
     checkout = repository_root()
-    catalog = catalog_plugin_names(checkout / CLAUDE_CATALOG_PATH)
+    catalog = catalog_plugin_names_from_document(checkout / CLAUDE_CATALOG_PATH)
     entries = []
     for index, plugin in enumerate(catalog):
         entry = {
@@ -68,7 +68,7 @@ def test_claude_inventory_maps_only_the_invocation_checkout_project_scope() -> N
 
 def test_codex_inventory_maps_only_outcomeeng_marketplace_entries() -> None:
     checkout = repository_root()
-    catalog = catalog_plugin_names(checkout / CODEX_CATALOG_PATH)
+    catalog = catalog_plugin_names_from_document(checkout / CODEX_CATALOG_PATH)
     entries = [
         {
             CODEX_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",

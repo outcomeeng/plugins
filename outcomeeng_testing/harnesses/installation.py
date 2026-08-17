@@ -68,7 +68,6 @@ from outcomeeng.distribution.installation import (
     build_persistent_preflight,
     claude_marketplace_settings,
     codex_marketplace_listing_payload,
-    catalog_plugin_names,
     codex_source_action,
     execute_installation,
     execute_persistent_installation,
@@ -310,8 +309,8 @@ def _installed_or_catalog_plugins(
     if installed is not None:
         return {agent: installed.get(agent, frozenset()) for agent in Agent}
     return {
-        Agent.CLAUDE: frozenset(catalog_plugin_names(checkout / CLAUDE_CATALOG_PATH)),
-        Agent.CODEX: frozenset(catalog_plugin_names(checkout / CODEX_CATALOG_PATH)),
+        agent: frozenset(names)
+        for agent, names in _catalogs_from_documents(checkout).items()
     }
 
 
@@ -1942,8 +1941,8 @@ def _base_ref_catalog_names(root: Path, path: Path) -> set[str]:
 
 def committed_catalog_plugin_names() -> frozenset[str]:
     """Plugins this checkout's own committed catalogs declare."""
-    root = repository_root()
-    names: set[str] = set()
-    for path in (CLAUDE_CATALOG_PATH, CODEX_CATALOG_PATH):
-        names.update(catalog_plugin_names(root / path))
-    return frozenset(names)
+    return frozenset(
+        name
+        for names in _catalogs_from_documents(repository_root()).values()
+        for name in names
+    )
