@@ -45,8 +45,8 @@ Closure is BLOCKED until session-owned files are committed.
 <record_state>
 For each anchored node, check `git status` and record:
 
-- **Committed**: session-owned work should appear here after the commit above.
-- **Uncommitted**: only foreign or intentionally untouched work should remain here.
+- **Committed**: session-owned work appears here after the commit above; anything else here means the commit step did not run.
+- **Uncommitted**: only foreign or intentionally untouched work remains here.
 
 </record_state>
 

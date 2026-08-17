@@ -52,7 +52,7 @@ Handoff:
 
 Optional context lines after the five: the agent session id and the assigned worktree root. Nothing else — no insight, status, or restated plan; those live in the body. Then `gh issue edit <N> --repo <store> --remove-assignee @me`. Re-read with `gh issue view <N> --repo <store> --json assignees`; the Change is released only when the list is empty.
 
-Secret values and credential payloads never enter a body, comment, or Handoff.
+The store-write inspection at the top of this workflow applies to the Handoff comment as to every other write.
 
 </post_handoff_or_close>
 
