@@ -3,7 +3,7 @@ name: upstream
 description: >-
   ALWAYS invoke this skill when starting a contribution to a repository the operator does not control, or when a contribution step needs that target and no live UPSTREAM_TARGET marker carries it — it resolves the upstream a fork came from, the head to push from, and the operator's permission on it.
   NEVER read that target from a git remote, an account name, or a successful push.
-allowed-tools: Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*)
+allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*)
 ---
 
 <objective>
@@ -12,9 +12,7 @@ One `<UPSTREAM_TARGET>` marker carrying the resolved base repository, head repos
 
 <workflow>
 
-**Step 1 — Load the standards.** Invoke `/contribution-standards` through the runtime's skill-composition surface. Its `<invariants>` govern every artifact the resolved target later receives.
-
-**Step 2 — Resolve the target.** Run the resolver once per contribution.
+**Step 1 — Resolve the target.** Run the resolver once per contribution.
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py"
@@ -36,7 +34,7 @@ It prints one JSON object:
 }
 ```
 
-**Step 3 — Emit the marker.** Report `base`, `head`, and `permission` verbatim, then emit:
+**Step 2 — Emit the marker.** Report `base`, `head`, and `permission` verbatim, then emit:
 
 ```text
 <UPSTREAM_TARGET base="<base>" head="<head>" permission="<permission>" classification="<classification>" />
@@ -44,13 +42,13 @@ It prints one JSON object:
 
 A later stage reads this marker instead of resolving again. Emit it for every classification, including one that stops the contribution, so a stage that follows knows the answer without repeating the search.
 
-**Step 4 — Act on the classification.**
+**Step 3 — Act on the classification.**
 
 | `classification`        | Meaning                                                         | Action                                                                              |
 | ----------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `upstream-contribution` | A base the operator does not control, and one head to push from | Continue. The contribution proceeds under `/contribution-standards` `<invariants>`. |
-| `head-ambiguous`        | Several forks of the base, across the operator's accounts       | STOP. Report every entry in `fork_matches`; choosing among them is the operator's.  |
-| `fork-absent`           | No fork of the base under any account the operator holds        | STOP. Report `fork_candidates` and the exact `gh repo fork` command.                |
+| `head-ambiguous`        | Several forks of the base, across the operator's accounts       | STOP. Report every entry in `fork.matches`; choosing among them is the operator's.  |
+| `fork-absent`           | No fork of the base under any account the operator holds        | STOP. Report `fork.candidates` and the exact `gh repo fork` command.                |
 | `controlled`            | `ADMIN`, `MAINTAIN`, or `WRITE` on the base                     | STOP. A repository the operator controls belongs to its own workflow.               |
 | `blocked`               | Permission unreadable, or `gh` unavailable or unauthenticated   | STOP and report the resolver's `detail` verbatim.                                   |
 
