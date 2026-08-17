@@ -36,6 +36,20 @@ When layers disagree, the lower layer is in violation.
 
 </layer_precedence>
 
+<product_content>
+
+- ALWAYS: treat as product content every product artifact a spec node governs or must govern, and derive its governing node before reading or modifying it.
+- ALWAYS: contextualize a node before discussing it and before reading or modifying any product content it governs; a compaction empties the set of contextualized nodes.
+- NEVER: read or modify product content that has no governing node — record the coverage gap.
+
+Product content is every artifact of the product a spec node governs or must govern: source, tests, evals, generated output, specs, decisions, coordination notes, and configuration a spec declares. Implementation — the code layer that complies with evidence — is one kind of product content; the term keeps its narrower meaning in `<node_states>` and the placement table. Governance is derived, never assumed: a path under `spx/<node>/` is governed by that node; any other path is governed by the node whose `spx/**/tests/` file names it and whose spec links that test, or whose spec or decision names that path in an `[audit]` assertion; several matching nodes resolve to their lowest common ancestor. That lookup is a search under the live foundation marker and opens no file body. Product content with no governing node is a coverage gap: it is not read or modified, and the gap is recorded.
+
+Not product content: operational configuration — the `spx/local/` overlays and the exclusion mechanism, which `<artifact_placement>` classifies as configuration and which the skill that declares them reads without the foundation marker and with no governing node — and the agent harness's own instruction and settings files it is told to read, tool and command output, the session store, and scratch space.
+
+Work that touches no product content — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — is an operational continuation and triggers neither `/understand` nor `/contextualize`.
+
+</product_content>
+
 <future_product_truth>
 
 - ALWAYS: higher-level truth remains authoritative while coherent, even when lower layers have not caught up.
@@ -493,7 +507,7 @@ A blocker exists only when the immediate next action needs operator input or an 
    - `${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.pdr.md`
    - `${CLAUDE_SKILL_DIR}/templates/nodes/enabler-name.md`
    - `${CLAUDE_SKILL_DIR}/templates/nodes/outcome-name.md`
-6. Read the complete root `CLAUDE.md` once when present. It routes skill invocation and carries product commands outside the managed router.
+6. Read the complete root `CLAUDE.md` from disk only when the live conversation does not already carry it complete; a harness that injects the whole file satisfies this step, and a truncated or absent injection requires the read. It routes skill invocation and carries product commands outside the managed router.
 7. Emit the marker:
 
 ```text
@@ -502,7 +516,7 @@ Loaded inline: truth-hierarchy, artifact-placement, node-model, assertion-model,
 Operational references available: excluded-nodes, product-domain-shapes
 Local lifecycle route: changes route through /merge; spx/local/merging.md refines the route when present
 Default-branch completion boundary: delivered value reaches the default branch on origin through /merge; verified local work remains unfinished unless explicitly limited or stopped at an explicit gate with no independent action remaining
-Routing guide: loaded from CLAUDE.md | absent
+Routing guide: CLAUDE.md carried complete by the harness | read from disk | absent
 Templates available: product, adr, pdr, enabler, outcome
 Examples available: adr, enabler, outcome, pdr
 </SPEC_TREE_FOUNDATION>

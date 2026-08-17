@@ -13,7 +13,7 @@ Search the conversation for the most recent `<CLAIMED_SESSIONS ids="a,b,c">` mar
 
 **Step 2 — Fallback when no CLAIMED_SESSIONS marker exists.**
 
-A malformed or otherwise absent marker can drop `<CLAIMED_SESSIONS>`. When compaction occurred, first invoke `/understand` and `/contextualize` for every spec node still in scope; only then recover in this order:
+A malformed or otherwise absent marker can drop `<CLAIMED_SESSIONS>`. When compaction occurred, the recovery below reads conversation markers and `spx session` output and needs no reload; invoke `/understand`, then `/contextualize` on the governing node, only immediately before the recovery reads or edits coordination notes or other governed product content. Recover in this order:
 
 - **Step 2a — checkpoint claimed-sessions attribute (preferred).** If the most recent `<PICKUP_CHECKPOINT id="..." claimed="a,b,c">` exists, parse its `claimed` attribute. That attribute carries the full claimed-session set as of the latest post-context checkpoint — use it as the authoritative resolved claimed-session set. One surviving checkpoint can recover a multi-claimed-session set without needing every earlier claim marker.
 - **Step 2b — additive rebuild (no checkpoint claimed attribute available).** If no `<PICKUP_CHECKPOINT>` carries a `claimed` attribute, collect every `<PICKUP_CLAIM id="...">` and `<PICKUP_CHECKPOINT id="...">` emitted since the last closure marker. Deduplicate by id.
@@ -35,7 +35,7 @@ Did this conversation run `spx session handoff` earlier? Collect every handoff i
 
 **Step 5 — Emit the RESOLVED_CLAIMED_SESSIONS marker.**
 
-After steps 1-4 produce the resolved claimed-session set and artifact candidates, emit a marker into the conversation. The `artifact_ids` attribute carries candidates for workflow 03 to partition; no consumer may archive that flat set directly. If another compaction drops the marker, invoke `/understand` and `/contextualize` for every spec node still in scope, then return to workflows 02-03 to reconstruct and approve the marker and partitions before workflow 04 resumes:
+After steps 1-4 produce the resolved claimed-session set and artifact candidates, emit a marker into the conversation. The `artifact_ids` attribute carries candidates for workflow 03 to partition; no consumer may archive that flat set directly. If another compaction drops the marker, return to workflows 02-03, invoking `/understand`, then `/contextualize` on the governing node, only immediately before the recovery reads or edits coordination notes or other governed product content, to reconstruct and approve the marker and partitions before workflow 04 resumes:
 
 ```text
 <RESOLVED_CLAIMED_SESSIONS ids="id-1,id-2,..." artifact_ids="id-1,id-2,...">

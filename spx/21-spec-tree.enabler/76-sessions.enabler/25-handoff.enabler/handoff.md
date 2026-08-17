@@ -11,3 +11,4 @@ Closure, continuation disposition, document shape, and the operator closeout are
 ### Compliance
 
 - NEVER: `/handoff` removes the runtime worktree occupancy claim; handoff creates fresh session documents when a continuation reader is needed, archives superseded same-conversation artifacts after the fresh document is verified, and steps off the Git branch when required, while the live worktree claim remains present until a later claim replaces it or liveness marks it free ([audit])
+- ALWAYS: `/handoff` invokes `/understand`, then `/contextualize` on the governing node, only immediately before it reads or edits coordination notes or other governed product content; claimed-session and marker recovery from conversation markers and `spx session` output triggers neither, per `spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.pdr.md` ([audit])

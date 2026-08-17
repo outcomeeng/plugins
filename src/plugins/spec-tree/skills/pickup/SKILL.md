@@ -142,7 +142,7 @@ Use the `id` attribute on `<PICKUP_CLAIM>` as the canonical identifier for the c
 
 Once claimed, follow `${CLAUDE_SKILL_DIR}/workflows/pickup.md` to process the session.
 
-The workflow invokes `/understand` immediately after claim markers and before it processes session details. Node-local `PLAN.md` and `ISSUES.md` content is read by `/contextualize`, not by pre-context pickup steps.
+The workflow invokes `/understand` immediately before its first product-content access — the coordination-note path check under `spx/` when the session names a node, otherwise the `/contextualize` invocation for the node the operator names — and at no earlier step; the claim, `spx session show`, checkout, base sync, and claim reconciliation touch no product content and need no reload. Node-local `PLAN.md` and `ISSUES.md` content is read by `/contextualize`, not by pre-context pickup steps.
 
 </claim>
 
@@ -217,7 +217,7 @@ A successful pickup:
 - [ ] Running CLAIMED_SESSIONS marker emitted as `<CLAIMED_SESSIONS ids="...">` including the newly claimed session id
 - [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session
 - [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
-- [ ] `/understand` invoked immediately after claim markers and before session details are processed
+- [ ] `/understand` invoked immediately before the first product-content access — the coordination-note path check when the session names a node, otherwise the `/contextualize` invocation for the node the operator names — and not before the claim, session presentation, checkout, base sync, or claim reconciliation
 - [ ] Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work
 - [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind
 - [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created

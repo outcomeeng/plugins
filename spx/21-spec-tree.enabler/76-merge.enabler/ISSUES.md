@@ -108,3 +108,35 @@ Revisit condition: this resolves with the prompt-only simulation above. Once
 producer, declare the producers the materialized prompt actually reads — then
 the generator derives their trigger paths, and a mutation to those skills
 genuinely changes a case outcome.
+
+## The direct-push lifecycle carries no worked example
+
+`src/plugins/spec-tree/skills/merge/SKILL.md` `<direct_push_lifecycle>` governs a push straight to the default branch on origin through named gates and predicates with no concrete trace — a selected transport, an overlay configuration, the push command, the resulting full SHA — that an in-progress run can be compared against before the push completes.
+
+**Resolution shape**: add one worked before/after example to `<direct_push_lifecycle>`, gated by `instructions:skill-auditor`. The example is a content addition to a section the reload-timing changeset does not touch, so it ships as its own change.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/merge/SKILL.md` on the post-compaction reload-timing change (finding `abstract_examples`).
+
+## The GitHub-PR lifecycle skill carries no worked mode-to-step example
+
+`src/plugins/spec-tree/skills/manage-github-pr/SKILL.md` routes four modes (Open PR, Instructed, Existing changeset, Empty) through a seven-step lifecycle and states how the mode is detected, with no `<examples>` block showing one concrete state signal per mode and the step sequence it produces.
+
+**Resolution shape**: add one short example per mode naming the observed repository state and the resulting step sequence, gated by `instructions:skill-auditor`. The examples are a content addition to the skill's routing surface, separate from the reload-timing rule.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/manage-github-pr/SKILL.md` on the post-compaction reload-timing change (finding `no_examples_section`).
+
+## The PR-management skill restates its post-watch re-entry rule twice
+
+`src/plugins/spec-tree/skills/manage-pr/SKILL.md` carries the sentence "and immediately return to Step 1 in the same turn. Do not merge or emit a final token from pre-watch state. The post-watch pass must re-read PR state, check rollup, PR-level comments, formal reviews, and review-thread comments before deciding the next action." verbatim at two sites (the wait step and the merge-readiness evaluation).
+
+**Resolution shape**: state the rule once at the merge-readiness evaluation and cross-reference it from the wait step, gated by `instructions:skill-auditor`.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` on the post-compaction reload-timing change (finding `duplicate_content`).
+
+## The merge-readiness decision table carries no worked trace
+
+`src/plugins/spec-tree/skills/manage-pr/SKILL.md` `<merge_readiness_decision_table>` enumerates eleven rules over named predicate fields with no example tracing one concrete `gh pr view --json` field set through a matched rule to its emitted guard verdict.
+
+**Resolution shape**: add one worked trace — sample JSON fragment, matched rule number, emitted `guard_verdict` — gated by `instructions:skill-auditor`.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` on the post-compaction reload-timing change (finding `abstract_examples`).

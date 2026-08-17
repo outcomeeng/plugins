@@ -10,6 +10,25 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.91.0
+
+### Added
+
+- **Product content is a defined term.** The `/understand` foundation defines product content as every product artifact a spec node governs or must govern — source, tests, evals, generated output, specs, decisions, coordination notes, spec-declared configuration, implementation being its code layer — with the governing node found by search under the live foundation marker: a path under a node directory belongs to that node; any other path to the node whose test file names it and whose spec links that test, or whose spec or decision names that path in an `[audit]` assertion; several matching nodes resolve to their lowest common ancestor. Product content with no governing spec is not read or modified; the gap is recorded. Operational configuration — the `spx/local/` overlays and the exclusion mechanism, read by the skill that declares them without the marker — and the agent harness's own instruction and settings files, tool output, the session store, and scratch space are not product content.
+
+### Changed
+
+- **Post-compaction recovery reloads at the first product-content access.** After compaction, `/understand` precedes the next product-content access and `/contextualize` on the governing spec node precedes any product content that node governs being read or modified, and any discussion of that node; a compaction empties the set of contextualized nodes. An operational continuation — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — touches no product content and triggers neither reload.
+- **`/manage-pr`, `/merge`, and `/manage-github-pr` reload at the first product-content access in the pass and at no earlier step.** PR inspection, check wait, merge, deploy, and release proceed on live PR and repository state alone; each skill carries the matching success criterion and failure mode.
+- **`/handoff` reloads only immediately before it reads or edits coordination notes or other governed product content.** Claimed-session and marker recovery from conversation markers and `spx session` output needs no reload.
+- **`/pickup` reloads at its first product-content access.** The claim, session presentation, checkout, base sync, and claim reconciliation touch no product content; `/understand` precedes the coordination-note path check under `spx/`, or `/contextualize` when the session names no node.
+- **`/understand` reads the root instruction file from disk only when the live conversation does not already carry it complete.** A harness that injects the whole file satisfies the step; a truncated or absent injection requires the read.
+- **The managed router's `/contextualize` rule and post-compaction STOP TRIGGER state the per-node product-content rule** (template 0.36.0).
+
+### Requires
+
+- Re-render the root instruction files with `/update-instruction-block` so the router block carries the product-content definition and the new STOP TRIGGER.
+
 ## 0.90.0
 
 ### Changed

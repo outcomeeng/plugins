@@ -2,17 +2,9 @@
 
 <process>
 
-**Step 2: Load Spec Tree foundation**
+**Step 2: Foundation timing**
 
-This step comes immediately after the session is claimed and the canonical claim markers are emitted. It comes before reading or presenting session details, checking out a work branch, inspecting anchored nodes, or touching node-local coordination notes.
-
-Invoke `/understand` now:
-
-```text
-Skill tool -> { "skill": "spec-tree:understand" }
-```
-
-If `<SPEC_TREE_FOUNDATION>` is already present, the skill may skip its body. Do not process the session's `<nodes>`, `<persisted>`, or `<coordination>` sections until this foundation step has completed.
+The claim, the session document, the checkout, base sync, and claim reconciliation are `spx session`, Git, and `gh` operations that touch no product content, so no foundation reload precedes them. `/understand` is invoked immediately before the first product-content access in this workflow — the coordination-note path check under `spx/` in Step 5 when the session names a node, otherwise the `/contextualize` invocation in Step 8 for the node the operator names. Do not read node-local `PLAN.md` or `ISSUES.md` content before `/contextualize`.
 
 **Step 2b: Hold the pickup proposal contract**
 
@@ -66,7 +58,13 @@ The script reads only — it reaches `spx session show`, `spx spec status`, `gh`
 - `Discrepancy` — current state differs (a base that advanced over the node, a commit absent from history, a tree now dirty, a renamed path). Surface these prominently before any work proceeds.
 - `Unverifiable` — the check could not run (a tool absent, a claim the script cannot parse). Present it as such; never treat it as `Confirmed`.
 
-Present the per-claim verdict report. Then, for each node in the `<nodes>` section, check for coordination-note paths only:
+Present the per-claim verdict report. When the `<nodes>` section names at least one node and `<SPEC_TREE_FOUNDATION>` is not live, invoke `/understand` once now — the path check below is the workflow's first product-content access:
+
+```text
+Skill tool -> { "skill": "spec-tree:understand" }
+```
+
+Then, for each node in the `<nodes>` section, check for coordination-note paths only:
 
 ```bash
 Glob: "{full-spx-node-path}/PLAN.md"
@@ -105,7 +103,13 @@ Show the `<coordination>` section — cross-cutting context that does not belong
 
 NEVER offer the user a choice here. NEVER propose fixes, code, or any implementation work at this point.
 
-The ONLY valid next action after presenting the session is to invoke `/contextualize` on the target node. The spec-tree methodology forbids all work without loaded context.
+The ONLY valid next action after presenting the session is to invoke `/contextualize` on the target node. When `<SPEC_TREE_FOUNDATION>` is not yet live, invoke `/understand` first:
+
+```text
+Skill tool -> { "skill": "spec-tree:understand" }
+```
+
+The spec-tree methodology forbids all work without loaded context.
 
 If the session references a single node, invoke `/contextualize` on it immediately. If it references multiple nodes, do NOT ask on multiplicity alone — select the contextualization target by trying these rules in priority order and taking the first that resolves exactly one node, falling through to the next rule when a rule matches zero nodes or more than one:
 
@@ -219,7 +223,7 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 
 <success_criteria>
 
-- [ ] `/understand` invoked immediately after claim markers and before session details are processed
+- [ ] `/understand` invoked immediately before the first product-content access — the coordination-note path check when the session names a node, otherwise the `/contextualize` invocation for the node the operator names — and not before the claim, session presentation, checkout, base sync, or claim reconciliation
 - [ ] Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work (Step 5b)
 - [ ] When the session `git_ref` names a feature branch, that branch is fetched and checked out before node context is loaded (Step 3)
 - [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created (Step 3)

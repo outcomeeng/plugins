@@ -17,7 +17,7 @@ Lean on the imperfection ledger defined in `/understand` (loaded as a foundation
 <process>
 
 <perspective_imperfections>
-Review remaining imperfections from this session — items observed but not yet resolved. These come from the running imperfection ledger maintained by live `/understand` `<imperfection_protocol>`. When context compaction pruned the ledger, STOP and invoke `/understand` followed by `/contextualize` for every spec node still in scope before reconstructing it from the reloaded context and recent turns. Scan for user corrections, methodology gaps, broken references, stale PLAN.md or ISSUES.md, untestable assertions, missing test coverage, and library or API gotchas.
+Review remaining imperfections from this session — items observed but not yet resolved. These come from the running imperfection ledger maintained by live `/understand` `<imperfection_protocol>`. When context compaction pruned the ledger, STOP and reconstruct it from recent turns and any coordination notes the reflection reads, invoking `/understand`, then `/contextualize` on the governing node, immediately before it reads or edits those notes or other governed product content. Scan for user corrections, methodology gaps, broken references, stale PLAN.md or ISSUES.md, untestable assertions, missing test coverage, and library or API gotchas.
 
 Classify each imperfection by nature to determine the persistence target. The destination is governed by the imperfection's nature, not its origin:
 
