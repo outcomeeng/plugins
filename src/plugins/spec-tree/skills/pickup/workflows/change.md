@@ -31,7 +31,7 @@ Classify `$ARGUMENTS`:
 
 1. Read the complete file from `spx session show <id>` — frontmatter and body, none of the injected file bodies — and apply the store-write inspection above; a detected secret leaves the file in `doing` with no Change created until the operator redacts it (then re-read through `spx session show <id>` and inspect again) or abandons the migration.
 2. `gh issue create --repo <store> --title '<goal frontmatter value>' --body-file - --assignee @me` — the title one single-quoted argument and the body on stdin, both per the rule above: one line `Received input: handoff document <id> from the <Product> queue (.spx/sessions), reproduced verbatim.`, a blank line, then the file inside a `text` code fence.
-3. `gh project item-add <number> --owner <owner> --url <issue-url>`, then `gh project item-edit` setting `Product` to the overlay's Product and `Maturity` to `Proposed`, using the field and option ids from `gh project field-list <number> --owner <owner> --format json`.
+3. `gh project item-add <number> --owner <owner> --url <issue-url>`, then two `gh project item-edit` calls — one field per invocation, as the CLI requires for a non-draft issue — the first setting `Product` to the overlay's Product, the second setting `Maturity` to `Proposed`, each with the field and option ids from `gh project field-list <number> --owner <owner> --format json`.
 4. Only after steps 2 and 3 have each returned success — the issue URL exists and `gh project item-list` shows the item with `Product` and `Maturity` set — archive the legacy file: `spx session archive <id>`. The Change now carries the input; the file has no reader. When any of steps 1–3 fails, report the failed command and its output, leave the file in `doing`, and stop; the archive never runs on a partial migration.
 
 Emit the claim markers, using the issue URL as the identity:
@@ -90,6 +90,7 @@ Check off each Activity in the issue body as it completes (`gh issue edit <N> --
 
 <success_criteria>
 
+- The post-context decision is captured through `{{! tool('ask_user') !}}` or an explicit `--auto-continue` override before `<PICKUP_CHECKPOINT change=...>` is emitted, and no Activity executes before that checkpoint.
 - Every `gh issue create`, `gh issue edit --body-file`, and `gh issue comment` this workflow performs — migrated file, drafted Frame, Activity check-off, Handoff — is inspected for secret values and credential payloads before it lands, and a hit writes nothing.
 - The target resolves to exactly one Change; a legacy file becomes a Change with its complete document as received input only after it was inspected for secret values and none were found, and is archived only after the issue and its project item exist; a detected secret halts migration with the file left in `doing`.
 - Claim state is derived from GitHub facts: exactly one assignee after claiming; a closed or otherwise-assigned Change stops the workflow as `owned_elsewhere`.

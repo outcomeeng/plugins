@@ -251,11 +251,11 @@ Each bullet is tagged `(both)` when it holds under and without `spx/local/coordi
 - [ ] (session file only) Session evidence reviewed after `/contextualize`: claim verdicts, persisted artifacts, loaded coordination notes, overlapping `doing` sessions, branch state, PR state, and expected verification
 - [ ] (session file only) Session classified as `actionable_here`, `owned_elsewhere`, `stale_or_superseded`, `blocked_on_external_dependency`, or `needs_operator_direction`
 - [ ] (both) When classification is `owned_elsewhere`, the owning session, branch, worktree, PR, or commit is reported and pickup stops without archiving, releasing, handing off, or otherwise mutating the claimed session
-- [ ] (session file only) When classification is not `owned_elsewhere`, a no-surprises proposal is presented before any operator decision: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation
+- [ ] (session file only) When classification is not `owned_elsewhere`, a no-surprises proposal with the same fields as the overlay's proposal above, minus the governing-truth field the Change supplies, is presented before any operator decision
 - [ ] (both) Any later unrepresented skill, evidence surface, external dependency, ownership conflict, or verification class stops at a safe checkpoint before continuation
 - [ ] (session file only) When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 3 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
 - [ ] (session file only) When classification is not `owned_elsewhere`, canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
-- [ ] (session file only) When classification is not `owned_elsewhere`, post-context decision captured via `request_user_input` response, or explicit `--auto-continue` override acknowledged
+- [ ] (both) When classification is not `owned_elsewhere`, post-context decision captured via `request_user_input` response, or explicit `--auto-continue` override acknowledged
 - [ ] (both) No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] (session file only) Failures listed in coordination are verified against current state before triaging
 - [ ] (session file only) When classification is not `owned_elsewhere`, Claude has the session `next_step`, current claim verdicts, loaded node context, and coordination-note paths needed to choose the next skill from current methodology
