@@ -8,23 +8,16 @@ fields are resolved, `source` first; no other Codex field carries the path, and
 `sourceType` appears only inside `marketplaceSource`.
 
 Tested with:
-- Claude marketplace JSON using a Directory source -> prints path.
-- Claude marketplace JSON using another source -> names none as available.
-- Codex marketplace JSON using a local marketplaceSource -> prints path.
-- Codex marketplace JSON carrying only top-level root -> prints root.
-- Codex marketplace JSON carrying source and root -> prefers source.
-- Codex marketplace JSON carrying an empty source and root -> prints root.
-- Malformed JSON -> returns a clear invalid-JSON error.
-- Missing local marketplace -> returns a clear target-resolution error.
-- No local marketplace registered at all -> names none as available.
-- Valid JSON in a shape that resolves no path -> names none as available:
-  a scalar payload, an absent or non-list marketplaces field, a non-mapping
-  entry in either payload shape, a non-string entry name, a Claude entry
-  without a source, a Directory entry without a path, a Codex entry without
-  a marketplaceSource, a local Codex entry without source or root, and a
-  non-mapping marketplaceSource.
+- The complete per-runtime field domain, over the registered source, the
+  materialized root, and the source type each present or absent -> resolves
+  the path the rule above names, or names none as available.
+- Every one of those cases repeated carrying the other runtime's fields as
+  decoys -> the resolved path is unchanged, so a resolver reading a field
+  outside its own runtime's set fails the case.
 - Two entries sharing the name -> resolves the first with a path.
 - An omitted --name -> resolves the default marketplace.
+- Generated JSON naming no matching marketplace -> target-resolution error.
+- Generated text that is not a JSON document -> invalid-JSON error.
 - No temporary files are created.
 """
 

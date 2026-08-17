@@ -159,6 +159,16 @@ Create exactly one fresh `todo` follow-up for every authorized invocation. Read 
 - the resolved `git_ref` and the follow-up's `goal`;
 - two options — file the follow-up into that repository, or stop for inspection.
 
+A rendering of those four values for an `spx` CLI target:
+
+```text
+Target:  /Users/example/Code/outcomeeng/spx/spx
+Origin:  github.com/outcomeeng/spx
+Ref:     main
+Goal:    A session handoff that records the work branch as its git_ref
+Options: file the follow-up into that repository / stop for inspection
+```
+
 The explicit `/issue` invocation authorizes one fresh same-repository queue write, so `same_repository=true` does not add a second confirmation. Every `same_repository=false` target requires this confirmation, including a separate clone with the same normalized origin identity and a checkout path named directly in `$ARGUMENTS`. STOP on anything but explicit approval, leaving both repositories unchanged.
 
 Once a `same_repository=false` target is approved, run `spx -C <queue-host> session list --json` before the first attempt. Record its `todo` and `doing` ids as `<baseline-ids>`, and derive `<overlap-ids>` from the same listing per `<overlap_derivation>`. Both values are defined on every path by the time Step 6 attempts the write.
