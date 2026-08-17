@@ -192,7 +192,7 @@ Authenticate gh (project scope) or fix the overlay; no Change was claimed or cre
 
 **Change closed or held elsewhere**: `owned_elsewhere` — report the terminal state or the current assignee and stop without mutating the Change.
 
-**Migration interrupted**: when `gh issue create`, `gh project item-add`, or `gh project item-edit` fails after `spx session pickup <id>`, report the failed command and its output; the legacy file stays in `doing` unarchived and no further Change write is attempted.
+**Migration interrupted**: when `gh issue create` or `gh project item-add` fails after `spx session pickup <id>`, report the failed command and its output; the legacy file stays in `doing` unarchived and no further Change write is attempted. A lone `gh project item-edit` failure gets one re-read of the item and one retry of the missing field; a second failure is reported the same way, with the created issue named as the Change to resume from.
 
 **Secret detected in legacy file**: report the file id and the kind of content found (never the value); the file stays in `doing` and no Change is created until the operator redacts it — after which the file is re-read and re-inspected — or abandons the migration.
 
