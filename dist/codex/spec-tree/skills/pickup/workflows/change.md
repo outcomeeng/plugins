@@ -81,9 +81,9 @@ Extend `<CLAIMED_CHANGES>` on every claim in the conversation, never replace it.
 
 <step name="foundation_and_currency">
 
-Invoke `/understand`. Read the Change body sections that exist (`## Output`, `## Nodes`, `## Assertions`, `## Decisions`, `## Repository`, `## Activities`, `## Refined from`) and the newest comment beginning `Handoff:` (Branch or PR, Completed Activities, Next Activity, Blockers, Hazards). Read blockers from `gh api repos/<store>/issues/<N>/dependencies/blocked_by` — the graph refinement writes at Framed; a Handoff's Blockers line is a mirror of it, never the source.
+Invoke `/understand`. Read only the newest comment beginning `Handoff:` and only its `Branch or PR` line — the minimal read that names where the work lives. When it names a branch or PR, fetch and switch to that branch in the assigned worktree as the session workflow's Step 3 prescribes, confirming the worktree's running claim through `spx worktree status` first. Then invoke `/sync-base`, before any other Change detail is read or presented — a Handoff records what was true when it was posted, and reading it against a stale checkout is the failure the sync prevents.
 
-When the Handoff names a branch or PR, fetch and switch to that branch in the assigned worktree as the session workflow's Step 3 prescribes, confirming the worktree's running claim through `spx worktree status` first. Then invoke `/sync-base`.
+Only after `/sync-base` reports `already_current` or `rebased`, read the rest: the Change body sections that exist (`## Output`, `## Nodes`, `## Assertions`, `## Decisions`, `## Repository`, `## Activities`, `## Refined from`), the Handoff's remaining lines (Completed Activities, Next Activity, Blockers, Hazards), and the blockers from `gh api repos/<store>/issues/<N>/dependencies/blocked_by` — the graph refinement writes at Framed; a Handoff's Blockers line is a mirror of it, never the source.
 
 </step>
 
