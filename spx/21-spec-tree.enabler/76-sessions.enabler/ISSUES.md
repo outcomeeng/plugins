@@ -46,7 +46,7 @@ The trigger judgment itself is separately asserted in `spx/21-spec-tree.enabler/
 
 **Evidence.** Surfaced by the `skill-auditor` review of the handoff skill on the post-compaction reload-timing change (findings `unclear_conditional_trigger`, `phrasing_drift`, `objective_bloat`, `no_failure_modes`).
 
-## 5. The `gh` untrusted-text rule is stated twice
+## 6. The `gh` untrusted-text rule is stated twice
 
 `src/plugins/spec-tree/skills/pickup/workflows/change.md` and `src/plugins/spec-tree/skills/handoff/workflows/05-change.md` each carry the same paragraph on passing untrusted text to `gh` — bodies and comments on stdin as `--body-file -`, every other interpolated argument single-quoted with `'"'"'` for apostrophes, never a double-quoted argument, scratch file, or redirect built from such text. Two authored copies drift; the title-quoting defect the local review found had to be repaired in both.
 
@@ -56,7 +56,7 @@ The same rule reaches `src/plugins/spec-tree/skills/open-pr/SKILL.md`, whose `gh
 
 **Evidence.** The `skill-auditor` verdict on the pickup bundle at `41b304b691460afca90c7b92559123fdc3e6a3a1` names the duplication (`reference_skill_extraction_candidate`).
 
-## 6. The Change-coordination mechanism has no decision record
+## 7. The Change-coordination mechanism has no decision record
 
 The overlay contract declared in `spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md`, `25-handoff.enabler/handoff.md`, and `28-pickup.enabler/pickup.md` — claim by assignee plus earliest `Claim:` comment, Maturity gating, the five-line Handoff comment, the authorized close comments, the secret inspection before every store write — is decided in the assertions and the two skill workflows, with no ADR or PDR under this node the way `13-handoff-persistence.adr.md` and `28-pickup.enabler/20-claim-verification.adr.md` decide their narrower mechanisms. The operator directed the GitHub realization to ship as a prototype without a PDR, following methodology 4.0.0 coordination (`versions/next/11-coordination.md` of `outcomeeng/methodology`) and its GitHub realization note directly.
 
@@ -64,7 +64,7 @@ The overlay contract declared in `spx/21-spec-tree.enabler/76-sessions.enabler/s
 
 **Evidence.** The local review of `work/session-pointer-truth-derivation` at `488bd2e6c9c43d83d13c50b63029b903e2e03880` recorded the missing decision as a DEBT finding; the operator's prototype direction is the recorded reason it is tracked here rather than fixed in that changeset.
 
-## 7. The Change store is bound by workflow discipline, not by the tool grant
+## 8. The Change store is bound by workflow discipline, not by the tool grant
 
 Every `gh` grant the Change workflows carry — `gh issue create:*`, `gh issue edit:*`, `gh project item-add:*`, `gh api repos/*/issues/*/dependencies/blocked_by:*`, and the rest — admits any repository the authenticated account reaches; a Bash allow-list pattern cannot name a per-consumer store, and the store comes from `spx/local/coordination.md` at runtime. Both workflows therefore state their own discipline as the containment: only the overlay's store, only the named endpoints and methods. The `gh api` write at Framed (`dependencies/blocked_by -X POST`) is the widest such capability, since a value read from a Change body or a migrated file feeds the call.
 
