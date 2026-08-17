@@ -233,31 +233,31 @@ How to avoid: Classify the session as `owned_elsewhere`, report the owning sessi
 </failure_modes>
 
 <success_criteria>
-Under `spx/local/coordination.md`, a successful pickup satisfies `${CLAUDE_SKILL_DIR}/workflows/change.md`'s success criteria — a Change claimed by sole assignee or created from a legacy file that carries no secret, `<PICKUP_CLAIM change="...">` and a cumulative `<CLAIMED_CHANGES urls="...">` emitted, execution only from a validated Executable Change continuing at the Handoff's Next Activity, and a proposal that names the Frame's governing truth first — together with the foundation, base-sync, worktree-claim, and no-work-before-checkpoint criteria below. Without the overlay, a successful pickup:
+Each bullet is tagged `(both)` when it holds under and without `spx/local/coordination.md`, or `(session file only)` when it belongs to the session-file path alone. Under the overlay a successful pickup satisfies `${CLAUDE_SKILL_DIR}/workflows/change.md`'s success criteria — a Change claimed by sole assignee or created from a legacy file that carries no secret, `<PICKUP_CLAIM change="...">` and a cumulative `<CLAIMED_CHANGES urls="...">` emitted, execution only from a validated Executable Change continuing at the Handoff's Next Activity, and a proposal that names the Frame's governing truth first — plus every `(both)` bullet. Without the overlay a successful pickup satisfies every bullet:
 
-- [ ] Session claimed via `spx session pickup`
-- [ ] Canonical pickup claim marker emitted as `<PICKUP_CLAIM id="...">`
-- [ ] Running CLAIMED_SESSIONS marker emitted as `<CLAIMED_SESSIONS ids="...">` including the newly claimed session id
-- [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session, except the legacy-file archive `<change_coordination>` authorizes once its Change exists
-- [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
-- [ ] `/understand` invoked immediately before the first product-content access — the coordination-note path check when the session names a node, otherwise the `/contextualize` invocation for the node the operator names — and not before the claim, session presentation, checkout, base sync, or claim reconciliation
-- [ ] Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work
-- [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind
-- [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created
-- [ ] Recorded claims reconciled by running `verify_session_claims.py`, with per-claim `Confirmed` / `Discrepancy` / `Unverifiable` verdicts presented in place of the recorded snapshot before the checkpoint
-- [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
-- [ ] Persisted artifacts acknowledged
-- [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
-- [ ] Session evidence reviewed after `/contextualize`: claim verdicts, persisted artifacts, loaded coordination notes, overlapping `doing` sessions, branch state, PR state, and expected verification
-- [ ] Session classified as `actionable_here`, `owned_elsewhere`, `stale_or_superseded`, `blocked_on_external_dependency`, or `needs_operator_direction`
-- [ ] When classification is `owned_elsewhere`, the owning session, branch, worktree, PR, or commit is reported and pickup stops without archiving, releasing, handing off, or otherwise mutating the claimed session
-- [ ] When classification is not `owned_elsewhere`, a no-surprises proposal is presented before any operator decision: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation
-- [ ] Any later unrepresented skill, evidence surface, external dependency, ownership conflict, or verification class stops at a safe checkpoint before continuation
-- [ ] When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 3 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
-- [ ] When classification is not `owned_elsewhere`, canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
-- [ ] When classification is not `owned_elsewhere`, post-context decision captured via `{{! tool('ask_user') !}}` response, or explicit `--auto-continue` override acknowledged
-- [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
-- [ ] Failures listed in coordination are verified against current state before triaging
-- [ ] When classification is not `owned_elsewhere`, Claude has the session `next_step`, current claim verdicts, loaded node context, and coordination-note paths needed to choose the next skill from current methodology
+- [ ] (session file only) Session claimed via `spx session pickup`
+- [ ] (session file only) Canonical pickup claim marker emitted as `<PICKUP_CLAIM id="...">`
+- [ ] (session file only) Running CLAIMED_SESSIONS marker emitted as `<CLAIMED_SESSIONS ids="...">` including the newly claimed session id
+- [ ] (session file only) Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session, except the legacy-file archive `<change_coordination>` authorizes once its Change exists
+- [ ] (session file only) No new handoff session is treated as permission to archive, release, or replace a claimed session
+- [ ] (both) `/understand` invoked immediately before the first product-content access — the coordination-note path check when the session names a node, otherwise the `/contextualize` invocation for the node the operator names — and not before the claim, session presentation, checkout, base sync, or claim reconciliation
+- [ ] (session file only) Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work
+- [ ] (both) Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind
+- [ ] (both) In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created
+- [ ] (session file only) Recorded claims reconciled by running `verify_session_claims.py`, with per-claim `Confirmed` / `Discrepancy` / `Unverifiable` verdicts presented in place of the recorded snapshot before the checkpoint
+- [ ] (session file only) PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
+- [ ] (session file only) Persisted artifacts acknowledged
+- [ ] (both) `/contextualize` invoked on target node — NOT offered as an option, just done
+- [ ] (session file only) Session evidence reviewed after `/contextualize`: claim verdicts, persisted artifacts, loaded coordination notes, overlapping `doing` sessions, branch state, PR state, and expected verification
+- [ ] (session file only) Session classified as `actionable_here`, `owned_elsewhere`, `stale_or_superseded`, `blocked_on_external_dependency`, or `needs_operator_direction`
+- [ ] (both) When classification is `owned_elsewhere`, the owning session, branch, worktree, PR, or commit is reported and pickup stops without archiving, releasing, handing off, or otherwise mutating the claimed session
+- [ ] (session file only) When classification is not `owned_elsewhere`, a no-surprises proposal is presented before any operator decision: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation
+- [ ] (both) Any later unrepresented skill, evidence surface, external dependency, ownership conflict, or verification class stops at a safe checkpoint before continuation
+- [ ] (session file only) When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 3 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
+- [ ] (session file only) When classification is not `owned_elsewhere`, canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
+- [ ] (session file only) When classification is not `owned_elsewhere`, post-context decision captured via `{{! tool('ask_user') !}}` response, or explicit `--auto-continue` override acknowledged
+- [ ] (both) No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
+- [ ] (session file only) Failures listed in coordination are verified against current state before triaging
+- [ ] (session file only) When classification is not `owned_elsewhere`, Claude has the session `next_step`, current claim verdicts, loaded node context, and coordination-note paths needed to choose the next skill from current methodology
 
 </success_criteria>
