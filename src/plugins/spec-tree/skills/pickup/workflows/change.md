@@ -10,6 +10,8 @@ This workflow replaces `${CLAUDE_SKILL_DIR}/workflows/pickup.md` when `spx/local
 
 **Every store write is inspected first.** Before any `gh issue create`, `gh issue edit --body-file`, or `gh issue comment` in this workflow — a migrated queue file, a drafted Frame, an Activity check-off, a Handoff — inspect the exact text about to be written for secret values and credential payloads: tokens, keys, passwords, connection strings, cookies, or any pasted credential-shaped content. When any appears, write nothing, report only the kind of content found (never the value), and ask through `{{! tool('ask_user') !}}` whether the operator supplies a redacted text or abandons that write; on redaction, inspect the supplied text and continue; on abandon, the write does not happen and the step reports it. The store is a remote issue tracker; a queue file, conversation state, and interview output all carry such content as readily as each other.
 
+**Every body reaches `gh` on stdin, never through a shell-assembled file.** Pass every issue body and comment as `--body-file -`: in an interactive session, a quoted heredoc (`<<'EOF'` … `EOF`, choosing a terminator no body line equals) so the text is inert data with no expansion; in a programmatic runner that requires one physical line, `printf '%s\n' 'line' 'line' … | gh …` with each body line one single-quoted argument and a literal apostrophe written as `'"'"'`. Never `--body "…"`, never a scratch file, never a redirect built from body text.
+
 <step name="resolve_target">
 
 Classify `$ARGUMENTS`:
@@ -27,12 +29,10 @@ Classify `$ARGUMENTS`:
 
 **Legacy file.** The file is received input; the Change does not exist yet. Claim the file with `spx session pickup <id>` so no other context takes it, then create the Change:
 
-1. Read the complete file from `spx session show <id>` — frontmatter and body, none of the injected file bodies — and apply the store-write inspection above; a detected secret leaves the file in `doing` with no Change created until the operator redacts it (then re-read through `spx session show <id>` and inspect again) or abandons the migration. Otherwise create a scratch file with `mktemp` and write the body into it — the file-writing tool where the harness provides one, otherwise one physical `printf '%s\n' ... > <scratch>` line in a programmatic runner: one line `Received input: handoff document <id> from the <Product> queue (.spx/sessions), reproduced verbatim.`, a blank line, then the file inside a `text` code fence.
-2. `gh issue create --repo <store> --title "<goal frontmatter value>" --body-file <scratch> --assignee @me`.
+1. Read the complete file from `spx session show <id>` — frontmatter and body, none of the injected file bodies — and apply the store-write inspection above; a detected secret leaves the file in `doing` with no Change created until the operator redacts it (then re-read through `spx session show <id>` and inspect again) or abandons the migration.
+2. `gh issue create --repo <store> --title "<goal frontmatter value>" --body-file - --assignee @me` with the body on stdin per the rule above: one line `Received input: handoff document <id> from the <Product> queue (.spx/sessions), reproduced verbatim.`, a blank line, then the file inside a `text` code fence.
 3. `gh project item-add <number> --owner <owner> --url <issue-url>`, then `gh project item-edit` setting `Product` to the overlay's Product and `Maturity` to `Proposed`, using the field and option ids from `gh project field-list <number> --owner <owner> --format json`.
 4. Only after steps 2 and 3 have each returned success — the issue URL exists and `gh project item-list` shows the item with `Product` and `Maturity` set — archive the legacy file: `spx session archive <id>`. The Change now carries the input; the file has no reader. When any of steps 1–3 fails, report the failed command and its output, leave the file in `doing`, and stop; the archive never runs on a partial migration.
-
-Delete the scratch file on every exit path.
 
 Emit the claim markers, using the issue URL as the identity:
 
@@ -82,7 +82,7 @@ Present the no-surprises proposal from the Change, never from the received input
 </PICKUP_CHECKPOINT>
 ```
 
-Check off each Activity in the issue body as it completes (`gh issue edit --body-file` after editing the checklist), so a later Handoff's Completed Activities is a projection of the body.
+Check off each Activity in the issue body as it completes (`gh issue edit <N> --repo <store> --body-file -` with the edited body on stdin), so a later Handoff's Completed Activities is a projection of the body.
 
 </step>
 

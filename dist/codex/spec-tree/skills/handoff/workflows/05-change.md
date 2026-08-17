@@ -14,11 +14,13 @@ This workflow replaces `<write_canonical_continuation>` and `<archive_claimed_se
 
 **Every store write is inspected first.** Before any `gh issue create`, `gh issue edit --body-file`, or `gh issue comment` in this workflow — a received input, a body refinement, an Activity check-off, a hazard, a Handoff comment — inspect the exact text about to be written for secret values and credential payloads: tokens, keys, passwords, connection strings, cookies, or any pasted credential-shaped content. When any appears, write nothing, report only the kind of content found (never the value), and ask through `request_user_input` whether the operator supplies a redacted text or abandons that write; on redaction, inspect the supplied text and continue; on abandon, the write does not happen and the closeout says so. The store is a remote issue tracker, and conversation state — error output, hazard descriptions, decision drafts — carries such content as readily as a queue file does.
 
+**Every body reaches `gh` on stdin, never through a shell-assembled file.** Pass every issue body and comment as `--body-file -`: in an interactive session, a quoted heredoc (`<<'EOF'` … `EOF`, choosing a terminator no body line equals) so the text is inert data with no expansion; in a programmatic runner that requires one physical line, `printf '%s\n' 'line' 'line' … | gh …` with each body line one single-quoted argument and a literal apostrophe written as `'"'"'`. Never `--body "…"`, never a scratch file, never a redirect built from body text.
+
 <resolve_changes>
 
 The Changes this conversation holds are the `urls` of the most recent `<CLAIMED_CHANGES>` marker. A conversation that also carries a legacy `<CLAIMED_SESSIONS>` marker archives those ids through 04's `<archive_claimed_sessions>` exactly as before; the legacy path and this one are independent.
 
-A conversation that holds no Change and finds continuation for work that has no Change creates one Proposed Change instead of a session file: after the store-write inspection above, `gh issue create --repo <store> --title "<intended Output>" --body-file <scratch>` where `<scratch>` comes from `mktemp` and holds the received input — the operator's request or the observations that opened the work, verbatim — then `gh project item-add`, and `Product` / `Maturity: Proposed` through `gh project item-edit` with the field and option ids read once from `gh project field-list <number> --owner <owner> --format json`. Delete the scratch file on every exit path. Leave the Change unassigned (Available). Received input is history; refinement happens on pickup.
+A conversation that holds no Change and finds continuation for work that has no Change creates one Proposed Change instead of a session file: after the store-write inspection above, `gh issue create --repo <store> --title "<intended Output>" --body-file -` with the received input — the operator's request or the observations that opened the work, verbatim — on stdin per the rule above, then `gh project item-add`, and `Product` / `Maturity: Proposed` through `gh project item-edit` with the field and option ids read once from `gh project field-list <number> --owner <owner> --format json`. Leave the Change unassigned (Available). Received input is history; refinement happens on pickup.
 
 </resolve_changes>
 
@@ -38,7 +40,7 @@ For each held Change, after `<release_work_branch>` has left the work committed,
 
 **Abandoned.** Only on the operator's explicit direction: close with `--reason "not planned"`.
 
-**Otherwise release.** Write the continuation below to a `mktemp` scratch file, post it as one comment with `gh issue comment <N> --repo <store> --body-file <scratch>` — never an inline `--body` string, whose bullets and colons break shell quoting — delete the scratch file, then remove the assignee:
+**Otherwise release.** Post the continuation below as one comment with `gh issue comment <N> --repo <store> --body-file -`, the body on stdin per the rule above, then remove the assignee:
 
 ```markdown
 Handoff:
