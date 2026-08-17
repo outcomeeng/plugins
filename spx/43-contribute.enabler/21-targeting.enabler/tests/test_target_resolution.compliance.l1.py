@@ -9,6 +9,7 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
     checkout_response,
     checkout_view_key,
     command_failure,
+    command_output,
     fork_list_key,
     full_fork_page,
     head_search_lookups,
@@ -91,18 +92,52 @@ def test_absence_of_a_head_is_searched_for_never_inferred() -> None:
 
 # Each way the search can fail to cover its domain. Absence claimed from any of
 # them would be inference, so each blocks instead.
+#
+# Every lookup fails in four forms, not one: the command exits non-zero, it exits
+# zero carrying output no parser accepts, it exits zero carrying a JSON shape the
+# resolver does not expect, or it exits zero carrying a payload without the field
+# the resolver reads. A table covering only the non-zero form leaves the three
+# quiet ones — the ones a green exit code hides — unexercised.
 INCOMPLETE_SEARCHES: tuple[tuple[str, Responses], ...] = (
     (
-        "the authenticated account is unreadable",
+        "the authenticated account read fails",
         {account_key(): command_failure("HTTP 401: Bad credentials")},
+    ),
+    (
+        "the authenticated account read returns unparseable output",
+        {account_key(): command_output("<html>502 Bad Gateway</html>")},
+    ),
+    (
+        "the authenticated account read returns a list",
+        {account_key(): command_output("[]")},
+    ),
+    (
+        "the authenticated account read omits the login",
+        {account_key(): command_output("{}")},
     ),
     (
         "the organization listing fails",
         {organizations_key(): command_failure("HTTP 502: Bad gateway")},
     ),
     (
+        "the organization listing returns unparseable output",
+        {organizations_key(): command_output("<html>502 Bad Gateway</html>")},
+    ),
+    (
+        "the organization listing returns an object",
+        {organizations_key(): command_output("{}")},
+    ),
+    (
         "one owner's fork listing fails",
         {fork_list_key(OWNERS[1]): command_failure("HTTP 403: Forbidden")},
+    ),
+    (
+        "one owner's fork listing returns unparseable output",
+        {fork_list_key(OWNERS[1]): command_output("<html>403 Forbidden</html>")},
+    ),
+    (
+        "one owner's fork listing returns an object",
+        {fork_list_key(OWNERS[1]): command_output("{}")},
     ),
     (
         "one owner's fork listing fills the page",
@@ -138,6 +173,9 @@ def test_a_search_that_did_not_cover_its_domain_blocks_instead_of_reporting_abse
     assert resolution.classification is _RESOLVER.Classification.BLOCKED
     assert resolution.classification is not _RESOLVER.Classification.FORK_ABSENT
     assert resolution.head is None
+    # A block that names nothing leaves the operator with the same dead end
+    # `fork-absent` would have handed them, minus the wrong command.
+    assert resolution.detail
 
 
 def test_a_full_fork_page_blocks_even_though_its_entries_match_nothing() -> None:

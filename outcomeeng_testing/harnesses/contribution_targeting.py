@@ -162,6 +162,17 @@ def command_failure(message: str) -> tuple[int, str, str]:
     return (1, "", message)
 
 
+def command_output(stdout: str) -> tuple[int, str, str]:
+    """What a `gh` command reports when it exits zero carrying `stdout`.
+
+    A lookup fails without failing its exit code whenever the output is
+    unreadable, carries a JSON shape the resolver does not expect, or omits the
+    field the resolver reads. Each leaves the search domain unknown while the
+    command itself reports success.
+    """
+    return (0, stdout, "")
+
+
 def full_fork_page(owner: str) -> tuple[int, str, str]:
     """A fork listing that fills the page the resolver reads.
 
