@@ -66,6 +66,7 @@ In `<confirm>`, the session-mechanics rows become Change rows: each Change URL w
 
 <success_criteria>
 
+- Every `gh issue create`, `gh issue edit --body-file`, and `gh issue comment` this workflow performs is inspected for secret values and credential payloads before it lands, and a hit writes nothing.
 - Every Change in `<CLAIMED_CHANGES>` ends Available with a current `Handoff:` comment and no assignee, or closed as Applied, Refined, or Abandoned with the matching authorized comment; no Change stays Claimed by a conversation that has ended.
 - A Handoff carries the five continuation lines and nothing that belongs in the body; refinement edits landed in the body before the Handoff was posted.
 - Applied is posted only after integration, evidence, and Output delivery all hold.

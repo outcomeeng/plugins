@@ -90,6 +90,7 @@ Check off each Activity in the issue body as it completes (`gh issue edit --body
 
 <success_criteria>
 
+- Every `gh issue create`, `gh issue edit --body-file`, and `gh issue comment` this workflow performs — migrated file, drafted Frame, Activity check-off, Handoff — is inspected for secret values and credential payloads before it lands, and a hit writes nothing.
 - The target resolves to exactly one Change; a legacy file becomes a Change with its complete document as received input only after it was inspected for secret values and none were found, and is archived only after the issue and its project item exist; a detected secret halts migration with the file left in `doing`.
 - Claim state is derived from GitHub facts: exactly one assignee after claiming; a closed or otherwise-assigned Change stops the workflow as `owned_elsewhere`.
 - `<PICKUP_CLAIM change>` and a cumulative `<CLAIMED_CHANGES urls>` are emitted before any product content is read.
