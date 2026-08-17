@@ -217,6 +217,23 @@ class PluginListing:
 
 
 @dataclass(frozen=True)
+class RealFirstInstallObservation:
+    """Real agent-CLI observations from one empty persistent installation."""
+
+    initial_state: tuple[tuple[str, bytes], ...]
+    initial_project_settings: bytes | None
+    exit_code: int
+    stdout: str
+    stderr: str
+    claude_listing_exit_code: int
+    claude_listing_stderr: str
+    claude_plugins: PluginListing | None
+    codex_listing_exit_code: int
+    codex_listing_stderr: str
+    codex_plugins: PluginListing | None
+
+
+@dataclass(frozen=True)
 class RealInstallationObservation:
     """Real persistent and repeated isolated installation observations."""
 
@@ -1037,6 +1054,49 @@ def observe_verification_recipe() -> VerificationRecipeObservation:
 
 
 @cache
+def observe_real_first_install() -> RealFirstInstallObservation:
+    """Run persistent installation in empty selected homes with real agent CLIs."""
+    checkout = repository_root()
+    _require_binaries(REQUIRED_BINARIES)
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        selected_root = temporary_root / "selected-agent-state"
+        _mirror_installation_inputs(checkout, mirror)
+        environment = _persistent_environment(selected_root)
+        _prepare_agent_state(environment)
+        initial_state = _tree_snapshot(selected_root)
+        project_settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
+        initial_project_settings = (
+            project_settings.read_bytes() if project_settings.exists() else None
+        )
+        installation = _run_persistent_recipe(checkout, mirror, environment)
+        claude_listing = _run_listing_unchecked(Agent.CLAUDE, mirror, environment)
+        codex_listing = _run_listing_unchecked(Agent.CODEX, mirror, environment)
+    return RealFirstInstallObservation(
+        initial_state=initial_state,
+        initial_project_settings=initial_project_settings,
+        exit_code=installation.returncode,
+        stdout=installation.stdout,
+        stderr=installation.stderr,
+        claude_listing_exit_code=claude_listing.returncode,
+        claude_listing_stderr=claude_listing.stderr,
+        claude_plugins=(
+            _listed_plugins(Agent.CLAUDE, claude_listing.stdout)
+            if claude_listing.returncode == 0
+            else None
+        ),
+        codex_listing_exit_code=codex_listing.returncode,
+        codex_listing_stderr=codex_listing.stderr,
+        codex_plugins=(
+            _listed_plugins(Agent.CODEX, codex_listing.stdout)
+            if codex_listing.returncode == 0
+            else None
+        ),
+    )
+
+
+@cache
 def observe_real_installation() -> RealInstallationObservation:
     """Run persistent and isolated installation with real agent CLIs.
 
@@ -1555,7 +1615,7 @@ def _seed_persistent_plugins(
             )
 
 
-def _run_listing(
+def _run_listing_unchecked(
     agent: Agent,
     checkout: Path,
     environment: Mapping[str, str],
@@ -1580,6 +1640,15 @@ def _run_listing(
         text=True,
         check=False,
     )
+    return result
+
+
+def _run_listing(
+    agent: Agent,
+    checkout: Path,
+    environment: Mapping[str, str],
+) -> subprocess.CompletedProcess[str]:
+    result = _run_listing_unchecked(agent, checkout, environment)
     if result.returncode != 0:
         raise RuntimeError(
             f"{agent.value} plugin listing failed with exit {result.returncode}: "
@@ -1673,6 +1742,7 @@ __all__ = [
     "PersistentPlanObservation",
     "PlanObservation",
     "DesignatedFailureRunner",
+    "RealFirstInstallObservation",
     "RealInstallationObservation",
     "RecordingRunner",
     "UnpublishedPluginObservation",
@@ -1695,6 +1765,7 @@ __all__ = [
     "observe_persistent_catalog_subset_plans",
     "observe_persistent_plan",
     "observe_planned_operations",
+    "observe_real_first_install",
     "observe_real_installation",
     "observe_repository_plan",
     "absent_from_every_agent",
