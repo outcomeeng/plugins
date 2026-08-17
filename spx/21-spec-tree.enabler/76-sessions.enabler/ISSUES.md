@@ -71,3 +71,11 @@ Every `gh` grant the Change workflows carry — `gh issue create:*`, `gh issue e
 **Resolution shape**: a bundled stdlib helper under the pickup and handoff skills that reads the store from `spx/local/coordination.md`, refuses any other `owner/repo`, and performs the dependency read and write, so the grant covers the helper invocation and the binding runs in code. It ships with its own tests under `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler` governance and the shipped-scripting rules of `spx/12-shipped-scripting.adr.md`, which makes it a separate structural concern rather than an edit inside the changeset that introduced the workflows.
 
 **Evidence.** The local review of `work/session-pointer-truth-derivation` at `acdb246e12062924e9dc3a6cb074ff537194d908` raised the unbounded-repository property of the `gh api` grants; the same property holds for every `gh --repo` grant the workflows carry.
+
+## 9. The `SessionStart` compact-hook message contradicts the operational-continuation rule
+
+The `spx hook run session-start` runner (owned by the `spx` CLI, delegated per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md`) prints on `source=compact`: "Before any spec-governed action, including resuming an in-flight PR, /apply, or /handoff, re-invoke /understand then /contextualize on every spec node still in scope (not just the next one) before any gh/git archaeology or reading spec-governed source." `spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.pdr.md` binds the reload to the first product-content access per governing node and lets an operational continuation — resuming an in-flight PR among them — proceed before either reload; "every spec node still in scope" is the undecidable scope the decision retires.
+
+**Resolution shape**: align the hook message in the `spx` CLI to the decision — `/understand` before the next product-content access, `/contextualize` per governing node before its product content is read or modified, operational continuation exempt — and keep the message advisory per `spx/15-hook-safety.pdr.md`. Cross-repository: file in the `outcomeeng/spx` queue; this repository's assertion already forbids the hook carrying methodology-reload behavior.
+
+**Evidence.** Hook output observed in the session that shipped PR #532, after compaction on 2026-08-17.

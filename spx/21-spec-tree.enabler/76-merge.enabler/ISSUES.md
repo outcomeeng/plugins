@@ -140,3 +140,11 @@ genuinely changes a case outcome.
 **Resolution shape**: add one worked trace — sample JSON fragment, matched rule number, emitted `guard_verdict` — gated by `instructions:skill-auditor`.
 
 **Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` on the post-compaction reload-timing change (finding `abstract_examples`).
+
+## The taught PR-body and branch-cleanup command forms trip the dangerous-command guard
+
+`src/plugins/spec-tree/skills/open-pr/SKILL.md` Step 5 teaches `gh pr create --body-file -` with a quoted heredoc, and `src/plugins/spec-tree/skills/merging-standards/references/merge-cleanup.md` teaches branch removal through shell variables (`git branch -d "$branch_from_pr"`, `git push origin --delete "$branch_from_pr"`). Under the dangerous-command guard the generated router requires, a heredoc body carrying backticks or node paths and a `git branch` invocation with a dynamic token are both blocked (`core.git:branch-dynamic-token` for the latter), and the router forbids reformulating a blocked command. The PR then opens only through the operator running the command, and branch cleanup completes only with literal branch names — sanctioned forms the skills do not name.
+
+**Resolution shape**: teach `gh pr create --body-file <path>` with a body written by the file tool, and spell branch cleanup with the literal branch name resolved before the command (or `git branch -d -- <branch>`), so the taught forms pass the guard as written; gated by `instructions:skill-auditor` over both skill surfaces. Amend the payload-form guidance in `spx/15-agent-tools.pdr.md` if the file-backed body is retained, since that decision currently forbids temporary files for payload assembly.
+
+**Evidence.** Observed on PR #532: `gh pr create --body-file -` blocked in the authoring session (operator ran it), and the merge-cleanup sequence blocked at `git branch -d "$b"` after the merge.
