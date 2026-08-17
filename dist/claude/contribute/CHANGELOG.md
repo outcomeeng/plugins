@@ -6,6 +6,26 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.2.0
+
+### Breaking
+
+- **Four skills are renamed from `parent` to `upstream`.** `/open-parent-pr`, `/manage-parent-pr`, `/open-parent-issue`, and `/manage-parent-issue` become `/open-upstream-pr`, `/manage-upstream-pr`, `/open-upstream-issue`, and `/manage-upstream-issue`. The old names no longer resolve. `parent` is what the GitHub API calls the repository a fork came from, and it stays in the resolver that reads that field; `upstream` is the word a developer uses for the same relationship, so it is the word the invocation surface carries. `/sync-fork` keeps its name.
+- **The resolver's classifications are renamed and extended.** `parent-contribution` becomes `upstream-contribution`, and `head-ambiguous` is new. A skill or overlay branching on the old value must read the new one.
+
+### Added
+
+- **`/upstream` resolves the contribution target once per contribution.** It runs the resolver and emits an `<UPSTREAM_TARGET>` marker carrying `base`, `head`, `permission`, and `classification`; the five workflow skills read that marker and invoke `/upstream` only when none is live. Invoked on its own it answers what the contribution target is and whether you can push to it.
+- **An existing fork is found instead of assumed absent.** Working from a clone of the upstream is ordinary, and the checkout then supplies no head. Resolution now searches the authenticated account and its organizations for a fork of the resolved base, matching without regard to case because GitHub preserves a repository's case and matches it without one. One match becomes the head and the contribution proceeds where it previously dead-ended; several stop as `head-ambiguous` with every match named, because choosing among them is yours; none yields `fork-absent`, which now means verified absent rather than inferred from the checkout — so the `gh repo fork` command it reports is one GitHub will accept.
+
+- **A misdirected artifact has a stated recovery.** The gates keep a comment, issue, or reply off the wrong thread, and none of them recalls a notification that already went out. When one lands in the wrong place anyway, the correction is a follow-up on that same artifact naming the error — never an edit or a delete of what watchers already received — and you hear about it in the turn it is discovered rather than in the pass's closing summary.
+
+- **Four skills carry a worked end-to-end example.** `/open-upstream-issue`, `/manage-upstream-issue`, `/manage-upstream-pr`, and `/sync-fork` each show one realistic case worked through to the text it produces — a defect report with its negative control, a maintainer's question and the reply that answers it, a two-finding review where one confirms and one does not, and a diverged fork's commit-by-commit report. A run compares its draft against the example instead of deriving the shape from prose alone.
+
+### Removed
+
+- **The five per-skill resolver copies are gone.** Each workflow skill shipped a byte-identical `scripts/resolve_target.py` whose only job was reaching the shared resolver. The resolver now lives in `/upstream` alone, and no other skill carries a `scripts/` directory or grants a resolver path.
+
 ## 0.1.1
 
 ### Fixed

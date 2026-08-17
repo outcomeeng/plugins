@@ -6,7 +6,7 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
     checkout_view_key,
     PARENT,
     Responses,
-    account_lookups,
+    head_search_lookups,
     checkout_response,
     load_resolver,
     permission_key,
@@ -23,7 +23,7 @@ def test_any_permission_outside_both_buckets_blocks_the_target() -> None:
         responses: Responses = {
             checkout_view_key(): checkout_response(is_fork),
             permission_key(PARENT): permission_response(permission),
-            **account_lookups(),
+            **head_search_lookups(0),
         }
 
         resolution, _ = resolve_with(responses)
