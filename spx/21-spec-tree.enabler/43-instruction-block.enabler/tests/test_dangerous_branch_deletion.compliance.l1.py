@@ -3,7 +3,7 @@ import pytest
 from outcomeeng.distribution import instruction_block as source
 
 
-def test_dangerous_branch_deletion_policy_rejects_every_missing_rule() -> None:
+def test_dangerous_command_guard_policy_rejects_every_missing_rule() -> None:
     module = source.load_instruction_block_module()
     templates = source.load_harness_templates(module)
     documents = source.render_instruction_blocks_from_harness_templates(
@@ -13,7 +13,7 @@ def test_dangerous_branch_deletion_policy_rejects_every_missing_rule() -> None:
     )
     source.validate_authority_hierarchy_policy(documents)
 
-    for _, required_text in source.DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS:
+    for _, required_text in source.DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS:
         for agent_harness, document in documents.items():
             violating_document = document.replace(required_text, "", 1)
             with pytest.raises(source.AuthorityHierarchyPolicyError):
