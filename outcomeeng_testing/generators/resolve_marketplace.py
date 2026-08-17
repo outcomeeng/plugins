@@ -194,12 +194,12 @@ def json_payloads() -> st.SearchStrategy[object]:
 def absent_marketplace_names() -> st.SearchStrategy[str]:
     """Marketplace names to request; collision is excluded by the caller.
 
-    A NUL is excluded because argv cannot carry one: the name reaches the
-    resolver as a command-line value, so a NUL fails in the process layer
-    before any resolution happens and says nothing about the resolver.
+    The alphabet is what argv can carry: encodable as UTF-8, and no NUL.
+    Either one fails in the process layer before resolution happens, so a
+    case built from one says nothing about the resolver.
     """
     return st.text(
-        alphabet=st.characters(min_codepoint=1, exclude_categories=("Cs",)),
+        alphabet=st.characters(min_codepoint=1, codec="utf-8"),
         min_size=1,
         max_size=32,
     )
