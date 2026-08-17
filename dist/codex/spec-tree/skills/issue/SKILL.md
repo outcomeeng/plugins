@@ -7,14 +7,14 @@ allowed-tools: Read, Grep, Glob, Bash(printf:*), Bash(printenv CODEX_THREAD_ID),
 ---
 
 <objective>
-A minimal follow-up filed in the owning spec-tree repository's active session queue — capturing Claude's observation and naming possible overlaps from queue headers.
+A minimal follow-up carrying Claude's observation, filed in the owning spec-tree repository's active session queue, reported beside the possible overlaps its queue headers name.
 
 </objective>
 
-<when_to_invoke>
-Editing a spec-tree component's installed source directly to record a needed change rewrites shared infrastructure for every consumer session that uses it, with no review. The `/issue` skill files the observation in the owning repository's session queue instead, where that repository's workflow triages and acts on it. The owning repository may be the invoking repository; recording a proportional follow-up never requires closing the current work.
+<context>
+Editing a spec-tree component's installed source directly to record a needed change rewrites shared infrastructure for every consumer session that uses it, with no review. Filing the observation in the owning repository's session queue leaves it where that repository's workflow triages and acts on it. The owning repository may be the invoking repository; recording a proportional follow-up never requires closing the current work.
 
-</when_to_invoke>
+</context>
 
 <captured_fields>
 Capture Claude's OBSERVATION only — never the dependency's internal taxonomy. Claude reports what it saw; the dependency workflow classifies it against its spec tree.
