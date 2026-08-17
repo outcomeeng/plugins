@@ -31,8 +31,33 @@ Classify `$ARGUMENTS`:
 
 1. Read the complete file from `spx session show <id>` — frontmatter and body, none of the injected file bodies — and apply the store-write inspection above; a detected secret leaves the file in `doing` with no Change created until the operator redacts it (then re-read through `spx session show <id>` and inspect again) or abandons the migration.
 2. `gh issue create --repo <store> --title '<goal frontmatter value>' --body-file - --assignee @me` — the title one single-quoted argument and the body on stdin, both per the rule above: one line `Received input: handoff document <id> from the <Product> queue (.spx/sessions), reproduced verbatim.`, a blank line, then the file inside a `text` code fence.
-3. `gh project item-add <number> --owner <owner> --url <issue-url>`, then two `gh project item-edit` calls — one field per invocation, as the CLI requires for a non-draft issue — the first setting `Product` to the overlay's Product, the second setting `Maturity` to `Proposed`, each with the field and option ids from `gh project field-list <number> --owner <owner> --format json`.
+3. `gh project item-add <number> --owner <owner> --url <issue-url>`, then two `gh project item-edit` calls — one field per invocation, as the CLI requires for a non-draft issue — the first setting `Product` to the overlay's Product, the second setting `Maturity` to `Proposed`, each with the field and option ids from `gh project field-list <number> --owner <owner> --format json`. When one of the two calls fails, re-read the item through `gh project item-list` and re-run only the field it lacks.
 4. Only after steps 2 and 3 have each returned success — the issue URL exists and `gh project item-list` shows the item with `Product` and `Maturity` set — archive the legacy file: `spx session archive <id>`. The Change now carries the input; the file has no reader. When any of steps 1–3 fails, report the failed command and its output, leave the file in `doing`, and stop; the archive never runs on a partial migration.
+
+Worked migration, with an overlay naming store `acme/changes`, project owner `acme` number `7`, Product `widgets`. The legacy file `2026-03-04_09-15-22` carries `goal: "Parser rejects unterminated strings with a located error"`. Inspection finds no credential-shaped content. The Change is created with the body on stdin — the provenance line, a blank line, then the whole file between a `text` fence-open line and a fence-close line, inside a heredoc whose terminator `RECEIVED_INPUT` no body line equals:
+
+```bash
+gh issue create --repo acme/changes --title 'Parser rejects unterminated strings with a located error' --body-file - --assignee @me <<'RECEIVED_INPUT'
+Received input: handoff document 2026-03-04_09-15-22 from the widgets queue (.spx/sessions), reproduced verbatim.
+
+<the text fence-open line>
+---
+"priority": "medium"
+"goal": "Parser rejects unterminated strings with a located error"
+…the rest of the file, unchanged…
+<the fence-close line>
+RECEIVED_INPUT
+```
+
+`gh` prints `https://github.com/acme/changes/issues/42`. `gh project field-list 7 --owner acme --format json` shows `Product` as field `PVTSSF_aaa` with option `widgets` = `1a2b3c4d`, and `Maturity` as field `PVTSSF_bbb` with option `Proposed` = `9f8e7d6c`. Then:
+
+```bash
+gh project item-add 7 --owner acme --url https://github.com/acme/changes/issues/42
+gh project item-edit --project-id <project-node-id> --id <item-id> --field-id PVTSSF_aaa --single-select-option-id 1a2b3c4d
+gh project item-edit --project-id <project-node-id> --id <item-id> --field-id PVTSSF_bbb --single-select-option-id 9f8e7d6c
+```
+
+`gh project item-list 7 --owner acme --format json` now shows the item with `Product: widgets` and `Maturity: Proposed`; only then `spx session archive 2026-03-04_09-15-22`. Had the second `item-edit` failed, the report would name that command and its output, the file would stay in `doing`, and issue 42 would remain the Change to resume from.
 
 Emit the claim markers, using the issue URL as the identity:
 
