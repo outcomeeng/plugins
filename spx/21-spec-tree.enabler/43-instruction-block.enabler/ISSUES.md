@@ -58,3 +58,27 @@ The rendered router block is read in full at the start of every session in every
 **Resolution shape.** Establishing a ceiling is a render-model decision rather than a content edit — it needs a stated budget in `spx/21-spec-tree.enabler/43-instruction-block.enabler/21-render-model.adr.md`, a deterministic measurement over the rendered block, a gate step that fails on breach, and a rule for what a breach requires (moving a section into a skill the router points at, or replacing prose with a reference). Sizing the budget also needs evidence across the harness renders and the enabled-language subsets, since the block a project receives varies with both.
 
 **Evidence.** Named by the `skill-auditor` gate while auditing the added `## Autonomy Boundary` section, which observed the block growing by a whole section with no offsetting removal and no ceiling to measure the growth against.
+
+## Non-DCG policy validators accept quoted requirement text
+
+`outcomeeng/distribution/instruction_block.py` uses
+`_operative_policy_line_contains` for
+`DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS`, while authority-hierarchy and
+sibling policy validators still use plain substring checks. A requirement
+reproduced only in a blockquote or fenced example can therefore satisfy those
+non-DCG validators.
+
+**Resolution shape**: apply the operative-line check across the
+authority-hierarchy, subagent-dispatch, wait-for-load, operator-question,
+verifier-dispatch, and every same-class policy validator; add mutation evidence
+for quoted and fenced requirements in each governed assertion.
+
+**Why separate**: the operator fixed this changeset to DCG-only scope. The
+validator sweep changes non-DCG policy semantics and evidence across several
+assertions.
+
+**Evidence**: current-head CI changeset review on PR #525 at
+`11d413fe156d068556cb5fa09eac8de3f2b17662`.
+
+**Revisit condition**: resolve in a dedicated policy-validator sweep, or before
+the next non-DCG policy-validator change.

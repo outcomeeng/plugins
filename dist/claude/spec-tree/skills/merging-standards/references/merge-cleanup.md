@@ -61,7 +61,11 @@ if git rev-parse --verify --quiet "refs/heads/$branch_from_pr" >/dev/null; then
     git cherry -v --abbrev=40 "origin/$base_from_pr" "$local_branch_sha" || true
   fi
 fi
+git status --porcelain
 ```
+
+Every proof run ends with `git status --porcelain`. An authorized literal
+deletion receives a second status check after the direct deletion command.
 
 When the proof block authorizes local deletion, type the printed branch name
 literally into one direct `git branch` command. Use `-d` for `mode=safe` and
