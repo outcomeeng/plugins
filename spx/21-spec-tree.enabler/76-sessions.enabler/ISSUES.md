@@ -63,3 +63,11 @@ The overlay contract declared in `spx/21-spec-tree.enabler/76-sessions.enabler/s
 **Resolution shape**: when the prototype graduates, author the decision under this node — a PDR when the Maturity and Lifecycle vocabulary is user-observable product behaviour, otherwise an ADR — and repoint the three overlay assertions at it; `/decompose` places it.
 
 **Evidence.** The local review of `work/session-pointer-truth-derivation` at `488bd2e6c9c43d83d13c50b63029b903e2e03880` recorded the missing decision as a DEBT finding; the operator's prototype direction is the recorded reason it is tracked here rather than fixed in that changeset.
+
+## 7. The Change store is bound by workflow discipline, not by the tool grant
+
+Every `gh` grant the Change workflows carry — `gh issue create:*`, `gh issue edit:*`, `gh project item-add:*`, `gh api repos/*/issues/*/dependencies/*`, and the rest — admits any repository the authenticated account reaches; a Bash allow-list pattern cannot name a per-consumer store, and the store comes from `spx/local/coordination.md` at runtime. Both workflows therefore state their own discipline as the containment: only the overlay's store, only the named endpoints and methods. The `gh api` write at Framed (`dependencies/blocked_by -X POST`) is the widest such capability, since a value read from a Change body or a migrated file feeds the call.
+
+**Resolution shape**: a bundled stdlib helper under the pickup and handoff skills that reads the store from `spx/local/coordination.md`, refuses any other `owner/repo`, and performs the dependency read and write, so the grant covers the helper invocation and the binding runs in code. It ships with its own tests under `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler` governance and the shipped-scripting rules of `spx/12-shipped-scripting.adr.md`, which makes it a separate structural concern rather than an edit inside the changeset that introduced the workflows.
+
+**Evidence.** The local review of `work/session-pointer-truth-derivation` at `acdb246e12062924e9dc3a6cb074ff537194d908` raised the unbounded-repository property of the `gh api` grants; the same property holds for every `gh --repo` grant the workflows carry.
