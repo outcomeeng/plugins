@@ -1,8 +1,8 @@
 ---
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
-argument-hint: "[session-id | --list] [--auto-continue]"
-allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3 "${SKILL_DIR}/scripts/verify_session_claims.py":*), request_user_input, Glob, Skill
+argument-hint: "[change-issue | session-id | --list] [--auto-continue]"
+allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(gh project field-list:*), Bash(gh api repos/*/issues/*/dependencies/*), Bash(spx session archive:*), Bash(mktemp:*), Bash(python3 "${SKILL_DIR}/scripts/verify_session_claims.py":*), request_user_input, Glob, Skill
 ---
 
 <objective>
@@ -17,6 +17,12 @@ A claimed handoff session — loaded, reconciled against current repository stat
 - If session evidence shows another active context already owns the objective, report the owning session, branch, or PR and stop without archiving, releasing, handing off, or otherwise mutating the claimed session.
 
 </constraints>
+
+<change_coordination>
+
+When `spx/local/coordination.md` exists at the repository root, the repository coordinates work through Changes and Handoffs — GitHub issues in the store that overlay names — and this skill follows `${SKILL_DIR}/workflows/change.md` in place of `${SKILL_DIR}/workflows/pickup.md` and the `<claim>` procedure below. A legacy queue file claimed under that overlay becomes a Change carrying the whole file as received input and is archived once the Change exists; that archive is the one session mutation this skill performs, and only there. `<claimed_sessions>` keeps governing any `<CLAIMED_SESSIONS>` marker already present in the conversation. Without the overlay, everything below applies unchanged.
+
+</change_coordination>
 
 <claimed_sessions>
 Three rules govern a conversation's claimed-session set:
@@ -140,7 +146,7 @@ The CLAIMED_SESSIONS marker names every in-conversation pickup that Claude is re
 
 Use the `id` attribute on `<PICKUP_CLAIM>` as the canonical identifier for the current pickup (checkpoints, markers, error messages).
 
-Once claimed, follow `${SKILL_DIR}/workflows/pickup.md` to process the session.
+Once claimed, follow `${SKILL_DIR}/workflows/pickup.md` to process the session. Under `spx/local/coordination.md`, `${SKILL_DIR}/workflows/change.md` is the workflow instead, per `<change_coordination>`.
 
 The workflow invokes `/understand` immediately before its first product-content access — the coordination-note path check under `spx/` when the session names a node, otherwise the `/contextualize` invocation for the node the operator names — and at no earlier step; the claim, `spx session show`, checkout, base sync, and claim reconciliation touch no product content and need no reload. Node-local `PLAN.md` and `ISSUES.md` content is read by `/contextualize`, not by pre-context pickup steps.
 
