@@ -733,7 +733,7 @@ def _operative_policy_line_contains(section: str, required_text: str) -> bool:
             continue
         if fence_marker is not None or stripped.startswith(">"):
             continue
-        if required_text in line and (line.startswith("- ") or line.startswith("🛑 ")):
+        if required_text in line and line.startswith(("- ", "🛑 ")):
             return True
     return False
 
