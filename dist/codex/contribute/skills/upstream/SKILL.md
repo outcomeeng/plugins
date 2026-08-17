@@ -48,7 +48,7 @@ A later stage reads this marker instead of resolving again. Emit it for every cl
 | ----------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `upstream-contribution` | A base the operator does not control, and one head to push from | Continue. The contribution proceeds under `/contribution-standards` `<invariants>`. |
 | `head-ambiguous`        | Several forks of the base, across the operator's accounts       | STOP. Report every entry in `fork.matches`; choosing among them is the operator's.  |
-| `fork-absent`           | No fork of the base under any account the operator holds        | STOP. Report `fork.candidates` and the exact `gh repo fork` command.                |
+| `fork-absent`           | No fork of the base under any account the operator holds        | STOP. Report `fork.candidates` and quote the `gh repo fork` command from `detail`.  |
 | `controlled`            | `ADMIN`, `MAINTAIN`, or `WRITE` on the base                     | STOP. A repository the operator controls belongs to its own workflow.               |
 | `blocked`               | Permission unreadable, or `gh` unavailable or unauthenticated   | STOP and report the resolver's `detail` verbatim.                                   |
 
@@ -60,6 +60,7 @@ A later stage reads this marker instead of resolving again. Emit it for every cl
 - MUST report `base`, `head`, and `permission` verbatim from the resolver.
 - NEVER reconstruct the classification from `gh` output read by eye.
 - NEVER select among several forks — report them and stop.
+- NEVER compose the `gh repo fork` command a `fork-absent` result reports. Quote it from `detail`, which carries `--org <destination>` unfilled; a composed replacement picks the destination the operator owns.
 - NEVER treat a git remote, the authenticated account, or a successful push as evidence of permission on the base.
 
 </constraints>
@@ -69,7 +70,7 @@ A later stage reads this marker instead of resolving again. Emit it for every cl
 - The resolver ran once, and the `base`, `head`, and `permission` reported match its JSON output field for field.
 - One `<UPSTREAM_TARGET>` marker carries those same values and the classification the resolver printed.
 - A `head-ambiguous` result named every match and selected none.
-- A `fork-absent` result named the candidate destinations and the fork command.
+- A `fork-absent` result named the candidate destinations and quoted the fork command from `detail`, its `--org <destination>` placeholder still unfilled.
 - `controlled` and `blocked` each stopped, and `blocked` reported the resolver's `detail` verbatim.
 
 </success_criteria>

@@ -18,7 +18,7 @@ The invariants every artifact obeys on its way to a repository the operator does
 - The contribution branch was cut from the base repository's default branch.
 - Every outward-facing surface passed a prose review before it was sent.
 - No outward-facing surface named Claude or its runtime.
-- The artifact carries the evidence a maintainer needs to reproduce its claim without access to the operator's machine.
+- A defect claim carries the tool versions involved, the base commit it was observed against, the command that produced the observation, and a negative control showing the same method reporting the opposite result.
 
 </success_criteria>
 
@@ -84,6 +84,8 @@ Fetch the base repository by URL, so only the head side needs this check.
 
 **Outward-facing text is permanent.** The notification reaches every watcher when the artifact appears, and deleting the artifact does not recall it. Title, body, comments, and review replies each pass a prose review before they are sent. Where the prose plugin is installed, dispatch its `prose-auditor` thin agent through the runtime's agent-dispatch surface, so the verdict comes from a separate verifier agent session rather than the session that wrote the text; where it is not installed, review against `<outward_text>` and report that the review ran unassisted.
 
+**Correct a misdirected artifact by appending, and say so at once.** The gates above exist to keep an artifact off the wrong thread, and none of them recalls a notification that already went out. A comment on the wrong thread, an issue in the wrong repository, or a reply answering the wrong finding is corrected by a follow-up on that same artifact naming the error plainly — never by editing or deleting what watchers already received — and the operator hears about it in the turn it is discovered rather than in the pass's closing summary.
+
 **Never name Claude or its runtime in the artifact.** Every outward-facing surface — issue and pull-request titles and bodies, comments, review replies, commit messages, and branch names — describes the work, never what produced it. A maintainer decides the contribution on its merits, and an authorship marker in a permanent public record raises a policy question the contribution never needed to raise. Exact tool names, quoted command output, and file paths keep their required spelling.
 
 **Carry reproducible evidence.** A maintainer cannot see the operator's machine. A defect claim states the tool versions involved, the base commit it was observed against, the command that produced the observation, and at least one negative control showing the same method reporting the opposite result. A claim without a negative control cannot distinguish a real defect from a broken measurement.
@@ -92,7 +94,7 @@ Fetch the base repository by URL, so only the head side needs this check.
 
 **The review loop runs on comments, not on API state.** Requesting a reviewer, dismissing a review, and clearing a changes-requested decision are maintainer-side actions. `gh pr edit --add-reviewer` fails on a base the operator does not control, and `reviewDecision` stays `CHANGES_REQUESTED` until the maintainer chooses to look again. A comment stating what changed is the re-request. Treat the permission failure as the expected path, never as an error to retry.
 
-**Never choose the fork destination.** When no head repository exists, report the resolved base, the accounts and organizations that could hold the fork, and the exact `gh repo fork` command — then stop. `gh repo fork` defaults to the personal account, and an operator holding repositories across several organizations has a destination decision no resolution can make.
+**Never choose the fork destination.** When no head repository exists, report the resolved base, the accounts and organizations that could hold the fork, and the `gh repo fork` command quoted verbatim from the resolver's `detail` — then stop. Quote it rather than composing one: the resolver's command carries `--org <destination>` unfilled, and a composed replacement drops that placeholder and picks a destination. `gh repo fork` defaults to the personal account, and an operator holding repositories across several organizations has a destination decision no resolution can make.
 
 **Never wait on the artifact.** A management pass reads current state once, acts on it, and returns. A maintainer answers on their own schedule, so polling, watching, and sleeping accumulate cost against a signal that arrives when it arrives.
 

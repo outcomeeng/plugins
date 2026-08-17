@@ -115,7 +115,7 @@ The first sentence answers the question asked, before anything else. The command
 - MUST establish the issue's author before the first write, and obtain authorization in the same turn before commenting on a thread the operator did not open.
 - MUST obtain authorization in the same turn before closing an issue.
 - MUST read `gh api user` only for the Step 5 authorship comparison. `/contribution-standards` `<invariants>` "Establish permission from the API" rules the authenticated account out as evidence of permission on the base; it is evidence of identity and nothing else.
-- NEVER write through `gh api user`. The `Bash(gh api user:*)` grant matches by prefix, so it admits `-X PATCH` and `-X DELETE` against the operator's own GitHub account; this constraint is the whole containment for those verbs. Read only.
+- NEVER pass an `-X` method flag to `gh api user`. The `Bash(gh api user:*)` grant matches by prefix, so it admits every verb against the operator's own GitHub account — `-X PATCH` and `-X DELETE` among them; this constraint is the whole containment for all of them. Read only.
 - NEVER pass `--edit-last` or `--delete-last` to `gh issue comment`. The `Bash(gh issue comment:*)` grant matches by prefix and admits both, and either one rewrites or removes a comment a maintainer may already have read. `/contribution-standards` `<invariants>` "Iterate by appending" is the rule; this constraint is its containment here.
 - NEVER close, label, or reassign an issue the operator did not open.
 - NEVER present a synthesized approximation of the condition as an observation.

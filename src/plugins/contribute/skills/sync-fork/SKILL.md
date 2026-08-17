@@ -3,7 +3,7 @@ name: sync-fork
 description: >-
   ALWAYS invoke this skill when bringing a fork's default branch current with the repository it was forked from.
   NEVER bring a fork's default branch current with `gh repo sync`, `git merge`, or `git reset` run directly.
-allowed-tools: Read, Skill, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh repo sync:*), Bash(git fetch:*), Bash(git rev-list:*), Bash(git log:*)
+allowed-tools: Skill, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh repo sync:*), Bash(git fetch:*), Bash(git rev-list:*), Bash(git log:*)
 ---
 
 <objective>

@@ -71,6 +71,18 @@ A table of contents is satisfied by a `## Contents` section, an XML `<contents>`
 
 **Revisit condition.** Resolve per plugin when that plugin next needs a reference-file change, or as one dedicated sweep. `create-subagent` is the highest-value single target: seven files, 4,646 lines, the largest partial-read exposure in the marketplace.
 
+## The non-interactive git guard sits on the command that cannot prompt
+
+`GIT_TERMINAL_PROMPT=0` guards `gh pr create` in both `src/plugins/spec-tree/skills/open-pr/SKILL.md` (lines 87 and 116) and `src/plugins/contribute/skills/open-upstream-pr/SKILL.md` (lines 125 and 149). `gh` authenticates through its own stored credential against the GitHub API, so the variable has little to act on there. The `git push` each skill runs immediately before is the command that blocks an unattended run on a credential or host-key prompt, and neither carries the guard.
+
+Moving it is not a text edit. Both skills declare narrow prefix-matched grants — `Bash(gh pr create:*)`, `Bash(git push:*)`, `Bash(git push -u origin HEAD:refs/heads/*)` — and an `ENV=value` prefix changes the command string the grant matches against. Whether Claude Code's matcher tolerates an environment-variable prefix decides between three different fixes: move the variable, drop it, or reach non-interactivity through `git -c` configuration. That question is unanswered, and the same answer governs both plugins.
+
+**Resolution shape**: establish how the Bash grant matcher treats an environment-variable prefix, then apply one fix across both skills in the same change. Gate each plugin with `instructions:skill-auditor`.
+
+**Why separate**: the pattern predates either changeset that touched these files and is identical in both plugins, so fixing it inside one plugin's changeset would leave the marketplace holding two spellings of the same convention.
+
+**Evidence**: surfaced by the `instructions:skill-auditor` verdict on `src/plugins/contribute/skills/open-upstream-pr/SKILL.md` during the contribute-plugin consolidation, then found unchanged in `open-pr` by grepping `GIT_TERMINAL_PROMPT` across `src/plugins/`.
+
 ## Agent-specific behavior is enumerated inside product-level decisions
 
 Product-level decisions carry per-agent facts inline, so adding an agent harness edits decisions
