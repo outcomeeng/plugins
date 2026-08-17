@@ -11,7 +11,7 @@ A claimed handoff session — or, under `spx/local/coordination.md`, a claimed C
 
 <constraints>
 
-- Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly. The single exception is the legacy-file archive `<change_coordination>` authorizes once the Change carrying that file as received input exists.
+- Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly. The single session exception is the legacy-file archive `<change_coordination>` authorizes once the Change carrying that file as received input exists. A Change is not a session: under the overlay, `${SKILL_DIR}/workflows/change.md` releases a Change — posts a `Handoff:` comment and removes the assignee — when an Executable Frame fails validation against current truth, and that release is the workflow's own step.
 - NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.
 - Before asking the operator to continue, review the loaded session evidence and present a no-surprises proposal: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation.
 - If session evidence shows another active context already owns the objective, report the owning session, branch, or PR and stop without archiving, releasing, handing off, or otherwise mutating the claimed session.
@@ -40,7 +40,7 @@ Three rules govern a conversation's claimed-session set:
 **Consequences of the three rules:**
 
 - Every successful `spx session pickup` adds that session id to the CLAIMED_SESSIONS marker for this conversation. A later pickup does not replace earlier entries — the set is additive.
-- The pickup workflow MUST NOT archive, release, delete, or manually move any session, except the legacy-file archive `<change_coordination>` authorizes after its Change exists. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
+- The pickup workflow MUST NOT archive, release, delete, or manually move any session, except the legacy-file archive `<change_coordination>` authorizes after its Change exists; releasing a Change after a failed Frame validation is a Change-workflow step, not a session mutation. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
 - A newly created handoff session is a workflow artifact, not a substitute for the claimed session. Its existence never grants permission to close any claimed session.
 - Queue inspection alone is never permission. Archival comes from completing the handoff workflow against the claimed-session set named in CLAIMED_SESSIONS.
 
