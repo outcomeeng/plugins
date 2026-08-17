@@ -92,6 +92,8 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
 </session_management>
 
 <claim>
+This whole section is skipped when `spx/local/coordination.md` exists — `${CLAUDE_SKILL_DIR}/workflows/change.md` then owns claiming, per `<change_coordination>`.
+
 **If `$ARGUMENTS` contains `--list`:**
 
 1. Get all todo sessions:
@@ -146,7 +148,7 @@ The CLAIMED_SESSIONS marker names every in-conversation pickup that Claude is re
 
 Use the `id` attribute on `<PICKUP_CLAIM>` as the canonical identifier for the current pickup (checkpoints, markers, error messages).
 
-Once claimed, follow `${CLAUDE_SKILL_DIR}/workflows/pickup.md` to process the session. Under `spx/local/coordination.md`, `${CLAUDE_SKILL_DIR}/workflows/change.md` is the workflow instead, per `<change_coordination>`.
+Once claimed, follow `${CLAUDE_SKILL_DIR}/workflows/pickup.md` to process the session.
 
 The workflow invokes `/understand` immediately before its first product-content access — the coordination-note path check under `spx/` when the session names a node, otherwise the `/contextualize` invocation for the node the operator names — and at no earlier step; the claim, `spx session show`, checkout, base sync, and claim reconciliation touch no product content and need no reload. Node-local `PLAN.md` and `ISSUES.md` content is read by `/contextualize`, not by pre-context pickup steps.
 
