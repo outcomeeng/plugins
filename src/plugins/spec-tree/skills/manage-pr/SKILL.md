@@ -2,8 +2,8 @@
 name: manage-pr
 description: >-
   ALWAYS invoke this skill when managing, waiting on, or continuing an open pull request lifecycle after a PR exists.
-argument-hint: "[pr-number|url|branch] [--return-closeout]"
-allowed-tools: Read, Glob, Grep, Edit, Write,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Skill, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(printf:*)
+argument-hint: "[pr-number|url|branch]"
+allowed-tools: Read, Glob, Grep, Edit, Write,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Skill, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(printf:*)
 ---
 
 <objective>
@@ -12,9 +12,7 @@ The pull request merged into the base branch on origin with one stable closeout-
 
 <input>
 
-`$ARGUMENTS` accepts one optional PR pointer and the optional exact marker `--return-closeout`. Remove the marker before pointer resolution. Treat the remaining complete trimmed value as a PR number, PR URL, or branch name and pass that same value to every pointer-bearing inspection command; when it is empty, resolve the PR from the current branch with bare `gh pr view`. Reject duplicate markers, unknown flags, or more than one pointer.
-
-The marker binds post-merge ownership. Present means the caller owns broader-goal continuation and session closure, so Step 9 returns closeout-ready evidence. Absent means `/manage-pr` owns direct-invocation closure and invokes `/handoff` when its remaining-work disposition is complete.
+`$ARGUMENTS` accepts one optional PR pointer. Treat the complete trimmed value as a PR number, PR URL, or branch name and pass that same value to every pointer-bearing inspection command; when it is empty, resolve the PR from the current branch with bare `gh pr view`. Reject unknown flags or more than one pointer.
 
 </input>
 
@@ -87,7 +85,7 @@ gh pr checks <pr-number> --watch --fail-fast --interval 30
 
 The command exits when all PR checks finish, and `--fail-fast` exits when any check fails. Do not schedule runtime heartbeats or timers for PR checks. Do not act from the pre-wait gate tuple; Step 1 and Step 2 re-read PR state, check rollup, PR-level comments, formal reviews, review-thread comments, and base drift before the next action.
 
-When Step 8 emits `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7 and immediately return to Step 1 in the same turn. Do not merge or emit a final token from pre-watch state. The post-watch pass must re-read PR state, check rollup, PR-level comments, formal reviews, and review-thread comments before deciding the next action.
+For every wait token, apply the post-watch re-entry rule in Step 8.
 
 </step>
 
@@ -110,6 +108,8 @@ Classify `MERGE_READINESS` in this order. The first matching rule wins; once a r
 9. Branch hygiene or PR-state predicate failed -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "branch-hygiene"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
 10. Head SHA, fetched branch head, or status-check head mismatch -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "head-mismatch"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
 11. Otherwise -> `merge_readiness: "HOLD"`, `blocking_predicate: "none"`, `guard_verdict: "MERGE_READY:<head-sha>"`, `merge_command_allowed: true`, `autonomous_action: "merge"`, `pr_comment_body: null`.
+
+**Worked trace.** The inspected head and fetched branch head both equal `4f3c2b1a09e8d7c6b5a493827160fedcba987654`; branch hygiene and PR state pass; the current-head review exists, is valid, and has no unresolved finding. `statusCheckRollup` contains a review-kind check with `status: "COMPLETED"` and `conclusion: "SUCCESS"`, plus the required `test` check with `status: "IN_PROGRESS"` and no conclusion. Rules 1–6 do not match. Rule 7 is the first match, so the guard emits `WAIT_FOR_CHECKS`, sets `merge_command_allowed: false`, runs Step 7, and does not merge.
 
 Ignore host mergeability. `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and a successful `gh pr merge` response never authorize the merge command.
 
@@ -152,15 +152,15 @@ If the project declares deploy or release phases, continue through Step 9 with t
 
 If `MERGE_READINESS` does not hold, directly read /merging-standards `action-tokens.md` from its `<reference_index>`, then emit exactly one token from `<action_tokens>`. The token is valid only for this pass. For `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7 and re-inspect. For `MERGE_BLOCKED:<reason>`, stop at the concrete blocker the token names; when the operator replies, restart this workflow for the PR pointer before acting. A base-sync conflict is handled earlier in Step 4 as a structured stop report, not an action token.
 
-**Step 9 — Build the closeout result and apply explicit ownership.** Once the PR is merged and `<merge_cleanup>` has run, build the branch-state closeout record from /merging-standards `<branch_state_closeout>` and run its safe cleanup policy before deploy or release routing so every later token carries the cleanup state. If a declared deploy action exists and its authorization predicate is unsatisfied, emit `AWAIT_DEPLOYMENT_AUTHORIZATION` with the branch-state closeout record, run no deploy action, run no release action, and wait for operator authorization before re-entering Step 1. If a declared release action exists after deploy completion or a deploy no-op and its authorization predicate is unsatisfied, emit `AWAIT_RELEASE_AUTHORIZATION` with the branch-state closeout record, run no release action, and wait for operator authorization before re-entering Step 1. When declared deploy and release phases are complete or no-op, build one closeout-ready result containing the PR URL, full merged head SHA, merge commit when available, cleanup state, branch-state closeout record with **Remaining Branches** groups, deploy result, release result, and remaining-work disposition. When `--return-closeout` is present, return that result so the caller applies broader-goal continuation and session closure. When the marker is absent and the disposition names remaining in-scope work, return the result for direct continuation. When the marker is absent and the disposition says no in-scope work remains, invoke `/handoff` plain with the branch-state closeout record and return the handoff closeout. The parsed marker, never inferred caller identity, decides closeout ownership.
+**Step 9 — Return the closeout result.** Once the PR is merged and `<merge_cleanup>` has run, build the branch-state closeout record from /merging-standards `<branch_state_closeout>` and run its safe cleanup policy before deploy or release routing so every later token carries the cleanup state. If a declared deploy action exists and its authorization predicate is unsatisfied, emit `AWAIT_DEPLOYMENT_AUTHORIZATION` with the branch-state closeout record, run no deploy action, run no release action, and wait for operator authorization before re-entering Step 1. If a declared release action exists after deploy completion or a deploy no-op and its authorization predicate is unsatisfied, emit `AWAIT_RELEASE_AUTHORIZATION` with the branch-state closeout record, run no release action, and wait for operator authorization before re-entering Step 1. When declared deploy and release phases are complete or no-op, return one closeout-ready result containing the PR URL, full merged head SHA, merge commit when available, cleanup state, branch-state closeout record with **Remaining Branches** groups, deploy result, release result, and remaining-work disposition. The result is `/manage-pr`'s terminal success output. Its shape and behavior never depend on caller identity; an outer entry point owns any continuation or session close that follows.
 
-**Exit when:** the PR is closed, Step 9 has returned a continuation result, Step 9 has returned `/handoff` closeout, or Step 9 has emitted `AWAIT_DEPLOYMENT_AUTHORIZATION` or `AWAIT_RELEASE_AUTHORIZATION` with branch-state closeout evidence. Otherwise return to Step 1 after Step 7 or after the operator resolves a token boundary.
+**Exit when:** Step 9 has returned the closeout-ready result, the PR is closed, or Step 9 has emitted `AWAIT_DEPLOYMENT_AUTHORIZATION` or `AWAIT_RELEASE_AUTHORIZATION` with branch-state closeout evidence. Otherwise return to Step 1 after Step 7 or after the operator resolves a token boundary.
 
 </step>
 
 <script_testing>
 
-`scripts/resolve_review_thread.py` has mapping evidence in this plugin's source test suite. The covered behavior is the review-thread resolution workflow this skill invokes.
+`scripts/resolve_review_thread.py` has linked scenario, property, and compliance evidence in this plugin's source test suite. The covered behavior is the review-thread resolution workflow this skill invokes.
 
 Tested inputs and expected outputs:
 
@@ -168,7 +168,7 @@ Tested inputs and expected outputs:
 - Review-comment discovery: `--host ghe.example.com --repo outcomeeng/plugins --pr 405 --review-comment-id 12345` discovers the owning review-thread node before resolving it.
 - Thread pagination: a first review-thread page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `threadsAfter=<cursor>` query, then resolves the discovered thread.
 - Comment pagination: a thread comments page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `commentsAfter=<cursor>` query before resolving the owning thread.
-- Malformed resolver CLI inputs: generated thread IDs, repositories, PR numbers, comment IDs, hosts, and mixed direct/discovery modes outside the helper's source-owned validators return exit code `2`, print a validation message, and make no GitHub mutation call.
+- Malformed resolver CLI inputs: empty and incomplete discovery selector sets, generated thread IDs, repositories, PR numbers, comment IDs, hosts, and mixed direct/discovery modes outside the helper's source-owned validators return exit code `2`, print a validation message, and make no GitHub mutation call.
 - Missing review comment: complete review-thread pagination without a matching comment returns exit code `2` with `review comment was not found after complete review-thread pagination`.
 - Malformed GitHub payloads: null repository, null pull request, null paginated thread node, missing comment pagination metadata, and missing pagination cursor responses return exit code `2` with the exact failing response shape named.
 - Cleanup: the helper creates no temporary files and owns no persistent state; tests assert only subprocess calls, stdout/stderr payload handling, and exit codes.
@@ -243,23 +243,12 @@ The narrow Bash grants in frontmatter authorize approval-free execution. Run req
 
 <success_criteria>
 
-The managing flow satisfies its contract when, at minimum:
-
-- /merging-standards and /commit-changes are loaded before any inspection or push, `merge-policy.md` is read directly from /merging-standards `<reference_index>` before any tagged policy section is used, and every management pass gets a fresh `spx worktree status` proof through `<occupancy_preflight>` before checkout-sensitive mutation.
-- Each pass inspects all three surfaces from /merging-standards `<review_inspection>`.
-- Each pass checks base drift in the same checkpoint as review inspection; a branch behind `origin/<base>` is rebased per /merging-standards `<base_sync>` before the queue is driven, regardless of whether a review has landed or carries findings.
-- Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and acted on by validity and phase, never by severity.
-- The work queue fixes every valid in-scope finding the open-PR review surfaces — no deferral of in-scope work; a `DEBT` finding the author judges out of scope is recorded in `ISSUES.md` / `PLAN.md` with a recorded reason and tracked, not a merge blocker.
-- Every follow-up push re-establishes `VERIFICATION_READINESS` on the diff it would publish — local deterministic verification passes per /merging-standards `<local_deterministic_scope>` (or, for a push that only rebased onto an advanced base, the preservation-proof-scoped lane per /merging-standards `<base_sync>`), every required evidence-auditor predicate has passed, and the local `changes-reviewer` review (invoked at parity per /merging-standards `<local_review_invocation>`, with no scope narrowing) has converged with no valid finding unaddressed — re-runs /merging-standards `<branch_hygiene>`, and goes to the ready PR with no draft toggle.
-- Pending PR checks or current-head CI review use exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30` per /merging-standards `<pr_check_wait>`.
-- Action tokens are treated as pass-local observations only; after compaction, wait completion, push, review arrival, operator reply, or a new user turn, `/manage-pr` re-enters from the PR pointer and re-inspects live GitHub and repository state before waiting, merging, or closing.
-- Merge fires autonomously only when `MERGE_READINESS` holds and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: a clean current-head CI review exists (present, complete and valid, reporting no unresolved `BLOCKING` or `DEBT` finding — stated directly or with every such finding individually refuted as unbacked, a `DEBT` finding the author tracks out of scope with a recorded reason not unresolved — its absence is never clean), every other required check is terminal-green, branch hygiene and PR-state hold, and the inspected head SHA matches the fetched remote branch head and status-check head.
-- After merge and declared deploy or release handling, the closeout-ready result carries the PR URL, full merged head SHA, merge commit when available, cleanup state, branch-state record with **Remaining Branches**, deploy and release results, and remaining-work disposition. The branch-state closeout record from /merging-standards `<branch_state_closeout>` has been built and safe cleanup has run. `--return-closeout` returns ownership to the caller; without it, remaining in-scope work returns for direct continuation and a complete disposition invokes `/handoff` plain.
-- A current-head CI review skipped **because the PR modifies the reviewer's own workflow file** (`conclusion: skipped`, GitHub Actions' identical-workflow-content gate) triggers the reviewer-skipped-by-design exception from /merging-standards `<authority_gates>`: post `<trigger-phrase> review` as a PR-level comment and emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`. For any other skip cause, emit `MERGE_BLOCKED:review-check-skipped` — the exception is scoped to the self-modifying-PR case only.
-- The foreground PR-check wait inspects the terminal check result, then re-runs the full Step 1/Step 2 inspection before deciding the next action.
-- `gh pr merge` is never run as a probe for mergeability; `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and command acceptance are not merge predicates.
-- Each pass that does not fire an autonomous action emits exactly one token from /merging-standards `<action_tokens>`, except a base-sync conflict, which stops with `/sync-base`'s structured conflict report and active rebase state.
-- `/understand` and the governing node's `/contextualize` were invoked before every product-content read or modification and every node discussion in the pass, only immediately before the first such access or discussion, never earlier, and not at all in a pass that touched no product content and discussed no node.
-- No `<self_reference>` violation per /merging-standards.
+- Every checkout-sensitive mutation has a current passing occupancy proof, and every product-content access has the required live foundation and node context.
+- The inspected head is current with `origin/<base>`; all three review surfaces were read; every valid in-scope finding was fixed; every separate larger concern carries a recorded reason.
+- Each pushed head has passing deterministic verification, every applicable evidence-auditor approval, a converged local changeset review, and passing branch hygiene.
+- A merge runs only after a clean current-head CI review exists, every required check is terminal-green, and the mutation guard returns `MERGE_READY:<head-sha>` for the same fetched head. A self-modifying review workflow uses the configured mention exception; every other skipped review check blocks.
+- A waiting pass runs the required foreground check watch, discards prior action authority, and re-inspects live state before its next decision. Every non-waiting blocked pass emits one current action token or the structured base-sync conflict report.
+- Successful completion returns one caller-independent closeout result containing the PR URL, full merged head SHA, merge commit when available, cleanup state, the branch-state record with **Remaining Branches**, deploy result, release result, and remaining-work disposition.
+- No mergeability probe, caller-identity branch, unsupported finding label, stale action token, or `<self_reference>` violation occurs.
 
 </success_criteria>
