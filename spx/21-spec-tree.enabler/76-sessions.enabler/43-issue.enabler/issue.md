@@ -10,6 +10,8 @@ CAN record a needed follow-up where that repository's own agents pick it up, wit
 
 - A marketplace registration entry's declared source fields — the registered source, the materialized root, and the source type, each present, empty, or absent for its runtime — map to the resolved target checkout path, an empty value falling through wherever an absent one would, and every other combination maps to a none-available diagnostic; a field belonging to the other runtime leaves the resolved path unchanged ([test](tests/test_resolve_marketplace.mapping.l1.py))
 
+- A requested marketplace name maps across a registration listing to the first entry that both carries that name and resolves a path, an omitted request name standing for the default marketplace name and a listing with no such entry mapping to a none-available diagnostic ([test](tests/test_resolve_marketplace.mapping.l1.py))
+
 ### Properties
 
 - Registration JSON naming no matching local marketplace resolves no path and exits non-zero, and stdin that is not a JSON document exits with the invalid-JSON status ([test](tests/test_resolve_marketplace.property.l1.py))

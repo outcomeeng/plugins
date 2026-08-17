@@ -14,6 +14,7 @@ from outcomeeng_testing.generators.resolve_marketplace import (
 )
 from outcomeeng_testing.harnesses.resolve_marketplace import (
     RESOLVER,
+    invalid_json_message_prefix,
     resolver_property_run,
     run_resolver,
     run_resolver_stdin,
@@ -48,3 +49,4 @@ def test_non_json_stdin_maps_to_the_invalid_json_status(
 
     assert result.returncode == RESOLVER.EXIT_INVALID_JSON
     assert result.stdout == ""
+    assert result.stderr.startswith(invalid_json_message_prefix())

@@ -53,7 +53,7 @@ confirmed the rule counts and recorded them as outside its own REJECT vocabulary
 
 ## The node's assertion count carries no recorded disposition
 
-The node carries 17 assertions. `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`
+The node carries 18 assertions. `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`
 treats more than roughly seven as a signal requiring decomposition analysis. The parent's
 `spx/21-spec-tree.enabler/76-sessions.enabler/PLAN.md` records an assertion-count disposition for
 `spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler`,
@@ -72,7 +72,7 @@ the parent `PLAN.md`.
 
 ## Marketplace-resolver extraction awaits a published SPX CLI capability
 
-`src/plugins/spec-tree/skills/issue/scripts/resolve_marketplace.py` runs to 144
+`src/plugins/spec-tree/skills/issue/scripts/resolve_marketplace.py` runs to 152
 lines — resolution of a marketplace entry's registered local source from JSON on
 stdin, covering the Claude Directory-source and Codex local-marketplace-source
 shapes, with distinct errors for malformed JSON and an unresolvable target. Past

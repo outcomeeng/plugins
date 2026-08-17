@@ -91,9 +91,22 @@ def run_resolver(
     return run_resolver_stdin(json.dumps(payload), runtime=runtime, name=name)
 
 
-def none_available_message() -> str:
-    """The stderr fragment naming an empty local-marketplace listing."""
-    return f"available local marketplaces: {RESOLVER.NO_LOCAL_MARKETPLACES}"
+def none_available_message(*, name: str, runtime: str) -> str:
+    """The stderr line the resolver emits when nothing local resolves.
+
+    Rendered from the production message template so a reword of that
+    message moves the expectation with it.
+    """
+    return RESOLVER.NOT_FOUND_MESSAGE.format(
+        name=name,
+        runtime=runtime,
+        available=RESOLVER.NO_LOCAL_MARKETPLACES,
+    )
+
+
+def invalid_json_message_prefix() -> str:
+    """The stable leading text of the production invalid-JSON message."""
+    return RESOLVER.INVALID_JSON_MESSAGE.split("{error}")[0]
 
 
 resolver_property_run = settings(

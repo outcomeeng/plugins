@@ -45,6 +45,11 @@ RUNTIME_CODEX: Final = "codex"
 NO_LOCAL_MARKETPLACES: Final = "none"
 EXIT_INVALID_JSON: Final = 2
 EXIT_MARKETPLACE_NOT_FOUND: Final = 3
+INVALID_JSON_MESSAGE: Final = "invalid marketplace JSON: {error}"
+NOT_FOUND_MESSAGE: Final = (
+    "marketplace {name!r} is not registered as a local {runtime} marketplace; "
+    "available local marketplaces: {available}"
+)
 
 
 def _entries(payload: Any) -> Iterable[dict[str, Any]]:
@@ -123,16 +128,18 @@ def main() -> int:
     try:
         payload = json.load(sys.stdin)
     except json.JSONDecodeError as exc:
-        print(f"invalid marketplace JSON: {exc}", file=sys.stderr)
+        print(INVALID_JSON_MESSAGE.format(error=exc), file=sys.stderr)
         return EXIT_INVALID_JSON
 
     entries = list(_entries(payload))
     path = _resolve(entries, args.runtime, args.name)
     if not path:
-        available = _available_local_marketplaces(entries, args.runtime)
         print(
-            f"marketplace {args.name!r} is not registered as a local "
-            f"{args.runtime} marketplace; available local marketplaces: {available}",
+            NOT_FOUND_MESSAGE.format(
+                name=args.name,
+                runtime=args.runtime,
+                available=_available_local_marketplaces(entries, args.runtime),
+            ),
             file=sys.stderr,
         )
         return EXIT_MARKETPLACE_NOT_FOUND

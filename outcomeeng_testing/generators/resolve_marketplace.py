@@ -98,6 +98,7 @@ def _codex_cases(base: str) -> Iterator[ResolutionCase]:
     source_types = (
         ("local", RESOLVER.CODEX_LOCAL_SOURCE_TYPE),
         ("nonlocal", _NON_LOCAL_SOURCE_TYPE),
+        ("empty-type", ""),
         ("absent-type", None),
     )
     for type_label, source_type in source_types:
@@ -108,6 +109,7 @@ def _codex_cases(base: str) -> Iterator[ResolutionCase]:
         ):
             for root_label, root in (
                 ("root", f"{base}/codex-root"),
+                ("empty-root", ""),
                 ("no-root", None),
             ):
                 for decoy_label, decoys in (("plain", False), ("decoyed", True)):
@@ -116,7 +118,7 @@ def _codex_cases(base: str) -> Iterator[ResolutionCase]:
                     # empty source is not a source, so it falls through the
                     # same way an absent one does.
                     if source_type == RESOLVER.CODEX_LOCAL_SOURCE_TYPE:
-                        expected = source or root
+                        expected = source or root or None
                     else:
                         expected = None
                     yield ResolutionCase(
@@ -177,6 +179,90 @@ def registration_field_domain(base: str) -> list[ResolutionCase]:
     message; it names no directory that has to exist.
     """
     return [*_codex_cases(base), *_claude_cases(base)]
+
+
+@dataclass(frozen=True)
+class SelectionCase:
+    """One entry list and the path the requested name selects from it."""
+
+    label: str
+    runtime: str
+    payload: object
+    requested_name: str | None
+    """The `--name` value, or None to omit the option entirely."""
+    expected_path: str | None
+
+
+_OTHER_MARKETPLACE_NAME = "other-marketplace"
+
+
+def _selection_entry(name: str, path: str | None, runtime: str) -> dict[str, object]:
+    if runtime == RESOLVER.RUNTIME_CODEX:
+        entry = _codex_entry(
+            source_type=RESOLVER.CODEX_LOCAL_SOURCE_TYPE,
+            source=path,
+            root=None,
+            decoys=False,
+        )
+    else:
+        entry = _claude_entry(
+            source=RESOLVER.CLAUDE_DIRECTORY_SOURCE, path=path, decoys=False
+        )
+    entry[RESOLVER.NAME_FIELD] = name
+    return entry
+
+
+def _as_payload(entries: list[dict[str, object]], runtime: str) -> object:
+    if runtime == RESOLVER.RUNTIME_CODEX:
+        return {RESOLVER.MARKETPLACES_FIELD: entries}
+    return entries
+
+
+def entry_selection_domain(base: str) -> list[SelectionCase]:
+    """The finite domain of which listed entry a requested name selects.
+
+    Each layout is a list of (entry name, resolvable) pairs. The declared
+    rule selects the first entry whose name equals the requested name and
+    whose declared fields resolve; an omitted `--name` requests the default
+    marketplace name.
+    """
+    default = RESOLVER.DEFAULT_MARKETPLACE_NAME
+    layouts: tuple[tuple[str, tuple[tuple[str, bool], ...], str | None], ...] = (
+        ("first-of-two-resolves", ((default, True), (default, True)), default),
+        ("second-resolves", ((default, False), (default, True)), default),
+        ("neither-resolves", ((default, False), (default, False)), default),
+        (
+            "other-name-precedes",
+            ((_OTHER_MARKETPLACE_NAME, True), (default, True)),
+            default,
+        ),
+        ("only-other-name", ((_OTHER_MARKETPLACE_NAME, True),), default),
+        ("omitted-name-takes-default", ((default, True),), None),
+        ("omitted-name-misses-other", ((_OTHER_MARKETPLACE_NAME, True),), None),
+        ("empty-list", (), default),
+    )
+
+    cases: list[SelectionCase] = []
+    for runtime in (RESOLVER.RUNTIME_CLAUDE, RESOLVER.RUNTIME_CODEX):
+        for label, layout, requested in layouts:
+            effective = requested if requested is not None else default
+            entries: list[dict[str, object]] = []
+            expected: str | None = None
+            for index, (name, resolvable) in enumerate(layout):
+                path = f"{base}/entry-{index}" if resolvable else None
+                entries.append(_selection_entry(name, path, runtime))
+                if expected is None and name == effective and path:
+                    expected = path
+            cases.append(
+                SelectionCase(
+                    label=f"{runtime}-{label}",
+                    runtime=runtime,
+                    payload=_as_payload(entries, runtime),
+                    requested_name=requested,
+                    expected_path=expected,
+                )
+            )
+    return cases
 
 
 def json_payloads() -> st.SearchStrategy[object]:
