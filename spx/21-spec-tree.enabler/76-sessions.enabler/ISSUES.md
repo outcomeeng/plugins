@@ -45,3 +45,29 @@ The trigger judgment itself is separately asserted in `spx/21-spec-tree.enabler/
 **Resolution shape**: drop or forward-point the line-16 clause, align the 02-reflect wording, reduce the objective to its output sentence, and add the eager-reload failure mode — one editorial pass over the handoff skill gated by `instructions:skill-auditor`.
 
 **Evidence.** Surfaced by the `skill-auditor` review of the handoff skill on the post-compaction reload-timing change (findings `unclear_conditional_trigger`, `phrasing_drift`, `objective_bloat`, `no_failure_modes`).
+
+## 5. The `gh` untrusted-text rule is stated twice
+
+`src/plugins/spec-tree/skills/pickup/workflows/change.md` and `src/plugins/spec-tree/skills/handoff/workflows/05-change.md` each carry the same paragraph on passing untrusted text to `gh` — bodies and comments on stdin as `--body-file -`, every other interpolated argument single-quoted with `'"'"'` for apostrophes, never a double-quoted argument, scratch file, or redirect built from such text. Two authored copies drift; the title-quoting defect the local review found had to be repaired in both.
+
+**Resolution shape**: extract the rule into a `{domain}-standards` reference skill both workflows invoke, per the reference-skill pattern in the skill-authoring standards. A new skill is a structural plugin change with its own audit and a minor bump, so it does not belong to the changeset that introduced the Change workflows.
+
+The same rule reaches `src/plugins/spec-tree/skills/open-pr/SKILL.md`, whose `gh pr create --title "…"` double-quotes an interpolated title; the extracted reference covers `--title` as well as `--body-file -`, and `open-pr` invokes it. The pull-request review of PR #535 (head `98b1ab9d114ab60f5da8ca11a6538c0fbd34f936`) surfaced that site as a DEBT finding; its fix changes a skill surface outside that changeset, so it is tracked here rather than carried there.
+
+**Evidence.** The `skill-auditor` verdict on the pickup bundle at `41b304b691460afca90c7b92559123fdc3e6a3a1` names the duplication (`reference_skill_extraction_candidate`).
+
+## 6. The Change-coordination mechanism has no decision record
+
+The overlay contract declared in `spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md`, `25-handoff.enabler/handoff.md`, and `28-pickup.enabler/pickup.md` — claim by assignee plus earliest `Claim:` comment, Maturity gating, the five-line Handoff comment, the authorized close comments, the secret inspection before every store write — is decided in the assertions and the two skill workflows, with no ADR or PDR under this node the way `13-handoff-persistence.adr.md` and `28-pickup.enabler/20-claim-verification.adr.md` decide their narrower mechanisms. The operator directed the GitHub realization to ship as a prototype without a PDR, following methodology 4.0.0 coordination (`versions/next/11-coordination.md` of `outcomeeng/methodology`) and its GitHub realization note directly.
+
+**Resolution shape**: when the prototype graduates, author the decision under this node — a PDR when the Maturity and Lifecycle vocabulary is user-observable product behaviour, otherwise an ADR — and repoint the three overlay assertions at it; `/decompose` places it.
+
+**Evidence.** The local review of `work/session-pointer-truth-derivation` at `488bd2e6c9c43d83d13c50b63029b903e2e03880` recorded the missing decision as a DEBT finding; the operator's prototype direction is the recorded reason it is tracked here rather than fixed in that changeset.
+
+## 7. The Change store is bound by workflow discipline, not by the tool grant
+
+Every `gh` grant the Change workflows carry — `gh issue create:*`, `gh issue edit:*`, `gh project item-add:*`, `gh api repos/*/issues/*/dependencies/*`, and the rest — admits any repository the authenticated account reaches; a Bash allow-list pattern cannot name a per-consumer store, and the store comes from `spx/local/coordination.md` at runtime. Both workflows therefore state their own discipline as the containment: only the overlay's store, only the named endpoints and methods. The `gh api` write at Framed (`dependencies/blocked_by -X POST`) is the widest such capability, since a value read from a Change body or a migrated file feeds the call.
+
+**Resolution shape**: a bundled stdlib helper under the pickup and handoff skills that reads the store from `spx/local/coordination.md`, refuses any other `owner/repo`, and performs the dependency read and write, so the grant covers the helper invocation and the binding runs in code. It ships with its own tests under `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler` governance and the shipped-scripting rules of `spx/12-shipped-scripting.adr.md`, which makes it a separate structural concern rather than an edit inside the changeset that introduced the workflows.
+
+**Evidence.** The local review of `work/session-pointer-truth-derivation` at `acdb246e12062924e9dc3a6cb074ff537194d908` raised the unbounded-repository property of the `gh api` grants; the same property holds for every `gh --repo` grant the workflows carry.

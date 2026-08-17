@@ -10,6 +10,16 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.92.0
+
+### Added
+
+- **Changes and Handoffs as GitHub issues, opted into by an overlay.** When a repository declares a Change store in `spx/local/coordination.md` — the issue repository, the org project carrying `Product` and `Maturity` fields with `Status` projecting Lifecycle, and the repository's `Product` value — `/pickup` follows `workflows/change.md` and `/handoff` follows `workflows/05-change.md`, per methodology `versions/next/11-coordination.md` and its GitHub realization. `/pickup` claims a Change by assignee, turns a legacy `.spx/sessions` file into a Proposed Change carrying the whole file as received input and archives the file only then, routes by Maturity — refinement through `/interview` below Executable, execution only at Executable after the Frame's Nodes, Assertions, Decisions, blockers, and lineage are validated against current truth — and continues from the newest `Handoff:` comment's Next Activity. `/handoff` refines what was learned into the Change body, then posts the five-line `Handoff:` comment and removes the assignee, or closes the Change as Applied, Refined, or Abandoned with the authorized comment. Both skills carry the `gh issue` and `gh project` grants the workflows use, and every issue body and comment reaches `gh` on stdin.
+
+### Changed
+
+- **Without `spx/local/coordination.md` nothing changes.** The session-file workflows remain the default; the overlay selects the Change workflows.
+
 ## 0.91.0
 
 ### Added

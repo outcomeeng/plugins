@@ -45,8 +45,8 @@ Closure is BLOCKED until session-owned files are committed.
 <record_state>
 For each anchored node, check `git status` and record:
 
-- **Committed**: session-owned work should appear here after the commit above.
-- **Uncommitted**: only foreign or intentionally untouched work should remain here.
+- **Committed**: session-owned work appears here after the commit above; anything else here means the commit step did not run.
+- **Uncommitted**: only foreign or intentionally untouched work remains here.
 
 </record_state>
 
@@ -71,6 +71,8 @@ Before processing partitions, require every thread record to have a resolved own
 </resolve_continuation_threads>
 
 <write_canonical_continuation>
+When `spx/local/coordination.md` exists, `${CLAUDE_SKILL_DIR}/workflows/05-change.md` replaces this section — see `SKILL.md` `<change_coordination>`.
+
 Every closure ends with **zero, one, or several** session files — one canonical continuation per resolved thread whose partition has a `fresh-session` disposition. Threads are independent of whether the claimed-session set is empty. Process each partition independently: execute its disposition, verify that thread's continuation state, then archive only that record's `archive_ids`. Complete one partition before processing the next. Zero sessions is correct when no continuation reader exists.
 
 **Worktree precondition:** any path that invokes `spx session handoff` requires an allowed git state. From a linked worktree, reach it first — see `<release_work_branch>` below — before running the command.
@@ -135,6 +137,8 @@ NEVER re-check-out the handed-off branch "to return to the prior spot." Re-occup
 </release_work_branch>
 
 <archive_claimed_sessions>
+When `spx/local/coordination.md` exists, `${CLAUDE_SKILL_DIR}/workflows/05-change.md` replaces this section for held Changes; legacy `<CLAIMED_SESSIONS>` ids still archive here — see `SKILL.md` `<change_coordination>`.
+
 After each canonical continuation is written and verified, archive only that thread partition's `archive_ids`. Under Path A, archive that partition after zero-handoff is confirmed valid for its thread: no replacement reader remains, or the named existing owner carries that thread's continuation. Archive the resolved claimed-session set after every artifact partition has reached its verified disposition, so one failed partition leaves the remaining thread artifacts untouched.
 
 Leave the running worktree's occupancy claim intact. Handoff creates fresh session documents, archives session documents, and may step off a Git branch, but the runtime worktree claim belongs to the live process and remains until a later claim replaces it or liveness marks it free.
