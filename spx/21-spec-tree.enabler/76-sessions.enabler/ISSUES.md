@@ -45,3 +45,11 @@ The trigger judgment itself is separately asserted in `spx/21-spec-tree.enabler/
 **Resolution shape**: drop or forward-point the line-16 clause, align the 02-reflect wording, reduce the objective to its output sentence, and add the eager-reload failure mode — one editorial pass over the handoff skill gated by `instructions:skill-auditor`.
 
 **Evidence.** Surfaced by the `skill-auditor` review of the handoff skill on the post-compaction reload-timing change (findings `unclear_conditional_trigger`, `phrasing_drift`, `objective_bloat`, `no_failure_modes`).
+
+## 5. The `gh` untrusted-text rule is stated twice
+
+`src/plugins/spec-tree/skills/pickup/workflows/change.md` and `src/plugins/spec-tree/skills/handoff/workflows/05-change.md` each carry the same paragraph on passing untrusted text to `gh` — bodies and comments on stdin as `--body-file -`, every other interpolated argument single-quoted with `'"'"'` for apostrophes, never a double-quoted argument, scratch file, or redirect built from such text. Two authored copies drift; the title-quoting defect the local review found had to be repaired in both.
+
+**Resolution shape**: extract the rule into a `{domain}-standards` reference skill both workflows invoke, per the reference-skill pattern in the skill-authoring standards. A new skill is a structural plugin change with its own audit and a minor bump, so it does not belong to the changeset that introduced the Change workflows.
+
+**Evidence.** The `skill-auditor` verdict on the pickup bundle at `41b304b691460afca90c7b92559123fdc3e6a3a1` names the duplication (`reference_skill_extraction_candidate`).
