@@ -87,23 +87,36 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
 )
 AUTHORITY_HIERARCHY_POLICY_HEADING: Final = "## Authority Hierarchy"
 DANGEROUS_COMMAND_GUARD_POLICY_HEADING: Final = "### Dangerous-command guard"
+DANGEROUS_BRANCH_DYNAMIC_PROHIBITION_REQUIREMENT: Final = (
+    "NEVER** pass dynamic branch names to `git branch -d` or `git branch -D`"
+)
+DANGEROUS_BRANCH_DYNAMIC_FORMS_REQUIREMENT: Final = (
+    "variables, command substitutions, arrays, and globs are denied"
+)
+DANGEROUS_BRANCH_QUOTED_FORM_REQUIREMENT: Final = (
+    "including when quoted or placed after `--`"
+)
+DANGEROUS_BRANCH_LITERAL_NAME_REQUIREMENT: Final = "Type every branch name literally"
+DANGEROUS_BRANCH_MULTI_NAME_REQUIREMENT: Final = (
+    "delete several literal names in one command"
+)
 DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS: Final = (
     (
         "dynamic destructive branch prohibition",
-        "NEVER** pass dynamic branch names to `git branch -d` or `git branch -D`",
+        DANGEROUS_BRANCH_DYNAMIC_PROHIBITION_REQUIREMENT,
     ),
     (
         "dynamic destructive branch forms",
-        "variables, command substitutions, arrays, and globs are denied",
+        DANGEROUS_BRANCH_DYNAMIC_FORMS_REQUIREMENT,
     ),
     (
         "quoted dynamic branch denial",
-        "including when quoted or placed after `--`",
+        DANGEROUS_BRANCH_QUOTED_FORM_REQUIREMENT,
     ),
-    ("literal destructive branch names", "Type every branch name literally"),
+    ("literal destructive branch names", DANGEROUS_BRANCH_LITERAL_NAME_REQUIREMENT),
     (
         "multi-branch destructive invocation",
-        "delete several literal names in one command",
+        DANGEROUS_BRANCH_MULTI_NAME_REQUIREMENT,
     ),
 )
 AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
@@ -144,23 +157,47 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     ("Claude guide filename", "`CLAUDE.md` for Claude Code"),
     ("Codex guide filename", "`AGENTS.md` for Codex"),
 )
+DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT: Final = (
+    "a dangerous-command guard (DCG) block terminates the attempted command family"
+)
+DANGEROUS_COMMAND_GUARD_RETRY_PROHIBITION_REQUIREMENT: Final = (
+    "NEVER** retry it by reformulating, splitting, rewriting, removing the flagged "
+    "clause, or substituting an equivalent command to evade the guard"
+)
+DANGEROUS_COMMAND_GUARD_SANCTIONED_PATH_REQUIREMENT: Final = (
+    "follow the active skills, repository instructions, and declared overlays to "
+    "find a sanctioned operation"
+)
+DANGEROUS_COMMAND_GUARD_TERMINAL_REPORT_REQUIREMENT: Final = (
+    "report the blocked command with secrets redacted"
+)
+DANGEROUS_COMMAND_GUARD_TERMINAL_PURPOSE_REQUIREMENT: Final = "explain its purpose"
+DANGEROUS_COMMAND_GUARD_TERMINAL_REASON_REQUIREMENT: Final = "guard's reason"
 DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS: Final = (
     (
         "dangerous-command guard stop trigger",
-        "a dangerous-command guard (DCG) block terminates the attempted command family",
+        DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT,
     ),
     (
         "dangerous-command guard retry prohibition",
-        "NEVER** retry it by reformulating, splitting, rewriting, removing the flagged clause, or substituting an equivalent command to evade the guard",
+        DANGEROUS_COMMAND_GUARD_RETRY_PROHIBITION_REQUIREMENT,
     ),
     *DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS,
     (
         "dangerous-command guard sanctioned path",
-        "follow the active skills, repository instructions, and declared overlays to find a sanctioned operation",
+        DANGEROUS_COMMAND_GUARD_SANCTIONED_PATH_REQUIREMENT,
     ),
     (
         "dangerous-command guard terminal report",
-        "report the blocked command with secrets redacted",
+        DANGEROUS_COMMAND_GUARD_TERMINAL_REPORT_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard terminal purpose",
+        DANGEROUS_COMMAND_GUARD_TERMINAL_PURPOSE_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard terminal reason",
+        DANGEROUS_COMMAND_GUARD_TERMINAL_REASON_REQUIREMENT,
     ),
 )
 WAIT_FOR_LOAD_STOP_TRIGGER: Final = (
