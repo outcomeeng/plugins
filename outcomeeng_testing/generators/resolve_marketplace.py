@@ -3,11 +3,12 @@
 Two domains, matching the two shapes the resolver's behavior takes.
 
 The registration-entry domain is finite and source-owned: it is the product
-of the resolver's own declared source fields over present/absent, and each
-case's expected outcome is derived from the resolution rule the decision
-states — a Codex local marketplace resolves ``source`` first and then
-``root``; a Claude Directory source resolves ``path`` — never by reading the
-script's branches. Every combination is emitted twice, once carrying decoy
+of the resolver's own declared source fields over present, empty, and
+absent, and each case's expected outcome is derived from the resolution rule
+the decision states — a Codex local marketplace resolves ``source`` first
+and then ``root``; a Claude Directory source resolves ``path``; an empty
+value is not a value, so it falls through wherever an absent one would —
+never by reading the script's branches. Every combination is emitted twice, once carrying decoy
 fields the other runtime owns, because the declared rule says the resolver
 reads no field outside the ones its runtime names; a resolver that consulted
 a decoy would change an expected outcome.
@@ -102,6 +103,7 @@ def _codex_cases(base: str) -> Iterator[ResolutionCase]:
     for type_label, source_type in source_types:
         for source_label, source in (
             ("source", f"{base}/codex-source"),
+            ("empty-source", ""),
             ("no-source", None),
         ):
             for root_label, root in (
@@ -110,9 +112,11 @@ def _codex_cases(base: str) -> Iterator[ResolutionCase]:
             ):
                 for decoy_label, decoys in (("plain", False), ("decoyed", True)):
                     # The declared rule: a local source type resolves the
-                    # registered source, then the materialized root.
+                    # registered source, then the materialized root. An
+                    # empty source is not a source, so it falls through the
+                    # same way an absent one does.
                     if source_type == RESOLVER.CODEX_LOCAL_SOURCE_TYPE:
-                        expected = source if source is not None else root
+                        expected = source or root
                     else:
                         expected = None
                     yield ResolutionCase(
@@ -145,15 +149,18 @@ def _claude_cases(base: str) -> Iterator[ResolutionCase]:
     for source_label, source in sources:
         for path_label, path in (
             ("path", f"{base}/claude-path"),
+            ("empty-path", ""),
             ("no-path", None),
         ):
             for decoy_label, decoys in (("plain", False), ("decoyed", True)):
                 # The declared rule: a Directory source resolves its path.
+                # An empty path is not a path, and this runtime declares no
+                # second field to fall through to.
                 directory = (
                     source is not None
                     and source.lower() == RESOLVER.CLAUDE_DIRECTORY_SOURCE
                 )
-                expected = path if directory else None
+                expected = path if directory and path else None
                 yield ResolutionCase(
                     label=(f"claude-{source_label}-{path_label}-{decoy_label}"),
                     runtime=RESOLVER.RUNTIME_CLAUDE,

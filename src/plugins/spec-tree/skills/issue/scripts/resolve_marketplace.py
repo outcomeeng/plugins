@@ -9,8 +9,9 @@ fields are resolved, `source` first; no other Codex field carries the path, and
 
 Tested with:
 - The complete per-runtime field domain, over the registered source, the
-  materialized root, and the source type each present or absent -> resolves
-  the path the rule above names, or names none as available.
+  materialized root, and the source type each present, empty, or absent ->
+  resolves the path the rule above names, or names none as available. An
+  empty value falls through wherever an absent one would.
 - Every one of those cases repeated carrying the other runtime's fields as
   decoys -> the resolved path is unchanged, so a resolver reading a field
   outside its own runtime's set fails the case.
