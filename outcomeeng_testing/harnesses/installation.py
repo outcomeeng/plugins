@@ -222,6 +222,7 @@ class RealFirstInstallObservation:
 
     initial_state: tuple[tuple[str, bytes], ...]
     initial_project_settings: bytes | None
+    project_settings_after: bytes | None
     exit_code: int
     stdout: str
     stderr: str
@@ -1071,11 +1072,15 @@ def observe_real_first_install() -> RealFirstInstallObservation:
             project_settings.read_bytes() if project_settings.exists() else None
         )
         installation = _run_persistent_recipe(checkout, mirror, environment)
+        project_settings_after = (
+            project_settings.read_bytes() if project_settings.exists() else None
+        )
         claude_listing = _run_listing_unchecked(Agent.CLAUDE, mirror, environment)
         codex_listing = _run_listing_unchecked(Agent.CODEX, mirror, environment)
     return RealFirstInstallObservation(
         initial_state=initial_state,
         initial_project_settings=initial_project_settings,
+        project_settings_after=project_settings_after,
         exit_code=installation.returncode,
         stdout=installation.stdout,
         stderr=installation.stderr,

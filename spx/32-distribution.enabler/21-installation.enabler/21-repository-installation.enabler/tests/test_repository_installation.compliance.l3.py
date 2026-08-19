@@ -1,6 +1,22 @@
-"""Network-backed real isolated-state boundary evidence."""
+"""Network-backed real-agent state-boundary evidence."""
 
-from outcomeeng_testing.harnesses.installation import observe_real_installation
+import json
+
+from outcomeeng.distribution.installation import CLAUDE_ENABLED_PLUGINS_FIELD
+from outcomeeng_testing.harnesses.installation import (
+    observe_real_first_install,
+    observe_real_installation,
+)
+
+
+def test_first_install_does_not_create_a_committed_plugin_selection() -> None:
+    observation = observe_real_first_install()
+
+    assert observation.initial_project_settings is None
+    assert observation.exit_code == 0, observation.stderr
+    assert observation.project_settings_after is not None
+    document = json.loads(observation.project_settings_after)
+    assert CLAUDE_ENABLED_PLUGINS_FIELD not in document
 
 
 def test_isolated_installation_preserves_persistent_agent_state() -> None:
