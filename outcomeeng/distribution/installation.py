@@ -708,23 +708,13 @@ def _build_plan(
     claude_action: SourceAction,
     codex_action: SourceAction,
     *,
-    claude_plugins: tuple[str, ...] | None = None,
-    codex_plugins: tuple[str, ...] | None = None,
+    claude_plugins: tuple[str, ...],
+    codex_plugins: tuple[str, ...],
     warnings: tuple[InstallationWarning, ...] = (),
 ) -> InstallationPlan:
-    selected_claude_plugins = (
-        catalog_plugin_names(roots.checkout / CLAUDE_CATALOG_PATH)
-        if claude_plugins is None
-        else claude_plugins
-    )
-    selected_codex_plugins = (
-        catalog_plugin_names(roots.checkout / CODEX_CATALOG_PATH)
-        if codex_plugins is None
-        else codex_plugins
-    )
     plugins_by_agent = {
-        Agent.CLAUDE: selected_claude_plugins,
-        Agent.CODEX: selected_codex_plugins,
+        Agent.CLAUDE: claude_plugins,
+        Agent.CODEX: codex_plugins,
     }
     actions = {Agent.CLAUDE: claude_action, Agent.CODEX: codex_action}
     commands = tuple(
@@ -741,8 +731,8 @@ def _build_plan(
     return InstallationPlan(
         mode=mode,
         roots=roots,
-        claude_plugins=selected_claude_plugins,
-        codex_plugins=selected_codex_plugins,
+        claude_plugins=claude_plugins,
+        codex_plugins=codex_plugins,
         commands=commands,
         warnings=warnings,
     )
