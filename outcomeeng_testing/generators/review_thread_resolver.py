@@ -10,7 +10,6 @@ from hypothesis.strategies import SearchStrategy
 from outcomeeng_testing.harnesses.review_thread_resolver import RESOLVER
 
 MAX_GENERATED_TEXT_LENGTH = 32
-MAX_GENERATED_NUMBER = 2**31 - 1
 
 
 def _forbidden_characters(allowed_characters: str) -> str:
@@ -46,9 +45,7 @@ def _mixed_mode_argv(
     thread_id, selector_mask, repository, pull_request, review_comment_id = values
     return (
         thread_id,
-        *_discovery_argv(
-            (selector_mask, repository, pull_request, review_comment_id)
-        ),
+        *_discovery_argv((selector_mask, repository, pull_request, review_comment_id)),
     )
 
 
@@ -62,6 +59,19 @@ def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
     maximum_node_suffix_length = node_suffix.maximum_length
     if maximum_node_suffix_length is None:
         raise RuntimeError("review-thread node IDs require a finite maximum length")
+    maximum_number = number_contract.maximum_value
+    if maximum_number is None:
+        raise RuntimeError(
+            "review-thread decimal inputs require a finite maximum value"
+        )
+    maximum_number_length = number_contract.maximum_length
+    if maximum_number_length is None:
+        raise RuntimeError(
+            "review-thread decimal inputs require a finite maximum length"
+        )
+    maximum_host_label_length = host_contract.label.maximum_length
+    if maximum_host_label_length is None:
+        raise RuntimeError("GitHub host labels require a finite maximum length")
 
     safe_name = st.text(
         alphabet=repository_contract.segment.allowed_characters,
@@ -80,7 +90,7 @@ def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
     valid_repositories = st.tuples(safe_name, safe_name).map(
         lambda segments: repository_contract.separator.join(segments)
     )
-    valid_numbers = st.integers(min_value=1, max_value=MAX_GENERATED_NUMBER).map(str)
+    valid_numbers = st.integers(min_value=1, max_value=maximum_number).map(str)
     valid_comment_node_ids = generated_node_suffixes.map(
         RESOLVER.format_review_comment_node_id
     )
@@ -115,29 +125,73 @@ def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
         forbidden_repository_text,
     )
     malformed_numbers = st.one_of(
-        st.integers(max_value=0).map(str),
+        st.integers(min_value=-maximum_number, max_value=0).map(str),
         st.text(
             alphabet=_forbidden_characters(number_contract.remaining_characters),
             min_size=1,
             max_size=MAX_GENERATED_TEXT_LENGTH,
         ),
-        st.integers(min_value=0, max_value=MAX_GENERATED_NUMBER).map(
+        st.integers(min_value=0, max_value=maximum_number).map(
             lambda value: f"0{value}"
         ),
+        st.integers(
+            min_value=maximum_number + 1,
+            max_value=maximum_number * 2,
+        ).map(str),
+        st.just(number_contract.first_characters[0] * (maximum_number_length + 1)),
     )
+    valid_host_labels = st.one_of(
+        st.sampled_from(host_contract.endpoint_characters),
+        st.tuples(
+            st.sampled_from(host_contract.endpoint_characters),
+            st.text(
+                alphabet=host_contract.label.allowed_characters,
+                max_size=min(
+                    maximum_host_label_length - 2,
+                    MAX_GENERATED_TEXT_LENGTH - 2,
+                ),
+            ),
+            st.sampled_from(host_contract.endpoint_characters),
+        ).map(lambda parts: "".join(parts)),
+    )
+    valid_hosts = st.lists(valid_host_labels, min_size=1, max_size=4).map(
+        host_contract.separator.join
+    )
+    non_endpoint_character = next(
+        character
+        for character in host_contract.label.allowed_characters
+        if character not in host_contract.endpoint_characters
+    )
+    maximum_host_label = (
+        host_contract.endpoint_characters[0] * maximum_host_label_length
+    )
+    overlong_host_labels = [maximum_host_label]
+    while (
+        len(host_contract.separator.join(overlong_host_labels))
+        <= host_contract.maximum_length
+    ):
+        overlong_host_labels.append(maximum_host_label)
+    overlong_host = host_contract.separator.join(overlong_host_labels)
     malformed_host = st.one_of(
         st.just(""),
         st.tuples(
-            st.text(
-                alphabet=host_contract.allowed_characters,
-                max_size=MAX_GENERATED_TEXT_LENGTH,
+            valid_hosts,
+            st.sampled_from(
+                _forbidden_characters(
+                    host_contract.label.allowed_characters + host_contract.separator
+                )
             ),
-            st.sampled_from(_forbidden_characters(host_contract.allowed_characters)),
-            st.text(
-                alphabet=host_contract.allowed_characters,
-                max_size=MAX_GENERATED_TEXT_LENGTH,
-            ),
+            valid_hosts,
         ).map(lambda parts: "".join(parts)),
+        st.tuples(valid_host_labels, valid_host_labels).map(
+            lambda labels: host_contract.separator.join((labels[0], "", labels[1]))
+        ),
+        valid_host_labels.map(lambda label: f"{host_contract.separator}{label}"),
+        valid_host_labels.map(lambda label: f"{label}{host_contract.separator}"),
+        valid_host_labels.map(lambda label: f"{non_endpoint_character}{label}"),
+        valid_host_labels.map(lambda label: f"{label}{non_endpoint_character}"),
+        st.just(host_contract.endpoint_characters[0] * (maximum_host_label_length + 1)),
+        st.just(overlong_host),
     )
 
     short_node_suffixes = st.text(
@@ -169,6 +223,7 @@ def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
         st.just(""),
         st.just(invalid_decimal_lead),
         valid_numbers.map(lambda value: f"{invalid_decimal_lead}{value}"),
+        malformed_numbers,
         short_node_suffixes.map(
             lambda suffix: f"{RESOLVER.COMMENT_ID_CONTRACT.node_id.prefix}{suffix}"
         ),
