@@ -63,7 +63,14 @@ ORGANIZATIONS_COMMAND: Final[tuple[str, ...]] = ("gh", "api", "user/orgs")
 
 
 def checkout_view_command(repository: str) -> tuple[str, ...]:
-    """The command that reads `repository`'s fork state, parent, and full name."""
+    """The command that reads `repository`'s fork state, parent, and full name.
+
+    `repository` is whatever `origin` reports, passed through unchanged. `gh`
+    normalizes every remote form to the same repository — the HTTPS URL, the
+    `ssh://` URL, and the SCP-style `git@host:owner/name.git` a push-capable
+    contributor checkout commonly carries — so no form needs parsing here, and
+    parsing one would be a second implementation of a mapping `gh` already owns.
+    """
     return ("gh", "repo", "view", repository, "--json", "isFork,parent,nameWithOwner")
 
 

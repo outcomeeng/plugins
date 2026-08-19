@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.2.1
+
+### Fixed
+
+- **A fork checkout resolves its target instead of blocking.** Every contribution from a fork stopped at `blocked` with `gh reported a fork with no parent repository`, which is every checkout this plugin serves. Resolution asked `gh` for the checkout without naming a repository, and `gh` answers a nameless read with the base it would publish to — the parent, whose own fork state then stood in for the head you push from. It also read that parent through a field `gh` does not emit. The checkout's repository now comes from `origin` and is named in the read, in whichever form `origin` carries: HTTPS, `ssh://`, and SCP-style remotes all resolve to the same repository.
+
 ## 0.2.0
 
 ### Breaking

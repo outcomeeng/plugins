@@ -144,11 +144,22 @@ def checkout_view_key(url: str = ORIGIN_URL) -> tuple[str, ...]:
     return tuple(load_resolver().checkout_view_command(url))
 
 
-def checkout_lookups(is_fork: bool) -> Responses:
+# The forms `origin` carries in a real checkout. `gh` resolves all three to the
+# same repository, so the resolver passes whichever one it reads through
+# unchanged; a test over them pins that pass-through, and `gh` itself remains
+# the oracle for the normalization.
+ORIGIN_URL_FORMS: Final = (
+    f"https://github.com/{FORK}.git",
+    f"ssh://git@github.com/{FORK}.git",
+    f"git@github.com:{FORK}.git",
+)
+
+
+def checkout_lookups(is_fork: bool, url: str = ORIGIN_URL) -> Responses:
     """Both reads that establish the checkout's own repository."""
     return {
-        checkout_remote_key(): checkout_remote_response(),
-        checkout_view_key(): checkout_response(is_fork),
+        checkout_remote_key(): checkout_remote_response(url),
+        checkout_view_key(url): checkout_response(is_fork),
     }
 
 

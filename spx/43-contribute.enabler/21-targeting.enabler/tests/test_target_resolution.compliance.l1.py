@@ -8,6 +8,7 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
     PARENT,
     Responses,
     account_key,
+    ORIGIN_URL_FORMS,
     checkout_lookups,
     checkout_remote_key,
     checkout_remote_response,
@@ -116,6 +117,27 @@ def test_the_checkout_repository_is_read_by_name() -> None:
     ]
     assert views
     assert all(command[3] != "--json" for command in views)
+    assert resolution.head == FORK
+    assert resolution.base == PARENT
+
+
+@pytest.mark.parametrize("origin", ORIGIN_URL_FORMS)
+def test_every_origin_form_reaches_gh_unparsed(origin: str) -> None:
+    """`origin` is named to `gh` exactly as git reported it.
+
+    A push-capable checkout carries HTTPS, `ssh://`, or SCP-style `origin`, and
+    `gh` resolves all three to the same repository. Parsing one form here would
+    reimplement a mapping `gh` already owns and would strand the forms the
+    reimplementation missed.
+    """
+    responses: Responses = {
+        **checkout_lookups(True, origin),
+        permission_key(PARENT): permission_response("READ"),
+    }
+
+    resolution, runner = resolve_with(responses)
+
+    assert checkout_view_key(origin) in runner.commands
     assert resolution.head == FORK
     assert resolution.base == PARENT
 
