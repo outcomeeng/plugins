@@ -29,6 +29,7 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
 ### Compliance
 
 - NEVER: repository installation reads or writes repository `.codex/config.toml` as Codex plugin installation or enablement state. ([test](tests/test_repository_installation.compliance.l1.py))
-- NEVER: a persistent installation run leaves the checkout's committed plugin selection changed, including a run that fails after installing has already altered it. ([test](tests/test_repository_installation.compliance.l1.py))
+- NEVER: a persistent installation run that starts with a committed plugin selection leaves that selection changed, including a run that fails after installing has already altered it. ([test](tests/test_repository_installation.compliance.l1.py))
+- NEVER: successful persistent installation creates a committed plugin selection when the checkout starts without one. ([test](tests/test_repository_installation.compliance.l3.py))
 - NEVER: preserving the committed plugin selection reverts the marketplace source the same run reconciled — a checkout declaring a noncanonical source ends with the canonical source and its own selection. ([test](tests/test_repository_installation.compliance.l1.py))
 - NEVER: isolated verification reads or mutates a developer's persistent agent home, marketplace registration, plugin cache, or agent directory. ([test](tests/test_repository_installation.compliance.l3.py))
