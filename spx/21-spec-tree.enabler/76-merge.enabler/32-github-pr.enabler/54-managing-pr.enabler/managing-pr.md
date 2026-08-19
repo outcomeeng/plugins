@@ -18,7 +18,8 @@ CAN drive an open pull request to an autonomous merge once `MERGE_READINESS` hol
 - Given a review-thread node ID, when the resolver runs, then it resolves that thread without a discovery query ([test](tests/test_resolve_review_thread.scenario.l1.py))
 - Given a pull-request review-comment database ID, when the resolver runs, then it discovers the owning thread before resolving it ([test](tests/test_resolve_review_thread.scenario.l1.py))
 - Given a pull-request review-comment node ID, when the resolver runs, then it discovers the owning thread before resolving it ([test](tests/test_resolve_review_thread.scenario.l1.py))
-- Given the requested review comment appears on a later review-thread page, when the resolver runs, then it follows review-thread pagination before resolving the owning thread ([test](tests/test_resolve_review_thread.scenario.l1.py))
+- Given the requested review comment appears on a later review-thread page while an earlier thread has another comment page, when the resolver runs, then it checks the later thread's first comment page before requesting the earlier thread's next comment page and resolves the owning thread ([test](tests/test_resolve_review_thread.scenario.l1.py))
+- Given the requested review comment appears on the next comment page of a later thread while an earlier thread has a deeper comment page, when the resolver runs, then it checks every thread at the shallower comment depth before requesting the earlier thread's deeper page and resolves the owning thread ([test](tests/test_resolve_review_thread.scenario.l1.py))
 - Given the requested review comment appears on a later comment page, when the resolver runs, then it follows comment pagination before resolving the owning thread ([test](tests/test_resolve_review_thread.scenario.l1.py))
 
 ### Properties
