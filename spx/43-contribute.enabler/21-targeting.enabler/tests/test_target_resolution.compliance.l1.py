@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from outcomeeng_testing.harnesses.contribution_targeting import (
@@ -6,7 +8,9 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
     PARENT,
     Responses,
     account_key,
-    checkout_response,
+    checkout_lookups,
+    checkout_remote_key,
+    checkout_remote_response,
     checkout_view_key,
     command_failure,
     command_output,
@@ -23,10 +27,20 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
 
 _RESOLVER = load_resolver()
 
+# The forms `origin` carries in a real checkout. `gh` resolves all three to the
+# same repository, so the resolver passes whichever one it reads through
+# unchanged; these cases pin that pass-through, and `gh` itself remains the
+# oracle for the normalization.
+ORIGIN_URL_FORMS = (
+    f"https://github.com/{FORK}.git",
+    f"ssh://git@github.com/{FORK}.git",
+    f"git@github.com:{FORK}.git",
+)
+
 
 def test_an_absent_permission_field_yields_no_permission_class() -> None:
     responses: Responses = {
-        checkout_view_key(): checkout_response(True),
+        **checkout_lookups(True),
         permission_key(PARENT): permission_response(None),
     }
 
@@ -37,19 +51,139 @@ def test_an_absent_permission_field_yields_no_permission_class() -> None:
 
 
 def test_no_signal_outside_gh_is_consulted_for_permission() -> None:
+    """The origin read names the checkout; permission still comes only from `gh`.
+
+    `git remote get-url origin` identifies the repository the contribution pushes
+    from, which is the one thing `gh` cannot answer for a fork checkout. It is the
+    only non-`gh` command the resolution runs, and permission remains a `gh` read
+    of the resolved base.
+    """
     responses: Responses = {
-        checkout_view_key(): checkout_response(True),
+        **checkout_lookups(True),
         permission_key(PARENT): permission_response(None),
     }
 
     _, runner = resolve_with(responses)
 
-    assert [command for command in runner.commands if command[:1] != ("gh",)] == []
+    outside_gh = [command for command in runner.commands if command[:1] != ("gh",)]
+    assert outside_gh == [checkout_remote_key()]
+    assert permission_key(PARENT) in runner.commands
+
+
+def test_an_unreadable_origin_blocks_before_any_gh_command() -> None:
+    """A checkout that cannot name its own remote resolves nothing.
+
+    The origin read is the only source for the repository the contribution
+    pushes from, so its failure leaves the head unknown. Continuing would send
+    the nameless `gh repo view` the resolution exists to avoid.
+    """
+    responses: Responses = {
+        checkout_remote_key(): command_failure("fatal: No such remote 'origin'"),
+    }
+
+    resolution, runner = resolve_with(responses)
+
+    assert resolution.classification is _RESOLVER.Classification.BLOCKED
+    assert "No such remote" in resolution.detail
+    assert runner.commands == [checkout_remote_key()]
+
+
+def test_an_origin_reported_as_empty_blocks_with_a_named_detail() -> None:
+    """`git` can exit zero and print nothing, which names no repository.
+
+    A zero exit reads as success everywhere else in this resolution, so the
+    empty value is checked beside the exit code; without that the empty string
+    would reach `gh repo view` as the repository argument.
+    """
+    responses: Responses = {
+        checkout_remote_key(): command_output(""),
+    }
+
+    resolution, runner = resolve_with(responses)
+
+    assert resolution.classification is _RESOLVER.Classification.BLOCKED
+    assert "no origin remote" in resolution.detail
+    assert runner.commands == [checkout_remote_key()]
+
+
+def test_the_checkout_repository_is_read_by_name() -> None:
+    """A nameless `gh repo view` answers for the parent, not for the checkout.
+
+    Asked without a repository, `gh` applies base-repository resolution, so a fork
+    checkout reports its parent's fork state and its parent's parent. The head the
+    contribution pushes from disappears, and in a two-level fork chain the base
+    resolves two repositories away from the one the operator is contributing to.
+    """
+    responses: Responses = {
+        **checkout_lookups(True),
+        permission_key(PARENT): permission_response("READ"),
+    }
+
+    resolution, runner = resolve_with(responses)
+
+    views = [
+        command for command in runner.commands if command[:3] == ("gh", "repo", "view")
+    ]
+    assert views
+    assert all(command[3] != "--json" for command in views)
+    assert resolution.head == FORK
+    assert resolution.base == PARENT
+
+
+@pytest.mark.parametrize("origin", ORIGIN_URL_FORMS)
+def test_every_origin_form_reaches_gh_unparsed(origin: str) -> None:
+    """`origin` is named to `gh` exactly as git reported it.
+
+    A push-capable checkout carries HTTPS, `ssh://`, or SCP-style `origin`, and
+    `gh` resolves all three to the same repository. Parsing one form here would
+    reimplement a mapping `gh` already owns and would strand the forms the
+    reimplementation missed.
+    """
+    responses: Responses = {
+        **checkout_lookups(True, origin),
+        permission_key(PARENT): permission_response("READ"),
+    }
+
+    resolution, runner = resolve_with(responses)
+
+    assert checkout_view_key(origin) in runner.commands
+    assert resolution.head == FORK
+    assert resolution.base == PARENT
+
+
+def test_a_parent_carrying_only_a_full_name_resolves_no_base() -> None:
+    """`gh` reports a parent as `owner.login` and `name`, never as `nameWithOwner`.
+
+    A response carrying only the full name is the shape no `gh --json parent`
+    field emits. Resolving a base from it would mean the resolver reads a field
+    the CLI does not supply, which blocks every real fork checkout while every
+    fabricated one passes.
+    """
+    responses: Responses = {
+        checkout_remote_key(): checkout_remote_response(),
+        checkout_view_key(): (
+            0,
+            json.dumps(
+                {
+                    "isFork": True,
+                    "nameWithOwner": FORK,
+                    "parent": {"nameWithOwner": PARENT},
+                }
+            ),
+            "",
+        ),
+        permission_key(PARENT): permission_response("READ"),
+    }
+
+    resolution, _ = resolve_with(responses)
+
+    assert resolution.classification is _RESOLVER.Classification.BLOCKED
+    assert resolution.base is None
 
 
 def test_a_failed_permission_read_blocks_and_keeps_the_gh_error() -> None:
     responses: Responses = {
-        checkout_view_key(): checkout_response(True),
+        **checkout_lookups(True),
         permission_key(PARENT): (1, "", "HTTP 404: Not Found"),
     }
 
@@ -60,12 +194,15 @@ def test_a_failed_permission_read_blocks_and_keeps_the_gh_error() -> None:
 
 
 def test_an_unavailable_gh_blocks_before_reading_permission() -> None:
-    responses: Responses = {checkout_view_key(): (127, "", "gh: command not found")}
+    responses: Responses = {
+        checkout_remote_key(): checkout_remote_response(),
+        checkout_view_key(): (127, "", "gh: command not found"),
+    }
 
     resolution, runner = resolve_with(responses)
 
     assert resolution.classification is _RESOLVER.Classification.BLOCKED
-    assert runner.commands == [checkout_view_key()]
+    assert runner.commands == [checkout_remote_key(), checkout_view_key()]
 
 
 def test_absence_of_a_head_is_searched_for_never_inferred() -> None:
@@ -76,7 +213,7 @@ def test_absence_of_a_head_is_searched_for_never_inferred() -> None:
     owner before absence is claimed.
     """
     responses: Responses = {
-        checkout_view_key(): checkout_response(False),
+        **checkout_lookups(False),
         permission_key(PARENT): permission_response("READ"),
         **head_search_lookups(0),
     }
@@ -162,7 +299,7 @@ def test_a_search_that_did_not_cover_its_domain_blocks_instead_of_reporting_abse
     command GitHub rejects whenever the unread account already holds one.
     """
     responses: Responses = {
-        checkout_view_key(): checkout_response(False),
+        **checkout_lookups(False),
         permission_key(PARENT): permission_response("READ"),
         **head_search_lookups(0),
         **override,
@@ -186,7 +323,7 @@ def test_a_full_fork_page_blocks_even_though_its_entries_match_nothing() -> None
     full is the whole signal: the match may sit on the page that was never read.
     """
     responses: Responses = {
-        checkout_view_key(): checkout_response(False),
+        **checkout_lookups(False),
         permission_key(PARENT): permission_response("READ"),
         **head_search_lookups(0),
         fork_list_key(OWNERS[0]): full_fork_page(OWNERS[0]),
@@ -201,7 +338,7 @@ def test_a_full_fork_page_blocks_even_though_its_entries_match_nothing() -> None
 def test_several_forks_are_named_and_none_is_selected() -> None:
     """Choosing among them is the operator's, so resolution carries no head."""
     responses: Responses = {
-        checkout_view_key(): checkout_response(False),
+        **checkout_lookups(False),
         permission_key(PARENT): permission_response("READ"),
         **head_search_lookups(2),
     }
@@ -221,6 +358,7 @@ def test_a_fork_reported_without_a_parent_blocks() -> None:
     # would pass on the runner's unconfigured-command failure rather than on the
     # resolver detecting the orphaned fork.
     responses: Responses = {
+        checkout_remote_key(): checkout_remote_response(),
         checkout_view_key(): orphan_fork_response(),
         permission_key(FORK): permission_response("ADMIN"),
     }

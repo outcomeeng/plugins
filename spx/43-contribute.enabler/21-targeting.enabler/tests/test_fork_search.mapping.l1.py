@@ -7,8 +7,7 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
     PARENT,
     Responses,
     account_lookups,
-    checkout_response,
-    checkout_view_key,
+    checkout_lookups,
     fork_list_key,
     fork_list_response,
     load_resolver,
@@ -45,7 +44,7 @@ def responses_for(source: str) -> Responses:
     )
     lookups[fork_list_key(OWNERS[1])] = fork_list_response([])
     return {
-        checkout_view_key(): checkout_response(False),
+        **checkout_lookups(False),
         permission_key(PARENT): permission_response("READ"),
         **lookups,
     }
@@ -78,7 +77,7 @@ def test_a_listing_entry_reporting_no_source_matches_nothing() -> None:
     lookups[fork_list_key(OWNERS[0])] = (0, '[{"nameWithOwner": "operator/x"}]', "")
     lookups[fork_list_key(OWNERS[1])] = fork_list_response([])
     responses: Responses = {
-        checkout_view_key(): checkout_response(False),
+        **checkout_lookups(False),
         permission_key(PARENT): permission_response("READ"),
         **lookups,
     }
