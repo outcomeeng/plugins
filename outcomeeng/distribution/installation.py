@@ -336,7 +336,11 @@ class ClaudeInstallationAdapter:
         environment: tuple[tuple[str, str], ...],
         plugins: Sequence[str],
     ) -> tuple[InstallationCommand, ...]:
-        scope = "project" if mode is InstallationMode.PERSISTENT else "user"
+        scope = (
+            CLAUDE_PROJECT_SCOPE
+            if mode is InstallationMode.PERSISTENT
+            else CLAUDE_USER_SCOPE
+        )
         source = (
             CANONICAL_MARKETPLACE_SOURCE
             if mode is InstallationMode.PERSISTENT
