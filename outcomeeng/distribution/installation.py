@@ -677,19 +677,19 @@ def _selection_of(document: Mapping[str, object]) -> DeclaredSelection:
     )
 
 
-def _declared_plugin_selection(settings: Path) -> DeclaredSelection | None:
+def _declared_plugin_selection(settings: Path) -> DeclaredSelection:
     """Read the plugin selection a checkout's project settings declare."""
     if not settings.exists():
-        return None
+        return DeclaredSelection(present=False, value=None)
     return _selection_of(_settings_document(settings))
 
 
 def _restore_plugin_selection(
     settings: Path,
-    declared: DeclaredSelection | None,
+    declared: DeclaredSelection,
 ) -> None:
     """Re-apply a declared plugin selection, leaving the rest of the document."""
-    if declared is None or not settings.exists():
+    if not settings.exists():
         return
     document = _settings_document(settings)
     if _selection_of(document) == declared:
