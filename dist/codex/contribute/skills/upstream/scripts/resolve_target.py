@@ -5,7 +5,9 @@ says nothing about where its artifact lands: a branch pushed to one repository a
 a pull request opened from it can reach a different organization entirely. This
 script performs that resolution once and emits a classification the contribute
 skills act on, so the decision never depends on reading `isFork`, `parent`, and
-`viewerPermission` by eye.
+`viewerPermission` by eye. The rule binds this script's own reads first: the
+checkout's repository is read by naming `origin`, because a nameless read in a
+fork checkout reports the parent and hides the head the contribution pushes from.
 
 Plugin-local by design: this is runtime-specific adapter logic over the GitHub CLI.
 Moving it into a runtime-neutral CLI would couple that CLI to one external runtime,
@@ -46,18 +48,24 @@ class Classification(StrEnum):
     BLOCKED = "blocked"
 
 
-# The `gh` invocations this resolution makes, named here so a caller reading the
+# The invocations this resolution makes, named here so a caller reading the
 # resolver's interaction protocol reads the commands themselves rather than a
 # copy that drifts when an argument list changes.
-CHECKOUT_VIEW_COMMAND: Final[tuple[str, ...]] = (
-    "gh",
-    "repo",
-    "view",
-    "--json",
-    "isFork,parent,nameWithOwner",
-)
+#
+# The checkout's own repository is read from `origin` rather than from `gh`'s
+# default resolution. `gh repo view` with no repository resolves a fork checkout
+# to its parent, so a nameless read reports the base where the checkout was
+# asked for — the same default every write in this plugin is forbidden from
+# accepting, and the one that decides whether a head exists at all.
+CHECKOUT_REMOTE_COMMAND: Final[tuple[str, ...]] = ("git", "remote", "get-url", "origin")
 ACCOUNT_COMMAND: Final[tuple[str, ...]] = ("gh", "api", "user")
 ORGANIZATIONS_COMMAND: Final[tuple[str, ...]] = ("gh", "api", "user/orgs")
+
+
+def checkout_view_command(repository: str) -> tuple[str, ...]:
+    """The command that reads `repository`'s fork state, parent, and full name."""
+    return ("gh", "repo", "view", repository, "--json", "isFork,parent,nameWithOwner")
+
 
 # How many forks one owner's listing returns. An operator holding more forks than
 # this under one account would have a match fall outside the page, so the bound is
@@ -196,11 +204,12 @@ def _fork_candidates(runner: CommandRunner) -> tuple[list[str], str]:
 
 
 def _forked_from(entry: object) -> str | None:
-    """The `owner/name` one fork listing entry reports as its source.
+    """The `owner/name` a repository record reports as its parent.
 
-    `gh repo list --json parent` reports the source as separate `owner.login` and
-    `name` fields rather than the `nameWithOwner` the checkout view carries, so
-    the two are joined here into the one spelling every comparison uses.
+    Every `gh --json parent` field reports the source as separate `owner.login`
+    and `name` fields — the fork listing and the single-repository view alike —
+    and never as a `nameWithOwner` inside the parent object. Both readings join
+    the two here into the one spelling every comparison uses.
     """
     if not isinstance(entry, dict):
         return None
@@ -283,7 +292,19 @@ def _search_for_head(
 
 def resolve(runner: CommandRunner) -> Resolution:
     """Classify the contribution target from the current checkout."""
-    checkout, detail = _json_field(runner, list(CHECKOUT_VIEW_COMMAND))
+    remote = runner.run(list(CHECKOUT_REMOTE_COMMAND))
+    origin = remote.stdout.strip()
+    if remote.returncode != 0 or not origin:
+        return Resolution(
+            Classification.BLOCKED,
+            detail=(
+                remote.stderr.strip()
+                or "git reported no origin remote for this checkout, so the "
+                "repository the contribution pushes from is unknown"
+            ),
+        )
+
+    checkout, detail = _json_field(runner, list(checkout_view_command(origin)))
     if checkout is None:
         return Resolution(Classification.BLOCKED, detail=detail)
 
@@ -294,10 +315,9 @@ def resolve(runner: CommandRunner) -> Resolution:
             detail="gh reported no nameWithOwner for this checkout",
         )
 
-    parent = checkout.get("parent")
     is_fork = bool(checkout.get("isFork"))
-    parent_name = parent.get("nameWithOwner") if isinstance(parent, dict) else None
-    if is_fork and (not isinstance(parent_name, str) or not parent_name):
+    parent_name = _forked_from(checkout)
+    if is_fork and not parent_name:
         # A fork whose parent gh does not report must never fall back to itself:
         # the operator usually controls their own fork, so treating it as the base
         # would classify a contribution as `controlled` and send it nowhere.

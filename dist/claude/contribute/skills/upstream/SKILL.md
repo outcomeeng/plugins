@@ -2,7 +2,7 @@
 name: upstream
 description: >-
   ALWAYS invoke this skill when starting a contribution to a repository the operator does not control, or when a contribution step needs that target and no live UPSTREAM_TARGET marker carries it — it resolves the upstream a fork came from, the head to push from, and the operator's permission on it.
-  NEVER read that target from a git remote, an account name, or a successful push.
+  NEVER read the base or the operator's permission from a git remote, an account name, or a successful push.
 allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_target.py":*)
 ---
 

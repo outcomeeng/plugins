@@ -39,6 +39,7 @@ SCRIPT = SKILLS_DIR.joinpath(RESOLVER_SKILL, *RESOLVER_RELPATH)
 
 FORK = "silvarbor/example"
 PARENT = "someone/example"
+ORIGIN_URL = f"https://github.com/{FORK}.git"
 
 Responses = dict[tuple[str, ...], tuple[int, str, str]]
 
@@ -100,11 +101,24 @@ class RecordingRunner:
 
 
 def checkout_response(is_fork: bool) -> tuple[int, str, str]:
-    """What `gh repo view --json isFork,parent,nameWithOwner` reports for a checkout."""
+    """What `gh repo view <repo> --json isFork,parent,nameWithOwner` reports.
+
+    `gh` reports the parent as separate `owner.login` and `name` fields, the same
+    shape the fork listing carries. It reports no `nameWithOwner` inside a parent
+    object, so a response built with one would let a resolver reading that field
+    pass here and block against the real CLI.
+    """
     payload: dict[str, object] = {
         "isFork": is_fork,
         "nameWithOwner": FORK if is_fork else PARENT,
-        "parent": {"nameWithOwner": PARENT} if is_fork else None,
+        "parent": (
+            {
+                "owner": {"login": PARENT.split("/")[0]},
+                "name": PARENT.split("/")[1],
+            }
+            if is_fork
+            else None
+        ),
     }
     return (0, json.dumps(payload), "")
 
@@ -115,9 +129,27 @@ def orphan_fork_response() -> tuple[int, str, str]:
     return (0, json.dumps(payload), "")
 
 
-def checkout_view_key() -> tuple[str, ...]:
-    """The checkout-view command the resolver issues, read from the resolver."""
-    return tuple(load_resolver().CHECKOUT_VIEW_COMMAND)
+def checkout_remote_key() -> tuple[str, ...]:
+    """The origin-remote read the resolver makes, read from the resolver."""
+    return tuple(load_resolver().CHECKOUT_REMOTE_COMMAND)
+
+
+def checkout_remote_response(url: str = ORIGIN_URL) -> tuple[int, str, str]:
+    """What `git remote get-url origin` reports, with the trailing newline git emits."""
+    return (0, f"{url}\n", "")
+
+
+def checkout_view_key(url: str = ORIGIN_URL) -> tuple[str, ...]:
+    """The checkout-view command the resolver issues for `url`, read from it."""
+    return tuple(load_resolver().checkout_view_command(url))
+
+
+def checkout_lookups(is_fork: bool) -> Responses:
+    """Both reads that establish the checkout's own repository."""
+    return {
+        checkout_remote_key(): checkout_remote_response(),
+        checkout_view_key(): checkout_response(is_fork),
+    }
 
 
 def permission_key(base: str) -> tuple[str, ...]:

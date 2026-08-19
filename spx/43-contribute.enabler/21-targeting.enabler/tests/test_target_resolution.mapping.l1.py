@@ -3,8 +3,7 @@ import pytest
 from outcomeeng_testing.harnesses.contribution_targeting import (
     PARENT,
     Responses,
-    checkout_response,
-    checkout_view_key,
+    checkout_lookups,
     head_search_lookups,
     load_resolver,
     permission_key,
@@ -82,7 +81,7 @@ def test_fork_state_permission_and_head_search_map_to_one_classification(
     is_fork: bool, permission: str, matches: int, expected: object
 ) -> None:
     responses: Responses = {
-        checkout_view_key(): checkout_response(is_fork),
+        **checkout_lookups(is_fork),
         permission_key(PARENT): permission_response(permission),
         **head_search_lookups(matches),
     }
@@ -98,7 +97,7 @@ def test_the_head_a_search_reports_is_the_head_resolution_carries(
 ) -> None:
     """One match becomes the head; every other count leaves none to carry."""
     responses: Responses = {
-        checkout_view_key(): checkout_response(False),
+        **checkout_lookups(False),
         permission_key(PARENT): permission_response("READ"),
         **head_search_lookups(matches),
     }

@@ -1,6 +1,6 @@
 {
   "name": "contribute",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Contributions to repositories you do not control: /upstream, /open-upstream-pr, /manage-upstream-pr, /open-upstream-issue, /manage-upstream-issue, /sync-fork",
   "author": {
     "name": "Simon Heimlicher",

@@ -10,6 +10,8 @@ Permission is read from `viewerPermission` on the resolved base. `ADMIN`, `MAINT
 
 A contribution needs a head repository the operator can push to. The checkout supplies one only when it is itself a fork; working from a clone of the base repository is ordinary, and the head then sits in some account or organization the operator holds. Resolution therefore searches for a fork of the resolved base across the authenticated account and its organizations rather than inferring absence from the checkout.
 
+Reading the checkout is where that default bites first. `gh` applies the same base-repository resolution to a read that names no repository, so a nameless read of a fork checkout answers for the parent: its fork state, its parent, and — in a chain of forks — a base two repositories from the one the contribution targets. The checkout's own repository comes from `origin` and is named in the read, so the rule the flows' writes obey binds the resolution that precedes them.
+
 A search that matches once yields the head. A search that matches several times names them and stops, because the destination among them is the operator's choice. A search that matches nothing establishes absence, which is what makes the fork command it reports correct rather than a guess GitHub rejects.
 
 ## Assertions
@@ -26,6 +28,8 @@ A search that matches once yields the head. A search that matches several times 
 ### Compliance
 
 - ALWAYS: every write to the base repository names it explicitly, because a command that omits the repository publishes wherever `gh` resolves the default ([audit])
+- ALWAYS: the checkout's own repository is read by naming it, because `gh` resolves a nameless read to the base it would publish to — for a fork checkout the parent, whose own fork state and parent then stand in for the head the contribution pushes from ([test](tests/test_target_resolution.compliance.l1.py))
+- ALWAYS: a parent `gh` reports is read as its owner login and its name, in the single-repository view and the fork listing alike, because no `parent` object carries the repository's full name ([test](tests/test_target_resolution.compliance.l1.py))
 - ALWAYS: the operator's permission on the base comes from `viewerPermission` on the resolved base repository ([audit])
 - ALWAYS: the controlling permission class is exactly `ADMIN`, `MAINTAIN`, and `WRITE`, and the contributing class is exactly `READ`, `TRIAGE`, and `NONE`; the resolver complies with this declaration, and the mapping evidence quantifies over the two classes rather than their members, because an oracle for the membership itself would restate the declaration in an artifact with no authority to make one ([audit])
 - ALWAYS: a fork search that does not cover the accounts and organizations it enumerates blocks the target — a failed account read, a failed organization read, a failed owner listing, and a listing filling the page the search reads each leave absence unestablished ([test](tests/test_target_resolution.compliance.l1.py))
