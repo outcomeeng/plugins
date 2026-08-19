@@ -41,15 +41,14 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
             generated_persistent_catalog_selections(observation.catalog)
         )
         for mapping in observation.mappings:
-            assert mapping.planned == (
-                (SPEC_TREE_PLUGIN,)
-                if not mapping.selected
-                else tuple(
-                    plugin
-                    for plugin in observation.catalog
-                    if plugin in mapping.selected
-                )
-            )
+            if not mapping.selected:
+                assert mapping.planned == (SPEC_TREE_PLUGIN,)
+            else:
+                assert set(mapping.planned) == set(mapping.selected)
+                positions = [
+                    observation.catalog.index(plugin) for plugin in mapping.planned
+                ]
+                assert positions == sorted(set(positions))
             assert mapping.installs == mapping.planned
             assert mapping.enables == (
                 mapping.planned if observation.agent is Agent.CLAUDE else ()
