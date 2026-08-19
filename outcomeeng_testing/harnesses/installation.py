@@ -1826,7 +1826,7 @@ class UnpublishedPluginRunner:
                 stdout="",
                 stderr=captured_unpublished_plugin_stderr(
                     command.agent,
-                    cast(str, command.plugin),
+                    command.plugin,
                 ),
             )
         stdout = (
