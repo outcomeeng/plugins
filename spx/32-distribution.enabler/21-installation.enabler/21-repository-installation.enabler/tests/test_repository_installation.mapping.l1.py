@@ -20,7 +20,6 @@ from outcomeeng.distribution.installation import (
     MARKETPLACE_NAME,
     PLUGIN_OPERATIONS,
     ReportField,
-    UNPUBLISHED_PLUGIN_FRAGMENT,
     Operation,
     installed_plugin_names,
 )
@@ -29,6 +28,7 @@ from outcomeeng_testing.generators.installation import (
     generated_failure_classification_cases,
 )
 from outcomeeng_testing.harnesses.installation import (
+    captured_unpublished_plugin_stderr,
     committed_catalog_plugin_names,
     observe_designated_failure,
     observe_failure_operation_domains,
@@ -123,7 +123,7 @@ def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
         source=source,
         operation=operation,
         plugin=plugin if carries_plugin else None,
-        stderr=UNPUBLISHED_PLUGIN_FRAGMENT,
+        stderr=captured_unpublished_plugin_stderr(Agent.CODEX, plugin),
     )
 
     if pending:

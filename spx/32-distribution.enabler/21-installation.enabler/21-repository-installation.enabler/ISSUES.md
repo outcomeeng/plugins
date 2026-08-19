@@ -27,18 +27,16 @@ The margin narrows as the source grows. The suite passed repeatedly earlier the 
 
 **Evidence**: reproduced twice on a host at 0.33 normalized load with `git ls-remote` against the same source returning in 0.58 seconds, so neither host starvation nor loss of connectivity explains it. Reproduced twice again in the release path after PR #515 merged, from a checkout at `33467bab05164e2974f179041f23eb6ff63669dd`, with identical structured records; clone duration was not measured in those two runs.
 
-## The unpublished-plugin fragment is matched but its real wording is only half observed
+## The unpublished-plugin enable wording is unobserved
 
-`_is_pending_publication` in `outcomeeng/distribution/installation.py` classifies a failed plugin install or enable as pending publication when `UNPUBLISHED_PLUGIN_FRAGMENT` — the literal `not found in marketplace` — appears in the lower-cased stderr. The only evidence is `UnpublishedPluginRunner`, whose canned stderr was authored alongside the constant it matches, so the test cannot fail on a wording mismatch.
-
-Both real **install** messages were observed while adding the `contribute` plugin, against a canonical marketplace that did not yet publish it:
+`_is_pending_publication` in `outcomeeng/distribution/installation.py` classifies a failed plugin install or enable as pending publication when `UNPUBLISHED_PLUGIN_FRAGMENT` — the literal `not found in marketplace` — appears in the lower-cased stderr. The simulated stimuli in `outcomeeng_testing/harnesses/installation.py` carry the independently transcribed real **install** wording for both CLIs, observed while adding the `contribute` plugin against a canonical marketplace that did not yet publish it:
 
 ```text
 Claude Code: Failed to install plugin "contribute@outcomeeng": Plugin "contribute" not found in marketplace "outcomeeng".
 Codex:       Error: plugin `contribute` was not found in marketplace `outcomeeng`
 ```
 
-Both contain the fragment, so the install path is real. Neither **enable** message was ever observed: the Claude plan issues install then enable per plugin, and the first observation run stopped at the Codex install before any enable ran. The fragment also carries no per-agent prefix, unlike `CLAUDE_ALREADY_INSTALLED_FRAGMENT`, so one unverified wording spans two CLIs.
+A constant that drifts from that captured wording now fails the linked tests. Neither **enable** message was ever observed: the Claude plan issues install then enable per plugin, and the first observation run stopped at the Codex install before any enable ran. The fragment also carries no per-agent prefix, unlike `CLAUDE_ALREADY_INSTALLED_FRAGMENT`, so the enable wording remains unverified for both CLIs.
 
 If either enable message words the absence differently, the carve-out silently never engages for that operation and the run fails where it should report pending.
 

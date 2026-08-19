@@ -62,7 +62,6 @@ from outcomeeng.distribution.installation import (
     SourceAction,
     SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
-    UNPUBLISHED_PLUGIN_FRAGMENT,
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
@@ -1534,7 +1533,7 @@ def _register_persistent_claude_marketplace(
             "add",
             CANONICAL_MARKETPLACE_SOURCE,
             "--scope",
-            "project",
+            CLAUDE_PROJECT_SCOPE,
         ),
         cwd=checkout,
         env=dict(environment),
@@ -1708,6 +1707,28 @@ def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
     return tuple(sorted(shipped.items()))
 
 
+# Transcribed verbatim from each real agent CLI's install failure against a
+# canonical marketplace that had not published the named plugin; independent of
+# the production fragment constant so a drifted constant fails the linked tests.
+_CAPTURED_UNPUBLISHED_PLUGIN_STDERR: Mapping[Agent, str] = {
+    Agent.CLAUDE: (
+        'Failed to install plugin "{plugin}@{marketplace}": '
+        'Plugin "{plugin}" not found in marketplace "{marketplace}".'
+    ),
+    Agent.CODEX: (
+        "Error: plugin `{plugin}` was not found in marketplace `{marketplace}`"
+    ),
+}
+
+
+def captured_unpublished_plugin_stderr(agent: Agent, plugin: str) -> str:
+    """One agent CLI's observed unpublished-plugin install failure wording."""
+    return _CAPTURED_UNPUBLISHED_PLUGIN_STDERR[agent].format(
+        plugin=plugin,
+        marketplace=MARKETPLACE_NAME,
+    )
+
+
 @contextmanager
 def _blocked_directory(path: Path) -> Iterator[Callable[[], int]]:
     original_mode = stat.S_IMODE(path.stat().st_mode)
@@ -1803,9 +1824,9 @@ class UnpublishedPluginRunner:
                 argv=command.argv,
                 exit_code=1,
                 stdout="",
-                stderr=(
-                    f"Error: plugin `{command.plugin}` was "
-                    f"{UNPUBLISHED_PLUGIN_FRAGMENT} `{MARKETPLACE_NAME}`"
+                stderr=captured_unpublished_plugin_stderr(
+                    command.agent,
+                    cast(str, command.plugin),
                 ),
             )
         stdout = (
