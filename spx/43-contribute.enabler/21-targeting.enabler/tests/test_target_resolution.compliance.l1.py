@@ -8,7 +8,6 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
     PARENT,
     Responses,
     account_key,
-    ORIGIN_URL_FORMS,
     checkout_lookups,
     checkout_remote_key,
     checkout_remote_response,
@@ -27,6 +26,16 @@ from outcomeeng_testing.harnesses.contribution_targeting import (
 )
 
 _RESOLVER = load_resolver()
+
+# The forms `origin` carries in a real checkout. `gh` resolves all three to the
+# same repository, so the resolver passes whichever one it reads through
+# unchanged; these cases pin that pass-through, and `gh` itself remains the
+# oracle for the normalization.
+ORIGIN_URL_FORMS = (
+    f"https://github.com/{FORK}.git",
+    f"ssh://git@github.com/{FORK}.git",
+    f"git@github.com:{FORK}.git",
+)
 
 
 def test_an_absent_permission_field_yields_no_permission_class() -> None:
