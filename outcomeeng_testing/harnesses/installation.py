@@ -7,7 +7,7 @@ import os
 import shutil
 import stat
 import subprocess
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
 from functools import cache
@@ -1197,15 +1197,17 @@ def observe_real_installation() -> RealInstallationObservation:
         claude_target = _registration_target(plan, Agent.CLAUDE)
         codex_target = _registration_target(plan, Agent.CODEX)
         state_roots = _state_roots(plan)
-        with _blocked_directory(persistent_root) as persistent_mode_first:
+        with _blocked_directory(persistent_root) as read_blocked_mode:
             first = _run_recipe(checkout, mirror, state, environment)
+            persistent_mode_first = read_blocked_mode()
         claude_first = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_first = _run_listing(Agent.CODEX, mirror, environment)
         placed_first = _agent_snapshot(mirror)
         unowned_first = unowned.read_bytes()
         persistent_first = _tree_snapshot(persistent_root)
-        with _blocked_directory(persistent_root) as persistent_mode_second:
+        with _blocked_directory(persistent_root) as read_blocked_mode:
             second = _run_recipe(checkout, mirror, state, environment)
+            persistent_mode_second = read_blocked_mode()
         claude_second = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_second = _run_listing(Agent.CODEX, mirror, environment)
         placed_second = _agent_snapshot(mirror)
@@ -1707,11 +1709,11 @@ def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
 
 
 @contextmanager
-def _blocked_directory(path: Path) -> Iterator[int]:
+def _blocked_directory(path: Path) -> Iterator[Callable[[], int]]:
     original_mode = stat.S_IMODE(path.stat().st_mode)
     path.chmod(0)
     try:
-        yield stat.S_IMODE(path.stat().st_mode)
+        yield lambda: stat.S_IMODE(path.stat().st_mode)
     finally:
         path.chmod(original_mode)
 
