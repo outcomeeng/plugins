@@ -6,8 +6,9 @@ a pull request opened from it can reach a different organization entirely. This
 script performs that resolution once and emits a classification the contribute
 skills act on, so the decision never depends on reading `isFork`, `parent`, and
 `viewerPermission` by eye. The rule binds this script's own reads first: the
-checkout's repository is read by naming `origin`, because a nameless read in a
-fork checkout reports the parent and hides the head the contribution pushes from.
+checkout's repository is read by naming `origin`, because a nameless read answers
+for whichever repository `gh` resolves as the base, which in a fork checkout can
+be the parent rather than the head the contribution pushes from.
 
 Plugin-local by design: this is runtime-specific adapter logic over the GitHub CLI.
 Moving it into a runtime-neutral CLI would couple that CLI to one external runtime,
@@ -53,10 +54,10 @@ class Classification(StrEnum):
 # copy that drifts when an argument list changes.
 #
 # The checkout's own repository is read from `origin` rather than from `gh`'s
-# default resolution. `gh repo view` with no repository resolves a fork checkout
-# to its parent, so a nameless read reports the base where the checkout was
-# asked for — the same default every write in this plugin is forbidden from
-# accepting, and the one that decides whether a head exists at all.
+# default resolution. A nameless `gh repo view` answers for whichever repository
+# it resolves as the base, which in a fork checkout can be the parent — the same
+# default every write in this plugin is forbidden from accepting, and the one
+# that decides whether a head exists at all.
 CHECKOUT_REMOTE_COMMAND: Final[tuple[str, ...]] = ("git", "remote", "get-url", "origin")
 ACCOUNT_COMMAND: Final[tuple[str, ...]] = ("gh", "api", "user")
 ORGANIZATIONS_COMMAND: Final[tuple[str, ...]] = ("gh", "api", "user/orgs")

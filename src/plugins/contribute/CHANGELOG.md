@@ -10,7 +10,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Fixed
 
-- **A fork checkout resolves its target instead of blocking.** Every contribution from a fork stopped at `blocked` with `gh reported a fork with no parent repository`, which is every checkout this plugin serves. Resolution asked `gh` for the checkout without naming a repository, and `gh` answers a nameless read with the base it would publish to — the parent, whose own fork state then stood in for the head you push from. It also read that parent through a field `gh` does not emit. The checkout's repository now comes from `origin` and is named in the read, in whichever form `origin` carries: HTTPS, `ssh://`, and SCP-style remotes all resolve to the same repository.
+- **A fork checkout resolves its target instead of blocking.** Every contribution from a fork stopped at `blocked` with `gh reported a fork with no parent repository`, which is every checkout this plugin serves. Resolution read the parent through `parent.nameWithOwner`, a field no `gh --json parent` object carries — it reports `owner.login` and `name` — so no fork checkout could resolve its base.
+- **The checkout is identified by naming it.** Resolution asked `gh` for the checkout without naming a repository. A nameless read answers for whichever repository `gh` resolves as the base, which in a fork checkout can be the parent rather than the fork you push from; where that happened, the parent's fork state and parent stood in for the checkout's own. The repository now comes from `origin` and is named in the read, in whichever form `origin` carries: HTTPS, `ssh://`, and SCP-style remotes all resolve to the same repository.
 
 ## 0.2.0
 
