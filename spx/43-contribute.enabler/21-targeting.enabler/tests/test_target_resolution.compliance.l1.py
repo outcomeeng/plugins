@@ -60,6 +60,42 @@ def test_no_signal_outside_gh_is_consulted_for_permission() -> None:
     assert permission_key(PARENT) in runner.commands
 
 
+def test_an_unreadable_origin_blocks_before_any_gh_command() -> None:
+    """A checkout that cannot name its own remote resolves nothing.
+
+    The origin read is the only source for the repository the contribution
+    pushes from, so its failure leaves the head unknown. Continuing would send
+    the nameless `gh repo view` the resolution exists to avoid.
+    """
+    responses: Responses = {
+        checkout_remote_key(): command_failure("fatal: No such remote 'origin'"),
+    }
+
+    resolution, runner = resolve_with(responses)
+
+    assert resolution.classification is _RESOLVER.Classification.BLOCKED
+    assert "No such remote" in resolution.detail
+    assert runner.commands == [checkout_remote_key()]
+
+
+def test_an_origin_reported_as_empty_blocks_with_a_named_detail() -> None:
+    """`git` can exit zero and print nothing, which names no repository.
+
+    A zero exit reads as success everywhere else in this resolution, so the
+    empty value is checked beside the exit code; without that the empty string
+    would reach `gh repo view` as the repository argument.
+    """
+    responses: Responses = {
+        checkout_remote_key(): command_output(""),
+    }
+
+    resolution, runner = resolve_with(responses)
+
+    assert resolution.classification is _RESOLVER.Classification.BLOCKED
+    assert "no origin remote" in resolution.detail
+    assert runner.commands == [checkout_remote_key()]
+
+
 def test_the_checkout_repository_is_read_by_name() -> None:
     """A nameless `gh repo view` answers for the parent, not for the checkout.
 
