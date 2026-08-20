@@ -18,7 +18,7 @@ A shipped hook observes or injects context on a non-blocking event only; it can 
 
 <session_identity>
 
-**Claude Code publishes `$CLAUDE_CODE_SESSION_ID` to every Bash tool call itself, and Pi's Claude-Code-compatible surface publishes the same variable. Read it directly.** The `SessionStart` hook + `$CLAUDE_ENV_FILE` pattern below propagates a value the agent does not publish.
+**Claude Code publishes `$CLAUDE_CODE_SESSION_ID` to every Bash tool call itself, and Pi's Claude-Code-compatible surface publishes the same variable. Read it directly.** The `SessionStart` hook + `$CLAUDE_ENV_FILE` pattern below propagates a value not already published as an environment variable.
 
 Claude Code command hooks receive a JSON payload on stdin that includes `session_id`, `transcript_path`, `cwd`, `hook_event_name`, and `model`; `SessionStart` also receives `source`. Claude Code injects `$CLAUDE_ENV_FILE` into `SessionStart` hooks. Writing `export VAR=value` lines to that file persists the variable for every subsequent Bash tool call in the session.
 
