@@ -109,6 +109,17 @@ def none_available_message(*, name: str, runtime: str) -> str:
     return template.format(name=name, runtime=runtime, available=available)
 
 
+def available_message(*, name: str, runtime: str, available: str) -> str:
+    """The stderr line for a request that resolved nothing.
+
+    ``available`` is the caller's own expectation of which marketplaces the
+    listing resolves; the harness only renders it through the production
+    message template.
+    """
+    template: str = RESOLVER.NOT_FOUND_MESSAGE
+    return template.format(name=name, runtime=runtime, available=available)
+
+
 def invalid_json_message_prefix() -> str:
     """The stable leading text of the production invalid-JSON message."""
     template: str = RESOLVER.INVALID_JSON_MESSAGE

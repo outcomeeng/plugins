@@ -14,6 +14,7 @@ from outcomeeng_testing.generators.resolve_marketplace import (
 )
 from outcomeeng_testing.harnesses.resolve_marketplace import (
     RESOLVER,
+    available_message,
     none_available_message,
     run_resolver,
 )
@@ -69,6 +70,14 @@ def test_requested_name_maps_to_the_first_resolvable_entry(
     if case.expected_path is None:
         assert result.returncode == RESOLVER.EXIT_MARKETPLACE_NOT_FOUND
         assert result.stdout == ""
+        assert (
+            available_message(
+                name=case.requested_name or RESOLVER.DEFAULT_MARKETPLACE_NAME,
+                runtime=case.runtime,
+                available=case.expected_available,
+            )
+            in result.stderr
+        )
     else:
         assert result.returncode == 0
         assert result.stdout == f"{case.expected_path}\n"

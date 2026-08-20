@@ -12,6 +12,10 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ## 0.92.3
 
+### Changed
+
+- **`/issue` matches a Claude Directory source exactly.** The marketplace resolver previously case-folded the entry's `source` before comparing it to the `directory` token, so `Directory` and `DIRECTORY` resolved a path. The token is a fixed literal, so the resolver now compares it exactly and a source differing in case resolves nothing. A registration emitting the token in any other case was never produced by `claude plugin marketplace list --json`.
+
 ### Fixed
 
 - **`/issue` files its follow-up from a programmatic runner.** The handoff payload previously reached `spx session handoff` through a quoted heredoc alone, so a programmatic Claude Code or Codex run, or a hosted runner whose parser requires one physical command line, had no supported form. The skill now names both stdin forms and which harness selects each, and grants `printf`, matching `/handoff`'s existing treatment of the same payload.

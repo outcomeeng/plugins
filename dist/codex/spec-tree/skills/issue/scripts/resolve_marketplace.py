@@ -7,11 +7,17 @@ marketplace was registered from a local directory, the same path at
 fields are resolved, `source` first; no other Codex field carries the path, and
 `sourceType` appears only inside `marketplaceSource`.
 
+A Claude entry carries the checkout at top-level `path` when its `source` is
+exactly the `directory` token; the token is a fixed literal, so a source
+differing in case is a different source and resolves nothing.
+
 Tested with:
 - The complete per-runtime field domain, over the registered source, the
   materialized root, and the source type each present, empty, or absent ->
   resolves the path the rule above names, or names none as available. An
   empty value falls through wherever an absent one would.
+- A Claude source differing from the `directory` token in case -> resolves
+  nothing, so the exact-match rule is exercised rather than assumed.
 - Every one of those cases repeated carrying the other runtime's fields as
   decoys -> the resolved path is unchanged, so a resolver reading a field
   outside its own runtime's set fails the case.
@@ -68,7 +74,7 @@ def _entries(payload: Any) -> Iterable[dict[str, Any]]:
 
 
 def _claude_path(entry: dict[str, Any]) -> str:
-    if str(entry.get(SOURCE_FIELD, "")).lower() == CLAUDE_DIRECTORY_SOURCE:
+    if entry.get(SOURCE_FIELD) == CLAUDE_DIRECTORY_SOURCE:
         path = entry.get(PATH_FIELD)
         if isinstance(path, str):
             return path
