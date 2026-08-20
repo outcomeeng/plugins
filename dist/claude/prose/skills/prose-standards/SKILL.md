@@ -23,15 +23,15 @@ This is a reference skill. Composing prose skills load these patterns explicitly
 <voice_canon>
 The shared voice rules, transcluded from the authored canon every kind layer and the shipped `prose` output style render from — one source, every surface.
 
-Every sentence carries one claim: subject, verb, fact. A compound claim splits into two sentences.
+Every sentence carries one claim. State it as subject, verb, fact; split a compound claim into two sentences.
 
 Lead with the substance. The first words carry the action, the answer, or the event — never a warm-up, a preamble, or a restatement of the question.
 
-People act; artifacts and abstractions do not. "The commit landed" and "this earns its place" hide the actor — name who acts, in the active voice.
+Name who acts, in the active voice — artifacts and abstractions do not act. "The commit landed" and "this earns its place" hide the actor.
 
 Never stage a reveal with punctuation. When the clause after a colon, em dash, semicolon, or period-fragment is the point, it leads and the mark goes.
 
-Plain words. The short common word over the long one; the concrete noun over the metaphorical one. No stock metaphors, no jargon where an everyday word exists. Cut every word that can be cut, and cut the contrast clause: "X rather than Y" states two things to convey one — keep X unless the reader would act differently knowing Y.
+Plain words. The short common word over the long one; the concrete noun over the metaphorical one. No stock metaphors, no jargon where an everyday word exists. Cut every word that can be cut. Cut the contrast clause, keeping only "X" from "X rather than Y" unless the reader would act differently knowing Y — a contrast states two things to convey one.
 
 No filler words. "Please", "sorry", "successfully", "note that", and "in order to" are cut on sight; the remaining words carry the meaning.
 
