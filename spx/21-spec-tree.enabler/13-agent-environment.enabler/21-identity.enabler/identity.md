@@ -4,6 +4,8 @@ PROVIDES a stable per-agent session identity written into the agent's environmen
 SO THAT session management nodes and the per-runtime session directory
 CAN scope work to the current agent without file-system heuristics or race conditions
 
+The scenario, property, and mapping assertions below verify the `$CLAUDE_SESSION_ID` env-file export the `spx` hook runner writes at the pinned floor; consumers never resolve identity from that export — the compliance assertions name the agent-published variables they read. `PLAN.md` in `spx/21-spec-tree.enabler/13-agent-environment.enabler` records the export's retirement, gated on the published `spx` floor advancing past the removal.
+
 ## Assertions
 
 ### Scenarios
@@ -20,6 +22,6 @@ CAN scope work to the current agent without file-system heuristics or race condi
 
 ### Compliance
 
-- ALWAYS: resolve session identity from `$CLAUDE_SESSION_ID` (Claude Code) or `$CODEX_THREAD_ID` (Codex) — never infer identity from file modification timestamps, directory enumeration, or index files ([audit])
-- ALWAYS: two concurrent sessions resolve distinct identities — the runtime assigns each session a unique id, and the hook writes what the payload supplies rather than generating uniqueness ([audit])
-- ALWAYS: under Codex, session identity is the runtime-injected `$CODEX_THREAD_ID` — the Claude Code `SessionStart` hook does not run, and no marketplace code sets it ([audit])
+- ALWAYS: resolve session identity from the variable the running agent publishes — `$CLAUDE_CODE_SESSION_ID` under Claude Code and under Pi, whose Claude-Code-compatible surface publishes it alongside its own `$PI_SESSION_ID` with the same value, and `$CODEX_THREAD_ID` under Codex — never by inferring identity from file modification timestamps, directory enumeration, or index files ([audit])
+- ALWAYS: two concurrent sessions resolve distinct identities — the agent assigns each session a unique id, and every consumer reads what the agent published rather than generating uniqueness ([audit])
+- ALWAYS: every agent that consumes a plugin surface publishes its own session identity and no marketplace code sets it — Claude Code publishes `$CLAUDE_CODE_SESSION_ID`, Pi publishes `$PI_SESSION_ID` and the Claude-Code-compatible `$CLAUDE_CODE_SESSION_ID`, and Codex publishes `$CODEX_THREAD_ID` — so an agent that gains a plugin surface declares its published variable here ([audit])

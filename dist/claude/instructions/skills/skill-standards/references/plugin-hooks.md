@@ -1,7 +1,7 @@
 <contents>
 
 - `<overview>` — hook safety boundary
-- `<session_identity>` — `SessionStart` identity propagation
+- `<session_identity>` — agent-published identity, and `SessionStart` value propagation
 - `<hooks_directory>` — plugin layout and runtime paths
 - `<anti_patterns>` — unsafe hook forms
 
@@ -9,7 +9,7 @@
 
 <overview>
 
-Plugin hook patterns for injecting session identity and runtime context into agent Bash tool calls. Read before authoring a hook script or `hooks/hooks.json`.
+Plugin hook patterns for injecting context into agent Bash tool calls, and where session identity comes from without a hook. Read before authoring a hook script or `hooks/hooks.json`.
 
 A shipped hook observes or injects context on a non-blocking event only; it can never deny, block, or stall an agent. Every hook command is a self-contained inline guard whose reachable floor is a clean exit on every branch, carries an explicit short timeout, exposes an environment kill switch, and treats any script or external command it runs as an optional dependency. A hook that fails degrades to a no-op, never an error — a missing script at a substituted path, an absent CLI, or a drifted plugin root leaves the session untouched.
 
@@ -17,11 +17,11 @@ A shipped hook observes or injects context on a non-blocking event only; it can 
 
 <session_identity>
 
-**The hook stdin `session_id` field is the canonical hook-script identity source. The `SessionStart` hook + `$CLAUDE_ENV_FILE` pattern is the Claude Code way to make that identity available to later Bash tool calls in a session.**
+**Claude Code publishes `$CLAUDE_CODE_SESSION_ID` to every Bash tool call itself, and Pi's Claude-Code-compatible surface publishes the same variable. Read it directly.** The `SessionStart` hook + `$CLAUDE_ENV_FILE` pattern below propagates a value not already published as an environment variable.
 
 Claude Code command hooks receive a JSON payload on stdin that includes `session_id`, `transcript_path`, `cwd`, `hook_event_name`, and `model`; `SessionStart` also receives `source`. Claude Code injects `$CLAUDE_ENV_FILE` into `SessionStart` hooks. Writing `export VAR=value` lines to that file persists the variable for every subsequent Bash tool call in the session.
 
-A hook script that writes the identity (`scripts/session-start.py` — Python, stdlib only, no `jq`):
+A hook script that propagates one such value (`scripts/session-start.py` — Python, stdlib only, no `jq`):
 
 ```python
 #!/usr/bin/env python3
@@ -30,12 +30,12 @@ import os
 import sys
 
 payload = json.loads(sys.stdin.read() or "{}")
-session_id = payload.get("session_id") or ""
+source = payload.get("source") or ""
 
 env_file = os.environ.get("CLAUDE_ENV_FILE")
-if env_file and session_id:
+if env_file and source:
     with open(env_file, "a", encoding="utf-8") as handle:
-        handle.write(f"export CLAUDE_SESSION_ID={session_id}\n")
+        handle.write(f"export MY_PLUGIN_SESSION_SOURCE={source}\n")
 ```
 
 The hook *command* never invokes that script bare. It wraps the invocation in an inline guard: an environment kill switch, an explicit `timeout`, and a floor that emits a valid empty result on every branch, so a missing script or a drifted plugin root degrades to a no-op rather than denying the session. Hook declaration (`hooks/hooks.json`):
@@ -71,14 +71,15 @@ A hook that needs richer session state delegates to a CLI rather than reimplemen
 }
 ```
 
-After this hook fires, `$CLAUDE_SESSION_ID` is available in all Bash tool calls for the session — no file-system heuristics or index files needed.
+After this hook fires, the exported variable is available in all Bash tool calls for the session.
 
-**Comparison by runtime for later shell commands:**
+**Session identity by agent — each agent publishes its own, so no hook is involved:**
 
-| Runtime     | Env var              | Source                                     |
-| ----------- | -------------------- | ------------------------------------------ |
-| Claude Code | `$CLAUDE_SESSION_ID` | `SessionStart` hook via `$CLAUDE_ENV_FILE` |
-| Codex       | `$CODEX_THREAD_ID`   | Injected by runtime                        |
+| Agent       | Env var                                     | Source                  |
+| ----------- | ------------------------------------------- | ----------------------- |
+| Claude Code | `$CLAUDE_CODE_SESSION_ID`                   | Injected by Claude Code |
+| Pi          | `$PI_SESSION_ID`, `$CLAUDE_CODE_SESSION_ID` | Injected by Pi          |
+| Codex       | `$CODEX_THREAD_ID`                          | Injected by Codex       |
 
 **`SessionStart` fires on**: startup, resume, `/clear`, and `/compact`. Hook scripts must be idempotent.
 

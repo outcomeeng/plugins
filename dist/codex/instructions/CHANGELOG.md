@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.17.3
+
+### Changed
+
+- **Hook guidance names the agent-published session identity.** `skill-standards`'s `plugin-hooks.md` reference states that Claude Code publishes `$CLAUDE_CODE_SESSION_ID` to every Bash tool call — and that Pi's Claude-Code-compatible surface publishes the same variable alongside its own `$PI_SESSION_ID` — so a skill reads identity directly and never installs a hook to synthesize it. The `SessionStart` + `$CLAUDE_ENV_FILE` example now propagates a payload value the agent does not publish, and the per-agent identity table covers Claude Code, Pi, and Codex.
+
 ## 0.17.2
 
 ### Removed

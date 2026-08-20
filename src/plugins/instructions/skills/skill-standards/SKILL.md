@@ -452,7 +452,7 @@ Before auditing, invoke `/typescript-test-standards` through the runtime's skill
 The runtime variable scopes and bundled-file path examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. Read it before referencing bundled files.
 
 {!% if target == 'claude' %!}
-Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` session-identity mechanism, hook `command:` paths, and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`. Read it before wiring hook commands.
+Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` value-propagation mechanism, hook `command:` paths, and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`, which also names `$CLAUDE_CODE_SESSION_ID` as the agent-published session identity a skill reads without a hook. Read it before wiring hook commands or consuming session identity from a skill.
 {!% else %!}
 Codex session-identity guidance for `$CODEX_THREAD_ID` lives in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`. Read it before consuming session identity from a skill.
 {!% endif %!}
