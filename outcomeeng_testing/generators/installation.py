@@ -10,8 +10,16 @@ from outcomeeng.distribution.installation import (
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
     CLAUDE_CATALOG_PATH,
+    CLAUDE_PLUGIN_ID_FIELD,
+    CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
+    CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PROJECT_SCOPE,
+    CLAUDE_USER_SCOPE,
     CODEX_CATALOG_PATH,
+    CODEX_PLUGIN_ID_FIELD,
+    CODEX_PLUGIN_MARKETPLACE_FIELD,
     InstallationMode,
+    MARKETPLACE_NAME,
     Operation,
     SPEC_TREE_PLUGIN,
 )
@@ -123,6 +131,55 @@ def generated_persistent_catalog_selections(
     return (frozenset(), *generated_valid_catalog_subsets(catalog))
 
 
+def generated_claude_listing_entries(
+    catalog: Sequence[str],
+    checkout: Path,
+) -> tuple[tuple[dict[str, str], ...], frozenset[str]]:
+    """Cycle Claude listing entries across scope cases, naming the in-scope set.
+
+    Every third entry stays in the invocation checkout's project scope; the
+    others rotate through a foreign project path and user scope, so scope
+    filtering has both accepted and rejected members for every catalog window.
+    """
+    entries: list[dict[str, str]] = []
+    in_scope: set[str] = set()
+    for index, plugin in enumerate(catalog):
+        entry = {
+            CLAUDE_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
+            CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+            CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
+        }
+        if index % 3 == 1:
+            entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] = str(checkout.parent)
+        elif index % 3 == 2:
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD] = CLAUDE_USER_SCOPE
+            del entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        else:
+            in_scope.add(plugin)
+        entries.append(entry)
+    return tuple(entries), frozenset(in_scope)
+
+
+def generated_codex_listing_entries(
+    catalog: Sequence[str],
+) -> tuple[tuple[dict[str, str], ...], frozenset[str]]:
+    """Alternate Codex listing entries across marketplaces, naming the in-scope set."""
+    entries: list[dict[str, str]] = []
+    in_scope: set[str] = set()
+    for index, plugin in enumerate(catalog):
+        if index % 2 == 0:
+            in_scope.add(plugin)
+        entries.append(
+            {
+                CODEX_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
+                CODEX_PLUGIN_MARKETPLACE_FIELD: (
+                    MARKETPLACE_NAME if index % 2 == 0 else f"{MARKETPLACE_NAME}-other"
+                ),
+            }
+        )
+    return tuple(entries), frozenset(in_scope)
+
+
 def generated_failure_classification_cases(
     operation_domains: Sequence[tuple[InstallationMode, str, Sequence[Operation]]],
 ) -> tuple[tuple[InstallationMode, str, Operation], ...]:
@@ -146,6 +203,8 @@ __all__ = [
     "catalog_plugin_names_from_document",
     "generated_agent_subsets",
     "generated_catalog_subset",
+    "generated_claude_listing_entries",
+    "generated_codex_listing_entries",
     "generated_failure_classification_cases",
     "generated_invalid_catalog_subsets",
     "generated_persistent_catalog_selections",
