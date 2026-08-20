@@ -291,7 +291,14 @@ class RealInstallationObservation:
 
 @dataclass
 class RecordingRunner:
-    """Installation runner that records commands and can fail one operation."""
+    """Installation runner that records commands and can fail one operation.
+
+    Controlled under `/test` Stage 5 Interaction protocols: the command order
+    and shape a plan emits are observable only by recording the calls at the
+    injected runner boundary. Failing one designated operation is the Stage 5
+    Failure simulation case, because a real CLI does not fail an arbitrary
+    operation on demand.
+    """
 
     failed_operation: Operation | None = None
     installed: Mapping[Agent, frozenset[str]] | None = None
@@ -1062,6 +1069,9 @@ def observe_real_first_install() -> RealFirstInstallObservation:
         mirror = temporary_root / "checkout"
         selected_root = temporary_root / "selected-agent-state"
         _mirror_installation_inputs(checkout, mirror)
+        _copy_committed_project_settings(
+            checkout, mirror / CLAUDE_PROJECT_SETTINGS_PATH
+        )
         environment = _persistent_environment(selected_root)
         _prepare_agent_state(environment)
         initial_state = _tree_snapshot(selected_root)
