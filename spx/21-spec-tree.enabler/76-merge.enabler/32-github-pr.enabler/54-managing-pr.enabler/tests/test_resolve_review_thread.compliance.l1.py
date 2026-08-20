@@ -976,20 +976,14 @@ def test_repeated_comment_page_cursor_returns_error() -> None:
         command: list[str],
         _kwargs: dict[str, object],
     ) -> subprocess.CompletedProcess[str]:
-        if (
-            f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}=comment-cursor-a"
-            in command
-        ):
+        if f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}=comment-cursor-a" in command:
             return completed(
                 command,
                 stdout=json.dumps(
                     GITHUB_RESPONSE.thread_comments_payload(middle_comments)
                 ),
             )
-        if (
-            f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}=comment-cursor-b"
-            in command
-        ):
+        if f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}=comment-cursor-b" in command:
             return completed(
                 command,
                 stdout=json.dumps(
@@ -1056,15 +1050,9 @@ def test_repeated_thread_page_cursor_returns_error() -> None:
         command: list[str],
         _kwargs: dict[str, object],
     ) -> subprocess.CompletedProcess[str]:
-        if (
-            f"{RESOLVER.GraphQLField.THREADS_AFTER.value}=thread-cursor-a"
-            in command
-        ):
+        if f"{RESOLVER.GraphQLField.THREADS_AFTER.value}=thread-cursor-a" in command:
             return completed(command, stdout=json.dumps(middle_page))
-        if (
-            f"{RESOLVER.GraphQLField.THREADS_AFTER.value}=thread-cursor-b"
-            in command
-        ):
+        if f"{RESOLVER.GraphQLField.THREADS_AFTER.value}=thread-cursor-b" in command:
             return completed(command, stdout=json.dumps(repeated_page))
         return completed(command, stdout=json.dumps(initial_page))
 

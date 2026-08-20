@@ -33,8 +33,8 @@ GitHub and the local repository are authoritative for PR state. Conversation mem
 Every PR-state `gh pr view --json` command that participates in a management pass or re-inspection reads the formal-review and PR-level-comment surfaces in the same snapshot as check and PR state:
 
 ```bash
-gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view --json number,url,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate
 ```
 
@@ -44,15 +44,15 @@ The `reviews` field carries formal review submissions. The `comments` field carr
 
 <step name="the_managing_flow">
 
-Walk these steps on each management pass. Routine steps — inspect, classify, rebase, re-review, push, and foreground PR-check wait — run directly. The only pauses are the autonomous merge after `MERGE_READINESS` holds and the mutation-point guard returns `MERGE_READY:<head-sha>`, plus the action-token emissions when a gate withholds.
+Walk these steps on each management pass. Routine steps — inspect, classify, rebase, re-review, push, foreground PR-check wait, and an authorized merge — run directly. A withheld gate mutation emits its action token; failed occupancy, overlay-preflight, post-cleanup, and base-sync checks return the structured evidence their governing step requires; successful closeout returns from Step 9.
 
 **Step 0 — Load references.** Invoke `/understand` and the governing node's `/contextualize` immediately before the first product content this pass reads or modifies — a finding fix, base-sync conflict reconciliation, `/commit-changes` of edited product content, a coordination-note edit — or the first node this pass discusses, and at no earlier step. PR inspection, check wait, merge, deploy, and release touch no product content and proceed without either reload. Invoke /merging-standards (shared vocabulary) and /commit-changes (commit format for any follow-up commits) via the Skill tool. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
 
 **Step 1 — Identify the PR.** When `$ARGUMENTS` is non-empty, resolve the PR from that pointer before inspecting state. Use the `<pr_identity_fields>` command field set. Use bare `gh pr view` only when `$ARGUMENTS` is empty and the current branch is the intended PR branch.
 
 ```bash
-gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view --json number,url,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 ```
 
 **Step 2 — Inspect three surfaces and check base drift.** Run /merging-standards `<review_inspection>` queries. Compare timestamps against the most recent push; entries after that push are re-reviews of the latest state. In the same checkpoint, fetch `origin/<base>` and determine whether the branch is behind it — review state and base drift are read together so the rebase can proceed during the wait for reviews, not only after they land.
@@ -106,7 +106,7 @@ Classify `MERGE_READINESS` in this order. The first matching rule wins; once a r
 7. Non-review required check non-terminal -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "check-not-terminal-green"`, `guard_verdict: "WAIT_FOR_CHECKS"`, `merge_command_allowed: false`, `autonomous_action: "wait"`, `pr_comment_body: null`.
 8. Non-review required check terminal-but-not-success or absent -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "check-failed-or-absent"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
 9. Branch hygiene or PR-state predicate failed -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "branch-hygiene"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
-10. Head SHA, fetched branch head, or status-check head mismatch -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "head-mismatch"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
+10. Inspected `headRefOid` and fetched branch head mismatch -> `merge_readiness: "WITHHOLD"`, `blocking_predicate: "head-mismatch"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`, `autonomous_action: "block"`, `pr_comment_body: null`.
 11. Otherwise -> `merge_readiness: "HOLD"`, `blocking_predicate: "none"`, `guard_verdict: "MERGE_READY:<head-sha>"`, `merge_command_allowed: true`, `autonomous_action: "merge"`, `pr_comment_body: null`.
 
 **Worked trace.** The inspected head and fetched branch head both equal `4f3c2b1a09e8d7c6b5a493827160fedcba987654`; branch hygiene and PR state pass; the current-head review exists, is valid, and has no unresolved finding. `statusCheckRollup` contains a review-kind check with `status: "COMPLETED"` and `conclusion: "SUCCESS"`, plus the required `test` check with `status: "IN_PROGRESS"` and no conclusion. Rules 1–6 do not match. Rule 7 is the first match, so the guard emits `WAIT_FOR_CHECKS`, sets `merge_command_allowed: false`, runs Step 7, and does not merge.
@@ -152,7 +152,7 @@ If the project declares deploy or release phases, continue through Step 9 with t
 
 If `MERGE_READINESS` does not hold, directly read /merging-standards `action-tokens.md` from its `<reference_index>`, then emit exactly one token from `<action_tokens>`. The token is valid only for this pass. For `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7 and re-inspect. For `MERGE_BLOCKED:<reason>`, stop at the concrete blocker the token names; when the operator replies, restart this workflow for the PR pointer before acting. A base-sync conflict is handled earlier in Step 4 as a structured stop report, not an action token.
 
-**Step 9 — Return the closeout result.** Once the PR is merged and `<merge_cleanup>` has run, build the branch-state closeout record from /merging-standards `<branch_state_closeout>` and run its safe cleanup policy before deploy or release routing so every later token carries the cleanup state. If a declared deploy action exists and its authorization predicate is unsatisfied, emit `AWAIT_DEPLOYMENT_AUTHORIZATION` with the branch-state closeout record, run no deploy action, run no release action, and wait for operator authorization before re-entering Step 1. If a declared release action exists after deploy completion or a deploy no-op and its authorization predicate is unsatisfied, emit `AWAIT_RELEASE_AUTHORIZATION` with the branch-state closeout record, run no release action, and wait for operator authorization before re-entering Step 1. When declared deploy and release phases are complete or no-op, return one closeout-ready result containing the PR URL, full merged head SHA, merge commit when available, cleanup state, branch-state closeout record with **Remaining Branches** groups, deploy result, release result, and remaining-work disposition. The result is `/manage-pr`'s terminal success output. Its shape and behavior never depend on caller identity; an outer entry point owns any continuation or session close that follows.
+**Step 9 — Return the closeout result.** Once the PR is merged and `<merge_cleanup>` has run, build the branch-state closeout record from /merging-standards `<branch_state_closeout>` and run its safe cleanup policy before deploy or release routing so every later token carries the cleanup state. If a declared deploy action exists and its authorization predicate is unsatisfied, emit `AWAIT_DEPLOYMENT_AUTHORIZATION` with the branch-state closeout record, run no deploy action, run no release action, and wait for operator authorization before re-entering Step 1. If a declared release action exists after deploy completion or a deploy no-op and its authorization predicate is unsatisfied, emit `AWAIT_RELEASE_AUTHORIZATION` with the branch-state closeout record, run no release action, and wait for operator authorization before re-entering Step 1. When declared deploy and release phases are complete or no-op, return one closeout-ready result containing the PR URL, full merged head SHA, merge commit when available, cleanup state, branch-state closeout record with **Remaining Branches** groups, deploy result, release result, and remaining-work disposition. Return this result and stop; its shape and behavior never depend on caller identity.
 
 **Exit when:** Step 9 has returned the closeout-ready result, the PR is closed, or Step 9 has emitted `AWAIT_DEPLOYMENT_AUTHORIZATION` or `AWAIT_RELEASE_AUTHORIZATION` with branch-state closeout evidence. Otherwise return to Step 1 after Step 7 or after the operator resolves a token boundary.
 
@@ -166,11 +166,11 @@ Tested inputs and expected outputs:
 
 - Direct thread node ID: `--host ghe.example.com PRRT_thread0002` resolves that thread by calling `gh api graphql --silent` with `id=PRRT_thread0002`.
 - Review-comment discovery: `--host ghe.example.com --repo outcomeeng/plugins --pr 405 --review-comment-id 12345` discovers the owning review-thread node before resolving it.
-- Thread pagination: a first review-thread page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `threadsAfter=<cursor>` query, then resolves the discovered thread.
-- Comment pagination: a thread comments page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `commentsAfter=<cursor>` query before resolving the owning thread.
-- Malformed resolver CLI inputs: empty and incomplete discovery selector sets, generated thread IDs, repositories, PR numbers, comment IDs, hosts, and mixed direct/discovery modes outside the helper's source-owned validators return exit code `2`, print a validation message, and make no GitHub mutation call.
+- Thread pagination: a first review-thread page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `threadsAfter=<cursor>` query; the resolver checks first-page comments across those thread pages before requesting any thread's later comment page, then resolves the discovered thread.
+- Comment pagination: a thread comments page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `commentsAfter=<cursor>` query; later comment pages are requested breadth-first across threads, so every shallower candidate page is checked before any deeper page, then the owning thread resolves.
+- Malformed resolver CLI inputs: empty and incomplete discovery selector sets; generated thread IDs and repositories; zero, overlong, or GraphQL-Int-overflow numbers; hostnames with empty labels, invalid label endpoints, overlong labels, overlong total length, or forbidden characters; and mixed direct/discovery modes outside the helper's source-owned validators return exit code `2`, print a validation message, and make no GitHub mutation call.
 - Missing review comment: complete review-thread pagination without a matching comment returns exit code `2` with `review comment was not found after complete review-thread pagination`.
-- Malformed GitHub payloads: null repository, null pull request, null paginated thread node, missing comment pagination metadata, and missing pagination cursor responses return exit code `2` with the exact failing response shape named.
+- Malformed GitHub payloads: null repository, null pull request, null paginated thread node, missing comment pagination metadata, missing or repeated pagination cursors, and missing, wrong-type, or out-of-range comment database IDs return exit code `2` with the exact failing response shape named.
 - Cleanup: the helper creates no temporary files and owns no persistent state; tests assert only subprocess calls, stdout/stderr payload handling, and exit codes.
 
 </script_testing>
@@ -181,8 +181,8 @@ For pre-flight, branch topology, push semantics, base sync, the authority gates,
 
 ```bash
 # PR identity
-gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view --json number,url,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 
 # Checks snapshot
 gh pr checks <pr-number>
@@ -243,12 +243,13 @@ The narrow Bash grants in frontmatter authorize approval-free execution. Run req
 
 <success_criteria>
 
-- Every checkout-sensitive mutation has a current passing occupancy proof, and every product-content access has the required live foundation and node context.
-- The inspected head is current with `origin/<base>`; all three review surfaces were read; every valid in-scope finding was fixed; every separate larger concern carries a recorded reason.
-- Each pushed head has passing deterministic verification, every applicable evidence-auditor approval, a converged local changeset review, and passing branch hygiene.
-- A merge runs only after a clean current-head CI review exists, every required check is terminal-green, and the mutation guard returns `MERGE_READY:<head-sha>` for the same fetched head. A self-modifying review workflow uses the configured mention exception; every other skipped review check blocks.
-- A waiting pass runs the required foreground check watch, discards prior action authority, and re-inspects live state before its next decision. Every non-waiting blocked pass emits one current action token or the structured base-sync conflict report.
-- Successful completion returns one caller-independent closeout result containing the PR URL, full merged head SHA, merge commit when available, cleanup state, the branch-state record with **Remaining Branches**, deploy result, release result, and remaining-work disposition.
+- Before each checkout-sensitive mutation, `spx worktree status --format json` reports this exact worktree root claimed by the current session; product-content access carries live foundation and node-context markers.
+- One inspection pass reads `gh pr view ... --json ...headRefOid,...statusCheckRollup,...reviews,comments`, `gh pr checks <pr-number>`, and `gh api repos/<owner>/<repo>/pulls/<pr-number>/comments`; `headRefOid` equals the fetched remote head, and `statusCheckRollup` comes from that same fresh PR snapshot.
+- Before each push, the exact committed head has exit-zero deterministic verification, every applicable evidence-auditor approval, a raw converged changes-review journal, and passing branch-hygiene fields.
+- A waiting pass runs exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30`, discards prior action authority, and repeats the complete inspection before its next decision.
+- The merge command runs only when fresh PR fields report `state=OPEN` and `isDraft=false`, the fetched branch head equals the inspected head, every required `statusCheckRollup` item is terminal-success, a clean current-head review exists, and the guard returns `MERGE_READY:<head-sha>` for that head.
+- Every non-waiting blocked pass returns exactly one current action token or one structured occupancy, overlay-preflight, post-cleanup, or sync-base failure report; the self-modifying-review exception uses only the configured mention trigger.
+- Successful completion returns one caller-independent closeout result with the PR URL, full merged head SHA, merge commit when available, cleanup state, **Remaining Branches**, deploy result, release result, and remaining-work disposition.
 - No mergeability probe, caller-identity branch, unsupported finding label, stale action token, or `<self_reference>` violation occurs.
 
 </success_criteria>
