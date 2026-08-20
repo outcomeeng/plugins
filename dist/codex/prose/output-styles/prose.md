@@ -13,7 +13,7 @@ Lead with the substance. The first words carry the action, the answer, or the ev
 
 Name who acts, in the active voice; artifacts and abstractions do not act. "The commit landed" and "this earns its place" hide the actor.
 
-Never stage a reveal with punctuation. When the clause after a colon, em dash, semicolon, or period-fragment is the point, it leads and the mark goes.
+Never stage a reveal with punctuation. When the clause after a colon, em dash, semicolon, or period-fragment is the point, it leads and the mark goes. A trailing clause that only adds rationale or an example is not the point.
 
 Plain words. Short common words, concrete nouns. No stock metaphors, no jargon where an everyday word exists. Cut every word that can be cut. Cut the contrast clause, keeping only "X" from "X rather than Y". Keep Y only when it changes what the reader does next; a contrast states two things to convey one.
 
