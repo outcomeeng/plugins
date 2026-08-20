@@ -17,16 +17,21 @@ from outcomeeng.distribution.installation import (
 )
 
 
-def catalog_plugin_names_from_document(catalog_path: Path) -> tuple[str, ...]:
-    """Read catalog order independently from the production catalog parser."""
+def catalog_plugin_names_from_bytes(payload: bytes) -> tuple[str, ...]:
+    """Read catalog order from raw bytes independently of the production parser."""
     document = cast(
         "dict[str, list[dict[str, object]]]",
-        json.loads(catalog_path.read_bytes()),
+        json.loads(payload),
     )
     return tuple(
         cast("str", plugin[CATALOG_PLUGIN_NAME_FIELD])
         for plugin in document[CATALOG_PLUGINS_FIELD]
     )
+
+
+def catalog_plugin_names_from_document(catalog_path: Path) -> tuple[str, ...]:
+    """Read catalog order independently from the production catalog parser."""
+    return catalog_plugin_names_from_bytes(catalog_path.read_bytes())
 
 
 def generated_catalog_subset(
@@ -137,6 +142,7 @@ def generated_failure_classification_cases(
 
 
 __all__ = [
+    "catalog_plugin_names_from_bytes",
     "catalog_plugin_names_from_document",
     "generated_agent_subsets",
     "generated_catalog_subset",

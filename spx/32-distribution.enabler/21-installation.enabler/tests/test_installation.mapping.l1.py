@@ -1,15 +1,11 @@
 """Finite catalog-to-agent mapping evidence for repository installation."""
 
-import json
-from typing import cast
-
 from outcomeeng.distribution.installation import (
     Agent,
-    CATALOG_PLUGIN_NAME_FIELD,
-    CATALOG_PLUGINS_FIELD,
     SPEC_TREE_PLUGIN,
 )
 from outcomeeng_testing.generators.installation import (
+    catalog_plugin_names_from_bytes,
     generated_persistent_catalog_selections,
 )
 from outcomeeng_testing.harnesses.installation import (
@@ -20,19 +16,11 @@ from outcomeeng_testing.harnesses.installation import (
 
 def test_each_mode_maps_its_selection_to_catalog_order() -> None:
     isolated = observe_repository_plan()
-    claude_catalog = cast(
-        dict[str, list[dict[str, object]]], json.loads(isolated.claude_catalog)
+    assert isolated.plan.claude_plugins == catalog_plugin_names_from_bytes(
+        isolated.claude_catalog
     )
-    codex_catalog = cast(
-        dict[str, list[dict[str, object]]], json.loads(isolated.codex_catalog)
-    )
-    assert isolated.plan.claude_plugins == tuple(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in claude_catalog[CATALOG_PLUGINS_FIELD]
-    )
-    assert isolated.plan.codex_plugins == tuple(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
+    assert isolated.plan.codex_plugins == catalog_plugin_names_from_bytes(
+        isolated.codex_catalog
     )
     observations = observe_persistent_catalog_subset_plans()
     assert tuple(observation.agent for observation in observations) == tuple(Agent)

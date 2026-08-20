@@ -5,10 +5,11 @@ from typing import cast
 
 from outcomeeng.distribution.installation import (
     Agent,
-    CATALOG_PLUGIN_NAME_FIELD,
-    CATALOG_PLUGINS_FIELD,
     ReportField,
     SourceAction,
+)
+from outcomeeng_testing.generators.installation import (
+    catalog_plugin_names_from_bytes,
 )
 from outcomeeng_testing.harnesses.installation import (
     canonical_catalog_plugin_names,
@@ -18,19 +19,11 @@ from outcomeeng_testing.harnesses.installation import (
 
 def test_real_agent_clis_map_full_and_generated_subsets() -> None:
     observation = observe_real_installation()
-    claude_catalog = cast(
-        dict[str, list[dict[str, object]]], json.loads(observation.claude_catalog)
-    )
-    codex_catalog = cast(
-        dict[str, list[dict[str, object]]], json.loads(observation.codex_catalog)
-    )
     claude_plugins = frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in claude_catalog[CATALOG_PLUGINS_FIELD]
+        catalog_plugin_names_from_bytes(observation.claude_catalog)
     )
     codex_plugins = frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
+        catalog_plugin_names_from_bytes(observation.codex_catalog)
     )
     persistent_report = cast(
         dict[str, object], json.loads(observation.persistent_stdout)
@@ -49,21 +42,11 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
         if entry[ReportField.AGENT] == Agent.CODEX.value
     )
     published = canonical_catalog_plugin_names()
-    subset_claude_catalog = cast(
-        dict[str, list[dict[str, object]]],
-        json.loads(observation.subset_claude_catalog),
-    )
-    subset_codex_catalog = cast(
-        dict[str, list[dict[str, object]]],
-        json.loads(observation.subset_codex_catalog),
-    )
     subset_claude_plugins = frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in subset_claude_catalog[CATALOG_PLUGINS_FIELD]
+        catalog_plugin_names_from_bytes(observation.subset_claude_catalog)
     )
     subset_codex_plugins = frozenset(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in subset_codex_catalog[CATALOG_PLUGINS_FIELD]
+        catalog_plugin_names_from_bytes(observation.subset_codex_catalog)
     )
 
     assert observation.persistent_exit_code == 0, observation.persistent_stderr
