@@ -28,6 +28,7 @@ from outcomeeng.distribution.installation import (
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
     CLAUDE_CATALOG_PATH,
+    CLAUDE_MARKETPLACE_LIST_COMMAND,
     CLAUDE_CONFIG_ENV,
     CLAUDE_ENABLED_PLUGINS_FIELD,
     CLAUDE_PLUGIN_ENABLED_FIELD,
@@ -65,6 +66,7 @@ from outcomeeng.distribution.installation import (
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
+    claude_marketplace_listing_payload,
     claude_marketplace_settings,
     codex_marketplace_listing_payload,
     codex_source_action,
@@ -379,12 +381,19 @@ def _plugin_listing_payload(
     )
 
 
+def _marketplace_listing_payload(agent: Agent) -> str:
+    """One agent's marketplace listing carrying the canonical registration."""
+    if agent is Agent.CLAUDE:
+        return claude_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+    return codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+
+
 def _successful_command_payload(
     command: InstallationCommand,
     installed: Mapping[Agent, frozenset[str]] | None,
 ) -> str:
     if command.operation is Operation.MARKETPLACE_INSPECT:
-        return codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+        return _marketplace_listing_payload(command.agent)
     if command.operation is Operation.PLUGIN_INSPECT:
         inventories = _installed_or_catalog_plugins(command.cwd, installed)
         return _plugin_listing_payload(
@@ -402,6 +411,9 @@ def _persistent_plan_with_catalog_inventories(
     inventories = _installed_or_catalog_plugins(preflight.roots.checkout, None)
     return build_persistent_installation_plan(
         preflight,
+        claude_marketplace_payload=claude_marketplace_listing_payload(
+            CANONICAL_MARKETPLACE_SOURCE
+        ),
         claude_plugins_payload=_plugin_listing_payload(
             Agent.CLAUDE,
             preflight.roots.checkout,
@@ -462,6 +474,9 @@ def observe_persistent_plan(
         inventories = _installed_or_catalog_plugins(mirror, installed)
         plan = build_persistent_installation_plan(
             preflight,
+            claude_marketplace_payload=claude_marketplace_listing_payload(
+                CANONICAL_MARKETPLACE_SOURCE
+            ),
             claude_plugins_payload=_plugin_listing_payload(
                 Agent.CLAUDE,
                 mirror,
@@ -530,6 +545,9 @@ def observe_persistent_catalog_subset_plans() -> tuple[
                 installed[agent] = selected
                 plan = build_persistent_installation_plan(
                     preflight,
+                    claude_marketplace_payload=claude_marketplace_listing_payload(
+                        CANONICAL_MARKETPLACE_SOURCE
+                    ),
                     claude_plugins_payload=_plugin_listing_payload(
                         Agent.CLAUDE,
                         mirror,
@@ -1152,8 +1170,13 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mirror,
             selected_environment,
         )
+        persistent_claude_marketplaces = _run_claude_marketplace_listing(
+            persistent_mirror,
+            selected_environment,
+        )
         persistent_plan = build_persistent_installation_plan(
             persistent_preflight,
+            claude_marketplace_payload=persistent_claude_marketplaces.stdout,
             claude_plugins_payload=_plugin_listing_payload(
                 Agent.CLAUDE,
                 persistent_mirror,
@@ -1668,6 +1691,25 @@ def _run_listing(
     return result
 
 
+def _run_claude_marketplace_listing(
+    checkout: Path,
+    environment: Mapping[str, str],
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        CLAUDE_MARKETPLACE_LIST_COMMAND,
+        cwd=checkout,
+        env=dict(environment),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"claude marketplace listing failed: {result.stderr.strip()}"
+        )
+    return result
+
+
 def _run_codex_marketplace_listing(
     checkout: Path,
     environment: Mapping[str, str],
@@ -1835,7 +1877,7 @@ class UnpublishedPluginRunner:
                 ),
             )
         stdout = (
-            codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+            _marketplace_listing_payload(command.agent)
             if command.operation is Operation.MARKETPLACE_INSPECT
             else ""
         )
@@ -1879,7 +1921,7 @@ class DesignatedFailureRunner:
                 argv=command.argv, exit_code=1, stdout="", stderr=self.stderr
             )
         stdout = (
-            codex_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+            _marketplace_listing_payload(command.agent)
             if command.operation is Operation.MARKETPLACE_INSPECT
             else ""
         )

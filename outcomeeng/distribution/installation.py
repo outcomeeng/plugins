@@ -53,6 +53,13 @@ CODEX_MARKETPLACE_LIST_COMMAND = (
     "list",
     "--json",
 )
+CLAUDE_MARKETPLACE_LIST_COMMAND = (
+    CLAUDE_EXECUTABLE,
+    "plugin",
+    "marketplace",
+    "list",
+    "--json",
+)
 PLACEMENT_SCRIPT_RELATIVE_PATH = Path("scripts/place_agents.py")
 CLAUDE_ALREADY_INSTALLED_FRAGMENT = "already installed"
 UNPUBLISHED_PLUGIN_FRAGMENT = "not found in marketplace"
@@ -70,6 +77,7 @@ CODEX_SOURCE_TYPE_FIELD = "sourceType"
 CODEX_SOURCE_FIELD = "source"
 CODEX_GIT_SOURCE_TYPE = "git"
 CODEX_LOCAL_SOURCE_TYPE = "local"
+CLAUDE_MARKETPLACE_NAME_FIELD = "name"
 CLAUDE_PLUGIN_ID_FIELD = "id"
 CLAUDE_PLUGIN_ENABLED_FIELD = "enabled"
 CLAUDE_PLUGIN_SCOPE_FIELD = "scope"
@@ -543,6 +551,14 @@ def build_persistent_preflight(
     inspections = (
         _command(
             Agent.CLAUDE,
+            Operation.MARKETPLACE_INSPECT,
+            None,
+            CLAUDE_MARKETPLACE_LIST_COMMAND,
+            roots,
+            environment,
+        ),
+        _command(
+            Agent.CLAUDE,
             Operation.PLUGIN_INSPECT,
             None,
             CLAUDE_LIST_COMMAND,
@@ -579,11 +595,23 @@ def build_persistent_preflight(
 def build_persistent_installation_plan(
     preflight: PersistentPreflight,
     *,
+    claude_marketplace_payload: str,
     claude_plugins_payload: str,
     codex_marketplace_payload: str,
     codex_plugins_payload: str,
 ) -> InstallationPlan:
-    """Build a persistent plan from validated inputs and Codex CLI state."""
+    """Build a persistent plan from validated inputs and live agent CLI state.
+
+    The checkout's committed settings declare the marketplace source, but a
+    fresh agent home has no marketplace to refresh: the declared action holds
+    only where the live listing carries the marketplace, and an absent live
+    marketplace is added regardless of the declaration.
+    """
+    claude_action = (
+        preflight.claude_source_action
+        if MARKETPLACE_NAME in claude_marketplace_names(claude_marketplace_payload)
+        else SourceAction.ADD
+    )
     codex_action = codex_source_action(codex_marketplace_payload)
     claude_selection, claude_warning = _persistent_selection(
         Agent.CLAUDE,
@@ -607,7 +635,7 @@ def build_persistent_installation_plan(
         InstallationMode.PERSISTENT,
         preflight.roots,
         preflight.environment,
-        preflight.claude_source_action,
+        claude_action,
         codex_action,
         claude_plugins=claude_selection,
         codex_plugins=codex_selection,
@@ -648,6 +676,9 @@ def execute_persistent_installation(
         inspection_payloads[(inspection.agent, inspection.operation)] = result.stdout
     plan = build_persistent_installation_plan(
         preflight,
+        claude_marketplace_payload=inspection_payloads[
+            (Agent.CLAUDE, Operation.MARKETPLACE_INSPECT)
+        ],
         claude_plugins_payload=inspection_payloads[
             (Agent.CLAUDE, Operation.PLUGIN_INSPECT)
         ],
@@ -1281,6 +1312,38 @@ def claude_source_action(document: Mapping[str, object]) -> SourceAction:
     return SourceAction.REPLACE
 
 
+def claude_marketplace_names(payload: str) -> frozenset[str]:
+    """Parse marketplace names from one Claude marketplace listing."""
+    try:
+        document = cast(object, json.loads(payload))
+    except json.JSONDecodeError as error:
+        raise ValueError(f"invalid claude marketplace listing: {error}") from error
+    if not isinstance(document, list):
+        raise ValueError("claude marketplace listing must be a JSON array")
+    names: set[str] = set()
+    for entry in document:
+        if not isinstance(entry, dict):
+            raise ValueError("claude marketplace listing contains a non-object")
+        name = entry.get(CLAUDE_MARKETPLACE_NAME_FIELD)
+        if not isinstance(name, str):
+            raise ValueError("claude marketplace listing entry lacks a typed name")
+        names.add(name)
+    return frozenset(names)
+
+
+def claude_marketplace_listing_payload(repository: str) -> str:
+    """Build one Claude marketplace-listing payload at its public boundary."""
+    return json.dumps(
+        [
+            {
+                CLAUDE_MARKETPLACE_NAME_FIELD: MARKETPLACE_NAME,
+                CLAUDE_SOURCE_FIELD: CLAUDE_GITHUB_SOURCE_TYPE,
+                CLAUDE_REPOSITORY_FIELD: repository,
+            }
+        ]
+    )
+
+
 def claude_marketplace_settings(repository: str) -> dict[str, object]:
     """Build one Claude project settings document for the marketplace."""
     if repository == CANONICAL_MARKETPLACE_SOURCE:
@@ -1480,6 +1543,8 @@ __all__ = [
     "CODEX_HOME_ENV",
     "CODEX_LOCAL_SOURCE_TYPE",
     "CODEX_MARKETPLACES_FIELD",
+    "CLAUDE_MARKETPLACE_LIST_COMMAND",
+    "CLAUDE_MARKETPLACE_NAME_FIELD",
     "CODEX_MARKETPLACE_LIST_COMMAND",
     "CODEX_MARKETPLACE_NAME_FIELD",
     "CODEX_MARKETPLACE_SOURCE_FIELD",
@@ -1513,6 +1578,8 @@ __all__ = [
     "build_persistent_installation_plan",
     "build_persistent_preflight",
     "catalog_plugin_names",
+    "claude_marketplace_listing_payload",
+    "claude_marketplace_names",
     "claude_marketplace_settings",
     "claude_source_action",
     "codex_marketplace_listing_payload",
