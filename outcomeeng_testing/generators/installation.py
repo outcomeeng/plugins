@@ -2,7 +2,6 @@
 
 import json
 from collections.abc import Mapping, Sequence
-from itertools import combinations
 from pathlib import Path
 from typing import cast
 
@@ -71,29 +70,44 @@ def generated_agent_subsets(
     }
 
 
+def _catalog_window(
+    optional: Sequence[str],
+    start: int,
+    size: int,
+) -> tuple[str, ...]:
+    """One deterministic rotating window over the optional catalog plugins."""
+    return tuple(optional[(start + offset) % len(optional)] for offset in range(size))
+
+
 def generated_valid_catalog_subsets(
     catalog: Sequence[str],
 ) -> tuple[frozenset[str], ...]:
-    """Enumerate every catalog subset containing the required plugin."""
+    """Generate one valid subset per size class over rotating catalog windows.
+
+    Size classes 0..n over the optional plugins keep every catalog member and
+    every subset cardinality in the domain while the domain grows linearly with
+    the catalog instead of exponentially.
+    """
     if SPEC_TREE_PLUGIN not in catalog:
         raise ValueError("catalog must contain spec-tree")
     optional = tuple(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
-    return tuple(
-        frozenset((SPEC_TREE_PLUGIN, *selected))
-        for size in range(len(optional) + 1)
-        for selected in combinations(optional, size)
+    return (
+        frozenset((SPEC_TREE_PLUGIN,)),
+        *(
+            frozenset((SPEC_TREE_PLUGIN, *_catalog_window(optional, size - 1, size)))
+            for size in range(1, len(optional) + 1)
+        ),
     )
 
 
 def generated_invalid_catalog_subsets(
     catalog: Sequence[str],
 ) -> tuple[frozenset[str], ...]:
-    """Enumerate every nonempty catalog subset omitting the required plugin."""
+    """Generate one nonempty invalid subset per size class over rotating windows."""
     optional = tuple(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
     return tuple(
-        frozenset(selected)
+        frozenset(_catalog_window(optional, size - 1, size))
         for size in range(1, len(optional) + 1)
-        for selected in combinations(optional, size)
     )
 
 
