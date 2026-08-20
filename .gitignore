@@ -36,6 +36,7 @@ methodology/memories/
 *~
 
 # macOS
+.metadata_never_index
 .DS_Store
 .AppleDouble
 .LSOverride
