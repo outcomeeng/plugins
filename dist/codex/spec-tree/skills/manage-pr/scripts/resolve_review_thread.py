@@ -111,7 +111,7 @@ class GitHubResponseField(StrEnum):
 class ResolverErrorMessage(StrEnum):
     THREAD_ID = "thread_id must be a GitHub node ID"
     REPOSITORY = "repo must be in owner/name form"
-    POSITIVE_INTEGER = "{name} must be a positive integer"
+    POSITIVE_INTEGER = "{name} must be a positive GraphQL Int"
     REVIEW_COMMENT_ID = "review_comment_id must be a database ID or GitHub node ID"
     HOST = "host must be a GitHub hostname"
     MIXED_MODE = "pass either thread_id or --repo/--pr/--review-comment-id"
@@ -127,13 +127,14 @@ class ResolverErrorMessage(StrEnum):
         "GitHub response comments.nodes id must be a review-comment node ID"
     )
     COMMENT_DATABASE_ID = (
-        "GitHub response comments.nodes databaseId must be a positive integer"
+        "GitHub response comments.nodes databaseId must be a positive GraphQL Int"
     )
     COMMENTS_PAGE_INFO = "GitHub response comments.pageInfo must be an object"
     COMMENTS_HAS_NEXT_PAGE = (
         "GitHub response comments.pageInfo.hasNextPage must be a boolean"
     )
     COMMENTS_CURSOR = "GitHub response comments page is missing endCursor"
+    COMMENTS_CURSOR_PROGRESS = "GitHub response comments page repeated endCursor"
     REPOSITORY_PAYLOAD = "GitHub response repository must be an object"
     PULL_REQUEST_PAYLOAD = "GitHub response pullRequest must be an object"
     REVIEW_THREADS_PAYLOAD = "GitHub response reviewThreads must be an object"
@@ -150,11 +151,16 @@ class ResolverErrorMessage(StrEnum):
     PAGINATED_THREAD = "GitHub response node must be a PullRequestReviewThread object"
     NODE_COMMENTS = "GitHub response node.comments must be an object"
     THREAD_CURSOR = "GitHub response reviewThreads page is missing endCursor"
+    THREAD_CURSOR_PROGRESS = "GitHub response reviewThreads page repeated endCursor"
 
 
 class ResolverExitCode(IntEnum):
     SUCCESS = 0
     INVALID_INPUT = 2
+
+
+class _ParsedJsonInteger(str):
+    """Preserve JSON integer spelling until its field contract validates it."""
 
 
 @dataclass(frozen=True)
@@ -177,6 +183,15 @@ class DecimalInputContract:
     remaining_characters: str
     minimum_length: int
     maximum_length: int | None
+    maximum_value: int | None
+
+
+@dataclass(frozen=True)
+class HostnameInputContract:
+    separator: str
+    maximum_length: int
+    label: TextInputContract
+    endpoint_characters: str
 
 
 @dataclass(frozen=True)
@@ -196,6 +211,7 @@ NODE_ID_SUFFIX_CONTRACT = TextInputContract(
     minimum_length=3,
     maximum_length=251,
 )
+GRAPHQL_INT_MAX = 2**31 - 1
 THREAD_ID_CONTRACT = PrefixedTextInputContract(
     prefix="PRRT_",
     suffix=NODE_ID_SUFFIX_CONTRACT,
@@ -213,7 +229,8 @@ NUMBER_CONTRACT = DecimalInputContract(
     first_characters=string.digits[1:],
     remaining_characters=string.digits,
     minimum_length=1,
-    maximum_length=None,
+    maximum_length=len(str(GRAPHQL_INT_MAX)),
+    maximum_value=GRAPHQL_INT_MAX,
 )
 COMMENT_ID_CONTRACT = CommentIdInputContract(
     database_id=NUMBER_CONTRACT,
@@ -222,10 +239,15 @@ COMMENT_ID_CONTRACT = CommentIdInputContract(
         suffix=NODE_ID_SUFFIX_CONTRACT,
     ),
 )
-HOST_CONTRACT = TextInputContract(
-    allowed_characters=string.ascii_letters + string.digits + ".-",
-    minimum_length=1,
-    maximum_length=None,
+HOST_CONTRACT = HostnameInputContract(
+    separator=".",
+    maximum_length=253,
+    label=TextInputContract(
+        allowed_characters=string.ascii_letters + string.digits + "-",
+        minimum_length=1,
+        maximum_length=63,
+    ),
+    endpoint_characters=string.ascii_letters + string.digits,
 )
 
 
@@ -319,7 +341,7 @@ def validate_comment_id(comment_id: str | None) -> str:
 def validate_host(host: str | None) -> str | None:
     if host is None:
         return None
-    if not _matches_text_contract(host, HOST_CONTRACT):
+    if not _matches_hostname_contract(host, HOST_CONTRACT):
         raise ValueError(ResolverErrorMessage.HOST.value)
     return host
 
@@ -337,8 +359,32 @@ def _matches_decimal_contract(value: str, contract: DecimalInputContract) -> boo
         return False
     if contract.maximum_length is not None and len(value) > contract.maximum_length:
         return False
-    return value[0] in contract.first_characters and all(
-        character in contract.remaining_characters for character in value[1:]
+    if not (
+        value[0] in contract.first_characters
+        and all(character in contract.remaining_characters for character in value[1:])
+    ):
+        return False
+    if contract.maximum_value is not None:
+        maximum_value = str(contract.maximum_value)
+        if len(value) > len(maximum_value) or (
+            len(value) == len(maximum_value) and value > maximum_value
+        ):
+            return False
+    return True
+
+
+def _matches_hostname_contract(
+    value: str,
+    contract: HostnameInputContract,
+) -> bool:
+    if not value or len(value) > contract.maximum_length:
+        return False
+    labels = value.split(contract.separator)
+    return all(
+        _matches_text_contract(label, contract.label)
+        and label[0] in contract.endpoint_characters
+        and label[-1] in contract.endpoint_characters
+        for label in labels
     )
 
 
@@ -382,7 +428,15 @@ def graphql_argv(
         [GraphQLOption.STRING_FIELD.value, f"{GraphQLField.QUERY.value}={query}"]
     )
     for key, value in fields.items():
-        argv.extend([GraphQLOption.TYPED_FIELD.value, f"{key}={value}"])
+        if isinstance(value, str):
+            option = GraphQLOption.STRING_FIELD
+        elif isinstance(value, int) and not isinstance(value, bool):
+            option = GraphQLOption.TYPED_FIELD
+        else:
+            raise TypeError(
+                f"GraphQL field {key} must be a string or non-boolean integer"
+            )
+        argv.extend([option.value, f"{key}={value}"])
     return argv
 
 
@@ -403,7 +457,7 @@ def run_graphql(
         print(completed.stderr, file=sys.stderr, end="")
         raise SystemExit(completed.returncode)
     try:
-        payload = json.loads(completed.stdout)
+        payload = json.loads(completed.stdout, parse_int=_ParsedJsonInteger)
     except json.JSONDecodeError as exc:
         raise ValueError(ResolverErrorMessage.INVALID_JSON.value) from exc
     return require_object(payload, ResolverErrorMessage.RESPONSE_PAYLOAD.value)
@@ -423,13 +477,12 @@ def comment_matches(comment: dict[str, object], comment_id: str) -> bool:
     ):
         raise ValueError(ResolverErrorMessage.COMMENT_NODE_ID.value)
     database_id = comment.get(GitHubResponseField.DATABASE_ID.value)
-    if (
-        isinstance(database_id, bool)
-        or not isinstance(database_id, int)
-        or database_id < 1
-    ):
+    if not isinstance(
+        database_id,
+        _ParsedJsonInteger,
+    ) or not _matches_decimal_contract(database_id, NUMBER_CONTRACT):
         raise ValueError(ResolverErrorMessage.COMMENT_DATABASE_ID.value)
-    return str(database_id) == comment_id or node_id == comment_id
+    return database_id == comment_id or node_id == comment_id
 
 
 def find_comment_in_page(comments: dict[str, object], comment_id: str) -> bool:
@@ -460,42 +513,64 @@ def next_comments_cursor(comments: dict[str, object]) -> str | None:
     return end_cursor
 
 
-def thread_has_comment(
-    thread_id: str,
-    comments: dict[str, object],
+def reject_seen_cursor(
+    cursor: str | None,
+    seen_cursors: set[str],
+    message: ResolverErrorMessage,
+) -> None:
+    if cursor is not None and cursor in seen_cursors:
+        raise ValueError(message.value)
+
+
+def find_thread_in_later_comment_pages(
+    first_page_cursors: list[tuple[str, str | None]],
     comment_id: str,
     host: str | None,
     runner: CommandRunner,
-) -> bool:
-    end_cursor = next_comments_cursor(comments)
-    if find_comment_in_page(comments, comment_id):
-        return True
-    while end_cursor is not None:
-        payload = run_graphql(
-            THREAD_COMMENTS_QUERY,
-            {
-                GraphQLField.THREAD_ID.value: thread_id,
-                GraphQLField.COMMENTS_AFTER.value: end_cursor,
-            },
-            host,
-            runner,
-        )
-        data = require_object(
-            payload.get(GitHubResponseField.DATA.value),
-            ResolverErrorMessage.DATA_PAYLOAD.value,
-        )
-        node = require_object(
-            data.get(GitHubResponseField.NODE.value),
-            ResolverErrorMessage.PAGINATED_THREAD.value,
-        )
-        comments = require_object(
-            node.get(GitHubResponseField.COMMENTS.value),
-            ResolverErrorMessage.NODE_COMMENTS.value,
-        )
-        end_cursor = next_comments_cursor(comments)
-        if find_comment_in_page(comments, comment_id):
-            return True
-    return False
+) -> str | None:
+    pending_pages = [
+        (thread_id, end_cursor, {end_cursor})
+        for thread_id, end_cursor in first_page_cursors
+        if end_cursor is not None
+    ]
+    while pending_pages:
+        next_pages: list[tuple[str, str, set[str]]] = []
+        for thread_id, end_cursor, seen_cursors in pending_pages:
+            payload = run_graphql(
+                THREAD_COMMENTS_QUERY,
+                {
+                    GraphQLField.THREAD_ID.value: thread_id,
+                    GraphQLField.COMMENTS_AFTER.value: end_cursor,
+                },
+                host,
+                runner,
+            )
+            data = require_object(
+                payload.get(GitHubResponseField.DATA.value),
+                ResolverErrorMessage.DATA_PAYLOAD.value,
+            )
+            node = require_object(
+                data.get(GitHubResponseField.NODE.value),
+                ResolverErrorMessage.PAGINATED_THREAD.value,
+            )
+            comments = require_object(
+                node.get(GitHubResponseField.COMMENTS.value),
+                ResolverErrorMessage.NODE_COMMENTS.value,
+            )
+            next_cursor = next_comments_cursor(comments)
+            reject_seen_cursor(
+                next_cursor,
+                seen_cursors,
+                ResolverErrorMessage.COMMENTS_CURSOR_PROGRESS,
+            )
+            if find_comment_in_page(comments, comment_id):
+                return thread_id
+            if next_cursor is not None:
+                next_pages.append(
+                    (thread_id, next_cursor, seen_cursors | {next_cursor})
+                )
+        pending_pages = next_pages
+    return None
 
 
 def review_threads_from_payload(payload: dict[str, object]) -> dict[str, object]:
@@ -567,20 +642,41 @@ def find_thread_id(
         GraphQLField.REPOSITORY.value: repo,
         GraphQLField.NUMBER.value: pr_number,
     }
+    seen_cursors: set[str] = set()
+    first_page_cursors: list[tuple[str, str | None]] = []
     while True:
         payload = run_graphql(THREADS_QUERY, fields, host, runner)
         review_threads = review_threads_from_payload(payload)
-        end_cursor = next_threads_cursor(review_threads)
+        threads_end_cursor = next_threads_cursor(review_threads)
+        reject_seen_cursor(
+            threads_end_cursor,
+            seen_cursors,
+            ResolverErrorMessage.THREAD_CURSOR_PROGRESS,
+        )
         thread_comments = tuple(iter_thread_comments(review_threads))
-        for _, comments in thread_comments:
-            next_comments_cursor(comments)
-            find_comment_in_page(comments, comment_id)
+        matching_thread_id: str | None = None
         for thread_id, comments in thread_comments:
-            if thread_has_comment(thread_id, comments, comment_id, host, runner):
-                return thread_id
-        if end_cursor is None:
-            raise ValueError(ResolverErrorMessage.COMMENT_NOT_FOUND.value)
-        fields[GraphQLField.THREADS_AFTER.value] = end_cursor
+            first_page_cursors.append((thread_id, next_comments_cursor(comments)))
+            if (
+                find_comment_in_page(comments, comment_id)
+                and matching_thread_id is None
+            ):
+                matching_thread_id = thread_id
+        if matching_thread_id is not None:
+            return matching_thread_id
+        if threads_end_cursor is None:
+            break
+        seen_cursors.add(threads_end_cursor)
+        fields[GraphQLField.THREADS_AFTER.value] = threads_end_cursor
+    matching_thread_id = find_thread_in_later_comment_pages(
+        first_page_cursors,
+        comment_id,
+        host,
+        runner,
+    )
+    if matching_thread_id is not None:
+        return matching_thread_id
+    raise ValueError(ResolverErrorMessage.COMMENT_NOT_FOUND.value)
 
 
 def main(

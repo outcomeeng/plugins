@@ -233,9 +233,7 @@ def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
         forbidden_text,
     )
 
-    full_discovery_selector_mask = (
-        1 << len(RESOLVER.DISCOVERY_SELECTOR_CONTRACTS)
-    ) - 1
+    full_discovery_selector_mask = (1 << len(RESOLVER.DISCOVERY_SELECTOR_CONTRACTS)) - 1
     incomplete_discovery = st.tuples(
         st.integers(min_value=0, max_value=full_discovery_selector_mask - 1),
         valid_repositories,

@@ -89,9 +89,7 @@ def test_review_comment_database_id_discovers_thread_before_resolving() -> None:
     assert run.returncode == RESOLVER.ResolverExitCode.SUCCESS
     owner_field = f"{RESOLVER.GraphQLField.OWNER.value}=outcomeeng"
     repository_field = f"{RESOLVER.GraphQLField.REPOSITORY.value}=plugins"
-    number_field = (
-        f"{RESOLVER.GraphQLField.NUMBER.value}={RESOLVER.GRAPHQL_INT_MAX}"
-    )
+    number_field = f"{RESOLVER.GraphQLField.NUMBER.value}={RESOLVER.GRAPHQL_INT_MAX}"
     assert discovery.command[discovery.command.index(owner_field) - 1] == (
         RESOLVER.GraphQLOption.STRING_FIELD.value
     )
@@ -138,7 +136,7 @@ def test_review_comment_node_id_discovers_thread_before_resolving() -> None:
                         ],
                         has_next_page=False,
                     ),
-                )
+                ),
             ]
         )
     )
@@ -308,7 +306,10 @@ def test_review_thread_discovery_checks_all_first_pages_before_later_comments() 
             for token in command
         ):
             return completed(command, stdout="null")
-        if f"{RESOLVER.GraphQLField.THREADS_AFTER.value}=@thread-cursor-file" in command:
+        if (
+            f"{RESOLVER.GraphQLField.THREADS_AFTER.value}=@thread-cursor-file"
+            in command
+        ):
             return completed(command, stdout=json.dumps(second_page))
         return completed(command, stdout=json.dumps(first_page))
 
@@ -410,9 +411,7 @@ def test_review_thread_discovery_pages_comments_until_comment_is_found() -> None
         f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}=@comment-cursor-file"
         in comments_query.command
     )
-    cursor_field = (
-        f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}=@comment-cursor-file"
-    )
+    cursor_field = f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}=@comment-cursor-file"
     assert comments_query.command[comments_query.command.index(cursor_field) - 1] == (
         RESOLVER.GraphQLOption.STRING_FIELD.value
     )
@@ -422,13 +421,9 @@ def test_review_thread_discovery_pages_comments_until_comment_is_found() -> None
 def test_review_thread_discovery_checks_peer_pages_before_deeper_pages() -> None:
     first_thread_id = RESOLVER.format_thread_id("thread0019")
     first_comment_node_id = RESOLVER.format_review_comment_node_id("comment0019")
-    first_later_comment_node_id = RESOLVER.format_review_comment_node_id(
-        "comment0022"
-    )
+    first_later_comment_node_id = RESOLVER.format_review_comment_node_id("comment0022")
     second_thread_id = RESOLVER.format_thread_id("thread0020")
-    second_first_comment_node_id = RESOLVER.format_review_comment_node_id(
-        "comment0020"
-    )
+    second_first_comment_node_id = RESOLVER.format_review_comment_node_id("comment0020")
     target_comment_node_id = RESOLVER.format_review_comment_node_id("comment0021")
     first_cursor = "first-comment-page-2"
     first_deeper_cursor = "first-comment-page-3"
@@ -495,15 +490,9 @@ def test_review_thread_discovery_checks_peer_pages_before_deeper_pages() -> None
     ) -> subprocess.CompletedProcess[str]:
         if kwargs.get("capture_output") is not True:
             return completed(command)
-        if (
-            f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}={first_cursor}"
-            in command
-        ):
+        if f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}={first_cursor}" in command:
             return completed(command, stdout=json.dumps(first_thread_second_page))
-        if (
-            f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}={second_cursor}"
-            in command
-        ):
+        if f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}={second_cursor}" in command:
             return completed(command, stdout=json.dumps(second_thread_second_page))
         if (
             f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}={first_deeper_cursor}"
