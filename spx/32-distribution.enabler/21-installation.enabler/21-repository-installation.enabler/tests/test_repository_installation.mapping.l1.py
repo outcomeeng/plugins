@@ -33,9 +33,31 @@ from outcomeeng_testing.harnesses.installation import (
     observe_designated_failure,
     observe_failure_operation_domains,
     observe_first_failure,
+    observe_isolated_subset_plan,
     observe_planned_operations,
     repository_root,
 )
+
+
+def test_explicit_isolated_subsets_map_to_their_selection_in_catalog_order() -> None:
+    observation = observe_isolated_subset_plan()
+
+    catalogs = {
+        Agent.CLAUDE: catalog_plugin_names_from_document(
+            repository_root() / CLAUDE_CATALOG_PATH
+        ),
+        Agent.CODEX: catalog_plugin_names_from_document(
+            repository_root() / CODEX_CATALOG_PATH
+        ),
+    }
+    planned = {
+        Agent.CLAUDE: observation.plan.claude_plugins,
+        Agent.CODEX: observation.plan.codex_plugins,
+    }
+    for agent in Agent:
+        assert set(planned[agent]) == set(observation.subsets[agent])
+        positions = [catalogs[agent].index(plugin) for plugin in planned[agent]]
+        assert positions == sorted(set(positions))
 
 
 def test_claude_inventory_maps_only_the_invocation_checkout_project_scope() -> None:

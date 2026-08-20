@@ -727,6 +727,38 @@ def observe_invalid_isolated_selection() -> SelectionRejectionObservation:
     return SelectionRejectionObservation(error=rejection, attempted=())
 
 
+@dataclass(frozen=True)
+class IsolatedSubsetPlanObservation:
+    """Catalog and plan observations for one explicit isolated subset."""
+
+    plan: InstallationPlan
+    subsets: Mapping[Agent, frozenset[str]]
+    claude_catalog: bytes
+    codex_catalog: bytes
+
+
+def observe_isolated_subset_plan() -> IsolatedSubsetPlanObservation:
+    """Build an isolated plan from one generated valid explicit subset."""
+    checkout = repository_root()
+    subsets = generated_agent_subsets(checkout, include_spec_tree=True)
+    claude_catalog = (checkout / CLAUDE_CATALOG_PATH).read_bytes()
+    codex_catalog = (checkout / CODEX_CATALOG_PATH).read_bytes()
+    with TemporaryDirectory() as temporary_directory:
+        plan = build_isolated_installation_plan(
+            checkout,
+            Path(temporary_directory) / "state",
+            os.environ,
+            claude_plugins=tuple(subsets[Agent.CLAUDE]),
+            codex_plugins=tuple(subsets[Agent.CODEX]),
+        )
+    return IsolatedSubsetPlanObservation(
+        plan=plan,
+        subsets=subsets,
+        claude_catalog=claude_catalog,
+        codex_catalog=codex_catalog,
+    )
+
+
 def observe_missing_codex_home() -> str | None:
     """Expose the rejection, if any, when no Codex home is selected."""
     checkout = repository_root()
