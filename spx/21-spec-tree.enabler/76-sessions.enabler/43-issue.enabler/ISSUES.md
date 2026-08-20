@@ -46,6 +46,30 @@ edit to this skill's prose.
 WARNING) on head `4b2ea0125a4ac9fa281bb105646179a850554f93`; that verdict names the
 sibling occurrences.
 
+## The agent-published session variable is described with a banned subject
+
+`CLAUDE.md` bans "the agent" and "an agent" as subjects in authored skill content, per
+`instructions`'s `agent-prompt-standards` `<voice>` rule. The sentence introducing the
+agent-published session variable uses it. This node's copy names the specific agent
+instead — Codex or Claude Code, the vocabulary `spx/15-agent-terminology.pdr.md`
+declares — and the same sentence stands unchanged in four files under
+`spx/21-spec-tree.enabler/76-sessions.enabler/25-handoff.enabler`:
+`skills/handoff/references/session-format.md`,
+`skills/handoff/references/claimed-session-resolution.md`,
+`skills/handoff/workflows/04-execute.md`, and the plugin changelog entry describing them.
+
+**Resolution shape**: sweep the four handoff-node files to the same per-agent naming,
+gated by `instructions:skill-auditor` on that node. "The runtime" is not the substitute:
+`spx/15-agent-terminology.pdr.md` excludes it from the agent vocabulary and `spx/ISSUES.md`
+already tracks removing it tree-wide.
+
+**Why separate**: those files belong to a different spec node than this changeset touches,
+so the sweep carries its own contextualization and its own auditor pass.
+
+**Evidence**: `instructions:skill-auditor` `f-006` (`banned_subject_the_agent`, WARNING) on
+head `caa951075a3222c9b25a41597ef4267f1d1bded3`; the wording entered this node through the
+rebase onto `a0947b27a`.
+
 ## Two Compliance assertions bundle roughly seven rules each
 
 `spx/21-spec-tree.enabler/76-sessions.enabler/43-issue.enabler/issue.md` carries two Compliance
