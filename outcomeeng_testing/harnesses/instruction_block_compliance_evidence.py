@@ -418,17 +418,6 @@ def rendered_instruction_blocks(
     return _render_shipped_instruction_blocks(enabled_languages)
 
 
-def dangerous_command_guard_fixture_path(filename: str) -> pathlib.Path:
-    """Return one inert dangerous-command guard policy fixture."""
-    return (
-        pathlib.Path(__file__).parents[1]
-        / "fixtures"
-        / "instruction_block"
-        / "dangerous_command_guard"
-        / filename
-    )
-
-
 def _assert_codex_role_input_uses_runtime_capability() -> None:
     """Assert role-task submission renders through a discoverable runtime token."""
     authored = dist.AUTHORED_TEMPLATE_PATH.read_text(encoding="utf-8")

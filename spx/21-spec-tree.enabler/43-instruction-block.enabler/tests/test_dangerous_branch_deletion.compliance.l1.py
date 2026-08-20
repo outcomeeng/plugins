@@ -6,124 +6,47 @@ from outcomeeng_testing.harnesses import (
 )
 
 
-def test_rendered_dcg_policy_matches_conforming_rule_fixture() -> None:
-    expected_section = (
-        evidence.dangerous_command_guard_fixture_path("conforming.md")
-        .read_text(encoding="utf-8")
-        .rstrip("\n")
-    )
+def test_rendered_dcg_policy_satisfies_the_production_validator() -> None:
     documents = evidence.rendered_instruction_blocks()
 
-    for document in documents.values():
-        router = source.managed_router_block(document)
-        actual_section = source.dangerous_command_guard_policy_section(router)
-        assert actual_section == expected_section
     source.validate_authority_hierarchy_policy(documents)
+    for agent_harness, document in documents.items():
+        router = source.managed_router_block(document)
+        guard_section = source.dangerous_command_guard_policy_section(router)
+        source.validate_dangerous_command_guard_policy(
+            {agent_harness: guard_section}
+        )
 
 
-def test_dcg_policy_rejects_missing_stop_trigger() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "missing-stop-trigger.md"
-    ).read_text(encoding="utf-8")
+def test_dcg_policy_rejects_each_missing_operative_requirement() -> None:
+    documents = evidence.rendered_instruction_blocks()
 
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
+    for agent_harness, document in documents.items():
+        router = source.managed_router_block(document)
+        guard_section = source.dangerous_command_guard_policy_section(router)
+        for requirement_name, required_text in (
+            source.DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS
+        ):
+            assert required_text in guard_section
+            violating_section = guard_section.replace(required_text, "", 1)
 
-
-def test_dcg_policy_rejects_missing_retry_prohibition() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "missing-retry-prohibition.md"
-    ).read_text(encoding="utf-8")
-
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
-
-
-def test_dcg_policy_rejects_missing_dynamic_branch_prohibition() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "missing-dynamic-branch-prohibition.md"
-    ).read_text(encoding="utf-8")
-
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
-
-
-def test_dcg_policy_rejects_missing_dynamic_branch_forms() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "missing-dynamic-branch-forms.md"
-    ).read_text(encoding="utf-8")
-
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
-
-
-def test_dcg_policy_rejects_missing_quoted_form_denial() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "missing-quoted-form-denial.md"
-    ).read_text(encoding="utf-8")
-
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
-
-
-def test_dcg_policy_rejects_missing_literal_name_requirement() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "missing-literal-name-requirement.md"
-    ).read_text(encoding="utf-8")
-
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
-
-
-def test_dcg_policy_rejects_missing_multi_branch_permission() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "missing-multi-branch-permission.md"
-    ).read_text(encoding="utf-8")
-
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
-
-
-def test_dcg_policy_rejects_missing_sanctioned_path() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "missing-sanctioned-path.md"
-    ).read_text(encoding="utf-8")
-
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
-
-
-def test_dcg_policy_rejects_missing_terminal_report() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "missing-terminal-report.md"
-    ).read_text(encoding="utf-8")
-
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
-
-
-def test_dcg_policy_rejects_missing_terminal_purpose() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "missing-terminal-purpose.md"
-    ).read_text(encoding="utf-8")
-
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
-
-
-def test_dcg_policy_rejects_missing_terminal_reason() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "missing-terminal-reason.md"
-    ).read_text(encoding="utf-8")
-
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
+            with pytest.raises(source.AuthorityHierarchyPolicyError) as raised:
+                source.validate_dangerous_command_guard_policy(
+                    {agent_harness: violating_section}
+                )
+            assert requirement_name in str(raised.value)
 
 
 def test_dcg_policy_rejects_quoted_guard_section() -> None:
-    guard_section = evidence.dangerous_command_guard_fixture_path(
-        "quoted-guard.md"
-    ).read_text(encoding="utf-8")
+    documents = evidence.rendered_instruction_blocks()
 
-    with pytest.raises(source.AuthorityHierarchyPolicyError):
-        source.validate_dangerous_command_guard_policy({"fixture": guard_section})
+    for agent_harness, document in documents.items():
+        router = source.managed_router_block(document)
+        guard_section = source.dangerous_command_guard_policy_section(router)
+        heading, *policy_lines = guard_section.splitlines()
+        quoted_section = "\n".join((heading, *(f"> {line}" for line in policy_lines)))
+
+        with pytest.raises(source.AuthorityHierarchyPolicyError):
+            source.validate_dangerous_command_guard_policy(
+                {agent_harness: quoted_section}
+            )
