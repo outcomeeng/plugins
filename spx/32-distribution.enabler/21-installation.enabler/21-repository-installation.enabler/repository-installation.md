@@ -18,6 +18,7 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
 - Given an installed plugin that owns Codex agent definitions, when that plugin's checkout materialization runs, then its generated definitions are placed in the invocation checkout's `.codex/agents/` namespace while definitions outside that plugin's ownership remain unchanged. ([test](tests/test_repository_installation.scenario.l3.py))
 - Given unchanged committed catalogs and checkout content, when isolated installation, together with any checkout materialization the run exercises, runs twice against the same disposable homes, then the second run succeeds with the same installed and placed state. ([test](tests/test_repository_installation.scenario.l3.py))
 - Given a persistent marketplace inspection that fails, when persistent installation runs, then it reports a failure naming that operation and attempts no plan operation. ([test](tests/test_repository_installation.scenario.l1.py))
+- Given a checkout declaring the canonical marketplace source and an agent home whose live marketplace listing lacks the marketplace, when persistent installation plans, then the plan adds the marketplace for that agent instead of refreshing it. ([test](tests/test_repository_installation.scenario.l1.py))
 
 ### Mappings
 

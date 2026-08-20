@@ -224,3 +224,20 @@ def test_a_plugin_absent_from_one_agent_stays_installed_for_the_other() -> None:
     # agents' installed counts on either one's failure.
     assert observation.report.pending_for(Agent.CLAUDE) == frozenset({absent})
     assert observation.report.pending_for(Agent.CODEX) == frozenset()
+
+
+def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
+    observation = observe_persistent_plan(claude_marketplace_listed=False)
+
+    source_operations = [
+        command.operation
+        for command in observation.plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation
+        in {
+            Operation.MARKETPLACE_REMOVE,
+            Operation.MARKETPLACE_ADD,
+            Operation.MARKETPLACE_REFRESH,
+        }
+    ]
+    assert source_operations == [Operation.MARKETPLACE_ADD]

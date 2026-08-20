@@ -457,6 +457,7 @@ def observe_repository_plan() -> PlanObservation:
 def observe_persistent_plan(
     *,
     claude_repository: str = CANONICAL_MARKETPLACE_SOURCE,
+    claude_marketplace_listed: bool = True,
     codex_source: str = CANONICAL_CODEX_SOURCE,
     installed: Mapping[Agent, frozenset[str]] | None = None,
 ) -> PersistentPlanObservation:
@@ -474,8 +475,10 @@ def observe_persistent_plan(
         inventories = _installed_or_catalog_plugins(mirror, installed)
         plan = build_persistent_installation_plan(
             preflight,
-            claude_marketplace_payload=claude_marketplace_listing_payload(
-                CANONICAL_MARKETPLACE_SOURCE
+            claude_marketplace_payload=(
+                claude_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+                if claude_marketplace_listed
+                else json.dumps([])
             ),
             claude_plugins_payload=_plugin_listing_payload(
                 Agent.CLAUDE,
