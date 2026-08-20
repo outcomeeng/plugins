@@ -21,7 +21,7 @@ This is a reference skill. Composing prose skills load these patterns explicitly
 </reference_note>
 
 <voice_canon>
-The shared voice rules transclude from the authored canon into every kind layer and the shipped `prose` output style.
+The build transcludes one authored voice canon into every kind layer and the shipped `prose` output style.
 
 Every sentence carries one claim. State it as subject, verb, fact; split a compound claim into two sentences.
 
