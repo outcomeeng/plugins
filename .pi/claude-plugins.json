@@ -8,8 +8,9 @@
   "plugins": {
     "instructions@outcomeeng": {},
     "typescript@outcomeeng": {},
-    "prose@outcomeeng": {},
     "python@outcomeeng": {},
-    "spec-tree@outcomeeng": {}
+    "spec-tree@outcomeeng": {},
+    "coding-agents@outcomeeng": {},
+    "prose@outcomeeng": {}
   }
 }
