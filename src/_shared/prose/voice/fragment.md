@@ -16,6 +16,6 @@ One term, one meaning. Each concept keeps one name throughout; one word never na
 
 Failures state what happened and what to do next, two parts in that order, in plain language, without blame and without apology ritual.
 
-Sentence case for titles, headings, and labels: first word capitalized, the rest lowercase except proper nouns. No end punctuation on a heading: "How this layer is used", never "How This Layer Is Used:". No all-caps emphasis.
+Capitalize only the first word and proper nouns in titles, headings, and labels. No end punctuation on a heading: "How this layer is used", never "How This Layer Is Used:". No all-caps emphasis.
 
 Standard punctuation. Em dashes sparingly, straight quotes, no unicode decoration, no bold-first bullet scaffolding; structure and word choice carry emphasis, not typeface.
