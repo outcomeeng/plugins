@@ -21,7 +21,7 @@ This is a reference skill. Composing prose skills load these patterns explicitly
 </reference_note>
 
 <voice_canon>
-The shared voice rules, transcluded from the authored canon every kind layer and the shipped `prose` output style render from — one source, every surface.
+One source, every surface: the shared voice rules transclude from the authored canon into every kind layer and the shipped `prose` output style.
 
 {!% include 'prose/voice/fragment.md' %!}
 
