@@ -112,7 +112,7 @@ the parent `PLAN.md`.
 
 ## Marketplace-resolver extraction awaits a published SPX CLI capability
 
-`src/plugins/spec-tree/skills/issue/scripts/resolve_marketplace.py` runs to 152
+`src/plugins/spec-tree/skills/issue/scripts/resolve_marketplace.py` runs to 158
 lines — resolution of a marketplace entry's registered local source from JSON on
 stdin, covering the Claude Directory-source and Codex local-marketplace-source
 shapes, with distinct errors for malformed JSON and an unresolvable target. Past
