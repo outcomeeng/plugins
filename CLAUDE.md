@@ -480,6 +480,7 @@ Claude Code state is project-scoped. A user-scoped `outcomeeng` registration blo
 ## Spec Tree Phase Commands
 
 - **author** — Regenerate the generated trees after `src/plugins/` edits: `just build-skills`. Regenerate the root instruction blocks after instruction-template edits: `just build-instructions`.
+- **clean** — Remove Git-ignored files and directories through `just clean` when ignored residue blocks a build or validation. The command has `git clean -fdX` semantics, so inspect and report its full effect before running it.
 - **verify** — Node and changeset tests: `just test <pytest-target>...`. Spec-only or Markdown-only changes: `spx validation markdown` and `spx spec status --format json`. Skill/plugin Markdown: `just check-skills` and `just docs-check`.
 - **gate** — Full local deterministic gate: `just check-full`.
 - **merge** — Ship to the default branch through `/merge`; the GitHub-PR transport merges with `gh pr merge <pr-number> --merge --delete-branch=false`.
