@@ -2,21 +2,27 @@
 
 import json
 
-from outcomeeng.distribution.installation import CLAUDE_ENABLED_PLUGINS_FIELD
+from outcomeeng.distribution.installation import (
+    CLAUDE_ENABLED_PLUGINS_FIELD,
+    MARKETPLACE_NAME,
+    SPEC_TREE_PLUGIN,
+)
 from outcomeeng_testing.harnesses.installation import (
     observe_real_first_install,
     observe_real_installation,
 )
 
 
-def test_first_install_does_not_create_a_committed_plugin_selection() -> None:
+def test_first_install_ends_with_the_bootstrapped_selection_enabled() -> None:
     observation = observe_real_first_install()
 
     assert observation.initial_project_settings is None
     assert observation.exit_code == 0, observation.stderr
     assert observation.project_settings_after is not None
     document = json.loads(observation.project_settings_after)
-    assert CLAUDE_ENABLED_PLUGINS_FIELD not in document
+    assert document[CLAUDE_ENABLED_PLUGINS_FIELD] == {
+        f"{SPEC_TREE_PLUGIN}@{MARKETPLACE_NAME}": True
+    }
 
 
 def test_isolated_installation_preserves_persistent_agent_state() -> None:
