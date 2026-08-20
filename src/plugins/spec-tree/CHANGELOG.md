@@ -14,6 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
+- **`/issue` attaches the marketplace name with `--name=`.** The resolver invocation passed the name as a separate argv token, which option parsing reads as another option when the value begins with `-`. The shipped invocation now uses `--name=outcomeeng`, so the name reaches the resolver whatever its first character. The name the skill passes is a fixed literal, so no consumer invocation changed behaviour.
 - **`/issue` matches a Claude Directory source exactly.** The marketplace resolver previously case-folded the entry's `source` before comparing it to the `directory` token, so `Directory` and `DIRECTORY` resolved a path. The token is a fixed literal, so the resolver now compares it exactly and a source differing in case resolves nothing. A registration emitting the token in any other case was never produced by `claude plugin marketplace list --json`.
 
 ### Fixed

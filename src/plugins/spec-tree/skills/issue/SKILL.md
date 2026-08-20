@@ -70,11 +70,11 @@ Resolve the target repository's checkout directory `<target-dir>` — the input 
 - **The spec-tree plugin (marketplace):** the registered Directory source. Resolve it from the marketplace registration:
   {!% if target == 'codex' %!}
   ```bash
-  codex plugin marketplace list --json | python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py" --runtime codex --name outcomeeng
+  codex plugin marketplace list --json | python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py" --runtime codex --name=outcomeeng
   ```
   {!% else %!}
   ```bash
-  claude plugin marketplace list --json | python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py" --runtime claude --name outcomeeng
+  claude plugin marketplace list --json | python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py" --runtime claude --name=outcomeeng
   ```
   {!% endif %!}
 - **The `spx` CLI, or another spec-tree dependency:** the dependency's own checkout. Accept the path from the user or the invoking repository's configuration.

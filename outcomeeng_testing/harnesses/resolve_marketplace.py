@@ -63,8 +63,11 @@ def run_resolver_stdin(
     ``name=None`` omits ``--name`` so the invocation takes the CLI default.
     ``cwd`` runs the resolver from that directory, so a caller can observe
     what the invocation leaves behind there.
+
+    The name is attached with ``--name=`` so a value beginning with ``-``
+    reaches the resolver instead of being read as another option.
     """
-    name_argv = [] if name is None else ["--name", name]
+    name_argv = [] if name is None else [f"--name={name}"]
     return subprocess.run(
         [
             sys.executable,

@@ -303,14 +303,21 @@ def json_payloads() -> st.SearchStrategy[object]:
 def absent_marketplace_names() -> st.SearchStrategy[str]:
     """Marketplace names to request; collision is excluded by the caller.
 
-    The alphabet is what argv can carry: encodable as UTF-8, and no NUL.
-    Either one fails in the process layer before resolution happens, so a
-    case built from one says nothing about the resolver.
+    The alphabet excludes exactly what fails in the process layer before
+    resolution happens, so no case says something about the process instead
+    of the resolver: a NUL byte, which the exec layer rejects, and anything
+    UTF-8 cannot encode. A leading ``-`` used to belong to that list and no
+    longer does -- the harness attaches the name with ``--name=``, so option
+    parsing carries it through -- and the boundary branch below keeps that
+    case in every run rather than leaving it to be drawn by chance.
     """
-    return st.text(
-        alphabet=st.characters(min_codepoint=1, codec="utf-8"),
-        min_size=1,
-        max_size=32,
+    return st.one_of(
+        st.sampled_from(["-", "-x", "--name", "--runtime"]),
+        st.text(
+            alphabet=st.characters(min_codepoint=1, codec="utf-8"),
+            min_size=1,
+            max_size=32,
+        ),
     )
 
 
