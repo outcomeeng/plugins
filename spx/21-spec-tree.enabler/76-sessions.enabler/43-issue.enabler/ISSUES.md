@@ -30,6 +30,22 @@ worked-example request is that auditor's `f-006` on the third round, which the
 higher-risk external-target confirmation example (`f-007`) was applied for because it
 duplicates nothing.
 
+Selecting between the two forms is stated without a checkable signal. The same Step 6
+names which harness takes which form — an interactive Claude Code or Codex session the
+heredoc, a programmatic run the `printf` line — and names no environment variable, tty
+check, or invocation-mode flag that decides which a session is.
+`src/plugins/spec-tree/skills/open-pr/SKILL.md` and
+`src/plugins/spec-tree/skills/commit-changes/SKILL.md` carry the same construction, so a
+wording fix here alone leaves the marketplace holding two spellings of one convention.
+`spx/15-agent-tools.pdr.md` scopes the guidance by environment rather than by a runtime
+signal, so closing this asks whether a detectable harness-mode signal belongs in that
+decision — a decision change reaching three skills under three governing nodes, not an
+edit to this skill's prose.
+
+**Evidence**: `instructions:skill-auditor` `f-008` (`unverifiable_harness_selection`,
+WARNING) on head `4b2ea0125a4ac9fa281bb105646179a850554f93`; that verdict names the
+sibling occurrences.
+
 ## Two Compliance assertions bundle roughly seven rules each
 
 `spx/21-spec-tree.enabler/76-sessions.enabler/43-issue.enabler/issue.md` carries two Compliance
