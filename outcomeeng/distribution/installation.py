@@ -692,16 +692,17 @@ def _restore_plugin_selection(
     settings: Path,
     declared: DeclaredSelection,
 ) -> None:
-    """Re-apply a declared plugin selection, leaving the rest of the document."""
-    if not settings.exists():
+    """Re-apply a declared plugin selection, leaving the rest of the document.
+
+    A bootstrap run declares no selection, so there is nothing to restore:
+    the enablement the run's own install wrote is the end state.
+    """
+    if not declared.present or not settings.exists():
         return
     document = _settings_document(settings)
     if _selection_of(document) == declared:
         return
-    if declared.present:
-        document[CLAUDE_ENABLED_PLUGINS_FIELD] = declared.value
-    else:
-        document.pop(CLAUDE_ENABLED_PLUGINS_FIELD, None)
+    document[CLAUDE_ENABLED_PLUGINS_FIELD] = declared.value
     settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
 
