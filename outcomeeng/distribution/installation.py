@@ -660,12 +660,10 @@ def execute_persistent_installation(
     )
     settings = checkout / CLAUDE_PROJECT_SETTINGS_PATH
     declared = _declared_plugin_selection(settings)
-    claude_bootstrap = any(warning.agent is Agent.CLAUDE for warning in plan.warnings)
     try:
         return execute_installation(plan, runner, completed=tuple(inspection_results))
     finally:
-        if declared.present or not claude_bootstrap:
-            _restore_plugin_selection(settings, declared)
+        _restore_plugin_selection(settings, declared)
 
 
 @dataclass(frozen=True)
@@ -683,24 +681,19 @@ def _selection_of(document: Mapping[str, object]) -> DeclaredSelection:
     )
 
 
-def _declared_plugin_selection(settings: Path) -> DeclaredSelection:
+def _declared_plugin_selection(settings: Path) -> DeclaredSelection | None:
     """Read the plugin selection a checkout's project settings declare."""
     if not settings.exists():
-        return DeclaredSelection(present=False, value=None)
+        return None
     return _selection_of(_settings_document(settings))
 
 
 def _restore_plugin_selection(
     settings: Path,
-    declared: DeclaredSelection,
+    declared: DeclaredSelection | None,
 ) -> None:
-    """Re-apply the pre-run plugin selection, leaving the rest of the document.
-
-    Restoring a declared absence removes the field the run's own commands
-    wrote; a bootstrap run keeps its written enablement because the call
-    site skips restoration for it.
-    """
-    if not settings.exists():
+    """Re-apply a declared plugin selection, leaving the rest of the document."""
+    if declared is None or not settings.exists():
         return
     document = _settings_document(settings)
     if _selection_of(document) == declared:

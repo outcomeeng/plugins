@@ -221,7 +221,6 @@ class RealFirstInstallObservation:
 
     initial_state: tuple[tuple[str, bytes], ...]
     initial_project_settings: bytes | None
-    project_settings_after: bytes | None
     exit_code: int
     stdout: str
     stderr: str
@@ -869,38 +868,6 @@ def observe_noncanonical_reconciliation() -> ReconciliationObservation:
     )
 
 
-@dataclass(frozen=True)
-class UndeclaredSelectionObservation:
-    """Settings bytes around a successful refresh with no declared selection."""
-
-    settings_before: bytes
-    settings_after: bytes
-    attempted: tuple[InstallationCommand, ...]
-
-
-def observe_undeclared_selection_restore() -> UndeclaredSelectionObservation:
-    """Refresh installed plugins against settings declaring no selection."""
-    checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
-        settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
-        _copy_committed_project_settings(checkout, settings)
-        document = _settings_json(settings)
-        document.pop(CLAUDE_ENABLED_PLUGINS_FIELD, None)
-        settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
-        environment = _persistent_environment(temporary_root)
-        before = settings.read_bytes()
-        runner = SettingsMutatingRunner(settings=settings)
-        execute_persistent_installation(mirror, environment, runner)
-        return UndeclaredSelectionObservation(
-            settings_before=before,
-            settings_after=settings.read_bytes(),
-            attempted=tuple(runner.calls),
-        )
-
-
 def observe_failed_run_restore(operation: Operation) -> RestoreObservation:
     """Fail a persistent run midway after it has already mutated settings."""
     checkout = repository_root()
@@ -1103,15 +1070,11 @@ def observe_real_first_install() -> RealFirstInstallObservation:
             project_settings.read_bytes() if project_settings.exists() else None
         )
         installation = _run_persistent_recipe(checkout, mirror, environment)
-        project_settings_after = (
-            project_settings.read_bytes() if project_settings.exists() else None
-        )
         claude_listing = _run_listing_unchecked(Agent.CLAUDE, mirror, environment)
         codex_listing = _run_listing_unchecked(Agent.CODEX, mirror, environment)
     return RealFirstInstallObservation(
         initial_state=initial_state,
         initial_project_settings=initial_project_settings,
-        project_settings_after=project_settings_after,
         exit_code=installation.returncode,
         stdout=installation.stdout,
         stderr=installation.stderr,
