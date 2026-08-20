@@ -102,16 +102,17 @@ def none_available_message(*, name: str, runtime: str) -> str:
     Rendered from the production message template so a reword of that
     message moves the expectation with it.
     """
-    return RESOLVER.NOT_FOUND_MESSAGE.format(
-        name=name,
-        runtime=runtime,
-        available=RESOLVER.NO_LOCAL_MARKETPLACES,
-    )
+    # The resolver is loaded through importlib, so every attribute reaches
+    # this module as Any; the annotations restate the type the source declares.
+    template: str = RESOLVER.NOT_FOUND_MESSAGE
+    available: str = RESOLVER.NO_LOCAL_MARKETPLACES
+    return template.format(name=name, runtime=runtime, available=available)
 
 
 def invalid_json_message_prefix() -> str:
     """The stable leading text of the production invalid-JSON message."""
-    return RESOLVER.INVALID_JSON_MESSAGE.split("{error}")[0]
+    template: str = RESOLVER.INVALID_JSON_MESSAGE
+    return template.split("{error}")[0]
 
 
 resolver_property_run = settings(
