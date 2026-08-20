@@ -140,11 +140,3 @@ genuinely changes a case outcome.
 **Resolution shape**: add one worked trace — sample JSON fragment, matched rule number, emitted `guard_verdict` — gated by `instructions:skill-auditor`.
 
 **Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` on the post-compaction reload-timing change (finding `abstract_examples`).
-
-## The taught branch-cleanup command form trips the dangerous-command guard
-
-`src/plugins/spec-tree/skills/merging-standards/references/merge-cleanup.md` teaches branch removal through shell variables (`git branch -d "$branch_from_pr"`, `git push origin --delete "$branch_from_pr"`). Under the dangerous-command guard the generated router requires, a `git branch` invocation carrying a dynamic token is blocked (`core.git:branch-dynamic-token`), and the router forbids reformulating a blocked command, so cleanup completes only with a literal branch name — a sanctioned form the reference does not name. The companion PR-body defect — `gh pr create --body-file -` blocked for a heredoc body containing code spans — is tracked in `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/32-opening-pr.enabler/ISSUES.md` ("The prescribed body-on-stdin form is unreachable for any body containing code spans"); PR #532 re-evidenced it (the operator ran the command), and its resolution decides the `spx/15-agent-tools.pdr.md` amendment.
-
-**Resolution shape**: spell branch cleanup with the literal branch name resolved before the command (or `git branch -d -- <branch>`), so the taught form passes the guard as written; gated by `instructions:skill-auditor` over the merging-standards surface.
-
-**Evidence.** Observed on PR #532: the merge-cleanup sequence blocked at `git branch -d "$b"` after the merge.
