@@ -18,7 +18,7 @@ def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
     observation = observe_real_first_install()
 
     assert observation.initial_state == ()
-    assert observation.initial_project_settings is None
+    assert observation.initial_project_settings is not None
     assert observation.exit_code == 0, observation.stderr
     document = json.loads(observation.stdout)
     assert document[ReportField.CLAUDE_PLUGINS] == [SPEC_TREE_PLUGIN]
