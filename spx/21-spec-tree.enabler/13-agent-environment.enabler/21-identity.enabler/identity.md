@@ -4,6 +4,8 @@ PROVIDES a stable per-agent session identity written into the agent's environmen
 SO THAT session management nodes and the per-runtime session directory
 CAN scope work to the current agent without file-system heuristics or race conditions
 
+The scenario, property, and mapping assertions below verify the `$CLAUDE_SESSION_ID` env-file export the `spx` hook runner writes at the pinned floor; consumers never resolve identity from that export — the compliance assertions name the agent-published variables they read. `PLAN.md` in `spx/21-spec-tree.enabler/13-agent-environment.enabler` records the export's retirement, gated on the published `spx` floor advancing past the removal.
+
 ## Assertions
 
 ### Scenarios
