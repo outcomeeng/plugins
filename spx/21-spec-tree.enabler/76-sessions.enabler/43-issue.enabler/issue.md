@@ -8,9 +8,9 @@ CAN record a needed follow-up where that repository's own agents pick it up, wit
 
 ### Mappings
 
-- A marketplace registration entry's declared source fields — the registered source, the materialized root, and the source type, each present, empty, or absent for its runtime — map to the resolved target checkout path, an empty value falling through wherever an absent one would, and every other combination maps to a none-available diagnostic; a field belonging to the other runtime leaves the resolved path unchanged ([test](tests/test_resolve_marketplace.mapping.l1.py))
+- A marketplace registration entry's declared source fields — the registered source, the materialized root, and the source type, each present, empty, or absent for its runtime — map to the resolved target checkout path, the registered source taking precedence over the materialized root and a Directory source matching its token exactly, an empty value falling through wherever an absent one would, and every other combination maps to a none-available diagnostic; a field belonging to the other runtime leaves the resolved path unchanged ([test](tests/test_resolve_marketplace.mapping.l1.py))
 
-- A requested marketplace name maps across a registration listing to the first entry that both carries that name and resolves a path, an omitted request name standing for the default marketplace name and a listing with no such entry mapping to a none-available diagnostic ([test](tests/test_resolve_marketplace.mapping.l1.py))
+- A requested marketplace name maps across a registration listing to the first entry that both carries that name and resolves a path, an omitted request name standing for the default marketplace name and a listing with no such entry mapping to a diagnostic naming every marketplace in the listing that does resolve a path, or none when the listing resolves none ([test](tests/test_resolve_marketplace.mapping.l1.py))
 
 ### Properties
 
