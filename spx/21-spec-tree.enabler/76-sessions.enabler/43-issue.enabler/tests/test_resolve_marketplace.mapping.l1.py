@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from outcomeeng_testing.generators.resolve_marketplace import (
@@ -26,9 +28,14 @@ ENTRY_SELECTION_DOMAIN = entry_selection_domain("/registered")
     ids=[case.label for case in REGISTRATION_FIELD_DOMAIN],
 )
 def test_registration_fields_map_to_the_resolved_checkout_path(
-    case: ResolutionCase,
+    case: ResolutionCase, tmp_path: Path
 ) -> None:
-    result = run_resolver(case.payload, runtime=case.runtime)
+    result = run_resolver(case.payload, runtime=case.runtime, cwd=tmp_path)
+
+    # The resolver reads stdin and writes stdout; it owns no scratch file.
+    # Every case observes that, so the claim holds across the whole domain
+    # rather than at one hand-picked payload.
+    assert list(tmp_path.iterdir()) == []
 
     if case.expected_path is None:
         assert result.returncode == RESOLVER.EXIT_MARKETPLACE_NOT_FOUND
@@ -51,11 +58,13 @@ def test_registration_fields_map_to_the_resolved_checkout_path(
     ids=[case.label for case in ENTRY_SELECTION_DOMAIN],
 )
 def test_requested_name_maps_to_the_first_resolvable_entry(
-    case: SelectionCase,
+    case: SelectionCase, tmp_path: Path
 ) -> None:
     result = run_resolver(
-        case.payload, runtime=case.runtime, name=case.requested_name
+        case.payload, runtime=case.runtime, name=case.requested_name, cwd=tmp_path
     )
+
+    assert list(tmp_path.iterdir()) == []
 
     if case.expected_path is None:
         assert result.returncode == RESOLVER.EXIT_MARKETPLACE_NOT_FOUND

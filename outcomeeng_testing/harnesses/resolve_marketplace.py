@@ -56,10 +56,13 @@ def run_resolver_stdin(
     *,
     runtime: str,
     name: str | None = RESOLVER.DEFAULT_MARKETPLACE_NAME,
+    cwd: pathlib.Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Drive the resolver over exactly these stdin bytes.
 
     ``name=None`` omits ``--name`` so the invocation takes the CLI default.
+    ``cwd`` runs the resolver from that directory, so a caller can observe
+    what the invocation leaves behind there.
     """
     name_argv = [] if name is None else ["--name", name]
     return subprocess.run(
@@ -74,6 +77,7 @@ def run_resolver_stdin(
         capture_output=True,
         text=True,
         check=False,
+        cwd=None if cwd is None else str(cwd),
     )
 
 
@@ -82,13 +86,14 @@ def run_resolver(
     *,
     runtime: str,
     name: str | None = RESOLVER.DEFAULT_MARKETPLACE_NAME,
+    cwd: pathlib.Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Serialize a JSON value and drive the resolver with it.
 
     Every JSON value serializes, a bare string included; a caller wanting
     stdin that is not a JSON document calls ``run_resolver_stdin``.
     """
-    return run_resolver_stdin(json.dumps(payload), runtime=runtime, name=name)
+    return run_resolver_stdin(json.dumps(payload), runtime=runtime, name=name, cwd=cwd)
 
 
 def none_available_message(*, name: str, runtime: str) -> str:
