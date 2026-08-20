@@ -1,99 +1,121 @@
 """First-failure evidence across every operation a repository plan performs."""
 
+import json
+
 import pytest
 
 from outcomeeng.distribution.installation import (
-    CANONICAL_MARKETPLACE_SOURCE,
-    MARKETPLACE_NAME,
+    Agent,
+    CLAUDE_CATALOG_PATH,
+    CODEX_CATALOG_PATH,
+    CODEX_PLUGIN_ENTRIES_FIELD,
+    InstallationMode,
     PLUGIN_OPERATIONS,
-    UNPUBLISHED_PLUGIN_FRAGMENT,
+    ReportField,
     Operation,
+    installed_plugin_names,
+)
+from outcomeeng_testing.generators.installation import (
+    catalog_plugin_names_from_document,
+    generated_claude_listing_entries,
+    generated_codex_listing_entries,
+    generated_failure_classification_cases,
 )
 from outcomeeng_testing.harnesses.installation import (
-    NONCANONICAL_MARKETPLACE_SOURCE,
+    captured_unpublished_plugin_stderr,
     committed_catalog_plugin_names,
-    designated_failure_operations,
     observe_designated_failure,
+    observe_failure_operation_domains,
     observe_first_failure,
+    observe_isolated_subset_plan,
     observe_planned_operations,
+    repository_root,
 )
 
-CARVE_OUT_SOURCES = (CANONICAL_MARKETPLACE_SOURCE, NONCANONICAL_MARKETPLACE_SOURCE)
+
+def test_explicit_isolated_subsets_map_to_their_selection_in_catalog_order() -> None:
+    observation = observe_isolated_subset_plan()
+
+    catalogs = {
+        Agent.CLAUDE: catalog_plugin_names_from_document(
+            repository_root() / CLAUDE_CATALOG_PATH
+        ),
+        Agent.CODEX: catalog_plugin_names_from_document(
+            repository_root() / CODEX_CATALOG_PATH
+        ),
+    }
+    planned = {
+        Agent.CLAUDE: observation.plan.claude_plugins,
+        Agent.CODEX: observation.plan.codex_plugins,
+    }
+    for agent in Agent:
+        assert set(planned[agent]) == set(observation.subsets[agent])
+        positions = [catalogs[agent].index(plugin) for plugin in planned[agent]]
+        assert positions == sorted(set(positions))
 
 
-def _carve_out_domain() -> tuple[tuple[bool, str, Operation], ...]:
-    """Every operation a run can fail at, paired with a plan that performs it.
+def test_claude_inventory_maps_only_the_invocation_checkout_project_scope() -> None:
+    checkout = repository_root()
+    catalog = catalog_plugin_names_from_document(checkout / CLAUDE_CATALOG_PATH)
+    entries, in_scope = generated_claude_listing_entries(catalog, checkout)
 
-    An isolated run registers the checkout itself, so its plan carries no
-    source reconciliation, and a persistent run reconciles by refreshing an
-    already-canonical source or by replacing a noncanonical one. Each case
-    carries the source whose plan reaches its operation, because a designated
-    operation absent from the plan fails nothing.
-    """
-    reached: dict[tuple[bool, Operation], str] = {}
-    for isolated in (False, True):
-        for source in CARVE_OUT_SOURCES:
-            for operation in designated_failure_operations(
-                isolated=isolated, source=source
-            ):
-                reached.setdefault((isolated, operation), source)
-    return tuple(
-        (isolated, source, operation)
-        for (isolated, operation), source in reached.items()
+    observed = installed_plugin_names(
+        Agent.CLAUDE,
+        json.dumps(list(entries)),
+        checkout=checkout,
     )
 
+    assert observed == in_scope
 
-CARVE_OUT_DOMAIN = _carve_out_domain()
+
+def test_codex_inventory_maps_only_outcomeeng_marketplace_entries() -> None:
+    checkout = repository_root()
+    catalog = catalog_plugin_names_from_document(checkout / CODEX_CATALOG_PATH)
+    entries, in_scope = generated_codex_listing_entries(catalog)
+
+    observed = installed_plugin_names(
+        Agent.CODEX,
+        json.dumps({CODEX_PLUGIN_ENTRIES_FIELD: list(entries)}),
+        checkout=checkout,
+    )
+
+    assert observed == in_scope
 
 
 def test_every_planned_operation_reports_its_failure_and_stops_installation() -> None:
     for operation in observe_planned_operations():
         observation = observe_first_failure(operation)
         attempted = observation.attempted
+        document = json.loads(observation.stderr)
 
-        assert observation.failure is not None
-        assert observation.failure.command.operation is operation
-        assert observation.failure.command.agent is not None
-        assert all(result.exit_code == 0 for result in observation.failure.completed)
-        assert attempted[-1] == observation.failure.command
-        assert attempted == observation.plan.commands[: len(attempted)]
-
-
-def test_the_carve_out_domain_agrees_with_the_planned_operation_enumeration() -> None:
-    """Pin the domain to the other route through the same plan builders.
-
-    Both sides reach `build_isolated_installation_plan` and
-    `build_persistent_installation_plan`, so their agreement is consistency
-    between two harness routes rather than an independent completeness proof.
-    It catches the domain drifting away from the planned-operation enumeration;
-    what the carve-out assertion actually rests on is the parametrized case
-    below, which drives each operation through a real classification.
-    """
-    covered = {operation for _, _, operation in CARVE_OUT_DOMAIN}
-
-    assert covered == set(observe_planned_operations())
-    assert PLUGIN_OPERATIONS <= covered
+        assert observation.exit_code != 0
+        assert observation.stdout == ""
+        assert document[ReportField.OPERATION] == operation.value
+        assert document[ReportField.AGENT] == attempted[-1].agent.value
+        assert document[ReportField.COMPLETED_OPERATIONS] == len(attempted) - 1
+        assert document[ReportField.EXIT_CODE] == observation.exit_code
+        assert attempted == observation.command_sequence[: len(attempted)]
 
 
-@pytest.mark.parametrize(("isolated", "source", "operation"), CARVE_OUT_DOMAIN)
+@pytest.mark.parametrize(
+    ("mode", "source", "operation"),
+    generated_failure_classification_cases(observe_failure_operation_domains()),
+)
 def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
-    isolated: bool,
+    mode: InstallationMode,
     source: str,
     operation: Operation,
 ) -> None:
     plugin = sorted(committed_catalog_plugin_names())[0]
     carries_plugin = operation in PLUGIN_OPERATIONS
-    pending = not isolated and carries_plugin
+    pending = mode is InstallationMode.PERSISTENT and carries_plugin
 
     observation = observe_designated_failure(
-        isolated=isolated,
+        isolated=mode is InstallationMode.ISOLATED,
         source=source,
         operation=operation,
         plugin=plugin if carries_plugin else None,
-        stderr=(
-            f"Error: plugin `{plugin}` was "
-            f"{UNPUBLISHED_PLUGIN_FRAGMENT} `{MARKETPLACE_NAME}`"
-        ),
+        stderr=captured_unpublished_plugin_stderr(Agent.CODEX, plugin),
     )
 
     if pending:

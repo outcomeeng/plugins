@@ -1,37 +1,43 @@
 """Finite catalog-to-agent mapping evidence for repository installation."""
 
-import json
-from typing import cast
-
 from outcomeeng.distribution.installation import (
-    CATALOG_PLUGIN_NAME_FIELD,
-    CATALOG_PLUGINS_FIELD,
+    Agent,
+    SPEC_TREE_PLUGIN,
+)
+from outcomeeng_testing.generators.installation import (
+    catalog_plugin_names_from_bytes,
+    generated_persistent_catalog_selections,
 )
 from outcomeeng_testing.harnesses.installation import (
-    observe_persistent_execution,
+    observe_persistent_catalog_subset_plans,
     observe_repository_plan,
 )
 
 
-def test_each_mode_uses_each_catalogs_complete_ordered_plugin_set() -> None:
+def test_each_mode_maps_its_selection_to_catalog_order() -> None:
     isolated = observe_repository_plan()
-    persistent = observe_persistent_execution()
-    claude_catalog = cast(
-        dict[str, list[dict[str, object]]], json.loads(isolated.claude_catalog)
+    assert isolated.plan.claude_plugins == catalog_plugin_names_from_bytes(
+        isolated.claude_catalog
     )
-    codex_catalog = cast(
-        dict[str, list[dict[str, object]]], json.loads(isolated.codex_catalog)
+    assert isolated.plan.codex_plugins == catalog_plugin_names_from_bytes(
+        isolated.codex_catalog
     )
-    expected_claude = tuple(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in claude_catalog[CATALOG_PLUGINS_FIELD]
-    )
-    expected_codex = tuple(
-        cast(str, plugin[CATALOG_PLUGIN_NAME_FIELD])
-        for plugin in codex_catalog[CATALOG_PLUGINS_FIELD]
-    )
-
-    assert isolated.plan.claude_plugins == expected_claude
-    assert isolated.plan.codex_plugins == expected_codex
-    assert persistent.report.plan.claude_plugins == expected_claude
-    assert persistent.report.plan.codex_plugins == expected_codex
+    observations = observe_persistent_catalog_subset_plans()
+    assert tuple(observation.agent for observation in observations) == tuple(Agent)
+    for observation in observations:
+        assert tuple(mapping.selected for mapping in observation.mappings) == (
+            generated_persistent_catalog_selections(observation.catalog)
+        )
+        for mapping in observation.mappings:
+            if not mapping.selected:
+                assert mapping.planned == (SPEC_TREE_PLUGIN,)
+            else:
+                assert set(mapping.planned) == set(mapping.selected)
+                positions = [
+                    observation.catalog.index(plugin) for plugin in mapping.planned
+                ]
+                assert positions == sorted(set(positions))
+            assert mapping.installs == mapping.planned
+            assert mapping.enables == (
+                mapping.planned if observation.agent is Agent.CLAUDE else ()
+            )

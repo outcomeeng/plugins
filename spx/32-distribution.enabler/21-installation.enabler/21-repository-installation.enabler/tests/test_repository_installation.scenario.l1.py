@@ -1,82 +1,96 @@
-"""Controlled first-failure evidence for repository installation."""
+"""Controlled CLI and first-failure evidence for repository installation."""
 
 import json
 from typing import cast
 
 from outcomeeng.distribution.installation import (
     Agent,
-    report_document,
-    CATALOG_PLUGIN_NAME_FIELD,
-    CATALOG_PLUGINS_FIELD,
     CANONICAL_MARKETPLACE_SOURCE,
+    FIRST_INSTALL_WARNING,
     Operation,
+    ReportField,
+    SPEC_TREE_PLUGIN,
     SourceAction,
     USER_SCOPE_COLLISION_DIAGNOSTIC,
-    VERIFICATION_RECIPE_COMMAND,
+    report_document,
 )
 from outcomeeng_testing.harnesses.installation import (
+    NONCANONICAL_MARKETPLACE_SOURCE,
     absent_from_every_agent,
     committed_catalog_plugin_names,
-    observe_unpublished_plugin,
-    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_claude_user_collision,
+    observe_first_persistent_cli,
     observe_inspection_failure,
-    observe_persistent_execution,
+    observe_invalid_isolated_selection,
+    observe_invalid_persistent_selection,
     observe_persistent_plan,
+    observe_unpublished_plugin,
     observe_verification_recipe,
 )
 
 
-def test_persistent_installation_refreshes_canonical_sources_and_catalogs() -> None:
-    observation = observe_persistent_execution()
-    plan = observation.report.plan
-
-    assert observation.preflight.claude_source_action is SourceAction.REFRESH
-    assert any(
-        command.agent is Agent.CLAUDE
-        and command.operation is Operation.MARKETPLACE_REFRESH
-        for command in plan.commands
-    )
-    assert any(
-        command.agent is Agent.CODEX
-        and command.operation is Operation.MARKETPLACE_REFRESH
-        for command in plan.commands
-    )
-    assert {
-        command.plugin
-        for command in plan.commands
-        if command.agent is Agent.CLAUDE
-        and command.operation is Operation.PLUGIN_INSTALL
-    } == {
-        plugin[CATALOG_PLUGIN_NAME_FIELD]
-        for plugin in json.loads(observation.claude_catalog)[CATALOG_PLUGINS_FIELD]
-    }
-    assert {
-        command.plugin
-        for command in plan.commands
-        if command.agent is Agent.CLAUDE
-        and command.operation is Operation.PLUGIN_ENABLE
-    } == {
-        plugin[CATALOG_PLUGIN_NAME_FIELD]
-        for plugin in json.loads(observation.claude_catalog)[CATALOG_PLUGINS_FIELD]
-    }
-    assert {
-        command.plugin
-        for command in plan.commands
-        if command.agent is Agent.CODEX
-        and command.operation is Operation.PLUGIN_INSTALL
-    } == {
-        plugin[CATALOG_PLUGIN_NAME_FIELD]
-        for plugin in json.loads(observation.codex_catalog)[CATALOG_PLUGINS_FIELD]
-    }
-    assert observation.attempted[1:] == plan.commands
-
-
-def test_verification_recipe_aliases_the_exact_l2_evidence() -> None:
+def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
     observation = observe_verification_recipe()
 
     assert observation.exit_code == 0, observation.stderr
-    assert observation.invoked == VERIFICATION_RECIPE_COMMAND
+    assert observation.invoked == (
+        "test",
+        "spx/32-distribution.enabler/21-installation.enabler/"
+        "21-repository-installation.enabler/tests",
+    )
+
+
+def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
+    observation = observe_first_persistent_cli()
+    document = json.loads(observation.stdout)
+    install_commands = [
+        command
+        for command in observation.attempted
+        if command.operation is Operation.PLUGIN_INSTALL
+    ]
+    enable_commands = [
+        command
+        for command in observation.attempted
+        if command.operation is Operation.PLUGIN_ENABLE
+    ]
+
+    assert observation.exit_code == 0
+    assert [command.agent for command in install_commands] == list(Agent)
+    assert {command.plugin for command in install_commands} == {SPEC_TREE_PLUGIN}
+    assert [command.agent for command in enable_commands] == [Agent.CLAUDE]
+    assert {command.plugin for command in enable_commands} == {SPEC_TREE_PLUGIN}
+    assert document[ReportField.CLAUDE_PLUGINS] == [SPEC_TREE_PLUGIN]
+    assert document[ReportField.CODEX_PLUGINS] == [SPEC_TREE_PLUGIN]
+    assert document[ReportField.WARNINGS] == [
+        {
+            ReportField.AGENT: agent.value,
+            ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(agent=agent.value),
+        }
+        for agent in Agent
+    ]
+    assert observation.stderr.splitlines() == [
+        f"warning: {FIRST_INSTALL_WARNING.format(agent=agent.value)}" for agent in Agent
+    ]
+
+
+def test_invalid_persistent_subset_is_rejected_before_mutation() -> None:
+    observation = observe_invalid_persistent_selection()
+
+    assert observation.error is not None
+    assert SPEC_TREE_PLUGIN in observation.error
+    assert observation.attempted
+    assert all(
+        command.operation in {Operation.MARKETPLACE_INSPECT, Operation.PLUGIN_INSPECT}
+        for command in observation.attempted
+    )
+
+
+def test_invalid_isolated_subset_is_rejected_before_mutation() -> None:
+    observation = observe_invalid_isolated_selection()
+
+    assert observation.error is not None
+    assert SPEC_TREE_PLUGIN in observation.error
+    assert observation.attempted == ()
 
 
 def test_persistent_installation_replaces_noncanonical_sources() -> None:
@@ -109,12 +123,17 @@ def test_persistent_installation_replaces_noncanonical_sources() -> None:
 
 def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> None:
     observation = observe_inspection_failure()
+    document = json.loads(observation.stderr)
 
-    assert observation.failure is not None
-    assert observation.failure.command.operation is Operation.MARKETPLACE_INSPECT
-    assert observation.failure.command.agent is not None
-    assert observation.failure.completed == ()
-    assert observation.attempted == (observation.failure.command,)
+    assert observation.exit_code != 0
+    assert observation.stdout == ""
+    assert document[ReportField.OPERATION] == Operation.MARKETPLACE_INSPECT.value
+    assert document[ReportField.AGENT] == observation.attempted[-1].agent.value
+    assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted) - 1
+    assert (
+        observation.attempted
+        == observation.command_sequence[: len(observation.attempted)]
+    )
     assert not any(
         command in observation.attempted for command in observation.plan.commands
     )
@@ -175,8 +194,10 @@ def test_the_json_report_never_lists_a_pending_plugin_as_installed() -> None:
     assert observation.report is not None
     document = report_document(observation.report)
     pending = {
-        cast(str, entry["plugin"])
-        for entry in cast(list[dict[str, str]], document["pending_publication"])
+        cast(str, entry[ReportField.PLUGIN])
+        for entry in cast(
+            list[dict[str, str]], document[ReportField.PENDING_PUBLICATION]
+        )
     }
 
     # The text summary and this document answer from the same accessor. Reading
@@ -184,8 +205,8 @@ def test_the_json_report_never_lists_a_pending_plugin_as_installed() -> None:
     # the next field reported it unpublished, and the two disagreed inside one
     # document.
     assert pending == {absent}
-    assert not pending & set(cast(list[str], document["claude_plugins"]))
-    assert absent in cast(list[str], document["codex_plugins"])
+    assert not pending & set(cast(list[str], document[ReportField.CLAUDE_PLUGINS]))
+    assert absent in cast(list[str], document[ReportField.CODEX_PLUGINS])
 
 
 def test_a_plugin_absent_from_one_agent_stays_installed_for_the_other() -> None:
@@ -203,3 +224,20 @@ def test_a_plugin_absent_from_one_agent_stays_installed_for_the_other() -> None:
     # agents' installed counts on either one's failure.
     assert observation.report.pending_for(Agent.CLAUDE) == frozenset({absent})
     assert observation.report.pending_for(Agent.CODEX) == frozenset()
+
+
+def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
+    observation = observe_persistent_plan(claude_marketplace_listed=False)
+
+    source_operations = [
+        command.operation
+        for command in observation.plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation
+        in {
+            Operation.MARKETPLACE_REMOVE,
+            Operation.MARKETPLACE_ADD,
+            Operation.MARKETPLACE_REFRESH,
+        }
+    ]
+    assert source_operations == [Operation.MARKETPLACE_ADD]

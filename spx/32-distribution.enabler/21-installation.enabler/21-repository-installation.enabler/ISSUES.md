@@ -4,18 +4,16 @@ Known defects in the repository-installation evidence. Each entry names the arti
 
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
-`test_real_agent_clis_install_every_catalog_plugin_idempotently` fails at the `marketplace-refresh` operation. `codex plugin marketplace upgrade outcomeeng --json` exits 1 with:
+`test_real_agent_clis_map_full_and_generated_subsets` can fail at the `marketplace-refresh` operation. `codex plugin marketplace upgrade outcomeeng --json` then exits 1 with:
 
 ```text
 Failed to upgrade marketplace `outcomeeng`: git clone marketplace source timed out after 30s
 fatal: early EOF
 ```
 
-`test_verification_recipe_aliases_the_exact_l2_evidence` fails only as a consequence, because it asserts `just verify-marketplace-installation` runs exactly that L2 test.
+The same bound breaks the declared RELEASE action. `just install-marketplace`, which `spx/local/merging.md` declares under `RELEASE_READINESS`, fails at the identical operation and recipe line, so a merge lifecycle cannot complete its release phase on a host where the clone exceeds the bound. Claude Code's selected plugin operations can complete before the Codex marketplace refresh, so Claude Code project scope may be refreshed while the Codex marketplace is not. That is a partial release reporting failure, never a cosmetic non-zero exit.
 
-The same bound breaks the declared RELEASE action. `just install-marketplace`, which `spx/local/merging.md` declares under `RELEASE_READINESS`, fails at the identical operation and recipe line, so a merge lifecycle cannot complete its release phase on a host where the clone exceeds the bound. The run's 23-operation prefix — the Claude marketplace replace, ten install and enable pairs, and the list — completes first, so Claude Code project scope is refreshed while the Codex marketplace is not. That is a partial release reporting failure, never a cosmetic non-zero exit.
-
-The failure is a timing margin, not a content defect. A quiet-machine `git clone` of `https://github.com/outcomeeng/plugins.git` completes in 18 seconds over 44 MB and 4358 commits, against a 30-second bound — a margin of roughly 1.7×. The refresh runs after 23 completed install operations, so it competes with the network and disk work those leave behind. The observation reports all ten Claude plugins installed before the refresh step, so catalog content and plugin payloads are not implicated.
+The failure is a timing margin, not a content defect. A quiet-machine `git clone` of `https://github.com/outcomeeng/plugins.git` completes in 18 seconds over 44 MB and 4358 commits, against a 30-second bound — a margin of roughly 1.7×. The refresh runs after Claude Code's selected plugin operations, so it competes with the network and disk work those leave behind. The observation reports those Claude Code operations complete before the refresh step, so catalog content and plugin payloads are not implicated.
 
 `fatal: early EOF` is not evidence about the remote. The bound is the constant `MARKETPLACE_UPGRADE_GIT_TIMEOUT`, fixed at 30 seconds inside the agent CLI at version 0.147.0 with no flag or configuration key, and a generic `-c` override cannot reach a constant. On expiry the CLI observes the clone still running, kills it, and only then appends the stderr it collected, so the `early EOF` is that kill's own residue and carries no evidence of a remote-side exit. Reading it as the remote hanging up mistakes the symptom for the cause.
 
@@ -29,18 +27,16 @@ The margin narrows as the source grows. The suite passed repeatedly earlier the 
 
 **Evidence**: reproduced twice on a host at 0.33 normalized load with `git ls-remote` against the same source returning in 0.58 seconds, so neither host starvation nor loss of connectivity explains it. Reproduced twice again in the release path after PR #515 merged, from a checkout at `33467bab05164e2974f179041f23eb6ff63669dd`, with identical structured records; clone duration was not measured in those two runs.
 
-## The unpublished-plugin fragment is matched but its real wording is only half observed
+## The unpublished-plugin enable wording is unobserved
 
-`_is_pending_publication` in `outcomeeng/distribution/installation.py` classifies a failed plugin install or enable as pending publication when `UNPUBLISHED_PLUGIN_FRAGMENT` — the literal `not found in marketplace` — appears in the lower-cased stderr. The only evidence is `UnpublishedPluginRunner`, whose canned stderr was authored alongside the constant it matches, so the test cannot fail on a wording mismatch.
-
-Both real **install** messages were observed while adding the `contribute` plugin, against a canonical marketplace that did not yet publish it:
+`_is_pending_publication` in `outcomeeng/distribution/installation.py` classifies a failed plugin install or enable as pending publication when `UNPUBLISHED_PLUGIN_FRAGMENT` — the literal `not found in marketplace` — appears in the lower-cased stderr. The simulated stimuli in `outcomeeng_testing/harnesses/installation.py` carry the independently transcribed real **install** wording for both CLIs, observed while adding the `contribute` plugin against a canonical marketplace that did not yet publish it:
 
 ```text
 Claude Code: Failed to install plugin "contribute@outcomeeng": Plugin "contribute" not found in marketplace "outcomeeng".
 Codex:       Error: plugin `contribute` was not found in marketplace `outcomeeng`
 ```
 
-Both contain the fragment, so the install path is real. Neither **enable** message was ever observed: the Claude plan issues install then enable per plugin, and the first observation run stopped at the Codex install before any enable ran. The fragment also carries no per-agent prefix, unlike `CLAUDE_ALREADY_INSTALLED_FRAGMENT`, so one unverified wording spans two CLIs.
+A constant that drifts from that captured wording now fails the linked tests. Neither **enable** message was ever observed: the Claude plan issues install then enable per plugin, and the first observation run stopped at the Codex install before any enable ran. The fragment also carries no per-agent prefix, unlike `CLAUDE_ALREADY_INSTALLED_FRAGMENT`, so the enable wording remains unverified for both CLIs.
 
 If either enable message words the absence differently, the carve-out silently never engages for that operation and the run fails where it should report pending.
 
@@ -48,9 +44,9 @@ If either enable message words the absence differently, the carve-out silently n
 
 **Evidence**: raised by changeset review `2026-08-09_10-14-46-352-325b0ceb84d5` against the changeset that introduced the carve-out.
 
-## The L2 installation evidence stalls on a Full Disk Access prompt
+## The L3 installation evidence stalls on a Full Disk Access prompt
 
-Running the repository-installation L2 evidence launches the real Claude Code and
+Running the repository-installation L3 evidence launches the real Claude Code and
 Codex CLIs. On macOS that spawn requests `kTCCServiceSystemPolicyAllFiles` and
 `kTCCServiceSystemPolicyAppBundles` through the invoking shell, so a machine that
 has not yet answered that request shows a modal Full Disk Access dialog and the
@@ -78,35 +74,3 @@ with the request refused.
 
 **Revisit condition**: before onboarding documentation claims a clean first-run
 gate on macOS, or when a contributor reports the gate hanging with no output.
-
-## Two tests declare a level below the one their evidence run reaches
-
-`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md`
-puts a case at the l3 floor when the evidence run itself must reach a remote or
-network-dependent system to exercise the behavior under test. Two of this node's
-tests do reach one and declare a lower level:
-
-- `tests/test_repository_installation.scenario.l2.py` registers the canonical
-  GitHub source and reconciles it with `SourceAction.REFRESH`, so a real
-  `codex plugin marketplace upgrade` clones `https://github.com/outcomeeng/plugins.git`
-  during the run. That is in-cycle network reach, not the pre-cycle acquisition
-  the l3-floor scoping carves out. The clone-timeout defect recorded above is the
-  same network dependency observed from its failure side.
-- `tests/test_repository_installation.scenario.l1.py`'s
-  `test_verification_recipe_aliases_the_exact_l2_evidence` asserts the real
-  recipe exits zero, and the recipe's nested `just test` runs the file above, so
-  its pass predicate inherits that same network reach while declaring `l1`.
-
-**Resolution shape**: reclassifying is not a rename. The declared level is
-carried by the filename, by `VERIFICATION_TEST` in
-`outcomeeng/distribution/installation.py`, by the `verify-marketplace-installation`
-recipe, and by the `[test]` links in this node's spec, and moving evidence to
-`l3` changes which lane runs it in CI. Decide first whether the recipe test
-should assert the nested command rather than its exit status — that would drop
-its own floor to `l1` honestly and leave one file to reclassify instead of two.
-
-**Revisit condition**: with the next change to this node's evidence, or when the
-clone-bound defect above is resolved and the network dependency is reconsidered.
-
-Surfaced by the evidence audit of the contribute-plugin changeset, which found
-both misclassifications pre-existing and unchanged by that diff.
