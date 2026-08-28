@@ -7,6 +7,7 @@ from outcomeeng_testing.harnesses.coding_agents import (
     mutation_observation,
     observe_send_transport,
     observed_message_participants,
+    production_handback,
 )
 
 
@@ -110,6 +111,20 @@ def test_agent_message_mappings() -> None:
     assert len(initiating_references) == len(
         set(module.MessageKind) - module.RESPONSE_KINDS
     )
+
+    handback = production_handback(sender, recipient)
+    production_content = message_content(module.MessageKind.FACT, 6)
+    production = module.build_envelope(
+        kind=module.MessageKind.FACT,
+        sender=sender,
+        recipient=recipient,
+        subject=production_content.subject,
+        facts=list(production_content.facts),
+        request=production_content.request,
+        handback=handback,
+    )
+    assert production[module.HANDBACK_FIELD] == handback
+    assert module.validate_envelope(production)[module.HANDBACK_FIELD] == handback
 
     rejected_content = message_content(module.MessageKind.ACKNOWLEDGEMENT, 7)
     rejected_acknowledgement = module.build_envelope(

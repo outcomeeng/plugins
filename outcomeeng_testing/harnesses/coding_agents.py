@@ -136,6 +136,23 @@ def fact_envelope(
     )
 
 
+def production_handback(
+    sender: dict[str, str],
+    recipient: dict[str, str],
+    completion_text: str = "Requested artifact completed.",
+) -> dict[str, object]:
+    """Return a structured handback produced by the environment capability."""
+    prowl = load_prowl_environment()
+    return cast(
+        dict[str, object],
+        prowl.handback_plan(
+            sender=sender,
+            recipient=recipient,
+            completion_text=completion_text,
+        ),
+    )
+
+
 def generated_envelope(
     module: ModuleType,
     *,

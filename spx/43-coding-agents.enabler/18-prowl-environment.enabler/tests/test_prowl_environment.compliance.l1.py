@@ -131,6 +131,7 @@ def test_terminal_handbacks_require_one_complete_result_form() -> None:
             recipient=recipient,
             subject=content.subject,
             instruction=content.instruction,
+            completion_text=content.completion_text,
             coordination_reference=str(
                 uuid.uuid5(uuid.NAMESPACE_URL, sender[module.PANE_FIELD])
             ),
@@ -183,6 +184,7 @@ def test_delegation_cli_rejects_unsupported_and_accepts_supported_fields() -> No
             module.RECIPIENT_FIELD: agent_identity(module, 1),
             module.SUBJECT_FIELD: content.subject,
             module.INSTRUCTION_FIELD: content.instruction,
+            module.COMPLETION_TEXT_FIELD: content.completion_text,
             module.COORDINATION_REFERENCE_FIELD: None,
         }
         unsupported_request = {
@@ -210,5 +212,40 @@ def test_delegation_cli_rejects_unsupported_and_accepts_supported_fields() -> No
             f"submitted {sender[module.PANE_FIELD]!r}; the recipient reads its "
             "return path from this field alone"
         )
+        handback = cast(dict[str, object], envelope[module.HANDBACK_FIELD])
+        corrupted = {
+            **envelope,
+            module.HANDBACK_FIELD: {
+                **handback,
+                module.COMMAND_FIELD: f"{handback[module.COMMAND_FIELD]} .",
+            },
+        }
+        try:
+            module.terminal_handback(
+                corrupted,
+                module.TerminalKind.COMPLETED,
+                inline_result=content.inline_result,
+            )
+        except module.ProwlEnvironmentError as error:
+            assert error.status == module.ExecutionStatus.INVALID_SCHEMA
+        else:
+            raise AssertionError("corrupted source-generated handback was accepted")
+        for executable_field in (
+            module.HANDBACK_FIELD,
+            module.COMMAND_FIELD,
+            "handbackCommand",
+            "returnPane",
+            module.ADAPTER_PATH_FIELD,
+        ):
+            try:
+                module._delegation_from_cli(
+                    {**supported_request, executable_field: "caller-owned"}
+                )
+            except module.ProwlEnvironmentError as error:
+                assert executable_field in str(error)
+            else:
+                raise AssertionError(
+                    f"caller-authored executable handback field was accepted: {executable_field}"
+                )
 
     run_delegation_cli_compliance(assert_delegation)

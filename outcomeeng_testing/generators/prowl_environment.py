@@ -13,6 +13,7 @@ from hypothesis import strategies as st
 class DelegationTextCase:
     subject: str
     instruction: str
+    completion_text: str
     inline_result: str
     result_reference: str
     projection: str
@@ -23,6 +24,7 @@ def delegation_text_cases() -> st.SearchStrategy[DelegationTextCase]:
         DelegationTextCase,
         subject=st.text(min_size=1, max_size=80),
         instruction=st.text(min_size=1, max_size=160),
+        completion_text=st.text(min_size=1, max_size=160),
         inline_result=st.text(min_size=1, max_size=200),
         result_reference=st.from_regex(r"result://[a-z0-9]{1,32}", fullmatch=True),
         projection=st.text(min_size=1, max_size=80),

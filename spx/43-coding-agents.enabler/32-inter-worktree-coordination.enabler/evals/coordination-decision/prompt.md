@@ -64,7 +64,7 @@ Report the target back to the operator as the supplied path while using the sele
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one target resolution, low-level operation, delegation request, or terminal handback. When it is empty, require a concrete operation before running the adapter. Resolve an absolute worktree, repository, or working-directory target per `<operator_target_resolution>` before building its operation request.
+1. Interpret `$ARGUMENTS` as one target resolution, low-level operation, handback plan, delegation request, or terminal handback. When it is empty, require a concrete operation before running the adapter. Resolve an absolute worktree, repository, or working-directory target per `<operator_target_resolution>` before building its operation request.
 2. For `list`, `agents`, `read`, or `send`, build this source-owned request shape and set only arguments the operation accepts:
 
 ```json
@@ -95,7 +95,7 @@ printf '%s\n' '{"schemaVersion":1,"operation":"agents","arguments":{}}' | python
 ```
 
 5. Accept only `status: "succeeded"` for a submitted operation. Preserve the complete versioned result, `commandExitCode`, and public `response` values. For `open`, preserve `response.data.resolution`, `created_tab`, and the complete target; `exact-root` with `created_tab: true` is the lazy equivalent of clicking a known sidebar worktree that has no terminal pane. `new-root` means Prowl added a previously unknown root and never proves a prepared recovery target existed. For submitted `send`, require `commandExitCode: 0` and preserve `response.data.input.trailing_enter_sent`; success with that field false or absent does not prove the turn left the editor. Once the checked send reports `trailing_enter_sent: true`, the turn is queued and delivery is complete; never send it again because the entry box becomes free. Stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `prowl-unavailable`, `mutation-unauthorized`, or `operation-unavailable`.
-6. For bounded delegation between two identities returned by `agents`, submit this shape to `delegate`:
+6. For bounded delegation between two identities returned by `agents`, supply semantic completion text and submit this shape to `delegate`:
 
 ```json
 {
@@ -116,24 +116,31 @@ printf '%s\n' '{"schemaVersion":1,"operation":"agents","arguments":{}}' | python
     "run": "<complete-run-id-when-present>"
   },
   "subject": "<bounded subject>",
-  "instruction": "<complete bounded request, ending with the return path per <handback_delivery>>",
+  "instruction": "<complete bounded request, with no shell command or return-path fields>",
+  "completionText": "<one-line completion signal for the sender>",
   "coordinationReference": null
 }
 ```
 
-The envelope already carries the return address: `sender.pane` is the sender's own complete pane, and the recipient reads it from the delegation it receives. Nothing else needs a field. What the recipient cannot infer is the exact command that reaches that pane and the environment conditions that break it, so the `instruction` ends by naming both per `<handback_delivery>`. The sender cannot poll for completion, so the recipient is the only party that can close the loop; an instruction that omits the handback is a request the sender can never learn the answer to.
+The adapter maps `completionText` and the two identities to a versioned `handback` block. The block contains `completionText`, the absolute `adapterPath`, an exact one-line `command` ending at `run`, checked `successCriteria`, `retryPolicy: "never-after-trailing-enter"`, `socket: "default"`, and `expectedPanes` in sender-recipient order. A caller never supplies `handback`, `command`, `handbackCommand`, `returnPane`, or `adapterPath`.
 
-The result carries the complete source-owned `delegation` envelope. Preserve it for the terminal handback; transport success is not acceptance or completion.
+The result carries the complete source-owned schema-version-2 `delegation` envelope and generated handback block. Preserve it for the terminal handback; transport success is not acceptance or completion.
 
 A direct delegation submission uses the same stdin boundary:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" delegate <<'JSON'
-{"sender":{"agent":"agent-a","pane":"11111111-1111-4111-8111-111111111111","worktree":"/repo-a","branch":"work/a","repository":"/repo.git","run":"run-a"},"recipient":{"agent":"agent-b","pane":"22222222-2222-4222-8222-222222222222","worktree":"/repo-b","branch":"work/b","repository":"/repo.git","run":"run-b"},"subject":"Review resolver evidence","instruction":"Write the result first. Then run exactly: printf '%s\\n' '{\"schemaVersion\":1,\"operation\":\"send\",\"arguments\":{\"pane\":\"11111111-1111-4111-8111-111111111111\",\"text\":\"Resolver evidence review completed; terminal result follows.\",\"noWait\":true}}' | python3 \"${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py\" run. Capture the complete result and require status succeeded, commandExitCode 0, and response.data.input.trailing_enter_sent true. Use the default socket, confirm the expected panes, and use this bundled command path when the CLI is absent from PATH.","coordinationReference":null}
+{"sender":{"agent":"agent-a","pane":"11111111-1111-4111-8111-111111111111","worktree":"/repo-a","branch":"work/a","repository":"/repo.git","run":"run-a"},"recipient":{"agent":"agent-b","pane":"22222222-2222-4222-8222-222222222222","worktree":"/repo-b","branch":"work/b","repository":"/repo.git","run":"run-b"},"subject":"Review resolver evidence","instruction":"Write the complete review result before sending the handback signal.","completionText":"Resolver evidence review completed; terminal result follows.","coordinationReference":null}
 JSON
 ```
 
-7. The recipient submits exactly one terminal result to `handback`, carrying the original `delegation`, one `kind`, and one supported result form:
+For a production request carried by `/message-agents`, generate the same block without sending a delegation. Submit exactly `sender`, `recipient`, and `completionText` to `plan-handback` and preserve the returned `handback` object unchanged:
+
+```bash
+printf '%s\n' '{"sender":{"agent":"agent-a","pane":"11111111-1111-4111-8111-111111111111","worktree":"/repo-a","branch":"work/a","repository":"/repo.git","run":"run-a"},"recipient":{"agent":"agent-b","pane":"22222222-2222-4222-8222-222222222222","worktree":"/repo-b","branch":"work/b","repository":"/repo.git","run":"run-b"},"completionText":"Requested artifact completed."}' | python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" plan-handback
+```
+
+7. The recipient writes any durable result first, executes the generated `handback.command` exactly, and submits exactly one terminal result to `handback`, carrying the complete original `delegation`, one `kind`, and one supported result form:
 
 - `delegation-completed`
 - `delegation-failed`
@@ -142,13 +149,7 @@ JSON
 
 A complete inline result uses `inlineResult`. A durable result uses a scheme-bearing `resultReference` plus a bounded `projection`; use `file:///absolute/path` for a local file. Both forms may appear together. The adapter rejects a missing result, a reference without a URI scheme or projection, and a conflicting terminal handback.
 
-A direct inline handback submission carries the complete returned delegation:
-
-```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" handback <<'JSON'
-{"delegation":{"schemaVersion":1,"kind":"delegation-request","coordinationReference":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","sender":{"agent":"agent-a","pane":"11111111-1111-4111-8111-111111111111","worktree":"/repo-a","branch":"work/a","repository":"/repo.git","run":"run-a"},"recipient":{"agent":"agent-b","pane":"22222222-2222-4222-8222-222222222222","worktree":"/repo-b","branch":"work/b","repository":"/repo.git","run":"run-b"},"subject":"Review resolver evidence","instruction":"Write the result first. Then run exactly: printf '%s\\n' '{\"schemaVersion\":1,\"operation\":\"send\",\"arguments\":{\"pane\":\"11111111-1111-4111-8111-111111111111\",\"text\":\"Resolver evidence review completed; terminal result follows.\",\"noWait\":true}}' | python3 \"${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py\" run. Capture the complete result and require status succeeded, commandExitCode 0, and response.data.input.trailing_enter_sent true. Use the default socket, confirm the expected panes, and use this bundled command path when the CLI is absent from PATH."},"kind":"delegation-completed","inlineResult":"Resolver evidence approved."}
-JSON
-```
+The direct stdin payload uses `{"delegation":<complete-returned-delegation>,"kind":"delegation-completed","inlineResult":"<complete-result>"}`. Replace the angle-bracket value with the returned delegation object itself, never a quoted summary or reconstructed envelope.
 
 8. Return the complete terminal result to the delegating workflow. Do not poll the recipient, add acceptance or progress phases, or infer completion from pane output.
 
@@ -162,13 +163,13 @@ Completion travels by push, never by pull. The sender's environment blocks polli
 
 **The recipient delivers the handback by sending one line into the return address's pane**, using the `send` operation with normal trailing-Enter behavior. That send lands as a turn in the sender's session, which is what makes it a signal rather than a message the sender must go looking for. A `noEnter` send prefills the sender's editor and signals nothing.
 
-**The sender states the handback at delegation time**, not after, by ending the `instruction` with two things the recipient cannot infer from the envelope: the exact command that reaches `sender.pane`, and the `<environment_traps>` conditions that break it. A recipient that discovers those traps by hitting them has already spent the turn the delegation was meant to buy. The pane itself needs no restating — it already travels as `sender.pane`.
+**The adapter generates the handback at delegation time.** The caller supplies only semantic completion text. The generated block binds that text to `sender.pane`, the bundled adapter path, checked submission criteria, the default socket, both expected panes, and the no-retry policy. This separation prevents a caller from changing CLI grammar while describing the requested work.
 
 </handback_delivery>
 
 <environment_traps>
 
-Two environment conditions silently break a handback. Name both in the delegation's return address rather than leaving the recipient to find them.
+Two environment conditions silently break a handback. The generated block names both instead of leaving the recipient to discover them.
 
 **The CLI may not be on `PATH`.** A recipient whose shell cannot resolve the command reads the failure as "the environment is unavailable" and abandons the handback. The executable bundled inside the application resolves when `PATH` does not, so the return address carries the command form that works in the recipient's environment rather than a bare command name.
 
@@ -180,6 +181,8 @@ Two environment conditions silently break a handback. Name both in the delegatio
 
 - ALWAYS preserve complete source-supplied agent, pane, worktree, branch, repository, run, coordination, status, conclusion, exit-code, and result-reference values.
 - ALWAYS execute the bundled script through `${CLAUDE_SKILL_DIR}`; never import it from another filesystem location or manufacture a path outside this skill directory.
+- ALWAYS generate executable handback data from semantic completion text through `delegate` or `plan-handback`.
+- NEVER accept caller-authored `handback`, `command`, `handbackCommand`, `returnPane`, or `adapterPath` fields.
 - NEVER invoke raw Prowl commands, Prowl command help, or an external environment-control skill.
 - NEVER mutate focus, keys, tabs, panes, or open-path selection without explicit authorization for the exact operation and target in the same turn.
 - NEVER equate `list` with the sidebar worktree inventory or enumerate filesystem worktrees to compensate for an uninstantiated pane.
@@ -190,7 +193,7 @@ Two environment conditions silently break a handback. Name both in the delegatio
 
 <testing>
 
-Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Run the documented `run` form with an `agents` payload and require `status: "succeeded"`, `commandExitCode: 0`, and a public response; run `resolve-target` with pane-only, worktree-only, and combined caller evidence and require one inventory call, caller exclusion, and zero sends; fill one returned send template and require `response.data.input.trailing_enter_sent: true`; run `delegate` and `handback` with the documented envelope shapes and require the initiating coordination reference and `sender.pane` to survive. Cover every operation mapping, public JSON failure, mutation rejection before command construction, URI-bearing delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch. An unknown top-level delegation key is rejected instead of silently dropped.
+Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Run the documented `run` form with an `agents` payload and require `status: "succeeded"`, `commandExitCode: 0`, and a public response; run `resolve-target` with pane-only, worktree-only, and combined caller evidence and require one inventory call, caller exclusion, and zero sends; fill one returned send template and require `response.data.input.trailing_enter_sent: true`; run `plan-handback`, `delegate`, and `handback` with the documented shapes and require the command to end exactly at `run`, the initiating coordination reference to survive, and every caller-authored executable handback field to fail. Cover every operation mapping, public JSON failure, mutation rejection before command construction, URI-bearing delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch.
 
 Recorded exercised payload/results:
 
@@ -208,7 +211,9 @@ Recorded exercised payload/results:
 
 **A visible worktree was absent from `list`.** Claude inferred missing Prowl topology because a sidebar row had no listed pane. The row was known but not entered; `open` returned `resolution: exact-root`, `created_tab: true`, and the first pane UUID. Treat `list` as the terminal inventory and use authorized `open` for visible lazy activation.
 
-**A delegation had no return path, so the operator became the message bus.** Claude asked a recipient to write a file, then had no signal that it had. Polling loops are blocked in the environment, so Claude read the pane once, saw nothing, and moved on — while a complete result sat on disk. The operator ended up carrying the answer between the two agents by hand. The delegation carried no return address, so the recipient could not push and the sender could not pull. Send the sender's own pane id, the exact handback command, and `<environment_traps>` in the delegation itself, and require the recipient to send one line on completion per `<handback_delivery>`.
+**A delegation had no return path, so the operator became the message bus.** Claude asked a recipient to write a file, then had no signal that it had. Polling loops are blocked in the environment, so Claude read the pane once, saw nothing, and moved on while a complete result sat on disk. Generate the structured handback from the sender, recipient, and completion text, then require the recipient to send one line on completion per `<handback_delivery>`.
+
+**A caller added a trailing argument to the return command.** Claude copied a hand-written `run .` command into a delegation. `argparse` rejected the extra positional argument before any send occurred. Generate the command from `completionText`; the adapter renders the final token as `run` and rejects caller-authored executable fields.
 
 **A single read was mistaken for a terminal answer.** Claude treated one empty pane read as evidence the recipient had produced nothing, when it proved only that nothing was on screen at that instant. A read establishes the pane's state at the moment it ran and never establishes that a delegation is incomplete. Completion arrives as the recipient's handback; its absence is an open delegation, not a negative result.
 
@@ -223,7 +228,7 @@ Recorded exercised payload/results:
 - A successful public operation is mechanically established only when the bundled script exits zero and emits `schemaVersion: 1`, `status: "succeeded"`, `commandExitCode: 0`, and a public `response` object without exposing Prowl command grammar.
 - Every positively identified Prowl participant retains complete public identities verbatim.
 - Every delegation preserves its initiating coordination reference through exactly one completed, failed, rejected, or unavailable terminal handback.
-- Every delegation's `instruction` ends with the exact command reaching `sender.pane` and the `<environment_traps>` conditions, so the recipient can push completion without discovering the environment first; the pane itself is read from the envelope, never restated as a separate field.
+- Every delegation carries one source-generated handback block whose command ends exactly at `run` and whose conditions identify checked submission, no retry after submission, the default socket, and both expected panes.
 - A durable handback writes its file before sending, and the notification reaches the sender's pane as a submitted turn rather than editor prefill.
 - One `resolve-target` invocation returns the checked inventory, complete caller and participants, non-caller path matches, and candidate-specific immediate-return send templates without sending.
 - An operator-named target is reported as the supplied worktree or directory, never as a pane UUID the operator must verify.
@@ -251,11 +256,11 @@ A source-owned coordination envelope delivered to one complete Prowl pane identi
 
 <workflow>
 
-1. Read `$ARGUMENTS`. When it is empty or whitespace, stop with `invalid-schema` and require one JSON message request containing `recipientPath`, `kind`, `subject`, and `facts`; perform no discovery or delivery. Otherwise interpret it as that request, with `recipientPath` holding the recipient's absolute worktree, repository, or working-directory path and with any applicable coordination fields. The request may carry `toPane` only as a complete identity assertion from an upstream coordination plan. When required data is absent, stop and name it before discovery or delivery; never invent message data or ask for a pane UUID.
+1. Read `$ARGUMENTS`. When it is empty or whitespace, stop with `invalid-schema` and require one JSON message request containing `recipientPath`, `kind`, `subject`, and `facts`; perform no discovery or delivery. Otherwise interpret it as that request, with `recipientPath` holding the recipient's absolute worktree, repository, or working-directory path and with any applicable coordination fields. The request may carry `toPane` only as a complete identity assertion from an upstream coordination plan and may carry `handback` only as the complete structured block returned by `/operate-prowl plan-handback`. When required data is absent, stop and name it before discovery or delivery; never invent message data or ask for a pane UUID.
 2. Invoke `/operate-prowl` once for `resolve-target` with the supplied path. Preserve the complete result. It returns the checked inventory, complete caller and participants, and non-caller candidates whose `sendRequestTemplate` already selects each pane with immediate-return mode and normal trailing-Enter behavior.
 3. Require a complete resolved caller and one selected candidate. On `identity-ambiguous` with `caller: null`, report the exact detail as an unresolved caller-identity conflict and stop; never ask the operator to select from the empty candidate set. Otherwise, when the request carries `toPane`, match it against the captured non-caller candidates before considering cardinality: exactly one matching candidate selects it, while zero or multiple matches stop with `invalid-identity`. Without `toPane`, use the sole candidate on `succeeded`. On `identity-ambiguous`, use `AskUserQuestion` for one single-select question: number candidates in resolver order, show each candidate's complete pane, worktree, branch, and repository, and map the answer back to that exact captured candidate and its `sendRequestTemplate` without rerunning resolution. When the runtime's option cap is below the candidate count, include the complete numbered inventory in the question and accept an exact candidate number through its free-form response; never omit a candidate. On `identity-unavailable`, report the exact detail and participant worktrees. NEVER select by title, focus, position, prose, or the caller's pane.
 4. Build the bundled script's `discovery` input directly from the resolver result: `caller` is the returned caller, `targets` is the returned complete participant list, and `status` is `prowl-pane`. Set `toPane` from the selected candidate's complete participant. This source-owned bridge uses the captured resolver result directly; never write an intermediate file or run an ad hoc transformation script.
-5. Build the bundled script's message request with the selected candidate's `toPane`, `kind`, `subject`, `facts`, optional `request`, optional `coordinationReference`, optional `mutationTarget`, optional `observedState`, and optional `accepted`. `recipientPath` has completed target resolution and never enters the envelope. `kind` is exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. An acknowledgement, mutation-state report, or mutation authorization MUST reuse the active proposal UUID; an initiating proposal or fact MUST omit it so the adapter creates a new UUID. An acknowledgement MUST carry boolean `accepted`; every other kind omits it.
+5. Build the bundled script's message request with the selected candidate's `toPane`, `kind`, `subject`, `facts`, optional `request`, optional `handback`, optional `coordinationReference`, optional `mutationTarget`, optional `observedState`, and optional `accepted`. `recipientPath` has completed target resolution and never enters the envelope. `kind` is exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. An acknowledgement, mutation-state report, or mutation authorization MUST reuse the active proposal UUID; an initiating proposal or fact MUST omit it so the adapter creates a new UUID. An acknowledgement MUST carry boolean `accepted`; every other kind omits it. Only a `fact` production request carries `handback`. Preserve that block byte-for-byte from `/operate-prowl`; reject top-level `command`, `handbackCommand`, `returnPane`, or `adapterPath` fields and never reconstruct the block.
 6. For a delegated mutation, use the source-owned handshake:
    - An `ownership-proposal` carries `mutationTarget` with exact `pane`, `worktree`, `branch`, `repository`, full `head`, and `status` values; pane, worktree, branch, and repository match the live recipient identity.
    - A `mutation-state` response carries the same target plus `observedState` with exact `worktree`, `branch`, `repository`, full `head`, and `status` values matching the live sender identity.
@@ -295,6 +300,8 @@ printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":
 - ALWAYS preserve complete source-supplied agent, pane, worktree, branch, repository, run, coordination-reference, mutation-target, observed-state, and transport identities.
 - ALWAYS report the selected target using the exact `recipientPath` supplied by the caller while using the resolved pane UUID only inside the delivery operation.
 - ALWAYS invoke `/operate-prowl` for source-owned target resolution and delivery.
+- ALWAYS preserve a production request's complete source-generated `handback` block unchanged.
+- NEVER accept or construct a handback command, return-pane field, or cross-skill adapter path.
 - ALWAYS retain each complete command result in the active tool context and feed it into the next source-owned operation; no scratch file or shell redirect is part of this workflow.
 - NEVER scan transcript files, use another terminal multiplexer, or ask the operator to relay a message as a fallback.
 - NEVER select an endpoint by title, focus, position, inferred prose, or an undeclared environment.
@@ -304,7 +311,7 @@ printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":
 
 <testing>
 
-Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Run the documented `build` stdin form and require `delivery.status: "ready"`; run the documented `result` form with a complete successful `send` payload and require `status: "delivered"`, then remove or alter each required transport field and require rejection. The matrix covers authoritative `toPane` selection from ambiguous candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, malformed identities and optional fields, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
+Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Run the documented `build` stdin form and require `delivery.status: "ready"`; run the documented `result` form with a complete successful `send` payload and require `status: "delivered"`, then remove or alter each required transport field and require rejection. The matrix covers authoritative `toPane` selection from ambiguous candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, a production request that preserves the source-generated handback block, rejection of caller-authored executable handback fields, malformed identities and optional fields, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
 
 Recorded exercised payload/results:
 
@@ -320,7 +327,7 @@ Recorded exercised payload/results:
 
 **Continuation prose remained in the editor.** Claude treated a successful immediate-return send as a submitted turn even though the operator could still see editable text. Require `response.data.input.trailing_enter_sent: true`; a prefill or absent submission field is a delivery failure.
 
-**A request was sent with no way for the answer to come back.** Claude asked a recipient to produce a result and sent no return path, then had no signal when the recipient finished. Polling is blocked by design, so the sender read the recipient's pane once, saw nothing, and moved on while the finished result sat on disk — leaving the operator to carry it between the two agents. A message that asks for something carries the sender's own complete pane and the exact command that reaches it, so the recipient can send one line back on completion.
+**A request was sent with no way for the answer to come back.** Claude asked a recipient to produce a result and sent no return path, then had no signal when the recipient finished. Polling is blocked by design, so the sender read the recipient's pane once, saw nothing, and moved on while the finished result sat on disk. A production request carries the complete handback block returned by `/operate-prowl plan-handback`, so the recipient can send one line back on completion.
 
 **A pane UUID was requested from the operator.** Claude asked which pane to send to, when the operator had already named the target the only way they can — by worktree or working directory. Resolve the operator's naming against the live inventory and report the target back in the same terms.
 
@@ -332,6 +339,7 @@ Recorded exercised payload/results:
 
 - Target resolution passes only with one complete non-caller candidate selected from the complete checked inventory for `recipientPath`, with any supplied `toPane` matching that candidate.
 - Build passes only with one validated envelope and one semantic delivery bound to the target's complete pane UUID.
+- A production request preserves one source-generated handback block and rejects every caller-authored executable handback field.
 - Delivery passes only after `/operate-prowl` returns a checked successful result whose public input record confirms trailing Enter was sent; every failure preserves its exact status, detail, and command exit code when present.
 - Caller, recipient, mutation-target, and observed-state identities validate before delivery.
 - Transport delivery remains distinct from acknowledgement, agreement, authorization, ownership, and continuation.
@@ -390,24 +398,24 @@ For a shared blocker, replace `operatorAction: null` with this complete object:
 
 Preserve every input participant in the verdict's `participants` array, dropping none — including a participant the classified relationship does not involve. An operator-named target resolved in step 1 joins that array as a complete identity, because it is a party to the coordination; resolution adds, never replaces. The array therefore holds exactly the input participants plus any resolved target, and never a participant no evidence names.
 
-Each message carries every field in the source-owned message contract: complete `recipientPath` equal to the recipient participant's absolute worktree, complete `toPane` UUID, `kind`, `subject`, `facts`, `request`, `coordinationReference`, `mutationTarget`, `observedState`, and `accepted`. `facts` is always an array of strings, including branches with exactly one fact. Use null for every field that does not apply. `kind` MUST be exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. Omit or set `coordinationReference` to null for initiating proposals and facts so `/message-agents` creates a UUID; every response kind preserves the active proposal UUID. Only an `acknowledgement` carries boolean `accepted`; every other kind carries `accepted: null`.
+Each message carries every field in the source-owned message contract: complete `recipientPath` equal to the recipient participant's absolute worktree, complete `toPane` UUID, `kind`, `subject`, `facts`, `request`, `handback`, `coordinationReference`, `mutationTarget`, `observedState`, and `accepted`. `facts` is always an array of strings, including branches with exactly one fact. Use null for every field that does not apply. `kind` MUST be exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. Omit or set `coordinationReference` to null for initiating proposals and facts so `/message-agents` creates a UUID; every response kind preserves the active proposal UUID. Only an `acknowledgement` carries boolean `accepted`; every other kind carries `accepted: null`. Only a production request carries the complete `handback` object returned by `/operate-prowl plan-handback`.
 
 Use these branch-owned payloads:
 
-| Branch                      | `subject`                          | `facts`                                                                                                               | `request`                                                                                                   |
-| --------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Ownership proposal          | `Ownership overlap`                | one `overlap=<path-or-concern>` string per checked overlapping item                                                   | `Accept or reject this ownership proposal.`                                                                 |
-| Delegated-mutation proposal | `Delegated mutation ownership`     | `target identity and state are authoritative`                                                                         | `Report exact pre-mutation state and accept or reject ownership.`                                           |
-| Dependency handoff          | `Dependency fact`                  | the checked dependency fact only                                                                                      | null                                                                                                        |
-| Production request          | `Dependency production request`    | the exact checked `requestedArtifact` value, then `returnPane=<requester-pane>` and `handbackCommand=<exact-command>` | `Send the handback command when the result is written.`                                                     |
-| Shared-blocker recovery     | `Shared blocker restored`          | `externalConditionKey=<key>` and `status=<operator-confirmed-status>`                                                 | null                                                                                                        |
-| Mutation authorization      | `Delegated mutation authorization` | `accepted ownership and observed state match the target`                                                              | `Recreate the required change in the target worktree; do not mutate or transfer from the sibling worktree.` |
+| Branch                      | `subject`                          | `facts`                                                               | `request`                                                                                                   |
+| --------------------------- | ---------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Ownership proposal          | `Ownership overlap`                | one `overlap=<path-or-concern>` string per checked overlapping item   | `Accept or reject this ownership proposal.`                                                                 |
+| Delegated-mutation proposal | `Delegated mutation ownership`     | `target identity and state are authoritative`                         | `Report exact pre-mutation state and accept or reject ownership.`                                           |
+| Dependency handoff          | `Dependency fact`                  | the checked dependency fact only                                      | null                                                                                                        |
+| Production request          | `Dependency production request`    | the exact checked `requestedArtifact` value as the only fact          | `Send the handback when the result is written.`                                                             |
+| Shared-blocker recovery     | `Shared blocker restored`          | `externalConditionKey=<key>` and `status=<operator-confirmed-status>` | null                                                                                                        |
+| Mutation authorization      | `Delegated mutation authorization` | `accepted ownership and observed state match the target`              | `Recreate the required change in the target worktree; do not mutate or transfer from the sibling worktree.` |
 
 4. Apply the protocol:
 
 - A checked path or concern overlap produces an `ownership-proposal` with one `overlap=<path-or-concern>` fact per overlapping item; its boundary remains proposed until a matching accepted acknowledgement arrives.
 - A dependency handoff sends `kind: "fact"` with checked facts and `request: null`, not another workflow's continuation instructions.
-- A dependency handoff that asks another workflow to *produce* something is a production request — its own branch, distinct from handing over an already-checked dependency fact. It still sends `kind: "fact"`. Its first `facts` string is the exact checked `requestedArtifact` value unchanged, with no field-name prefix; the next two are exactly `returnPane=<requester-pane>` and `handbackCommand=<exact-command>`. Its `request` is exactly `Send the handback command when the result is written.` The requester cannot poll — polling loops are blocked by design — so a request with no return path is one the requester can never learn the answer to, and the operator ends up relaying it by hand. When the produced artifact is a file, the file carries the payload and the handback carries only the signal and the complete path. Emit `status: "signal-gap"`, `reason: "insufficient-evidence"`, and no message when the requester's own pane is not among the authoritative participants, since a return path cannot be fabricated.
+- A dependency handoff that asks another workflow to *produce* something is a production request — its own branch, distinct from handing over an already-checked dependency fact. It still sends `kind: "fact"`. Its `facts` array contains only the exact checked `requestedArtifact` value unchanged, with no field-name prefix. Its `request` is exactly `Send the handback when the result is written.` Before emitting the message, invoke `/operate-prowl plan-handback` with the authoritative requester as `sender`, the producer as `recipient`, and the exact semantic `completionText`; preserve the returned `handback` object unchanged. Never write a command, return-pane fact, or cross-skill script path. When the produced artifact is a file, the file carries the payload and `completionText` carries the complete path in the signal. Emit `status: "signal-gap"`, `reason: "insufficient-evidence"`, and no message when the requester is absent from the authoritative participants, `completionText` is absent, or the environment capability does not return a successful structured block.
 - A delegated mutation begins with an `ownership-proposal` whose `mutationTarget` contains the recipient's exact pane UUID, worktree path, branch, repository, full HEAD SHA, and status. The recipient performs no mutation until it returns both a matching `acknowledgement` with `accepted: true` and a `mutation-state` message with the same coordination reference and an `observedState` containing its exact worktree, branch, repository, full HEAD SHA, and status.
 - When delegated-mutation evidence has no `observedState`, emit one ownership proposal carrying the exact target and request the state report.
 - Treat `acceptedAcknowledgement` as authoritative only when its kind is `acknowledgement`, `accepted` is true, its coordination reference equals the active proposal reference, its sender is the target participant, and its recipient is the coordinating participant. When observed state exists but acknowledgement evidence is missing, rejected, or mismatched, emit `status: "coordination-needed"`, `reason: "ownership-overlap"`, and no message.
@@ -433,12 +441,15 @@ Use these branch-owned payloads:
 - NEVER plan or deliver a message to the complete current caller pane.
 - NEVER wait on another workflow by polling its pane, re-reading it on a timer, or treating one empty read as evidence it produced nothing. A read establishes that pane's state at the instant it ran, never that a request is unanswered.
 - NEVER leave the operator to carry a result between two workflows. When a request needs an answer, the request itself carries the return path.
+- NEVER construct or copy executable handback data; `/operate-prowl` owns the structured block.
 
 </constraints>
 
 <failure_modes>
 
-**A production request went out with no way to answer it.** Claude classified a dependency handoff correctly and sent the checked need, but omitted `returnPane=` and `handbackCommand=`. The recipient produced the result and had no address to send it to. Claude could not poll — polling loops are blocked by design — so it read the recipient's pane once, saw nothing, and moved on while the finished result sat on disk; the operator carried the answer between the two workflows by hand. A production request without both facts is unanswerable by construction.
+**A production request went out with no way to answer it.** Claude classified a dependency handoff correctly and sent the checked need without a structured handback. The recipient produced the result and had no address to send it to. Generate the block through `/operate-prowl plan-handback` before emitting the message; a production request without that source-owned block is a signal gap.
+
+**A copied handback command gained a trailing argument.** Claude copied command text into a coordination fact and changed the command to `run .`. The adapter rejected the extra argument before sending. Pass semantic `completionText` to `/operate-prowl plan-handback` and preserve its returned block unchanged.
 
 **One empty pane read was treated as a negative result.** Claude read a recipient's pane, saw nothing relevant, and concluded the workflow had produced nothing. The read established that pane's state at the instant it ran and nothing more. Absence of a handback is an open request; only a returned message closes it.
 
@@ -451,6 +462,7 @@ Use these branch-owned payloads:
 - The structured verdict names whether coordination is needed, its authoritative reason, complete participants, and protocol-valid messages whose delivery result proves submission rather than editor prefill.
 - Shared blockers yield one human-owned action, expose the recovery fact to the current workflow in the verdict, and message every other affected workflow without centralizing execution.
 - Delegated mutations carry an exact target envelope, require an exact pre-mutation state report, and produce no authorization on any identity mismatch.
+- Production requests carry one source-generated handback block and no caller-authored command or return-pane facts.
 - Independent work and signal gaps produce no message.
 
 </success_criteria>

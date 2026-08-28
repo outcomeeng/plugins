@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.6.1
+
+### Fixed
+
+- **Production requests use source-generated handback commands.** Callers provide semantic completion text, and `/operate-prowl` returns one structured block whose command ends at `run`, carries checked submission criteria, and cannot gain a stray trailing argument during prompt assembly.
+
 ## 0.6.0
 
 ### Breaking

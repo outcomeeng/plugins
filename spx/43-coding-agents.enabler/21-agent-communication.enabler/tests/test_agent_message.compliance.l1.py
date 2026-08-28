@@ -13,6 +13,7 @@ from outcomeeng_testing.harnesses.coding_agents import (
     generated_envelope,
     mutation_observation,
     observe_send_transport,
+    production_handback,
     public_message_context,
 )
 
@@ -350,6 +351,29 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
                 {**valid_request, forbidden_field: forbidden_field}, discovery
             )
         assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
+
+    for executable_field in (
+        module.COMMAND_FIELD,
+        "handbackCommand",
+        "returnPane",
+        module.ADAPTER_PATH_FIELD,
+    ):
+        with pytest.raises(module.MessageError) as raised:
+            module.send_request(
+                {**valid_request, executable_field: "caller-owned"}, discovery
+            )
+        assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
+
+    handback = production_handback(sender, recipient)
+    tampered_handback = {
+        **handback,
+        module.COMMAND_FIELD: f"{handback[module.COMMAND_FIELD]} .",
+    }
+    with pytest.raises(module.MessageError) as raised:
+        module.send_request(
+            {**valid_request, module.HANDBACK_FIELD: tampered_handback}, discovery
+        )
+    assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
 
 
 def test_message_cli_preserves_source_owned_results() -> None:
