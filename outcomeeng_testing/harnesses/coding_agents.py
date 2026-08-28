@@ -167,12 +167,18 @@ def production_handback(
 
 def run_handback_preservation_property(
     assert_handback: Callable[
-        [ModuleType, dict[str, str], dict[str, str], dict[str, object]], None
+        [
+            ModuleType,
+            dict[str, str],
+            dict[str, str],
+            dict[str, object],
+            dict[str, object],
+        ],
+        None,
     ],
 ) -> None:
     """Drive generated handbacks while the linked test owns preservation."""
-    _, message, _, participants = observed_message_participants()
-    sender, recipient = participants[:2]
+    message, sender, recipient, discovery = public_message_context()
 
     @seed(HANDBACK_PROPERTY_SEED)
     @settings(
@@ -186,6 +192,7 @@ def run_handback_preservation_property(
             message,
             sender,
             recipient,
+            discovery,
             production_handback(sender, recipient, completion_text),
         )
 

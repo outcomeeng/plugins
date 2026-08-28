@@ -352,12 +352,7 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
             )
         assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
 
-    for executable_field in (
-        module.COMMAND_FIELD,
-        "handbackCommand",
-        "returnPane",
-        module.ADAPTER_PATH_FIELD,
-    ):
+    for executable_field in module.FORBIDDEN_EXECUTABLE_FIELDS:
         with pytest.raises(module.MessageError) as raised:
             module.send_request(
                 {**valid_request, executable_field: "caller-owned"}, discovery

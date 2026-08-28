@@ -30,6 +30,7 @@ trials = 1
 kind = "producer-files"
 producers = [
   "dist/claude/coding-agents/skills/operate-prowl/SKILL.md",
+  "dist/claude/coding-agents/skills/operate-prowl/scripts/prowl_environment.py",
   "dist/claude/coding-agents/skills/message-agents/SKILL.md",
   "dist/claude/coding-agents/skills/coordinate-agents/SKILL.md",
 ]

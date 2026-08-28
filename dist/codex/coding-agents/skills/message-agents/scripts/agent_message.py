@@ -141,6 +141,9 @@ OBSERVED_STATE_FIELDS = frozenset(
     {WORKTREE_FIELD, BRANCH_FIELD, REPOSITORY_FIELD, HEAD_FIELD, STATUS_FIELD}
 )
 FORBIDDEN_TARGET_FIELDS = frozenset({"title", "focus", "position", "prose", "channel"})
+FORBIDDEN_EXECUTABLE_FIELDS = frozenset(
+    {COMMAND_FIELD, "handbackCommand", "returnPane", ADAPTER_PATH_FIELD}
+)
 IDENTITY_FIELDS = ("agent", "pane", "worktree", "branch", "repository")
 IDENTITY_INPUT_FIELDS = frozenset((*IDENTITY_FIELDS, RUN_FIELD))
 

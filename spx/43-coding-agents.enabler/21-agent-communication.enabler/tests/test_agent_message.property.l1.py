@@ -11,18 +11,22 @@ def test_production_requests_preserve_source_generated_handbacks() -> None:
         module: ModuleType,
         sender: dict[str, str],
         recipient: dict[str, str],
+        discovery: dict[str, object],
         handback: dict[str, object],
     ) -> None:
         content = message_content(module.MessageKind.FACT, 1)
-        envelope = module.build_envelope(
-            kind=module.MessageKind.FACT,
-            sender=sender,
-            recipient=recipient,
-            subject=content.subject,
-            facts=list(content.facts),
-            request=content.request,
-            handback=handback,
+        result = module.send_request(
+            module.build_request(
+                to_pane=recipient[module.PANE_FIELD],
+                kind=module.MessageKind.FACT,
+                subject=content.subject,
+                facts=list(content.facts),
+                request=content.request,
+                handback=handback,
+            ),
+            discovery,
         )
+        envelope = result[module.ENVELOPE_FIELD]
 
         assert envelope[module.HANDBACK_FIELD] == handback
         assert module.validate_envelope(envelope)[module.HANDBACK_FIELD] == handback
