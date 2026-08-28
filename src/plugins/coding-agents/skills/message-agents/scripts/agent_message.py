@@ -213,7 +213,10 @@ def _load_prowl_environment() -> ModuleType:
     cached = sys.modules.get(PROWL_ENVIRONMENT_MODULE)
     if cached is not None:
         module_path = getattr(cached, "__file__", None)
-        if isinstance(module_path, str) and Path(module_path).resolve() == resolved_path:
+        if (
+            isinstance(module_path, str)
+            and Path(module_path).resolve() == resolved_path
+        ):
             return cached
     spec = importlib.util.spec_from_file_location(
         PROWL_ENVIRONMENT_MODULE,
