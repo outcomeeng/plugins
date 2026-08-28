@@ -4,14 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
-import shlex
 import sys
 import uuid
 from enum import StrEnum
 from pathlib import Path
+from types import ModuleType
 from typing import Callable, TextIO, cast
 
 SCHEMA_VERSION = 4
@@ -146,6 +147,13 @@ FORBIDDEN_EXECUTABLE_FIELDS = frozenset(
 )
 IDENTITY_FIELDS = ("agent", "pane", "worktree", "branch", "repository")
 IDENTITY_INPUT_FIELDS = frozenset((*IDENTITY_FIELDS, RUN_FIELD))
+PROWL_ENVIRONMENT_PATH = (
+    Path(__file__).resolve().parent.parent.parent
+    / "operate-prowl"
+    / "scripts"
+    / "prowl_environment.py"
+)
+PROWL_ENVIRONMENT_MODULE = "coding_agents_prowl_environment"
 
 
 class Operation(StrEnum):
@@ -198,6 +206,41 @@ class MessageError(RuntimeError):
     def __init__(self, status: DeliveryStatus, message: str) -> None:
         super().__init__(message)
         self.status = status
+
+
+def _load_prowl_environment() -> ModuleType:
+    resolved_path = PROWL_ENVIRONMENT_PATH.resolve()
+    cached = sys.modules.get(PROWL_ENVIRONMENT_MODULE)
+    if cached is not None:
+        module_path = getattr(cached, "__file__", None)
+        if isinstance(module_path, str) and Path(module_path).resolve() == resolved_path:
+            return cached
+    spec = importlib.util.spec_from_file_location(
+        PROWL_ENVIRONMENT_MODULE,
+        resolved_path,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Cannot load Prowl environment command contract from {resolved_path}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[PROWL_ENVIRONMENT_MODULE] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _expected_handback_command(
+    *, pane: str, completion_text: str, adapter_path: str
+) -> str:
+    command_builder = cast(
+        Callable[..., str],
+        getattr(_load_prowl_environment(), "_handback_command"),
+    )
+    return command_builder(
+        pane=pane,
+        completion_text=completion_text,
+        adapter_path=adapter_path,
+    )
 
 
 def _object(value: object, location: str) -> dict[str, object]:
@@ -297,11 +340,15 @@ def _validated_handback(
             "Handback adapterPath must be absolute.",
         )
     command = _text(handback.get(COMMAND_FIELD), f"{HANDBACK_FIELD}.{COMMAND_FIELD}")
-    expected_adapter_suffix = f"| python3 {shlex.quote(adapter_path)} run"
-    if not command.endswith(expected_adapter_suffix):
+    expected_command = _expected_handback_command(
+        pane=sender[PANE_FIELD],
+        completion_text=completion_text,
+        adapter_path=adapter_path,
+    )
+    if command != expected_command:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Handback command must invoke its adapterPath and end at the run subcommand.",
+            "Handback command does not match its semantic completion data.",
         )
     success = _object(
         handback.get(SUCCESS_CRITERIA_FIELD),

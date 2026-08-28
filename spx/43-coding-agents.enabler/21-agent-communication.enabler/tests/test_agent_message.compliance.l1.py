@@ -367,6 +367,12 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
         },
         {
             **handback,
+            module.COMMAND_FIELD: production_handback(recipient, sender)[
+                module.COMMAND_FIELD
+            ],
+        },
+        {
+            **handback,
             module.ADAPTER_PATH_FIELD: "/caller-owned/prowl_environment.py",
         },
     ):
