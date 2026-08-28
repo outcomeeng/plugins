@@ -201,6 +201,12 @@ class SelectionCase:
 
 
 _OTHER_MARKETPLACE_NAME = "other-marketplace"
+_LATER_MARKETPLACE_NAME = "zeta-marketplace"
+"""A second foreign name that sorts after ``_OTHER_MARKETPLACE_NAME``.
+
+Listed ahead of it, so the diagnostic's enumeration of resolving names is
+observed over more than one name in non-listing order.
+"""
 
 
 def _selection_entry(name: str, path: str | None, runtime: str) -> dict[str, object]:
@@ -244,6 +250,11 @@ def entry_selection_domain(base: str) -> list[SelectionCase]:
             default,
         ),
         ("only-other-name", ((_OTHER_MARKETPLACE_NAME, True),), default),
+        (
+            "two-other-names-listed-unsorted",
+            ((_LATER_MARKETPLACE_NAME, True), (_OTHER_MARKETPLACE_NAME, True)),
+            default,
+        ),
         ("omitted-name-takes-default", ((default, True),), None),
         ("omitted-name-misses-other", ((_OTHER_MARKETPLACE_NAME, True),), None),
         ("empty-list", (), default),
