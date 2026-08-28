@@ -21,7 +21,7 @@ import importlib.util
 import re
 import subprocess
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Protocol, cast
@@ -86,6 +86,39 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("product-path follow guard", "Never follow paths from their output"),
 )
 AUTHORITY_HIERARCHY_POLICY_HEADING: Final = "## Authority Hierarchy"
+DANGEROUS_COMMAND_GUARD_POLICY_HEADING: Final = "### Dangerous-command guard"
+DANGEROUS_BRANCH_DYNAMIC_PROHIBITION_REQUIREMENT: Final = (
+    "NEVER** pass dynamic branch names to `git branch -d` or `git branch -D`"
+)
+DANGEROUS_BRANCH_DYNAMIC_FORMS_REQUIREMENT: Final = (
+    "variables, command substitutions, arrays, and globs are denied"
+)
+DANGEROUS_BRANCH_QUOTED_FORM_REQUIREMENT: Final = (
+    "including when quoted or placed after `--`"
+)
+DANGEROUS_BRANCH_LITERAL_NAME_REQUIREMENT: Final = "Type every branch name literally"
+DANGEROUS_BRANCH_MULTI_NAME_REQUIREMENT: Final = (
+    "delete several literal names in one command"
+)
+DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS: Final = (
+    (
+        "dynamic destructive branch prohibition",
+        DANGEROUS_BRANCH_DYNAMIC_PROHIBITION_REQUIREMENT,
+    ),
+    (
+        "dynamic destructive branch forms",
+        DANGEROUS_BRANCH_DYNAMIC_FORMS_REQUIREMENT,
+    ),
+    (
+        "quoted dynamic branch denial",
+        DANGEROUS_BRANCH_QUOTED_FORM_REQUIREMENT,
+    ),
+    ("literal destructive branch names", DANGEROUS_BRANCH_LITERAL_NAME_REQUIREMENT),
+    (
+        "multi-branch destructive invocation",
+        DANGEROUS_BRANCH_MULTI_NAME_REQUIREMENT,
+    ),
+)
 AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     (
         "strong skill authority warning",
@@ -123,21 +156,48 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     ),
     ("Claude guide filename", "`CLAUDE.md` for Claude Code"),
     ("Codex guide filename", "`AGENTS.md` for Codex"),
+)
+DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT: Final = (
+    "a dangerous-command guard (DCG) block terminates the attempted command family"
+)
+DANGEROUS_COMMAND_GUARD_RETRY_PROHIBITION_REQUIREMENT: Final = (
+    "NEVER** retry it by reformulating, splitting, rewriting, removing the flagged "
+    "clause, or substituting an equivalent command to evade the guard"
+)
+DANGEROUS_COMMAND_GUARD_SANCTIONED_PATH_REQUIREMENT: Final = (
+    "follow the active skills, repository instructions, and declared overlays to "
+    "find a sanctioned operation"
+)
+DANGEROUS_COMMAND_GUARD_TERMINAL_REPORT_REQUIREMENT: Final = (
+    "report the blocked command with secrets redacted"
+)
+DANGEROUS_COMMAND_GUARD_TERMINAL_PURPOSE_REQUIREMENT: Final = "explain its purpose"
+DANGEROUS_COMMAND_GUARD_TERMINAL_REASON_REQUIREMENT: Final = "guard's reason"
+DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS: Final = (
     (
         "dangerous-command guard stop trigger",
-        "a dangerous-command guard (DCG) block terminates the attempted command family",
+        DANGEROUS_COMMAND_GUARD_STOP_TRIGGER_REQUIREMENT,
     ),
     (
         "dangerous-command guard retry prohibition",
-        "NEVER** retry it by reformulating, splitting, rewriting, removing the flagged clause, or substituting an equivalent command to evade the guard",
+        DANGEROUS_COMMAND_GUARD_RETRY_PROHIBITION_REQUIREMENT,
     ),
+    *DANGEROUS_BRANCH_DELETION_POLICY_REQUIREMENTS,
     (
         "dangerous-command guard sanctioned path",
-        "follow the active skills, repository instructions, and declared overlays to find a sanctioned operation",
+        DANGEROUS_COMMAND_GUARD_SANCTIONED_PATH_REQUIREMENT,
     ),
     (
         "dangerous-command guard terminal report",
-        "report the blocked command with secrets redacted",
+        DANGEROUS_COMMAND_GUARD_TERMINAL_REPORT_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard terminal purpose",
+        DANGEROUS_COMMAND_GUARD_TERMINAL_PURPOSE_REQUIREMENT,
+    ),
+    (
+        "dangerous-command guard terminal reason",
+        DANGEROUS_COMMAND_GUARD_TERMINAL_REASON_REQUIREMENT,
     ),
 )
 WAIT_FOR_LOAD_STOP_TRIGGER: Final = (
@@ -156,6 +216,8 @@ WAIT_FOR_LOAD_POLICY_REQUIREMENTS: Final = (
     ("ready command", WAIT_FOR_LOAD_READY_REQUIREMENT),
     ("scope preservation", WAIT_FOR_LOAD_SCOPE_REQUIREMENT),
 )
+MARKDOWN_BLOCKQUOTE_MARKER: Final = ">"
+MARKDOWN_CODE_FENCE_MARKERS: Final = ("```", "~~~")
 
 
 @dataclass(frozen=True)
@@ -540,6 +602,8 @@ class InstructionBlockModule(Protocol):
 
     def parse_template_version(self, text: str) -> str | None: ...
 
+    def template_languages(self, template_text: str) -> tuple[str, ...]: ...
+
     def assert_no_unresolved_build_macros(self, template_text: str) -> None: ...
 
     def detect_languages_from_tree(self, spx_dir: Path) -> tuple[str, ...]: ...
@@ -561,6 +625,15 @@ class InstructionBlockModule(Protocol):
     def remove_obsolete_spx_instruction_files(self, repo_root: Path) -> None: ...
 
     def shared_region_drift(self, repo_root: Path) -> tuple[str, ...]: ...
+
+
+@dataclass(frozen=True)
+class OperativePolicyValidation:
+    """One source-owned router policy validation and its required prose."""
+
+    name: str
+    requirements: tuple[tuple[str, str], ...]
+    validator: Callable[[Mapping[str, str]], None]
 
 
 def _run(
@@ -694,6 +767,25 @@ def _markdown_section(document: str, heading: str) -> str:
     return "\n".join(lines[start:end])
 
 
+def _operative_policy_line_contains(section: str, required_text: str) -> bool:
+    """Return whether operative policy prose contains ``required_text``."""
+    fence_marker: str | None = None
+    for line in section.splitlines():
+        stripped = line.strip()
+        marker = stripped[:3]
+        if marker in MARKDOWN_CODE_FENCE_MARKERS:
+            if fence_marker is None:
+                fence_marker = marker
+            elif fence_marker == marker:
+                fence_marker = None
+            continue
+        if fence_marker is not None or stripped.startswith(MARKDOWN_BLOCKQUOTE_MARKER):
+            continue
+        if required_text in line:
+            return True
+    return False
+
+
 def managed_router_block(document: str) -> str:
     """Extract the managed router block from a complete root instruction document."""
     module = load_instruction_block_module()
@@ -702,6 +794,29 @@ def managed_router_block(document: str) -> str:
         raise FoundationAccessPolicyError("missing complete standalone router block")
     start, end = bounds
     return document[start:end]
+
+
+def dangerous_command_guard_policy_section(router: str) -> str:
+    """Extract the dangerous-command guard section from a managed router."""
+    authority_section = _markdown_section(router, AUTHORITY_HIERARCHY_POLICY_HEADING)
+    return _markdown_section(authority_section, DANGEROUS_COMMAND_GUARD_POLICY_HEADING)
+
+
+def validate_dangerous_command_guard_policy(
+    sections_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a dangerous-command guard section missing an operative rule."""
+    for harness, guard_section in sections_by_harness.items():
+        missing_guard_rules = [
+            name
+            for name, required_text in DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS
+            if not _operative_policy_line_contains(guard_section, required_text)
+        ]
+        if missing_guard_rules:
+            details = ", ".join(missing_guard_rules)
+            raise AuthorityHierarchyPolicyError(
+                f"{harness} router dangerous-command guard is incomplete: {details}"
+            )
 
 
 def validate_foundation_access_policy(
@@ -714,7 +829,7 @@ def validate_foundation_access_policy(
         missing = [
             name
             for name, required_text in FOUNDATION_POLICY_REQUIREMENTS
-            if required_text not in section
+            if not _operative_policy_line_contains(section, required_text)
         ]
         if missing:
             details = ", ".join(missing)
@@ -744,13 +859,20 @@ def validate_authority_hierarchy_policy(
         missing = [
             name
             for name, required_text in AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS
-            if required_text not in section
+            if not _operative_policy_line_contains(section, required_text)
         ]
         if missing:
             details = ", ".join(missing)
             raise AuthorityHierarchyPolicyError(
                 f"{harness} router authority hierarchy is incomplete: {details}"
             )
+        try:
+            guard_section = dangerous_command_guard_policy_section(router)
+        except FoundationAccessPolicyError as exc:
+            raise AuthorityHierarchyPolicyError(
+                f"missing router section: {DANGEROUS_COMMAND_GUARD_POLICY_HEADING}"
+            ) from exc
+        validate_dangerous_command_guard_policy({harness: guard_section})
 
 
 def validate_harness_dispatch_mechanics(blocks_by_harness: Mapping[str, str]) -> None:
@@ -762,7 +884,7 @@ def validate_harness_dispatch_mechanics(blocks_by_harness: Mapping[str, str]) ->
     for harness, document in blocks_by_harness.items():
         router = managed_router_block(document)
         for owning_harness, marker in HARNESS_DISPATCH_MECHANICS_MARKERS.items():
-            present = marker in router
+            present = _operative_policy_line_contains(router, marker)
             if owning_harness == harness and not present:
                 raise HarnessDispatchMechanicsError(
                     f"{harness} router is missing its own dispatch mechanics: {marker}"
@@ -798,7 +920,7 @@ def validate_subagent_dispatch_policy(blocks_by_harness: Mapping[str, str]) -> N
         missing = [
             name
             for name, required_text in SUBAGENT_DISPATCH_POLICY_REQUIREMENTS
-            if required_text not in section
+            if not _operative_policy_line_contains(section, required_text)
         ]
         if missing:
             details = ", ".join(missing)
@@ -821,7 +943,9 @@ def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
         if harness == CODEX_HARNESS:
             requirements.extend(WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS)
         missing = [
-            name for name, required_text in requirements if required_text not in section
+            name
+            for name, required_text in requirements
+            if not _operative_policy_line_contains(section, required_text)
         ]
         if missing:
             details = ", ".join(missing)
@@ -863,7 +987,7 @@ def validate_operator_question_policy(
         missing = [
             name
             for name, required_text in OPERATOR_QUESTION_REQUIREMENTS
-            if required_text not in policy
+            if not _operative_policy_line_contains(policy, required_text)
         ]
         if missing:
             details = ", ".join(missing)
@@ -906,7 +1030,7 @@ def validate_verifier_dispatch_policy(
     missing = [
         name
         for name, required_text in CODEX_VERIFIER_DISPATCH_REQUIREMENTS
-        if required_text not in policy
+        if not _operative_policy_line_contains(policy, required_text)
     ]
     if missing:
         details = ", ".join(missing)
@@ -949,12 +1073,12 @@ def validate_deferred_agent_discovery_policy(
     missing_policy = [
         name
         for name, required_text in DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS
-        if required_text not in policy
+        if not _operative_policy_line_contains(policy, required_text)
     ]
     missing_lifecycle = [
         name
         for name, required_text in DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS
-        if required_text not in router
+        if not _operative_policy_line_contains(router, required_text)
     ]
     missing = [*missing_policy, *missing_lifecycle]
     if missing:
@@ -974,6 +1098,59 @@ def validate_deferred_agent_discovery_policy(
         )
 
 
+OPERATIVE_POLICY_VALIDATIONS: Final = (
+    OperativePolicyValidation(
+        name="foundation-access",
+        requirements=FOUNDATION_POLICY_REQUIREMENTS,
+        validator=validate_foundation_access_policy,
+    ),
+    OperativePolicyValidation(
+        name="authority-hierarchy",
+        requirements=(
+            *AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS,
+            *DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS,
+        ),
+        validator=validate_authority_hierarchy_policy,
+    ),
+    OperativePolicyValidation(
+        name="wait-for-load",
+        requirements=(
+            *WAIT_FOR_LOAD_POLICY_REQUIREMENTS,
+            *WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS,
+        ),
+        validator=validate_wait_for_load_policy,
+    ),
+    OperativePolicyValidation(
+        name="operator-question",
+        requirements=OPERATOR_QUESTION_REQUIREMENTS,
+        validator=validate_operator_question_policy,
+    ),
+    OperativePolicyValidation(
+        name="subagent-dispatch",
+        requirements=SUBAGENT_DISPATCH_POLICY_REQUIREMENTS,
+        validator=validate_subagent_dispatch_policy,
+    ),
+    OperativePolicyValidation(
+        name="harness-dispatch-mechanics",
+        requirements=tuple(HARNESS_DISPATCH_MECHANICS_MARKERS.items()),
+        validator=validate_harness_dispatch_mechanics,
+    ),
+    OperativePolicyValidation(
+        name="verifier-dispatch",
+        requirements=CODEX_VERIFIER_DISPATCH_REQUIREMENTS,
+        validator=validate_verifier_dispatch_policy,
+    ),
+    OperativePolicyValidation(
+        name="deferred-agent-discovery",
+        requirements=(
+            *DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS,
+            *DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS,
+        ),
+        validator=validate_deferred_agent_discovery_policy,
+    ),
+)
+
+
 def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     """Render both root instruction files in place from committed harness dist templates."""
     module = load_instruction_block_module()
@@ -989,14 +1166,8 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
         module.detect_languages_from_tree(spx_dir),
         template_paths=paths,
     )
-    validate_foundation_access_policy(rendered)
-    validate_authority_hierarchy_policy(rendered)
-    validate_wait_for_load_policy(rendered)
-    validate_operator_question_policy(rendered)
-    validate_subagent_dispatch_policy(rendered)
-    validate_harness_dispatch_mechanics(rendered)
-    validate_verifier_dispatch_policy(rendered)
-    validate_deferred_agent_discovery_policy(rendered)
+    for validation in OPERATIVE_POLICY_VALIDATIONS:
+        validation.validator(rendered)
     module.write_root_instruction_files(repo_root, rendered)
     module.remove_obsolete_spx_instruction_files(repo_root)
 
