@@ -365,15 +365,21 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
         assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
 
     handback = production_handback(sender, recipient)
-    tampered_handback = {
-        **handback,
-        module.COMMAND_FIELD: f"{handback[module.COMMAND_FIELD]} .",
-    }
-    with pytest.raises(module.MessageError) as raised:
-        module.send_request(
-            {**valid_request, module.HANDBACK_FIELD: tampered_handback}, discovery
-        )
-    assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
+    for tampered_handback in (
+        {
+            **handback,
+            module.COMMAND_FIELD: f"{handback[module.COMMAND_FIELD]} .",
+        },
+        {
+            **handback,
+            module.ADAPTER_PATH_FIELD: "/caller-owned/prowl_environment.py",
+        },
+    ):
+        with pytest.raises(module.MessageError) as raised:
+            module.send_request(
+                {**valid_request, module.HANDBACK_FIELD: tampered_handback}, discovery
+            )
+        assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
 
 
 def test_message_cli_preserves_source_owned_results() -> None:

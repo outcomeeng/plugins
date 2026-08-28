@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import sys
 import uuid
 from enum import StrEnum
@@ -293,10 +294,11 @@ def _validated_handback(
             "Handback adapterPath must be absolute.",
         )
     command = _text(handback.get(COMMAND_FIELD), f"{HANDBACK_FIELD}.{COMMAND_FIELD}")
-    if not command.endswith(" run") or command.endswith(" run ."):
+    expected_adapter_suffix = f"| python3 {shlex.quote(adapter_path)} run"
+    if not command.endswith(expected_adapter_suffix):
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Handback command must end at the run subcommand.",
+            "Handback command must invoke its adapterPath and end at the run subcommand.",
         )
     success = _object(
         handback.get(SUCCESS_CRITERIA_FIELD),
