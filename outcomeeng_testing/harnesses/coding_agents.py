@@ -4,14 +4,22 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import sys
 import uuid
+from io import StringIO
 from pathlib import Path
 from types import ModuleType
-from typing import cast
+from typing import Callable, cast
+
+from hypothesis import given, seed, settings
 
 from outcomeeng_testing.generators.coding_agents import message_content
-from outcomeeng_testing.generators.prowl_environment import public_agent_item
+from outcomeeng_testing.generators.prowl_environment import (
+    message_texts,
+    public_agent_item,
+)
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 from outcomeeng_testing.harnesses.prowl_environment import (
     RecordingRunner,
     load_prowl_environment,
@@ -22,6 +30,12 @@ from outcomeeng_testing.harnesses.prowl_environment import (
 ROOT = Path(__file__).parents[2]
 AGENT_MESSAGE_PATH = (
     ROOT / "src/plugins/coding-agents/skills/message-agents/scripts/agent_message.py"
+)
+HANDBACK_PROPERTY_SEED = 2026082801
+HANDBACK_PROPERTY_EXAMPLES = 40
+HANDBACK_PROPERTY_REPLAY_PATH = (
+    "spx/43-coding-agents.enabler/21-agent-communication.enabler/tests/"
+    "test_agent_message.property.l1.py"
 )
 
 
@@ -133,6 +147,82 @@ def fact_envelope(
             request=content.request,
             uuid_factory=lambda: uuid.UUID("cccccccc-cccc-4ccc-8ccc-cccccccccccc"),
         ),
+    )
+
+
+def production_handback(
+    sender: dict[str, str],
+    recipient: dict[str, str],
+    completion_text: str = "Requested artifact completed.",
+) -> dict[str, object]:
+    """Return a structured handback produced by the environment capability."""
+    return cast(
+        dict[str, object],
+        production_handback_plan(sender, recipient, completion_text)["handback"],
+    )
+
+
+def production_handback_plan(
+    sender: dict[str, str],
+    recipient: dict[str, str],
+    completion_text: str = "Requested artifact completed.",
+) -> dict[str, object]:
+    """Return the complete public plan-handback result."""
+    prowl = load_prowl_environment()
+    stdout = StringIO()
+    exit_code = prowl.main(
+        [prowl.CliOperation.PLAN_HAND_BACK],
+        stdin=StringIO(
+            json.dumps(
+                {
+                    prowl.SENDER_FIELD: sender,
+                    prowl.RECIPIENT_FIELD: recipient,
+                    prowl.COMPLETION_TEXT_FIELD: completion_text,
+                }
+            )
+        ),
+        stdout=stdout,
+    )
+    if exit_code != 0:
+        raise AssertionError(f"handback plan failed: {stdout.getvalue()}")
+    return cast(dict[str, object], json.loads(stdout.getvalue()))
+
+
+def run_handback_preservation_property(
+    assert_handback: Callable[
+        [
+            ModuleType,
+            dict[str, str],
+            dict[str, str],
+            dict[str, object],
+            dict[str, object],
+        ],
+        None,
+    ],
+) -> None:
+    """Drive generated handbacks while the linked test owns preservation."""
+    message, sender, recipient, discovery = public_message_context()
+
+    @seed(HANDBACK_PROPERTY_SEED)
+    @settings(
+        max_examples=HANDBACK_PROPERTY_EXAMPLES,
+        deadline=None,
+        print_blob=True,
+    )
+    @given(completion_text=message_texts())
+    def generated_handback_property(completion_text: str) -> None:
+        assert_handback(
+            message,
+            sender,
+            recipient,
+            discovery,
+            production_handback(sender, recipient, completion_text),
+        )
+
+    run_replayable_property(
+        generated_handback_property,
+        seed_value=HANDBACK_PROPERTY_SEED,
+        replay_path=HANDBACK_PROPERTY_REPLAY_PATH,
     )
 
 

@@ -21,6 +21,7 @@ def test_prowl_environment_properties() -> None:
             recipient=recipient,
             subject=property_text.subject,
             instruction=property_text.instruction,
+            completion_text=property_text.completion_text,
             coordination_reference=reference,
         )
         terminal = module.terminal_handback(
@@ -55,8 +56,8 @@ def test_prowl_environment_properties() -> None:
             module.terminal_handback(
                 delegation,
                 terminal_kind,
-                result_reference=property_text.result_reference,
-                projection=property_text.projection,
+                result_reference=f"{property_text.result_reference}-conflict",
+                projection=f"{property_text.projection}-conflict",
             ),
         )
         for conflicting_terminal in conflicting_terminals:

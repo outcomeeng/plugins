@@ -8,7 +8,7 @@ from outcomeeng_testing.harnesses.prowl_environment import (
 )
 
 
-def test_prowl_environment_conformance() -> None:
+def test_checked_responses_map_to_versioned_results() -> None:
     module = load_prowl_environment()
 
     for request in operation_requests(module):
@@ -37,42 +37,32 @@ def test_prowl_environment_conformance() -> None:
             stdin=StringIO(json.dumps(request)),
             stdout=output_stream,
         )
-        rendered = output_stream.getvalue()
 
-        assert rendered.count("\n") == 1
-        success = json.loads(rendered)
+        assert output_stream.getvalue().count("\n") == 1
         assert cli_exit_code == 0
-        validated = module.validate_operation_result(success, operation)
-        assert validated[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
-        assert validated[module.RESPONSE_FIELD] == response
-        assert validated[module.COMMAND_EXIT_CODE_FIELD] == 0
-        validated_response = validated[module.RESPONSE_FIELD]
-        validated_data = validated_response[module.DATA_FIELD]
-        if operation is module.Operation.OPEN:
-            assert (
-                validated_data[module.RESOLUTION_FIELD]
-                == module.OpenResolution.EXACT_ROOT
-            )
-            assert validated_data[module.CREATED_TAB_FIELD] is True
-        elif operation is module.Operation.SEND:
-            assert (
-                validated_data[module.INPUT_FIELD][module.TRAILING_ENTER_SENT_FIELD]
-                is True
-            )
+        assert json.loads(output_stream.getvalue()) == {
+            module.SCHEMA_VERSION_FIELD: module.SCHEMA_VERSION,
+            module.OPERATION_FIELD: operation,
+            module.STATUS_FIELD: module.ExecutionStatus.SUCCEEDED,
+            module.COMMAND_EXIT_CODE_FIELD: 0,
+            module.RESPONSE_FIELD: response,
+        }
 
 
-def test_prowl_environment_failure_results_conform() -> None:
+def test_command_failures_map_to_named_results() -> None:
     module = load_prowl_environment()
     request = module.operation_request(module.Operation.LIST)
 
-    for command_result, expected_status in (
+    for command_result, expected_status, expected_detail in (
         (
             module.CommandResult(7, "", "command failed"),
             module.ExecutionStatus.COMMAND_FAILED,
+            "command failed",
         ),
         (
             module.CommandResult(0, "{", ""),
             module.ExecutionStatus.INVALID_SCHEMA,
+            "Prowl returned invalid JSON",
         ),
         (
             module.CommandResult(
@@ -86,10 +76,13 @@ def test_prowl_environment_failure_results_conform() -> None:
                 "",
             ),
             module.ExecutionStatus.COMMAND_FAILED,
+            "not accepted",
         ),
     ):
         result = module.execute(request, RecordingRunner([command_result]))
-        validated = module.validate_operation_result(result, module.Operation.LIST)
 
-        assert validated[module.STATUS_FIELD] == expected_status
-        assert validated[module.COMMAND_EXIT_CODE_FIELD] == command_result.returncode
+        assert result[module.SCHEMA_VERSION_FIELD] == module.SCHEMA_VERSION
+        assert result[module.OPERATION_FIELD] == module.Operation.LIST
+        assert result[module.STATUS_FIELD] == expected_status
+        assert result[module.COMMAND_EXIT_CODE_FIELD] == command_result.returncode
+        assert expected_detail in result[module.DETAIL_FIELD]

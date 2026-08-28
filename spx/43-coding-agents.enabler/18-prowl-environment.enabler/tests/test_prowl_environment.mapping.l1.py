@@ -1,5 +1,6 @@
 import json
 import uuid
+from io import StringIO
 from types import ModuleType
 from typing import cast
 
@@ -234,8 +235,30 @@ def test_terminal_kinds_map_to_correlated_handbacks() -> None:
             recipient=recipient,
             subject=content.subject,
             instruction=content.instruction,
+            completion_text=content.completion_text,
             coordination_reference=reference,
         )
+        handback = cast(dict[str, object], delegation[module.HANDBACK_FIELD])
+        command = cast(str, handback[module.COMMAND_FIELD])
+        success = cast(dict[str, object], handback[module.SUCCESS_CRITERIA_FIELD])
+
+        assert handback[module.COMPLETION_TEXT_FIELD] == content.completion_text
+        assert handback[module.ADAPTER_PATH_FIELD].endswith(
+            "/skills/operate-prowl/scripts/prowl_environment.py"
+        )
+        assert command.endswith(" run")
+        assert not command.endswith(" run .")
+        assert success == {
+            module.STATUS_FIELD: module.ExecutionStatus.SUCCEEDED,
+            module.COMMAND_EXIT_CODE_FIELD: 0,
+            module.TRAILING_ENTER_SENT_FIELD: True,
+        }
+        assert handback[module.RETRY_POLICY_FIELD] == module.HANDBACK_RETRY_POLICY
+        assert handback[module.SOCKET_FIELD] == module.DEFAULT_SOCKET
+        assert handback[module.EXPECTED_PANES_FIELD] == [
+            sender[module.PANE_FIELD],
+            recipient[module.PANE_FIELD],
+        ]
 
         for terminal_kind in module.TerminalKind:
             terminal = module.terminal_handback(
@@ -269,3 +292,29 @@ def test_terminal_kinds_map_to_correlated_handbacks() -> None:
             )
 
     run_terminal_mapping(assert_terminal)
+
+
+def test_plan_handback_cli_maps_semantic_text_to_generated_command() -> None:
+    module = load_prowl_environment()
+    sender = agent_identity(module, ordinal=1)
+    recipient = agent_identity(module, ordinal=2)
+    stdout = StringIO()
+
+    exit_code = module.main(
+        [module.CliOperation.PLAN_HAND_BACK],
+        stdin=StringIO(
+            json.dumps(
+                {
+                    module.SENDER_FIELD: sender,
+                    module.RECIPIENT_FIELD: recipient,
+                    module.COMPLETION_TEXT_FIELD: "Structure review completed.",
+                }
+            )
+        ),
+        stdout=stdout,
+    )
+    result = json.loads(stdout.getvalue())
+
+    assert exit_code == 0
+    assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+    assert result[module.HANDBACK_FIELD][module.COMMAND_FIELD].endswith(" run")

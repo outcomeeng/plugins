@@ -12,7 +12,7 @@ import uuid
 from enum import StrEnum
 from typing import Callable, TextIO, cast
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 SCHEMA_VERSION_FIELD = "schemaVersion"
 STATUS_FIELD = "status"
 DETAIL_FIELD = "detail"
@@ -25,6 +25,7 @@ CALLER_FIELD = "caller"
 TARGETS_FIELD = "targets"
 DISCOVERY_FIELD = "discovery"
 MESSAGE_REQUEST_FIELD = "messageRequest"
+HANDBACK_PLAN_FIELD = "handbackPlan"
 ENVELOPE_FIELD = "envelope"
 DELIVERY_FIELD = "delivery"
 DELIVERED_FIELD = "delivered"
@@ -35,6 +36,14 @@ KIND_FIELD = "kind"
 SUBJECT_FIELD = "subject"
 FACTS_FIELD = "facts"
 REQUEST_FIELD = "request"
+HANDBACK_FIELD = "handback"
+COMPLETION_TEXT_FIELD = "completionText"
+ADAPTER_PATH_FIELD = "adapterPath"
+COMMAND_FIELD = "command"
+SUCCESS_CRITERIA_FIELD = "successCriteria"
+RETRY_POLICY_FIELD = "retryPolicy"
+SOCKET_FIELD = "socket"
+EXPECTED_PANES_FIELD = "expectedPanes"
 COORDINATION_REFERENCE_FIELD = "coordinationReference"
 MUTATION_TARGET_FIELD = "mutationTarget"
 OBSERVED_STATE_FIELD = "observedState"
@@ -58,6 +67,11 @@ INPUT_FIELD = "input"
 TRAILING_ENTER_SENT_FIELD = "trailing_enter_sent"
 TRANSPORT_SEND_OPERATION = "send"
 TRANSPORT_SUCCEEDED_STATUS = "succeeded"
+HANDBACK_SCHEMA_VERSION = 1
+HANDBACK_PLAN_SCHEMA_VERSION = 2
+HANDBACK_RETRY_POLICY = "never-after-trailing-enter"
+DEFAULT_SOCKET = "default"
+PLAN_HANDBACK_OPERATION = "plan-handback"
 TRANSPORT_SUCCESS_FIELDS = frozenset(
     {
         SCHEMA_VERSION_FIELD,
@@ -79,6 +93,7 @@ ENVELOPE_FIELDS = frozenset(
         SUBJECT_FIELD,
         FACTS_FIELD,
         REQUEST_FIELD,
+        HANDBACK_FIELD,
         MUTATION_TARGET_FIELD,
         OBSERVED_STATE_FIELD,
         ACCEPTED_FIELD,
@@ -91,11 +106,30 @@ REQUEST_INPUT_FIELDS = frozenset(
         SUBJECT_FIELD,
         FACTS_FIELD,
         REQUEST_FIELD,
+        HANDBACK_FIELD,
         COORDINATION_REFERENCE_FIELD,
         MUTATION_TARGET_FIELD,
         OBSERVED_STATE_FIELD,
         ACCEPTED_FIELD,
     }
+)
+HANDBACK_FIELDS = frozenset(
+    {
+        SCHEMA_VERSION_FIELD,
+        COMPLETION_TEXT_FIELD,
+        ADAPTER_PATH_FIELD,
+        COMMAND_FIELD,
+        SUCCESS_CRITERIA_FIELD,
+        RETRY_POLICY_FIELD,
+        SOCKET_FIELD,
+        EXPECTED_PANES_FIELD,
+    }
+)
+HANDBACK_SUCCESS_FIELDS = frozenset(
+    {STATUS_FIELD, COMMAND_EXIT_CODE_FIELD, TRAILING_ENTER_SENT_FIELD}
+)
+HANDBACK_PLAN_FIELDS = frozenset(
+    {SCHEMA_VERSION_FIELD, TRANSPORT_OPERATION_FIELD, STATUS_FIELD, HANDBACK_FIELD}
 )
 MUTATION_TARGET_FIELDS = frozenset(
     {
@@ -111,6 +145,9 @@ OBSERVED_STATE_FIELDS = frozenset(
     {WORKTREE_FIELD, BRANCH_FIELD, REPOSITORY_FIELD, HEAD_FIELD, STATUS_FIELD}
 )
 FORBIDDEN_TARGET_FIELDS = frozenset({"title", "focus", "position", "prose", "channel"})
+FORBIDDEN_EXECUTABLE_FIELDS = frozenset(
+    {COMMAND_FIELD, "handbackCommand", "returnPane", ADAPTER_PATH_FIELD}
+)
 IDENTITY_FIELDS = ("agent", "pane", "worktree", "branch", "repository")
 IDENTITY_INPUT_FIELDS = frozenset((*IDENTITY_FIELDS, RUN_FIELD))
 
@@ -229,6 +266,133 @@ def validate_identity(identity: object, label: str) -> dict[str, str]:
     return validated
 
 
+def _validated_handback(
+    value: object,
+    *,
+    sender: dict[str, str],
+    recipient: dict[str, str],
+) -> dict[str, object] | None:
+    if value is None:
+        return None
+    handback = _object(value, HANDBACK_FIELD)
+    unexpected = sorted(set(handback) - HANDBACK_FIELDS)
+    missing = sorted(HANDBACK_FIELDS - set(handback))
+    if unexpected or missing:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Handback must contain exactly the environment-owned fields.",
+        )
+    if handback.get(SCHEMA_VERSION_FIELD) != HANDBACK_SCHEMA_VERSION:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Handback schema version must be {HANDBACK_SCHEMA_VERSION}.",
+        )
+    completion_text = _text(
+        handback.get(COMPLETION_TEXT_FIELD),
+        f"{HANDBACK_FIELD}.{COMPLETION_TEXT_FIELD}",
+    )
+    adapter_path = _text(
+        handback.get(ADAPTER_PATH_FIELD),
+        f"{HANDBACK_FIELD}.{ADAPTER_PATH_FIELD}",
+    )
+    if not os.path.isabs(adapter_path):
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Handback adapterPath must be absolute.",
+        )
+    command = _text(handback.get(COMMAND_FIELD), f"{HANDBACK_FIELD}.{COMMAND_FIELD}")
+    success = _object(
+        handback.get(SUCCESS_CRITERIA_FIELD),
+        f"{HANDBACK_FIELD}.{SUCCESS_CRITERIA_FIELD}",
+    )
+    command_exit_code = success.get(COMMAND_EXIT_CODE_FIELD)
+    if (
+        set(success) != HANDBACK_SUCCESS_FIELDS
+        or success.get(STATUS_FIELD) != TRANSPORT_SUCCEEDED_STATUS
+        or not isinstance(command_exit_code, int)
+        or isinstance(command_exit_code, bool)
+        or command_exit_code != 0
+        or success.get(TRAILING_ENTER_SENT_FIELD) is not True
+    ):
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Handback success criteria must require checked turn submission.",
+        )
+    if handback.get(RETRY_POLICY_FIELD) != HANDBACK_RETRY_POLICY:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Handback retryPolicy must be {HANDBACK_RETRY_POLICY}.",
+        )
+    if handback.get(SOCKET_FIELD) != DEFAULT_SOCKET:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Handback socket must be {DEFAULT_SOCKET}.",
+        )
+    expected_panes = [sender[PANE_FIELD], recipient[PANE_FIELD]]
+    if handback.get(EXPECTED_PANES_FIELD) != expected_panes:
+        raise MessageError(
+            DeliveryStatus.INVALID_IDENTITY,
+            "Handback expectedPanes do not match the message participants.",
+        )
+    return {
+        SCHEMA_VERSION_FIELD: HANDBACK_SCHEMA_VERSION,
+        COMPLETION_TEXT_FIELD: completion_text,
+        ADAPTER_PATH_FIELD: adapter_path,
+        COMMAND_FIELD: command,
+        SUCCESS_CRITERIA_FIELD: success,
+        RETRY_POLICY_FIELD: HANDBACK_RETRY_POLICY,
+        SOCKET_FIELD: DEFAULT_SOCKET,
+        EXPECTED_PANES_FIELD: expected_panes,
+    }
+
+
+def _validated_handback_plan(
+    plan: object,
+    handback: object,
+    *,
+    sender: dict[str, str],
+    recipient: dict[str, str],
+) -> dict[str, object] | None:
+    if handback is None:
+        if plan is not None:
+            raise MessageError(
+                DeliveryStatus.INVALID_SCHEMA,
+                "handbackPlan requires a handback in the message request.",
+            )
+        return None
+    value = _object(plan, HANDBACK_PLAN_FIELD)
+    if set(value) != HANDBACK_PLAN_FIELDS:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "handbackPlan must contain the complete environment capability result.",
+        )
+    if (
+        value.get(SCHEMA_VERSION_FIELD) != HANDBACK_PLAN_SCHEMA_VERSION
+        or value.get(TRANSPORT_OPERATION_FIELD) != PLAN_HANDBACK_OPERATION
+        or value.get(STATUS_FIELD) != TRANSPORT_SUCCEEDED_STATUS
+    ):
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "handbackPlan must be a successful plan-handback result.",
+        )
+    requested = _validated_handback(
+        handback,
+        sender=sender,
+        recipient=recipient,
+    )
+    planned = _validated_handback(
+        value.get(HANDBACK_FIELD),
+        sender=sender,
+        recipient=recipient,
+    )
+    if requested != planned:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Message handback must match the environment capability result.",
+        )
+    return requested
+
+
 def coordination_reference(
     kind: MessageKind,
     active_reference: str | None,
@@ -262,6 +426,7 @@ def build_request(
     subject: str,
     facts: list[str],
     request: str | None,
+    handback: object = None,
     coordination_reference: str | None = None,
     mutation_target: object = None,
     observed_state: object = None,
@@ -273,6 +438,7 @@ def build_request(
         SUBJECT_FIELD: _text(subject, f"request.{SUBJECT_FIELD}"),
         FACTS_FIELD: facts,
         REQUEST_FIELD: _optional_text(request, f"request.{REQUEST_FIELD}"),
+        HANDBACK_FIELD: handback,
         COORDINATION_REFERENCE_FIELD: _optional_text(
             coordination_reference, f"request.{COORDINATION_REFERENCE_FIELD}"
         ),
@@ -386,6 +552,7 @@ def build_envelope(
     subject: str,
     facts: list[str],
     request: str | None,
+    handback: object = None,
     active_reference: str | None = None,
     uuid_factory: Callable[[], uuid.UUID] = uuid.uuid4,
     mutation_target: object = None,
@@ -417,6 +584,16 @@ def build_envelope(
         mutation_target,
         observed_state,
     )
+    validated_handback = _validated_handback(
+        handback,
+        sender=validated_sender,
+        recipient=validated_recipient,
+    )
+    if validated_handback is not None and kind is not MessageKind.FACT:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Only a fact production request may carry a handback.",
+        )
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         COORDINATION_REFERENCE_FIELD: coordination_reference(
@@ -429,6 +606,7 @@ def build_envelope(
         SUBJECT_FIELD: _text(subject, SUBJECT_FIELD),
         FACTS_FIELD: facts,
         REQUEST_FIELD: _optional_text(request, REQUEST_FIELD),
+        HANDBACK_FIELD: validated_handback,
         MUTATION_TARGET_FIELD: validated_target,
         OBSERVED_STATE_FIELD: validated_state,
         ACCEPTED_FIELD: accepted,
@@ -487,6 +665,16 @@ def validate_envelope(envelope: object) -> dict[str, object]:
             ) from error
     sender = validate_identity(value.get(SENDER_FIELD), SENDER_FIELD)
     recipient = validate_identity(value.get(RECIPIENT_FIELD), RECIPIENT_FIELD)
+    handback = _validated_handback(
+        value.get(HANDBACK_FIELD),
+        sender=sender,
+        recipient=recipient,
+    )
+    if handback is not None and kind is not MessageKind.FACT:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Only a fact production request may carry a handback.",
+        )
     target, state = _mutation_contract(
         kind,
         sender,
@@ -514,6 +702,7 @@ def validate_envelope(envelope: object) -> dict[str, object]:
         SUBJECT_FIELD: _text(value.get(SUBJECT_FIELD), SUBJECT_FIELD),
         FACTS_FIELD: facts,
         REQUEST_FIELD: _optional_text(value.get(REQUEST_FIELD), REQUEST_FIELD),
+        HANDBACK_FIELD: handback,
         MUTATION_TARGET_FIELD: target,
         OBSERVED_STATE_FIELD: state,
         ACCEPTED_FIELD: accepted,
@@ -550,7 +739,12 @@ def delivery_request(envelope: object) -> dict[str, object]:
     }
 
 
-def send_request(request: object, discovery: object) -> dict[str, object]:
+def send_request(
+    request: object,
+    discovery: object,
+    *,
+    handback_plan: object = None,
+) -> dict[str, object]:
     value = _object(request, MESSAGE_REQUEST_FIELD)
     unexpected = sorted(set(value) - REQUEST_INPUT_FIELDS)
     if unexpected:
@@ -577,16 +771,24 @@ def send_request(request: object, discovery: object) -> dict[str, object]:
             DeliveryStatus.INVALID_SCHEMA,
             "Expected an array of strings at request.facts.",
         )
+    recipient = _target_by_pane(
+        discovered.get(TARGETS_FIELD),
+        to_pane,
+    )
+    handback = _validated_handback_plan(
+        handback_plan,
+        value.get(HANDBACK_FIELD),
+        sender=caller,
+        recipient=recipient,
+    )
     envelope = build_envelope(
         kind=_message_kind(value.get(KIND_FIELD)),
         sender=caller,
-        recipient=_target_by_pane(
-            discovered.get(TARGETS_FIELD),
-            to_pane,
-        ),
+        recipient=recipient,
         subject=_text(value.get(SUBJECT_FIELD), f"request.{SUBJECT_FIELD}"),
         facts=facts,
         request=_optional_text(value.get(REQUEST_FIELD), f"request.{REQUEST_FIELD}"),
+        handback=handback,
         active_reference=_optional_text(
             value.get(COORDINATION_REFERENCE_FIELD),
             f"request.{COORDINATION_REFERENCE_FIELD}",
@@ -731,7 +933,9 @@ def main(
         value = _json_input(input_stream)
         if operation is Operation.BUILD:
             result = send_request(
-                value.get(MESSAGE_REQUEST_FIELD), value.get(DISCOVERY_FIELD)
+                value.get(MESSAGE_REQUEST_FIELD),
+                value.get(DISCOVERY_FIELD),
+                handback_plan=value.get(HANDBACK_PLAN_FIELD),
             )
         else:
             result = delivery_result(

@@ -7,15 +7,19 @@ import argparse
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import uuid
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Final, Mapping, Protocol, TextIO, cast
 from urllib.parse import urlparse
 
 SCHEMA_VERSION = 1
+DELEGATION_SCHEMA_VERSION = 2
+HANDBACK_SCHEMA_VERSION = 1
 COMMAND_TIMEOUT_SECONDS = 30
 MAX_RESULT_PROJECTION_CHARACTERS = 4_000
 PROWL_COMMAND = "prowl"
@@ -95,12 +99,19 @@ SENDER_FIELD = "sender"
 RECIPIENT_FIELD = "recipient"
 SUBJECT_FIELD = "subject"
 INSTRUCTION_FIELD = "instruction"
+COMPLETION_TEXT_FIELD = "completionText"
 COORDINATION_REFERENCE_FIELD = "coordinationReference"
 INLINE_RESULT_FIELD = "inlineResult"
 RESULT_REFERENCE_FIELD = "resultReference"
 PROJECTION_FIELD = "projection"
 DELEGATION_FIELD = "delegation"
 TERMINAL_FIELD = "terminal"
+HANDBACK_FIELD = "handback"
+ADAPTER_PATH_FIELD = "adapterPath"
+SUCCESS_CRITERIA_FIELD = "successCriteria"
+RETRY_POLICY_FIELD = "retryPolicy"
+SOCKET_FIELD = "socket"
+EXPECTED_PANES_FIELD = "expectedPanes"
 CONCLUSION_FIELD = "conclusion"
 PARTICIPANTS_FIELD = "participants"
 PARTICIPANT_FIELD = "participant"
@@ -115,6 +126,8 @@ CREATED_TAB_FIELD = "created_tab"
 PROWL_PANE_ID_ENV = "PROWL_PANE_ID"
 PROWL_WORKTREE_PATH_ENV = "PROWL_WORKTREE_PATH"
 CALLER_IDENTITY_ENV_FIELDS = (PROWL_PANE_ID_ENV, PROWL_WORKTREE_PATH_ENV)
+HANDBACK_RETRY_POLICY = "never-after-trailing-enter"
+DEFAULT_SOCKET = "default"
 
 REQUEST_FIELDS = frozenset({SCHEMA_VERSION_FIELD, OPERATION_FIELD, ARGUMENTS_FIELD})
 SUCCESS_RESULT_FIELDS = frozenset(
@@ -147,6 +160,7 @@ DELEGATION_CLI_FIELDS = frozenset(
         RECIPIENT_FIELD,
         SUBJECT_FIELD,
         INSTRUCTION_FIELD,
+        COMPLETION_TEXT_FIELD,
         COORDINATION_REFERENCE_FIELD,
     }
 )
@@ -159,7 +173,26 @@ DELEGATION_REQUEST_FIELDS = frozenset(
         RECIPIENT_FIELD,
         SUBJECT_FIELD,
         INSTRUCTION_FIELD,
+        HANDBACK_FIELD,
     }
+)
+HANDBACK_FIELDS = frozenset(
+    {
+        SCHEMA_VERSION_FIELD,
+        COMPLETION_TEXT_FIELD,
+        ADAPTER_PATH_FIELD,
+        COMMAND_FIELD,
+        SUCCESS_CRITERIA_FIELD,
+        RETRY_POLICY_FIELD,
+        SOCKET_FIELD,
+        EXPECTED_PANES_FIELD,
+    }
+)
+HANDBACK_SUCCESS_FIELDS = frozenset(
+    {STATUS_FIELD, COMMAND_EXIT_CODE_FIELD, TRAILING_ENTER_SENT_FIELD}
+)
+HANDBACK_PLAN_CLI_FIELDS = frozenset(
+    {SENDER_FIELD, RECIPIENT_FIELD, COMPLETION_TEXT_FIELD}
 )
 TERMINAL_HANDBACK_FIELDS = frozenset(
     {
@@ -433,6 +466,7 @@ class CliOperation(StrEnum):
     RESOLVE_TARGET = "resolve-target"
     DELEGATE = "delegate"
     HAND_BACK = "handback"
+    PLAN_HAND_BACK = "plan-handback"
 
 
 @dataclass(frozen=True)
@@ -1129,12 +1163,155 @@ def _canonical_reference(value: object) -> str:
         ) from error
 
 
+def _handback_command(*, pane: str, completion_text: str) -> str:
+    request = operation_request(
+        Operation.SEND,
+        pane=pane,
+        text=completion_text,
+        no_wait=True,
+    )
+    payload = json.dumps(request, sort_keys=True, separators=(",", ":"))
+    adapter_path = str(Path(__file__).resolve())
+    return (
+        "printf '%s\\n' "
+        f"{shlex.quote(payload)} | python3 {shlex.quote(adapter_path)} run"
+    )
+
+
+def handback_plan(
+    *,
+    sender: object,
+    recipient: object,
+    completion_text: str,
+) -> dict[str, object]:
+    validated_sender = validate_identity(sender, SENDER_FIELD)
+    validated_recipient = validate_identity(recipient, RECIPIENT_FIELD)
+    if validated_sender[PANE_FIELD] == validated_recipient[PANE_FIELD]:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            "A handback recipient must be a different positively identified Prowl agent.",
+        )
+    completion = _text(completion_text, COMPLETION_TEXT_FIELD)
+    adapter_path = str(Path(__file__).resolve())
+    return {
+        SCHEMA_VERSION_FIELD: HANDBACK_SCHEMA_VERSION,
+        COMPLETION_TEXT_FIELD: completion,
+        ADAPTER_PATH_FIELD: adapter_path,
+        COMMAND_FIELD: _handback_command(
+            pane=validated_sender[PANE_FIELD],
+            completion_text=completion,
+        ),
+        SUCCESS_CRITERIA_FIELD: {
+            STATUS_FIELD: ExecutionStatus.SUCCEEDED,
+            COMMAND_EXIT_CODE_FIELD: 0,
+            TRAILING_ENTER_SENT_FIELD: True,
+        },
+        RETRY_POLICY_FIELD: HANDBACK_RETRY_POLICY,
+        SOCKET_FIELD: DEFAULT_SOCKET,
+        EXPECTED_PANES_FIELD: [
+            validated_sender[PANE_FIELD],
+            validated_recipient[PANE_FIELD],
+        ],
+    }
+
+
+def _validated_handback(
+    value: object,
+    *,
+    sender: dict[str, str],
+    recipient: dict[str, str],
+) -> dict[str, object]:
+    handback = _object(value, HANDBACK_FIELD)
+    unexpected = sorted(set(handback) - HANDBACK_FIELDS)
+    missing = sorted(HANDBACK_FIELDS - set(handback))
+    if unexpected or missing:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            "Handback must contain exactly the source-owned fields.",
+        )
+    if handback.get(SCHEMA_VERSION_FIELD) != HANDBACK_SCHEMA_VERSION:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Handback schema version must be {HANDBACK_SCHEMA_VERSION}.",
+        )
+    completion = _text(
+        handback.get(COMPLETION_TEXT_FIELD),
+        f"{HANDBACK_FIELD}.{COMPLETION_TEXT_FIELD}",
+    )
+    adapter_path = _text(
+        handback.get(ADAPTER_PATH_FIELD),
+        f"{HANDBACK_FIELD}.{ADAPTER_PATH_FIELD}",
+    )
+    expected_adapter_path = str(Path(__file__).resolve())
+    if adapter_path != expected_adapter_path:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            "Handback adapterPath must match the source-owned adapter path.",
+        )
+    expected_command = _handback_command(
+        pane=sender[PANE_FIELD],
+        completion_text=completion,
+    )
+    command = _text(handback.get(COMMAND_FIELD), f"{HANDBACK_FIELD}.{COMMAND_FIELD}")
+    if command != expected_command:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            "Handback command does not match its semantic completion data.",
+        )
+    success = _object(
+        handback.get(SUCCESS_CRITERIA_FIELD),
+        f"{HANDBACK_FIELD}.{SUCCESS_CRITERIA_FIELD}",
+    )
+    command_exit_code = success.get(COMMAND_EXIT_CODE_FIELD)
+    if (
+        set(success) != HANDBACK_SUCCESS_FIELDS
+        or success.get(STATUS_FIELD) != ExecutionStatus.SUCCEEDED
+        or not isinstance(command_exit_code, int)
+        or isinstance(command_exit_code, bool)
+        or command_exit_code != 0
+        or success.get(TRAILING_ENTER_SENT_FIELD) is not True
+    ):
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            "Handback success criteria must require checked turn submission.",
+        )
+    if handback.get(RETRY_POLICY_FIELD) != HANDBACK_RETRY_POLICY:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Handback retryPolicy must be {HANDBACK_RETRY_POLICY}.",
+        )
+    if handback.get(SOCKET_FIELD) != DEFAULT_SOCKET:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Handback socket must be {DEFAULT_SOCKET}.",
+        )
+    if handback.get(EXPECTED_PANES_FIELD) != [
+        sender[PANE_FIELD],
+        recipient[PANE_FIELD],
+    ]:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            "Handback expectedPanes must preserve sender and recipient pane order.",
+        )
+    return {
+        SCHEMA_VERSION_FIELD: HANDBACK_SCHEMA_VERSION,
+        COMPLETION_TEXT_FIELD: completion,
+        ADAPTER_PATH_FIELD: adapter_path,
+        COMMAND_FIELD: command,
+        SUCCESS_CRITERIA_FIELD: success,
+        RETRY_POLICY_FIELD: HANDBACK_RETRY_POLICY,
+        SOCKET_FIELD: DEFAULT_SOCKET,
+        EXPECTED_PANES_FIELD: [sender[PANE_FIELD], recipient[PANE_FIELD]],
+    }
+
+
 def delegation_request(
     *,
     sender: object,
     recipient: object,
     subject: str,
     instruction: str,
+    completion_text: str,
     coordination_reference: str | None = None,
 ) -> dict[str, object]:
     validated_sender = validate_identity(sender, SENDER_FIELD)
@@ -1150,13 +1327,18 @@ def delegation_request(
         else _canonical_reference(coordination_reference)
     )
     return {
-        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        SCHEMA_VERSION_FIELD: DELEGATION_SCHEMA_VERSION,
         KIND_FIELD: EnvelopeKind.DELEGATION_REQUEST,
         COORDINATION_REFERENCE_FIELD: reference,
         SENDER_FIELD: validated_sender,
         RECIPIENT_FIELD: validated_recipient,
         SUBJECT_FIELD: _text(subject, SUBJECT_FIELD),
         INSTRUCTION_FIELD: _text(instruction, INSTRUCTION_FIELD),
+        HANDBACK_FIELD: handback_plan(
+            sender=validated_sender,
+            recipient=validated_recipient,
+            completion_text=completion_text,
+        ),
     }
 
 
@@ -1169,28 +1351,38 @@ def _validated_delegation(value: object) -> dict[str, object]:
             ExecutionStatus.INVALID_SCHEMA,
             "Delegation request must contain exactly the source-owned request fields.",
         )
-    if request.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
+    if request.get(SCHEMA_VERSION_FIELD) != DELEGATION_SCHEMA_VERSION:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Delegation request schema version must be {SCHEMA_VERSION}.",
+            f"Delegation request schema version must be {DELEGATION_SCHEMA_VERSION}.",
         )
     if request.get(KIND_FIELD) != EnvelopeKind.DELEGATION_REQUEST:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
             f"Delegation request kind must be {EnvelopeKind.DELEGATION_REQUEST}.",
         )
+    sender = validate_identity(request.get(SENDER_FIELD), SENDER_FIELD)
+    recipient = validate_identity(request.get(RECIPIENT_FIELD), RECIPIENT_FIELD)
+    if sender[PANE_FIELD] == recipient[PANE_FIELD]:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            "A delegation recipient must be a different positively identified Prowl agent.",
+        )
     return {
-        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        SCHEMA_VERSION_FIELD: DELEGATION_SCHEMA_VERSION,
         KIND_FIELD: EnvelopeKind.DELEGATION_REQUEST,
         COORDINATION_REFERENCE_FIELD: _canonical_reference(
             request.get(COORDINATION_REFERENCE_FIELD)
         ),
-        SENDER_FIELD: validate_identity(request.get(SENDER_FIELD), SENDER_FIELD),
-        RECIPIENT_FIELD: validate_identity(
-            request.get(RECIPIENT_FIELD), RECIPIENT_FIELD
-        ),
+        SENDER_FIELD: sender,
+        RECIPIENT_FIELD: recipient,
         SUBJECT_FIELD: _text(request.get(SUBJECT_FIELD), SUBJECT_FIELD),
         INSTRUCTION_FIELD: _text(request.get(INSTRUCTION_FIELD), INSTRUCTION_FIELD),
+        HANDBACK_FIELD: _validated_handback(
+            request.get(HANDBACK_FIELD),
+            sender=sender,
+            recipient=recipient,
+        ),
     }
 
 
@@ -1244,7 +1436,7 @@ def terminal_handback(
             f"projection exceeds {MAX_RESULT_PROJECTION_CHARACTERS} characters.",
         )
     return {
-        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        SCHEMA_VERSION_FIELD: DELEGATION_SCHEMA_VERSION,
         KIND_FIELD: kind,
         COORDINATION_REFERENCE_FIELD: request[COORDINATION_REFERENCE_FIELD],
         SENDER_FIELD: request[RECIPIENT_FIELD],
@@ -1264,10 +1456,10 @@ def _validated_terminal(value: object) -> dict[str, object]:
             ExecutionStatus.INVALID_SCHEMA,
             "Terminal handback must contain exactly the source-owned terminal fields.",
         )
-    if terminal.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
+    if terminal.get(SCHEMA_VERSION_FIELD) != DELEGATION_SCHEMA_VERSION:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Terminal handback schema version must be {SCHEMA_VERSION}.",
+            f"Terminal handback schema version must be {DELEGATION_SCHEMA_VERSION}.",
         )
     kind = _terminal_kind(terminal.get(KIND_FIELD))
     inline = _optional_text(terminal.get(INLINE_RESULT_FIELD), INLINE_RESULT_FIELD)
@@ -1296,7 +1488,7 @@ def _validated_terminal(value: object) -> dict[str, object]:
             f"projection exceeds {MAX_RESULT_PROJECTION_CHARACTERS} characters.",
         )
     return {
-        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        SCHEMA_VERSION_FIELD: DELEGATION_SCHEMA_VERSION,
         KIND_FIELD: kind,
         COORDINATION_REFERENCE_FIELD: _canonical_reference(
             terminal.get(COORDINATION_REFERENCE_FIELD)
@@ -1390,10 +1582,32 @@ def _delegation_from_cli(value: dict[str, object]) -> dict[str, object]:
         recipient=value.get(RECIPIENT_FIELD),
         subject=_text(value.get(SUBJECT_FIELD), SUBJECT_FIELD),
         instruction=_text(value.get(INSTRUCTION_FIELD), INSTRUCTION_FIELD),
+        completion_text=_text(value.get(COMPLETION_TEXT_FIELD), COMPLETION_TEXT_FIELD),
         coordination_reference=cast(
             str | None, value.get(COORDINATION_REFERENCE_FIELD)
         ),
     )
+
+
+def _handback_from_cli(value: dict[str, object]) -> dict[str, object]:
+    unexpected = sorted(set(value) - HANDBACK_PLAN_CLI_FIELDS)
+    missing = sorted(HANDBACK_PLAN_CLI_FIELDS - set(value))
+    if unexpected or missing:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            "plan-handback requires exactly sender, recipient, and completionText.",
+        )
+    handback = handback_plan(
+        sender=value.get(SENDER_FIELD),
+        recipient=value.get(RECIPIENT_FIELD),
+        completion_text=_text(value.get(COMPLETION_TEXT_FIELD), COMPLETION_TEXT_FIELD),
+    )
+    return {
+        SCHEMA_VERSION_FIELD: DELEGATION_SCHEMA_VERSION,
+        OPERATION_FIELD: CliOperation.PLAN_HAND_BACK,
+        STATUS_FIELD: ExecutionStatus.SUCCEEDED,
+        HANDBACK_FIELD: handback,
+    }
 
 
 def command_exit_code(result: object) -> int:
@@ -1433,6 +1647,8 @@ def _execute_cli_operation(
         return _resolve_target_from_cli(value, environment, runner)
     if cli_operation is CliOperation.RUN:
         return execute(value, runner)
+    if cli_operation is CliOperation.PLAN_HAND_BACK:
+        return _handback_from_cli(value)
     if cli_operation is CliOperation.DELEGATE:
         delegation = _delegation_from_cli(value)
         result = execute(delegation_delivery_request(delegation), runner)

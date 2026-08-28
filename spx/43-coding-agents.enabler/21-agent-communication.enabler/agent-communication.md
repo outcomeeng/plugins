@@ -11,6 +11,10 @@ CAN exchange facts and authority messages through complete participant identitie
 - Ownership proposals, one-way facts, acknowledgements, mutation-state reports, mutation authorizations, and delivery failures map to distinct source-owned message and result states ([test](tests/test_agent_message.mapping.l1.py))
 - Every acknowledgement, mutation-state report, and mutation authorization preserves the complete active proposal reference, while every message that initiates a coordination reference receives a new UUID ([test](tests/test_agent_message.mapping.l1.py))
 
+### Properties
+
+- Every valid source-generated structured handback block is preserved unchanged in a production request ([test](tests/test_agent_message.property.l1.py))
+
 ### Compliance
 
 - ALWAYS: delivery validates complete sender and recipient agent, environment endpoint, worktree, branch, repository, and applicable run identities before sending ([test](tests/test_agent_message.compliance.l1.py))
@@ -18,4 +22,5 @@ CAN exchange facts and authority messages through complete participant identitie
 - ALWAYS: successful message delivery requires checked public Prowl input evidence that trailing Enter submitted the turn; text remaining editable in the recipient pane is not delivery ([test](tests/test_agent_message.compliance.l1.py))
 - NEVER: successful transport delivery establishes acknowledgement, agreement, ownership, or mutation authorization ([test](tests/test_agent_message.compliance.l1.py))
 - NEVER: communication targets by title, focus, position, inferred prose, or an undeclared fallback environment ([test](tests/test_agent_message.compliance.l1.py))
+- NEVER: a communication caller supplies a handback command, return pane fact, or cross-skill script path; production requests accept only the structured block returned by the environment capability ([test](tests/test_agent_message.compliance.l1.py))
 - NEVER: communication skills construct environment command arguments directly; delivery routes through the source-owned environment capability ([audit])
