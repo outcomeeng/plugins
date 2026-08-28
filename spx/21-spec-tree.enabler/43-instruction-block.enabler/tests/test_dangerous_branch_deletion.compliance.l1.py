@@ -13,9 +13,7 @@ def test_rendered_dcg_policy_satisfies_the_production_validator() -> None:
     for agent_harness, document in documents.items():
         router = source.managed_router_block(document)
         guard_section = source.dangerous_command_guard_policy_section(router)
-        source.validate_dangerous_command_guard_policy(
-            {agent_harness: guard_section}
-        )
+        source.validate_dangerous_command_guard_policy({agent_harness: guard_section})
 
 
 def test_dcg_policy_rejects_each_missing_operative_requirement() -> None:
@@ -24,9 +22,10 @@ def test_dcg_policy_rejects_each_missing_operative_requirement() -> None:
     for agent_harness, document in documents.items():
         router = source.managed_router_block(document)
         guard_section = source.dangerous_command_guard_policy_section(router)
-        for requirement_name, required_text in (
-            source.DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS
-        ):
+        for (
+            requirement_name,
+            required_text,
+        ) in source.DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS:
             assert required_text in guard_section
             violating_section = guard_section.replace(required_text, "", 1)
 
