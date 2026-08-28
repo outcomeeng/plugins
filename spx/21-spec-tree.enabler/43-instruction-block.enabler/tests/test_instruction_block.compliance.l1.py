@@ -66,3 +66,41 @@ def test_dropping_a_required_dispatch_literal_is_rejected() -> None:
                     source.validate_subagent_dispatch_policy(
                         {agent_harness: violating_document}
                     )
+
+
+def test_quoted_policy_requirements_are_rejected() -> None:
+    documents = evidence.rendered_instruction_blocks()
+    for validation in source.OPERATIVE_POLICY_VALIDATIONS:
+        for _, required_text in validation.requirements:
+            violating_documents = {
+                agent_harness: document.replace(
+                    required_text,
+                    f"\n{source.MARKDOWN_BLOCKQUOTE_MARKER} {required_text}\n",
+                )
+                for agent_harness, document in documents.items()
+            }
+            with pytest.raises(source.InstructionBlockRenderError):
+                validation.validator(violating_documents)
+
+
+def test_fenced_policy_requirements_are_rejected() -> None:
+    documents = evidence.rendered_instruction_blocks()
+    for validation in source.OPERATIVE_POLICY_VALIDATIONS:
+        for _, required_text in validation.requirements:
+            violating_documents = {
+                agent_harness: document.replace(
+                    required_text,
+                    "\n".join(
+                        (
+                            "",
+                            source.MARKDOWN_CODE_FENCE_MARKERS[0],
+                            required_text,
+                            source.MARKDOWN_CODE_FENCE_MARKERS[0],
+                            "",
+                        )
+                    ),
+                )
+                for agent_harness, document in documents.items()
+            }
+            with pytest.raises(source.InstructionBlockRenderError):
+                validation.validator(violating_documents)

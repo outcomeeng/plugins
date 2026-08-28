@@ -21,7 +21,7 @@ import importlib.util
 import re
 import subprocess
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Protocol, cast
@@ -216,6 +216,8 @@ WAIT_FOR_LOAD_POLICY_REQUIREMENTS: Final = (
     ("ready command", WAIT_FOR_LOAD_READY_REQUIREMENT),
     ("scope preservation", WAIT_FOR_LOAD_SCOPE_REQUIREMENT),
 )
+MARKDOWN_BLOCKQUOTE_MARKER: Final = ">"
+MARKDOWN_CODE_FENCE_MARKERS: Final = ("```", "~~~")
 
 
 @dataclass(frozen=True)
@@ -625,6 +627,15 @@ class InstructionBlockModule(Protocol):
     def shared_region_drift(self, repo_root: Path) -> tuple[str, ...]: ...
 
 
+@dataclass(frozen=True)
+class OperativePolicyValidation:
+    """One source-owned router policy validation and its required prose."""
+
+    name: str
+    requirements: tuple[tuple[str, str], ...]
+    validator: Callable[[Mapping[str, str]], None]
+
+
 def _run(
     args: Sequence[str], *, cwd: Path = REPO_ROOT
 ) -> subprocess.CompletedProcess[str]:
@@ -759,18 +770,18 @@ def _markdown_section(document: str, heading: str) -> str:
 def _operative_policy_line_contains(section: str, required_text: str) -> bool:
     """Return whether operative policy prose contains ``required_text``."""
     fence_marker: str | None = None
-    for line in section.splitlines()[1:]:
+    for line in section.splitlines():
         stripped = line.strip()
         marker = stripped[:3]
-        if marker in {"```", "~~~"}:
+        if marker in MARKDOWN_CODE_FENCE_MARKERS:
             if fence_marker is None:
                 fence_marker = marker
             elif fence_marker == marker:
                 fence_marker = None
             continue
-        if fence_marker is not None or stripped.startswith(">"):
+        if fence_marker is not None or stripped.startswith(MARKDOWN_BLOCKQUOTE_MARKER):
             continue
-        if required_text in line and line.startswith(("- ", "🛑 ")):
+        if required_text in line:
             return True
     return False
 
@@ -818,7 +829,7 @@ def validate_foundation_access_policy(
         missing = [
             name
             for name, required_text in FOUNDATION_POLICY_REQUIREMENTS
-            if required_text not in section
+            if not _operative_policy_line_contains(section, required_text)
         ]
         if missing:
             details = ", ".join(missing)
@@ -848,7 +859,7 @@ def validate_authority_hierarchy_policy(
         missing = [
             name
             for name, required_text in AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS
-            if required_text not in section
+            if not _operative_policy_line_contains(section, required_text)
         ]
         if missing:
             details = ", ".join(missing)
@@ -873,7 +884,7 @@ def validate_harness_dispatch_mechanics(blocks_by_harness: Mapping[str, str]) ->
     for harness, document in blocks_by_harness.items():
         router = managed_router_block(document)
         for owning_harness, marker in HARNESS_DISPATCH_MECHANICS_MARKERS.items():
-            present = marker in router
+            present = _operative_policy_line_contains(router, marker)
             if owning_harness == harness and not present:
                 raise HarnessDispatchMechanicsError(
                     f"{harness} router is missing its own dispatch mechanics: {marker}"
@@ -909,7 +920,7 @@ def validate_subagent_dispatch_policy(blocks_by_harness: Mapping[str, str]) -> N
         missing = [
             name
             for name, required_text in SUBAGENT_DISPATCH_POLICY_REQUIREMENTS
-            if required_text not in section
+            if not _operative_policy_line_contains(section, required_text)
         ]
         if missing:
             details = ", ".join(missing)
@@ -932,7 +943,9 @@ def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
         if harness == CODEX_HARNESS:
             requirements.extend(WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS)
         missing = [
-            name for name, required_text in requirements if required_text not in section
+            name
+            for name, required_text in requirements
+            if not _operative_policy_line_contains(section, required_text)
         ]
         if missing:
             details = ", ".join(missing)
@@ -974,7 +987,7 @@ def validate_operator_question_policy(
         missing = [
             name
             for name, required_text in OPERATOR_QUESTION_REQUIREMENTS
-            if required_text not in policy
+            if not _operative_policy_line_contains(policy, required_text)
         ]
         if missing:
             details = ", ".join(missing)
@@ -1017,7 +1030,7 @@ def validate_verifier_dispatch_policy(
     missing = [
         name
         for name, required_text in CODEX_VERIFIER_DISPATCH_REQUIREMENTS
-        if required_text not in policy
+        if not _operative_policy_line_contains(policy, required_text)
     ]
     if missing:
         details = ", ".join(missing)
@@ -1060,12 +1073,12 @@ def validate_deferred_agent_discovery_policy(
     missing_policy = [
         name
         for name, required_text in DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS
-        if required_text not in policy
+        if not _operative_policy_line_contains(policy, required_text)
     ]
     missing_lifecycle = [
         name
         for name, required_text in DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS
-        if required_text not in router
+        if not _operative_policy_line_contains(router, required_text)
     ]
     missing = [*missing_policy, *missing_lifecycle]
     if missing:
@@ -1085,6 +1098,59 @@ def validate_deferred_agent_discovery_policy(
         )
 
 
+OPERATIVE_POLICY_VALIDATIONS: Final = (
+    OperativePolicyValidation(
+        name="foundation-access",
+        requirements=FOUNDATION_POLICY_REQUIREMENTS,
+        validator=validate_foundation_access_policy,
+    ),
+    OperativePolicyValidation(
+        name="authority-hierarchy",
+        requirements=(
+            *AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS,
+            *DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS,
+        ),
+        validator=validate_authority_hierarchy_policy,
+    ),
+    OperativePolicyValidation(
+        name="wait-for-load",
+        requirements=(
+            *WAIT_FOR_LOAD_POLICY_REQUIREMENTS,
+            *WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS,
+        ),
+        validator=validate_wait_for_load_policy,
+    ),
+    OperativePolicyValidation(
+        name="operator-question",
+        requirements=OPERATOR_QUESTION_REQUIREMENTS,
+        validator=validate_operator_question_policy,
+    ),
+    OperativePolicyValidation(
+        name="subagent-dispatch",
+        requirements=SUBAGENT_DISPATCH_POLICY_REQUIREMENTS,
+        validator=validate_subagent_dispatch_policy,
+    ),
+    OperativePolicyValidation(
+        name="harness-dispatch-mechanics",
+        requirements=tuple(HARNESS_DISPATCH_MECHANICS_MARKERS.items()),
+        validator=validate_harness_dispatch_mechanics,
+    ),
+    OperativePolicyValidation(
+        name="verifier-dispatch",
+        requirements=CODEX_VERIFIER_DISPATCH_REQUIREMENTS,
+        validator=validate_verifier_dispatch_policy,
+    ),
+    OperativePolicyValidation(
+        name="deferred-agent-discovery",
+        requirements=(
+            *DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS,
+            *DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS,
+        ),
+        validator=validate_deferred_agent_discovery_policy,
+    ),
+)
+
+
 def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     """Render both root instruction files in place from committed harness dist templates."""
     module = load_instruction_block_module()
@@ -1100,14 +1166,8 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
         module.detect_languages_from_tree(spx_dir),
         template_paths=paths,
     )
-    validate_foundation_access_policy(rendered)
-    validate_authority_hierarchy_policy(rendered)
-    validate_wait_for_load_policy(rendered)
-    validate_operator_question_policy(rendered)
-    validate_subagent_dispatch_policy(rendered)
-    validate_harness_dispatch_mechanics(rendered)
-    validate_verifier_dispatch_policy(rendered)
-    validate_deferred_agent_discovery_policy(rendered)
+    for validation in OPERATIVE_POLICY_VALIDATIONS:
+        validation.validator(rendered)
     module.write_root_instruction_files(repo_root, rendered)
     module.remove_obsolete_spx_instruction_files(repo_root)
 
