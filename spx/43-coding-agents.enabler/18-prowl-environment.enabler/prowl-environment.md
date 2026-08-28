@@ -8,14 +8,11 @@ CAN operate between any positively identified Prowl agents without constructing 
 
 ### Mappings
 
-- Every supported operation — list, agents, read, send, key, focus, tab create, tab close, pane close, and open — maps from one source-owned request shape to one exact Prowl argument vector and checked response result ([test](tests/test_prowl_environment.mapping.l1.py))
+- Every supported operation — list, agents, read, send, key, focus, tab create, tab close, pane close, and open — maps each source-owned request shape through the source-owned operation registry to one Prowl argument vector and checked response result ([test](tests/test_prowl_environment.mapping.l1.py))
 - Public Prowl agent evidence maps to complete source-preserved agent, pane, worktree, branch, repository, and applicable run identities or to a named unavailable or ambiguous result ([test](tests/test_prowl_environment.mapping.l1.py))
 - An absolute worktree, repository, or working-directory path maps through one source-owned resolver to the complete caller, complete pane inventory, non-caller path matches, and candidate-specific immediate-return send request templates; zero, one, and multiple matches produce unavailable, succeeded, and ambiguous results without sending, while a selected template produces exactly one checked send result with trailing-Enter evidence and no retry ([test](tests/test_prowl_target_resolution.mapping.l1.py))
 - A delegation request with semantic completion text maps to one source-generated structured handback block and exactly one correlated `delegation-completed`, `delegation-failed`, `delegation-rejected`, or `delegation-unavailable` terminal handback containing a complete inline result or an exact durable result reference with a bounded inline projection ([test](tests/test_prowl_environment.mapping.l1.py))
-
-### Conformance
-
-- Every operation emits a versioned JSON result conforming to its source-owned schema while preserving Prowl identity, status, conclusion, exit-code, open resolution, tab-creation, and send-submission values verbatim ([test](tests/test_prowl_environment.conformance.l1.py))
+- Every supported operation maps a checked public Prowl response or named command failure to one versioned JSON result that preserves Prowl identity, status, conclusion, exit-code, open resolution, tab-creation, and send-submission values verbatim ([test](tests/test_prowl_result.mapping.l1.py))
 
 ### Properties
 
@@ -29,6 +26,7 @@ CAN operate between any positively identified Prowl agents without constructing 
 - NEVER: another shipped coding-agents script constructs a raw Prowl argument vector or invokes Prowl command help ([test](tests/test_prowl_environment.compliance.l1.py))
 - NEVER: a delegation request submitted over stdin carries a field the envelope does not forward or executable handback data the adapter must own — an unsupported key is rejected rather than dropped, so a caller never sends a delegation missing or corrupting data it believed it supplied ([test](tests/test_prowl_environment.compliance.l1.py))
 - NEVER: another shipped coding-agents skill instructs a workflow to construct raw Prowl commands, invoke Prowl command help, or depend on an external environment-control skill ([audit])
+- ALWAYS: the adapter's source-owned operation registry is the sole declaration of public Prowl command tokens; test evidence imports those values and exercises request-to-command composition without restating them ([audit])
 - ALWAYS: the delegation surface closes the loop by push through a source-generated structured handback block — the recipient writes a durable result before sending one line to the pane the block addresses, because the sender cannot poll for completion ([audit])
 - ALWAYS: the structured handback block carries the exact adapter command and the environment conditions that break delivery — an unresolvable adapter path and a socket owned by a different instance — so a recipient distinguishes them from an absent sender ([audit])
 - ALWAYS: operator-target resolution reports a target named by absolute worktree, repository, or working-directory path in the same path terms the operator supplied while using the selected pane identity internally, never asking for a pane UUID or selecting by focus, position, or title ([audit])

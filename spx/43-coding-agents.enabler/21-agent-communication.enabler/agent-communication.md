@@ -10,7 +10,10 @@ CAN exchange facts and authority messages through complete participant identitie
 
 - Ownership proposals, one-way facts, acknowledgements, mutation-state reports, mutation authorizations, and delivery failures map to distinct source-owned message and result states ([test](tests/test_agent_message.mapping.l1.py))
 - Every acknowledgement, mutation-state report, and mutation authorization preserves the complete active proposal reference, while every message that initiates a coordination reference receives a new UUID ([test](tests/test_agent_message.mapping.l1.py))
-- A production request preserves one source-generated structured handback block containing semantic completion text, exact command, success criteria, retry policy, socket, and expected panes ([test](tests/test_agent_message.mapping.l1.py))
+
+### Properties
+
+- Every valid source-generated structured handback block is preserved unchanged in a production request ([test](tests/test_agent_message.property.l1.py))
 
 ### Compliance
 

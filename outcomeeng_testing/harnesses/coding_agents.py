@@ -8,10 +8,16 @@ import sys
 import uuid
 from pathlib import Path
 from types import ModuleType
-from typing import cast
+from typing import Callable, cast
+
+from hypothesis import given, seed, settings
 
 from outcomeeng_testing.generators.coding_agents import message_content
-from outcomeeng_testing.generators.prowl_environment import public_agent_item
+from outcomeeng_testing.generators.prowl_environment import (
+    message_texts,
+    public_agent_item,
+)
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 from outcomeeng_testing.harnesses.prowl_environment import (
     RecordingRunner,
     load_prowl_environment,
@@ -22,6 +28,12 @@ from outcomeeng_testing.harnesses.prowl_environment import (
 ROOT = Path(__file__).parents[2]
 AGENT_MESSAGE_PATH = (
     ROOT / "src/plugins/coding-agents/skills/message-agents/scripts/agent_message.py"
+)
+HANDBACK_PROPERTY_SEED = 2026082801
+HANDBACK_PROPERTY_EXAMPLES = 40
+HANDBACK_PROPERTY_REPLAY_PATH = (
+    "spx/43-coding-agents.enabler/21-agent-communication.enabler/tests/"
+    "test_agent_message.property.l1.py"
 )
 
 
@@ -150,6 +162,37 @@ def production_handback(
             recipient=recipient,
             completion_text=completion_text,
         ),
+    )
+
+
+def run_handback_preservation_property(
+    assert_handback: Callable[
+        [ModuleType, dict[str, str], dict[str, str], dict[str, object]], None
+    ],
+) -> None:
+    """Drive generated handbacks while the linked test owns preservation."""
+    _, message, _, participants = observed_message_participants()
+    sender, recipient = participants[:2]
+
+    @seed(HANDBACK_PROPERTY_SEED)
+    @settings(
+        max_examples=HANDBACK_PROPERTY_EXAMPLES,
+        deadline=None,
+        print_blob=True,
+    )
+    @given(completion_text=message_texts())
+    def generated_handback_property(completion_text: str) -> None:
+        assert_handback(
+            message,
+            sender,
+            recipient,
+            production_handback(sender, recipient, completion_text),
+        )
+
+    run_replayable_property(
+        generated_handback_property,
+        seed_value=HANDBACK_PROPERTY_SEED,
+        replay_path=HANDBACK_PROPERTY_REPLAY_PATH,
     )
 
 
