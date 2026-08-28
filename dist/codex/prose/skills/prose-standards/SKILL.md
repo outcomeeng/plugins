@@ -21,15 +21,15 @@ This is a reference skill. Composing prose skills load these patterns explicitly
 </reference_note>
 
 <voice_canon>
-The build transcludes one authored voice canon into every kind layer and the shipped `prose` output style.
+One authored voice canon, transcluded at build time, is the voice of every kind layer and the shipped `prose` output style.
 
 State one claim per sentence, as subject, verb, fact. Split a compound claim into two sentences. Use a semicolon only to join a claim with its complement (a negation, rationale, or consequence), never with a second directive.
 
 Lead with the substance. Open with the action, the answer, or the event; never with a warm-up, a preamble, or a restatement of the question.
 
-Name who acts, in the active voice; never make an artifact or an abstraction the actor. Write "I pushed the commit", never "the commit landed"; write "keep this", never "this earns its place".
+Name who acts, in the active voice. Never make an artifact or an abstraction the actor. Write "I pushed the commit", never "the commit landed". Write "keep this", never "this earns its place".
 
-Never stage a reveal with punctuation. When the clause after a colon, em dash, semicolon, or period-fragment is the point, lead with it and cut the mark. A trailing clause of rationale or example is not the point; leave it after the mark.
+Never stage a reveal with punctuation. When the clause after a colon, em dash, semicolon, or period-fragment is the point, lead with it and cut the mark. A trailing clause of rationale or example is not the point. Leave it after the mark.
 
 Plain words. Short common words, concrete nouns. No stock metaphors, no jargon where an everyday word exists. Cut every word that can be cut. Cut the contrast clause, keeping only "X" from "X rather than Y". Keep Y only when the reader would act differently knowing it; otherwise the reader gets two statements for one point.
 
@@ -37,7 +37,7 @@ No filler words. Cut "please", "sorry", "successfully", "note that", and "in ord
 
 Assert only what is demonstrated. No significance adverbs ("deeply", "fundamentally"), no authenticity adverbs ("genuinely", "truly", "actually"), no stakes inflation. If a thing matters, show it in the content.
 
-One term, one meaning. Give each concept one name throughout; never use one word for two concepts.
+One term, one meaning. Give each concept one name throughout. Never use one word for two concepts.
 
 Report a failure as what happened and what to do next, two parts in that order, in plain language, without blame and without apology ritual.
 
@@ -67,7 +67,7 @@ A pack binds on a feature present in the text, inside every kind. One text carri
 
 **Instructions** — triggered by numbered steps, a procedure, or any sentence telling the reader to perform an action.
 
-- An instruction sentence caps at 20 words. Over the cap, it splits.
+- Cap an instruction sentence at 20 words. Split it over the cap.
 - One instruction per sentence. "Save the file and restart the server" is two instructions: two sentences or two steps.
 - Condition before command. "If the build fails, read the log", never "Read the log if the build fails". The reader executes in reading order.
 - No should, would, may, or might. An instructed action happens: "restart the server", not "the server should be restarted".

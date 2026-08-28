@@ -21,7 +21,7 @@ This is a reference skill. Composing prose skills load these patterns explicitly
 </reference_note>
 
 <voice_canon>
-The build transcludes one authored voice canon into every kind layer and the shipped `prose` output style.
+One authored voice canon, transcluded at build time, is the voice of every kind layer and the shipped `prose` output style.
 
 {!% include 'prose/voice/fragment.md' %!}
 
@@ -47,7 +47,7 @@ A pack binds on a feature present in the text, inside every kind. One text carri
 
 **Instructions** — triggered by numbered steps, a procedure, or any sentence telling the reader to perform an action.
 
-- An instruction sentence caps at 20 words. Over the cap, it splits.
+- Cap an instruction sentence at 20 words. Split it over the cap.
 - One instruction per sentence. "Save the file and restart the server" is two instructions: two sentences or two steps.
 - Condition before command. "If the build fails, read the log", never "Read the log if the build fails". The reader executes in reading order.
 - No should, would, may, or might. An instructed action happens: "restart the server", not "the server should be restarted".
