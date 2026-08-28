@@ -17,7 +17,7 @@ The catalog itself is sound when every anti-pattern entry carries a name, the ru
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Composing prose skills load these patterns explicitly before writing or reviewing. It is not a standalone workflow. The caller supplies the kind a text carries to the prose workflow skills. This catalog states rules and never resolves a kind.
+This is a reference skill. Composing prose skills load these patterns explicitly before writing or reviewing. It is not a standalone workflow. The caller supplies the kind a text carries to the prose workflow skills. This catalog states rules and never resolves a kind. Each catalog entry opens with its pattern label, a colon, and the rule.
 </reference_note>
 
 <voice_canon>
@@ -156,7 +156,7 @@ Avoid: "Think of it like a highway system for data.", "Think of it as a Swiss Ar
 
 Avoid: "Imagine a world where every tool you use -- your calendar, your inbox, your documents -- has a quiet intelligence behind it..."
 
-**False vulnerability**: Don't perform self-awareness. Simulated candor, pretending to break the fourth wall or admit a bias, reads as hollow. Real honesty is specific and has stakes; don't fake it.
+**False vulnerability**: Don't perform self-awareness. Simulated candor, pretending to break the fourth wall or admit a bias, reads as hollow. Real honesty is specific and has stakes. Don't fake it.
 
 Avoid: "And yes, I'm openly in love with the platform model", "This is not a rant; it's a diagnosis"
 

@@ -17,7 +17,7 @@ The catalog itself is sound when every anti-pattern entry carries a name, the ru
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Composing prose skills load these patterns explicitly before writing or reviewing. It is not a standalone workflow. The caller supplies the kind a text carries to the prose workflow skills. This catalog states rules and never resolves a kind.
+This is a reference skill. Composing prose skills load these patterns explicitly before writing or reviewing. It is not a standalone workflow. The caller supplies the kind a text carries to the prose workflow skills. This catalog states rules and never resolves a kind. Each catalog entry opens with its pattern label, a colon, and the rule.
 </reference_note>
 
 <voice_canon>
@@ -25,25 +25,25 @@ One authored voice canon, transcluded at build time, is the voice of every kind 
 
 State one claim per sentence, as subject, verb, fact. Split a compound claim into two sentences. Use a semicolon only to join a claim with its complement (a negation, rationale, or consequence), never with a second directive.
 
-Lead with the substance. Open with the action, the answer, or the event; never with a warm-up, a preamble, or a restatement of the question.
+Lead with the substance. Open with the action, the answer, or the event. Never open with a warm-up, a preamble, or a restatement of the question.
 
 Name who acts, in the active voice. Never make an artifact or an abstraction the actor. Write "I pushed the commit", never "the commit landed". Write "keep this", never "this earns its place".
 
 Never stage a reveal with punctuation. When the clause after a colon, em dash, semicolon, or period-fragment is the point, lead with it and cut the mark. A trailing clause of rationale or example is not the point. Leave it after the mark.
 
-Plain words. Short common words, concrete nouns. No stock metaphors, no jargon where an everyday word exists. Cut every word that can be cut. Cut the contrast clause, keeping only "X" from "X rather than Y". Keep Y only when the reader would act differently knowing it; otherwise the reader gets two statements for one point.
+Use short common words and concrete nouns. Use no stock metaphor and no jargon where an everyday word exists. Cut every word that can be cut. Cut the contrast clause, keeping only "X" from "X rather than Y". Keep Y only when the reader would act differently knowing it; otherwise the reader gets two statements for one point.
 
-No filler words. Cut "please", "sorry", "successfully", "note that", and "in order to" on sight.
+Cut "please", "sorry", "successfully", "note that", and "in order to" on sight.
 
-Assert only what is demonstrated. No significance adverbs ("deeply", "fundamentally"), no authenticity adverbs ("genuinely", "truly", "actually"), no stakes inflation. If a thing matters, show it in the content.
+Assert only what is demonstrated. Cut significance adverbs ("deeply", "fundamentally"), authenticity adverbs ("genuinely", "truly", "actually"), and stakes inflation. If a thing matters, show it in the content.
 
-One term, one meaning. Give each concept one name throughout. Never use one word for two concepts.
+Give each concept one name throughout. Never use one word for two concepts.
 
 Report a failure as what happened and what to do next, two parts in that order, in plain language, without blame and without apology ritual.
 
-Capitalize only the first word and proper nouns in titles, headings, and labels. No end punctuation on a heading: "How this layer is used", never "How This Layer Is Used:". No all-caps emphasis.
+Capitalize only the first word and proper nouns in titles, headings, and labels. Put no end punctuation on a heading: "How this layer is used", never "How This Layer Is Used:". Use no all-caps emphasis.
 
-Standard punctuation. Em dashes sparingly, straight quotes, no unicode decoration, no bold-first bullet scaffolding. Put emphasis in structure and word choice, never in typeface.
+Use standard punctuation: em dashes sparingly, straight quotes, no unicode decoration, no bold-first bullet scaffolding. Put emphasis in structure and word choice, never in typeface.
 
 </voice_canon>
 
@@ -176,7 +176,7 @@ Avoid: "Think of it like a highway system for data.", "Think of it as a Swiss Ar
 
 Avoid: "Imagine a world where every tool you use -- your calendar, your inbox, your documents -- has a quiet intelligence behind it..."
 
-**False vulnerability**: Don't perform self-awareness. Simulated candor, pretending to break the fourth wall or admit a bias, reads as hollow. Real honesty is specific and has stakes; don't fake it.
+**False vulnerability**: Don't perform self-awareness. Simulated candor, pretending to break the fourth wall or admit a bias, reads as hollow. Real honesty is specific and has stakes. Don't fake it.
 
 Avoid: "And yes, I'm openly in love with the platform model", "This is not a rant; it's a diagnosis"
 
