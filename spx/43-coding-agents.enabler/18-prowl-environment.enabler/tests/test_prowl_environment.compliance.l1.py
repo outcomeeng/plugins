@@ -230,6 +230,25 @@ def test_delegation_cli_rejects_unsupported_and_accepts_supported_fields() -> No
             assert error.status == module.ExecutionStatus.INVALID_SCHEMA
         else:
             raise AssertionError("corrupted source-generated handback was accepted")
+        foreign_adapter_path = "/caller-owned/prowl_environment.py"
+        foreign_adapter_handback = {
+            **handback,
+            module.ADAPTER_PATH_FIELD: foreign_adapter_path,
+            module.COMMAND_FIELD: cast(str, handback[module.COMMAND_FIELD]).replace(
+                cast(str, handback[module.ADAPTER_PATH_FIELD]),
+                foreign_adapter_path,
+            ),
+        }
+        try:
+            module.terminal_handback(
+                {**envelope, module.HANDBACK_FIELD: foreign_adapter_handback},
+                module.TerminalKind.COMPLETED,
+                inline_result=content.inline_result,
+            )
+        except module.ProwlEnvironmentError as error:
+            assert error.status == module.ExecutionStatus.INVALID_SCHEMA
+        else:
+            raise AssertionError("foreign handback adapter path was accepted")
         for executable_field in (
             module.HANDBACK_FIELD,
             module.COMMAND_FIELD,

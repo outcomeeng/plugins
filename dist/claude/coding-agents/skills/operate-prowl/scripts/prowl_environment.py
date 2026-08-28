@@ -1163,7 +1163,7 @@ def _canonical_reference(value: object) -> str:
         ) from error
 
 
-def _handback_command(*, pane: str, completion_text: str, adapter_path: str) -> str:
+def _handback_command(*, pane: str, completion_text: str) -> str:
     request = operation_request(
         Operation.SEND,
         pane=pane,
@@ -1171,6 +1171,7 @@ def _handback_command(*, pane: str, completion_text: str, adapter_path: str) -> 
         no_wait=True,
     )
     payload = json.dumps(request, sort_keys=True, separators=(",", ":"))
+    adapter_path = str(Path(__file__).resolve())
     return (
         "printf '%s\\n' "
         f"{shlex.quote(payload)} | python3 {shlex.quote(adapter_path)} run"
@@ -1199,7 +1200,6 @@ def handback_plan(
         COMMAND_FIELD: _handback_command(
             pane=validated_sender[PANE_FIELD],
             completion_text=completion,
-            adapter_path=adapter_path,
         ),
         SUCCESS_CRITERIA_FIELD: {
             STATUS_FIELD: ExecutionStatus.SUCCEEDED,
@@ -1242,15 +1242,15 @@ def _validated_handback(
         handback.get(ADAPTER_PATH_FIELD),
         f"{HANDBACK_FIELD}.{ADAPTER_PATH_FIELD}",
     )
-    if not Path(adapter_path).is_absolute():
+    expected_adapter_path = str(Path(__file__).resolve())
+    if adapter_path != expected_adapter_path:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Handback adapterPath must be absolute.",
+            "Handback adapterPath must match the source-owned adapter path.",
         )
     expected_command = _handback_command(
         pane=sender[PANE_FIELD],
         completion_text=completion,
-        adapter_path=adapter_path,
     )
     command = _text(handback.get(COMMAND_FIELD), f"{HANDBACK_FIELD}.{COMMAND_FIELD}")
     if command != expected_command:

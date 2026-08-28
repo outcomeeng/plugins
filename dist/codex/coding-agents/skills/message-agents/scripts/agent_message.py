@@ -232,9 +232,7 @@ def _load_prowl_environment() -> ModuleType:
     return module
 
 
-def _expected_handback_command(
-    *, pane: str, completion_text: str, adapter_path: str
-) -> str:
+def _expected_handback_command(*, pane: str, completion_text: str) -> str:
     command_builder = cast(
         Callable[..., str],
         getattr(_load_prowl_environment(), "_handback_command"),
@@ -242,7 +240,6 @@ def _expected_handback_command(
     return command_builder(
         pane=pane,
         completion_text=completion_text,
-        adapter_path=adapter_path,
     )
 
 
@@ -337,16 +334,15 @@ def _validated_handback(
         handback.get(ADAPTER_PATH_FIELD),
         f"{HANDBACK_FIELD}.{ADAPTER_PATH_FIELD}",
     )
-    if not Path(adapter_path).is_absolute():
+    if adapter_path != str(PROWL_ENVIRONMENT_PATH.resolve()):
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Handback adapterPath must be absolute.",
+            "Handback adapterPath must match the source-owned adapter path.",
         )
     command = _text(handback.get(COMMAND_FIELD), f"{HANDBACK_FIELD}.{COMMAND_FIELD}")
     expected_command = _expected_handback_command(
         pane=sender[PANE_FIELD],
         completion_text=completion_text,
-        adapter_path=adapter_path,
     )
     if command != expected_command:
         raise MessageError(
