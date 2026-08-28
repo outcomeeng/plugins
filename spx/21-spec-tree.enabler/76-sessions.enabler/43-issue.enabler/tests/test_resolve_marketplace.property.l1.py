@@ -31,7 +31,11 @@ def test_json_naming_no_matching_marketplace_maps_to_not_found(
     payload: object, name: str, runtime: str
 ) -> None:
     """Any JSON that names no matching marketplace resolves no path."""
-    assume(name not in json.dumps(payload))
+    # Exclude only a payload carrying the name as a whole JSON string. A
+    # bare substring test also discards every payload whose negative number
+    # or hyphenated text happens to contain the sampled ``-`` name, which
+    # drops the boundary case the generator keeps in every run.
+    assume(json.dumps(name) not in json.dumps(payload))
 
     result = run_resolver(payload, runtime=runtime, name=name)
 
