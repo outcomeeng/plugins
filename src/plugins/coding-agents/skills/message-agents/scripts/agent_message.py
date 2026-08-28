@@ -4,15 +4,12 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import os
 import re
 import sys
 import uuid
 from enum import StrEnum
-from pathlib import Path
-from types import ModuleType
 from typing import Callable, TextIO, cast
 
 SCHEMA_VERSION = 4
@@ -28,6 +25,7 @@ CALLER_FIELD = "caller"
 TARGETS_FIELD = "targets"
 DISCOVERY_FIELD = "discovery"
 MESSAGE_REQUEST_FIELD = "messageRequest"
+HANDBACK_PLAN_FIELD = "handbackPlan"
 ENVELOPE_FIELD = "envelope"
 DELIVERY_FIELD = "delivery"
 DELIVERED_FIELD = "delivered"
@@ -70,8 +68,10 @@ TRAILING_ENTER_SENT_FIELD = "trailing_enter_sent"
 TRANSPORT_SEND_OPERATION = "send"
 TRANSPORT_SUCCEEDED_STATUS = "succeeded"
 HANDBACK_SCHEMA_VERSION = 1
+HANDBACK_PLAN_SCHEMA_VERSION = 2
 HANDBACK_RETRY_POLICY = "never-after-trailing-enter"
 DEFAULT_SOCKET = "default"
+PLAN_HANDBACK_OPERATION = "plan-handback"
 TRANSPORT_SUCCESS_FIELDS = frozenset(
     {
         SCHEMA_VERSION_FIELD,
@@ -128,6 +128,9 @@ HANDBACK_FIELDS = frozenset(
 HANDBACK_SUCCESS_FIELDS = frozenset(
     {STATUS_FIELD, COMMAND_EXIT_CODE_FIELD, TRAILING_ENTER_SENT_FIELD}
 )
+HANDBACK_PLAN_FIELDS = frozenset(
+    {SCHEMA_VERSION_FIELD, TRANSPORT_OPERATION_FIELD, STATUS_FIELD, HANDBACK_FIELD}
+)
 MUTATION_TARGET_FIELDS = frozenset(
     {
         PANE_FIELD,
@@ -147,13 +150,6 @@ FORBIDDEN_EXECUTABLE_FIELDS = frozenset(
 )
 IDENTITY_FIELDS = ("agent", "pane", "worktree", "branch", "repository")
 IDENTITY_INPUT_FIELDS = frozenset((*IDENTITY_FIELDS, RUN_FIELD))
-PROWL_ENVIRONMENT_PATH = (
-    Path(__file__).resolve().parent.parent.parent
-    / "operate-prowl"
-    / "scripts"
-    / "prowl_environment.py"
-)
-PROWL_ENVIRONMENT_MODULE = "coding_agents_prowl_environment"
 
 
 class Operation(StrEnum):
@@ -206,41 +202,6 @@ class MessageError(RuntimeError):
     def __init__(self, status: DeliveryStatus, message: str) -> None:
         super().__init__(message)
         self.status = status
-
-
-def _load_prowl_environment() -> ModuleType:
-    resolved_path = PROWL_ENVIRONMENT_PATH.resolve()
-    cached = sys.modules.get(PROWL_ENVIRONMENT_MODULE)
-    if cached is not None:
-        module_path = getattr(cached, "__file__", None)
-        if (
-            isinstance(module_path, str)
-            and Path(module_path).resolve() == resolved_path
-        ):
-            return cached
-    spec = importlib.util.spec_from_file_location(
-        PROWL_ENVIRONMENT_MODULE,
-        resolved_path,
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load Prowl environment command contract from {resolved_path}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[PROWL_ENVIRONMENT_MODULE] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-def _expected_handback_command(*, pane: str, completion_text: str) -> str:
-    command_builder = cast(
-        Callable[..., str],
-        getattr(_load_prowl_environment(), "_handback_command"),
-    )
-    return command_builder(
-        pane=pane,
-        completion_text=completion_text,
-    )
 
 
 def _object(value: object, location: str) -> dict[str, object]:
@@ -334,21 +295,12 @@ def _validated_handback(
         handback.get(ADAPTER_PATH_FIELD),
         f"{HANDBACK_FIELD}.{ADAPTER_PATH_FIELD}",
     )
-    if adapter_path != str(PROWL_ENVIRONMENT_PATH.resolve()):
+    if not os.path.isabs(adapter_path):
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Handback adapterPath must match the source-owned adapter path.",
+            "Handback adapterPath must be absolute.",
         )
     command = _text(handback.get(COMMAND_FIELD), f"{HANDBACK_FIELD}.{COMMAND_FIELD}")
-    expected_command = _expected_handback_command(
-        pane=sender[PANE_FIELD],
-        completion_text=completion_text,
-    )
-    if command != expected_command:
-        raise MessageError(
-            DeliveryStatus.INVALID_SCHEMA,
-            "Handback command does not match its semantic completion data.",
-        )
     success = _object(
         handback.get(SUCCESS_CRITERIA_FIELD),
         f"{HANDBACK_FIELD}.{SUCCESS_CRITERIA_FIELD}",
@@ -392,6 +344,53 @@ def _validated_handback(
         SOCKET_FIELD: DEFAULT_SOCKET,
         EXPECTED_PANES_FIELD: expected_panes,
     }
+
+
+def _validated_handback_plan(
+    plan: object,
+    handback: object,
+    *,
+    sender: dict[str, str],
+    recipient: dict[str, str],
+) -> dict[str, object] | None:
+    if handback is None:
+        if plan is not None:
+            raise MessageError(
+                DeliveryStatus.INVALID_SCHEMA,
+                "handbackPlan requires a handback in the message request.",
+            )
+        return None
+    value = _object(plan, HANDBACK_PLAN_FIELD)
+    if set(value) != HANDBACK_PLAN_FIELDS:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "handbackPlan must contain the complete environment capability result.",
+        )
+    if (
+        value.get(SCHEMA_VERSION_FIELD) != HANDBACK_PLAN_SCHEMA_VERSION
+        or value.get(TRANSPORT_OPERATION_FIELD) != PLAN_HANDBACK_OPERATION
+        or value.get(STATUS_FIELD) != TRANSPORT_SUCCEEDED_STATUS
+    ):
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "handbackPlan must be a successful plan-handback result.",
+        )
+    requested = _validated_handback(
+        handback,
+        sender=sender,
+        recipient=recipient,
+    )
+    planned = _validated_handback(
+        value.get(HANDBACK_FIELD),
+        sender=sender,
+        recipient=recipient,
+    )
+    if requested != planned:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Message handback must match the environment capability result.",
+        )
+    return requested
 
 
 def coordination_reference(
@@ -740,7 +739,12 @@ def delivery_request(envelope: object) -> dict[str, object]:
     }
 
 
-def send_request(request: object, discovery: object) -> dict[str, object]:
+def send_request(
+    request: object,
+    discovery: object,
+    *,
+    handback_plan: object = None,
+) -> dict[str, object]:
     value = _object(request, MESSAGE_REQUEST_FIELD)
     unexpected = sorted(set(value) - REQUEST_INPUT_FIELDS)
     if unexpected:
@@ -767,17 +771,24 @@ def send_request(request: object, discovery: object) -> dict[str, object]:
             DeliveryStatus.INVALID_SCHEMA,
             "Expected an array of strings at request.facts.",
         )
+    recipient = _target_by_pane(
+        discovered.get(TARGETS_FIELD),
+        to_pane,
+    )
+    handback = _validated_handback_plan(
+        handback_plan,
+        value.get(HANDBACK_FIELD),
+        sender=caller,
+        recipient=recipient,
+    )
     envelope = build_envelope(
         kind=_message_kind(value.get(KIND_FIELD)),
         sender=caller,
-        recipient=_target_by_pane(
-            discovered.get(TARGETS_FIELD),
-            to_pane,
-        ),
+        recipient=recipient,
         subject=_text(value.get(SUBJECT_FIELD), f"request.{SUBJECT_FIELD}"),
         facts=facts,
         request=_optional_text(value.get(REQUEST_FIELD), f"request.{REQUEST_FIELD}"),
-        handback=value.get(HANDBACK_FIELD),
+        handback=handback,
         active_reference=_optional_text(
             value.get(COORDINATION_REFERENCE_FIELD),
             f"request.{COORDINATION_REFERENCE_FIELD}",
@@ -922,7 +933,9 @@ def main(
         value = _json_input(input_stream)
         if operation is Operation.BUILD:
             result = send_request(
-                value.get(MESSAGE_REQUEST_FIELD), value.get(DISCOVERY_FIELD)
+                value.get(MESSAGE_REQUEST_FIELD),
+                value.get(DISCOVERY_FIELD),
+                handback_plan=value.get(HANDBACK_PLAN_FIELD),
             )
         else:
             result = delivery_result(

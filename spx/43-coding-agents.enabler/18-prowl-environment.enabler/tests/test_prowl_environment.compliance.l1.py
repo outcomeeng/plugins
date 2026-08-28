@@ -166,7 +166,13 @@ def test_terminal_handbacks_require_one_complete_result_form() -> None:
 
 def test_raw_prowl_command_rule_rejects_only_the_violating_fixture() -> None:
     module = load_prowl_environment()
-    assert module.raw_prowl_command_violations(prowl_command_source_texts()) == []
+    source_texts = prowl_command_source_texts()
+    assert module.raw_prowl_command_violations(source_texts) == []
+    assert all(
+        not ("spec_from_file_location" in source and "operate-prowl" in source)
+        for source in source_texts.values()
+    )
+    assert all("_handback_command" not in source for source in source_texts.values())
 
     fixture_path, fixture_source = raw_prowl_violation_source()
     assert module.raw_prowl_command_violations(fixture_source) == [fixture_path]

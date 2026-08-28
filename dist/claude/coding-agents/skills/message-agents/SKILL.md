@@ -16,7 +16,7 @@ A source-owned coordination envelope delivered to one complete Prowl pane identi
 2. Invoke `/operate-prowl` once for `resolve-target` with the supplied path. Preserve the complete result. It returns the checked inventory, complete caller and participants, and non-caller candidates whose `sendRequestTemplate` already selects each pane with immediate-return mode and normal trailing-Enter behavior.
 3. Require a complete resolved caller and one selected candidate. On `identity-ambiguous` with `caller: null`, report the exact detail as an unresolved caller-identity conflict and stop; never ask the operator to select from the empty candidate set. Otherwise, when the request carries `toPane`, match it against the captured non-caller candidates before considering cardinality: exactly one matching candidate selects it, while zero or multiple matches stop with `invalid-identity`. Without `toPane`, use the sole candidate on `succeeded`. On `identity-ambiguous`, use `AskUserQuestion` for one single-select question: number candidates in resolver order, show each candidate's complete pane, worktree, branch, and repository, and map the answer back to that exact captured candidate and its `sendRequestTemplate` without rerunning resolution. When the runtime's option cap is below the candidate count, include the complete numbered inventory in the question and accept an exact candidate number through its free-form response; never omit a candidate. On `identity-unavailable`, report the exact detail and participant worktrees. NEVER select by title, focus, position, prose, or the caller's pane.
 4. Build the bundled script's `discovery` input directly from the resolver result: `caller` is the returned caller, `targets` is the returned complete participant list, and `status` is `prowl-pane`. Set `toPane` from the selected candidate's complete participant. This source-owned bridge uses the captured resolver result directly; never write an intermediate file or run an ad hoc transformation script.
-5. Build the bundled script's message request with the selected candidate's `toPane`, `kind`, `subject`, `facts`, optional `request`, optional `handback`, optional `coordinationReference`, optional `mutationTarget`, optional `observedState`, and optional `accepted`. `recipientPath` has completed target resolution and never enters the envelope. `kind` is exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. An acknowledgement, mutation-state report, or mutation authorization MUST reuse the active proposal UUID; an initiating proposal or fact MUST omit it so the adapter creates a new UUID. An acknowledgement MUST carry boolean `accepted`; every other kind omits it. Only a `fact` production request carries `handback`. Preserve that block byte-for-byte from `/operate-prowl`; reject top-level `command`, `handbackCommand`, `returnPane`, or `adapterPath` fields and never reconstruct the block.
+5. Build the bundled script's message request with the selected candidate's `toPane`, `kind`, `subject`, `facts`, optional `request`, optional `handback`, optional `coordinationReference`, optional `mutationTarget`, optional `observedState`, and optional `accepted`. `recipientPath` has completed target resolution and never enters the envelope. `kind` is exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. An acknowledgement, mutation-state report, or mutation authorization MUST reuse the active proposal UUID; an initiating proposal or fact MUST omit it so the adapter creates a new UUID. An acknowledgement MUST carry boolean `accepted`; every other kind omits it. Only a `fact` production request carries `handback`. When it does, invoke `/operate-prowl plan-handback` with the captured caller as sender, the selected participant as recipient, and that block's semantic `completionText`; require a successful result whose returned handback matches the request byte-for-byte, and pass the complete result to the bundled script as top-level `handbackPlan`. Reject top-level `command`, `handbackCommand`, `returnPane`, or `adapterPath` fields and never reconstruct the block.
 6. For a delegated mutation, use the source-owned handshake:
    - An `ownership-proposal` carries `mutationTarget` with exact `pane`, `worktree`, `branch`, `repository`, full `head`, and `status` values; pane, worktree, branch, and repository match the live recipient identity.
    - A `mutation-state` response carries the same target plus `observedState` with exact `worktree`, `branch`, `repository`, full `head`, and `status` values matching the live sender identity.
@@ -34,7 +34,7 @@ Pass every payload over stdin. When the shell accepts multiline input:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" build <<'JSON'
-{"discovery":{},"messageRequest":{}}
+{"discovery":{},"messageRequest":{},"handbackPlan":null}
 JSON
 
 python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" result <<'JSON'
@@ -45,7 +45,7 @@ JSON
 When the runner requires one physical command line:
 
 ```bash
-printf '%s\n' '{"discovery":{},"messageRequest":{}}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" build
+printf '%s\n' '{"discovery":{},"messageRequest":{},"handbackPlan":null}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" build
 printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":{},"detail":"<exact-environment-detail>"}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" result
 ```
 
@@ -57,6 +57,7 @@ printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":
 - ALWAYS report the selected target using the exact `recipientPath` supplied by the caller while using the resolved pane UUID only inside the delivery operation.
 - ALWAYS invoke `/operate-prowl` for source-owned target resolution and delivery.
 - ALWAYS preserve a production request's complete source-generated `handback` block unchanged.
+- ALWAYS require the matching complete successful `/operate-prowl plan-handback` result before building a production request.
 - NEVER accept or construct a handback command, return-pane field, or cross-skill adapter path.
 - ALWAYS retain each complete command result in the active tool context and feed it into the next source-owned operation; no scratch file or shell redirect is part of this workflow.
 - NEVER scan transcript files, use another terminal multiplexer, or ask the operator to relay a message as a fallback.
@@ -67,7 +68,7 @@ printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":
 
 <testing>
 
-Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Run the documented `build` stdin form and require `delivery.status: "ready"`; run the documented `result` form with a complete successful `send` payload and require `status: "delivered"`, then remove or alter each required transport field and require rejection. The matrix covers authoritative `toPane` selection from ambiguous candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, a production request that preserves the source-generated handback block, rejection of caller-authored executable handback fields, malformed identities and optional fields, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
+Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Run the documented `build` stdin form and require `delivery.status: "ready"`; run the documented `result` form with a complete successful `send` payload and require `status: "delivered"`, then remove or alter each required transport field and require rejection. The matrix covers authoritative `toPane` selection from ambiguous candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, a production request that preserves the source-generated handback block only with its matching complete `plan-handback` result, rejection of caller-authored executable handback fields, malformed identities and optional fields, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
 
 Recorded exercised payload/results:
 
@@ -95,7 +96,7 @@ Recorded exercised payload/results:
 
 - Target resolution passes only with one complete non-caller candidate selected from the complete checked inventory for `recipientPath`, with any supplied `toPane` matching that candidate.
 - Build passes only with one validated envelope and one semantic delivery bound to the target's complete pane UUID.
-- A production request preserves one source-generated handback block and rejects every caller-authored executable handback field.
+- A production request preserves one source-generated handback block only when the complete successful `plan-handback` result carries the same block, and rejects every caller-authored executable handback field.
 - Delivery passes only after `/operate-prowl` returns a checked successful result whose public input record confirms trailing Enter was sent; every failure preserves its exact status, detail, and command exit code when present.
 - Caller, recipient, mutation-target, and observed-state identities validate before delivery.
 - Transport delivery remains distinct from acknowledgement, agreement, authorization, ownership, and continuation.

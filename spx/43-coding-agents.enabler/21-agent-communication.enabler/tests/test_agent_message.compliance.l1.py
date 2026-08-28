@@ -14,6 +14,7 @@ from outcomeeng_testing.harnesses.coding_agents import (
     mutation_observation,
     observe_send_transport,
     production_handback,
+    production_handback_plan,
     public_message_context,
 )
 
@@ -360,6 +361,12 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
         assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
 
     handback = production_handback(sender, recipient)
+    handback_plan = production_handback_plan(sender, recipient)
+    with pytest.raises(module.MessageError) as raised:
+        module.send_request(
+            {**valid_request, module.HANDBACK_FIELD: handback}, discovery
+        )
+    assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
     for tampered_handback in (
         {
             **handback,
@@ -378,7 +385,9 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
     ):
         with pytest.raises(module.MessageError) as raised:
             module.send_request(
-                {**valid_request, module.HANDBACK_FIELD: tampered_handback}, discovery
+                {**valid_request, module.HANDBACK_FIELD: tampered_handback},
+                discovery,
+                handback_plan=handback_plan,
             )
         assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
 
@@ -387,12 +396,15 @@ def test_message_cli_preserves_source_owned_results() -> None:
     module, sender, recipient, discovery = public_message_context()
     envelope = fact_envelope(module, sender, recipient)
     request_content = message_content(module.MessageKind.FACT, 29)
+    handback = production_handback(sender, recipient)
+    handback_plan = production_handback_plan(sender, recipient)
     valid_request = module.build_request(
         to_pane=recipient[module.PANE_FIELD],
         kind=module.MessageKind.FACT,
         subject=request_content.subject,
         facts=list(request_content.facts),
         request=request_content.request,
+        handback=handback,
     )
 
     build_stdout = StringIO()
@@ -403,6 +415,7 @@ def test_message_cli_preserves_source_owned_results() -> None:
                 {
                     module.DISCOVERY_FIELD: discovery,
                     module.MESSAGE_REQUEST_FIELD: valid_request,
+                    module.HANDBACK_PLAN_FIELD: handback_plan,
                 }
             )
         ),
@@ -414,6 +427,7 @@ def test_message_cli_preserves_source_owned_results() -> None:
         build_output[module.DELIVERY_FIELD][module.STATUS_FIELD]
         == module.DeliveryStatus.READY
     )
+    assert build_output[module.ENVELOPE_FIELD][module.HANDBACK_FIELD] == handback
 
     result_stdout = StringIO()
     result_exit = module.main(

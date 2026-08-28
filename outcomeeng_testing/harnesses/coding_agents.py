@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import sys
 import uuid
+from io import StringIO
 from pathlib import Path
 from types import ModuleType
 from typing import Callable, cast
@@ -154,15 +156,36 @@ def production_handback(
     completion_text: str = "Requested artifact completed.",
 ) -> dict[str, object]:
     """Return a structured handback produced by the environment capability."""
-    prowl = load_prowl_environment()
     return cast(
         dict[str, object],
-        prowl.handback_plan(
-            sender=sender,
-            recipient=recipient,
-            completion_text=completion_text,
-        ),
+        production_handback_plan(sender, recipient, completion_text)["handback"],
     )
+
+
+def production_handback_plan(
+    sender: dict[str, str],
+    recipient: dict[str, str],
+    completion_text: str = "Requested artifact completed.",
+) -> dict[str, object]:
+    """Return the complete public plan-handback result."""
+    prowl = load_prowl_environment()
+    stdout = StringIO()
+    exit_code = prowl.main(
+        [prowl.CliOperation.PLAN_HAND_BACK],
+        stdin=StringIO(
+            json.dumps(
+                {
+                    prowl.SENDER_FIELD: sender,
+                    prowl.RECIPIENT_FIELD: recipient,
+                    prowl.COMPLETION_TEXT_FIELD: completion_text,
+                }
+            )
+        ),
+        stdout=stdout,
+    )
+    if exit_code != 0:
+        raise AssertionError(f"handback plan failed: {stdout.getvalue()}")
+    return cast(dict[str, object], json.loads(stdout.getvalue()))
 
 
 def run_handback_preservation_property(

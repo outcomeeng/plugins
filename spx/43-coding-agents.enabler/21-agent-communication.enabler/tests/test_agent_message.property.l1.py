@@ -2,6 +2,7 @@ from types import ModuleType
 
 from outcomeeng_testing.generators.coding_agents import message_content
 from outcomeeng_testing.harnesses.coding_agents import (
+    production_handback_plan,
     run_handback_preservation_property,
 )
 
@@ -25,6 +26,11 @@ def test_production_requests_preserve_source_generated_handbacks() -> None:
                 handback=handback,
             ),
             discovery,
+            handback_plan=production_handback_plan(
+                sender,
+                recipient,
+                str(handback[module.COMPLETION_TEXT_FIELD]),
+            ),
         )
         envelope = result[module.ENVELOPE_FIELD]
 
