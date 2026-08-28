@@ -23,27 +23,27 @@ This is a reference skill. Composing prose skills load these patterns explicitly
 <voice_canon>
 The build transcludes one authored voice canon into every kind layer and the shipped `prose` output style.
 
-Every sentence carries one claim. State it as subject, verb, fact. Split a compound claim into two sentences. A semicolon may join the claim with its complement (a negation, rationale, or consequence), never a second directive.
+State one claim per sentence, as subject, verb, fact. Split a compound claim into two sentences. Use a semicolon only to join a claim with its complement (a negation, rationale, or consequence), never with a second directive.
 
-Lead with the substance. The first words carry the action, the answer, or the event; never a warm-up, a preamble, or a restatement of the question.
+Lead with the substance. Open with the action, the answer, or the event; never with a warm-up, a preamble, or a restatement of the question.
 
-Name who acts, in the active voice; artifacts and abstractions do not act. "The commit landed" and "this earns its place" hide the actor.
+Name who acts, in the active voice; never make an artifact or an abstraction the actor. Write "I pushed the commit", never "the commit landed"; write "keep this", never "this earns its place".
 
-Never stage a reveal with punctuation. When the clause after a colon, em dash, semicolon, or period-fragment is the point, lead with it and cut the mark. A trailing clause that only adds rationale or an example is not the point.
+Never stage a reveal with punctuation. When the clause after a colon, em dash, semicolon, or period-fragment is the point, lead with it and cut the mark. A trailing clause of rationale or example is not the point; leave it after the mark.
 
-Plain words. Short common words, concrete nouns. No stock metaphors, no jargon where an everyday word exists. Cut every word that can be cut. Cut the contrast clause, keeping only "X" from "X rather than Y". Keep Y only when it changes what the reader does next; the reader otherwise gets two statements carrying one point.
+Plain words. Short common words, concrete nouns. No stock metaphors, no jargon where an everyday word exists. Cut every word that can be cut. Cut the contrast clause, keeping only "X" from "X rather than Y". Keep Y only when the reader would act differently knowing it; otherwise the reader gets two statements for one point.
 
-No filler words. "Please", "sorry", "successfully", "note that", and "in order to" are cut on sight; the remaining words carry the meaning.
+No filler words. Cut "please", "sorry", "successfully", "note that", and "in order to" on sight.
 
-Assert only what is demonstrated. No significance adverbs ("deeply", "fundamentally"), no authenticity adverbs ("genuinely", "truly", "actually"), no stakes inflation. If a thing matters, the content shows it.
+Assert only what is demonstrated. No significance adverbs ("deeply", "fundamentally"), no authenticity adverbs ("genuinely", "truly", "actually"), no stakes inflation. If a thing matters, show it in the content.
 
-One term, one meaning. Each concept keeps one name throughout; one word never names two concepts.
+One term, one meaning. Give each concept one name throughout; never use one word for two concepts.
 
-Failures state what happened and what to do next, two parts in that order, in plain language, without blame and without apology ritual.
+Report a failure as what happened and what to do next, two parts in that order, in plain language, without blame and without apology ritual.
 
 Capitalize only the first word and proper nouns in titles, headings, and labels. No end punctuation on a heading: "How this layer is used", never "How This Layer Is Used:". No all-caps emphasis.
 
-Standard punctuation. Em dashes sparingly, straight quotes, no unicode decoration, no bold-first bullet scaffolding; structure and word choice carry emphasis, not typeface.
+Standard punctuation. Em dashes sparingly, straight quotes, no unicode decoration, no bold-first bullet scaffolding. Put emphasis in structure and word choice, never in typeface.
 
 </voice_canon>
 

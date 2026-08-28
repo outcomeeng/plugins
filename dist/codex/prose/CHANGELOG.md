@@ -10,12 +10,12 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Added
 
-- **The shipped `prose` output style keeps the coding instructions.** The style's frontmatter sets `keep-coding-instructions: true`, a documented output-style field whose default drops them, so selecting the style no longer replaces the coding system prompt.
+- **The shipped `prose` output style keeps the coding instructions.** The style's frontmatter sets `keep-coding-instructions: true`, a documented output-style field whose default drops them, so selecting the style keeps the coding instructions in force.
 - **The output style carries chat conduct and code-task shape.** New paragraphs govern correction responses (state the fix, no agreement ritual), reporting (findings without decision narration or origin disclaimers), code-task reports (finding, fix, next step in under 5 lines), noisy-output compression, and a pre-send recheck of the first and last paragraph.
 
 ### Changed
 
-- **The voice canon opens with a generative core.** One claim per sentence with a defined semicolon boundary, named actors, no punctuation-staged reveals with a trailing-rationale exemption, and a decidable contrast-clause rule join the canon, so every kind layer and the shipped style compose from the same rules the audits enforce.
+- **The voice canon opens with a generative core, written in the imperative.** One claim per sentence with a defined semicolon boundary, named actors, no punctuation-staged reveals with a trailing-rationale exemption, and a decidable contrast-clause rule open the canon, so the build renders every kind layer and the shipped style from the same rules the audits enforce.
 
 ## 0.10.1
 
