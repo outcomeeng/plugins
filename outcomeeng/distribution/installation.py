@@ -16,6 +16,12 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Protocol, cast
 
+from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
+    DIST_DIR_NAME,
+    SKILLS_SUBDIR_NAME,
+)
+
 MARKETPLACE_NAME = "outcomeeng"
 USER_SCOPE_COLLISION_DIAGNOSTIC = "Claude Code user-scope marketplace collision"
 CANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins"
@@ -1104,12 +1110,12 @@ def generated_codex_agent_definitions(
     for plugin in plugins:
         source_root = (
             checkout
-            / "dist"
+            / DIST_DIR_NAME
             / Agent.CODEX.value
             / plugin
-            / "skills"
+            / SKILLS_SUBDIR_NAME
             / f"{plugin}-plugin"
-            / "agents"
+            / AGENTS_SUBDIR_NAME
         )
         for source in sorted(source_root.glob("*.toml")):
             destination = agents_root / source.name
