@@ -156,6 +156,92 @@ contract gap. Complete and publish `spx spec context` against the contract above
 return here for the consumption slice once the satisfying release exists and the
 floor is advanced to it.
 
+## Keep isolated verification dispatch context-free
+
+### Problem
+
+Operational verification dispatch passes exact committed refs, spec-node paths,
+and artifact paths to configured isolated auditors and reviewers. Those values
+are scope coordinates for the isolated session. Treating their transmission as
+discussion of the governed node forces the main conversation to load the product
+foundation and the node's complete context even when it will neither inspect nor
+change product content. The extra loading increases latency and context use while
+duplicating work that the isolated verifier must perform in its own session.
+
+### Requirements
+
+- The main conversation passes committed heads, ref ranges, node paths, and
+  artifact paths unchanged to configured isolated auditors and reviewers as
+  opaque scope inputs without loading the product foundation or contextualizing
+  the named nodes.
+- The exemption applies to every configured isolated audit and review role. It
+  does not extend to general-purpose workers, explorers, or arbitrary delegated
+  file reads.
+- Spawning the isolated role, collecting and closing its handle, rendering its
+  returned run or journal token, and recording its verdict and findings remain
+  operational continuation. These actions do not count as product-content
+  access or node discussion.
+- Each isolated auditor or reviewer loads the foundation and node context its
+  own workflow requires inside its isolated session. The main conversation does
+  not preload or relay that content.
+- A returned token, projection, verdict, finding location, or rejection remains
+  operational data while the main conversation handles it without opening the
+  referenced product artifacts.
+- Before the main conversation first reads, searches, lists, or edits referenced
+  product content to investigate or repair a finding, it establishes a live
+  foundation and contextualizes every governing node required by that access.
+- Compaction clears any product foundation and contextualized-node state held by
+  the main conversation. It does not prevent context-free operational dispatch
+  or result collection after compaction.
+
+### Boundaries
+
+- The exemption grants no product-file read or write authority.
+- Rejecting or accepting a verifier finding without inspecting product content
+  does not trigger context loading.
+- Product-content access after dispatch follows the existing foundation and
+  contextualization gates, including the post-compaction reset.
+- The change preserves verifier role definitions, isolation, output contracts,
+  handle lifecycle, and gate authority.
+
+### Acceptance evidence
+
+- A focused compliance case starts after compaction with a clean committed
+  changeset, dispatches each configured isolated audit or review role from exact
+  scope coordinates, and proves that the main conversation performs no product
+  context load before dispatch or result collection.
+- A focused compliance case receives a rejection or finding token and proves
+  that recording and routing the result remains operational until the main
+  conversation attempts product-content access.
+- A focused compliance case attempts to open a referenced product path and
+  proves that foundation loading and node contextualization become mandatory at
+  that boundary.
+- Generated Claude and Codex instruction surfaces express the same exemption and
+  re-entry boundary.
+- Focused tests, skill checks, documentation checks, instruction checks, and SPX
+  validation pass for the exact committed changeset.
+
+### Intended implementation order
+
+1. Amend the context-loading spec and any governing decision needed to define
+   opaque verification scope and the product-content re-entry boundary.
+2. Align the authored instruction template and the `/contextualize` skill with
+   the new operational exemption.
+3. Add focused compliance coverage for opaque scope transmission,
+   verifier-owned context loading, compaction behavior, and product-file
+   re-entry.
+4. Regenerate derived instruction surfaces and advance the plugin version.
+5. Run the affected spec, skill, test-evidence, implementation, and changeset
+   review gates.
+
+### Interview decisions
+
+- Desired behavior: context-free dispatch.
+- Covered roles: all configured isolated verification roles.
+- Reload boundary: immediately before main-conversation product-file access.
+- Deliverable: requirements only in this PLAN; implementation remains a later
+  slice.
+
 ## Done in this changeset
 
 - Authored `spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`
