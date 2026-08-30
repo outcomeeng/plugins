@@ -107,6 +107,7 @@ from outcomeeng.validation.selected_gate import (
     MARKDOWN_REASON,
     PYTHON_REASON,
     SELECTED_CHECK_PLAN_HEADER,
+    SHARED_TEST_INFRASTRUCTURE_REASON,
     SKILL_REASON,
     SKILL_STEP_LABELS,
     TEST_REASON,
@@ -116,6 +117,7 @@ from outcomeeng.validation.selected_gate import (
     deleted_paths_after_status_resolution,
     run_selected_check as production_run_selected_check,
 )
+from outcomeeng.validation.infrastructure_index import index_test_infrastructure
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_CHECK_WORKFLOW_PATH,
     SELECTED_GATE_FULL_GATE_PATH,
@@ -136,6 +138,7 @@ from outcomeeng_testing.generators.gate import (
 )
 from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
 
+REPOSITORY_ROOT: Final = Path(validation_pkg.__file__).resolve().parents[2]
 SELECTED_GATE_PROPERTY_SEED = 20260705
 SELECTED_GATE_PROPERTY_REPLAY_PATH = (
     "just test "
@@ -1041,8 +1044,6 @@ def assert_selected_gate_mapping_contract() -> None:
         SELECTED_GATE_FULL_GATE_PATH,
         SELECTED_GATE_CHECK_WORKFLOW_PATH,
         "outcomeeng/validation/selected_gate.py",
-        "outcomeeng_testing/generators/gate.py",
-        "outcomeeng_testing/evals/just_recipes.py",
     )
     plans = [build_selected_gate_plan((path,)) for path in full_gate_examples]
     for full_plan in plans:
@@ -1051,6 +1052,23 @@ def assert_selected_gate_mapping_contract() -> None:
             (*VALIDATION_STEPS, *TEST_STEPS)
         )
         assert all(item.reason == FULL_GATE_REASON for item in full_plan.selected_steps)
+
+    # This repository's gate harness is imported by tests under more than one
+    # node, so a change to it or to what it imports is shared infrastructure.
+    repository_index = index_test_infrastructure(REPOSITORY_ROOT)
+    shared_examples = (
+        "outcomeeng_testing/generators/gate.py",
+        "outcomeeng_testing/harnesses/gate.py",
+    )
+    for path in shared_examples:
+        shared_plan = build_selected_gate_plan(
+            (path,), test_infrastructure=repository_index
+        )
+        assert shared_plan.full_gate is True
+        assert all(
+            item.reason == SHARED_TEST_INFRASTRUCTURE_REASON
+            for item in shared_plan.selected_steps
+        )
 
     readme_plan = build_selected_gate_plan((SELECTED_GATE_README_PATH,))
     assert readme_plan.full_gate is False
