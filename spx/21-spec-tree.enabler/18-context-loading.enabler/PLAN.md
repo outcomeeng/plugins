@@ -253,8 +253,10 @@ The operation has these requirements:
   `NODE_CONTEXT_POLICY_REQUIREMENTS` tuple for the template's `Before working on
   a specific node` section, use `FOUNDATION_POLICY_REQUIREMENTS` for the
   `spx journal` and `spx verification` operational exemption, and use
-  `SUBAGENT_DISPATCH_POLICY_REQUIREMENTS` for the managed dispatch contracts.
-  The test imports its expected substrings from those three tuples and fails
+  `SUBAGENT_DISPATCH_POLICY_REQUIREMENTS` for wording inside the `Sub-agent
+  dispatch` section. Add `ROLE_TASK_CONTRACT_POLICY_REQUIREMENTS`, anchored to
+  `Quick Reference: Skills and Agents`, for the managed role-task contracts.
+  The test imports its expected substrings from those four tuples and fails
   when either generated harness surface omits the operational-continuation
   addition, path-only dispatch contract, or product-content re-entry boundary.
 - Add `[audit]` assertions to
@@ -273,13 +275,16 @@ The operation has these requirements:
 1. Amend `spx/21-spec-tree.enabler/spec-tree.md` to extend its
    operational-continuation assertion, then amend
    `spx/21-spec-tree.enabler/18-context-loading.enabler/context-loading.md` with
-   the new `[audit]` and `[eval]` assertions. This refinement needs no new
+   the new `[audit]` assertions. Add the linking `[test]` assertion to
+   `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md`,
+   referencing the render-compliance test file. This refinement needs no new
    decision record.
 2. Amend `src/plugins/spec-tree/skills/understand/SKILL.md`; the managed
    instruction template sections `Before product-content access`, `Before
    working on a specific node`, and `Sub-agent dispatch`;
    `FOUNDATION_POLICY_REQUIREMENTS`, `SUBAGENT_DISPATCH_POLICY_REQUIREMENTS`, and
-   the new `NODE_CONTEXT_POLICY_REQUIREMENTS` tuple in
+   the new `NODE_CONTEXT_POLICY_REQUIREMENTS` and
+   `ROLE_TASK_CONTRACT_POLICY_REQUIREMENTS` tuples in
    `outcomeeng/distribution/instruction_block.py`; and every named role-task
    contract that currently requires a content-bearing field. Add the managed
    path-only contract for `spec-tree:changeset-coherence-auditor`. Update every
