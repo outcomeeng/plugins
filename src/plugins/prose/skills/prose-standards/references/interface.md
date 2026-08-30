@@ -17,7 +17,7 @@ Buttons and links start with the verb that names what happens: "Create project",
 Brevity is per element.
 
 - Buttons: three words or fewer.
-- Titles and labels: a fit without truncation.
+- Titles and labels: fit without truncation.
 - Tooltips: one sentence.
 - Notifications: the event in the first clause.
 

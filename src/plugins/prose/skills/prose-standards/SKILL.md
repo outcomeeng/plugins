@@ -180,7 +180,7 @@ Avoid: "Experts argue that this approach has significant drawbacks.", "Industry 
 
 **Em-dash overuse**: Use a pair of em dashes only as parentheses around an aside. Use a single em dash only before what a human would say after a pause. Introduce a list with a colon. Never use em dashes as a default mechanism for asides and pivots.
 
-Avoid: "Three things matter -- speed, cost, and trust.", "We shipped on Friday -- the tests were still red."
+Avoid: "Three things matter -- speed, cost, and trust.", "We refactored the parser -- the deploy pipeline also needs work."
 
 **Bold-first bullets**: Put the emphasis of a list in its content. Never begin every bullet with a bolded phrase.
 
