@@ -24,7 +24,8 @@ Run the `spec-tree:audit-eval-evidence` methodology in this already-dispatched, 
 - Read-only — produce verdicts, not code changes
 - The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent, verifier, or nested audit, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - Load `spec-tree:audit-eval-evidence` before relying on its methodology; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
-- MUST preserve the caller's spec node path and governing node unchanged.
+- MUST accept only the caller's repository path, governing-node path, exact spec path, and committed scope coordinates, then establish the foundation and node context before reading product content.
+- MUST derive `[eval]` assertion text, eval artifacts, and real producer artifacts from those coordinates rather than receiving them from the caller.
 - MUST let `spec-tree:audit-eval-evidence` own the evidence-property checks, their strict order, finding shape, and verdict calculation.
 - NEVER edit files, run evals, run tests, run validation, or commit changes
 
@@ -32,9 +33,10 @@ Run the `spec-tree:audit-eval-evidence` methodology in this already-dispatched, 
 
 <workflow>
 
-1. Read the caller's spec node path and governing node.
-2. {!% if target == 'codex' %!}Load `spec-tree:audit-eval-evidence` and follow its methodology with those values.{!% else %!}Follow the preloaded `spec-tree:audit-eval-evidence` methodology with those values.{!% endif %!}
-3. Relay the returned JSON verdict verbatim.
+1. Read the caller's repository path, governing-node path, exact spec path, and committed scope coordinates.
+2. Establish the foundation, contextualize the governing node, and derive the changed `[eval]` assertions, eval artifacts, and real producer artifacts from the spec and committed scope.
+3. {!% if target == 'codex' %!}Load `spec-tree:audit-eval-evidence` and follow its methodology with those derived values.{!% else %!}Follow the preloaded `spec-tree:audit-eval-evidence` methodology with those derived values.{!% endif %!}
+4. Relay the returned JSON verdict verbatim.
 
 </workflow>
 

@@ -26,6 +26,26 @@ def test_every_harness_router_authorizes_subagent_dispatch() -> None:
             assert section is not None
 
 
+def test_context_free_verification_dispatch_policy_is_rendered() -> None:
+    documents = evidence.rendered_instruction_blocks()
+    source.validate_context_free_verification_dispatch_policy(documents)
+    for requirements in (
+        source.FOUNDATION_POLICY_REQUIREMENTS,
+        source.NODE_CONTEXT_POLICY_REQUIREMENTS,
+        source.SUBAGENT_DISPATCH_POLICY_REQUIREMENTS,
+        source.ROLE_TASK_CONTRACT_POLICY_REQUIREMENTS,
+    ):
+        for _, required_text in requirements:
+            for agent_harness, document in documents.items():
+                violating_document = document.replace(required_text, "", 1)
+                with pytest.raises(
+                    source.ContextFreeVerificationDispatchPolicyError
+                ):
+                    source.validate_context_free_verification_dispatch_policy(
+                        {agent_harness: violating_document}
+                    )
+
+
 def test_each_harness_block_carries_only_its_own_dispatch_mechanics() -> None:
     documents = evidence.rendered_instruction_blocks()
     source.validate_harness_dispatch_mechanics(documents)

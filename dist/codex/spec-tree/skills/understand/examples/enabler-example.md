@@ -23,5 +23,5 @@ CAN traverse the spec tree without re-reading the filesystem on every operation
 
 ### Compliance
 
-- ALWAYS: ignore dotfiles and `node_modules` during traversal — prevents accidental inclusion of tooling artifacts
-- NEVER: follow symlinks outside the `spx/` root — prevents path traversal
+- ALWAYS: ignore dotfiles and `node_modules` during traversal — prevents accidental inclusion of tooling artifacts ([test](tests/tree-parser.compliance.l1.test.{ext}))
+- NEVER: follow symlinks outside the `spx/` root — prevents path traversal ([test](tests/tree-parser.compliance.l1.test.{ext}))

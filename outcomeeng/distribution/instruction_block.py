@@ -89,6 +89,8 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("session release exemption", "release"),
     ("worktree-status exemption", "`spx worktree status`"),
     ("diagnose exemption", "`spx diagnose`"),
+    ("journal read exemption", "`spx journal`"),
+    ("verification read exemption", "`spx verification`"),
     ("no-patch Git exemption", "no-patch Git status, history, and topology"),
     ("product-path follow guard", "Never follow paths from their output"),
 )
@@ -371,10 +373,56 @@ SUBAGENT_DISPATCH_POLICY_REQUIREMENTS: Final = (
         "**NEVER** dispatch a sub-agent this router does not name",
     ),
     (
+        "configured verifier boundary",
+        "confine this context-free authorization to configured named verifier and reviewer roles",
+    ),
+    (
+        "non-verifier exclusions",
+        "implementation runners such as `spec-tree:applier`, simplifier agents, updater agents",
+    ),
+    (
         "main-conversation verification prohibition",
         "**NEVER** run a verification skill — audit or review — in the main conversation",
     ),
     ("blocked-gate fallback", "**ALWAYS** treat the gate as blocked"),
+)
+NODE_CONTEXT_POLICY_HEADING: Final = "### Before working on a specific node -> `/contextualize`"
+NODE_CONTEXT_POLICY_REQUIREMENTS: Final = (
+    (
+        "recorded-coordinate dispatch",
+        "dispatching a configured named verifier or reviewer role from recorded exact-commit and path or node coordinates",
+    ),
+    (
+        "coordinate provenance",
+        "exact commit and its `Refs:` trailer, the session store, or sealed journal scope events",
+    ),
+    (
+        "post-compaction deterministic rerun",
+        "After compaction, rerun the declared deterministic command",
+    ),
+    (
+        "finding judgment re-entry",
+        "Before rejecting, downgrading, dropping as unbacked, or deferring a finding",
+    ),
+)
+ROLE_TASK_CONTRACT_POLICY_HEADING: Final = "## Quick Reference: Skills and Agents"
+ROLE_TASK_CONTRACT_POLICY_REQUIREMENTS: Final = (
+    (
+        "path-only caller contract",
+        "accepts only the repository path and recorded exact-commit, artifact-path, or governing-node coordinates",
+    ),
+    (
+        "verifier-owned context",
+        "establishes its own live `<SPEC_TREE_FOUNDATION>` marker and contextualized-node set",
+    ),
+    (
+        "verifier-derived content",
+        "derives assertion text, eval and producer artifacts, implementation scope, language-scope classification, and owning-plugin classification",
+    ),
+    (
+        "changeset coherence contract",
+        "`changeset-coherence-auditor`: repository path, exact committed `<base>..<head>` scope",
+    ),
 )
 OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
 OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
@@ -626,6 +674,10 @@ class VerifierDispatchPolicyError(InstructionBlockRenderError):
 
 class SubagentDispatchPolicyError(InstructionBlockRenderError):
     """A rendered harness router weakens the sub-agent dispatch authorization."""
+
+
+class ContextFreeVerificationDispatchPolicyError(InstructionBlockRenderError):
+    """A rendered router weakens context-free verification dispatch policy."""
 
 
 class HarnessDispatchMechanicsError(InstructionBlockRenderError):
@@ -1122,6 +1174,41 @@ def validate_subagent_dispatch_policy(blocks_by_harness: Mapping[str, str]) -> N
             )
 
 
+def validate_context_free_verification_dispatch_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a router missing context-free dispatch or context re-entry rules."""
+    section_requirements = (
+        (FOUNDATION_POLICY_HEADING, FOUNDATION_POLICY_REQUIREMENTS),
+        (NODE_CONTEXT_POLICY_HEADING, NODE_CONTEXT_POLICY_REQUIREMENTS),
+        (SUBAGENT_DISPATCH_POLICY_HEADING, SUBAGENT_DISPATCH_POLICY_REQUIREMENTS),
+        (
+            ROLE_TASK_CONTRACT_POLICY_HEADING,
+            ROLE_TASK_CONTRACT_POLICY_REQUIREMENTS,
+        ),
+    )
+    for harness, document in blocks_by_harness.items():
+        router = managed_router_block(document)
+        for heading, requirements in section_requirements:
+            try:
+                section = _markdown_section(router, heading)
+            except FoundationAccessPolicyError as exc:
+                raise ContextFreeVerificationDispatchPolicyError(
+                    f"{harness} router is missing context-free dispatch section: {heading}"
+                ) from exc
+            missing = [
+                name
+                for name, required_text in requirements
+                if not _operative_policy_line_contains(section, required_text)
+            ]
+            if missing:
+                details = ", ".join(missing)
+                raise ContextFreeVerificationDispatchPolicyError(
+                    f"{harness} router context-free dispatch policy is incomplete "
+                    f"under {heading}: {details}"
+                )
+
+
 def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
     """Reject a rendered harness router that weakens the load-wait policy."""
     for harness, document in blocks_by_harness.items():
@@ -1327,6 +1414,16 @@ OPERATIVE_POLICY_VALIDATIONS: Final = (
         name="subagent-dispatch",
         requirements=SUBAGENT_DISPATCH_POLICY_REQUIREMENTS,
         validator=validate_subagent_dispatch_policy,
+    ),
+    OperativePolicyValidation(
+        name="context-free-verification-dispatch",
+        requirements=(
+            *FOUNDATION_POLICY_REQUIREMENTS,
+            *NODE_CONTEXT_POLICY_REQUIREMENTS,
+            *SUBAGENT_DISPATCH_POLICY_REQUIREMENTS,
+            *ROLE_TASK_CONTRACT_POLICY_REQUIREMENTS,
+        ),
+        validator=validate_context_free_verification_dispatch_policy,
     ),
     OperativePolicyValidation(
         name="harness-dispatch-mechanics",

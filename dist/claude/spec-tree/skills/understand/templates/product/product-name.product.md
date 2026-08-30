@@ -52,12 +52,12 @@ Capabilities grouped by the consumer and surface they serve. `/decompose` maps t
 
 ## Product-level assertions
 
-Cross-cutting assertions that span the entire tree. Product-level assertions are typically Compliance rules. Add other assertion types only when they span the entire tree.
+Cross-cutting assertions that span the entire tree. Choose exactly one evidence
+marker for each assertion: `[test](path)`, `[eval](path)`, or `[audit]`.
 
 ### Compliance
 
-- ALWAYS: {product-wide behavioral rule} — {why}
-- NEVER: {product-wide prohibition} — {why}
+- {product-wide assertion} — {why} {choose exactly one: ([test](path)), ([eval](path)), or ([audit])}
 
 ## Open decisions
 

@@ -2,9 +2,10 @@
 name: understand
 description: >-
   ALWAYS invoke this skill when the live SPEC_TREE_FOUNDATION marker is absent
-  before direct filesystem access under spx/ or before reading, searching,
-  listing, or changing source or test files. NEVER access that product content
-  without loading this skill first.
+  before directly reading, searching, listing, or changing product content:
+  source, tests, evals, generated output, specs, decisions, coordination notes,
+  or spec-declared configuration. NEVER access any such content without loading
+  this skill first.
 allowed-tools: Read, Glob, Grep
 ---
 
@@ -44,9 +45,13 @@ When layers disagree, the lower layer is in violation.
 
 Product content is every artifact of the product a spec node governs or must govern: source, tests, evals, generated output, specs, decisions, coordination notes, and configuration a spec declares. Implementation — the code layer that complies with evidence — is one kind of product content; the term keeps its narrower meaning in `<node_states>` and the placement table. Governance is derived, never assumed: a path under `spx/<node>/` is governed by that node; any other path is governed by the node whose `spx/**/tests/` file names it and whose spec links that test, or whose spec or decision names that path in an `[audit]` assertion; several matching nodes resolve to their lowest common ancestor. That lookup is a search under the live foundation marker and opens no file body. Product content with no governing node is a coverage gap: it is not read or modified, and the gap is recorded.
 
-Not product content: operational configuration — the `spx/local/` overlays and the exclusion mechanism, which `<artifact_placement>` classifies as configuration and which the skill that declares them reads without the foundation marker and with no governing node — and the agent harness's own instruction and settings files it is told to read, tool and command output, the session store, and scratch space.
+Not product content: operational configuration — the `spx/local/` overlays and the exclusion mechanism, which `<artifact_placement>` classifies as configuration and which the skill that declares them reads without the foundation marker and with no governing node — and the agent harness's own instruction and settings files it is told to read, tool and command output, the session store, and scratch space. `spx journal` and `spx verification` read, list, and render operations remain operational until their output is followed into product content.
 
-Work that touches no product content — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — is an operational continuation and triggers neither `/understand` nor `/contextualize`.
+Work that touches no product content — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof, or dispatching a configured named verifier or reviewer role from recorded exact-commit and path or node coordinates, collecting its result, rendering its returned journal token or projection, and recording its verdict and findings — is an operational continuation and triggers neither `/understand` nor `/contextualize`. The configured role carries a managed path-only task contract; implementation runners such as `spec-tree:applier`, simplifier agents, updater agents, general-purpose workers, explorers, and arbitrary delegated reads remain outside this boundary.
+
+Scope coordinates are operational data only when recorded before dispatch in the exact commit and its `Refs:` trailer, the session store, or sealed journal scope events. A missing coordinate derived by searching product content activates the normal gates. The verifier agent session establishes its own live foundation marker and contextualized-node set, then derives assertion text, eval and producer artifacts, implementation scope, language-scope classification, and owning-plugin classification from those paths.
+
+After compaction, the authoring agent session reruns the declared deterministic command and observes passing evidence for the exact committed subject before dispatching an agentic verifier or reviewer; a summary or prior-run claim does not re-establish that precondition. A returned token, projection, verdict, finding location, or finding record remains operational while recorded or accepted into the conversation-local imperfection ledger. Rejecting, downgrading, dropping as unbacked, or deferring a finding is a product judgment and requires a live foundation marker plus context for every governing node, as does opening or changing a referenced product artifact.
 
 </product_content>
 

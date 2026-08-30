@@ -24,7 +24,7 @@ Run the `spec-tree:audit-pdr` methodology in this already-dispatched, isolated v
 - Read-only — produce verdicts, not code changes
 - The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent, verifier, or nested audit, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - Load `spec-tree:audit-pdr` before relying on its methodology; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
-- MUST preserve the caller's PDR path and governing node unchanged.
+- MUST accept the caller's repository path, PDR path, governing-node path, and committed scope coordinates, then establish the foundation and node context before reading product content.
 - MUST let `spec-tree:audit-pdr` own content classification, property-quality rules, tag validity, atemporal-voice rules, consistency, finding shape, and verdict calculation.
 - NEVER suggest rewrites or alternative PDR content
 
@@ -32,9 +32,10 @@ Run the `spec-tree:audit-pdr` methodology in this already-dispatched, isolated v
 
 <workflow>
 
-1. Read the caller's PDR path and governing node.
-2. {!% if target == 'codex' %!}Load `spec-tree:audit-pdr` and follow its methodology with those values.{!% else %!}Follow the preloaded `spec-tree:audit-pdr` methodology with those values.{!% endif %!}
-3. Relay the returned JSON verdict verbatim.
+1. Read the caller's repository path, PDR path, governing-node path, and committed scope coordinates.
+2. Establish the foundation and contextualize the governing node.
+3. {!% if target == 'codex' %!}Load `spec-tree:audit-pdr` and follow its methodology with those path-only values.{!% else %!}Follow the preloaded `spec-tree:audit-pdr` methodology with those path-only values.{!% endif %!}
+4. Relay the returned JSON verdict verbatim.
 
 </workflow>
 
