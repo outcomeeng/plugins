@@ -6,7 +6,7 @@ Name who acts, in the active voice. Never make an artifact or an abstraction the
 
 Lead with the point. Never stage it after a colon, em dash, semicolon, or period-fragment. Cut the mark. Open with what followed it. Leave a trailing clause of rationale or example after the mark.
 
-Use short common words. Use a simple verb, never the noun clause made from it. Use concrete nouns. Use the everyday word, never jargon or a stock metaphor. Cut every dispensable word, starting with adjectives and adverbs. Cut the contrast clause, keeping only "X" from "X rather than Y". Keep Y only when the reader would act differently knowing it; otherwise the reader gets two statements for one point.
+Use short common words. Use a simple verb, never the noun made from it: "decide", not "decision". Use concrete nouns. Use the everyday word, never jargon or a stock metaphor. Cut every dispensable word, starting with adjectives and adverbs. Cut the contrast clause, keeping only "X" from "X rather than Y". Keep Y only when the reader would act differently knowing it; otherwise the reader gets two statements for one point.
 
 Cut "please", "sorry", "successfully", "note that", and "in order to" on sight.
 
