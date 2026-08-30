@@ -14,7 +14,14 @@ Repetition across elements is consistency, not duplication. The base one-point-o
 
 Buttons and links start with the verb that names what happens: "Create project", not "New". A destructive action names its object: "Delete 3 files", never bare "Confirm".
 
-Brevity is per element. Buttons at three words or fewer; titles and labels that fit without truncation; tooltips one sentence; notifications lead with the event in the first clause. When an element needs a second sentence, the second sentence is a candidate for a link to docs instead.
+Brevity is per element.
+
+- Buttons: three words or fewer.
+- Titles and labels: a fit without truncation.
+- Tooltips: one sentence.
+- Notifications: the event in the first clause.
+
+When an element needs a second sentence, the second sentence is a candidate for a link to docs instead.
 
 Empty states orient. What belongs here and how to add the first one; never a bare "No items".
 
