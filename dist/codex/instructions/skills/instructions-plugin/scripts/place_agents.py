@@ -2,8 +2,9 @@
 
 Tested with: missing/current/stale owned definitions, foreign and modified
 collisions, malformed ownership records, scope splits, check-only runs,
-write and prune destinations changed between preflight and mutation, and
-atomic ownership updates with no temporary files left behind.
+write and prune destinations changed between preflight and mutation (through
+the injected digest reader), and atomic ownership updates with no temporary
+files left behind.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ import os
 import re
 import tempfile
 import tomllib
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -169,7 +171,11 @@ def _scope_splits(checkout: Path, shipped: dict[str, bytes]) -> list[str]:
     return found
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    current_digest: Callable[[Path], str | None] = _current_digest,
+) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--home", type=Path, default=os.environ.get("CODEX_HOME"))
     parser.add_argument("--checkout", type=Path, default=Path.cwd())
@@ -208,7 +214,7 @@ def main(argv: list[str] | None = None) -> int:
     for relative, content in desired.items():
         path, recorded = home / relative, by_destination.get(relative)
         present = path.exists() or path.is_symlink()
-        current = _current_digest(path)
+        current = current_digest(path)
         if present:
             cause = _collision_cause(path, recorded, current)
             if cause is not None:
@@ -225,7 +231,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         path = home / entry["destination"]
         present = path.exists() or path.is_symlink()
-        current = _current_digest(path)
+        current = current_digest(path)
         if present and path.is_symlink():
             collisions.append(f"collision: {path} (symlink)")
         elif present and current != entry["digest"]:
@@ -250,8 +256,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"collision: {ownership_path} (changed after preflight)")
         return 2
     drifted = [
-        path for path, _, expected in writes if _current_digest(path) != expected
-    ] + [path for path, expected in prunes if _current_digest(path) != expected]
+        path for path, _, expected in writes if current_digest(path) != expected
+    ] + [path for path, expected in prunes if current_digest(path) != expected]
     if drifted:
         for path in drifted:
             print(f"collision: {path} (changed after preflight)")

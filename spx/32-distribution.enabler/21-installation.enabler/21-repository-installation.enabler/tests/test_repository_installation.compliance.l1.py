@@ -300,9 +300,12 @@ def test_a_write_destination_changed_after_preflight_stops_before_mutation(
             destination.write_bytes(b"foreign concurrent content\n")
         return observed(path)
 
-    module._current_digest = concurrent_writer
+    # Controlled digest reader under `/test` Stage 5 exception 3 (Time and
+    # concurrency): a writer racing the run between preflight and mutation
+    # cannot be scheduled deterministically against the real filesystem.
     exit_code = module.main(
-        ["--home", str(lifecycle.home), "--checkout", str(lifecycle.checkout)]
+        ["--home", str(lifecycle.home), "--checkout", str(lifecycle.checkout)],
+        current_digest=concurrent_writer,
     )
 
     assert exit_code == 2
@@ -341,9 +344,12 @@ def test_a_prune_destination_changed_after_preflight_stops_before_mutation(
             stale.write_bytes(b"edited while the run was planning\n")
         return observed(path)
 
-    module._current_digest = concurrent_writer
+    # Controlled digest reader under `/test` Stage 5 exception 3 (Time and
+    # concurrency): a writer racing the run between preflight and mutation
+    # cannot be scheduled deterministically against the real filesystem.
     exit_code = module.main(
-        ["--home", str(lifecycle.home), "--checkout", str(lifecycle.checkout)]
+        ["--home", str(lifecycle.home), "--checkout", str(lifecycle.checkout)],
+        current_digest=concurrent_writer,
     )
 
     assert exit_code == 2
