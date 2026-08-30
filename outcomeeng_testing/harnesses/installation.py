@@ -1871,22 +1871,19 @@ def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
         install = _run_recipe(checkout, mirror, state, environment)
         codex_home = state / "codex"
         placed_roles = _placed_role_names(codex_home)
-        login = subprocess.run(
+        login = scrubbed_probe_run(
             CODEX_LOGIN_COMMAND,
             cwd=mirror,
             env=environment,
-            input=credential,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=ROLE_DISCOVERY_TIMEOUT_SECONDS,
+            credential=credential,
+            input_text=credential,
         )
         schema_path = temporary_root / "role-discovery-schema.json"
         schema_path.write_text(
             json.dumps(ROLE_DISCOVERY_OUTPUT_SCHEMA), encoding="utf-8"
         )
         last_message_path = temporary_root / "role-discovery-last-message.json"
-        session = subprocess.run(
+        session = scrubbed_probe_run(
             (
                 CODEX_EXECUTABLE,
                 "exec",
@@ -1902,10 +1899,7 @@ def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
             ),
             cwd=mirror,
             env=environment,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=ROLE_DISCOVERY_TIMEOUT_SECONDS,
+            credential=credential,
         )
         last_message = (
             last_message_path.read_text(encoding="utf-8")
@@ -1925,6 +1919,75 @@ def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
         placed_roles=placed_roles,
         codex_home=codex_home,
     )
+
+
+def scrubbed_probe_run(
+    argv: Sequence[str],
+    *,
+    cwd: Path,
+    env: Mapping[str, str],
+    credential: str,
+    input_text: str | None = None,
+    timeout: float = ROLE_DISCOVERY_TIMEOUT_SECONDS,
+) -> subprocess.CompletedProcess[str]:
+    """Run one probe command with every captured stream scrubbed on every path.
+
+    ``subprocess.TimeoutExpired`` carries the partial capture collected before
+    the kill; scrubbing it before the exception leaves this helper keeps the
+    credential out of tracebacks and CI logs on the timeout path as well.
+    """
+    try:
+        return subprocess.run(
+            argv,
+            cwd=cwd,
+            env=env,
+            input=input_text,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as error:
+        error.output = _scrub_captured(error.output, credential)
+        error.stderr = _scrub_captured(error.stderr, credential)
+        raise
+
+
+def _scrub_captured(
+    captured: str | bytes | None, credential: str
+) -> str | bytes | None:
+    """Scrub one captured stream whichever representation the runtime kept.
+
+    ``subprocess.TimeoutExpired`` stores the partial capture as raw bytes even
+    under ``text=True``, so both representations are covered.
+    """
+    if isinstance(captured, bytes):
+        return captured.replace(credential.encode("utf-8"), b"[REDACTED-CREDENTIAL]")
+    if isinstance(captured, str):
+        return scrub_credential(captured, credential)
+    return captured
+
+
+def racing_digest_reader(
+    target: Path,
+    inject: Callable[[], None],
+    real: Callable[[Path], str | None],
+) -> Callable[[Path], str | None]:
+    """Digest reader whose second read of ``target`` runs ``inject`` first.
+
+    Controlled collaborator under `/test` Stage 5 exception 3 (Time and
+    concurrency): a writer racing the run between preflight and mutation
+    cannot be scheduled deterministically against the real filesystem.
+    """
+    calls: dict[Path, int] = {}
+
+    def reader(path: Path) -> str | None:
+        calls[path] = calls.get(path, 0) + 1
+        if path == target and calls[path] == 2:
+            inject()
+        return real(path)
+
+    return reader
 
 
 def scrub_credential(text: str, credential: str) -> str:
@@ -2476,7 +2539,9 @@ __all__ = [
     "observe_real_installation",
     "observe_repository_plan",
     "observe_scope_split",
+    "racing_digest_reader",
     "scrub_credential",
+    "scrubbed_probe_run",
     "skill_enabling_definition",
     "RENAMED_CHECKOUT_AGENT_NAME",
     "RENAMED_CHECKOUT_SKILL_NAME",

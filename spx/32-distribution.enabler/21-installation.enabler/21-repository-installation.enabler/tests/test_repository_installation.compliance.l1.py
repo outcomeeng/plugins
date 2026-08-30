@@ -2,6 +2,8 @@
 
 import hashlib
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -14,6 +16,8 @@ from outcomeeng.distribution.installation import (
 from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT
 from outcomeeng_testing.harnesses.installation import (
     observe_interrupted_reconciliation,
+    racing_digest_reader,
+    scrubbed_probe_run,
     RENAMED_CHECKOUT_AGENT_NAME,
     PluginLifecycleHarness,
     observe_agent_home_collision,
@@ -320,22 +324,16 @@ def test_a_write_destination_changed_after_preflight_stops_before_mutation(
     shipped = lifecycle.write_shipped("fixture_auditor.toml", b'name = "auditor"\n')
     module = lifecycle.load_module()
     destination = lifecycle.home_agents / shipped.name
-    observed = module._current_digest
-    calls: dict[Path, int] = {}
 
-    def concurrent_writer(path: Path) -> str | None:
-        calls[path] = calls.get(path, 0) + 1
-        if path == destination and calls[path] == 2:
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_bytes(b"foreign concurrent content\n")
-        return observed(path)
+    def inject() -> None:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(b"foreign concurrent content\n")
 
-    # Controlled digest reader under `/test` Stage 5 exception 3 (Time and
-    # concurrency): a writer racing the run between preflight and mutation
-    # cannot be scheduled deterministically against the real filesystem.
     exit_code = module.main(
         ["--home", str(lifecycle.home), "--checkout", str(lifecycle.checkout)],
-        current_digest=concurrent_writer,
+        current_digest=racing_digest_reader(
+            destination, inject, module._current_digest
+        ),
     )
 
     assert exit_code == 2
@@ -365,21 +363,13 @@ def test_a_prune_destination_changed_after_preflight_stops_before_mutation(
         }
     )
     module = lifecycle.load_module()
-    observed = module._current_digest
-    calls: dict[Path, int] = {}
 
-    def concurrent_writer(path: Path) -> str | None:
-        calls[path] = calls.get(path, 0) + 1
-        if path == stale and calls[path] == 2:
-            stale.write_bytes(b"edited while the run was planning\n")
-        return observed(path)
+    def inject() -> None:
+        stale.write_bytes(b"edited while the run was planning\n")
 
-    # Controlled digest reader under `/test` Stage 5 exception 3 (Time and
-    # concurrency): a writer racing the run between preflight and mutation
-    # cannot be scheduled deterministically against the real filesystem.
     exit_code = module.main(
         ["--home", str(lifecycle.home), "--checkout", str(lifecycle.checkout)],
-        current_digest=concurrent_writer,
+        current_digest=racing_digest_reader(stale, inject, module._current_digest),
     )
 
     assert exit_code == 2
@@ -394,6 +384,28 @@ def test_a_missing_probe_credential_fails_loudly_before_any_agent_process(
 
     with pytest.raises(RuntimeError, match="required credential"):
         observe_codex_role_discovery()
+
+
+def test_a_timed_out_probe_command_scrubs_its_partial_capture(
+    tmp_path: Path,
+) -> None:
+    credential = "probe-credential-value"
+    with pytest.raises(subprocess.TimeoutExpired) as raised:
+        scrubbed_probe_run(
+            (
+                sys.executable,
+                "-c",
+                "import sys, time; print('leak " + credential + " leak');"
+                " sys.stdout.flush(); time.sleep(30)",
+            ),
+            cwd=tmp_path,
+            env={},
+            credential=credential,
+            timeout=1,
+        )
+    assert credential not in str(raised.value.output)
+    assert "[REDACTED-CREDENTIAL]" in str(raised.value.output)
+    assert credential not in str(raised.value.stderr or "")
 
 
 def test_scrubbing_replaces_every_credential_occurrence() -> None:

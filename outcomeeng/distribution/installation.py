@@ -161,6 +161,12 @@ class ReportField(StrEnum):
     PENDING_PUBLICATION = "pending_publication"
     WARNINGS = "warnings"
     MESSAGE = "message"
+    AGENT_HOME = "agent_home"
+    WRITTEN = "written"
+    PRUNED = "pruned"
+    COLLISIONS = "collisions"
+    DESTINATION = "destination"
+    REASON = "reason"
 
 
 PLUGIN_OPERATIONS: frozenset[Operation] = frozenset(
@@ -2058,15 +2064,15 @@ def report_document(report: InstallationReport) -> dict[str, object]:
             }
             for warning in report.plan.warnings
         ],
-        "agent_home": (
+        ReportField.AGENT_HOME: (
             {
-                "written": [str(path) for path in agent_home.written],
-                "pruned": [str(path) for path in agent_home.pruned],
-                "collisions": [
+                ReportField.WRITTEN: [str(path) for path in agent_home.written],
+                ReportField.PRUNED: [str(path) for path in agent_home.pruned],
+                ReportField.COLLISIONS: [
                     {
-                        "destination": str(collision.destination),
-                        "plugin": collision.plugin,
-                        "reason": collision.reason,
+                        ReportField.DESTINATION: str(collision.destination),
+                        ReportField.PLUGIN: collision.plugin,
+                        ReportField.REASON: collision.reason,
                     }
                     for collision in agent_home.collisions
                 ],

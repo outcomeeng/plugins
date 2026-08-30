@@ -187,10 +187,10 @@ def main(
     parser.add_argument("--checkout", type=Path, default=Path.cwd())
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
-    if args.home is None or not args.home.is_absolute():
-        parser.error(
-            "--home must be the absolute selected CODEX_HOME (or set CODEX_HOME)"
-        )
+    if args.home is None:
+        parser.error("set CODEX_HOME or pass --home <absolute selected CODEX_HOME>")
+    if not args.home.is_absolute():
+        parser.error(f"CODEX_HOME/--home resolved to a relative path: {args.home}")
     home = args.home.resolve()
     agents = home / "agents"
     shipped = {path.name: path.read_bytes() for path in sorted(SHIPPED.glob("*.toml"))}
