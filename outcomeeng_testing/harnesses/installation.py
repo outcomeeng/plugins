@@ -1948,24 +1948,20 @@ def scrubbed_probe_run(
             timeout=timeout,
         )
     except subprocess.TimeoutExpired as error:
-        error.output = _scrub_captured(error.output, credential)
-        error.stderr = _scrub_captured(error.stderr, credential)
+        error.output = _scrub_captured_bytes(error.output, credential)
+        error.stderr = _scrub_captured_bytes(error.stderr, credential)
         raise
 
 
-def _scrub_captured(
-    captured: str | bytes | None, credential: str
-) -> str | bytes | None:
-    """Scrub one captured stream whichever representation the runtime kept.
+def _scrub_captured_bytes(captured: bytes | None, credential: str) -> bytes | None:
+    """Scrub one captured stream in the raw representation the runtime kept.
 
     ``subprocess.TimeoutExpired`` stores the partial capture as raw bytes even
-    under ``text=True``, so both representations are covered.
+    under ``text=True``, so the credential is replaced byte-for-byte.
     """
-    if isinstance(captured, bytes):
-        return captured.replace(credential.encode("utf-8"), b"[REDACTED-CREDENTIAL]")
-    if isinstance(captured, str):
-        return scrub_credential(captured, credential)
-    return captured
+    if captured is None:
+        return None
+    return captured.replace(credential.encode("utf-8"), b"[REDACTED-CREDENTIAL]")
 
 
 def racing_digest_reader(
