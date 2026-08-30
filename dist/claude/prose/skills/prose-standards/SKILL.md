@@ -124,13 +124,13 @@ Avoid: "They assume that users will pay... They assume that developers will buil
 
 **Tricolon abuse**: List every needed item and no more. Never use a tricolon unless three is the accurate and minimal number of items.
 
-Avoid: "Products impress people; platforms empower them. Products solve problems; platforms create worlds. Products scale linearly; platforms scale exponentially."
+Avoid: "The change is small, simple, and minimal."
 
 **"It's worth noting"**: Connect a point to the one before it only where the relationship is otherwise ambiguous. Never use throat-clearing ("It's worth noting", "It bears mentioning", "Importantly", "Interestingly", "Notably") or any other transition without effect on the meaning of what follows.
 
 **Superficial analyses**: State an observation to stand on its own. Never append a present participle phrase such as "highlighting its importance" to inject significance. Never add a parenthetical such as "(Important!)" or "(don't skip this)" in a heading or anywhere else.
 
-Avoid: "contributing to the region's rich cultural heritage", "underscoring its role as a dynamic hub of activity and culture"
+Avoid: "contributing to the region's rich cultural heritage", "underscoring its role as a dynamic hub of activity and culture", "## Setup (Important!)", "Run the migration first (don't skip this)."
 
 **False ranges**: Use "from X to Y" only for a real spectrum with a meaningful middle. Never use it to dress up a list of two loosely related things.
 
@@ -198,9 +198,9 @@ Avoid: "Experts argue that this approach has significant drawbacks.", "Industry 
 
 <formatting>
 
-**Em-dash overuse**: Use a pair of em dashes only as parentheses around an aside, and a single em dash only before what a human would say after a pause. Never use em dashes as a default mechanism for asides and pivots.
+**Em-dash overuse**: Use a pair of em dashes only as parentheses around an aside, and a single em dash only before what a human would say after a pause. Introduce a list with a colon. Never use em dashes as a default mechanism for asides and pivots.
 
-Avoid: "The problem -- and this is the part nobody talks about -- is systemic.", "Not recklessly, not completely -- but enough -- enough to matter."
+Avoid: "Three things matter -- speed, cost, and trust.", "We shipped on Friday -- the tests were still red."
 
 **Bold-first bullets**: Put the emphasis of a list in its content. Never begin every bullet with a bolded phrase.
 
