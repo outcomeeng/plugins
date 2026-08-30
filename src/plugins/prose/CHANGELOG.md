@@ -1,4 +1,4 @@
-# Changelog — prose plugin
+# Prose plugin changelog
 
 Prose craft: structure, writing, and audit for interface text, documentation, and standalone pieces.
 
@@ -49,7 +49,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **One voice canon, every surface.** The shared voice canon renders into `/prose-standards` and the shipped `prose` output style from one authored fragment, and every kind's style layer derives from the shared catalog — kinds differ in register and composition, never in voice.
+- **One voice canon, every surface.** The shared voice canon renders into `/prose-standards` and the shipped `prose` output style from one authored fragment, and every kind's style layer derives from the shared catalog, so kinds differ in register and composition, never in voice.
 
 ### Removed
 
@@ -64,8 +64,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 ### Changed
 
 - **Ambiguity resolution follows the caller's interactivity.** The interactive caller asks the user to select a kind; a dispatched audit honors a dispatch-declared kind only for text the detection procedure leaves ambiguous — ownership outranks a declared kind, and each declaration binds only the part it names — and undeclared ambiguity is reported in the verdict with the plausible kinds' shared rules audited.
-- **internal-docs covers team documents wherever the team keeps them** — a workspace tool or a repository. The audience test reads the reader's context, not the storage platform.
-- **The audit path runs at the craft model tier** — the `prose-auditor` agent, the `audit-prose` router, and the four composed audit skills declare the craft model (Opus on Claude Code, gpt-5.5 on Codex) instead of the mechanical-auditor tier.
+- **internal-docs covers team documents wherever the team keeps them**, a workspace tool or a repository. The audience test reads the reader's context, not the storage platform.
+- **The audit path runs at the craft model tier.** The `prose-auditor` agent, the `audit-prose` router, and the four composed audit skills declare the craft model (Opus on Claude Code, gpt-5.5 on Codex) instead of the mechanical-auditor tier.
 
 ### Fixed
 
