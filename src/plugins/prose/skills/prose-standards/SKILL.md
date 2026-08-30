@@ -162,7 +162,7 @@ Avoid: "And yes, I'm openly in love with the platform model", "This is not a ran
 
 Avoid: "The reality is simpler and less flattering", "History is unambiguous on this point"
 
-**Grandiose stakes inflation**: Match the stakes of each claim to the evidence in the text, and claim no consequence beyond the scale of that evidence.
+**Grandiose stakes inflation**: Match the stakes of each claim to the evidence in the text. Never claim a consequence beyond the scale of that evidence.
 
 Avoid: "This will fundamentally reshape how we think about everything.", "will define the next era of computing"
 
