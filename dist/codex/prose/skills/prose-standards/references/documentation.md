@@ -16,7 +16,7 @@ The following base rules are RELAXED for a documentation page.
 
 Numbered-step imperatives stand alone. The base rule against listicles governs a prose argument. A procedure is a numbered list by design, and each step is an imperative sentence that would read as a commanding fragment in an essay. The instruction pack governs what those steps say.
 
-Bold opens a list item as the reader's scan target. The base rule against bold-first bullets governs copy. On a documentation page, a changelog among them, a bulleted or numbered item opens with a bolded keyword label or headline sentence when the reader scans the list by it. Example: "**Security**: environment-based configuration replaces the checked-in secrets file." and "**The shipped `prose` output style keeps the coding instructions.** The style's frontmatter sets ..."
+Open a list item with bold as the reader's scan target. The base rule against bold-first bullets governs copy. On a documentation page, a changelog among them, open a bulleted or numbered item with a bolded keyword label or headline sentence when the reader scans the list by it. The base catalog's own Avoid example is this construction, forbidden in copy and permitted here. Example: "**Security**: environment-based configuration replaces the checked-in secrets file." and "**The shipped `prose` output style keeps the coding instructions.** The style's frontmatter sets ..."
 
 Bold table cells are allowed for row keys. A documentation page uses bold for column-one row labels when those labels are the row key the reader scans for. Example: a levelling matrix whose first column reads "**Ownership**", "**Craft**", "**Communication**".
 

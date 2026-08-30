@@ -136,7 +136,7 @@ Avoid: "contributing to the region's rich cultural heritage", "underscoring its 
 
 Avoid: "From innovation to implementation to cultural transformation.", "From the singularity of the Big Bang to the grand cosmic web."
 
-**Gerund fragment litany**: Give every sentence a subject and a finite verb. Never follow a claim with a run of gerund fragments.
+**Gerund fragment litany**: Give each sentence after a claim its own subject and finite verb. Never follow a claim with a run of gerund fragments.
 
 Avoid: "Fixing small bugs. Writing straightforward features. Implementing well-defined tickets."
 
