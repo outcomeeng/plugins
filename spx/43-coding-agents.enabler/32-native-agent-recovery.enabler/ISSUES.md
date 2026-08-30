@@ -30,9 +30,9 @@ verdict.
 **Revisit condition**: the pattern spans several nodes rather than this one, so the inversion is one
 migration with a shared harness contract rather than a per-node repair. This node's three files are
 among the spec test files whose every assertion is a bare comparison of a harness return value against
-an empty failure list; a wider set delegates to `assert_*` helpers in the same way. `spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/ISSUES.md` and
-`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/ISSUES.md` track the same class
-for their own nodes. Schedule the three together as that migration.
+an empty failure list; a wider set delegates to `assert_*` helpers in the same way.
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/ISSUES.md` tracks the same class
+for its own node. Schedule the two together as that migration.
 
 **Deferral reason**: the changeset that surfaced this widens one return annotation in the harness so
 its declared type matches the type its single consumer already declares, unblocking a type check that
