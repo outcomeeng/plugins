@@ -22,7 +22,7 @@ Bold table cells are allowed for row keys. A documentation page uses bold for co
 
 Parentheses are allowed when they aid clarity, for three purposes. First, to define an acronym on first introduction: "engineering management (EM)". Second, to wrap a clarifying list when the inline form would create comma ambiguity: "the recruiting process (intro call, blank-paper exercise, paid test-drive) produces enough signal." Third, for formal notation that does not read as prose: "Score 1 to 4 (no neutral midpoint)".
 
-Parentheses remain forbidden for emphasis, for redundant explanation, and for asides that should be their own sentences. The test: does the parenthetical carry information the surrounding sentence depends on? If yes, keep it. If it is punch or restatement, cut it.
+Parentheses remain forbidden for emphasis, for redundant explanation, and for asides that belong in their own sentences. The test: does the parenthetical carry information the surrounding sentence depends on? If yes, keep it. If it is punch or restatement, cut it.
 
 Bold inline labels for paragraph introducers are allowed in a procedure or structured-reference page, when each paragraph addresses a distinct labeled topic. Example: "**Hiring.** Levels are assessed against the same four dimensions. **Promotion.** Engineers are promoted after they have already operated at the next level."
 
@@ -50,7 +50,7 @@ Avoid: "*Do not* skip this step." Prefer: "A *blank-paper exercise* asks the can
 
 ## Lists and callouts
 
-Lists pick the shape the content has. Numbered when order matters or items will be referenced by number. Bulleted when items are parallel and order is incidental. A definition list — short label left, explanation right — when each item is identified by a short name and described by a longer body. A bold-label bullet list is the same shape; pick either by the scan-target test in Overrides.
+Lists pick the shape the content has. Numbered when order matters or items will be referenced by number. Bulleted when items are parallel and order is incidental. A definition list — short label left, explanation right — when each item is identified by a short name and described by a longer body. A bold-label bullet list is the same shape. Pick either by the scan-target test in Overrides.
 
 Callouts sparingly. Reserve them for warnings, content that does not fit the main flow, or short structured asides. One or two per page; more becomes noise. Never use a callout for metadata.
 
