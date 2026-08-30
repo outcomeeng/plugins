@@ -60,8 +60,7 @@ are one-line wrappers over `assert_gate_scenario_contract` and
 `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
 requires the executed test to own every predicate while the harness exposes observations.
 
-**Resolution shape**: the same inversion as the signal-harness entry above and the one
-`spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/ISSUES.md` records — convert
+**Resolution shape**: the same inversion as the signal-harness entry above — convert
 each `assert_*_contract` entry point into observation helpers returning summaries, spawn-call
 records, sink output, and AST nodes, and move each predicate beside the assertion it verifies.
 
