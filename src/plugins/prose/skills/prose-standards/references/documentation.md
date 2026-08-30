@@ -1,6 +1,6 @@
 # Documentation style layer
 
-The style rules for the documentation kind — a page in a document set: product documentation, wiki pages, runbooks, reference, policies, rubrics, onboarding guides, READMEs. The base catalog and the voice canon bind except where the overrides below relax them. The reader scans the page and enters it at a point, which is what every relaxation and cap below serves. Structural conventions for the kind — page types, lead-first openings, heading hierarchy, cross-link topology — live in the matching `/prose-architecture-standards` reference.
+The documentation kind: text the reader scans and enters at a point, such as product documentation, a wiki page, a runbook, a reference, a policy, a rubric, an onboarding guide, a README, or a changelog. The base catalog and the voice canon bind except where the overrides below relax them. The reader scans the page and enters it at a point, which is what every relaxation and cap below serves. Structural conventions for the kind — page types, lead-first openings, heading hierarchy, cross-link topology — live in the matching `/prose-architecture-standards` reference.
 
 ## Contents
 
@@ -16,7 +16,7 @@ The following base rules are RELAXED for a documentation page.
 
 Numbered-step imperatives stand alone. The base rule against listicles governs a prose argument. A procedure is a numbered list by design, and each step is an imperative sentence that would read as a commanding fragment in an essay. The instruction pack governs what those steps say.
 
-Open a list item with bold as the reader's scan target. The base rule against bold-first bullets governs copy. On a documentation page, a changelog among them, open a bulleted or numbered item with a bolded keyword label or headline sentence when the reader scans the list by it. The base catalog's own Avoid example is this construction, forbidden in copy and permitted here. Example: "**Security**: environment-based configuration replaces the checked-in secrets file." and "**The shipped `prose` output style keeps the coding instructions.** The style's frontmatter sets ..."
+Open a list item with bold as the reader's scan target. The base rule against bold-first bullets governs copy. On a documentation page, a changelog among them, open a bulleted or numbered item with a bolded keyword label or headline sentence when the reader scans the list by it. The base catalog's own Avoid example is this construction, forbidden in copy and permitted here. Example: "**Security**: environment-based configuration replaces the checked-in secrets file." and "**Output style: coding instructions kept.** `keep-coding-instructions: true` in the frontmatter, a documented field."
 
 Bold table cells are allowed for row keys. A documentation page uses bold for column-one row labels when those labels are the row key the reader scans for. Example: a levelling matrix whose first column reads "**Ownership**", "**Craft**", "**Communication**".
 
@@ -34,7 +34,7 @@ Active voice. "The parser rejects invalid input", never "invalid input is reject
 
 No should, would, may, or might. A behavior happens or it does not: "the server restarts", not "the server should restart". "Can" states capability and "will" states a promised future — both survive. This binds every sentence on the page, not only its steps.
 
-A descriptive sentence caps at 25 words and splits over the cap. Simple tenses only: present for facts, imperative for instructions, simple past for a prerequisite already performed. No perfect tenses and no progressive forms. No verbal "-ing" clauses: "the command exits and prints a summary", never "the command exits, printing a summary" — nouns ending in -ing ("the setting", "a warning") are words, not violations. Noun clusters cap at three nouns; break a longer one with a preposition. Paragraphs cap at six sentences and carry one topic.
+A descriptive sentence caps at 25 words and splits over the cap. Simple tenses only: present for facts, imperative for instructions, simple past for a prerequisite already performed. No perfect tenses and no progressive forms. No verbal "-ing" clauses: "the command exits and prints a summary", never "the command exits, printing a summary" — nouns ending in -ing ("the setting", "a warning") are words, not violations. Use at most three nouns in a row. Break a longer run with a preposition: "build pipeline cache key" becomes "cache key of the build pipeline". Paragraphs cap at six sentences and carry one topic.
 
 ## Typography
 
@@ -50,7 +50,7 @@ Avoid: "*Do not* skip this step." Prefer: "A *blank-paper exercise* asks the can
 
 ## Lists and callouts
 
-Lists pick the shape the content has. Numbered when order matters or items will be referenced by number. Bulleted when items are parallel and order is incidental. A definition list — short label left, explanation right — when each item is identified by a short name and described by a longer body. A bold-label bullet list is the same shape where the rendering surface has no definition list.
+Lists pick the shape the content has. Numbered when order matters or items will be referenced by number. Bulleted when items are parallel and order is incidental. A definition list — short label left, explanation right — when each item is identified by a short name and described by a longer body. A bold-label bullet list is the same shape; pick either by the scan-target test in Overrides.
 
 Callouts sparingly. Reserve them for warnings, content that does not fit the main flow, or short structured asides. One or two per page; more becomes noise. Never use a callout for metadata.
 

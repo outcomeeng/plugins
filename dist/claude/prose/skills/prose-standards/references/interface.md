@@ -1,6 +1,6 @@
 # Interface style layer
 
-The style rules for the interface kind — text fragments embedded in a designed surface: app chrome, buttons, labels, empty states, error messages, tooltips, notifications, email templates, short web-page sections. The base catalog and the voice canon bind except where the overrides below relax them. Structural conventions for the kind — the surface inventory and element parallelism — live in the matching `/prose-architecture-standards` reference.
+The interface kind: text the reader meets inside a designed surface, such as app chrome, a button, a label, an empty state, an error message, a tooltip, a notification, an email template, or a short web-page section. The base catalog and the voice canon bind except where the overrides below relax them. Structural conventions for the kind — the surface inventory and element parallelism — live in the matching `/prose-architecture-standards` reference.
 
 ## Overrides
 

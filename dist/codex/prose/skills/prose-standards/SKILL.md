@@ -138,7 +138,7 @@ Avoid: "From innovation to implementation to cultural transformation.", "From th
 
 **Gerund fragment litany**: Give each sentence after a claim its own subject and finite verb. Never follow a claim with a run of gerund fragments.
 
-Avoid: "Fixing small bugs. Writing straightforward features. Implementing well-defined tickets."
+Avoid: "This ticket needs someone senior. Fixing small bugs. Writing straightforward features. Implementing well-defined tickets."
 
 **Tautological definitions**: State the test directly. Drop the adjective. Never define a quality using the quality itself. In "A genuine change does not revert", read "genuine" as "does not revert", a predicate restating the adjective.
 

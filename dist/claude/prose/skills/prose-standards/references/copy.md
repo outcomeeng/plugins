@@ -1,6 +1,6 @@
 # Copy style layer
 
-The style rules for the copy kind — a standalone piece read start to finish: essays, articles, long-form landing narrative. The base catalog and the voice canon bind in full; this layer adds the word- and sentence-level craft a read-through piece needs. Structural conventions for the kind live in the matching `/prose-architecture-standards` reference.
+The copy kind: text the reader reads for its content or argument, such as an essay, an article, or long-form landing narrative. The base catalog and the voice canon bind in full; this layer adds the word- and sentence-level craft a read-through piece needs. Structural conventions for the kind live in the matching `/prose-architecture-standards` reference.
 
 ## Overrides
 
