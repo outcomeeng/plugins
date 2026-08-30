@@ -1640,8 +1640,6 @@ def execute_installation(
     completed: tuple[CommandResult, ...] = (),
 ) -> InstallationReport:
     """Execute plan order and stop at the first failed operation."""
-    if plan.agent_home.collisions:
-        raise AgentHomeCollisionError(plan.agent_home.collisions)
     if plan.mode is InstallationMode.ISOLATED:
         _create_isolated_roots(plan.roots)
     results = list(completed)

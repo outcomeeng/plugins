@@ -20,7 +20,10 @@ from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import cast
 
-from outcomeeng.distribution.agents import AGENT_NAME_FIELD
+from outcomeeng.distribution.agents import (
+    AGENT_NAME_FIELD,
+    AGENT_SKILL_ENABLED_FIELD,
+)
 from outcomeeng.distribution.build import render_text
 from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
@@ -1014,7 +1017,7 @@ def skill_enabling_definition(plugin: str) -> bytes:
         'name = "local-helper"\n'
         f"[[{AGENT_SKILLS_FIELD}.{AGENT_SKILLS_CONFIG_FIELD}]]\n"
         f'{AGENT_SKILL_NAME_FIELD} = "{plugin}:{RENAMED_CHECKOUT_SKILL_NAME}"\n'
-        "enabled = true\n"
+        f"{AGENT_SKILL_ENABLED_FIELD} = true\n"
     ).encode("utf-8")
 
 
