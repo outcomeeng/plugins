@@ -4,7 +4,7 @@ The copy kind: text the reader reads for its content or argument, such as an ess
 
 ## Overrides
 
-None. Copy relaxes no base rule — the voice is the base voice, at zero tolerance.
+None. Copy relaxes no base rule; the voice is the base voice, at zero tolerance.
 
 ## Word choice
 
@@ -14,17 +14,17 @@ Adverbs earn their place by adding real information. "The server responded in 14
 
 Use the plainest accurate noun for a field, area, or collection: field, area, market, industry, set. The concrete noun that names the actual thing beats a metaphorical one.
 
-Use words that were normal before 2023. If a word feels like a thesaurus entry for a common word, use the common word — or show the quality through specifics rather than asserting it with any adjective at all.
+Use words that were normal before 2023. If a word feels like a thesaurus entry for a common word, use the common word, or show the quality through specifics.
 
 ## Sentence structure
 
-One rhetorical move per paragraph. A sentence that makes a point is followed by development, support, or transition — not a reframe of the same point.
+One rhetorical move per paragraph. A sentence that makes a point is followed by development, support, or transition; never a reframe of the same point.
 
 State things directly. "The API lacks scoped permissions" is a complete thought; it needs no setup as a correction of what the reader supposedly believed. If a specific misconception is worth addressing, name it and cite where it comes from.
 
 A definition earns its keep when the predicate adds information the subject does not contain. State the test directly and drop the adjective: "The change does not revert."
 
-Questions in prose are real questions — non-obvious answers, or open exploration. A question whose answer appears in the next five words is a speed bump.
+Questions in prose are real questions: non-obvious answers, or open exploration. A question whose answer appears in the next five words is a speed bump.
 
 Vary sentence openings. Three consecutive sentences starting the same way means rethinking two. Parallel structure is for the moment of a specific rhetorical payoff, not a default mode.
 
@@ -36,8 +36,8 @@ Participial phrases at sentence endings add new information, or they go.
 
 "From X to Y" is reserved for a real continuum with a middle that matters. Loosely related things get listed.
 
-Build toward the point directly — never negate before stating what something is. Every sentence has a subject and a verb; a claim is not illustrated with a trail of verbless fragments.
+Build toward the point directly. Never negate before stating what something is. Every sentence has a subject and a verb; a claim is not illustrated with a trail of verbless fragments.
 
 ## Formatting
 
-Punctuation names the relationship between clauses; when uncertain, a period and a new sentence is almost always right. Emphasis comes from structure and word choice, not typeface. Lists use plain text items. Use the characters a keyboard produces — straight quotes, plain hyphens, `->` in code.
+Punctuation names the relationship between clauses; when uncertain, a period and a new sentence is almost always right. Emphasis comes from structure and word choice, not typeface. Lists use plain text items. Use the characters a keyboard produces: straight quotes, plain hyphens, `->` in code.
