@@ -156,92 +156,6 @@ contract gap. Complete and publish `spx spec context` against the contract above
 return here for the consumption slice once the satisfying release exists and the
 floor is advanced to it.
 
-## Keep isolated verification dispatch context-free
-
-### Problem
-
-Operational verification dispatch passes exact committed refs, spec-node paths,
-and artifact paths to configured isolated auditors and reviewers. Those values
-are scope coordinates for the isolated session. Treating their transmission as
-discussion of the governed node forces the main conversation to load the product
-foundation and the node's complete context even when it will neither inspect nor
-change product content. The extra loading increases latency and context use while
-duplicating work that the isolated verifier must perform in its own session.
-
-### Requirements
-
-- The main conversation passes committed heads, ref ranges, node paths, and
-  artifact paths unchanged to configured isolated auditors and reviewers as
-  opaque scope inputs without loading the product foundation or contextualizing
-  the named nodes.
-- The exemption applies to every configured isolated audit and review role. It
-  does not extend to general-purpose workers, explorers, or arbitrary delegated
-  file reads.
-- Spawning the isolated role, collecting and closing its handle, rendering its
-  returned run or journal token, and recording its verdict and findings remain
-  operational continuation. These actions do not count as product-content
-  access or node discussion.
-- Each isolated auditor or reviewer loads the foundation and node context its
-  own workflow requires inside its isolated session. The main conversation does
-  not preload or relay that content.
-- A returned token, projection, verdict, finding location, or rejection remains
-  operational data while the main conversation handles it without opening the
-  referenced product artifacts.
-- Before the main conversation first reads, searches, lists, or edits referenced
-  product content to investigate or repair a finding, it establishes a live
-  foundation and contextualizes every governing node required by that access.
-- Compaction clears any product foundation and contextualized-node state held by
-  the main conversation. It does not prevent context-free operational dispatch
-  or result collection after compaction.
-
-### Boundaries
-
-- The exemption grants no product-file read or write authority.
-- Rejecting or accepting a verifier finding without inspecting product content
-  does not trigger context loading.
-- Product-content access after dispatch follows the existing foundation and
-  contextualization gates, including the post-compaction reset.
-- The change preserves verifier role definitions, isolation, output contracts,
-  handle lifecycle, and gate authority.
-
-### Acceptance evidence
-
-- A focused compliance case starts after compaction with a clean committed
-  changeset, dispatches each configured isolated audit or review role from exact
-  scope coordinates, and proves that the main conversation performs no product
-  context load before dispatch or result collection.
-- A focused compliance case receives a rejection or finding token and proves
-  that recording and routing the result remains operational until the main
-  conversation attempts product-content access.
-- A focused compliance case attempts to open a referenced product path and
-  proves that foundation loading and node contextualization become mandatory at
-  that boundary.
-- Generated Claude and Codex instruction surfaces express the same exemption and
-  re-entry boundary.
-- Focused tests, skill checks, documentation checks, instruction checks, and SPX
-  validation pass for the exact committed changeset.
-
-### Intended implementation order
-
-1. Amend the context-loading spec and any governing decision needed to define
-   opaque verification scope and the product-content re-entry boundary.
-2. Align the authored instruction template and the `/contextualize` skill with
-   the new operational exemption.
-3. Add focused compliance coverage for opaque scope transmission,
-   verifier-owned context loading, compaction behavior, and product-file
-   re-entry.
-4. Regenerate derived instruction surfaces and advance the plugin version.
-5. Run the affected spec, skill, test-evidence, implementation, and changeset
-   review gates.
-
-### Interview decisions
-
-- Desired behavior: context-free dispatch.
-- Covered roles: all configured isolated verification roles.
-- Reload boundary: immediately before main-conversation product-file access.
-- Deliverable: requirements only in this PLAN; implementation remains a later
-  slice.
-
 ## Done in this changeset
 
 - Authored `spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`
@@ -253,3 +167,143 @@ duplicating work that the isolated verifier must perform in its own session.
 - Updated `src/plugins/spec-tree/skills/contextualize/SKILL.md` so the current
   runtime reads explicit full-path ADR/PDR citations from loaded specs and
   decisions before emitting `<SPEC_TREE_CONTEXT>`.
+
+## Keep named verification dispatch context-free
+
+### Problem
+
+The authoring agent session already holds exact committed refs and recorded
+scope coordinates when it reaches an agentic verification gate. Passing those
+coordinates to a verifier agent session currently risks being classified as
+discussion of the governed node, which forces the authoring session to reload
+the live `<SPEC_TREE_FOUNDATION>` marker and complete node context before it can
+dispatch. The verifier agent session must load its own context to produce an
+independent verdict, so author-side preloading duplicates work and consumes the
+context needed to act on the result.
+
+### Operational-continuation requirement
+
+Extend the existing operational-continuation enumeration in
+`spx/21-spec-tree.enabler/spec-tree.md` and the shipped `/understand` policy with
+one harness-neutral operation:
+
+> Dispatching a named verifier or reviewer role from recorded scope
+> coordinates, collecting its result, rendering its returned token or
+> projection, and recording its verdict and findings touches no product content
+> and triggers neither `/understand` nor `/contextualize`.
+
+The operation has these requirements:
+
+- A named role is an audit or review role with a role-task contract in the
+  managed instruction block. The operation excludes implementation runners such
+  as `spec-tree:applier`, simplifier agents, updater agents, general-purpose
+  workers, explorers, and arbitrary delegated reads.
+- Scope coordinates are operational data recorded before dispatch in a source
+  the authoring agent session may read without the foundation marker: the exact
+  commit and its `Refs:` trailer, the session store, or sealed journal scope
+  events. After compaction, the authoring agent session never derives a governing
+  node by searching product content. An absent recorded coordinate makes that
+  derivation product-content access and activates the normal gates.
+- Every named role-task contract accepts path-only coordinates. Assertion text,
+  eval artifacts, producer artifacts, language-scope classification, and
+  owning-plugin classifications are resolved by the verifier agent session from
+  those paths after it establishes its own live `<SPEC_TREE_FOUNDATION>` marker
+  and contextualized-node set. The authoring agent session neither preloads nor
+  relays content-bearing fields.
+- `spx journal` and `spx verification` read, list, and render operations are
+  operational commands under the same boundary as `spx session`,
+  `spx worktree status`, and `spx diagnose`. Following any path from their
+  output into product content activates the normal gates.
+- Compaction clears the authoring agent session's live foundation marker,
+  contextualized-node set, and remembered deterministic-verification result. A
+  post-compaction agentic dispatch re-establishes deterministic passing evidence
+  for the exact committed subject by rerunning the declared deterministic
+  command and reading its tool output. A compaction summary or prior-run claim
+  does not establish that precondition.
+- A returned token, projection, verdict, finding location, or finding record is
+  operational data while the authoring agent session handles it without opening
+  a referenced product artifact or making a product judgment.
+
+### Product-content re-entry and finding disposition
+
+- Before the authoring agent session first reads, searches, lists, or edits
+  product content for any purpose after dispatch, it establishes a live
+  `<SPEC_TREE_FOUNDATION>` marker and contextualizes every governing node needed
+  by that access.
+- Accepting a finding as recorded and routing it to the fix queue is operational.
+- Rejecting, downgrading, dropping as unbacked, or deferring a finding is a
+  product judgment. The authoring agent session establishes the live foundation
+  marker and contextualizes the finding's governing node before making that
+  decision.
+- Writing a deferral to `PLAN.md` or `ISSUES.md` is product-content access under
+  the same gates. A bounded valid finding remains fix-now, and a valid finding's
+  defect class is swept across the touched nodes as required by
+  `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`.
+- The change preserves verifier-session isolation, output contracts, gate
+  authority, and each harness's own handle-lifecycle rules. Harness-specific
+  handle wording stays inside the matching generated harness region.
+
+### Required evidence
+
+- Add an `[eval]` at
+  `spx/21-spec-tree.enabler/18-context-loading.enabler/evals/context-free-dispatch/`
+  modelled on
+  `spx/21-spec-tree.enabler/76-merge.enabler/evals/local-completion-boundary/`.
+  Its graded cases cover:
+  1. Post-compaction dispatch of a named verifier role from recorded coordinates:
+     pass when the transcript emits no `<SPEC_TREE_FOUNDATION>` or
+     `<SPEC_TREE_CONTEXT>` marker and issues no Read, Grep, Glob, `cat`, `sed`,
+     `rg`, or patch-emitting Git operation on a product path before dispatch or
+     returned-token render.
+  2. A returned finding the authoring agent session attempts to reject,
+     downgrade, drop, or defer: pass when `/understand` and `/contextualize` run
+     before the product judgment.
+  3. Product content opened after dispatch for any purpose: pass when both
+     required markers precede the first product-content access.
+- Add `[test]` render-compliance evidence under
+  `spx/21-spec-tree.enabler/43-instruction-block.enabler` for the pinned policy
+  tuple. The test fails when either generated harness surface omits the
+  operational-continuation addition or the product-content re-entry boundary.
+- Add `[audit]` assertions to
+  `spx/21-spec-tree.enabler/18-context-loading.enabler/context-loading.md` for the
+  shipped `/understand` policy, path-only role contracts, verifier-owned context,
+  finding-disposition boundary, and post-compaction deterministic precondition.
+- Focused SPX validation, skill checks, documentation checks, instruction checks,
+  the eval, affected auditors, and changeset review pass on the same committed
+  subject.
+
+### Exact implementation surfaces and order
+
+1. Amend `spx/21-spec-tree.enabler/spec-tree.md` to extend its
+   operational-continuation assertion, then amend
+   `spx/21-spec-tree.enabler/18-context-loading.enabler/context-loading.md` with
+   the new `[audit]` and `[eval]` assertions. This refinement needs no new
+   decision record.
+2. Amend `src/plugins/spec-tree/skills/understand/SKILL.md`; the managed
+   instruction template sections `Before product-content access`, `Before
+   working on a specific node`, and `Sub-agent dispatch`;
+   `FOUNDATION_POLICY_REQUIREMENTS` in
+   `outcomeeng/distribution/instruction_block.py`; and every named role-task
+   contract that currently requires a content-bearing field.
+3. Use `src/plugins/prose/skills/audit-prose/SKILL.md` as the current concrete
+   audit-workflow model and
+   `src/plugins/instructions/skills/audit-skill/SKILL.md` as the structural
+   auditor-skeleton model when converting role-task contracts to path-only
+   inputs.
+4. Author the context-free-dispatch eval and the instruction-render compliance
+   test.
+5. Run `just bump`, `just build-skills`, `just build-instructions`, and
+   `just instructions-check` in that order. Run `just build-eval-triggers` when
+   the eval's `owned_paths` changes generated trigger ownership.
+6. Run focused deterministic verification, the affected spec, skill,
+   test-evidence, eval-evidence, and implementation audits, and changeset review.
+
+### Interview decisions
+
+- Desired behavior: context-free dispatch from recorded operational scope.
+- Covered roles: every audit or review role named by a managed role-task
+  contract.
+- Reload boundary: immediately before any authoring-agent-session product-content
+  access or product judgment.
+- Deliverable: requirements only in this PLAN; implementation remains a later
+  slice.
