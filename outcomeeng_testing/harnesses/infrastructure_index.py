@@ -268,3 +268,29 @@ def index_property(test_func: Callable[..., None]) -> Callable[[], None]:
         )
 
     return wrapper
+
+
+@dataclass(frozen=True)
+class MixedLayout:
+    """A node-local module beside a changed test that does not import it."""
+
+    changed_path: str
+    reached_tests: tuple[str, ...]
+    changed_test: str
+    index: InfrastructureIndex
+
+
+def mixed_reach_layout(repo: SyntheticRepository) -> MixedLayout:
+    """Write a node-local harness, its importing tests, and one unrelated test."""
+
+    harness = f"{repo.package}.{HARNESSES_SUBPACKAGE}.local"
+    import_line = f"from {repo.package}.{HARNESSES_SUBPACKAGE} import local\n"
+    changed = repo.write_module(harness, "")
+    reached = (repo.write_test(FIRST_NODE, "one", import_line),)
+    unrelated = repo.write_test(FIRST_NODE, "unrelated", "")
+    return MixedLayout(
+        changed_path=changed,
+        reached_tests=reached,
+        changed_test=unrelated,
+        index=repo.index(),
+    )

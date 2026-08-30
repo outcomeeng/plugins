@@ -8,6 +8,7 @@ from outcomeeng.validation import PYTEST_ARGV, TEST_STEPS, VALIDATION_STEPS
 from outcomeeng.validation.selected_gate import (
     REACHED_TESTS_REASON,
     SHARED_TEST_INFRASTRUCTURE_REASON,
+    TEST_REASON,
     UNTRACEABLE_TEST_INFRASTRUCTURE_REASON,
     build_selected_gate_plan,
 )
@@ -18,6 +19,7 @@ from outcomeeng_testing.harnesses.gate import (
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
     conftest_reach_layout,
+    mixed_reach_layout,
     reach_layout,
     synthetic_repository,
 )
@@ -80,6 +82,28 @@ def test_module_reached_by_conftest_selects_the_full_surface() -> None:
     assert {item.reason for item in plan.selected_steps} == {
         SHARED_TEST_INFRASTRUCTURE_REASON
     }
+
+
+def test_step_fed_by_changed_and_reached_tests_names_both_reasons() -> None:
+    with synthetic_repository() as repo:
+        layout = mixed_reach_layout(repo)
+
+    plan = build_selected_gate_plan(
+        (layout.changed_path, layout.changed_test),
+        test_infrastructure=layout.index,
+    )
+    pytest_steps = [
+        item
+        for item in plan.selected_steps
+        if item.step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+    ]
+
+    assert plan.full_gate is False
+    assert [item.step.argv for item in pytest_steps] == [
+        (*PYTEST_ARGV, *sorted((layout.changed_test, *layout.reached_tests)))
+    ]
+    assert TEST_REASON in pytest_steps[0].reason
+    assert REACHED_TESTS_REASON in pytest_steps[0].reason
 
 
 def test_template_script_maps_to_skill_and_lint_steps() -> None:

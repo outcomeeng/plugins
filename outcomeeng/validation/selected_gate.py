@@ -71,6 +71,9 @@ SHARED_TEST_INFRASTRUCTURE_REASON: Final = "shared test infrastructure changed"
 UNTRACEABLE_TEST_INFRASTRUCTURE_REASON: Final = (
     "test-infrastructure artifact reached by path changed"
 )
+# One pytest step can carry paths selected for different reasons; its label
+# names every reason that contributed a path.
+REASON_SEPARATOR: Final = "; "
 ROOT_README_PATH: Final = "README.md"
 SPX_CONFIG_PATH: Final = "spx.config.yaml"
 # Exact-match selection targets, named so a consumer imports the value rather
@@ -444,16 +447,19 @@ def build_selected_gate_plan(
         for path in normalized
         if _is_python_assertion_test(path) and path not in deleted_path_set
     )
-    test_paths = tuple(
-        sorted((set(changed_test_paths) | reached_tests) - deleted_path_set)
-    )
+    reached_only = reached_tests - set(changed_test_paths) - deleted_path_set
+    test_paths = tuple(sorted(set(changed_test_paths) | reached_only))
     if test_paths:
+        test_reasons = (
+            *((TEST_REASON,) if changed_test_paths else ()),
+            *((REACHED_TESTS_REASON,) if reached_only else ()),
+        )
         selected_steps.append(
             SelectedGateStep(
                 step=Step(
                     label=TEST_RECIPE.steps[0].label, argv=(*PYTEST_ARGV, *test_paths)
                 ),
-                reason=TEST_REASON if changed_test_paths else REACHED_TESTS_REASON,
+                reason=REASON_SEPARATOR.join(test_reasons),
             )
         )
     return SelectedGatePlan(
