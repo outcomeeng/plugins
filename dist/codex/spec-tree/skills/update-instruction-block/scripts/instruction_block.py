@@ -479,7 +479,10 @@ def template_languages(template_text: str) -> tuple[str, ...]:
 
 
 def filter_harness(body: str, harness: str) -> str:
-    """Keep each ``harness:NAME`` block whose NAME is the target harness; drop the rest."""
+    """Keep each ``harness:NAME`` block whose NAME is the target harness; drop the rest.
+
+    Public: the instruction-block evidence exercises this filter directly.
+    """
     return _filter_conditional_blocks(body, "harness", {harness})
 
 
