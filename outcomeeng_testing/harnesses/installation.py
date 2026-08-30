@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import shutil
 import stat
 import subprocess
+import sys
+import tomllib
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
@@ -14,15 +17,28 @@ from functools import cache
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import ModuleType
 from typing import cast
 
-from outcomeeng.distribution.build import (
-    PLACEMENT_MANIFEST_DIRECTORY_FIELD,
-    PLACEMENT_MANIFEST_FILENAME,
-    PLACEMENT_MANIFEST_PREFIX_FIELD,
+from outcomeeng.distribution.agents import (
+    AGENT_NAME_FIELD,
+    AGENT_SKILL_ENABLED_FIELD,
+)
+from outcomeeng.distribution.build import render_text
+from outcomeeng.distribution.contracts import (
+    BUILD_TARGET_VARIABLE,
+    PLUGIN_NAME_VARIABLE,
+    Target,
 )
 from outcomeeng.distribution.installation import (
+    AGENT_OWNERSHIP_FILENAME,
+    AGENT_SKILL_NAME_FIELD,
+    AGENT_SKILLS_CONFIG_FIELD,
+    AGENT_SKILLS_FIELD,
     Agent,
+    AgentHomeCollision,
+    AgentHomeCollisionError,
+    AgentHomeResult,
     CANONICAL_CODEX_SOURCE,
     CANONICAL_MARKETPLACE_SOURCE,
     CATALOG_PLUGIN_NAME_FIELD,
@@ -38,9 +54,11 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_PROJECT_SETTINGS_PATH,
     CODEX_AGENTS_PATH,
+    CODEX_EXECUTABLE,
     CODEX_CATALOG_PATH,
     CODEX_CONFIG_PATH,
     CODEX_HOME_ENV,
+    CODEX_HOME_AGENTS_PATH,
     CODEX_MARKETPLACE_LIST_COMMAND,
     CODEX_PLUGIN_ENABLED_FIELD,
     CODEX_PLUGIN_ENTRIES_FIELD,
@@ -59,7 +77,9 @@ from outcomeeng.distribution.installation import (
     Operation,
     PersistentPreflight,
     PLUGIN_OPERATIONS,
-    PYTHON_EXECUTABLE,
+    ScopeSplitClassification,
+    ScopeSplitEntry,
+    ScopeSplitError,
     SourceAction,
     SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
@@ -80,13 +100,36 @@ from outcomeeng_testing.generators.installation import (
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
 )
+from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT
 
 UNOWNED_AGENT_FILENAME = "developer-owned.toml"
 UNOWNED_AGENT_CONTENT = 'name = "developer-owned"\n'
-REQUIRED_BINARIES: tuple[str, ...] = ("just", "claude", "codex", PYTHON_EXECUTABLE)
+REQUIRED_BINARIES: tuple[str, ...] = ("just", "claude", "codex")
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
 PLUGIN_DISABLING_CODEX_CONFIG = b"[plugins]\nenabled = false\n"
+
+CODEX_LOGIN_COMMAND: tuple[str, ...] = (CODEX_EXECUTABLE, "login", "--with-api-key")
+ROLE_DISCOVERY_ROLES_FIELD = "roles"
+RENAMED_CHECKOUT_AGENT_NAME = "local_helper.toml"
+RENAMED_CHECKOUT_SKILL_NAME = "renamed-skill"
+ROLE_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
+    "type": "object",
+    "properties": {
+        ROLE_DISCOVERY_ROLES_FIELD: {"type": "array", "items": {"type": "string"}}
+    },
+    "required": [ROLE_DISCOVERY_ROLES_FIELD],
+    "additionalProperties": False,
+}
+ROLE_DISCOVERY_PROMPT = (
+    "Report every agent role name you can spawn as a subagent in this session: "
+    "the exact `agent_type` values your subagent-spawning tool declares, "
+    "including built-in roles. If that tool is not initially exposed, discover "
+    "it through your deferred-tool registry first. Do not read any file, run "
+    "any command, or spawn any agent. Answer only with JSON matching the "
+    "required output schema."
+)
+ROLE_DISCOVERY_TIMEOUT_SECONDS = 600
 
 
 def _settings_json(path: Path) -> dict[str, object]:
@@ -181,6 +224,201 @@ class SelectionRejectionObservation:
 
     error: str | None
     attempted: tuple[InstallationCommand, ...]
+
+
+@dataclass(frozen=True)
+class AgentHomeReconciliationObservation:
+    """Selected-home definitions across install and catalog reconciliation."""
+
+    desired_first: tuple[tuple[str, bytes], ...]
+    desired_second: tuple[tuple[str, bytes], ...]
+    home_initial: tuple[tuple[str, bytes], ...]
+    home_first: tuple[tuple[str, bytes], ...]
+    home_second: tuple[tuple[str, bytes], ...]
+    foreign_initial: bytes
+    foreign_first: bytes
+    foreign_second: bytes
+    first_result: AgentHomeResult
+    second_result: AgentHomeResult
+    ownership_record_present: bool
+
+
+@dataclass(frozen=True)
+class AgentHomeCollisionObservation:
+    """Foreign destination and command observations from a rejected plan."""
+
+    collisions: tuple[AgentHomeCollision, ...]
+    attempted: tuple[InstallationCommand, ...]
+    home_before: tuple[tuple[str, bytes], ...]
+    home_after: tuple[tuple[str, bytes], ...]
+
+
+@dataclass(frozen=True)
+class ScopeSplitObservation:
+    """Checkout split classifications and selected-home mutation boundary."""
+
+    entries: tuple[ScopeSplitEntry, ...]
+    attempted: tuple[InstallationCommand, ...]
+    home_before: tuple[tuple[str, bytes], ...]
+    home_after: tuple[tuple[str, bytes], ...]
+
+
+@dataclass(frozen=True)
+class PluginLifecycleRun:
+    """One shipped plugin lifecycle-script execution and its resulting trees."""
+
+    exit_code: int
+    stdout: str
+    stderr: str
+    home_snapshot: tuple[tuple[str, str], ...]
+    checkout_snapshot: tuple[tuple[str, str], ...]
+
+
+@dataclass
+class PluginLifecycleHarness:
+    """Temporary shipped-plugin, selected-home, and checkout resources."""
+
+    root: Path
+    plugin_name: str
+
+    @classmethod
+    def create(
+        cls, root: Path, *, plugin_name: str = "fixture-plugin"
+    ) -> PluginLifecycleHarness:
+        harness = cls(root=root, plugin_name=plugin_name)
+        harness._materialize_script()
+        return harness
+
+    @property
+    def skill_root(self) -> Path:
+        return self.root / "plugin" / "skills" / f"{self.plugin_name}-plugin"
+
+    @property
+    def script_path(self) -> Path:
+        return self.skill_root / "scripts" / "place_agents.py"
+
+    @property
+    def shipped_agents(self) -> Path:
+        return self.skill_root / "agents"
+
+    @property
+    def home(self) -> Path:
+        return self.root / "codex-home"
+
+    @property
+    def home_agents(self) -> Path:
+        return self.home / "agents"
+
+    @property
+    def ownership_path(self) -> Path:
+        return self.home_agents / AGENT_OWNERSHIP_FILENAME
+
+    @property
+    def checkout(self) -> Path:
+        return self.root / "checkout"
+
+    @property
+    def checkout_agents(self) -> Path:
+        return self.checkout / CODEX_AGENTS_PATH
+
+    def _materialize_script(self) -> None:
+        template = (
+            repository_root() / "src/templates/plugin/scripts/place_agents.py"
+        ).read_text(encoding="utf-8")
+        rendered = render_text(
+            template,
+            variables={
+                BUILD_TARGET_VARIABLE: Target.CODEX.value,
+                PLUGIN_NAME_VARIABLE: self.plugin_name,
+            },
+        )
+        self.script_path.parent.mkdir(parents=True, exist_ok=True)
+        self.script_path.write_text(rendered, encoding="utf-8")
+        self.shipped_agents.mkdir(parents=True, exist_ok=True)
+        self.checkout.mkdir(parents=True, exist_ok=True)
+
+    def load_module(self) -> ModuleType:
+        """Import the rendered script for in-process race simulation."""
+        spec = importlib.util.spec_from_file_location(
+            f"place_agents_{self.plugin_name.replace('-', '_')}", self.script_path
+        )
+        if spec is None or spec.loader is None:
+            raise RuntimeError(
+                f"cannot load the placement script module: {self.script_path}"
+            )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def write_shipped(self, name: str, content: bytes) -> Path:
+        path = self.shipped_agents / name
+        path.write_bytes(content)
+        return path
+
+    def write_home(self, name: str, content: bytes) -> Path:
+        self.home_agents.mkdir(parents=True, exist_ok=True)
+        path = self.home_agents / name
+        path.write_bytes(content)
+        return path
+
+    def write_checkout(self, name: str, content: bytes) -> Path:
+        self.checkout_agents.mkdir(parents=True, exist_ok=True)
+        path = self.checkout_agents / name
+        path.write_bytes(content)
+        return path
+
+    def write_ownership(self, document: Mapping[str, object]) -> None:
+        self.home_agents.mkdir(parents=True, exist_ok=True)
+        self.ownership_path.write_text(
+            json.dumps(document, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+    def run(self, *, check: bool = False) -> PluginLifecycleRun:
+        argv = [
+            sys.executable,
+            str(self.script_path),
+            "--home",
+            str(self.home),
+            "--checkout",
+            str(self.checkout),
+        ]
+        if check:
+            argv.append("--check")
+        result = subprocess.run(
+            argv,
+            cwd=self.checkout,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return PluginLifecycleRun(
+            exit_code=result.returncode,
+            stdout=result.stdout,
+            stderr=result.stderr,
+            home_snapshot=self.snapshot(self.home),
+            checkout_snapshot=self.snapshot(self.checkout),
+        )
+
+    @staticmethod
+    def snapshot(root: Path) -> tuple[tuple[str, str], ...]:
+        if not root.exists() and not root.is_symlink():
+            return ()
+        values: list[tuple[str, str]] = []
+        for path in sorted(root.rglob("*")):
+            relative = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                values.append((relative, f"symlink:{os.readlink(path)}"))
+            elif path.is_file():
+                values.append((relative, path.read_bytes().hex()))
+            else:
+                values.append((relative, "directory"))
+        return tuple(values)
+
+    @staticmethod
+    def file_identity(path: Path) -> tuple[int, int, int]:
+        metadata = path.stat()
+        return metadata.st_ino, metadata.st_mtime_ns, metadata.st_size
 
 
 @dataclass(frozen=True)
@@ -297,18 +535,25 @@ class RecordingRunner:
 
     Controlled under `/test` Stage 5 Interaction protocols: the command order
     and shape a plan emits are observable only by recording the calls at the
-    injected runner boundary. Failing one designated operation is the Stage 5
-    Failure simulation case, because a real CLI does not fail an arbitrary
-    operation on demand.
+    injected runner boundary. Failing one designated operation — narrowed to
+    one agent when `failed_agent` is set — is the Stage 5 Failure simulation
+    case, because a real CLI does not fail an arbitrary operation on demand.
+    It returns observations only.
     """
 
     failed_operation: Operation | None = None
     installed: Mapping[Agent, frozenset[str]] | None = None
+    failed_agent: Agent | None = None
     calls: list[InstallationCommand] = field(default_factory=list)
 
     def __call__(self, command: InstallationCommand) -> CommandResult:
         self.calls.append(command)
-        exit_code = 1 if command.operation is self.failed_operation else 0
+        designated_agent = (
+            self.failed_agent is None or command.agent is self.failed_agent
+        )
+        exit_code = (
+            1 if command.operation is self.failed_operation and designated_agent else 0
+        )
         stdout = _successful_command_payload(command, self.installed)
         return CommandResult(
             argv=command.argv,
@@ -621,6 +866,196 @@ def observe_first_persistent_cli() -> PersistentCliObservation:
         attempted=tuple(runner.calls),
         stdout=stdout.getvalue(),
         stderr=stderr.getvalue(),
+    )
+
+
+def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
+    """Install selected-home agents, then remove one from the desired catalog set."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        agents_root = Path(environment[CODEX_HOME_ENV]) / CODEX_HOME_AGENTS_PATH
+        foreign = agents_root / UNOWNED_AGENT_FILENAME
+        foreign.parent.mkdir(parents=True, exist_ok=True)
+        foreign.write_text(UNOWNED_AGENT_CONTENT, encoding="utf-8")
+        foreign_initial = foreign.read_bytes()
+        home_initial = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+
+        first_preflight = build_persistent_preflight(mirror, environment)
+        desired_first = _definition_snapshot(first_preflight)
+        first_report = execute_persistent_installation(
+            mirror,
+            environment,
+            RecordingRunner(),
+        )
+        first_result = first_report.agent_home
+        if first_result is None:
+            raise RuntimeError("persistent installation returned no agent-home result")
+        home_first = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+        foreign_first = foreign.read_bytes()
+
+        retired = first_preflight.codex_agents[0]
+        retired.source.unlink()
+        second_preflight = build_persistent_preflight(mirror, environment)
+        desired_second = _definition_snapshot(second_preflight)
+        second_report = execute_persistent_installation(
+            mirror,
+            environment,
+            RecordingRunner(),
+        )
+        second_result = second_report.agent_home
+        if second_result is None:
+            raise RuntimeError("persistent installation returned no agent-home result")
+        home_second = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+        foreign_second = foreign.read_bytes()
+        ownership_record_present = (agents_root / AGENT_OWNERSHIP_FILENAME).is_file()
+
+    return AgentHomeReconciliationObservation(
+        desired_first=desired_first,
+        desired_second=desired_second,
+        home_initial=home_initial,
+        home_first=home_first,
+        home_second=home_second,
+        foreign_initial=foreign_initial,
+        foreign_first=foreign_first,
+        foreign_second=foreign_second,
+        first_result=first_result,
+        second_result=second_result,
+        ownership_record_present=ownership_record_present,
+    )
+
+
+@dataclass(frozen=True)
+class InterruptedReconciliationObservation:
+    """Home state across an install, a lost ownership record, and a re-run."""
+
+    first_result: AgentHomeResult
+    second_result: AgentHomeResult
+    home_first: tuple[tuple[str, bytes], ...]
+    home_second: tuple[tuple[str, bytes], ...]
+    record_present_after: bool
+
+
+def observe_interrupted_reconciliation() -> InterruptedReconciliationObservation:
+    """Install, drop the ownership record as an interrupted run would, re-run."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        agents_root = Path(environment[CODEX_HOME_ENV]) / CODEX_HOME_AGENTS_PATH
+
+        first_report = execute_persistent_installation(
+            mirror,
+            environment,
+            RecordingRunner(),
+        )
+        first_result = first_report.agent_home
+        if first_result is None:
+            raise RuntimeError("persistent installation returned no agent-home result")
+        home_first = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+        (agents_root / AGENT_OWNERSHIP_FILENAME).unlink()
+
+        second_report = execute_persistent_installation(
+            mirror,
+            environment,
+            RecordingRunner(),
+        )
+        second_result = second_report.agent_home
+        if second_result is None:
+            raise RuntimeError("persistent installation returned no agent-home result")
+        home_second = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+        record_present_after = (agents_root / AGENT_OWNERSHIP_FILENAME).is_file()
+
+    return InterruptedReconciliationObservation(
+        first_result=first_result,
+        second_result=second_result,
+        home_first=home_first,
+        home_second=home_second,
+        record_present_after=record_present_after,
+    )
+
+
+def observe_agent_home_collision() -> AgentHomeCollisionObservation:
+    """Occupy one desired destination without ownership before installation."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        preflight = build_persistent_preflight(mirror, environment)
+        destination = preflight.codex_agents[0].destination
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text('name = "foreign-definition"\n', encoding="utf-8")
+        home_before = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+        runner = RecordingRunner()
+        collisions: tuple[AgentHomeCollision, ...] = ()
+        try:
+            execute_persistent_installation(mirror, environment, runner)
+        except AgentHomeCollisionError as error:
+            collisions = error.collisions
+        home_after = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+    return AgentHomeCollisionObservation(
+        collisions=collisions,
+        attempted=tuple(runner.calls),
+        home_before=home_before,
+        home_after=home_after,
+    )
+
+
+def skill_enabling_definition(plugin: str) -> bytes:
+    """A definition carrying no plugin filename prefix that enables one plugin skill."""
+    return (
+        'name = "local-helper"\n'
+        f"[[{AGENT_SKILLS_FIELD}.{AGENT_SKILLS_CONFIG_FIELD}]]\n"
+        f'{AGENT_SKILL_NAME_FIELD} = "{plugin}:{RENAMED_CHECKOUT_SKILL_NAME}"\n'
+        f"{AGENT_SKILL_ENABLED_FIELD} = true\n"
+    ).encode("utf-8")
+
+
+def observe_scope_split() -> ScopeSplitObservation:
+    """Place exact and changed plugin definitions in the checkout before install."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        preflight = build_persistent_preflight(mirror, environment)
+        exact = preflight.codex_agents[0]
+        changed = preflight.codex_agents[1]
+        checkout_agents = mirror / CODEX_AGENTS_PATH
+        checkout_agents.mkdir(parents=True, exist_ok=True)
+        (checkout_agents / exact.destination.name).write_bytes(exact.content)
+        (checkout_agents / changed.destination.name).write_bytes(
+            changed.content + b"# locally changed\n"
+        )
+        (checkout_agents / f"{changed.plugin}_symlink.toml").symlink_to(changed.source)
+        (checkout_agents / RENAMED_CHECKOUT_AGENT_NAME).write_bytes(
+            skill_enabling_definition(changed.plugin)
+        )
+        home_before = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+        runner = RecordingRunner()
+        entries: tuple[ScopeSplitEntry, ...] = ()
+        try:
+            execute_persistent_installation(mirror, environment, runner)
+        except ScopeSplitError as error:
+            entries = error.entries
+        home_after = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+    return ScopeSplitObservation(
+        entries=entries,
+        attempted=tuple(runner.calls),
+        home_before=home_before,
+        home_after=home_after,
     )
 
 
@@ -987,16 +1422,24 @@ def observe_inspection_failure() -> FailureObservation:
         )
 
 
-def observe_first_failure(operation: Operation) -> FailureObservation:
+def observe_first_failure(
+    operation: Operation,
+    *,
+    agent: Agent | None = None,
+) -> FailureObservation:
     """Fail a selected plan operation through the public CLI surface."""
     with TemporaryDirectory() as temporary_directory:
         plans = _installation_plans(Path(temporary_directory))
         plan = next(
             candidate
             for candidate in plans
-            if any(command.operation is operation for command in candidate.commands)
+            if any(
+                command.operation is operation
+                and (agent is None or command.agent is agent)
+                for command in candidate.commands
+            )
         )
-        runner = RecordingRunner(failed_operation=operation)
+        runner = RecordingRunner(failed_operation=operation, failed_agent=agent)
         environment = dict(plan.commands[0].environment)
         arguments = ["--checkout", str(plan.roots.checkout), "--json"]
         if plan.mode is InstallationMode.ISOLATED:
@@ -1249,11 +1692,11 @@ def observe_real_installation() -> RealInstallationObservation:
         persistent_environment = _persistent_environment(persistent_root)
         _seed_persistent_state(persistent_root)
         persistent_initial = _tree_snapshot(persistent_root)
-        unowned = mirror / CODEX_AGENTS_PATH / UNOWNED_AGENT_FILENAME
+        unowned = state / "codex" / CODEX_HOME_AGENTS_PATH / UNOWNED_AGENT_FILENAME
         unowned.parent.mkdir(parents=True, exist_ok=True)
         unowned.write_text(UNOWNED_AGENT_CONTENT, encoding="utf-8")
         unowned_initial = unowned.read_bytes()
-        placed_initial = _agent_snapshot(mirror)
+        placed_initial = _agent_snapshot(state / "codex")
         plan = build_isolated_installation_plan(mirror, state, persistent_environment)
         environment = dict(plan.commands[0].environment)
         claude_target = _registration_target(plan, Agent.CLAUDE)
@@ -1264,7 +1707,7 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mode_first = read_blocked_mode()
         claude_first = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_first = _run_listing(Agent.CODEX, mirror, environment)
-        placed_first = _agent_snapshot(mirror)
+        placed_first = _agent_snapshot(state / "codex")
         unowned_first = unowned.read_bytes()
         persistent_first = _tree_snapshot(persistent_root)
         with _blocked_directory(persistent_root) as read_blocked_mode:
@@ -1272,7 +1715,7 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mode_second = read_blocked_mode()
         claude_second = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_second = _run_listing(Agent.CODEX, mirror, environment)
-        placed_second = _agent_snapshot(mirror)
+        placed_second = _agent_snapshot(state / "codex")
         unowned_second = unowned.read_bytes()
         persistent_second = _tree_snapshot(persistent_root)
         subset_mirror = temporary_root / "subset-checkout"
@@ -1380,6 +1823,209 @@ def observe_real_installation() -> RealInstallationObservation:
         subset_stdout=subset.stdout,
         subset_stderr=subset.stderr,
     )
+
+
+@dataclass(frozen=True)
+class CodexRoleDiscoveryObservation:
+    """One fresh non-interactive Codex session's role discovery over a home.
+
+    Observations only: the isolated installation result that populated the
+    disposable home, the login and session command results, the parsed roles
+    the session reported, and the canonical role names placed under that home.
+    The linked test owns every predicate.
+    """
+
+    install_exit_code: int
+    install_stderr: str
+    login_exit_code: int
+    login_stderr: str
+    session_exit_code: int
+    session_stderr: str
+    session_last_message: str
+    discovered_roles: frozenset[str] | None
+    placed_roles: frozenset[str]
+    codex_home: Path
+
+
+def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
+    """Populate a disposable Codex home by isolated installation and probe it.
+
+    The credential named by ``CODEX_API_KEY_ENVIRONMENT`` reaches only the agent
+    CLI's login command over standard input; the session environment carries no
+    credential variable, so authentication demonstrably comes from the disposable
+    home. A missing credential is a dependency error, never a silent pass.
+    """
+    checkout = repository_root()
+    _require_binaries(REQUIRED_BINARIES)
+    credential = os.environ.get(CODEX_API_KEY_ENVIRONMENT)
+    if not credential:
+        raise RuntimeError(
+            f"required credential {CODEX_API_KEY_ENVIRONMENT} is unavailable for "
+            "the Codex role-discovery probe"
+        )
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        state = temporary_root / "state"
+        _mirror_installation_inputs(checkout, mirror)
+        base_environment = {
+            name: value
+            for name, value in os.environ.items()
+            if name != CODEX_API_KEY_ENVIRONMENT
+        }
+        plan = build_isolated_installation_plan(mirror, state, base_environment)
+        environment = dict(plan.commands[0].environment)
+        install = _run_recipe(checkout, mirror, state, environment)
+        codex_home = state / "codex"
+        placed_roles = _placed_role_names(codex_home)
+        login = scrubbed_probe_run(
+            CODEX_LOGIN_COMMAND,
+            cwd=mirror,
+            env=environment,
+            credential=credential,
+            input_text=credential,
+        )
+        schema_path = temporary_root / "role-discovery-schema.json"
+        schema_path.write_text(
+            json.dumps(ROLE_DISCOVERY_OUTPUT_SCHEMA), encoding="utf-8"
+        )
+        last_message_path = temporary_root / "role-discovery-last-message.json"
+        session = scrubbed_probe_run(
+            (
+                CODEX_EXECUTABLE,
+                "exec",
+                "--ephemeral",
+                "--skip-git-repo-check",
+                "-C",
+                str(mirror),
+                "--output-schema",
+                str(schema_path),
+                "--output-last-message",
+                str(last_message_path),
+                ROLE_DISCOVERY_PROMPT,
+            ),
+            cwd=mirror,
+            env=environment,
+            credential=credential,
+        )
+        last_message = (
+            last_message_path.read_text(encoding="utf-8")
+            if last_message_path.exists()
+            else ""
+        )
+    scrubbed_last_message = scrub_credential(last_message, credential)
+    return CodexRoleDiscoveryObservation(
+        install_exit_code=install.returncode,
+        install_stderr=scrub_credential(install.stderr, credential),
+        login_exit_code=login.returncode,
+        login_stderr=scrub_credential(login.stderr, credential),
+        session_exit_code=session.returncode,
+        session_stderr=scrub_credential(session.stderr, credential),
+        session_last_message=scrubbed_last_message,
+        discovered_roles=_discovered_roles(scrubbed_last_message),
+        placed_roles=placed_roles,
+        codex_home=codex_home,
+    )
+
+
+def scrubbed_probe_run(
+    argv: Sequence[str],
+    *,
+    cwd: Path,
+    env: Mapping[str, str],
+    credential: str,
+    input_text: str | None = None,
+    timeout: float = ROLE_DISCOVERY_TIMEOUT_SECONDS,
+) -> subprocess.CompletedProcess[str]:
+    """Run one probe command with every captured stream scrubbed on every path.
+
+    ``subprocess.TimeoutExpired`` carries the partial capture collected before
+    the kill; scrubbing it before the exception leaves this helper keeps the
+    credential out of tracebacks and CI logs on the timeout path as well.
+    """
+    try:
+        return subprocess.run(
+            argv,
+            cwd=cwd,
+            env=env,
+            input=input_text,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as error:
+        error.output = _scrub_captured_bytes(error.output, credential)
+        error.stderr = _scrub_captured_bytes(error.stderr, credential)
+        raise
+
+
+def _scrub_captured_bytes(captured: bytes | None, credential: str) -> bytes | None:
+    """Scrub one captured stream in the raw representation the runtime kept.
+
+    ``subprocess.TimeoutExpired`` stores the partial capture as raw bytes even
+    under ``text=True``, so the credential is replaced byte-for-byte.
+    """
+    if captured is None:
+        return None
+    return captured.replace(credential.encode("utf-8"), b"[REDACTED-CREDENTIAL]")
+
+
+def racing_digest_reader(
+    target: Path,
+    inject: Callable[[], None],
+    real: Callable[[Path], str | None],
+) -> Callable[[Path], str | None]:
+    """Digest reader whose second read of ``target`` runs ``inject`` first.
+
+    Controlled collaborator under `/test` Stage 5 exception 3 (Time and
+    concurrency): a writer racing the run between preflight and mutation
+    cannot be scheduled deterministically against the real filesystem.
+    """
+    calls: dict[Path, int] = {}
+
+    def reader(path: Path) -> str | None:
+        calls[path] = calls.get(path, 0) + 1
+        if path == target and calls[path] == 2:
+            inject()
+        return real(path)
+
+    return reader
+
+
+def scrub_credential(text: str, credential: str) -> str:
+    """Replace the credential's bytes so no captured stream can carry them.
+
+    Assertion messages surface these streams verbatim in a failure report, and
+    exact-literal CI secret masking does not cover a transformed echo, so the
+    substitution happens at capture time before any storage.
+    """
+    return text.replace(credential, "[REDACTED-CREDENTIAL]")
+
+
+def _placed_role_names(codex_home: Path) -> frozenset[str]:
+    """Read the role name each placed definition declares under the home."""
+    names: set[str] = set()
+    for _, content in _agent_snapshot(codex_home):
+        document = tomllib.loads(content.decode("utf-8"))
+        name = document.get(AGENT_NAME_FIELD)
+        if isinstance(name, str):
+            names.add(name)
+    return frozenset(names)
+
+
+def _discovered_roles(last_message: str) -> frozenset[str] | None:
+    """Parse the session's structured answer; ``None`` when it is not the schema."""
+    try:
+        document = json.loads(last_message)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(document, dict):
+        return None
+    roles = document.get(ROLE_DISCOVERY_ROLES_FIELD)
+    if not isinstance(roles, list) or not all(isinstance(r, str) for r in roles):
+        return None
+    return frozenset(roles)
 
 
 def _listing_entries(agent: Agent, payload: str) -> list[object]:
@@ -1765,27 +2411,33 @@ def _run_codex_marketplace_listing(
     return result
 
 
-def _agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
-    directory = checkout / CODEX_AGENTS_PATH
-    return tuple((path.name, path.read_bytes()) for path in sorted(directory.glob("*")))
+def _agent_snapshot(codex_home: Path) -> tuple[tuple[str, bytes], ...]:
+    directory = codex_home / CODEX_HOME_AGENTS_PATH
+    return tuple(
+        (path.name, path.read_bytes()) for path in sorted(directory.glob("*.toml"))
+    )
+
+
+def _definition_snapshot(
+    preflight: PersistentPreflight,
+) -> tuple[tuple[str, bytes], ...]:
+    return tuple(
+        sorted(
+            (definition.destination.name, definition.content)
+            for definition in preflight.codex_agents
+        )
+    )
 
 
 def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
     shipped: dict[str, bytes] = {}
-    manifests = (checkout / "dist/codex").glob(
-        f"*/skills/*/agents/{PLACEMENT_MANIFEST_FILENAME}"
-    )
-    for manifest in sorted(manifests):
-        document = json.loads(manifest.read_text(encoding="utf-8"))
-        if document.get(PLACEMENT_MANIFEST_DIRECTORY_FIELD) != str(CODEX_AGENTS_PATH):
-            continue
-        prefix = str(document[PLACEMENT_MANIFEST_PREFIX_FIELD])
-        for definition in sorted(manifest.parent.glob(f"{prefix}*")):
-            if definition.name in shipped:
-                raise RuntimeError(
-                    f"duplicate shipped Codex agent definition: {definition.name}"
-                )
-            shipped[definition.name] = definition.read_bytes()
+    definitions = (checkout / "dist/codex").glob("*/skills/*/agents/*.toml")
+    for definition in sorted(definitions):
+        if definition.name in shipped:
+            raise RuntimeError(
+                f"duplicate shipped Codex agent definition: {definition.name}"
+            )
+        shipped[definition.name] = definition.read_bytes()
     return tuple(sorted(shipped.items()))
 
 
@@ -1845,23 +2497,35 @@ def _tree_snapshot(root: Path) -> tuple[tuple[str, bytes], ...]:
 __all__ = [
     "CatalogSubsetMapping",
     "CatalogSubsetPlanObservation",
+    "AgentHomeCollisionObservation",
+    "InterruptedReconciliationObservation",
+    "AgentHomeReconciliationObservation",
+    "CodexRoleDiscoveryObservation",
     "CollisionObservation",
     "ConfigObservation",
     "FailureObservation",
     "PersistentExecutionObservation",
     "PersistentPlanObservation",
     "PlanObservation",
+    "PluginLifecycleHarness",
+    "PluginLifecycleRun",
     "DesignatedFailureRunner",
     "RealFirstInstallObservation",
     "RealInstallationObservation",
     "RecordingRunner",
+    "ScopeSplitClassification",
+    "ScopeSplitObservation",
     "UnpublishedPluginObservation",
     "UnpublishedPluginRunner",
     "VerificationRecipeObservation",
     "canonical_catalog_plugin_names",
     "committed_catalog_plugin_names",
+    "observe_agent_home_collision",
+    "observe_interrupted_reconciliation",
+    "observe_agent_home_reconciliation",
     "observe_claude_user_collision",
     "observe_codex_config_independence",
+    "observe_codex_role_discovery",
     "observe_designated_failure",
     "observe_first_failure",
     "observe_failed_run_restore",
@@ -1878,6 +2542,13 @@ __all__ = [
     "observe_real_first_install",
     "observe_real_installation",
     "observe_repository_plan",
+    "observe_scope_split",
+    "racing_digest_reader",
+    "scrub_credential",
+    "scrubbed_probe_run",
+    "skill_enabling_definition",
+    "RENAMED_CHECKOUT_AGENT_NAME",
+    "RENAMED_CHECKOUT_SKILL_NAME",
     "absent_from_every_agent",
     "observe_unpublished_plugin",
     "observe_verification_recipe",

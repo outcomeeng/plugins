@@ -70,4 +70,4 @@ name = "spec-tree:update-instruction-block"
 enabled = true
 
 [shell_environment_policy]
-set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/spec-tree_instruction-block-updater" }
+set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/instruction-block-updater" }

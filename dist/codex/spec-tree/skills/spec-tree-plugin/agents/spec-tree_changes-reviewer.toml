@@ -73,4 +73,4 @@ name = "spec-tree:review-changes"
 enabled = true
 
 [shell_environment_policy]
-set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/spec-tree_changes-reviewer" }
+set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/changes-reviewer" }

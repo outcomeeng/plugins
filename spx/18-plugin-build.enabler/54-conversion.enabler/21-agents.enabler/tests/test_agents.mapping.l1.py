@@ -1,126 +1,59 @@
-"""Mapping evidence for agent model, effort, and permission conversion."""
+"""Mapping evidence for canonical Codex marketplace agent identities."""
 
 from __future__ import annotations
 
-from outcomeeng_testing.harnesses.agent_conversion import (
-    assert_all_tools_sentinel_leaves_sandbox_to_runtime_default,
-    assert_all_tools_sentinel_leaves_web_search_to_runtime_default,
-    assert_explicit_empty_tool_allowlist_disables_web_search,
-    assert_explicit_empty_tool_allowlist_infers_read_only_sandbox,
-    assert_explicit_unmapped_permission_mode_blocks_read_only_inference,
-    assert_mapping_oracles_cover_production_tables,
-    assert_missing_tool_allowlist_leaves_sandbox_to_runtime_default,
-    assert_missing_tool_allowlist_leaves_web_search_to_runtime_default,
-    assert_opus_model_maps_to_distinct_top_tier_codex_model,
-    assert_permission_modes_map_to_codex_sandbox_or_manual_review,
-    assert_read_only_tool_allowlist_infers_read_only_sandbox,
-    assert_read_only_web_tool_allowlist_infers_read_only_sandbox,
-    assert_script_capable_tool_allowlist_leaves_sandbox_to_runtime_default,
-    assert_source_effort_maps_to_codex_reasoning_effort,
-    assert_source_effort_reaches_converted_codex_reasoning_effort,
-    assert_source_model_maps_to_codex_model,
-    assert_skills_are_preserved_as_codex_config_and_guidance,
-    assert_supported_permission_mode_reaches_converted_codex_sandbox_mode,
-    assert_tool_allowlist_with_web_tool_leaves_web_search_to_runtime_default,
-    assert_tool_allowlist_without_web_tool_disables_web_search,
-    assert_unmapped_permission_mode_converts_to_manual_review_guidance,
-    assert_web_capable_only_tool_allowlist_infers_read_only_sandbox,
-    assert_write_capable_tool_allowlist_converts_to_manual_review_guidance,
-    assert_write_capable_tool_allowlist_leaves_sandbox_to_runtime_default,
+import tomllib
+from pathlib import Path
+
+from outcomeeng.distribution.build import (
+    agent_capability,
+    agent_slug,
+    build,
 )
+from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
+    DIST_DIR_NAME,
+    PLUGINS_DIR_NAME,
+    SKILLS_SUBDIR_NAME,
+    SOURCE_ROOT_NAME,
+    Target,
+)
+from outcomeeng_testing.harnesses.distribution import REPOSITORY_ROOT
 
 
-def test_mapping_oracles_cover_production_tables() -> None:
-    assert_mapping_oracles_cover_production_tables()
+def test_flat_namespace_agent_identity_contains_plugin_exactly_once(
+    tmp_path: Path,
+) -> None:
+    source_plugins = REPOSITORY_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME
+    sources = tuple(sorted(source_plugins.glob(f"*/{AGENTS_SUBDIR_NAME}/*.md")))
+    assert sources
+    dist_root = tmp_path / DIST_DIR_NAME
+    build(REPOSITORY_ROOT / SOURCE_ROOT_NAME, dist_root)
 
+    for target in Target:
+        capability = agent_capability(target)
+        if capability.namespaced:
+            continue
+        target_tree = dist_root / target.value
+        for source in sources:
+            plugin = source.parents[1].name
+            stem = source.stem
+            # Hand-authored separators keep this oracle independent of the
+            # production constants agent_slug reads.
+            expected = stem if stem.startswith(f"{plugin}-") else f"{plugin}_{stem}"
 
-def test_source_model_maps_to_codex_model() -> None:
-    assert_source_model_maps_to_codex_model()
-
-
-def test_skills_are_preserved_as_codex_config_and_guidance() -> None:
-    assert_skills_are_preserved_as_codex_config_and_guidance()
-
-
-def test_opus_model_maps_to_distinct_top_tier_codex_model() -> None:
-    assert_opus_model_maps_to_distinct_top_tier_codex_model()
-
-
-def test_source_effort_maps_to_codex_reasoning_effort() -> None:
-    assert_source_effort_maps_to_codex_reasoning_effort()
-
-
-def test_source_effort_reaches_converted_codex_reasoning_effort() -> None:
-    assert_source_effort_reaches_converted_codex_reasoning_effort()
-
-
-def test_permission_modes_map_to_codex_sandbox_or_manual_review() -> None:
-    assert_permission_modes_map_to_codex_sandbox_or_manual_review()
-
-
-def test_supported_permission_mode_reaches_converted_codex_sandbox_mode() -> None:
-    assert_supported_permission_mode_reaches_converted_codex_sandbox_mode()
-
-
-def test_tool_allowlist_without_web_tool_disables_web_search() -> None:
-    assert_tool_allowlist_without_web_tool_disables_web_search()
-
-
-def test_explicit_empty_tool_allowlist_disables_web_search() -> None:
-    assert_explicit_empty_tool_allowlist_disables_web_search()
-
-
-def test_missing_tool_allowlist_leaves_web_search_to_runtime_default() -> None:
-    assert_missing_tool_allowlist_leaves_web_search_to_runtime_default()
-
-
-def test_tool_allowlist_with_web_tool_leaves_web_search_to_runtime_default() -> None:
-    assert_tool_allowlist_with_web_tool_leaves_web_search_to_runtime_default()
-
-
-def test_all_tools_sentinel_leaves_web_search_to_runtime_default() -> None:
-    assert_all_tools_sentinel_leaves_web_search_to_runtime_default()
-
-
-def test_read_only_tool_allowlist_infers_read_only_sandbox() -> None:
-    assert_read_only_tool_allowlist_infers_read_only_sandbox()
-
-
-def test_read_only_web_tool_allowlist_infers_read_only_sandbox() -> None:
-    assert_read_only_web_tool_allowlist_infers_read_only_sandbox()
-
-
-def test_web_capable_only_tool_allowlist_infers_read_only_sandbox() -> None:
-    assert_web_capable_only_tool_allowlist_infers_read_only_sandbox()
-
-
-def test_all_tools_sentinel_leaves_sandbox_to_runtime_default() -> None:
-    assert_all_tools_sentinel_leaves_sandbox_to_runtime_default()
-
-
-def test_explicit_empty_tool_allowlist_infers_read_only_sandbox() -> None:
-    assert_explicit_empty_tool_allowlist_infers_read_only_sandbox()
-
-
-def test_missing_tool_allowlist_leaves_sandbox_to_runtime_default() -> None:
-    assert_missing_tool_allowlist_leaves_sandbox_to_runtime_default()
-
-
-def test_write_capable_tool_allowlist_leaves_sandbox_to_runtime_default() -> None:
-    assert_write_capable_tool_allowlist_leaves_sandbox_to_runtime_default()
-
-
-def test_script_capable_tool_allowlist_leaves_sandbox_to_runtime_default() -> None:
-    assert_script_capable_tool_allowlist_leaves_sandbox_to_runtime_default()
-
-
-def test_explicit_unmapped_permission_mode_blocks_read_only_inference() -> None:
-    assert_explicit_unmapped_permission_mode_blocks_read_only_inference()
-
-
-def test_unmapped_permission_mode_converts_to_manual_review_guidance() -> None:
-    assert_unmapped_permission_mode_converts_to_manual_review_guidance()
-
-
-def test_write_capable_tool_allowlist_converts_to_manual_review_guidance() -> None:
-    assert_write_capable_tool_allowlist_converts_to_manual_review_guidance()
+            slug = agent_slug(plugin, stem, capability=capability)
+            assert slug == expected
+            assert slug.count(plugin) == 1
+            assert slug.endswith(stem)
+            artifact = (
+                target_tree
+                / plugin
+                / SKILLS_SUBDIR_NAME
+                / f"{plugin}-plugin"
+                / AGENTS_SUBDIR_NAME
+                / f"{expected}{capability.suffix}"
+            )
+            assert artifact.exists(), f"missing canonical agent artifact {artifact}"
+            parsed = tomllib.loads(artifact.read_text(encoding="utf-8"))
+            assert parsed["name"] == expected

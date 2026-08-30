@@ -10,7 +10,6 @@ from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
-    PLACEMENT_MANIFEST_FILENAME,
     EmissionProjection,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
@@ -68,8 +67,8 @@ from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 type PathSnapshot = tuple[tuple[Path, bytes], ...]
 
 # Actions whose output is the rendered source text, so a caller may compare the
-# two directly. A converted agent and a placement manifest are derived artifacts
-# whose output is not their source's rendered text, so they are excluded.
+# two directly. A converted agent is a derived artifact whose output is not its
+# source's rendered text, so it is excluded.
 _SOURCE_TEXT_ACTIONS = frozenset({EmissionAction.RENDER, EmissionAction.COPY})
 
 
@@ -95,9 +94,9 @@ def source_emission_counts() -> dict[Target, Counter[Path]]:
     rather than a verdict: the caller owns the predicate over it.
 
     Counts a source's own outputs — rendered, copied, or converted. A fanned-out
-    shared fragment and a placement manifest are derived artifacts attributed to
-    a source they do not correspond one-to-one with, so counting them would
-    conflate derivation with emission.
+    shared fragment is a derived artifact attributed to a source it does not
+    correspond one-to-one with, so counting it would conflate derivation with
+    emission.
     """
     counted = {
         EmissionAction.RENDER,
@@ -185,13 +184,7 @@ def agent_artifact_paths(target: Target) -> tuple[Path, ...]:
     capability = AGENT_CAPABILITY_REGISTRY[target.value]
     if capability.manifest_declares_agents:
         return tuple(sorted(tree.glob(f"*/{AGENTS_SUBDIR_NAME}/*")))
-    return tuple(
-        sorted(
-            path
-            for path in tree.glob(f"*/{SKILLS_SUBDIR_NAME}/*/{AGENTS_SUBDIR_NAME}/*")
-            if path.name != PLACEMENT_MANIFEST_FILENAME
-        )
-    )
+    return tuple(sorted(tree.glob(f"*/{SKILLS_SUBDIR_NAME}/*/{AGENTS_SUBDIR_NAME}/*")))
 
 
 def agent_artifacts_carrying_foreign_skill_dir_token(

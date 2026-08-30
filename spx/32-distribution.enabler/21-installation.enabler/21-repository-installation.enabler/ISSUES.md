@@ -74,3 +74,67 @@ with the request refused.
 
 **Revisit condition**: before onboarding documentation claims a clean first-run
 gate on macOS, or when a contributor reports the gate hanging with no output.
+
+## The shipped placement script exceeds the fifty-line ceiling
+
+`src/templates/plugin/scripts/place_agents.py` — rendered once per plugin as
+`skills/<plugin>-plugin/scripts/place_agents.py` — carries the ownership-record
+parser, the digest-bound collision detector, the atomic writer, and the
+scope-split classifier at roughly 250 lines. `spx/12-shipped-scripting.adr.md`
+sets fifty lines as the point where a generic shipped script becomes debt
+awaiting extraction into the SPX CLI once proven, or removal when it is not,
+and exempts only runtime-specific adapter logic whose extraction would couple
+SPX to one external agent while the adapter stays deterministic, bounded,
+standard-library-only, and independently tested.
+
+The script satisfies each exemption predicate — it targets Codex's agent home
+alone, performs one bounded reconciliation and exits, imports only the standard
+library, and is exercised by this node's lifecycle tests — but no decision
+records the exemption, and the same reconciliation algorithm exists a second
+time in `outcomeeng/distribution/installation.py`, which argues the logic is
+generic rather than Codex-bound.
+
+**Resolution shape**: choose one of the two paths the ADR admits and record it —
+amend `21-installation-architecture.adr.md` to name the placement script a
+Codex-specific adapter kept plugin-local under the exemption, or schedule the
+extraction into `spx` and reduce the shipped script to the skill instruction the
+ADR prescribes for a proven script. The duplicated algorithm in
+`outcomeeng/distribution/installation.py` weighs toward extraction.
+
+**Revisit condition**: with the next behavior change to placement, since any
+addition deepens whichever path is not chosen.
+
+**Evidence**: raised by changeset review `2026-08-17_01-03-44-668-0ddd9fe582a1`;
+supersedes the ceiling entry the agents-conversion node carried for the earlier
+fifty-line version.
+
+## Cross-plugin agent-home cleanup is reachable only through the maintainers' installer
+
+`spx/12-marketplace-state.adr.md` separates a plugin's namespace-bounded
+placement from marketplace-scope reconciliation — the pass that prunes
+definitions of plugins later removed or renamed from the catalog under the
+marketplace's recorded ownership. The shipped `place_agents.py` implements only
+its own plugin's namespace; the marketplace-scope pass lives in
+`outcomeeng/distribution/installation.py` and is reachable solely through
+`just install-marketplace` in this repository. An ordinary consumer whose
+`$CODEX_HOME/agents/` carries a definition for a plugin the catalog no longer
+publishes has no shipped path to prune it: the definition stays until the
+consumer removes it by hand.
+
+The retired plan for this node proposed embedding a committed-catalog snapshot,
+stamped with a deterministic catalog revision, in each plugin's shipped tree so
+any single plugin's lifecycle skill could run the marketplace-scope pass. That
+mechanism was not built; the ownership record shipped instead, which lets the
+maintainers' installer prune safely but gives a shipped script no view of the
+current catalog.
+
+**Resolution shape**: either ship the consumer-reachable marketplace-scope pass —
+an embedded catalog snapshot the shipped script consults, or an `spx` command
+that reads the marketplace source directly — or narrow the decision's
+reconciliation invariant to the maintainers' installer and say so where the
+consumer would look for the missing prune.
+
+**Revisit condition**: before a plugin is removed or renamed in the catalog,
+since that is the event that leaves a stale owned definition in consumer homes.
+
+**Evidence**: raised by changeset review `2026-08-17_01-03-44-668-0ddd9fe582a1`.

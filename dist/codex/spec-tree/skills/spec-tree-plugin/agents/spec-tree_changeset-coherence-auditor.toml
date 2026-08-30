@@ -56,4 +56,4 @@ name = "spec-tree:audit-changeset-coherence"
 enabled = true
 
 [shell_environment_policy]
-set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/spec-tree_changeset-coherence-auditor" }
+set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/changeset-coherence-auditor" }

@@ -56,4 +56,4 @@ name = "instructions:audit-skill"
 enabled = true
 
 [shell_environment_policy]
-set = { OUTCOMEENG_CODEX_AGENT_NAME = "instructions/instructions_skill-auditor" }
+set = { OUTCOMEENG_CODEX_AGENT_NAME = "instructions/skill-auditor" }

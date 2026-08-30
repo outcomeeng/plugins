@@ -1,4 +1,4 @@
-name = "rust_rust-simplifier"
+name = "rust-simplifier"
 description = "ALWAYS invoke when simplifying recently modified Rust code while preserving behavior, ownership semantics, testability, and verified test coverage."
 model = "gpt-5.4"
 web_search = "disabled"
@@ -222,4 +222,4 @@ name = "rust:code-rust"
 enabled = true
 
 [shell_environment_policy]
-set = { OUTCOMEENG_CODEX_AGENT_NAME = "rust/rust_rust-simplifier" }
+set = { OUTCOMEENG_CODEX_AGENT_NAME = "rust/rust-simplifier" }

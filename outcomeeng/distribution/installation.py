@@ -3,15 +3,24 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
 import sys
+import tempfile
+import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol, cast
+
+from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
+    DIST_DIR_NAME,
+    SKILLS_SUBDIR_NAME,
+)
 
 MARKETPLACE_NAME = "outcomeeng"
 USER_SCOPE_COLLISION_DIAGNOSTIC = "Claude Code user-scope marketplace collision"
@@ -22,6 +31,17 @@ CLAUDE_CATALOG_PATH = Path(".claude-plugin/marketplace.json")
 CLAUDE_PROJECT_SETTINGS_PATH = Path(".claude/settings.json")
 CODEX_CONFIG_PATH = Path(".codex/config.toml")
 CODEX_AGENTS_PATH = Path(".codex/agents")
+CODEX_HOME_AGENTS_PATH = Path("agents")
+AGENT_OWNERSHIP_FILENAME = ".outcomeeng-marketplace-ownership.json"
+AGENT_OWNERSHIP_SCHEMA_VERSION = 1
+AGENT_OWNERSHIP_SCHEMA_FIELD = "schema_version"
+AGENT_OWNERSHIP_ENTRIES_FIELD = "entries"
+AGENT_OWNERSHIP_DESTINATION_FIELD = "destination"
+AGENT_OWNERSHIP_PLUGIN_FIELD = "plugin"
+AGENT_OWNERSHIP_DIGEST_FIELD = "digest"
+AGENT_SKILLS_FIELD = "skills"
+AGENT_SKILLS_CONFIG_FIELD = "config"
+AGENT_SKILL_NAME_FIELD = "name"
 CATALOG_PLUGINS_FIELD = "plugins"
 CATALOG_PLUGIN_NAME_FIELD = "name"
 HOME_ENV = "HOME"
@@ -36,7 +56,6 @@ STATE_ENV_NAMES: tuple[str, ...] = (
 )
 CLAUDE_EXECUTABLE = "claude"
 CODEX_EXECUTABLE = "codex"
-PYTHON_EXECUTABLE = "python3"
 CLAUDE_LIST_COMMAND = (CLAUDE_EXECUTABLE, "plugin", "list", "--json")
 CODEX_LIST_COMMAND = (
     CODEX_EXECUTABLE,
@@ -60,7 +79,6 @@ CLAUDE_MARKETPLACE_LIST_COMMAND = (
     "list",
     "--json",
 )
-PLACEMENT_SCRIPT_RELATIVE_PATH = Path("scripts/place_agents.py")
 CLAUDE_ALREADY_INSTALLED_FRAGMENT = "already installed"
 UNPUBLISHED_PLUGIN_FRAGMENT = "not found in marketplace"
 CLAUDE_ALREADY_ENABLED_FRAGMENT = "already enabled"
@@ -120,7 +138,6 @@ class Operation(StrEnum):
     MARKETPLACE_REFRESH = "marketplace-refresh"
     PLUGIN_INSTALL = "plugin-install"
     PLUGIN_ENABLE = "plugin-enable"
-    LIFECYCLE_PLACE = "lifecycle-place"
     PLUGIN_LIST = "plugin-list"
 
 
@@ -144,6 +161,12 @@ class ReportField(StrEnum):
     PENDING_PUBLICATION = "pending_publication"
     WARNINGS = "warnings"
     MESSAGE = "message"
+    AGENT_HOME = "agent_home"
+    WRITTEN = "written"
+    PRUNED = "pruned"
+    COLLISIONS = "collisions"
+    DESTINATION = "destination"
+    REASON = "reason"
 
 
 PLUGIN_OPERATIONS: frozenset[Operation] = frozenset(
@@ -173,6 +196,14 @@ class SourceAction(StrEnum):
     ADD = "add"
     REFRESH = "refresh"
     REPLACE = "replace"
+
+
+class AgentHomeAction(StrEnum):
+    """One digest-guarded mutation in the selected Codex agent home."""
+
+    CREATE = "create"
+    REPLACE = "replace"
+    PRUNE = "prune"
 
 
 @dataclass(frozen=True)
@@ -209,6 +240,115 @@ class CommandResult:
     stderr: str
 
 
+@dataclass(frozen=True, order=True)
+class AgentDefinition:
+    """One generated Codex agent definition selected by the committed catalog."""
+
+    plugin: str
+    source: Path
+    destination: Path
+    digest: str
+    content: bytes
+
+
+@dataclass(frozen=True, order=True)
+class AgentOwnership:
+    """One marketplace ownership claim over a selected-home destination."""
+
+    destination: Path
+    plugin: str
+    digest: str
+
+
+@dataclass(frozen=True, order=True)
+class AgentHomeMutation:
+    """One planned home mutation guarded by its preflight observation."""
+
+    action: AgentHomeAction
+    destination: Path
+    plugin: str
+    digest: str
+    expected_digest: str | None
+    content: bytes | None
+
+
+@dataclass(frozen=True, order=True)
+class AgentHomeCollision:
+    """One destination preserved because marketplace ownership is insufficient."""
+
+    destination: Path
+    plugin: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class AgentHomePlan:
+    """Immutable marketplace-wide reconciliation for one selected Codex home."""
+
+    ownership_path: Path
+    ownership_expected_digest: str | None
+    mutations: tuple[AgentHomeMutation, ...]
+    collisions: tuple[AgentHomeCollision, ...]
+    ownership_after: tuple[AgentOwnership, ...]
+
+
+@dataclass(frozen=True)
+class AgentHomeResult:
+    """Applied home mutations and preserved collisions from one installation."""
+
+    written: tuple[Path, ...]
+    pruned: tuple[Path, ...]
+    collisions: tuple[AgentHomeCollision, ...]
+
+
+class ScopeSplitClassification(StrEnum):
+    """How one checkout definition relates to the selected home's shipped copy."""
+
+    DIRECTED_REMOVAL = "directed-removal"
+    SHADOWING_COLLISION = "shadowing-collision"
+
+
+@dataclass(frozen=True, order=True)
+class ScopeSplitEntry:
+    """One checkout definition shadowing a selected-home plugin definition."""
+
+    path: Path
+    classification: ScopeSplitClassification
+
+
+class ScopeSplitError(ValueError):
+    """Checkout agent definitions shadow skills installed in the selected home."""
+
+    def __init__(self, entries: tuple[ScopeSplitEntry, ...]) -> None:
+        self.entries = entries
+        removals = tuple(
+            str(entry.path)
+            for entry in entries
+            if entry.classification is ScopeSplitClassification.DIRECTED_REMOVAL
+        )
+        collisions = tuple(
+            str(entry.path)
+            for entry in entries
+            if entry.classification is ScopeSplitClassification.SHADOWING_COLLISION
+        )
+        super().__init__(
+            "Codex agent scope split: selected-home plugin skills are shadowed; "
+            f"remove byte-identical plugin copies {removals}; inspect changed or "
+            f"unrecognized collisions {collisions}"
+        )
+
+
+class AgentHomeCollisionError(ValueError):
+    """Selected-home destinations block complete marketplace reconciliation."""
+
+    def __init__(self, collisions: tuple[AgentHomeCollision, ...]) -> None:
+        self.collisions = collisions
+        details = tuple(
+            f"{collision.destination} ({collision.reason})" for collision in collisions
+        )
+        super().__init__(f"Codex agent-home collisions: {details}")
+
+
 @dataclass(frozen=True)
 class PersistentPreflight:
     """Validated persistent inputs and read-only inspection commands."""
@@ -217,6 +357,7 @@ class PersistentPreflight:
     environment: tuple[tuple[str, str], ...]
     claude_plugins: tuple[str, ...]
     codex_plugins: tuple[str, ...]
+    codex_agents: tuple[AgentDefinition, ...]
     claude_source_action: SourceAction
     inspections: tuple[InstallationCommand, ...]
 
@@ -238,6 +379,7 @@ class InstallationPlan:
     claude_plugins: tuple[str, ...]
     codex_plugins: tuple[str, ...]
     commands: tuple[InstallationCommand, ...]
+    agent_home: AgentHomePlan
     warnings: tuple[InstallationWarning, ...] = ()
 
 
@@ -261,6 +403,7 @@ class InstallationReport:
     plan: InstallationPlan
     results: tuple[CommandResult, ...]
     pending_publication: tuple[PendingPublication, ...] = ()
+    agent_home: AgentHomeResult | None = None
 
     def pending_for(self, agent: Agent) -> frozenset[str]:
         """The plugins this agent could not install because they are unpublished."""
@@ -424,7 +567,7 @@ class ClaudeInstallationAdapter:
 
 @dataclass(frozen=True)
 class CodexInstallationAdapter:
-    """Translate a Codex catalog into install and lifecycle operations."""
+    """Translate a Codex catalog into selected-home CLI operations."""
 
     agent: Agent = Agent.CODEX
 
@@ -461,7 +604,6 @@ class CodexInstallationAdapter:
                     environment,
                 )
             )
-        commands.extend(_lifecycle_commands(roots, environment, plugins))
         commands.append(
             _command(
                 self.agent,
@@ -548,6 +690,13 @@ def build_persistent_preflight(
     project_document = _settings_document(roots.checkout / CLAUDE_PROJECT_SETTINGS_PATH)
     project_source_action = claude_source_action(project_document)
     environment = persistent_environment(roots, base_environment)
+    codex_plugins = catalog_plugin_names(roots.checkout / CODEX_CATALOG_PATH)
+    codex_agents = generated_codex_agent_definitions(
+        roots.checkout,
+        roots.codex_home,
+        codex_plugins,
+    )
+    _reject_scope_split(roots.checkout, codex_plugins, codex_agents)
     inspections = (
         _command(
             Agent.CLAUDE,
@@ -586,7 +735,8 @@ def build_persistent_preflight(
         roots=roots,
         environment=environment,
         claude_plugins=catalog_plugin_names(roots.checkout / CLAUDE_CATALOG_PATH),
-        codex_plugins=catalog_plugin_names(roots.checkout / CODEX_CATALOG_PATH),
+        codex_plugins=codex_plugins,
+        codex_agents=codex_agents,
         claude_source_action=project_source_action,
         inspections=inspections,
     )
@@ -639,6 +789,9 @@ def build_persistent_installation_plan(
         codex_action,
         claude_plugins=claude_selection,
         codex_plugins=codex_selection,
+        codex_agents=tuple(
+            agent for agent in preflight.codex_agents if agent.plugin in codex_selection
+        ),
         warnings=tuple(
             warning
             for warning in (claude_warning, codex_warning)
@@ -745,8 +898,19 @@ def _build_plan(
     *,
     claude_plugins: tuple[str, ...],
     codex_plugins: tuple[str, ...],
+    codex_agents: tuple[AgentDefinition, ...] | None = None,
     warnings: tuple[InstallationWarning, ...] = (),
 ) -> InstallationPlan:
+    selected_codex_agents = (
+        generated_codex_agent_definitions(
+            roots.checkout,
+            roots.codex_home,
+            codex_plugins,
+        )
+        if codex_agents is None
+        else codex_agents
+    )
+    _reject_scope_split(roots.checkout, codex_plugins, selected_codex_agents)
     plugins_by_agent = {
         Agent.CLAUDE: claude_plugins,
         Agent.CODEX: codex_plugins,
@@ -763,12 +927,19 @@ def _build_plan(
             plugins_by_agent[adapter.agent],
         )
     )
+    agent_home = build_agent_home_plan(
+        roots.codex_home,
+        selected_codex_agents,
+    )
+    if agent_home.collisions:
+        raise AgentHomeCollisionError(agent_home.collisions)
     return InstallationPlan(
         mode=mode,
         roots=roots,
         claude_plugins=claude_plugins,
         codex_plugins=codex_plugins,
         commands=commands,
+        agent_home=agent_home,
         warnings=warnings,
     )
 
@@ -940,6 +1111,437 @@ def catalog_plugin_names(catalog_path: Path) -> tuple[str, ...]:
     return tuple(names)
 
 
+def generated_codex_agent_definitions(
+    checkout: Path,
+    codex_home: Path,
+    plugins: Sequence[str],
+) -> tuple[AgentDefinition, ...]:
+    """Read every catalog plugin's generated Codex agent definitions."""
+    agents_root = codex_home / CODEX_HOME_AGENTS_PATH
+    definitions: list[AgentDefinition] = []
+    destinations: dict[Path, Path] = {}
+    for plugin in plugins:
+        source_root = (
+            checkout
+            / DIST_DIR_NAME
+            / Agent.CODEX.value
+            / plugin
+            / SKILLS_SUBDIR_NAME
+            / f"{plugin}-plugin"
+            / AGENTS_SUBDIR_NAME
+        )
+        for source in sorted(source_root.glob("*.toml")):
+            destination = agents_root / source.name
+            prior = destinations.get(destination)
+            if prior is not None:
+                raise ValueError(
+                    "generated Codex agent destination collision: "
+                    f"{prior} and {source} both claim {destination}"
+                )
+            destinations[destination] = source
+            content = source.read_bytes()
+            definitions.append(
+                AgentDefinition(
+                    plugin=plugin,
+                    source=source,
+                    destination=destination,
+                    digest=_digest(content),
+                    content=content,
+                )
+            )
+    return tuple(sorted(definitions))
+
+
+def _reject_scope_split(
+    checkout: Path,
+    plugins: Sequence[str],
+    definitions: Sequence[AgentDefinition],
+) -> None:
+    entries = checkout_scope_split_entries(checkout, plugins, definitions)
+    if entries:
+        raise ScopeSplitError(entries)
+
+
+def checkout_scope_split_entries(
+    checkout: Path,
+    plugins: Sequence[str],
+    definitions: Sequence[AgentDefinition],
+) -> tuple[ScopeSplitEntry, ...]:
+    """Classify checkout definitions that shadow selected-home plugin skills."""
+    shipped_content = {definition.content for definition in definitions}
+    plugin_names = frozenset(plugins)
+    entries: list[ScopeSplitEntry] = []
+    for path in sorted((checkout / CODEX_AGENTS_PATH).glob("*.toml")):
+        if path.is_symlink():
+            entries.append(
+                ScopeSplitEntry(path, ScopeSplitClassification.SHADOWING_COLLISION)
+            )
+            continue
+        content = path.read_bytes()
+        if content in shipped_content:
+            entries.append(
+                ScopeSplitEntry(path, ScopeSplitClassification.DIRECTED_REMOVAL)
+            )
+            continue
+        if _checkout_agent_mentions_plugin(path, content, plugin_names):
+            entries.append(
+                ScopeSplitEntry(path, ScopeSplitClassification.SHADOWING_COLLISION)
+            )
+    return tuple(entries)
+
+
+def _checkout_agent_mentions_plugin(
+    path: Path,
+    content: bytes,
+    plugins: frozenset[str],
+) -> bool:
+    if any(
+        path.stem.startswith(f"{plugin}_") or path.stem.startswith(f"{plugin}-")
+        for plugin in plugins
+    ):
+        return True
+    try:
+        document = tomllib.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, tomllib.TOMLDecodeError):
+        return False
+    skills = document.get(AGENT_SKILLS_FIELD)
+    if not isinstance(skills, dict):
+        return False
+    config = skills.get(AGENT_SKILLS_CONFIG_FIELD)
+    if not isinstance(config, list):
+        return False
+    return any(
+        isinstance(entry, dict)
+        and isinstance(name := entry.get(AGENT_SKILL_NAME_FIELD), str)
+        and name.partition(":")[0] in plugins
+        for entry in config
+    )
+
+
+def build_agent_home_plan(
+    codex_home: Path,
+    definitions: Sequence[AgentDefinition],
+) -> AgentHomePlan:
+    """Plan catalog-wide reconciliation from digest-bound ownership."""
+    agents_root = codex_home / CODEX_HOME_AGENTS_PATH
+    if agents_root.is_symlink():
+        raise ValueError(
+            f"selected Codex agent directory must not be a symlink: {agents_root}"
+        )
+    ownership_path = agents_root / AGENT_OWNERSHIP_FILENAME
+    if ownership_path.is_symlink():
+        raise ValueError(
+            f"agent ownership record must be a regular file: {ownership_path}"
+        )
+    ownership_expected_digest = (
+        _digest(ownership_path.read_bytes()) if ownership_path.is_file() else None
+    )
+    ownership = {
+        entry.destination: entry for entry in _read_agent_ownership(codex_home)
+    }
+    desired = {definition.destination: definition for definition in definitions}
+    mutations: list[AgentHomeMutation] = []
+    collisions: list[AgentHomeCollision] = []
+    ownership_after: dict[Path, AgentOwnership] = dict(ownership)
+
+    for destination, definition in desired.items():
+        recorded = ownership.get(destination)
+        destination_present = destination.exists() or destination.is_symlink()
+        current_digest = _path_digest(destination)
+        if not destination_present:
+            mutations.append(
+                AgentHomeMutation(
+                    action=AgentHomeAction.CREATE,
+                    destination=destination,
+                    plugin=definition.plugin,
+                    digest=definition.digest,
+                    expected_digest=None,
+                    content=definition.content,
+                )
+            )
+            ownership_after[destination] = AgentOwnership(
+                destination,
+                definition.plugin,
+                definition.digest,
+            )
+            continue
+        if current_digest is None:
+            collisions.append(
+                AgentHomeCollision(
+                    destination,
+                    definition.plugin,
+                    "destination exists but is not a regular file",
+                )
+            )
+            continue
+        if recorded is None:
+            if current_digest == definition.digest:
+                ownership_after[destination] = AgentOwnership(
+                    destination,
+                    definition.plugin,
+                    definition.digest,
+                )
+                continue
+            collisions.append(
+                AgentHomeCollision(
+                    destination,
+                    definition.plugin,
+                    "destination is occupied without marketplace ownership",
+                )
+            )
+            continue
+        if current_digest != recorded.digest:
+            collisions.append(
+                AgentHomeCollision(
+                    destination,
+                    recorded.plugin,
+                    "destination bytes differ from the recorded installed digest",
+                )
+            )
+            continue
+        if current_digest != definition.digest:
+            mutations.append(
+                AgentHomeMutation(
+                    action=AgentHomeAction.REPLACE,
+                    destination=destination,
+                    plugin=definition.plugin,
+                    digest=definition.digest,
+                    expected_digest=current_digest,
+                    content=definition.content,
+                )
+            )
+        ownership_after[destination] = AgentOwnership(
+            destination,
+            definition.plugin,
+            definition.digest,
+        )
+
+    for destination, recorded in ownership.items():
+        if destination in desired:
+            continue
+        destination_present = destination.exists() or destination.is_symlink()
+        current_digest = _path_digest(destination)
+        if not destination_present:
+            ownership_after.pop(destination, None)
+            continue
+        if current_digest is None:
+            collisions.append(
+                AgentHomeCollision(
+                    destination,
+                    recorded.plugin,
+                    "retired destination exists but is not a regular file",
+                )
+            )
+            continue
+        if current_digest != recorded.digest:
+            collisions.append(
+                AgentHomeCollision(
+                    destination,
+                    recorded.plugin,
+                    "retired destination bytes differ from the recorded installed digest",
+                )
+            )
+            continue
+        mutations.append(
+            AgentHomeMutation(
+                action=AgentHomeAction.PRUNE,
+                destination=destination,
+                plugin=recorded.plugin,
+                digest=recorded.digest,
+                expected_digest=current_digest,
+                content=None,
+            )
+        )
+        ownership_after.pop(destination, None)
+
+    return AgentHomePlan(
+        ownership_path=ownership_path,
+        ownership_expected_digest=ownership_expected_digest,
+        mutations=tuple(sorted(mutations)),
+        collisions=tuple(sorted(collisions)),
+        ownership_after=tuple(sorted(ownership_after.values())),
+    )
+
+
+def apply_agent_home_plan(plan: AgentHomePlan) -> AgentHomeResult:
+    """Apply one preflighted home reconciliation without widening ownership."""
+    if plan.collisions:
+        raise AgentHomeCollisionError(plan.collisions)
+    ownership_present = plan.ownership_path.exists() or plan.ownership_path.is_symlink()
+    if plan.ownership_expected_digest is None and ownership_present:
+        raise ValueError(
+            f"agent ownership changed after preflight: {plan.ownership_path}"
+        )
+    if (
+        plan.ownership_expected_digest is not None
+        and _path_digest(plan.ownership_path) != plan.ownership_expected_digest
+    ):
+        raise ValueError(
+            f"agent ownership changed after preflight: {plan.ownership_path}"
+        )
+    for mutation in plan.mutations:
+        destination_present = (
+            mutation.destination.exists() or mutation.destination.is_symlink()
+        )
+        if mutation.expected_digest is None and destination_present:
+            raise ValueError(
+                f"agent destination changed after preflight: {mutation.destination}"
+            )
+        if (
+            mutation.expected_digest is not None
+            and _path_digest(mutation.destination) != mutation.expected_digest
+        ):
+            raise ValueError(
+                f"agent destination changed after preflight: {mutation.destination}"
+            )
+
+    written: list[Path] = []
+    pruned: list[Path] = []
+    for mutation in plan.mutations:
+        if mutation.action is AgentHomeAction.PRUNE:
+            mutation.destination.unlink()
+            pruned.append(mutation.destination)
+            continue
+        if mutation.content is None:
+            raise ValueError(f"agent write has no content: {mutation.destination}")
+        _atomic_write(mutation.destination, mutation.content)
+        written.append(mutation.destination)
+
+    ownership_content = _agent_ownership_content(
+        plan.ownership_path.parent.parent,
+        plan.ownership_after,
+    )
+    if _path_bytes(plan.ownership_path) != ownership_content:
+        _atomic_write(plan.ownership_path, ownership_content)
+    return AgentHomeResult(
+        written=tuple(written),
+        pruned=tuple(pruned),
+        collisions=plan.collisions,
+    )
+
+
+def _read_agent_ownership(codex_home: Path) -> tuple[AgentOwnership, ...]:
+    ownership_path = codex_home / CODEX_HOME_AGENTS_PATH / AGENT_OWNERSHIP_FILENAME
+    if not ownership_path.exists() and not ownership_path.is_symlink():
+        return ()
+    if ownership_path.is_symlink():
+        raise ValueError(
+            f"agent ownership record must be a regular file: {ownership_path}"
+        )
+    try:
+        document = cast(
+            object,
+            json.loads(ownership_path.read_text(encoding="utf-8")),
+        )
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError(
+            f"invalid agent ownership record {ownership_path}: {error}"
+        ) from error
+    if not isinstance(document, dict):
+        raise ValueError(f"agent ownership record {ownership_path} must be an object")
+    if document.get(AGENT_OWNERSHIP_SCHEMA_FIELD) != AGENT_OWNERSHIP_SCHEMA_VERSION:
+        raise ValueError(
+            f"agent ownership record {ownership_path} has an unsupported schema"
+        )
+    values = document.get(AGENT_OWNERSHIP_ENTRIES_FIELD)
+    if not isinstance(values, list):
+        raise ValueError(
+            f"agent ownership record {ownership_path} must contain an entries array"
+        )
+    entries: list[AgentOwnership] = []
+    seen: set[Path] = set()
+    for index, value in enumerate(values):
+        if not isinstance(value, dict):
+            raise ValueError(
+                f"agent ownership record {ownership_path} entry {index} must be an object"
+            )
+        destination_value = value.get(AGENT_OWNERSHIP_DESTINATION_FIELD)
+        plugin = value.get(AGENT_OWNERSHIP_PLUGIN_FIELD)
+        digest = value.get(AGENT_OWNERSHIP_DIGEST_FIELD)
+        if not isinstance(destination_value, str):
+            raise ValueError(
+                f"agent ownership record {ownership_path} entry {index} has no destination"
+            )
+        relative_destination = Path(destination_value)
+        if (
+            relative_destination.is_absolute()
+            or len(relative_destination.parts) != 2
+            or relative_destination.parts[0] != CODEX_HOME_AGENTS_PATH.name
+            or relative_destination.suffix != ".toml"
+        ):
+            raise ValueError(
+                f"agent ownership record {ownership_path} entry {index} has an invalid destination"
+            )
+        destination = codex_home / relative_destination
+        if not isinstance(plugin, str) or not plugin:
+            raise ValueError(
+                f"agent ownership record {ownership_path} entry {index} has no plugin"
+            )
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+        ):
+            raise ValueError(
+                f"agent ownership record {ownership_path} entry {index} has an invalid digest"
+            )
+        if destination in seen:
+            raise ValueError(
+                f"agent ownership record {ownership_path} repeats {destination}"
+            )
+        seen.add(destination)
+        entries.append(AgentOwnership(destination, plugin, digest))
+    return tuple(sorted(entries))
+
+
+def _agent_ownership_content(
+    codex_home: Path,
+    entries: Sequence[AgentOwnership],
+) -> bytes:
+    document = {
+        AGENT_OWNERSHIP_SCHEMA_FIELD: AGENT_OWNERSHIP_SCHEMA_VERSION,
+        AGENT_OWNERSHIP_ENTRIES_FIELD: [
+            {
+                AGENT_OWNERSHIP_DESTINATION_FIELD: str(
+                    entry.destination.relative_to(codex_home)
+                ),
+                AGENT_OWNERSHIP_PLUGIN_FIELD: entry.plugin,
+                AGENT_OWNERSHIP_DIGEST_FIELD: entry.digest,
+            }
+            for entry in entries
+        ],
+    }
+    return (json.dumps(document, indent=2, sort_keys=True) + "\n").encode()
+
+
+def _atomic_write(path: Path, content: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=f".{path.name}.",
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(content)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _digest(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
+def _path_bytes(path: Path) -> bytes | None:
+    return path.read_bytes() if path.is_file() and not path.is_symlink() else None
+
+
+def _path_digest(path: Path) -> str | None:
+    content = _path_bytes(path)
+    return _digest(content) if content is not None else None
+
+
 def codex_source_action(payload: str) -> SourceAction:
     """Classify the selected Codex home's configured marketplace source."""
     try:
@@ -1053,10 +1655,12 @@ def execute_installation(
                 if entry not in pending:
                     pending.append(entry)
         results.append(result)
+    agent_home = apply_agent_home_plan(plan.agent_home)
     return InstallationReport(
         plan=plan,
         results=tuple(results),
         pending_publication=tuple(pending),
+        agent_home=agent_home,
     )
 
 
@@ -1235,41 +1839,6 @@ def _codex_source_commands(
                 environment,
             )
         )
-    return tuple(commands)
-
-
-def _lifecycle_commands(
-    roots: InstallationRoots,
-    environment: tuple[tuple[str, str], ...],
-    plugins: Sequence[str],
-) -> tuple[InstallationCommand, ...]:
-    commands: list[InstallationCommand] = []
-    for plugin in plugins:
-        script = (
-            roots.checkout
-            / "dist"
-            / Agent.CODEX.value
-            / plugin
-            / "skills"
-            / f"{plugin}-plugin"
-            / PLACEMENT_SCRIPT_RELATIVE_PATH
-        )
-        if script.is_file():
-            commands.append(
-                _command(
-                    Agent.CODEX,
-                    Operation.LIFECYCLE_PLACE,
-                    plugin,
-                    (
-                        PYTHON_EXECUTABLE,
-                        str(script),
-                        "--checkout",
-                        str(roots.checkout),
-                    ),
-                    roots,
-                    environment,
-                )
-            )
     return tuple(commands)
 
 
@@ -1484,6 +2053,7 @@ def _failure_document(failure: InstallationFailure) -> dict[str, object]:
 
 
 def report_document(report: InstallationReport) -> dict[str, object]:
+    agent_home = report.agent_home
     return {
         ReportField.MODE: report.plan.mode.value,
         ReportField.CLAUDE_PLUGINS: sorted(report.installed_for(Agent.CLAUDE)),
@@ -1505,13 +2075,42 @@ def report_document(report: InstallationReport) -> dict[str, object]:
             }
             for warning in report.plan.warnings
         ],
+        ReportField.AGENT_HOME: (
+            {
+                ReportField.WRITTEN: [str(path) for path in agent_home.written],
+                ReportField.PRUNED: [str(path) for path in agent_home.pruned],
+                ReportField.COLLISIONS: [
+                    {
+                        ReportField.DESTINATION: str(collision.destination),
+                        ReportField.PLUGIN: collision.plugin,
+                        ReportField.REASON: collision.reason,
+                    }
+                    for collision in agent_home.collisions
+                ],
+            }
+            if agent_home is not None
+            else None
+        ),
     }
 
 
 __all__ = [
     "AGENT_ADAPTERS",
+    "AGENT_OWNERSHIP_FILENAME",
+    "AGENT_SKILL_NAME_FIELD",
+    "AGENT_SKILLS_CONFIG_FIELD",
+    "AGENT_SKILLS_FIELD",
+    "AGENT_OWNERSHIP_SCHEMA_VERSION",
     "Agent",
     "AgentAdapter",
+    "AgentDefinition",
+    "AgentHomeAction",
+    "AgentHomeCollision",
+    "AgentHomeCollisionError",
+    "AgentHomeMutation",
+    "AgentHomePlan",
+    "AgentHomeResult",
+    "AgentOwnership",
     "CANONICAL_CODEX_SOURCE",
     "CANONICAL_MARKETPLACE_SOURCE",
     "PLUGIN_OPERATIONS",
@@ -1541,6 +2140,7 @@ __all__ = [
     "CODEX_CONFIG_PATH",
     "CODEX_GIT_SOURCE_TYPE",
     "CODEX_HOME_ENV",
+    "CODEX_HOME_AGENTS_PATH",
     "CODEX_LOCAL_SOURCE_TYPE",
     "CODEX_MARKETPLACES_FIELD",
     "CLAUDE_MARKETPLACE_LIST_COMMAND",
@@ -1569,21 +2169,27 @@ __all__ = [
     "MARKETPLACE_NAME",
     "Operation",
     "PersistentPreflight",
-    "PYTHON_EXECUTABLE",
     "ReportField",
+    "ScopeSplitClassification",
+    "ScopeSplitEntry",
+    "ScopeSplitError",
     "SourceAction",
     "STATE_ENV_NAMES",
     "SPEC_TREE_PLUGIN",
+    "apply_agent_home_plan",
+    "build_agent_home_plan",
     "build_isolated_installation_plan",
     "build_persistent_installation_plan",
     "build_persistent_preflight",
     "catalog_plugin_names",
+    "checkout_scope_split_entries",
     "claude_marketplace_listing_payload",
     "claude_marketplace_names",
     "claude_marketplace_settings",
     "claude_source_action",
     "codex_marketplace_listing_payload",
     "codex_source_action",
+    "generated_codex_agent_definitions",
     "execute_installation",
     "execute_persistent_installation",
     "isolated_environment",

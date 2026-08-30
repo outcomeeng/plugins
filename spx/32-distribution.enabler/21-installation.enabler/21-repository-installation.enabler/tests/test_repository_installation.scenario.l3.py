@@ -9,6 +9,7 @@ from outcomeeng.distribution.installation import (
     SPEC_TREE_PLUGIN,
 )
 from outcomeeng_testing.harnesses.installation import (
+    observe_codex_role_discovery,
     observe_real_first_install,
     observe_real_installation,
 )
@@ -43,7 +44,7 @@ def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
     assert observation.codex_plugins.enabled == {SPEC_TREE_PLUGIN}
 
 
-def test_real_agent_clis_materialize_and_repeat_full_installation() -> None:
+def test_real_agent_clis_place_home_agents_and_repeat_full_installation() -> None:
     observation = observe_real_installation()
     assert observation.first_exit_code == 0, observation.first_stderr
     assert observation.second_exit_code == 0, observation.second_stderr
@@ -55,3 +56,14 @@ def test_real_agent_clis_materialize_and_repeat_full_installation() -> None:
     assert observation.placed_first == observation.placed_second
     assert observation.unowned_first == observation.unowned_initial
     assert observation.unowned_second == observation.unowned_initial
+
+
+def test_fresh_codex_session_discovers_every_placed_canonical_role() -> None:
+    observation = observe_codex_role_discovery()
+
+    assert observation.install_exit_code == 0, observation.install_stderr
+    assert observation.login_exit_code == 0, observation.login_stderr
+    assert observation.session_exit_code == 0, observation.session_stderr
+    assert observation.placed_roles
+    assert observation.discovered_roles is not None, observation.session_last_message
+    assert observation.placed_roles <= observation.discovered_roles

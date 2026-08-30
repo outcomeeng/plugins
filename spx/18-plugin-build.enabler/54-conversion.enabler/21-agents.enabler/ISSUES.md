@@ -2,20 +2,6 @@
 
 Coordination note; not spec truth.
 
-## DEBT [structure]: split overloaded agent-conversion boundaries
-
-`changes-reviewer` runs `2026-07-03_08-02-43-874-6887784d925b` and `2026-07-03_09-26-23-414-a5d4fd1ca5be` raised debt finding `F-001`: `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/agents.md` carries more than roughly seven assertions and mixes independently validated concerns:
-
-- agent conversion output shape
-- tool and policy inference
-- duplicate-filename installation behavior
-
-The reviewer cited `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`, whose decomposition rule treats more than roughly seven assertions as a signal for analysis and separates independent concerns when each concern has a meaningful validation boundary.
-
-Revisit condition: when structural work on `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler` is scheduled, invoke `/decompose` on the agents node. Split the remaining conversion and policy-inference concerns into focused child nodes when the ordering-evidence matrix supports the split.
-
-Deferral reason: this branch targets the bounded generated Codex-agent config enforcement change. The sync-order assertion was re-scoped to `spx/32-distribution.enabler/21-sync.enabler` in this branch; the remaining proposed fix is a tree-structure refactor inside the agents node.
-
 ## DEBT [consistency]: reassess `permissionMode` mapping for plugin-shipped agents
 
 `changes-reviewer` run `2026-07-03_15-20-18-970-ba8ba57733e4` and CI review comment `2026-07-03T15:40:38Z` raised that Claude Code plugin-shipped agents do not support `permissionMode` frontmatter, while this node still specifies and tests `permissionMode` to Codex `sandbox_mode` mapping.
@@ -38,29 +24,22 @@ Revisit condition: the pattern spans twenty-seven of the one hundred forty-two t
 
 Deferral reason: the changeset that surfaced this is a subtraction — it withdraws the Codex configured-agent identity preflight and the two spec nodes authored with it. Inverting a roughly one-thousand-line harness and thirty-two test functions inside it would more than double a reduction changeset, and the same inversion is owed across twenty-five further files that this changeset does not touch.
 
-## DEBT [standards]: the shipped placement script's line ceiling excludes script-standards additions
+## Claude plugin renders bundle the never-invoked placement script
 
-`instructions:skill-auditor` raised two WARNING findings against
-`src/templates/plugin/scripts/place_agents.py`: it carries no `Tested with:` documentation comment
-recording sample-input, expected-output, and error-case coverage, and it lets a malformed
-`placement.json` surface a bare `JSONDecodeError` or `KeyError` rather than a message naming the file
-and the invalid field.
+Every Claude-target `<plugin>-plugin` skill ships `scripts/place_agents.py`
+even though its own SKILL.md states the script serves only the Codex
+rendering and is never invoked there. Omitting it requires a
+target-conditional emission rule in the build's projection — new projection
+semantics with their own evidence — which is a separate, larger concern than
+any single changeset touching the lifecycle skill.
 
-Both are correct against `/skill-standards`. Both also add raw lines to a script that sits at exactly
-fifty, the ceiling `spx/12-shipped-scripting.adr.md` sets before a shipped script becomes debt
-awaiting extraction into the SPX CLI. The two standards pull in opposite directions on the same file,
-and neither yields to the other by its own terms.
+**Resolution shape**: teach the emission projection to omit a bundled file
+per target when the source declares it target-scoped, then drop the script
+from the Claude renders.
 
-The auditor's own severity reasoning bounds the risk: `placement.json` is build-generated and
-trusted, never consumer input, so the unguarded parse cannot be reached by a malformed file a
-consumer authored.
+**Revisit condition**: with the next change to the build's emission
+projection.
 
-**Resolution shape**: decide which standard governs a shipped script at the ceiling — raise the
-ceiling for scripts carrying mandated documentation and validation, exempt those two categories from
-the raw-line count, or treat reaching the ceiling as the extraction trigger the ADR describes and
-move placement into the SPX CLI, leaving the skill its instruction and no script. The third option is
-what the ADR already prescribes for a proven script, so this may be an extraction decision rather
-than a standards conflict.
-
-**Revisit condition**: when placement next needs a behavior change, since any addition crosses the
-ceiling and forces the decision.
+**Evidence**: raised by the skill-authoring audit of the canonical
+agent-registry changeset as a size/hygiene warning, not a correctness
+defect.

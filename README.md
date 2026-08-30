@@ -135,20 +135,21 @@ codex plugin marketplace upgrade outcomeeng
 Repository maintainers can verify both catalogs with
 `just verify-marketplace-installation`. The command installs each full catalog
 and a generated valid subset through the real Claude Code and Codex CLIs in
-disposable homes. The command also rejects an invalid subset that omits `spec-tree`.
-The command runs Codex checkout materialization against the invocation checkout
-and leaves persistent plugin state unchanged.
+disposable homes. The command also rejects an invalid subset that omits `spec-tree`. It places
+each installed plugin's generated Codex agent definitions in the disposable
+home's `agents/` directory and leaves persistent plugin state unchanged.
 
 After merged distribution changes, `just install-marketplace` refreshes the
 project-scoped Claude Code marketplace and the selected `$CODEX_HOME`. It
 reinstalls only the plugins already installed for each agent. Empty state receives
 only `spec-tree` and a warning. The command rejects nonempty state without `spec-tree`.
-The command runs Codex checkout materialization against the invocation checkout. The
-`place-agents-check` gate still requires the committed `.codex/agents/` copies
-to stay byte-identical to shipped output — run `just place-agents` after
-editing agent sources — while `spx/12-marketplace-state.adr.md` marks the
-directory as pending removal once home delivery ships; churn from a release
-run itself signals nothing to commit, per `spx/local/merging.md`.
+The command reconciles the selected plugins' generated Codex agent definitions
+into the selected `$CODEX_HOME/agents/` registry under a digest-bound marketplace
+ownership record, leaving foreign and modified files untouched. A checkout
+`.codex/agents/` definition whose invoked skills live in the selected home is a
+scope split that stops the run before mutation, per
+`spx/12-marketplace-state.adr.md`; marketplace installation never requires
+committing agent definitions into a checkout.
 
 ### Bumping plugin versions on a branch
 

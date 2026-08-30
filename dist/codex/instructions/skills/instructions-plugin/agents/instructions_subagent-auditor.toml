@@ -56,4 +56,4 @@ name = "instructions:audit-subagent"
 enabled = true
 
 [shell_environment_policy]
-set = { OUTCOMEENG_CODEX_AGENT_NAME = "instructions/instructions_subagent-auditor" }
+set = { OUTCOMEENG_CODEX_AGENT_NAME = "instructions/subagent-auditor" }

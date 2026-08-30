@@ -24,21 +24,6 @@ sources = [
 generator = ["outcomeeng/distribution/**"]
 regenerate = "just build-skills"
 
-# Agent definitions for an agent whose plugin manifest cannot declare agents.
-# The build converts each plugin's authored agents into that target's native
-# artifact inside the plugin's lifecycle skill, and the skill's shipped script
-# places them here, so the committed checkout directory is generated twice over
-# — never hand-authored and never hand-edited.
-[[relation]]
-outputs = [".codex/agents/**"]
-sources = ["src/plugins/*/agents/*.md", "src/templates/**"]
-generator = [
-  "outcomeeng/distribution/agents.py",
-  "outcomeeng/distribution/build.py",
-  "src/templates/plugin/scripts/place_agents.py",
-]
-regenerate = "just build-skills && just place-agents"
-
 [[relation]]
 outputs = [
   { file = "CLAUDE.md", begin = "<!-- SPEC-TREE v", end = "<!-- /SPEC-TREE -->" },
