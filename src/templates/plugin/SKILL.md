@@ -78,6 +78,8 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py" --home <selected-codex-hom
 python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py" --home <selected-codex-home> --checkout <repository-root>
 ```
 
+An interrupted `init` or `upgrade` leaves no partial definition: each destination and the ownership record are replaced atomically, and re-running `init` recomputes every owned destination from the shipped definitions.
+
 Run the check form again afterward. Success requires zero remaining drift, collision, or scope-split report. An interrupted `init` or `upgrade` is safe to re-run: every write is atomic per file and the ownership record is recomputed from the shipped definitions on each run. A `collision: <path> (changed after preflight)` line means the home changed while the run was planning; re-run the check form for a fresh plan instead of retrying the mutating form.{!% endif %!}
 
 </agent_delivery>
