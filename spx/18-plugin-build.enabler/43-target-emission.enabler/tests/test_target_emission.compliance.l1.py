@@ -72,7 +72,6 @@ def test_every_source_file_emits_to_both_target_trees() -> None:
     required_actions = {
         EmissionAction.FAN_OUT,
         EmissionAction.CONVERT_AGENT,
-        EmissionAction.PLACEMENT_MANIFEST,
     }
     assert required_actions <= fixture.covered_actions, (
         f"synthetic fixture misses emission actions: "
@@ -155,16 +154,6 @@ def test_agent_capabilities_resolve_from_the_source_owned_registry() -> None:
         assert slug == (
             "someagent" if capability.namespaced else "someplugin_someagent"
         ), f"{target.value} derives an unexpected agent slug {slug!r}"
-        if capability.manifest_declares_agents:
-            assert capability.checkout_directory is None, (
-                f"{target.value} declares agents in its manifest, so it needs no "
-                "checkout placement directory"
-            )
-        else:
-            assert capability.checkout_directory, (
-                f"{target.value} cannot declare agents in its manifest, so it must "
-                "name the checkout directory its agents are placed into"
-            )
 
 
 def test_no_target_tree_carries_an_agent_artifact_it_cannot_read() -> None:

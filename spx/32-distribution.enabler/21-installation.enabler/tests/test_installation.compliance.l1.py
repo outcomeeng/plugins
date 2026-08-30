@@ -152,12 +152,12 @@ def test_invalid_installed_selection_never_reaches_a_state_changing_operation() 
 
 
 def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
-    observation = observe_first_failure(Operation.LIFECYCLE_PLACE)
+    observation = observe_first_failure(Operation.PLUGIN_INSTALL, agent=Agent.CODEX)
     document = json.loads(observation.stderr)
 
     assert observation.exit_code != 0
     assert document[ReportField.AGENT] == Agent.CODEX.value
-    assert document[ReportField.OPERATION] == Operation.LIFECYCLE_PLACE.value
+    assert document[ReportField.OPERATION] == Operation.PLUGIN_INSTALL.value
     assert document[ReportField.PLUGIN] is not None
     assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted) - 1
     assert (
