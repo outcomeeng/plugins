@@ -349,6 +349,7 @@ def test_a_renamed_test_source_never_reaches_pytest() -> None:
 
     assert run.exit_code == 0
     assert all(PYTEST_ARGV != call[: len(PYTEST_ARGV)] for call in run.spawn_calls)
+    assert PYTHON_REASON in run.output
 
 
 def test_a_deleted_then_modified_test_still_runs_when_present() -> None:
@@ -362,6 +363,18 @@ def test_a_deleted_then_modified_test_still_runs_when_present() -> None:
 
     assert run.exit_code == 0
     assert run.spawn_calls[-1] == (*PYTEST_ARGV, SELECTED_GATE_PYTHON_TEST_PATH)
+
+
+def test_a_copy_collects_both_sides() -> None:
+    observation = collected_paths_observation(
+        branch_old_path=SELECTED_GATE_PYTHON_TEST_PATH,
+        branch_path=SELECTED_GATE_RENAMED_TARGET_ARG,
+        branch_status="C100",
+    )
+
+    assert observation.collected == tuple(
+        sorted((SELECTED_GATE_PYTHON_TEST_PATH, SELECTED_GATE_RENAMED_TARGET_ARG))
+    )
 
 
 def test_a_copied_test_selects_pytest_for_the_surviving_source() -> None:
