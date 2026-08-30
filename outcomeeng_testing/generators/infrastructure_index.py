@@ -6,8 +6,12 @@ follows from that construction rather than from the resolver under test.
 
 from __future__ import annotations
 
+import string
 from dataclasses import dataclass
 from typing import Final
+
+from hypothesis import strategies as st
+from hypothesis.strategies import SearchStrategy
 
 from outcomeeng.validation.infrastructure_index import (
     TEST_INFRASTRUCTURE_PACKAGE,
@@ -82,3 +86,22 @@ def import_statement_cases(
             expected=path_to_subpackage | {sibling},
         ),
     )
+
+
+CHAIN_MODULE_PREFIX: Final = "chain_"
+MAX_CHAIN_LENGTH: Final = 6
+
+
+def import_chains() -> SearchStrategy[tuple[str, ...]]:
+    """Distinct module names forming one import chain, first to last.
+
+    Each generated name is prefixed so it is a valid identifier that collides
+    with no keyword; the chain length varies from one module upward.
+    """
+
+    return st.lists(
+        st.text(alphabet=string.ascii_lowercase, min_size=1, max_size=6),
+        min_size=1,
+        max_size=MAX_CHAIN_LENGTH,
+        unique=True,
+    ).map(lambda names: tuple(f"{CHAIN_MODULE_PREFIX}{name}" for name in names))

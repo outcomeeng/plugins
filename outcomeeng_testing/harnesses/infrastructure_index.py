@@ -8,12 +8,14 @@ the index and owns every predicate over it.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final
+
+from hypothesis import given, seed, settings
 
 from outcomeeng.validation.infrastructure_index import (
     CONFTEST_FILENAME,
@@ -26,6 +28,8 @@ from outcomeeng.validation.infrastructure_index import (
     InfrastructureReach,
     index_test_infrastructure,
 )
+from outcomeeng_testing.generators.infrastructure_index import import_chains
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 HARNESSES_SUBPACKAGE: Final = "harnesses"
 GENERATORS_SUBPACKAGE: Final = "generators"
@@ -207,3 +211,60 @@ def side_effect_layout(repo: SyntheticRepository) -> SideEffectLayout:
         f"from {repo.package}.{HARNESSES_SUBPACKAGE} import effectful\n",
     )
     return SideEffectLayout(module=module, marker=marker, test=test)
+
+
+INDEX_PROPERTY_SEED: Final = 20260830
+INDEX_PROPERTY_REPLAY_PATH: Final = (
+    "spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/tests/"
+    "test_infrastructure_index.property.l1.py::"
+    "test_every_module_in_an_import_chain_reaches_the_test"
+)
+INDEX_PROPERTY_EXAMPLES: Final = 40
+
+
+@dataclass(frozen=True)
+class ChainLayout:
+    """An import chain of modules, first to last, and the test importing the first."""
+
+    modules: tuple[str, ...]
+    test: str
+    index: InfrastructureIndex
+
+
+def chain_layout(repo: SyntheticRepository, chain: tuple[str, ...]) -> ChainLayout:
+    """Write modules where each imports the next and a test importing the first."""
+
+    modules = tuple(f"{repo.package}.{HARNESSES_SUBPACKAGE}.{name}" for name in chain)
+    for position, name in enumerate(chain):
+        following = chain[position + 1 :]
+        source = (
+            f"from {repo.package}.{HARNESSES_SUBPACKAGE} import {following[0]}\n"
+            if following
+            else ""
+        )
+        repo.write_module(modules[position], source)
+    test = repo.write_test(
+        FIRST_NODE,
+        "chain",
+        f"from {repo.package}.{HARNESSES_SUBPACKAGE} import {chain[0]}\n",
+    )
+    return ChainLayout(modules=modules, test=test, index=repo.index())
+
+
+def index_property(test_func: Callable[..., None]) -> Callable[[], None]:
+    """Bind the chain domain and run configuration to a property test."""
+
+    configured = seed(INDEX_PROPERTY_SEED)(
+        settings(max_examples=INDEX_PROPERTY_EXAMPLES, deadline=None, print_blob=True)(
+            given(chain=import_chains())(test_func)
+        )
+    )
+
+    def wrapper() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=INDEX_PROPERTY_SEED,
+            replay_path=INDEX_PROPERTY_REPLAY_PATH,
+        )
+
+    return wrapper
