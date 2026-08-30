@@ -23,3 +23,23 @@ Resolution shape: invert the harness so each helper returns the observation and 
 Revisit condition: the pattern spans twenty-seven of the one hundred forty-two test files under `spx/**/tests/`, so the inversion is one migration with a shared harness contract rather than a per-node repair. Schedule it as that migration and take this node's two files as its first unit.
 
 Deferral reason: the changeset that surfaced this is a subtraction — it withdraws the Codex configured-agent identity preflight and the two spec nodes authored with it. Inverting a roughly one-thousand-line harness and thirty-two test functions inside it would more than double a reduction changeset, and the same inversion is owed across twenty-five further files that this changeset does not touch.
+
+## Claude plugin renders bundle the never-invoked placement script
+
+Every Claude-target `<plugin>-plugin` skill ships `scripts/place_agents.py`
+even though its own SKILL.md states the script serves only the Codex
+rendering and is never invoked there. Omitting it requires a
+target-conditional emission rule in the build's projection — new projection
+semantics with their own evidence — which is a separate, larger concern than
+any single changeset touching the lifecycle skill.
+
+**Resolution shape**: teach the emission projection to omit a bundled file
+per target when the source declares it target-scoped, then drop the script
+from the Claude renders.
+
+**Revisit condition**: with the next change to the build's emission
+projection.
+
+**Evidence**: raised by the skill-authoring audit of the canonical
+agent-registry changeset as a size/hygiene warning, not a correctness
+defect.
