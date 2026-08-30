@@ -478,7 +478,7 @@ def template_languages(template_text: str) -> tuple[str, ...]:
     )
 
 
-def _filter_harness(body: str, harness: str) -> str:
+def filter_harness(body: str, harness: str) -> str:
     """Keep each ``harness:NAME`` block whose NAME is the target harness; drop the rest."""
     return _filter_conditional_blocks(body, "harness", {harness})
 
@@ -533,7 +533,7 @@ def render(
 
     body = _filter_language_presence(template_body, languages)
     body = _filter_languages(body, languages)
-    body = _filter_harness(body, harness)
+    body = filter_harness(body, harness)
     body = _BLANK_RUN.sub("\n\n", body)
     body = body.lstrip("\n")
 

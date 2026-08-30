@@ -59,4 +59,4 @@ name = "spec-tree:audit-implementation"
 enabled = true
 
 [shell_environment_policy]
-set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/spec-tree_implementation-auditor" }
+set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/implementation-auditor" }

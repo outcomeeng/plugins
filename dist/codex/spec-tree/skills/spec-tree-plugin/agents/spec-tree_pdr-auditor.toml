@@ -56,4 +56,4 @@ name = "spec-tree:audit-pdr"
 enabled = true
 
 [shell_environment_policy]
-set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/spec-tree_pdr-auditor" }
+set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/pdr-auditor" }

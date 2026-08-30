@@ -12,13 +12,12 @@ directly instead of keeping test-owned duplicates.
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import shutil
 import subprocess
 import sys
 from ast import literal_eval
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -117,13 +116,8 @@ SHARED_DIR_NAME: Final = "_shared"
 # from `_shared`, whose fragments are included INTO a skill rather than being a
 # whole skill generated from one source.
 TEMPLATES_DIR_NAME: Final = "templates"
-# The template whose generated skill carries each plugin's own lifecycle surface,
-# including the agent definitions a target reads from the checkout rather than
-# from a plugin manifest.
+# The template whose generated skill carries each plugin's own lifecycle surface.
 LIFECYCLE_TEMPLATE_NAME: Final = "plugin"
-PLACEMENT_MANIFEST_FILENAME: Final = "placement.json"
-PLACEMENT_MANIFEST_DIRECTORY_FIELD: Final = "directory"
-PLACEMENT_MANIFEST_PREFIX_FIELD: Final = "prefix"
 SHARED_FRAGMENT_FILENAME: Final = "fragment.md"
 
 
@@ -185,7 +179,6 @@ class EmissionAction(StrEnum):
     COPY = "copy"
     FAN_OUT = "fan-out"
     CONVERT_AGENT = "convert-agent"
-    PLACEMENT_MANIFEST = "placement-manifest"
 
 
 @dataclass(frozen=True)
@@ -993,9 +986,6 @@ def build(
         if emission.action is EmissionAction.CONVERT_AGENT:
             _emit_converted_agent(emission, dist_root=dist_root, src_root=src_root)
             continue
-        if emission.action is EmissionAction.PLACEMENT_MANIFEST:
-            _emit_placement_manifest(emission, dist_root=dist_root)
-            continue
         if emission.action is EmissionAction.FAN_OUT:
             _emit_projected_fan_out(
                 emission,
@@ -1084,6 +1074,28 @@ def _make_kind_global(
     return render
 
 
+@pass_context
+def _render_agent_role(
+    context: Context,
+    plugin: str,
+    agent: str,
+    runtime: str | None = None,
+) -> str:
+    """Render an agent's canonical role name for the selected target."""
+    resolved = runtime if runtime is not None else context.get("target")
+    if resolved is None:
+        raise RuntimeTokenError(
+            f"agent role {plugin!r}/{agent!r} rendered with no target in context"
+        )
+    try:
+        target = _Target(resolved)
+    except ValueError as exc:
+        raise RuntimeTokenError(
+            f"agent role {plugin!r}/{agent!r} rendered for unknown target {resolved!r}"
+        ) from exc
+    return agent_slug(plugin, agent, capability=agent_capability(target))
+
+
 def make_jinja_environment(
     shared_root: Path | None = None,
     *,
@@ -1107,6 +1119,7 @@ def make_jinja_environment(
     # term(), file(). A new kind in the registry is exposed automatically.
     for kind in runtime_token_registry:
         environment.globals[kind] = _make_kind_global(kind, runtime_token_registry)
+    environment.globals["agent_role"] = _render_agent_role
     return environment
 
 
@@ -1249,9 +1262,7 @@ def _emit_converted_agent(
 
     The conversion runs once here rather than once per consumer, so every
     consumer receives byte-identical definitions and the placement a consumer
-    performs stays a file copy. The placement manifest beside the artifacts
-    tells the plugin's lifecycle skill where the target reads them from and
-    which namespace this plugin owns there.
+    performs stays a file copy.
 
     Target translation runs before conversion so the artifact carries the
     target's own runtime tokens; converting first would freeze the authoring
@@ -1266,27 +1277,6 @@ def _emit_converted_agent(
         name=destination.stem,
     )
     _write_text(destination, converted)
-
-
-def _emit_placement_manifest(emission: ProjectedEmission, *, dist_root: Path) -> None:
-    """Write the placement manifest a plugin's lifecycle skill reads."""
-    capability = agent_capability(emission.target)
-    if capability.checkout_directory is None:
-        return
-    plugin = emission.relative_path.parts[0]
-    destination = dist_root / emission.target.value / emission.relative_path
-    _write_text(
-        destination,
-        json.dumps(
-            {
-                PLACEMENT_MANIFEST_DIRECTORY_FIELD: capability.checkout_directory,
-                PLACEMENT_MANIFEST_PREFIX_FIELD: f"{plugin}_",
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
-    )
 
 
 def _copy_unrendered_file(
@@ -1450,10 +1440,8 @@ class AgentCapability:
 
     ``manifest_declares_agents`` is the capability that decides everything else:
     a target whose plugin manifest can declare agents receives them through the
-    manifest in its own authored format, so the build emits the authored file
-    unchanged and no checkout placement is required. A target whose manifest
-    cannot receives a converted artifact inside the plugin's lifecycle skill,
-    plus the placement manifest that directs it into ``checkout_directory``.
+    manifest in its own authored format, while a target whose manifest cannot
+    receives a converted artifact inside the plugin's lifecycle skill.
     ``namespaced`` records whether the target namespaces a plugin's agents; a
     flat namespace takes the plugin slug as a filename and identity prefix so a
     policy matching on name can tell one plugin's agents from another's.
@@ -1462,7 +1450,6 @@ class AgentCapability:
     manifest_declares_agents: bool
     namespaced: bool
     suffix: str
-    checkout_directory: str | None
 
 
 # Source-owned per-target agent capabilities. Adding a target adds an entry here
@@ -1475,13 +1462,11 @@ AGENT_CAPABILITY_REGISTRY: Final[dict[str, AgentCapability]] = {
         manifest_declares_agents=True,
         namespaced=True,
         suffix=".md",
-        checkout_directory=None,
     ),
     "codex": AgentCapability(
         manifest_declares_agents=False,
         namespaced=False,
         suffix=".toml",
-        checkout_directory=".codex/agents",
     ),
 }
 
@@ -1560,7 +1545,6 @@ def project_emissions(src_root: Path) -> EmissionProjection:
                 )
             )
     emissions.extend(_projected_template_emissions(src_root, shared_root=shared_root))
-    emissions.extend(_projected_placement_emissions(src_root, emissions))
     projection = EmissionProjection(
         plugin_sources=plugin_sources, emissions=tuple(emissions)
     )
@@ -1576,6 +1560,13 @@ def project_emissions(src_root: Path) -> EmissionProjection:
     return projection
 
 
+# An authored agent stem that already opens with its plugin name joins the two
+# with this separator; a flat-namespace slug that has to add the plugin joins
+# with FLAT_AGENT_PLUGIN_SEPARATOR, so either shape carries the plugin once.
+AUTHORED_AGENT_PLUGIN_SEPARATOR: Final = "-"
+FLAT_AGENT_PLUGIN_SEPARATOR: Final = "_"
+
+
 def agent_slug(plugin: str, stem: str, *, capability: AgentCapability) -> str:
     """Return one agent's filename stem in ``capability``'s namespace.
 
@@ -1583,7 +1574,11 @@ def agent_slug(plugin: str, stem: str, *, capability: AgentCapability) -> str:
     namespace takes the plugin slug as a prefix, rendering the namespaced
     ``<plugin>:<agent>`` identity as ``<plugin>_<agent>``.
     """
-    return stem if capability.namespaced else f"{plugin}_{stem}"
+    if capability.namespaced or stem.startswith(
+        f"{plugin}{AUTHORED_AGENT_PLUGIN_SEPARATOR}"
+    ):
+        return stem
+    return f"{plugin}{FLAT_AGENT_PLUGIN_SEPARATOR}{stem}"
 
 
 def _agent_aware_destination(
@@ -1622,34 +1617,6 @@ def _agent_aware_destination(
         / filename
     )
     return destination, EmissionAction.CONVERT_AGENT
-
-
-def _projected_placement_emissions(
-    src_root: Path,
-    emissions: Sequence[ProjectedEmission],
-) -> tuple[ProjectedEmission, ...]:
-    """Return one placement manifest per plugin whose agents need placement.
-
-    The manifest tells a plugin's lifecycle skill which checkout directory its
-    target reads agent definitions from and which namespace this plugin owns
-    there. It exists only where converted agents were projected, so a plugin that
-    ships no agents carries no manifest and its lifecycle skill reports that.
-    """
-    template = src_root / TEMPLATES_DIR_NAME / LIFECYCLE_TEMPLATE_NAME / SKILL_FILENAME
-    projected: dict[tuple[_Target, Path], ProjectedEmission] = {}
-    for emission in emissions:
-        if emission.action is not EmissionAction.CONVERT_AGENT:
-            continue
-        manifest_path = emission.relative_path.parent / PLACEMENT_MANIFEST_FILENAME
-        projected[(emission.target, manifest_path)] = ProjectedEmission(
-            source=template,
-            target=emission.target,
-            relative_path=manifest_path,
-            action=EmissionAction.PLACEMENT_MANIFEST,
-        )
-    return tuple(
-        projected[key] for key in sorted(projected, key=lambda k: (k[0].value, k[1]))
-    )
 
 
 def _projected_template_emissions(

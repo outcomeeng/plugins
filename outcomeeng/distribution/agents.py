@@ -14,9 +14,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+AGENT_NAME_FIELD: Final = "name"
+AGENT_SKILL_ENABLED_FIELD: Final = "enabled"
 SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
     {
-        "name",
+        AGENT_NAME_FIELD,
         "description",
         "model",
         "model_reasoning_effort",
@@ -65,29 +67,36 @@ MODEL_PREFIX_EXAMPLE_SUFFIX: Final = "-example"
 ALL_TOOLS_SENTINEL: Final = "all"
 CODEX_AGENT_ENV_VAR: Final = "OUTCOMEENG_CODEX_AGENT_NAME"
 CODEX_AGENT_ENV_SEPARATOR: Final = "/"
+SKILL_ENABLEMENT_LIMITATION: Final = "not a spawn-time preload guarantee"
+TOOLS_GUIDANCE_LIMITATION: Final = (
+    "command-level meanings inside allowed shell tools as manual-review guidance"
+)
+DISALLOWED_TOOLS_LIMITATION: Final = "do not enforce Codex permissions"
+PERMISSION_MODE_LIMITATION: Final = "has no direct Codex mapping"
+UNSUPPORTED_FIELDS_LIMITATION: Final = "Review unsupported source agent fields manually"
 CODEX_SKILLS_GUIDANCE_TEMPLATE: Final = (
     "Source `skills` entries were preserved as prompt guidance. "
     "The generated Codex `skills.config` entries enable these skills; "
-    "they are not a spawn-time preload guarantee. Invoke or load these "
+    f"they are {SKILL_ENABLEMENT_LIMITATION}. Invoke or load these "
     "skills before relying on this agent's specialized behavior: {skills}."
 )
 CODEX_TOOLS_GUIDANCE_TEMPLATE: Final = (
     "Source `tools` allowlists can map only to Codex configuration "
-    "boundaries with matching semantics. Treat command-level meanings "
-    "inside allowed shell tools as manual-review guidance: {tools}."
+    f"boundaries with matching semantics. Treat {TOOLS_GUIDANCE_LIMITATION}: "
+    "{tools}."
 )
 CODEX_DISALLOWED_TOOLS_GUIDANCE_TEMPLATE: Final = (
-    "Source `disallowedTools` deny lists do not enforce Codex permissions. "
+    f"Source `disallowedTools` deny lists {DISALLOWED_TOOLS_LIMITATION}. "
     "Treat these tools as manual-review guidance unless runtime policy "
     "enforces them: {tools}."
 )
 CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE: Final = (
-    "Source `permissionMode: {permission_mode}` has no direct Codex mapping. "
+    f"Source `permissionMode: {{permission_mode}}` {PERMISSION_MODE_LIMITATION}. "
     "Choose the appropriate sandbox, permissions, MCP tool filters, or app "
     "tool filters before relying on this agent for write or network behavior."
 )
 CODEX_UNSUPPORTED_FIELDS_GUIDANCE_TEMPLATE: Final = (
-    "Review unsupported source agent fields manually: {fields}."
+    f"{UNSUPPORTED_FIELDS_LIMITATION}: {{fields}}."
 )
 MANUAL_REVIEW_GUIDANCE_TAG: Final = "manual_review_guidance"
 MANUAL_REVIEW_GUIDANCE_OPEN: Final = f"<{MANUAL_REVIEW_GUIDANCE_TAG}>"
@@ -164,7 +173,7 @@ def parse_agent_markdown(path: Path) -> SourceAgent:
     """
     text = path.read_text(encoding="utf-8")
     frontmatter, _body = _split_frontmatter(text)
-    name = _optional_string(frontmatter, "name") or path.stem
+    name = _optional_string(frontmatter, AGENT_NAME_FIELD) or path.stem
     return parse_agent_text(text, source_path=path, name=name)
 
 
@@ -213,7 +222,7 @@ def convert_agent_markdown(text: str, *, source_path: Path, name: str) -> str:
 def convert_agent(agent: SourceAgent) -> CodexAgent:
     """Convert one rendered plugin agent into a Codex custom-agent representation."""
     values: dict[str, object] = {
-        "name": agent.name,
+        AGENT_NAME_FIELD: agent.name,
         "description": agent.description,
     }
     model = map_model(agent.model)
@@ -241,7 +250,10 @@ def convert_agent(agent: SourceAgent) -> CodexAgent:
     if agent.skills:
         values["skills"] = {
             "config": TomlArrayTable(
-                tuple({"name": skill, "enabled": True} for skill in agent.skills)
+                tuple(
+                    {AGENT_NAME_FIELD: skill, AGENT_SKILL_ENABLED_FIELD: True}
+                    for skill in agent.skills
+                )
             )
         }
     values["shell_environment_policy"] = {
@@ -272,7 +284,8 @@ def agent_environment_marker(agent: SourceAgent) -> str:
         raise AgentConversionError(
             f"agent source path must be under <plugin>/agents: {agent.source_path}"
         )
-    return f"{plugin_name}{CODEX_AGENT_ENV_SEPARATOR}{generated_agent_type(agent)}"
+    authored_agent_slug = _slugify(agent.source_path.stem)
+    return f"{plugin_name}{CODEX_AGENT_ENV_SEPARATOR}{authored_agent_slug}"
 
 
 def generated_agent_type(agent: SourceAgent) -> str:
@@ -904,6 +917,8 @@ def _format_toml_multiline(value: str) -> str:
 
 
 __all__ = [
+    "AGENT_NAME_FIELD",
+    "AGENT_SKILL_ENABLED_FIELD",
     "AGENT_SOURCE_DIRECTORY_NAME",
     "ALL_TOOLS_SENTINEL",
     "CODEX_AGENT_ENV_VAR",

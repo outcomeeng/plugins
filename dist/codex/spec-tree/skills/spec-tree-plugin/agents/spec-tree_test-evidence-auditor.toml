@@ -56,4 +56,4 @@ name = "spec-tree:audit-tests"
 enabled = true
 
 [shell_environment_policy]
-set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/spec-tree_test-evidence-auditor" }
+set = { OUTCOMEENG_CODEX_AGENT_NAME = "spec-tree/test-evidence-auditor" }

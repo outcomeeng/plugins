@@ -25,6 +25,20 @@ These instructions explain WHEN to invoke spec-tree skills for this product. The
 
 **Read this entire file before acting.** This managed router block is only the first section; the product's own instructions, commands, and conventions follow below, outside it. The router is product-neutral and carries no product command. Never act on the router alone.
 
+<!-- harness:codex -->
+
+## Canonical Agent Registry
+
+The selected `$CODEX_HOME/agents/` directory is the canonical registry for marketplace-delivered custom agents. It contains exactly one current canonical role per authored marketplace agent, with the owning plugin identity appearing exactly once in each role name.
+
+Canonical examples are `spec-tree_adr-auditor`, `instructions_skill-auditor`, `prose-auditor`, `rust-simplifier`, and `typescript-simplifier`. A bare legacy role beside its canonical role, or a role whose plugin identity is repeated, is stale duplicate state rather than another agent to dispatch.
+
+When a named role is unavailable, invoke the owning plugin's `/<plugin>-plugin init` to refresh its definitions in the selected `$CODEX_HOME/agents/`, then reload the harness plugin index or start a new session. A running session retains its already-loaded registry; repeated discovery in that session cannot prove the refresh failed.
+
+**NEVER** create or commit marketplace-delivered agent definitions into a checkout; no generated instruction requires it. A plugin-owned checkout definition whose invoked skills live in the selected agent home is a scope split: remove only a byte-identical generated copy, and inspect every changed or unrecognized copy as a shadowing collision before any removal.
+
+<!-- /harness:codex -->
+
 ---
 
 ## Authority Hierarchy
@@ -213,8 +227,6 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 <!-- harness:codex -->
 
-**If a plugin's agents are missing, run that plugin's `/<plugin>-plugin init`.** For an agent whose plugin manifest cannot declare agents, a plugin's agent definitions reach a session only once they are materialized into the checkout's agent directory, and every plugin ships a lifecycle skill that places them. When dispatching an agent finds no such agent, invoke the owning plugin's `/<plugin>-plugin init` and retry — `/spec-tree-plugin init` for a spec-tree agent, `/instructions-plugin init` for an instructions agent. This is repair on the failure path, not a check to run at session start. The definitions it places are durable checkout configuration: commit them, so sessions that run no verb receive the same agents. That plugin's lifecycle skill governs their persistence, including the removals and renames an `upgrade` produces.
-
 **Read each file fully in its designated context.** A file the user names is read in the main conversation. A file this conversation authored is verified by a configured verifier or reviewer in an independent context. Subagents may locate files; a file the main conversation needs is then read in the main conversation in full.
 
 **Dispatch each named role through the runtime's exposed typed-subagent spawn capability** (`{{! tool('spawn_agent', 'codex') !}}` when that identifier is available), spawning the matching subagents in parallel when several roles apply. `### Sub-agent dispatch` above governs when to dispatch, forbids asking the operator to confirm, and blocks the gate when a named role cannot be dispatched; this section governs only the Codex mechanics. Act only on the result the subagent returns.
@@ -265,7 +277,7 @@ NEVER invent, shorten, or substitute an agent id, including an all-zero placehol
 
 Record the returned agent id verbatim, then collect the role-task result with `{{! tool('wait_agent', 'codex') !}}`. The role task passes only through its own output contract below; an error, timeout, missing final message, or output outside that contract blocks the gate. Record the full agent id and observed result, and close the child.
 
-Wait once for one or more spawned agents. Use the 10-minute individual-file timeout for subagents such as `implementation-auditor` or `spec-auditor`:
+Wait once for one or more spawned agents. Use the 10-minute individual-file timeout for subagents such as `spec-tree_implementation-auditor` or `spec-tree_spec-auditor`:
 
 ```json
 {
@@ -277,7 +289,7 @@ Wait once for one or more spawned agents. Use the 10-minute individual-file time
 }
 ```
 
-Use the 30-minute changeset timeout only for `changes-reviewer` role work:
+Use the 30-minute changeset timeout only for `spec-tree_changes-reviewer` role work:
 
 ```json
 {
@@ -304,7 +316,7 @@ In the main authoring conversation, if `{{! tool('spawn_agent', 'codex') !}}`, `
 
 **Result collection for verifier and reviewer agents.** The exposed typed wait capability (`{{! tool('wait_agent', 'codex') !}}` in the examples below) is the planned result-collection mechanism for the role task. Read its returned JSON, keyed by the spawned subagent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the turn result; when that final status carries a final message, that message is the turn output. Do not infer success from a subagent notification, a pending handle, or an open subagent id.
 
-Successful `changes-reviewer` result shape:
+Successful `spec-tree_changes-reviewer` result shape:
 
 ```json
 {
@@ -327,21 +339,21 @@ Blocked or incomplete result shape:
 }
 ```
 
-**Codex `changes-reviewer` output contract.** For `agent_type: "changes-reviewer"`, a successful final message is the raw `spx journal --type review` run token. Treat that token as the only review result. Inspect the review by reading or rendering the sealed journal prefix for that token. Do not ask the reviewer to summarize findings, do not accept a prose summary as the gate result, and do not run `spec-tree:review-changes` in the main thread to replace a missing token.
+**Codex `spec-tree_changes-reviewer` output contract.** For `agent_type: "spec-tree_changes-reviewer"`, a successful final message is the raw `spx journal --type review` run token. Treat that token as the only review result. Inspect the review by reading or rendering the sealed journal prefix for that token. Do not ask the reviewer to summarize findings, do not accept a prose summary as the gate result, and do not run `spec-tree:review-changes` in the main thread to replace a missing token.
 
 **Codex blocked-result rule.** If `wait_agent` returns an error, `not_found`, timeout with no final status, usage-limit failure, model-capacity failure, or any final message that is not a raw review journal token, the review gate is blocked. Record the exact agent id, tool result, and blocking reason. Do not publish, merge, or mark the gate passed. When repairing a finding or blocked subject, rerun deterministic verification, create a new local checkpoint commit, and review that new head; an operator-approved process exception is the only other path past the gate.
 
-**Use raw scope only for the `changes-reviewer` role task.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token as the spawn `message`: `HEAD` for the current committed branch scope, `origin/<base>...HEAD` for a specific committed range, a branch name, or a PR reference. Confirm the worktree is clean before dispatch; commit the exact current version before the reviewer agent session reads it.
+**Use raw scope only for the `spec-tree_changes-reviewer` role task.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token as the spawn `message`: `HEAD` for the current committed branch scope, `origin/<base>...HEAD` for a specific committed range, a branch name, or a PR reference. Confirm the worktree is clean before dispatch; commit the exact current version before the reviewer agent session reads it.
 
 - ALWAYS prepare the worktree first: isolate the intended changes, sync to the base using the `spec-tree:sync-base` skill when the governing workflow requires it, pass deterministic verification, create a local checkpoint commit, and leave the worktree clean so the reviewer judges an exact committed head. Never dispatch the reviewer over a working diff.
-- NEVER invoke the `spec-tree:review-changes` skill in the main authoring conversation; the `changes-reviewer` invokes it inside its isolated role workflow.
+- NEVER invoke the `spec-tree:review-changes` skill in the main authoring conversation; the `spec-tree_changes-reviewer` invokes it inside its isolated role workflow.
 - NEVER pass a prose prompt, restate review instructions, add severity filters, or tell the reviewer to focus only on new changes, or what to emphasize.
 
 ```json
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
-    "agent_type": "changes-reviewer",
+    "agent_type": "spec-tree_changes-reviewer",
     "message": "HEAD"
   }
 }
@@ -351,7 +363,7 @@ Blocked or incomplete result shape:
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
-    "agent_type": "changes-reviewer",
+    "agent_type": "spec-tree_changes-reviewer",
     "message": "origin/<base>...HEAD"
   }
 }
@@ -365,13 +377,13 @@ Use this shape for an implementation audit:
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
-    "agent_type": "implementation-auditor",
+    "agent_type": "spec-tree_implementation-auditor",
     "message": "Repository: <absolute-repository-path>\nScope: <base>..<head> committed changeset scope\nLive file list: <none for reusable gate evidence | full modified and untracked paths for explicit advisory audit>\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results, or advisory state>\nRun driver identity: {\"producerKind\":\"agent\",\"agentName\":\"implementation-auditor\",\"agentOwningPluginName\":\"spec-tree\",\"skillName\":\"audit-implementation\",\"skillOwningPluginName\":\"spec-tree\",\"invocationRole\":\"run-driver\"}\nTask: Run the implementation audit through spx verification run. Return the run token and rendered projection; the complete blocked SPX diagnostic with run token or not-started, exact command, payload source, payload key, exit code, and stderr; or the complete pre-run skill-load diagnostic with run token not-started, required skill spec-tree:audit-implementation, and the exact load or availability failure."
   }
 }
 ```
 
-**Codex `implementation-auditor` output contract.** A successful final message carries the raw `spx verification run` token and rendered projection, without a competing prose verdict envelope. Treat the projection's `terminalStatus` as authoritative: `approved` passes the implementation-audit gate and `rejected` requires repair. A command-failure `BLOCKED` result leaves the gate blocked and must carry the run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. A pre-run skill-load `BLOCKED` result also leaves the gate blocked and must carry run token `not-started`, required skill `spec-tree:audit-implementation`, and the exact load or availability failure. A missing token or projection, a terminal status outside that vocabulary, or an incomplete blocked diagnostic also leaves the gate blocked.
+**Codex `spec-tree_implementation-auditor` output contract.** A successful final message carries the raw `spx verification run` token and rendered projection, without a competing prose verdict envelope. Treat the projection's `terminalStatus` as authoritative: `approved` passes the implementation-audit gate and `rejected` requires repair. A command-failure `BLOCKED` result leaves the gate blocked and must carry the run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. A pre-run skill-load `BLOCKED` result also leaves the gate blocked and must carry run token `not-started`, required skill `spec-tree:audit-implementation`, and the exact load or availability failure. A missing token or projection, a terminal status outside that vocabulary, or an incomplete blocked diagnostic also leaves the gate blocked.
 
 **Implementation audit subject.** A gate-eligible implementation audit reads an exact locally committed subject, carries `Live file list: none`, and runs only after applicable deterministic verification passes on that subject. An explicit advisory implementation audit may carry the full modified and untracked path list; its result supplies no reusable gate evidence.
 
@@ -383,7 +395,7 @@ Use this shape for test-evidence audits:
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
-    "agent_type": "test-evidence-auditor",
+    "agent_type": "spec-tree_test-evidence-auditor",
     "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <full paths to test files under the node>\nTask: Audit whether the test evidence proves the listed assertions without weakening the selected verification type or test assertion type. Return only the audit-tests JSON verdict, with schema_version 1, skill audit-tests, overall APPROVED or REJECTED, rows, and metadata. Do not add prose outside the JSON object."
   }
 }
@@ -395,7 +407,7 @@ Use this shape for eval-evidence audits:
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
-    "agent_type": "eval-evidence-auditor",
+    "agent_type": "spec-tree_eval-evidence-auditor",
     "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full [eval] assertion text or exact spec file path plus assertion headings>\nEval artifacts: <full paths to eval.toml, prompt.md, cases.jsonl, and history.jsonl>\nProducer artifacts: <full paths to the producing skill, agent, classifier, script, or command source>\nTask: Audit whether the eval evidence proves the listed assertions without replacing the real producer with a prompt-only simulation. Return the JSON verdict specified by audit-eval-evidence, with overall PASS, FAIL, or UNKNOWN and row findings for failed evidence properties. Do not add prose outside the JSON object."
   }
 }
@@ -407,7 +419,7 @@ Use this shape for spec-node audits:
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
-    "agent_type": "spec-auditor",
+    "agent_type": "spec-tree_spec-auditor",
     "message": "Repository: <absolute-repository-path>\nNode: <full spx/... node path>\nTask: Audit the node spec for assertion quality, evidence tags, atemporal voice, decision alignment, and spec-tree structure. Return only the audit-specs JSON verdict, with schema_version 1, skill audit-specs, overall APPROVED or REJECTED, the section-structure, atemporal-voice, and tag-fitness rows, and metadata. Do not add prose outside the JSON object."
   }
 }
@@ -419,7 +431,7 @@ Use this shape for decision audits:
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
-    "agent_type": "adr-auditor",
+    "agent_type": "spec-tree_adr-auditor",
     "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.adr.md path>\nGoverning node: <full spx/... node path>\nAudit scope: <exact committed changeset or artifact scope>\nScope classification: <language-neutral | implementation-language partitions: comma-separated languages>\nTask: Audit the ADR for decision structure, atemporal voice, tag validity, and every language-specific architecture concern required by the scope classification. Return only the structured JSON verdict specified by audit-adr, with no prose outside the JSON object."
   }
 }
@@ -429,7 +441,7 @@ Use this shape for decision audits:
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
-    "agent_type": "pdr-auditor",
+    "agent_type": "spec-tree_pdr-auditor",
     "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.pdr.md path>\nGoverning node: <full spx/... node path>\nTask: Audit the PDR for product-decision structure, atemporal voice, tag validity, downstream alignment, and evidence quality. Return only the audit-pdr JSON verdict, with schema_version 1, skill audit-pdr, overall APPROVED or REJECTED, the content-classification, property-quality, tag-validity, atemporal-voice, and consistency rows, and metadata. Do not add prose outside the JSON object."
   }
 }
@@ -441,19 +453,19 @@ Use this shape for skill audits:
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
-    "agent_type": "skill-auditor",
+    "agent_type": "instructions_skill-auditor",
     "message": "Repository: <absolute-repository-path>\nSkill content: <full paths to every changed artifact governing the skill surface, including SKILL.md files, skill subdirectory files, authored shared fragments, and generated runtime copies>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed skill content for skill-authoring standards, agent-prompt standards, progressive disclosure, portability, voice, and structure; also audit the complete plugin skill-name set when the active repository skill-authoring overlay requires a plugin-wide naming audit. Return only the structured JSON verdict specified by instructions:audit-skill, with no prose outside the JSON object."
   }
 }
 ```
 
-Use this shape for one subagent audit. When several custom-agent configurations changed, dispatch one `subagent-auditor` per file: acquire each handle sequentially, then let the role tasks run concurrently.
+Use this shape for one subagent audit. When several custom-agent configurations changed, dispatch one `instructions_subagent-auditor` per file: acquire each handle sequentially, then let the role tasks run concurrently.
 
 ```json
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
-    "agent_type": "subagent-auditor",
+    "agent_type": "instructions_subagent-auditor",
     "message": "Repository: <absolute-repository-path>\nCustom agent file: <full path to one changed agent-directory file in the checkout>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed custom agent configuration for subagent-authoring standards, prompt voice, tool boundaries, model settings, skill preloads, and output contract. Return only the structured JSON verdict specified by instructions:audit-subagent, with no prose outside the JSON object."
   }
 }
@@ -469,55 +481,112 @@ Use this shape for one subagent audit. When several custom-agent configurations 
 
 {!% include 'agentic-execution/configured-verifier-contracts/fragment.md' %!}
 
-| User Says...                                            | Skill                  | Agent                   |
-| ------------------------------------------------------- | ---------------------- | ----------------------- |
-| "Implement this outcome" or "Start the TDD flow"        | `/apply`               | —                       |
-| "Create an outcome" or "Add an ADR"                     | `/author`              | —                       |
-| "Add a new node" or "This node is too big"              | `/decompose`           | —                       |
-| "Move this under that"                                  | `/refactor`            | —                       |
-| "Check these specs"                                     | `/align`               | —                       |
-| "Establish evidence for this" or "Write tests for this" | `/verify`              | —                       |
-| "Audit this PDR"                                        | `/audit-pdr`           | `pdr-auditor`           |
-| "Audit this ADR"                                        | `/audit-adr`           | `adr-auditor`           |
-| "Audit test evidence"                                   | `/audit-tests`         | `test-evidence-auditor` |
-| "Audit eval evidence"                                   | `/audit-eval-evidence` | `eval-evidence-auditor` |
-| "Audit this spec node"                                  | `/audit-specs`         | `spec-auditor`          |
-| "Diagnose the spx environment"                          | `/diagnose`            | —                       |
-| "File a follow-up in a dependency queue"                | `/issue`               | —                       |
+<!-- harness:claude -->
+
+| User Says...                                            | Skill                  | Agent                                                                |
+| ------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------- |
+| "Implement this outcome" or "Start the TDD flow"        | `/apply`               | —                                                                    |
+| "Create an outcome" or "Add an ADR"                     | `/author`              | —                                                                    |
+| "Add a new node" or "This node is too big"              | `/decompose`           | —                                                                    |
+| "Move this under that"                                  | `/refactor`            | —                                                                    |
+| "Check these specs"                                     | `/align`               | —                                                                    |
+| "Establish evidence for this" or "Write tests for this" | `/verify`              | —                                                                    |
+| "Audit this PDR"                                        | `/audit-pdr`           | `{{! agent_role('spec-tree', 'pdr-auditor', 'claude') !}}`           |
+| "Audit this ADR"                                        | `/audit-adr`           | `{{! agent_role('spec-tree', 'adr-auditor', 'claude') !}}`           |
+| "Audit test evidence"                                   | `/audit-tests`         | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'claude') !}}` |
+| "Audit eval evidence"                                   | `/audit-eval-evidence` | `{{! agent_role('spec-tree', 'eval-evidence-auditor', 'claude') !}}` |
+| "Audit this spec node"                                  | `/audit-specs`         | `{{! agent_role('spec-tree', 'spec-auditor', 'claude') !}}`          |
+| "Diagnose the spx environment"                          | `/diagnose`            | —                                                                    |
+| "File a follow-up in a dependency queue"                | `/issue`               | —                                                                    |
 
 <!-- langs:present -->
 
-Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
 
 <!-- /langs:present -->
 <!-- lang:python -->
 
-| User Says...            | Skill (composed)             | Composing agent          |
-| ----------------------- | ---------------------------- | ------------------------ |
-| "Audit this code"       | `/audit-python-code`         | `implementation-auditor` |
-| "Audit ADRs for Python" | `/audit-python-architecture` | `adr-auditor`            |
-| "Audit these tests"     | `/audit-python-tests`        | `test-evidence-auditor`  |
+| User Says...            | Skill (composed)             | Composing agent                                                       |
+| ----------------------- | ---------------------------- | --------------------------------------------------------------------- |
+| "Audit this code"       | `/audit-python-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` |
+| "Audit ADRs for Python" | `/audit-python-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'claude') !}}`            |
+| "Audit these tests"     | `/audit-python-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'claude') !}}`  |
 
 <!-- /lang:python -->
 <!-- lang:typescript -->
 
-| User Says...                | Skill (composed)                 | Composing agent          |
-| --------------------------- | -------------------------------- | ------------------------ |
-| "Audit this code"           | `/audit-typescript-code`         | `implementation-auditor` |
-| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `adr-auditor`            |
-| "Audit these tests"         | `/audit-typescript-tests`        | `test-evidence-auditor`  |
+| User Says...                | Skill (composed)                 | Composing agent                                                       |
+| --------------------------- | -------------------------------- | --------------------------------------------------------------------- |
+| "Audit this code"           | `/audit-typescript-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` |
+| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'claude') !}}`            |
+| "Audit these tests"         | `/audit-typescript-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'claude') !}}`  |
 
 <!-- /lang:typescript -->
 <!-- lang:rust -->
 
-| User Says...          | Skill (composed)           | Composing agent          |
-| --------------------- | -------------------------- | ------------------------ |
-| "Audit this code"     | `/audit-rust-code`         | `implementation-auditor` |
-| "Audit unsafe Rust"   | `/audit-rust-code`         | `implementation-auditor` |
-| "Audit ADRs for Rust" | `/audit-rust-architecture` | `adr-auditor`            |
-| "Audit these tests"   | `/audit-rust-tests`        | `test-evidence-auditor`  |
+| User Says...          | Skill (composed)           | Composing agent                                                       |
+| --------------------- | -------------------------- | --------------------------------------------------------------------- |
+| "Audit this code"     | `/audit-rust-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` |
+| "Audit unsafe Rust"   | `/audit-rust-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` |
+| "Audit ADRs for Rust" | `/audit-rust-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'claude') !}}`            |
+| "Audit these tests"   | `/audit-rust-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'claude') !}}`  |
 
 <!-- /lang:rust -->
+
+<!-- /harness:claude -->
+<!-- harness:codex -->
+
+| User Says...                                            | Skill                  | Agent                                                               |
+| ------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------- |
+| "Implement this outcome" or "Start the TDD flow"        | `/apply`               | —                                                                   |
+| "Create an outcome" or "Add an ADR"                     | `/author`              | —                                                                   |
+| "Add a new node" or "This node is too big"              | `/decompose`           | —                                                                   |
+| "Move this under that"                                  | `/refactor`            | —                                                                   |
+| "Check these specs"                                     | `/align`               | —                                                                   |
+| "Establish evidence for this" or "Write tests for this" | `/verify`              | —                                                                   |
+| "Audit this PDR"                                        | `/audit-pdr`           | `{{! agent_role('spec-tree', 'pdr-auditor', 'codex') !}}`           |
+| "Audit this ADR"                                        | `/audit-adr`           | `{{! agent_role('spec-tree', 'adr-auditor', 'codex') !}}`           |
+| "Audit test evidence"                                   | `/audit-tests`         | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'codex') !}}` |
+| "Audit eval evidence"                                   | `/audit-eval-evidence` | `{{! agent_role('spec-tree', 'eval-evidence-auditor', 'codex') !}}` |
+| "Audit this spec node"                                  | `/audit-specs`         | `{{! agent_role('spec-tree', 'spec-auditor', 'codex') !}}`          |
+| "Diagnose the spx environment"                          | `/diagnose`            | —                                                                   |
+| "File a follow-up in a dependency queue"                | `/issue`               | —                                                                   |
+
+<!-- langs:present -->
+
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
+
+<!-- /langs:present -->
+<!-- lang:python -->
+
+| User Says...            | Skill (composed)             | Composing agent                                                      |
+| ----------------------- | ---------------------------- | -------------------------------------------------------------------- |
+| "Audit this code"       | `/audit-python-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` |
+| "Audit ADRs for Python" | `/audit-python-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'codex') !}}`            |
+| "Audit these tests"     | `/audit-python-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'codex') !}}`  |
+
+<!-- /lang:python -->
+<!-- lang:typescript -->
+
+| User Says...                | Skill (composed)                 | Composing agent                                                      |
+| --------------------------- | -------------------------------- | -------------------------------------------------------------------- |
+| "Audit this code"           | `/audit-typescript-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` |
+| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'codex') !}}`            |
+| "Audit these tests"         | `/audit-typescript-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'codex') !}}`  |
+
+<!-- /lang:typescript -->
+<!-- lang:rust -->
+
+| User Says...          | Skill (composed)           | Composing agent                                                      |
+| --------------------- | -------------------------- | -------------------------------------------------------------------- |
+| "Audit this code"     | `/audit-rust-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` |
+| "Audit unsafe Rust"   | `/audit-rust-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` |
+| "Audit ADRs for Rust" | `/audit-rust-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'codex') !}}`            |
+| "Audit these tests"   | `/audit-rust-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'codex') !}}`  |
+
+<!-- /lang:rust -->
+
+<!-- /harness:codex -->
 
 <!-- langs:present -->
 

@@ -200,6 +200,45 @@ DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS: Final = (
         DANGEROUS_COMMAND_GUARD_TERMINAL_REASON_REQUIREMENT,
     ),
 )
+CODEX_AGENT_REGISTRY_POLICY_HEADING: Final = "## Canonical Agent Registry"
+CODEX_AGENT_REGISTRY_POLICY_REQUIREMENTS: Final = (
+    (
+        "selected agent home",
+        "The selected `$CODEX_HOME/agents/` directory is the canonical registry",
+    ),
+    (
+        "one canonical role per authored agent",
+        "exactly one current canonical role per authored marketplace agent",
+    ),
+    (
+        "plugin identity appears once",
+        "owning plugin identity appearing exactly once",
+    ),
+    ("spec-tree role example", "`spec-tree_adr-auditor`"),
+    ("instructions role example", "`instructions_skill-auditor`"),
+    ("prose role example", "`prose-auditor`"),
+    ("Rust role example", "`rust-simplifier`"),
+    ("TypeScript role example", "`typescript-simplifier`"),
+    ("plugin lifecycle repair", "`/<plugin>-plugin init`"),
+    (
+        "session registry reload",
+        "reload the harness plugin index or start a new session",
+    ),
+    (
+        "checkout definition prohibition",
+        "**NEVER** create or commit marketplace-delivered agent definitions into a "
+        "checkout; no generated instruction requires it",
+    ),
+    ("scope-split classification", "is a scope split"),
+    (
+        "byte-identical removal boundary",
+        "remove only a byte-identical generated copy",
+    ),
+    (
+        "shadowing collision boundary",
+        "inspect every changed or unrecognized copy as a shadowing collision",
+    ),
+)
 WAIT_FOR_LOAD_STOP_TRIGGER: Final = (
     "🛑 **STOP TRIGGER — Before any test, eval, build, or validation command, "
     "ALWAYS invoke `/wait-for-load`.**"
@@ -562,6 +601,10 @@ class AuthorityHierarchyPolicyError(InstructionBlockRenderError):
     """Raised when a rendered router omits part of its authority hierarchy."""
 
 
+class CodexAgentRegistryPolicyError(InstructionBlockRenderError):
+    """Raised when rendered routers violate the Codex agent-registry policy."""
+
+
 class WaitForLoadPolicyError(InstructionBlockRenderError):
     """Raised when a rendered router omits or contradicts its load-wait policy."""
 
@@ -875,6 +918,41 @@ def validate_authority_hierarchy_policy(
         validate_dangerous_command_guard_policy({harness: guard_section})
 
 
+def validate_codex_agent_registry_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject missing, incomplete, or cross-harness agent-registry policy."""
+    codex_document = blocks_by_harness.get(CODEX_HARNESS)
+    if codex_document is None:
+        raise CodexAgentRegistryPolicyError("missing Codex router")
+    codex_router = managed_router_block(codex_document)
+    try:
+        section = _markdown_section(codex_router, CODEX_AGENT_REGISTRY_POLICY_HEADING)
+    except FoundationAccessPolicyError as exc:
+        raise CodexAgentRegistryPolicyError(
+            f"missing router section: {CODEX_AGENT_REGISTRY_POLICY_HEADING}"
+        ) from exc
+    missing = [
+        name
+        for name, required_text in CODEX_AGENT_REGISTRY_POLICY_REQUIREMENTS
+        if not _operative_policy_line_contains(section, required_text)
+    ]
+    if missing:
+        details = ", ".join(missing)
+        raise CodexAgentRegistryPolicyError(
+            f"Codex router agent registry policy is incomplete: {details}"
+        )
+
+    claude_document = blocks_by_harness.get(CLAUDE_HARNESS)
+    if claude_document is None:
+        raise CodexAgentRegistryPolicyError("missing Claude router")
+    claude_router = managed_router_block(claude_document)
+    if CODEX_AGENT_REGISTRY_POLICY_HEADING in claude_router:
+        raise CodexAgentRegistryPolicyError(
+            "Claude router carries the Codex agent registry policy"
+        )
+
+
 def validate_harness_dispatch_mechanics(blocks_by_harness: Mapping[str, str]) -> None:
     """Reject a rendered router carrying another harness's dispatch mechanics.
 
@@ -1111,6 +1189,11 @@ OPERATIVE_POLICY_VALIDATIONS: Final = (
             *DANGEROUS_COMMAND_GUARD_POLICY_REQUIREMENTS,
         ),
         validator=validate_authority_hierarchy_policy,
+    ),
+    OperativePolicyValidation(
+        name="codex-agent-registry",
+        requirements=CODEX_AGENT_REGISTRY_POLICY_REQUIREMENTS,
+        validator=validate_codex_agent_registry_policy,
     ),
     OperativePolicyValidation(
         name="wait-for-load",

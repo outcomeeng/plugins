@@ -1,28 +1,28 @@
 ---
 name: coding-agents-plugin
 description: >-
-  ALWAYS invoke this skill to operate the coding-agents plugin's own lifecycle in a checkout — report its version, manage whatever checkout footprint this plugin owns on the running agent, and check that footprint. Invoke it when this plugin's agents are missing from a session. NEVER hand-copy a plugin's agent definitions into a checkout or hand-edit them once placed.
+  ALWAYS invoke this skill to operate the coding-agents plugin's own lifecycle — report its version and check or reconcile its agent-delivery footprint. Invoke it when this plugin's agents are missing from a session. NEVER commit marketplace-delivered agent definitions into a checkout.
 argument-hint: "[help|version|init|upgrade|check]"
 allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/place_agents.py":*)
 ---
 
 <objective>
-The coding-agents plugin's consumer-side footprint reported, placed, or refreshed in the invocation checkout, bounded to the namespace this plugin owns.
+The coding-agents plugin's resolved version and agent-delivery state reported or reconciled in the scope that carries its skills.
 </objective>
 
 <verbs>
 
-Read `$ARGUMENTS`, trim it, and match it against the table below. One verb runs per invocation; `help` is the default when `$ARGUMENTS` is empty. Text matching no row is an error naming the five verbs, never a guessed match.
+Read `$ARGUMENTS`, trim it, and match it against the table. One verb runs per invocation; `help` is the default when `$ARGUMENTS` is empty. Text matching no row is an error naming all five verbs.
 
-| Verb      | Result                                                                               |
-| --------- | ------------------------------------------------------------------------------------ |
-| `help`    | This plugin's verbs, what each one changes, and where its changelogs are             |
-| `version` | The plugin version the running session resolved                                      |
-| `init`    | This plugin's checkout footprint established for this version †                      |
-| `upgrade` | This plugin's checkout footprint brought to this version, retiring what it dropped † |
-| `check`   | Whether the checkout's footprint matches this version, changing nothing †            |
+| Verb      | Result                                                                                       |
+| --------- | -------------------------------------------------------------------------------------------- |
+| `help`    | This plugin's verbs, mutation boundaries, reload requirement, and changelog locations        |
+| `version` | The version resolved by the running session                                                  |
+| `init`    | Missing plugin-owned Codex definitions established in the selected agent home                |
+| `upgrade` | Plugin-owned Codex definitions reconciled to this version, including safe stale-file pruning |
+| `check`   | Selected-home drift, collision, and checkout scope-split state reported without mutation     |
 
-† This agent's plugin manifest cannot declare agents, so `init`, `upgrade`, and `check` own this plugin's checkout footprint. When the plugin ships no agent definitions, they report that and change nothing.
+`init`, `upgrade`, and `check` use the bundled reconciliation script. The script never writes into a checkout.
 
 </verbs>
 
@@ -30,95 +30,107 @@ Read `$ARGUMENTS`, trim it, and match it against the table below. One verb runs 
 
 `help` names where a reader answers "what changed for me, and what must I now do?", reading from disk without network access.
 
-This plugin carries one changelog, its own:
+This plugin carries one changelog:
 
 | Line   | Records                     | Path                              |
 | ------ | --------------------------- | --------------------------------- |
 | Plugin | what changed in this plugin | `${SKILL_DIR}/../../CHANGELOG.md` |
 
-Events no single plugin owns — a harness gained or dropped, a plugin added, removed, or renamed — are recorded once in the marketplace changelog, which ships with the plugin that carries the methodology rather than in every plugin. This plugin has no copy of it.
+Marketplace-wide events ship in the methodology plugin's marketplace changelog; this plugin carries no copy.
 
 </changelogs>
 
 <version_reporting>
 
-`version` reports the version of the plugin directory the session actually resolved. Read exactly one file:
+`version` reads exactly one skill-directory-relative manifest:
 
 ```text
 ${SKILL_DIR}/../../.codex-plugin/plugin.json
 ```
 
-That path is relative to this skill's own directory, so it resolves inside whichever plugin copy the session loaded. A session may resolve a plugin from its marketplace source tree or from a versioned cache snapshot, and those diverge — so the version a reader needs is the one backing the running session, never the newest on disk elsewhere. Every plugin tree carries both manifest directories; read the one named above and never the other, because only that one is authoritative for the agent this copy was rendered for.
+Report the version from the plugin copy backing this running session. Never search for another manifest elsewhere on disk.
 
 </version_reporting>
 
-<placement>
+<agent_delivery>
 
-Placement runs the bundled script, which writes every agent definition this plugin ships into the checkout's agent directory, the only path by which this agent's session receives them:
+The plugin ships generated TOML definitions inside this skill. They belong in the selected `CODEX_HOME/agents/` directory beside the installed skill content they invoke.
+
+Before every verb, resolve the selected home from `CODEX_HOME`. When it is absent, require an explicit absolute `--home` value; never guess another account or fall back to a checkout. Resolve the invocation checkout root and pass it with `--checkout` so the read-only scope-split preflight can report shadowing plugin copies.
+
+Run the check form first:
 
 ```bash
-python3 "${SKILL_DIR}/scripts/place_agents.py" --checkout <repository-root>
+python3 "${SKILL_DIR}/scripts/place_agents.py" --home <selected-codex-home> --checkout <repository-root> --check
 ```
 
-The script owns the whole footprint operation: it writes this plugin's definitions, removes definitions that carry this plugin's prefix but no longer ship with it, and leaves every other file in that directory untouched. `check` passes `--check`, which reports drift and writes nothing.
+`check` ends there. For `init` or `upgrade`, stop on any collision or scope split. Otherwise name every destination the check reported, state that the ownership record changes with them, and run the mutating form only after the harness grants that external write:
 
-Definitions are generated at build time and ship inside this skill, so placement is a file copy. Claude never edits a placed definition, and never converts, rewrites, or hand-authors one — a placed file that needs to change is changed at its source and re-placed.
-
-</placement>
-
-<persistence>
-
-Placed definitions are durable checkout configuration, not local runtime output. Commit them. A session the placing verb never ran in — a hosted run, a continuous-integration job, a colleague's fresh clone — receives this plugin's agents only from the committed directory. Ignoring these files instead grants agents to whoever ran the verb and withholds them everywhere else.
-
-`upgrade` changes the committed set rather than only adding to it. A version that renames an agent writes the new definition and removes the old one; a version that retires an agent removes it and writes nothing back. Git reports the first as a rename when the two definitions stay similar enough to pair and as a deletion plus an addition when they do not, and reports the second as a deletion. Those removals are the verb working. Commit them alongside the additions: restoring a removed definition keeps a retired agent dispatchable and leaves the checkout claiming a version it no longer carries.
-
-An upgrade that renames one definition, retires another, and revises a third leaves this `git status --short` shape in the agent directory:
-
-```text
-R  coding-agents_old-name -> coding-agents_new-name
-D  coding-agents_retired-name
-M  coding-agents_revised-name
+```bash
+python3 "${SKILL_DIR}/scripts/place_agents.py" --home <selected-codex-home> --checkout <repository-root>
 ```
 
-All three lines belong in one commit. Before committing, confirm every changed path falls inside the namespace `<ownership_boundary>` defines.
+Run the check form again afterward. Success requires zero remaining drift, collision, or scope-split report. An interrupted `init` or `upgrade` is safe to re-run: every write is atomic per file and the ownership record is recomputed from the shipped definitions on each run. A `collision: <path> (changed after preflight)` line means the home changed while the run was planning; re-run the check form for a fresh plan instead of retrying the mutating form.
 
-A committed set means each version bump shows in the diff. That cost buys every session the same agents, including the sessions that can run no verb at all.
-
-</persistence>
+</agent_delivery>
 
 <ownership_boundary>
 
-This plugin places and prunes only within the namespace its own name prefixes. Agent definitions a developer authored, and definitions another plugin provides, are outside that namespace and stay untouched even when their content matches what this plugin would write.
+The shared agent home is reconciled through `.outcomeeng-marketplace-ownership.json`. This plugin may create, replace, or prune only entries that record `coding-agents` as owner and whose on-disk digest still matches the record. An unrecorded destination, a modified owned file, malformed ownership data, or a destination owned by another plugin is a collision: report it and change nothing.
 
-A file inside the namespace is this plugin's to replace or remove. A file outside it is never this plugin's to claim, and matching content is not ownership.
+A checkout definition byte-identical to a shipped definition is a scope split with directed removal. A changed checkout definition, or one that claims this plugin by filename prefix or by enabling one of its skills, is a scope-split collision requiring inspection. Either state stops home mutation; never refresh the home skills underneath a shadowing checkout definition.
 
 </ownership_boundary>
 
+<examples>
+
+A `--check` run against a home carrying one stale owned definition, one recorded definition the plugin no longer ships, and one developer file the ownership record does not know prints its plan and exits `2` on any collision or scope split, `1` when writes or prunes are pending, and `0` when the home already matches:
+
+```text
+write: /Users/dev/.codex/agents/coding-agents_reviewer.toml
+prune: /Users/dev/.codex/agents/coding-agents_verifier.toml
+collision: /Users/dev/.codex/agents/coding-agents_notes.toml (unrecorded)
+```
+
+`write` names a destination whose bytes differ from the shipped definition, `prune` a recorded `coding-agents` destination the plugin no longer ships, and `collision` a present file the ownership record does not authorize, with its cause: `symlink`, `unrecorded`, `owned by <plugin>`, `not a regular file`, or `digest mismatch`. A `scope-split directed-removal:` or `scope-split collision:` line names a checkout copy under `.codex/agents/` — matched by shipped bytes, by the `coding-agents` filename prefix, or by a `skills.config` entry naming a `coding-agents:` skill — and stops mutation. After the mutating form succeeds, the ownership record carries one entry per written destination:
+
+```json
+{ "destination": "agents/coding-agents_reviewer.toml", "plugin": "coding-agents", "digest": "<sha256 of the installed bytes>" }
+```
+
+</examples>
+
+<reload>
+
+Agent registries are loaded at session start. After a successful `init` or `upgrade`, reload the harness plugin index or start a new session before judging whether a role is available. Re-running the mutating verb in the same session does not refresh that session's already-loaded registry.
+
+</reload>
+
 <failure_modes>
 
-**Claude hand-copied the agent definitions instead of running the script.**
+**Claude repaired a missing role by copying its TOML into the checkout.**
 
-The definitions were placed by hand from the skill directory, so pruning never ran and a definition retired in a later version stayed behind, shadowing nothing but reported as current. Run the script; it owns placement and pruning together.
+The checkout copy shadows the selected-home definition while the home plugin can advance independently. Remove a byte-identical generated copy; inspect a changed or unrecognized copy. Reconcile the selected home, then reload the harness.
 
-**Claude treated the removals an upgrade made as damage.**
+**Claude treated a plugin-looking filename as ownership proof.**
 
-An upgrade retired one definition and renamed another. The retirement showed as a `D`, and the rename showed as a `D` beside its `A` because Git could not pair the two. Claude restored both removed paths, and the checkout kept dispatching an agent the plugin no longer ships while `check` reported drift that never cleared. Commit the removals with the additions; the verb prunes only inside this plugin's prefix, so a removal there is the upgrade, never a loss.
+Filename prefixes collide with developer-authored files. Only the digest-bound ownership record authorizes replacement or pruning; preserve and report every other file.
 
-**Claude reported the version from a manifest elsewhere on disk.**
+**Claude reported a version from another plugin copy.**
 
-A marketplace source tree and a cache snapshot both carry a manifest, and they diverge, and each plugin tree carries a manifest directory per agent. The reported version described a plugin the session was not running. Read the one skill-directory-relative path `<version_reporting>` names, resolving it rather than searching for a manifest.
+A marketplace source and cache snapshot can diverge. Read only the skill-directory-relative manifest named in `<version_reporting>`.
 
 </failure_modes>
 
 <success_criteria>
 
-- Exactly one verb runs per invocation, defaulting to `help`.
-- `version` reads only the skill-directory-relative manifest path named above, never another copy on disk.
-- `help` names exactly the changelog lines `<changelogs>` lists, at the paths given there, and no other line.
-  - A marketplace-event question reports that this plugin carries no marketplace changelog, naming no path for one.
-- Placement and pruning happen through the bundled script, never by hand.
-- Every file written or removed carries this plugin's namespace prefix; no other file in the agent directory changes.
-- `check` writes nothing and reports drift.
-- After `upgrade`, a `git status --short` over the agent directory reports no outstanding change: every addition, removal, and rename it produced is committed.
+- Exactly one verb runs, defaulting to `help`.
+- `version` reads only the running skill copy's target manifest.
+- `help` reports the exact changelog lines and paths declared above.
+- `check` writes nothing and reports every drift, collision, and scope split.
+- `init` and `upgrade` mutate only the selected home after a clean preflight and external-write approval.
+- Every replacement or prune is authorized by matching plugin ownership and digest; foreign or modified files remain untouched.
+- A final check reports no drift, collision, or scope split.
+- Missing-role repair ends with a harness plugin-index reload or a new session.
 
 </success_criteria>

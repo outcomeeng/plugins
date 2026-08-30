@@ -1,4 +1,4 @@
-name = "typescript_typescript-simplifier"
+name = "typescript-simplifier"
 description = "ALWAYS invoke when simplifying recently modified TypeScript code while preserving behavior, type safety, testability, and verified test coverage."
 model = "gpt-5.4"
 web_search = "disabled"
@@ -246,4 +246,4 @@ name = "typescript:code-typescript"
 enabled = true
 
 [shell_environment_policy]
-set = { OUTCOMEENG_CODEX_AGENT_NAME = "typescript/typescript_typescript-simplifier" }
+set = { OUTCOMEENG_CODEX_AGENT_NAME = "typescript/typescript-simplifier" }

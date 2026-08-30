@@ -633,8 +633,8 @@ class LanguagePresenceObservation:
     gated_sections: tuple[str, ...]
 
 
-def presence_gated_template_sections() -> tuple[str, ...]:
-    """Return every canonical-template span the source-owned presence markers wrap."""
+def presence_gated_template_sections(agent_harness: str) -> tuple[str, ...]:
+    """Return presence-gated spans that apply to one source-owned harness."""
     module = load_instruction_block_module()
     opening = (
         f"<!-- {module.LANGUAGE_PRESENCE_MARKER}:{module.LANGUAGE_PRESENCE_NAME} -->"
@@ -642,7 +642,9 @@ def presence_gated_template_sections() -> tuple[str, ...]:
     closing = (
         f"<!-- /{module.LANGUAGE_PRESENCE_MARKER}:{module.LANGUAGE_PRESENCE_NAME} -->"
     )
-    lines = read_canonical_template(HARNESS_CLAUDE).splitlines(keepends=True)
+    template = read_canonical_template(agent_harness)
+    harness_template = module.filter_harness(template, agent_harness)
+    lines = harness_template.splitlines(keepends=True)
     sections: list[str] = []
     start: int | None = None
     for index, line in enumerate(lines):
@@ -658,21 +660,24 @@ def presence_gated_template_sections() -> tuple[str, ...]:
 def canonical_language_presence_observations() -> tuple[
     LanguagePresenceObservation, ...
 ]:
-    """Observe the render of every declared language subset beside every gated section."""
+    """Observe every harness and language subset beside its gated sections."""
     module = load_instruction_block_module()
-    template = read_canonical_template(HARNESS_CLAUDE)
-    version = module.parse_template_version(template)
-    gated = presence_gated_template_sections()
-    return tuple(
-        LanguagePresenceObservation(
-            languages=subset,
-            rendered=cast(
-                str, module.render(template, subset, version, HARNESS_CLAUDE)
-            ),
-            gated_sections=gated,
+    observations: list[LanguagePresenceObservation] = []
+    for agent_harness in sorted(module.AGENT_HARNESS_INSTRUCTION_FILENAMES):
+        template = read_canonical_template(agent_harness)
+        version = module.parse_template_version(template)
+        gated = presence_gated_template_sections(agent_harness)
+        observations.extend(
+            LanguagePresenceObservation(
+                languages=subset,
+                rendered=cast(
+                    str, module.render(template, subset, version, agent_harness)
+                ),
+                gated_sections=gated,
+            )
+            for subset in _language_subsets(template_declared_languages(template))
         )
-        for subset in template_language_subsets()
-    )
+    return tuple(observations)
 
 
 def canonical_router_spacing_declarations() -> tuple[str, ...]:
