@@ -124,3 +124,7 @@ per-agent coupling.
 **Revisit condition.** Resolve before a third agent harness ships, since that is the change the
 coupling taxes. Related to the agent-harness terminology sweep recorded above, which the same
 decomposition can carry.
+
+## Plugin changelog titles use two forms
+
+Ten plugin changelogs open with "# Changelog — {plugin} plugin"; the prose changelog opens with "# Prose plugin changelog", the form the prose canon's em dash rule requires. One sweep renames the other ten titles to the dash-free form. Surfaced by the CI changeset review on the chat-voice branch; deferred there because the sweep touches ten plugins outside that changeset.

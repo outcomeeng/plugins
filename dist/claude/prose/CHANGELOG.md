@@ -1,10 +1,23 @@
-# Changelog — prose plugin
+# Prose plugin changelog
 
 Prose craft: structure, writing, and audit for interface text, documentation, and standalone pieces.
 
 What changed in **this plugin**, for a consumer repository. An entry appears when a change alters what a consumer can rely on, must do, or must know.
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
+
+## 0.11.0
+
+### Added
+
+- **Output style: coding instructions kept.** `keep-coding-instructions: true` in the frontmatter, a documented field. Claude keeps the coding instructions after selecting the style.
+- **Output style: chat conduct and code-task shape.** When corrected, Claude states the fix, with no agreement ritual. Claude reports findings without decision narration or origin disclaimers. Claude reports a code task as the finding, the fix, and the next step in under 5 lines. Claude compresses noisy command output to a few bullets. Claude rereads the first and last paragraph before sending.
+
+### Changed
+
+- **Voice canon: a generative core in the imperative.** The core: one claim per sentence, a named actor, the point before the mark, a decidable contrast clause. The catalog: each rule as the wanted shape first, then the ban, with the writer or the reader as the named actor. The em dash rule: the canon's.
+- **Documentation layer: bold-first list items permitted.** On a documentation page, a changelog among them, the writer opens a list item with a bolded keyword label or headline sentence as the reader's scan target.
+- **Catalog entries with a changed scope.** Tricolon abuse: any tricolon whose three is not the accurate and minimal count, no longer only stacked tricolons. "The X? A Y.": every rhetorical question, no longer only one answered for effect. Ornate nouns: "seam" and "boundary" join the banned list. Superficial analyses: parentheticals such as "(Important!)" in headings or anywhere else join the ban. "It's worth noting": any transition without effect on the meaning of what follows, no longer only the fixed cut list.
 
 ## 0.10.1
 
@@ -17,7 +30,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 - **The `prose-auditor` contract the router publishes matches what the agent returns.** The configured-verifier contract for a craft plugin's `{plugin}-auditor` states both output shapes — a structured verdict, or a sealed-run journal token rendered through `spx journal render` — so a caller no longer judges a correct raw-token result as malformed output.
 - **`prose-auditor` declares its output contract.** The definition carries an `<output_format>` section naming the raw run token and the load-diagnostic fallback, and its success criteria cover the no-nested-dispatch and no-invented-policy rules its constraints already impose.
 - **The documentation layer regained two structural-writing caps** the four-kind merge dropped: active voice, and the ban on `should`, `would`, `may`, and `might` across the whole page rather than only inside a numbered procedure.
-- **The interface and documentation structural conventions no longer restate style rules.** Element wording, heading case, and the one-term-one-meaning rule live in the style layer and the voice canon; the architecture references keep only what an ADR decides — element types, parallel sets, terminology homes, and where depth lives.
+- **The interface and documentation structural conventions no longer restate style rules.** Element wording, heading case, and the one-term-one-meaning rule live in the style layer and the voice canon; the architecture references keep only what an ADR decides: element types, parallel sets, terminology homes, and where depth lives.
 - **`audit-prose`'s description names its subject and scope** without the run-journal delivery clause, matching the audit-skill description convention the language plugins follow.
 - **The voice canon bans end punctuation on a heading.** The rule previously reached only the documentation kind through a structural reference; it belongs beside the sentence-case rule the canon already carries, so it now binds the shipped `prose` output style and every kind alike.
 
@@ -38,7 +51,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **One voice canon, every surface.** The shared voice canon renders into `/prose-standards` and the shipped `prose` output style from one authored fragment, and every kind's style layer derives from the shared catalog — kinds differ in register and composition, never in voice.
+- **One voice canon, every surface.** The shared voice canon renders into `/prose-standards` and the shipped `prose` output style from one authored fragment, and every kind's style layer derives from the shared catalog, so kinds differ in register and composition, never in voice.
 
 ### Removed
 
@@ -53,8 +66,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 ### Changed
 
 - **Ambiguity resolution follows the caller's interactivity.** The interactive caller asks the user to select a kind; a dispatched audit honors a dispatch-declared kind only for text the detection procedure leaves ambiguous — ownership outranks a declared kind, and each declaration binds only the part it names — and undeclared ambiguity is reported in the verdict with the plausible kinds' shared rules audited.
-- **internal-docs covers team documents wherever the team keeps them** — a workspace tool or a repository. The audience test reads the reader's context, not the storage platform.
-- **The audit path runs at the craft model tier** — the `prose-auditor` agent, the `audit-prose` router, and the four composed audit skills declare the craft model (Opus on Claude Code, gpt-5.5 on Codex) instead of the mechanical-auditor tier.
+- **internal-docs covers team documents wherever the team keeps them**, a workspace tool or a repository. The audience test reads the reader's context, not the storage platform.
+- **The audit path runs at the craft model tier.** The `prose-auditor` agent, the `audit-prose` router, and the four composed audit skills declare the craft model (Opus on Claude Code, gpt-5.5 on Codex) instead of the mechanical-auditor tier.
 
 ### Fixed
 
