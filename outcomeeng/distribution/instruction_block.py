@@ -386,7 +386,9 @@ SUBAGENT_DISPATCH_POLICY_REQUIREMENTS: Final = (
     ),
     ("blocked-gate fallback", "**ALWAYS** treat the gate as blocked"),
 )
-NODE_CONTEXT_POLICY_HEADING: Final = "### Before working on a specific node -> `/contextualize`"
+NODE_CONTEXT_POLICY_HEADING: Final = (
+    "### Before working on a specific node -> `/contextualize`"
+)
 NODE_CONTEXT_POLICY_REQUIREMENTS: Final = (
     (
         "recorded-coordinate dispatch",
@@ -421,7 +423,7 @@ ROLE_TASK_CONTRACT_POLICY_REQUIREMENTS: Final = (
     ),
     (
         "changeset coherence contract",
-        "`changeset-coherence-auditor`: repository path, exact committed `<base>..<head>` scope",
+        "repository path, exact committed `<base>..<head>` scope, and the task to derive the governed nodes",
     ),
 )
 OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"

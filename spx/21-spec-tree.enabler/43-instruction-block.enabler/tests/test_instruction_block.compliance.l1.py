@@ -38,9 +38,7 @@ def test_context_free_verification_dispatch_policy_is_rendered() -> None:
         for _, required_text in requirements:
             for agent_harness, document in documents.items():
                 violating_document = document.replace(required_text, "", 1)
-                with pytest.raises(
-                    source.ContextFreeVerificationDispatchPolicyError
-                ):
+                with pytest.raises(source.ContextFreeVerificationDispatchPolicyError):
                     source.validate_context_free_verification_dispatch_policy(
                         {agent_harness: violating_document}
                     )
