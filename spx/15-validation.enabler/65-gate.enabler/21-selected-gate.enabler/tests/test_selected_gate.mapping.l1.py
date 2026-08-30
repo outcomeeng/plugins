@@ -30,6 +30,7 @@ from outcomeeng.validation.selected_gate import (
     PYTHON_REASON,
     REACHED_TESTS_REASON,
     SHARED_TEST_INFRASTRUCTURE_REASON,
+    SKILL_REASON,
     SKILL_STEP_LABELS,
     SelectedGatePlan,
     TEST_REASON,
@@ -52,6 +53,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_SHARED_SOURCE_PATH,
     SELECTED_GATE_SKILL_PATH,
     SELECTED_GATE_SPX_CONFIG_PATH,
+    SELECTED_GATE_TEMPLATE_SCRIPT_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
 )
 from outcomeeng_testing.harnesses import gate as gate_harness
@@ -60,13 +62,10 @@ from outcomeeng_testing.harnesses.gate import (
     SELECTED_GATE_RENAMED_TARGET_ARG,
     SELECTED_GATE_WHITESPACE_PATH,
     collected_paths_observation,
-    expected_plugin_script_reason,
-    expected_skill_reason,
     resolved_base_observation,
     run_check_observation,
     selected_gate_branch_discovery_argv,
     selected_gate_changed_path_domain,
-    template_script_gate_mapping,
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
     conftest_reach_layout,
@@ -243,7 +242,12 @@ def test_a_plugin_script_selects_skill_and_python_lint_steps() -> None:
     )
     assert plan.steps == expected
     assert _reasons(plan) == tuple(
-        expected_plugin_script_reason(step.argv) for step in expected
+        PYTHON_REASON
+        if step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
+        else EVAL_REASON
+        if step.argv == EVAL_PROMPTS_ARGV
+        else SKILL_REASON
+        for step in expected
     )
 
 
@@ -263,7 +267,7 @@ def test_a_shared_fragment_selects_skill_and_markdown_steps() -> None:
     assert _reasons(plan) == tuple(
         MARKDOWN_REASON
         if step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
-        else expected_skill_reason(step.argv)
+        else SKILL_REASON
         for step in expected
     )
 
@@ -457,14 +461,22 @@ def test_template_script_maps_to_skill_and_lint_steps() -> None:
     # The template tree is an authored source root the generated-source
     # declaration and the raw-token enforcement roots both name, so a change to
     # a shipped template script has to reach the build, drift, and lint steps
-    # that carry it into every plugin's generated tree.
-    mapping = template_script_gate_mapping()
+    # that carry it into every plugin's generated tree. An eval names its
+    # producer by an authored `src/plugins/` path, so a template edit stales no
+    # materialized prompt and the prompt check stays unselected.
+    plan = build_selected_gate_plan((SELECTED_GATE_TEMPLATE_SCRIPT_PATH,))
 
-    assert not mapping.full_gate, (
-        "a template script escalated to the full gate instead of selecting a subset"
+    expected = tuple(
+        step
+        for step in VALIDATION_STEPS
+        if step.label in SKILL_STEP_LABELS
+        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
     )
-    assert mapping.selected, "a template script selected no validation step at all"
-    assert mapping.selected == mapping.expected, (
-        "selected steps and reasons differ from the expectation: "
-        f"{set(mapping.selected) ^ set(mapping.expected)}"
+    assert plan.full_gate is False
+    assert plan.steps == expected
+    assert _reasons(plan) == tuple(
+        PYTHON_REASON
+        if step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
+        else SKILL_REASON
+        for step in expected
     )

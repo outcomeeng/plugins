@@ -30,7 +30,6 @@ from hypothesis import given, seed, settings
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation import (
     CHECK_RECIPES,
-    EVAL_PROMPTS_ARGV,
     FAILURE_EXCERPT_LINE_LIMIT,
     FMT_CHECK_ARGV,
     FORWARDED_SIGNALS,
@@ -93,13 +92,7 @@ from outcomeeng.validation.selected_gate import (
     GIT_DIFF_STAGED_ARGV,
     GIT_DIFF_UNSTAGED_ARGV,
     GIT_LS_UNTRACKED_ARGV,
-    EVAL_REASON,
-    MARKDOWN_REASON,
-    PYTHON_REASON,
     SELECTED_CHECK_PLAN_HEADER,
-    SKILL_REASON,
-    SKILL_STEP_LABELS,
-    build_selected_gate_plan,
     collect_changed_paths,
     run_selected_check as production_run_selected_check,
 )
@@ -107,7 +100,6 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
     SELECTED_GATE_SKILL_PATH,
-    SELECTED_GATE_TEMPLATE_SCRIPT_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
     selected_gate_changed_paths,
 )
@@ -822,61 +814,6 @@ def _assert_production_step_lists_smoke() -> None:
 
     assert exit_code == PASS_EXIT_CODE
     assert len(spawner.spawn_calls) == len(steps)
-
-
-def expected_skill_reason(argv: tuple[str, ...]) -> str:
-    if argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}:
-        return MARKDOWN_REASON
-    if argv == EVAL_PROMPTS_ARGV:
-        return EVAL_REASON
-    return SKILL_REASON
-
-
-def expected_plugin_script_reason(argv: tuple[str, ...]) -> str:
-    if argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}:
-        return PYTHON_REASON
-    if argv == EVAL_PROMPTS_ARGV:
-        return EVAL_REASON
-    return SKILL_REASON
-
-
-@dataclass(frozen=True)
-class SelectedGateMapping:
-    """One changed path's selected steps beside the derived expectation.
-
-    Carries both sequences rather than their agreement, so the linked test owns
-    the comparison the assertion claims.
-    """
-
-    selected: tuple[tuple[str, str], ...]
-    expected: tuple[tuple[str, str], ...]
-    full_gate: bool
-
-
-def template_script_gate_mapping() -> SelectedGateMapping:
-    """Return what a per-plugin template script selects, undecided.
-
-    A template renders into every plugin's generated tree, so its script
-    selects the skill steps an authored plugin script selects plus the lint
-    steps its suffix earns. An eval names its producer by an authored
-    ``src/plugins/`` path, so a template edit stales no materialized prompt and
-    the prompt check stays out of the expectation.
-    """
-    plan = build_selected_gate_plan((SELECTED_GATE_TEMPLATE_SCRIPT_PATH,))
-    expected_steps = tuple(
-        step
-        for step in VALIDATION_STEPS
-        if step.label in SKILL_STEP_LABELS
-        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
-    )
-    return SelectedGateMapping(
-        selected=tuple((item.step.label, item.reason) for item in plan.selected_steps),
-        expected=tuple(
-            (step.label, expected_plugin_script_reason(step.argv))
-            for step in expected_steps
-        ),
-        full_gate=plan.full_gate,
-    )
 
 
 @dataclass(frozen=True)
