@@ -227,7 +227,12 @@ def test_a_skill_path_selects_skill_steps_with_the_prompt_check() -> None:
     )
     assert plan.steps == expected
     assert _reasons(plan) == tuple(
-        expected_skill_reason(step.argv) for step in expected
+        MARKDOWN_REASON
+        if step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
+        else EVAL_REASON
+        if step.argv == EVAL_PROMPTS_ARGV
+        else SKILL_REASON
+        for step in expected
     )
 
 
