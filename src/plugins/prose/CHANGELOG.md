@@ -17,7 +17,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **Voice canon: a generative core in the imperative.** The core: one claim per sentence, a named actor, the point before the mark, a decidable contrast clause. The catalog: each rule as the wanted shape first, then the ban, with the writer or the reader as the named actor. The em dash rule: the canon's.
 - **Documentation layer: bold-first list items permitted.** On a documentation page, a changelog among them, the writer opens a list item with a bolded keyword label or headline sentence as the reader's scan target.
-- **Two catalog entries with a changed scope.** Tricolon abuse: any tricolon whose three is not the accurate and minimal count, no longer only stacked tricolons. "The X? A Y.": every rhetorical question, no longer only one answered for effect.
+- **Catalog entries with a changed scope.** Tricolon abuse: any tricolon whose three is not the accurate and minimal count, no longer only stacked tricolons. "The X? A Y.": every rhetorical question, no longer only one answered for effect. Ornate nouns: "seam" and "boundary" join the banned list. Superficial analyses: parentheticals such as "(Important!)" in headings or anywhere else join the ban. "It's worth noting": any transition without effect on the meaning of what follows, no longer only the fixed cut list.
 
 ## 0.10.1
 
