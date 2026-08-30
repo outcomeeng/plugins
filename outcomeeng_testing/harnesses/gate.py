@@ -112,6 +112,7 @@ from outcomeeng_testing.generators.gate import (
     selected_gate_changed_paths,
 )
 from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 SELECTED_GATE_PROPERTY_SEED = 20260705
 SELECTED_GATE_PROPERTY_REPLAY_PATH = (
@@ -318,12 +319,11 @@ def selected_gate_property(
     )
 
     def wrapper() -> None:
-        try:
-            configured()
-        except AssertionError as error:
-            error.add_note(f"Hypothesis seed: {SELECTED_GATE_PROPERTY_SEED}")
-            error.add_note(f"Replay path: {SELECTED_GATE_PROPERTY_REPLAY_PATH}")
-            raise
+        run_replayable_property(
+            configured,
+            seed_value=SELECTED_GATE_PROPERTY_SEED,
+            replay_path=SELECTED_GATE_PROPERTY_REPLAY_PATH,
+        )
 
     return wrapper
 
