@@ -16,7 +16,9 @@ The following base rules are RELAXED for a documentation page.
 
 Numbered-step imperatives stand alone. The base rule against listicles governs a prose argument. A procedure is a numbered list by design, and each step is an imperative sentence that would read as a commanding fragment in an essay. The instruction pack governs what those steps say.
 
-Bold table cells are allowed for row keys. External prose forbids bold-first bullets. A documentation page uses bold for column-one row labels when those labels are the row key the reader scans for. Example: a levelling matrix whose first column reads "**Ownership**", "**Craft**", "**Communication**".
+Bold opens a list item as the reader's scan target. The base rule against bold-first bullets governs copy. On a documentation page, a changelog among them, a bulleted or numbered item opens with a bolded keyword label or headline sentence when the reader scans the list by it. Example: "**Security**: environment-based configuration replaces the checked-in secrets file." and "**The shipped `prose` output style keeps the coding instructions.** The style's frontmatter sets ..."
+
+Bold table cells are allowed for row keys. A documentation page uses bold for column-one row labels when those labels are the row key the reader scans for. Example: a levelling matrix whose first column reads "**Ownership**", "**Craft**", "**Communication**".
 
 Parentheses are allowed when they aid clarity, for three purposes. First, to define an acronym on first introduction: "engineering management (EM)". Second, to wrap a clarifying list when the inline form would create comma ambiguity: "the recruiting process (intro call, blank-paper exercise, paid test-drive) produces enough signal." Third, for formal notation that does not read as prose: "Score 1 to 4 (no neutral midpoint)".
 
@@ -48,9 +50,7 @@ Avoid: "*Do not* skip this step." Prefer: "A *blank-paper exercise* asks the can
 
 ## Lists and callouts
 
-Lists pick the shape the content has. Numbered when order matters or items will be referenced by number. Bulleted when items are parallel and order is incidental. A definition list — short label left, explanation right — when each item is identified by a short name and described by a longer body. Definition lists are the alternative to the bold-first bullet list the base catalog forbids.
-
-Avoid: "**Intro call.** Thirty minutes. **Blank-paper exercise.** Ninety minutes." as a bold-first bullet list. Prefer: a definition list with each stage as the label.
+Lists pick the shape the content has. Numbered when order matters or items will be referenced by number. Bulleted when items are parallel and order is incidental. A definition list — short label left, explanation right — when each item is identified by a short name and described by a longer body. A bold-label bullet list is the same shape where the rendering surface has no definition list.
 
 Callouts sparingly. Reserve them for warnings, content that does not fit the main flow, or short structured asides. One or two per page; more becomes noise. Never use a callout for metadata.
 

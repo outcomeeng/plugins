@@ -15,7 +15,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **The voice canon opens with a generative core, written in the imperative.** One claim per sentence with a defined semicolon boundary, named actors, no punctuation-staged reveals with a trailing-rationale exemption, and a decidable contrast-clause rule open the canon, so the build renders every kind layer and the shipped style from the same rules the audits enforce. The standards catalog states each rule positively first, in the imperative, with the writer or the reader as the named actor, and its em dash rule is the canon's.
+- **The voice canon opens with a generative core, written in the imperative.** One claim per sentence with a defined semicolon boundary, named actors, no punctuation-staged reveals with a trailing-rationale exemption, and a decidable contrast-clause rule open the canon, so the build renders every kind layer and the shipped style from the same rules the audits enforce. The standards catalog states each rule positively first, in the imperative, with the writer or the reader as the named actor. Its em dash rule is the canon's.
+- **The documentation style layer permits bold-first list items.** A bulleted or numbered item on a documentation page, a changelog among them, opens with a bolded keyword label or headline sentence as the reader's scan target.
 
 ## 0.10.1
 

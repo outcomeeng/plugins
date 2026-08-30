@@ -27,7 +27,7 @@ Lead with the substance. Open with the action, the answer, or the event. Never o
 
 Name who acts, in the active voice. Never make an artifact or an abstraction the actor. Write "I pushed the commit", never "the commit landed". Write "keep this", never "this earns its place".
 
-Lead with the point. Never stage it after a colon, em dash, semicolon, or period-fragment. Cut the mark and open with what followed it. Leave a trailing clause of rationale or example after the mark.
+Lead with the point. Never stage it after a colon, em dash, semicolon, or period-fragment. Cut the mark. Open with what followed it. Leave a trailing clause of rationale or example after the mark.
 
 Use short common words. Use a simple verb, never the noun clause made from it. Use concrete nouns. Use the everyday word, never jargon or a stock metaphor. Cut every dispensable word, starting with adjectives and adverbs. Cut the contrast clause, keeping only "X" from "X rather than Y". Keep Y only when the reader would act differently knowing it; otherwise the reader gets two statements for one point.
 
@@ -37,7 +37,7 @@ Assert only demonstrated facts. Show what matters in the content. Never assert s
 
 Give each concept one name throughout. Never use one word for two concepts.
 
-Report a failure as what happened and what to do next, two parts in that order, in plain language, without blame and without apology ritual.
+Report a failure as what happened, then what to do next, in plain language, without blame or apology.
 
 Capitalize only the first word and proper nouns in titles, headings, and labels. Put no end punctuation on a heading: "How this layer is used", never "How This Layer Is Used:". Use no all-caps emphasis.
 
@@ -106,7 +106,7 @@ Avoid: "The building serves as a reminder of the city's heritage.", "The station
 
 <sentence_structure>
 
-**Negative parallelism**: State the point plainly. Never frame it as "It's not X -- it's Y." to manufacture profundity. Use one such construction per piece at most, and treat a second as an insult to the reader.
+**Negative parallelism**: State the point plainly. Never frame it as "It's not X -- it's Y." to manufacture profundity. Use one such construction per piece at most. Treat a second as an insult to the reader.
 
 Avoid: "It's not bold. It's backwards.", "Feeding isn't nutrition. It's dialysis.", "Half the bugs you chase aren't in your code. They're in your head."
 
@@ -140,7 +140,7 @@ Avoid: "From innovation to implementation to cultural transformation.", "From th
 
 Avoid: "Fixing small bugs. Writing straightforward features. Implementing well-defined tickets."
 
-**Tautological definitions**: State the test directly and drop the adjective. Never define a quality using the quality itself. In "A genuine change does not revert", read "genuine" as "does not revert", a predicate restating the adjective.
+**Tautological definitions**: State the test directly. Drop the adjective. Never define a quality using the quality itself. In "A genuine change does not revert", read "genuine" as "does not revert", a predicate restating the adjective.
 
 Avoid: "An irreversible change does not revert.", "A truly important decision has lasting consequences.", "Real leaders inspire their teams."
 
@@ -198,7 +198,7 @@ Avoid: "Experts argue that this approach has significant drawbacks.", "Industry 
 
 <formatting>
 
-**Em-dash overuse**: Use a pair of em dashes only as parentheses around an aside, and a single em dash only before what a human would say after a pause. Introduce a list with a colon. Never use em dashes as a default mechanism for asides and pivots.
+**Em-dash overuse**: Use a pair of em dashes only as parentheses around an aside. Use a single em dash only before what a human would say after a pause. Introduce a list with a colon. Never use em dashes as a default mechanism for asides and pivots.
 
 Avoid: "Three things matter -- speed, cost, and trust.", "We shipped on Friday -- the tests were still red."
 
@@ -212,7 +212,7 @@ Avoid: "**Security**: Environment-based configuration with...", "**Performance**
 
 <composition>
 
-**Fractal summaries**: Say each thing once, at one level. Never summarize a section before and after writing it, and never restate the section's content at the document level.
+**Fractal summaries**: Say each thing once, at one level. Never summarize a section before and after writing it. Never restate the section's content at the document level.
 
 Avoid: "In this section, we'll explore... [3000 words later] ...as we've seen in this section.", "And so we return to where we began."
 
