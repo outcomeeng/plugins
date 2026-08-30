@@ -3,7 +3,8 @@
 Tested with: missing/current/stale owned definitions, foreign and modified
 collisions, malformed ownership records, scope splits, check-only runs,
 write and prune destinations changed between preflight and mutation (through
-the injected digest reader), and atomic ownership updates with no temporary
+the injected digest reader), adoption of identical unrecorded destinations an
+interrupted run left behind, and atomic ownership updates with no temporary
 files left behind.
 """
 
@@ -116,13 +117,18 @@ def _current_digest(path: Path) -> str | None:
 
 
 def _collision_cause(
-    path: Path, recorded: dict[str, str] | None, current: str | None
+    path: Path, recorded: dict[str, str] | None, current: str | None, desired: str
 ) -> str | None:
-    """Name why a present destination is not this plugin's to replace."""
+    """Name why a present destination is not this plugin's to replace.
+
+    A destination no entry records whose bytes already equal the desired
+    shipped content is the artifact of a run interrupted before the ownership
+    record was written; it is adopted, not a collision.
+    """
     if path.is_symlink():
         return "symlink"
     if recorded is None:
-        return "unrecorded"
+        return None if current == desired else "unrecorded"
     if recorded["plugin"] != PLUGIN:
         return f"owned by {recorded['plugin']}"
     if current is None:
@@ -215,12 +221,12 @@ def main(
         path, recorded = home / relative, by_destination.get(relative)
         present = path.exists() or path.is_symlink()
         current = current_digest(path)
+        digest = _digest(content)
         if present:
-            cause = _collision_cause(path, recorded, current)
+            cause = _collision_cause(path, recorded, current, digest)
             if cause is not None:
                 collisions.append(f"collision: {path} ({cause})")
                 continue
-        digest = _digest(content)
         if current != digest:
             writes.append((path, content, current))
         next_entries.append(

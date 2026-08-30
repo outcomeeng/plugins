@@ -1256,6 +1256,13 @@ def build_agent_home_plan(
             )
             continue
         if recorded is None:
+            if current_digest == definition.digest:
+                ownership_after[destination] = AgentOwnership(
+                    destination,
+                    definition.plugin,
+                    definition.digest,
+                )
+                continue
             collisions.append(
                 AgentHomeCollision(
                     destination,

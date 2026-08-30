@@ -13,6 +13,7 @@ from outcomeeng.distribution.installation import (
 )
 from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT
 from outcomeeng_testing.harnesses.installation import (
+    observe_interrupted_reconciliation,
     RENAMED_CHECKOUT_AGENT_NAME,
     PluginLifecycleHarness,
     observe_agent_home_collision,
@@ -213,6 +214,35 @@ def test_catalog_reconciliation_prunes_only_stale_owned_agents() -> None:
         name for name, _ in retired
     }
     assert observation.foreign_second == observation.foreign_initial
+
+
+def test_an_interrupted_run_is_adopted_cleanly_on_rerun() -> None:
+    observation = observe_interrupted_reconciliation()
+
+    assert observation.first_result.collisions == ()
+    assert observation.second_result.collisions == ()
+    assert observation.second_result.written == ()
+    assert observation.second_result.pruned == ()
+    assert observation.home_second == observation.home_first
+    assert observation.record_present_after
+
+
+def test_a_lifecycle_run_adopts_an_identical_unrecorded_destination(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
+    content = b'name = "auditor"\n'
+    shipped = lifecycle.write_shipped("fixture_auditor.toml", content)
+    lifecycle.write_home(shipped.name, content)
+
+    run = lifecycle.run()
+
+    assert run.exit_code == 0, run.stdout + run.stderr
+    assert "collision" not in run.stdout
+    assert (lifecycle.home_agents / shipped.name).read_bytes() == content
+    assert lifecycle.ownership_path.is_file()
+    check = lifecycle.run(check=True)
+    assert check.exit_code == 0, check.stdout + check.stderr
 
 
 def test_foreign_agent_collision_stops_before_any_mutation() -> None:

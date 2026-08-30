@@ -922,6 +922,59 @@ def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
     )
 
 
+@dataclass(frozen=True)
+class InterruptedReconciliationObservation:
+    """Home state across an install, a lost ownership record, and a re-run."""
+
+    first_result: AgentHomeResult
+    second_result: AgentHomeResult
+    home_first: tuple[tuple[str, bytes], ...]
+    home_second: tuple[tuple[str, bytes], ...]
+    record_present_after: bool
+
+
+def observe_interrupted_reconciliation() -> InterruptedReconciliationObservation:
+    """Install, drop the ownership record as an interrupted run would, re-run."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        _mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        agents_root = Path(environment[CODEX_HOME_ENV]) / CODEX_HOME_AGENTS_PATH
+
+        first_report = execute_persistent_installation(
+            mirror,
+            environment,
+            RecordingRunner(),
+        )
+        first_result = first_report.agent_home
+        if first_result is None:
+            raise RuntimeError("persistent installation returned no agent-home result")
+        home_first = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+        (agents_root / AGENT_OWNERSHIP_FILENAME).unlink()
+
+        second_report = execute_persistent_installation(
+            mirror,
+            environment,
+            RecordingRunner(),
+        )
+        second_result = second_report.agent_home
+        if second_result is None:
+            raise RuntimeError("persistent installation returned no agent-home result")
+        home_second = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+        record_present_after = (agents_root / AGENT_OWNERSHIP_FILENAME).is_file()
+
+    return InterruptedReconciliationObservation(
+        first_result=first_result,
+        second_result=second_result,
+        home_first=home_first,
+        home_second=home_second,
+        record_present_after=record_present_after,
+    )
+
+
 def observe_agent_home_collision() -> AgentHomeCollisionObservation:
     """Occupy one desired destination without ownership before installation."""
     checkout = repository_root()
@@ -2379,6 +2432,7 @@ __all__ = [
     "CatalogSubsetMapping",
     "CatalogSubsetPlanObservation",
     "AgentHomeCollisionObservation",
+    "InterruptedReconciliationObservation",
     "AgentHomeReconciliationObservation",
     "CodexRoleDiscoveryObservation",
     "CollisionObservation",
@@ -2400,6 +2454,7 @@ __all__ = [
     "canonical_catalog_plugin_names",
     "committed_catalog_plugin_names",
     "observe_agent_home_collision",
+    "observe_interrupted_reconciliation",
     "observe_agent_home_reconciliation",
     "observe_claude_user_collision",
     "observe_codex_config_independence",
