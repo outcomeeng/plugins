@@ -52,13 +52,14 @@ sibling occurrences.
 `instructions`'s `agent-prompt-standards` `<voice>` rule. The sentence introducing the
 agent-published session variable uses it. This node's copy names the specific agent
 instead — Codex or Claude Code, the vocabulary `spx/15-agent-terminology.pdr.md`
-declares — and the same sentence stands unchanged in four files under
-`spx/21-spec-tree.enabler/76-sessions.enabler/25-handoff.enabler`:
-`skills/handoff/references/session-format.md`,
-`skills/handoff/references/claimed-session-resolution.md`,
-`skills/handoff/workflows/04-execute.md`, and the plugin changelog entry describing them.
+declares — and the same sentence stands unchanged in three authored files governed by
+`spx/21-spec-tree.enabler/76-sessions.enabler/25-handoff.enabler` —
+`src/plugins/spec-tree/skills/handoff/references/session-format.md`,
+`src/plugins/spec-tree/skills/handoff/references/claimed-session-resolution.md`, and
+`src/plugins/spec-tree/skills/handoff/workflows/04-execute.md` — and in the
+`src/plugins/spec-tree/CHANGELOG.md` entry describing them.
 
-**Resolution shape**: sweep the four handoff-node files to the same per-agent naming,
+**Resolution shape**: sweep those four files to the same per-agent naming,
 gated by `instructions:skill-auditor` on that node. "The runtime" is not the substitute:
 `spx/15-agent-terminology.pdr.md` excludes it from the agent vocabulary and `spx/ISSUES.md`
 already tracks removing it tree-wide.
