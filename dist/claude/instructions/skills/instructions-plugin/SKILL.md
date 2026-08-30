@@ -3,6 +3,7 @@ name: instructions-plugin
 description: >-
   ALWAYS invoke this skill to operate the instructions plugin's own lifecycle — report its version and check or reconcile its agent-delivery footprint. Invoke it when this plugin's agents are missing from a session. NEVER commit marketplace-delivered agent definitions into a checkout.
 argument-hint: "[help|version|init|upgrade|check]"
+arguments: verb
 allowed-tools: Read
 ---
 
@@ -12,7 +13,7 @@ The instructions plugin's resolved version and agent-delivery state reported or 
 
 <verbs>
 
-Read `$ARGUMENTS`, trim it, and match it against the table. One verb runs per invocation; `help` is the default when `$ARGUMENTS` is empty. Text matching no row is an error naming all five verbs.
+Read `$verb`, trim it, and match it against the table. One verb runs per invocation; `help` is the default when `$verb` is empty. Text matching no row is an error naming all five verbs.
 
 | Verb      | Result                                                                                       |
 | --------- | -------------------------------------------------------------------------------------------- |
@@ -22,7 +23,7 @@ Read `$ARGUMENTS`, trim it, and match it against the table. One verb runs per in
 | `upgrade` | Plugin-owned Codex definitions reconciled to this version, including safe stale-file pruning |
 | `check`   | Selected-home drift, collision, and checkout scope-split state reported without mutation     |
 
-`init`, `upgrade`, and `check` report that this agent receives plugin agents through the plugin manifest and change nothing.
+`init`, `upgrade`, and `check` report that Claude Code receives this plugin's agents through the plugin manifest and change nothing.
 
 </verbs>
 
