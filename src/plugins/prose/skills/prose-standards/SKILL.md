@@ -94,7 +94,7 @@ Avoid: "It's not bold. It's backwards.", "Feeding isn't nutrition. It's dialysis
 
 Avoid: "Not a bug. Not a feature. A fundamental design flaw.", "Not ten. Not fifty. Five hundred and twenty-three lint violations across 67 files."
 
-**"The X? A Y."**: State the point directly. Never pose rhetorical questions. Never add questions for dramatic effect.
+**"The X? A Y."**: State the point directly. Never pose a rhetorical question or add a question for dramatic effect.
 
 Avoid: "The result? Devastating.", "The worst part? Nobody saw it coming.", "The scary part? This attack vector is perfect for developers."
 
