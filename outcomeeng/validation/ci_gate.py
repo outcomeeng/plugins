@@ -15,6 +15,9 @@ GATE_PUSH_EVENT: Final = "push"
 GATE_PUSH_BRANCH: Final = "main"
 JUST_BINARY: Final = "just"
 GATE_RECIPE_COMMAND: Final = f"{JUST_BINARY} {RECIPE_CHECK_FULL}"
+GATE_STEP_NAME: Final = "Run quality gate"
+GITHUB_TOKEN_ENVIRONMENT: Final = "GH_TOKEN"
+CODEX_API_KEY_ENVIRONMENT: Final = "OPENAI_API_KEY"
 CONTINUE_ON_ERROR_FALSY: Final = (None, "false")
 FAIL_FAST_PREAMBLE: Final = "set -euo pipefail"
 TRAP_COMMAND_PREFIX: Final = "trap "
@@ -87,7 +90,8 @@ CI_TOOL_REQUIREMENTS: Final = (
     CiToolRequirement(None, "actions/setup-python@", None),
 )
 CI_STEP_ENVIRONMENT_REQUIREMENTS: Final = (
-    CiStepEnvironmentRequirement("Run quality gate", "GH_TOKEN"),
+    CiStepEnvironmentRequirement(GATE_STEP_NAME, GITHUB_TOKEN_ENVIRONMENT),
+    CiStepEnvironmentRequirement(GATE_STEP_NAME, CODEX_API_KEY_ENVIRONMENT),
 )
 MAXIMUM_JOB_TIMEOUT_MINUTES: Final = 30
 REUSABLE_WORKFLOW_CALL_KEY: Final = "uses"
@@ -97,6 +101,9 @@ WORKFLOW_FILE_GLOBS: Final = ("*.yml", "*.yaml")
 
 __all__ = [
     "CI_STEP_ENVIRONMENT_REQUIREMENTS",
+    "CODEX_API_KEY_ENVIRONMENT",
+    "GATE_STEP_NAME",
+    "GITHUB_TOKEN_ENVIRONMENT",
     "CI_TOOL_REQUIREMENTS",
     "CONTINUE_ON_ERROR_FALSY",
     "JOB_TIMEOUT_KEY",

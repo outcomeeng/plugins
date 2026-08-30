@@ -84,7 +84,6 @@ INSTRUCTION_BLOCK_SOURCE_PATH: Final = "src/plugins/spec-tree/skills/update-inst
 SKILL_STEP_LABELS: Final = (
     "build-skills",
     "dist-diff",
-    "place-agents-check",
     "manifests",
     "skills",
     "skill-injection",
@@ -143,7 +142,6 @@ SKILL_PATTERNS: Final = (
     "src/templates/**",
     "dist/claude/**",
     "dist/codex/**",
-    ".codex/agents/**",
     ".claude-plugin/**",
     ".agents/plugins/**",
 )
