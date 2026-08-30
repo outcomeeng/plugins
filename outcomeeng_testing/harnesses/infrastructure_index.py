@@ -17,6 +17,7 @@ from typing import Final
 
 from hypothesis import given, seed, settings
 
+from outcomeeng import validation as validation_pkg
 from outcomeeng.validation.infrastructure_index import (
     CONFTEST_FILENAME,
     PACKAGE_INIT_FILENAME,
@@ -294,3 +295,21 @@ def mixed_reach_layout(repo: SyntheticRepository) -> MixedLayout:
         changed_test=unrelated,
         index=repo.index(),
     )
+
+
+REPOSITORY_ROOT: Final = Path(validation_pkg.__file__).resolve().parents[2]
+
+
+@dataclass(frozen=True)
+class RepositoryReach:
+    """A real repository module's path beside the index built over the checkout."""
+
+    path: str
+    index: InfrastructureIndex
+
+
+def repository_reach(module_file: str) -> RepositoryReach:
+    """Index this checkout and return the repository-relative path of ``module_file``."""
+
+    path = Path(module_file).resolve().relative_to(REPOSITORY_ROOT).as_posix()
+    return RepositoryReach(path=path, index=index_test_infrastructure(REPOSITORY_ROOT))

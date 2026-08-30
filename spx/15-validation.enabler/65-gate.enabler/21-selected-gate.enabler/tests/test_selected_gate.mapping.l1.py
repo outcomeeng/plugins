@@ -13,6 +13,7 @@ from outcomeeng.validation.selected_gate import (
     build_selected_gate_plan,
 )
 from outcomeeng.validation.infrastructure_index import InfrastructureReach
+from outcomeeng_testing.harnesses import gate as gate_harness
 from outcomeeng_testing.harnesses.gate import (
     assert_selected_gate_mapping_contract,
     template_script_gate_mapping,
@@ -21,6 +22,7 @@ from outcomeeng_testing.harnesses.infrastructure_index import (
     conftest_reach_layout,
     mixed_reach_layout,
     reach_layout,
+    repository_reach,
     synthetic_repository,
 )
 
@@ -104,6 +106,24 @@ def test_step_fed_by_changed_and_reached_tests_names_both_reasons() -> None:
     ]
     assert TEST_REASON in pytest_steps[0].reason
     assert REACHED_TESTS_REASON in pytest_steps[0].reason
+
+
+def test_the_gate_harness_shared_with_the_parent_node_selects_the_full_surface() -> (
+    None
+):
+    # This file and the parent node's tests both import the gate harness, so
+    # the real checkout is the case: a change to that harness is shared.
+    observation = repository_reach(gate_harness.__file__)
+
+    plan = build_selected_gate_plan(
+        (observation.path,), test_infrastructure=observation.index
+    )
+
+    assert observation.index.reach(observation.path).kind is InfrastructureReach.SHARED
+    assert plan.full_gate is True
+    assert {item.reason for item in plan.selected_steps} == {
+        SHARED_TEST_INFRASTRUCTURE_REASON
+    }
 
 
 def test_template_script_maps_to_skill_and_lint_steps() -> None:
