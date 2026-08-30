@@ -301,12 +301,19 @@ class AgentHomeResult:
     collisions: tuple[AgentHomeCollision, ...]
 
 
+class ScopeSplitClassification(StrEnum):
+    """How one checkout definition relates to the selected home's shipped copy."""
+
+    DIRECTED_REMOVAL = "directed-removal"
+    SHADOWING_COLLISION = "shadowing-collision"
+
+
 @dataclass(frozen=True, order=True)
 class ScopeSplitEntry:
     """One checkout definition shadowing a selected-home plugin definition."""
 
     path: Path
-    classification: str
+    classification: ScopeSplitClassification
 
 
 class ScopeSplitError(ValueError):
@@ -317,12 +324,12 @@ class ScopeSplitError(ValueError):
         removals = tuple(
             str(entry.path)
             for entry in entries
-            if entry.classification == "directed-removal"
+            if entry.classification is ScopeSplitClassification.DIRECTED_REMOVAL
         )
         collisions = tuple(
             str(entry.path)
             for entry in entries
-            if entry.classification == "shadowing-collision"
+            if entry.classification is ScopeSplitClassification.SHADOWING_COLLISION
         )
         super().__init__(
             "Codex agent scope split: selected-home plugin skills are shadowed; "
@@ -1166,14 +1173,20 @@ def checkout_scope_split_entries(
     entries: list[ScopeSplitEntry] = []
     for path in sorted((checkout / CODEX_AGENTS_PATH).glob("*.toml")):
         if path.is_symlink():
-            entries.append(ScopeSplitEntry(path, "shadowing-collision"))
+            entries.append(
+                ScopeSplitEntry(path, ScopeSplitClassification.SHADOWING_COLLISION)
+            )
             continue
         content = path.read_bytes()
         if content in shipped_content:
-            entries.append(ScopeSplitEntry(path, "directed-removal"))
+            entries.append(
+                ScopeSplitEntry(path, ScopeSplitClassification.DIRECTED_REMOVAL)
+            )
             continue
         if _checkout_agent_mentions_plugin(path, content, plugin_names):
-            entries.append(ScopeSplitEntry(path, "shadowing-collision"))
+            entries.append(
+                ScopeSplitEntry(path, ScopeSplitClassification.SHADOWING_COLLISION)
+            )
     return tuple(entries)
 
 
@@ -2159,6 +2172,7 @@ __all__ = [
     "Operation",
     "PersistentPreflight",
     "ReportField",
+    "ScopeSplitClassification",
     "ScopeSplitEntry",
     "ScopeSplitError",
     "SourceAction",

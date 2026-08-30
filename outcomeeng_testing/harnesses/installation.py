@@ -74,6 +74,7 @@ from outcomeeng.distribution.installation import (
     Operation,
     PersistentPreflight,
     PLUGIN_OPERATIONS,
+    ScopeSplitClassification,
     ScopeSplitEntry,
     ScopeSplitError,
     SourceAction,
@@ -338,7 +339,10 @@ class PluginLifecycleHarness:
         spec = importlib.util.spec_from_file_location(
             f"place_agents_{self.plugin_name.replace('-', '_')}", self.script_path
         )
-        assert spec is not None and spec.loader is not None
+        if spec is None or spec.loader is None:
+            raise RuntimeError(
+                f"cannot load the placement script module: {self.script_path}"
+            )
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
@@ -2506,6 +2510,7 @@ __all__ = [
     "RealFirstInstallObservation",
     "RealInstallationObservation",
     "RecordingRunner",
+    "ScopeSplitClassification",
     "ScopeSplitObservation",
     "UnpublishedPluginObservation",
     "UnpublishedPluginRunner",

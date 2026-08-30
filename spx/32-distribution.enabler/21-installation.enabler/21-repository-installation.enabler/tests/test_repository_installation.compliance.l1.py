@@ -16,6 +16,7 @@ from outcomeeng.distribution.installation import (
 from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT
 from outcomeeng_testing.harnesses.installation import (
     observe_interrupted_reconciliation,
+    ScopeSplitClassification,
     racing_digest_reader,
     scrubbed_probe_run,
     RENAMED_CHECKOUT_AGENT_NAME,
@@ -265,15 +266,15 @@ def test_scope_split_reports_exact_and_changed_copies_before_mutation() -> None:
     observation = observe_scope_split()
 
     assert {entry.classification for entry in observation.entries} == {
-        "directed-removal",
-        "shadowing-collision",
+        ScopeSplitClassification.DIRECTED_REMOVAL,
+        ScopeSplitClassification.SHADOWING_COLLISION,
     }
     assert len(observation.entries) == 4
     assert {
         entry.classification
         for entry in observation.entries
         if entry.path.name == RENAMED_CHECKOUT_AGENT_NAME
-    } == {"shadowing-collision"}
+    } == {ScopeSplitClassification.SHADOWING_COLLISION}
     assert observation.attempted == ()
     assert observation.home_after == observation.home_before
 
