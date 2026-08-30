@@ -16,7 +16,7 @@ The following base rules are RELAXED for a documentation page.
 
 Numbered-step imperatives stand alone. The base rule against listicles governs a prose argument. A procedure is a numbered list by design, and each step is an imperative sentence that would read as a commanding fragment in an essay. The instruction pack governs what those steps say.
 
-Open a list item with bold as the reader's scan target. The base rule against bold-first bullets governs copy. On a documentation page, a changelog among them, open a bulleted or numbered item with a bolded keyword label or headline sentence when the reader scans the list by it. The base catalog's own Avoid example is this construction, forbidden in copy and permitted here. Example: "**Security**: environment-based configuration replaces the checked-in secrets file." and "**Output style: coding instructions kept.** `keep-coding-instructions: true` in the frontmatter, a documented field."
+Open a list item with bold as the reader's scan target. In copy, keep the base ban on bold-first bullets. On a documentation page, a changelog among them, open a bulleted or numbered item with a bolded keyword label or headline sentence when the reader scans the list by it. The base catalog's own Avoid example is this construction, forbidden in copy and permitted here. Example: "**Security**: environment-based configuration replaces the checked-in secrets file." and "**Output style: coding instructions kept.** `keep-coding-instructions: true` in the frontmatter, a documented field."
 
 Bold table cells are allowed for row keys. A documentation page uses bold for column-one row labels when those labels are the row key the reader scans for. Example: a levelling matrix whose first column reads "**Ownership**", "**Craft**", "**Communication**".
 
@@ -34,7 +34,7 @@ Active voice. "The parser rejects invalid input", never "invalid input is reject
 
 No should, would, may, or might. A behavior happens or it does not: "the server restarts", not "the server should restart". "Can" states capability. "Will" states a promised future. Both survive. This binds every sentence on the page, not only its steps.
 
-A descriptive sentence caps at 25 words and splits over the cap. Simple tenses only: present for facts, imperative for instructions, simple past for a prerequisite already performed. No perfect tenses and no progressive forms. No verbal "-ing" clauses: "the command exits and prints a summary", never "the command exits, printing a summary"; nouns ending in -ing ("the setting", "a warning") are words, not violations. Use at most three nouns in a row. Break a longer run with a preposition: "build pipeline cache key" becomes "cache key of the build pipeline". Paragraphs cap at six sentences and carry one topic.
+A descriptive sentence caps at 25 words and splits over the cap. Simple tenses only: present for facts, imperative for instructions, simple past for a prerequisite already performed. No perfect tenses and no progressive forms. No verbal "-ing" clauses: "the command exits and prints a summary", never "the command exits, printing a summary". Nouns ending in -ing ("the setting", "a warning") are words, not violations. Use at most three nouns in a row. Break a longer run with a preposition: "build pipeline cache key" becomes "cache key of the build pipeline". Paragraphs cap at six sentences and carry one topic.
 
 ## Typography
 
