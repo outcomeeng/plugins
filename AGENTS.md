@@ -24,7 +24,7 @@ The selected `$CODEX_HOME/agents/` directory is the canonical registry for marke
 
 Canonical examples are `spec-tree_adr-auditor`, `instructions_skill-auditor`, `prose-auditor`, `rust-simplifier`, and `typescript-simplifier`. A bare legacy role beside its canonical role, or a role whose plugin identity is repeated, is stale duplicate state rather than another agent to dispatch.
 
-When a named role is unavailable, invoke the owning plugin's `/<plugin>-plugin init` to refresh its definitions in the selected `$CODEX_HOME/agents/`, then reload the harness plugin index or start a new session. A running session retains its already-loaded registry; repeated discovery in that session cannot prove the refresh failed.
+When a named role is unavailable, invoke the owning plugin's `/<plugin>-plugin init` to refresh its definitions in the selected `$CODEX_HOME/agents/`, then reload the harness plugin index or start a new session. `/<plugin>-plugin check` proves whether the selected home carries that plugin's current shipped definitions, writing nothing. A running session retains its already-loaded registry; repeated discovery in that session cannot prove the refresh failed.
 
 **NEVER** create or commit marketplace-delivered agent definitions into a checkout; no generated instruction requires it. A plugin-owned checkout definition whose invoked skills live in the selected agent home is a scope split: remove only a byte-identical generated copy, and inspect every changed or unrecognized copy as a shadowing collision before any removal.
 
