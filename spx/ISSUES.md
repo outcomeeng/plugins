@@ -136,13 +136,16 @@ two test files), that node's harness and generator under `outcomeeng_testing/`, 
 tests plus `just check-skills` and `just docs-check` — and reserves the full bundle for shared
 validation or test infrastructure, package-manager files, generated catalog output, or distribution
 build machinery, none of which the changeset touched. The selector in `outcomeeng/validation`
-therefore widens beyond the overlay's declared scope; which path class triggers the widening
-(`dist/`, `outcomeeng_testing/`, or the manifests) has not been read.
+therefore widens beyond the overlay's declared scope. The class that promotes such a changeset is
+`outcomeeng_testing/**` in `FULL_GATE_PATTERNS` (`outcomeeng/validation/selected_gate.py`), matched
+as a whole directory with no node scoping. `spx/local/merging.md` names that divergence beside its
+touched-scope lane so the two boundaries do not diverge silently.
 
-**Resolution shape**: read the selector's path classification, name the class that promoted this
-changeset to the full surface, and either narrow that class to what the overlay declares or record
-in the overlay why the selector's boundary is the right one. The fix touches the validation pipeline
-under `spx/15-validation.enabler`, so it carries its own contextualization and deterministic lane.
+**Resolution shape**: narrow that class to the node-scoped shared-infrastructure definition the
+overlay declares — a harness or generator imported by tests under more than one node, or by
+`conftest.py` — or record in the overlay why the directory-level boundary is the right one. The fix
+touches the validation pipeline under `spx/15-validation.enabler`, so it carries its own
+contextualization and deterministic lane.
 
 **Evidence**: two `just check` runs on PR #529 heads `13911df3511b3d7210478dce37c24632d8a3f0fc`
 and `a0788400b157378d9485caa6de47ae69294bbbc8`, each printing "full gate surface changed" for all
