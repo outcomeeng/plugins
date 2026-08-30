@@ -195,9 +195,11 @@ one harness-neutral operation:
 The operation has these requirements:
 
 - A named role is an audit or review role with a role-task contract in the
-  managed instruction block. The operation excludes implementation runners such
-  as `spec-tree:applier`, simplifier agents, updater agents, general-purpose
-  workers, explorers, and arbitrary delegated reads.
+  managed instruction block. Add a path-only managed contract for
+  `spec-tree:changeset-coherence-auditor` so this isolated audit role shares the
+  boundary with the other auditor roles. The operation excludes implementation
+  runners such as `spec-tree:applier`, simplifier agents, updater agents,
+  general-purpose workers, explorers, and arbitrary delegated reads.
 - Scope coordinates are operational data recorded before dispatch in a source
   the authoring agent session may read without the foundation marker: the exact
   commit and its `Refs:` trailer, the session store, or sealed journal scope
@@ -230,7 +232,8 @@ The operation has these requirements:
   product content for any purpose after dispatch, it establishes a live
   `<SPEC_TREE_FOUNDATION>` marker and contextualizes every governing node needed
   by that access.
-- Accepting a finding as recorded and routing it to the fix queue is operational.
+- Accepting a finding as recorded and placing it in the conversation-local
+  imperfection ledger for fix-now handling is operational.
 - Rejecting, downgrading, dropping as unbacked, or deferring a finding is a
   product judgment. The authoring agent session establishes the live foundation
   marker and contextualizes the finding's governing node before making that
@@ -245,31 +248,24 @@ The operation has these requirements:
 
 ### Required evidence
 
-- Add an `[eval]` at
-  `spx/21-spec-tree.enabler/18-context-loading.enabler/evals/context-free-dispatch/`
-  modelled on
-  `spx/21-spec-tree.enabler/76-merge.enabler/evals/local-completion-boundary/`.
-  Its graded cases cover:
-  1. Post-compaction dispatch of a named verifier role from recorded coordinates:
-     pass when the transcript emits no `<SPEC_TREE_FOUNDATION>` or
-     `<SPEC_TREE_CONTEXT>` marker and issues no Read, Grep, Glob, `cat`, `sed`,
-     `rg`, or patch-emitting Git operation on a product path before dispatch or
-     returned-token render.
-  2. A returned finding the authoring agent session attempts to reject,
-     downgrade, drop, or defer: pass when `/understand` and `/contextualize` run
-     before the product judgment.
-  3. Product content opened after dispatch for any purpose: pass when both
-     required markers precede the first product-content access.
 - Add `[test]` render-compliance evidence under
-  `spx/21-spec-tree.enabler/43-instruction-block.enabler` for the pinned policy
-  tuple. The test fails when either generated harness surface omits the
-  operational-continuation addition or the product-content re-entry boundary.
+  `spx/21-spec-tree.enabler/43-instruction-block.enabler`. Add a source-owned
+  `NODE_CONTEXT_POLICY_REQUIREMENTS` tuple for the template's `Before working on
+  a specific node` section, use `FOUNDATION_POLICY_REQUIREMENTS` for the
+  `spx journal` and `spx verification` operational exemption, and use
+  `SUBAGENT_DISPATCH_POLICY_REQUIREMENTS` for the managed dispatch contracts.
+  The test imports its expected substrings from those three tuples and fails
+  when either generated harness surface omits the operational-continuation
+  addition, path-only dispatch contract, or product-content re-entry boundary.
 - Add `[audit]` assertions to
   `spx/21-spec-tree.enabler/18-context-loading.enabler/context-loading.md` for the
   shipped `/understand` policy, path-only role contracts, verifier-owned context,
   finding-disposition boundary, and post-compaction deterministic precondition.
-- Focused SPX validation, skill checks, documentation checks, instruction checks,
-  the eval, affected auditors, and changeset review pass on the same committed
+- This prototype adds no `[eval]` assertion or eval artifact and makes no scored
+  claim about model behavior. Its new assertions cover policy design through
+  `[audit]` and rendered policy presence through `[test]`. Focused SPX validation,
+  render-compliance tests, skill checks, documentation checks, instruction
+  checks, affected auditors, and changeset review pass on the same committed
   subject.
 
 ### Exact implementation surfaces and order
@@ -282,28 +278,33 @@ The operation has these requirements:
 2. Amend `src/plugins/spec-tree/skills/understand/SKILL.md`; the managed
    instruction template sections `Before product-content access`, `Before
    working on a specific node`, and `Sub-agent dispatch`;
-   `FOUNDATION_POLICY_REQUIREMENTS` in
+   `FOUNDATION_POLICY_REQUIREMENTS`, `SUBAGENT_DISPATCH_POLICY_REQUIREMENTS`, and
+   the new `NODE_CONTEXT_POLICY_REQUIREMENTS` tuple in
    `outcomeeng/distribution/instruction_block.py`; and every named role-task
-   contract that currently requires a content-bearing field.
+   contract that currently requires a content-bearing field. Add the managed
+   path-only contract for `spec-tree:changeset-coherence-auditor`. Update every
+   agent definition whose body restates a caller-supplied content-bearing
+   contract, including `src/plugins/spec-tree/agents/adr-auditor.md` and
+   `src/plugins/spec-tree/agents/pdr-auditor.md`.
 3. Use `src/plugins/prose/skills/audit-prose/SKILL.md` as the current concrete
    audit-workflow model and
    `src/plugins/instructions/skills/audit-skill/SKILL.md` as the structural
    auditor-skeleton model when converting role-task contracts to path-only
    inputs.
-4. Author the context-free-dispatch eval and the instruction-render compliance
-   test.
+4. Author the instruction-render compliance test from the three source-owned
+   policy tuples. The prototype carries no eval lane.
 5. Run `just bump`, `just build-skills`, `just build-instructions`, and
-   `just instructions-check` in that order. Run `just build-eval-triggers` when
-   the eval's `owned_paths` changes generated trigger ownership.
+   `just instructions-check` in that order.
 6. Run focused deterministic verification, the affected spec, skill,
-   test-evidence, eval-evidence, and implementation audits, and changeset review.
+   test-evidence, and implementation audits; one `subagent-auditor` dispatch per
+   changed agent configuration path; and changeset review.
 
 ### Interview decisions
 
 - Desired behavior: context-free dispatch from recorded operational scope.
 - Covered roles: every audit or review role named by a managed role-task
-  contract.
+  contract, including `spec-tree:changeset-coherence-auditor`.
 - Reload boundary: immediately before any authoring-agent-session product-content
   access or product judgment.
-- Deliverable: requirements only in this PLAN; implementation remains a later
-  slice.
+- Deliverable: one final requirements review, followed by prototype
+  implementation without an eval lane.
