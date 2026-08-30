@@ -48,3 +48,28 @@ rather than bundled into a bug fix.
 **Revisit condition**: resolve before the next behavioral change to
 `outcomeeng_testing/harnesses/gate_signal.py`, so the seam is repaired while that
 harness is already in context.
+
+## The level-1 gate contracts hold every predicate in their harness
+
+`spx/15-validation.enabler/65-gate.enabler/tests/test_gate.scenario.l1.py::test_gate_scenario_contract`
+and `spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py::test_gate_compliance_contract`
+are one-line wrappers over `assert_gate_scenario_contract` and
+`assert_gate_compliance_contract` in `outcomeeng_testing/harnesses/gate.py`, which own every
+`assert` for the node's scenario and compliance assertions, including the nested
+`_assert_primitive_recipes`, `_assert_failing_step`, and `_assert_check_wrapper` helpers.
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
+requires the executed test to own every predicate while the harness exposes observations.
+
+**Resolution shape**: the same inversion as the signal-harness entry above and the one
+`spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/ISSUES.md` records — convert
+each `assert_*_contract` entry point into observation helpers returning summaries, spawn-call
+records, sink output, and AST nodes, and move each predicate beside the assertion it verifies.
+
+**Why separate**: the two entry points and their helpers run to several hundred lines driving the
+real orchestrator through recording spawners; relocating them rewrites both linked test files
+wholesale, a refactor with its own regression risk and its own review.
+
+**Evidence**: `implementation-auditor` run `2026-08-30_18-40-43-212-8449501550dd` on head
+`1452a3887bcc1d79da6733668e8b22cbde91c6ed`, findings
+`finding-predicate-ownership-gate-scenario-contract` and
+`finding-predicate-ownership-gate-compliance-contract`.
