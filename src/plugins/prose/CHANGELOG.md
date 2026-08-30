@@ -15,7 +15,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **The voice canon opens with a generative core, written in the imperative.** One claim per sentence with a defined semicolon boundary, named actors, no punctuation-staged reveals with a trailing-rationale exemption, and a decidable contrast-clause rule open the canon, so the build renders every kind layer and the shipped style from the same rules the audits enforce.
+- **The voice canon opens with a generative core, written in the imperative.** One claim per sentence with a defined semicolon boundary, named actors, no punctuation-staged reveals with a trailing-rationale exemption, and a decidable contrast-clause rule open the canon, so the build renders every kind layer and the shipped style from the same rules the audits enforce. The standards catalog states each rule positively first, in the imperative, with the writer as the only actor, and its em dash rule is the canon's.
 
 ## 0.10.1
 
