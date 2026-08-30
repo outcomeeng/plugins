@@ -1,11 +1,30 @@
 #!/usr/bin/env python3
 """Resolve the registered local source for a marketplace entry from JSON stdin.
 
+A Codex entry carries the materialized checkout at top-level `root` and, when the
+marketplace was registered from a local directory, the same path at
+`marketplaceSource.source` with `marketplaceSource.sourceType` of `local`. Both
+fields are resolved, `source` first; no other Codex field carries the path, and
+`sourceType` appears only inside `marketplaceSource`.
+
+A Claude entry carries the checkout at top-level `path` when its `source` is
+exactly the `directory` token; the token is a fixed literal, so a source
+differing in case is a different source and resolves nothing.
+
 Tested with:
-- Claude marketplace JSON using a Directory source -> prints path.
-- Codex marketplace JSON using a local marketplaceSource -> prints path.
-- Malformed JSON -> returns a clear invalid-JSON error.
-- Missing local marketplace -> returns a clear target-resolution error.
+- The complete per-runtime field domain, over the registered source, the
+  materialized root, and the source type each present, empty, or absent ->
+  resolves the path the rule above names, or names none as available. An
+  empty value falls through wherever an absent one would.
+- A Claude source differing from the `directory` token in case -> resolves
+  nothing, so the exact-match rule is exercised rather than assumed.
+- Every one of those cases repeated carrying the other runtime's fields as
+  decoys -> the resolved path is unchanged, so a resolver reading a field
+  outside its own runtime's set fails the case.
+- Two entries sharing the name -> resolves the first with a path.
+- An omitted --name -> resolves the default marketplace.
+- Generated JSON naming no matching marketplace -> target-resolution error.
+- Generated text that is not a JSON document -> invalid-JSON error.
 - No temporary files are created.
 """
 
@@ -29,8 +48,14 @@ CLAUDE_DIRECTORY_SOURCE: Final = "directory"
 CODEX_LOCAL_SOURCE_TYPE: Final = "local"
 RUNTIME_CLAUDE: Final = "claude"
 RUNTIME_CODEX: Final = "codex"
+NO_LOCAL_MARKETPLACES: Final = "none"
 EXIT_INVALID_JSON: Final = 2
 EXIT_MARKETPLACE_NOT_FOUND: Final = 3
+INVALID_JSON_MESSAGE: Final = "invalid marketplace JSON: {error}"
+NOT_FOUND_MESSAGE: Final = (
+    "marketplace {name!r} is not registered as a local {runtime} marketplace; "
+    "available local marketplaces: {available}"
+)
 
 
 def _entries(payload: Any) -> Iterable[dict[str, Any]]:
@@ -49,7 +74,7 @@ def _entries(payload: Any) -> Iterable[dict[str, Any]]:
 
 
 def _claude_path(entry: dict[str, Any]) -> str:
-    if str(entry.get(SOURCE_FIELD, "")).lower() == CLAUDE_DIRECTORY_SOURCE:
+    if entry.get(SOURCE_FIELD) == CLAUDE_DIRECTORY_SOURCE:
         path = entry.get(PATH_FIELD)
         if isinstance(path, str):
             return path
@@ -59,13 +84,11 @@ def _claude_path(entry: dict[str, Any]) -> str:
 def _codex_path(entry: dict[str, Any]) -> str:
     source = entry.get(MARKETPLACE_SOURCE_FIELD, {})
     source = source if isinstance(source, dict) else {}
-    source_type = source.get(SOURCE_TYPE_FIELD) or entry.get(SOURCE_TYPE_FIELD)
-    if source_type != CODEX_LOCAL_SOURCE_TYPE:
+    if source.get(SOURCE_TYPE_FIELD) != CODEX_LOCAL_SOURCE_TYPE:
         return ""
 
     for key_owner, key in (
         (source, SOURCE_FIELD),
-        (entry, PATH_FIELD),
         (entry, ROOT_FIELD),
     ):
         value = key_owner.get(key)
@@ -95,7 +118,7 @@ def _available_local_marketplaces(entries: list[dict[str, Any]], runtime: str) -
         for entry in entries
         if isinstance(entry.get(NAME_FIELD), str) and path_for(entry)
     )
-    return ", ".join(names) if names else "none"
+    return ", ".join(names) if names else NO_LOCAL_MARKETPLACES
 
 
 def main() -> int:
@@ -111,16 +134,18 @@ def main() -> int:
     try:
         payload = json.load(sys.stdin)
     except json.JSONDecodeError as exc:
-        print(f"invalid marketplace JSON: {exc}", file=sys.stderr)
+        print(INVALID_JSON_MESSAGE.format(error=exc), file=sys.stderr)
         return EXIT_INVALID_JSON
 
     entries = list(_entries(payload))
     path = _resolve(entries, args.runtime, args.name)
     if not path:
-        available = _available_local_marketplaces(entries, args.runtime)
         print(
-            f"marketplace {args.name!r} is not registered as a local "
-            f"{args.runtime} marketplace; available local marketplaces: {available}",
+            NOT_FOUND_MESSAGE.format(
+                name=args.name,
+                runtime=args.runtime,
+                available=_available_local_marketplaces(entries, args.runtime),
+            ),
             file=sys.stderr,
         )
         return EXIT_MARKETPLACE_NOT_FOUND

@@ -3,18 +3,18 @@ name: issue
 description: >-
   ALWAYS invoke this skill when filing a follow-up into the owning repository's session queue — including the invoking repository, the spec-tree plugin repository, the spx CLI repository, or another spec-tree dependency. NEVER edit installed dependency source or run the current work through full handoff closure merely to record a needed follow-up.
 argument-hint: "[target-dir-or-dependency]"
-allowed-tools: Read, Grep, Glob, Bash(printenv CLAUDE_CODE_SESSION_ID), Bash(spx -C:* diagnose*), Bash(spx -C:* session handoff*), Bash(spx -C:* session list*), Bash(spx -C:* session show*), Bash(spx session show:*), Bash(git status:*), Bash(git rev-parse --show-toplevel), Bash(git rev-parse --path-format=absolute --git-common-dir), Bash(git remote get-url origin), Bash(git -C:* branch --show-current), Bash(git -C:* config --get core.bare), Bash(git -C:* worktree list --porcelain), Bash(git -C:* symbolic-ref --short refs/remotes/origin/HEAD), Bash(git -C:* rev-parse --path-format=absolute --git-common-dir), Bash(git -C:* rev-parse --show-toplevel), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(git -C:* remote get-url origin), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash(printf:*), Bash(printenv CLAUDE_CODE_SESSION_ID), Bash(spx -C:* diagnose*), Bash(spx -C:* session handoff*), Bash(spx -C:* session list*), Bash(spx -C:* session show*), Bash(spx session show:*), Bash(git status:*), Bash(git rev-parse --show-toplevel), Bash(git rev-parse --path-format=absolute --git-common-dir), Bash(git remote get-url origin), Bash(git -C:* branch --show-current), Bash(git -C:* config --get core.bare), Bash(git -C:* worktree list --porcelain), Bash(git -C:* symbolic-ref --short refs/remotes/origin/HEAD), Bash(git -C:* rev-parse --path-format=absolute --git-common-dir), Bash(git -C:* rev-parse --show-toplevel), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(git -C:* remote get-url origin), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
 ---
 
 <objective>
-A minimal follow-up filed in the owning spec-tree repository's active session queue — capturing Claude's observation and naming possible overlaps from queue headers.
+A minimal follow-up carrying Claude's observation, filed in the owning spec-tree repository's active session queue, reported beside the possible overlaps its queue headers name.
 
 </objective>
 
-<when_to_invoke>
-Editing a spec-tree component's installed source directly to record a needed change rewrites shared infrastructure for every consumer session that uses it, with no review. The `/issue` skill files the observation in the owning repository's session queue instead, where that repository's workflow triages and acts on it. The owning repository may be the invoking repository; recording a proportional follow-up never requires closing the current work.
+<context>
+Editing a spec-tree component's installed source directly to record a needed change rewrites shared infrastructure for every consumer session that uses it, with no review. Filing the observation in the owning repository's session queue leaves it where that repository's workflow triages and acts on it. The owning repository may be the invoking repository; recording a proportional follow-up never requires closing the current work.
 
-</when_to_invoke>
+</context>
 
 <captured_fields>
 Capture Claude's OBSERVATION only — never the dependency's internal taxonomy. Claude reports what it saw; the dependency workflow classifies it against its spec tree.
@@ -33,7 +33,7 @@ NEVER assign the dependency's node addresses, decision indices, or assertion typ
 
 <dependency_followup_body>
 
-Dependency follow-ups use a minimal body contract because Claude assigns none of the target dependency's node taxonomy. Include each section exactly once, in this order:
+Dependency follow-ups use a minimal body contract because Claude assigns none of the target dependency's node taxonomy. Include each section exactly once, in this order. Step 6 spells this line sequence twice, once per stdin form, so a change to the section order or count updates both blocks in the same edit.
 
 ```text
 # <short title>
@@ -70,7 +70,7 @@ Resolve the target repository's checkout directory `<target-dir>` — the input 
 - **The spec-tree plugin (marketplace):** the registered Directory source. Resolve it from the marketplace registration:
 
   ```bash
-  claude plugin marketplace list --json | python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py" --runtime claude --name outcomeeng
+  claude plugin marketplace list --json | python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py" --runtime claude --name=outcomeeng
   ```
 
 - **The `spx` CLI, or another spec-tree dependency:** the dependency's own checkout. Accept the path from the user or the invoking repository's configuration.
@@ -102,9 +102,33 @@ Resolve a queue-safe `<queue-host>` before writing the session. Classify the lay
 - `core.bare` is `true` — a bare-repository pool: run `spx -C <target-dir> diagnose --format json`, read the sole `worktree-pool` record, and require `verdict=compliant` and a non-empty absolute `readings.mainCheckoutPath`; `<queue-host>` is that path. Require that `git -C <queue-host> rev-parse --path-format=absolute --git-common-dir` equals the common directory resolved in Step 1. Do not switch, detach, commit, or otherwise move the invoking or target worktree.
 - `core.bare` is `false` with more than one `worktree` line, a `core.bare` value outside `true`/`false`, a non-compliant or missing `worktree-pool` record, or a main-checkout path whose common directory differs: the topology cannot produce a queue-safe checkout. Stop with the exact command output. Never reformulate the write against the active feature worktree.
 
-Create exactly one fresh `todo` follow-up for every authorized invocation. Before the write, run `spx -C <queue-host> session list --json` once and read only the header fields it returns for `todo` and `doing` sessions — `id`, `status`, `goal`, `next_step`. Collect as `<overlap-ids>` the full ids whose `goal` or `next_step` names an affected path or skill from `<captured_fields>`. Never run `spx session show` on a listed session, never compare bodies, never probe origin for a stored branch, and never reuse or suppress the write because an overlap exists; queue consumers reconcile overlapping observations at pickup. The report names `<overlap-ids>` so the reader sees them beside the new record.
+A compliant pool record and the `<queue-host>` it yields:
+
+```json
+{
+  "name": "worktree-pool",
+  "verdict": "compliant",
+  "readings": {
+    "bare": "true",
+    "mainCheckoutPath": "/Users/example/Code/acme/widgets/widgets",
+    "defaultBranch": "main",
+    "mainCheckoutBranch": "main",
+    "mainCheckoutBranchRead": "true"
+  }
+}
+```
+
+`<queue-host>` is `/Users/example/Code/acme/widgets/widgets`, whatever branch the invoking feature worktree carries. Every `readings` value is a JSON string, `bare` included; compare them as strings.
 
 </same_repository_filing>
+
+<overlap_derivation>
+
+This rule governs every target, same-repository or external. The step that owns the `<queue-host>` listing differs by path; what it derives does not.
+
+Create exactly one fresh `todo` follow-up for every authorized invocation. Read only the header fields the `<queue-host>` listing returns for `todo` and `doing` sessions — `id`, `status`, `goal`, `next_step`. Collect as `<overlap-ids>` the full ids whose `goal` or `next_step` names an affected path or skill from `<captured_fields>`. Never run `spx session show` on a listed session, never compare bodies, never probe origin for a stored branch, and never reuse or suppress the write because an overlap exists; queue consumers reconcile overlapping observations at pickup. The report names `<overlap-ids>` so the reader sees them beside the new record.
+
+</overlap_derivation>
 
 <workflow>
 
@@ -122,7 +146,7 @@ Create exactly one fresh `todo` follow-up for every authorized invocation. Befor
 
 **Step 4 — Compose the body.** Write the observation from `<captured_fields>` using `<dependency_followup_body>` exactly. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
-**Step 5 — Snapshot state and list overlaps.** Capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository as the before-state for the tracked-worktree mutation check. When `same_repository=true`, run the header-only overlap listing in `<same_repository_filing>` and record `<overlap-ids>`, possibly empty.
+**Step 5 — Snapshot state and list overlaps.** Capture the exact output of `git status --porcelain=v1 --untracked-files=all` from the invoking repository as the before-state for the tracked-worktree mutation check. When `same_repository=true`, run `spx -C <queue-host> session list --json` once, record its `todo` and `doing` ids as `<baseline-ids>`, and derive `<overlap-ids>` from that same listing per `<overlap_derivation>`, possibly empty. When `same_repository=false`, defer the listing to Step 6 and take both values there, immediately after confirmation and before the first attempt — an unconfirmed repository's queue is not read at all until the operator approves contact with it. Either way, one header listing per invocation yields both values before the write, and Step 6's fallback compares against `<baseline-ids>` to prove a failed first attempt wrote nothing.
 
 **Step 6 — GATE: Confirm an external target, then file.** When `same_repository=false`, the handoff writes into a different repository queue. Resolving or naming a path is not authorization to mutate that queue, so obtain confirmation through `AskUserQuestion` before the first mutating command, presenting:
 
@@ -131,9 +155,27 @@ Create exactly one fresh `todo` follow-up for every authorized invocation. Befor
 - the resolved `git_ref` and the follow-up's `goal`;
 - two options — file the follow-up into that repository, or stop for inspection.
 
+A rendering of those four values:
+
+```text
+Target:  /Users/example/Code/acme/widgets/widgets
+Origin:  github.com/acme/widgets
+Ref:     main
+Goal:    A parser that reports the column of an unterminated string
+Options: file the follow-up into that repository / stop for inspection
+```
+
 The explicit `/issue` invocation authorizes one fresh same-repository queue write, so `same_repository=true` does not add a second confirmation. Every `same_repository=false` target requires this confirmation, including a separate clone with the same normalized origin identity and a checkout path named directly in `$ARGUMENTS`. STOP on anything but explicit approval, leaving both repositories unchanged.
 
-Then resolve the current agent session identity verbatim from the variable the agent publishes with `printenv CLAUDE_CODE_SESSION_ID` and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin:
+Once a `same_repository=false` target is approved, run `spx -C <queue-host> session list --json` before the first attempt. Record its `todo` and `doing` ids as `<baseline-ids>`, and derive `<overlap-ids>` from the same listing per `<overlap_derivation>`. Both values are defined on every path by the time Step 6 attempts the write.
+
+Then resolve the current agent session identity verbatim from the variable Claude Code publishes, `printenv CLAUDE_CODE_SESSION_ID`, and STOP when it is empty. Run `spx -C <queue-host> session handoff`, passing the JSON header line then the body on stdin. Both forms below send the same bytes and enumerate the same `<dependency_followup_body>` lines in the same order; an edit to that section's shape updates both. Never assemble the body through a temporary file, a helper file, command substitution, or post-hoc text substitution.
+
+Select the form by harness before the first attempt. An interactive Claude Code or Codex session uses the quoted heredoc. A programmatic Claude Code or Codex run, or a hosted runner such as GitHub Actions — any harness whose parser requires one physical command line — uses the `printf` form directly, never attempting the heredoc first.
+
+A second attempt is governed whichever form ran first. A heredoc the shell cannot terminate emits a warning rather than a blocking parse error, so `spx` still runs and may already have created the record; a failed attempt is unknown, not failed. Before any second attempt, re-run `spx -C <queue-host> session list --json` and compare the `todo` and `doing` ids against the `<baseline-ids>` captured above. A new id may be the first attempt's record — take that id as `<HANDOFF_ID>` and verify it through Step 7 before reporting it, and never write again whatever that verification returns. When that listing itself fails, stop with the exact command, exit code, and stderr; an unobtained id set proves nothing and never authorizes a write. Only an unchanged id set authorizes a second attempt.
+
+The interactive form:
 
 ```bash
 spx -C <queue-host> session handoff <<'EOF'
@@ -162,6 +204,14 @@ spx -C <queue-host> session handoff <<'EOF'
 EOF
 ```
 
+The programmatic form, `printf '%s\n'` with one argument per output line:
+
+```bash
+printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","git_ref":"<target-branch-on-origin>","specs":[],"files":[]}' '# <short title>' '' '<observation>' '...' '</observation>' '' '<uncertainty>' '...' '</uncertainty>' '' '<checked_facts>' '...' '</checked_facts>' '' '<affected_paths>' '...' '</affected_paths>' '' '<next_workflow_context>' '...' '</next_workflow_context>' | spx -C <queue-host> session handoff
+```
+
+Keep that pipeline on one physical shell line. A literal apostrophe inside a single-quoted argument is written `'"'"'`.
+
 `-C <queue-host>` runs the handoff against the owning repository's queue without moving the active checkout. For a different repository, the invoking session queue stays untouched. For the invoking repository, the only permitted queue delta is this one new `todo` follow-up.
 
 **Step 7 — Verify the created follow-up.** Parse `<HANDOFF_ID>` and `<SESSION_FILE>` from the handoff output. Read that returned record once with `spx -C <queue-host> session show --json <HANDOFF_ID>`. Require `status=todo`; the Step 3 `goal`, `next_step`, `priority`, `git_ref`, empty `specs`, and empty `files`; a non-empty `agent_session_id` equal to the runtime identity resolved in Step 6; and a non-empty `created_at`. When `same_repository=false`, run `spx session show --json <HANDOFF_ID>` from the invoking repository and require the id to be absent there. Re-run `git status --porcelain=v1 --untracked-files=all` and require it to match the Step 5 snapshot byte-for-byte. A missing record, field mismatch, external-target copy in the invoking queue, or git-state difference blocks success and is reported with the observed values. Do not read any other session.
@@ -178,6 +228,7 @@ EOF
 - NEVER guess the target checkout directory — resolve it deterministically or ask.
 - NEVER guess `git_ref` — use a target branch that exists on origin or ask.
 - NEVER read the body of, compare, archive, release, delete, edit, replace, move, or reuse an existing active session while filing the follow-up — the header listing is the only read of other sessions, and it only names possible overlaps.
+- NEVER make a second handoff attempt unless a fresh listing proves the queue's `todo` and `doing` ids still equal `<baseline-ids>` — a new id, or a listing that fails, forbids the second write.
 
 </constraints>
 
@@ -206,6 +257,14 @@ What happened: Marketplace resolution returned no local source, so Claude asked 
 Why it failed: The invoking checkout already identified itself as the target; the question pushed a deterministic check onto the operator.
 
 How to avoid: Read `<root>/.claude-plugin/marketplace.json` before any marketplace lookup and take the invoking repository as the target when it names the `outcomeeng` marketplace with the `spec-tree` plugin.
+
+**Failure 4: Claude retried the write after a heredoc it read as failed.**
+
+What happened: The first attempt ended in an error, so Claude switched forms and wrote again.
+
+Why it failed: A heredoc the shell cannot terminate emits a warning, not a blocking parse error. The shell still dispatched `spx session handoff` with whatever stdin it collected, so the error Claude read came from a command that had already run and may have created the record. The retry left two records where the queue owner expects one, in a repository the invoking session does not watch.
+
+How to avoid: Treat a failed attempt as unknown rather than failed. Re-list the queue, compare against `<baseline-ids>`, and write again only on an unchanged id set. A new id is the first attempt's record — verify and report it. A listing that fails proves nothing and forbids the write. The rule is unconditional: a concurrent session's unrelated new id also forbids the second write, and that cost is smaller than a duplicate record.
 
 </failure_modes>
 
