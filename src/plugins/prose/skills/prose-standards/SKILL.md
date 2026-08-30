@@ -186,7 +186,7 @@ Avoid: "The problem -- and this is the part nobody talks about -- is systemic.",
 
 Avoid: "**Security**: Environment-based configuration with...", "**Performance**: Lazy loading of expensive resources..."
 
-**Unicode decoration**: Use plain text equivalents (->), straight quotes, and standard punctuation. Never use unicode arrows, curly quotes, or any other character outside plain keyboard input.
+**Unicode decoration**: Use plain text equivalents (->), straight quotes, standard punctuation, and the em dash as the canon permits. Never use unicode arrows, curly quotes, or any other decorative character.
 
 </formatting>
 
