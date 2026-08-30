@@ -66,7 +66,7 @@ Apply a rule pack at every occurrence of its feature in the text, inside every k
 
 Avoid: "quietly orchestrating workflows, decisions, and interactions", "the one that quietly suffocates everything else", "a quiet intelligence behind it"
 
-**Authenticity adverbs** ("genuinely", "truly", "actually"): Never use "genuinely", "truly", "actually", "really", or "essentially" to assert that something is real or authentic. Cut the adverb in every case, and show the quality in the rest of the sentence instead. Treat the adjective "genuine" the same. Use "real" or "specific" as the qualifier, or drop the qualifier.
+**Authenticity adverbs** ("genuinely", "truly", "actually"): Show the quality in the rest of the sentence. Never use "genuinely", "truly", "actually", "really", or "essentially" to assert that something is real or authentic. Treat the adjective "genuine" the same. Use "real" or "specific" as the qualifier, or drop the qualifier.
 
 Avoid: "a genuinely transformative experience", "This is a genuine concern", "users who truly need this feature", "what actually matters here", "This essentially means that..."
 
@@ -86,7 +86,7 @@ Avoid: "The building serves as a reminder of the city's heritage.", "The station
 
 <sentence_structure>
 
-**Negative parallelism**: Never frame points as "It's not X -- it's Y." to manufacture profundity. Use one such construction per piece at most, and treat a second as an insult to the reader.
+**Negative parallelism**: State the point plainly. Never frame it as "It's not X -- it's Y." to manufacture profundity. Use one such construction per piece at most, and treat a second as an insult to the reader.
 
 Avoid: "It's not bold. It's backwards.", "Feeding isn't nutrition. It's dialysis.", "Half the bugs you chase aren't in your code. They're in your head."
 

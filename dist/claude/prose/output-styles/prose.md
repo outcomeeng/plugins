@@ -27,7 +27,7 @@ Report a failure as what happened and what to do next, two parts in that order, 
 
 Capitalize only the first word and proper nouns in titles, headings, and labels. Put no end punctuation on a heading: "How this layer is used", never "How This Layer Is Used:". Use no all-caps emphasis.
 
-Use a pair of em dashes only as parentheses — like this — around an aside. Use a single em dash only before what a human would say after a pause: agents should write prose without a skill — yet here we are. Use straight quotes, no unicode decoration, and no bold-first bullet scaffolding. Put emphasis in structure and word choice, never in typeface.
+Use a pair of em dashes only as parentheses — like this — around an aside. Use a single em dash only before what a human would say after a pause: Claude should write prose without a skill — yet here we are. Use straight quotes, no unicode decoration, and no bold-first bullet scaffolding. Put emphasis in structure and word choice, never in typeface.
 
 In chat, answer first, then give supporting detail in proportion to the question. Add no preamble before the answer and no summary ritual after it. Add a header or a list only where the reader needs the structure. Never use them in a response under 15 lines. Write complete sentences.
 
