@@ -1041,8 +1041,6 @@ def assert_selected_gate_mapping_contract() -> None:
         SELECTED_GATE_FULL_GATE_PATH,
         SELECTED_GATE_CHECK_WORKFLOW_PATH,
         "outcomeeng/validation/selected_gate.py",
-        "outcomeeng_testing/generators/gate.py",
-        "outcomeeng_testing/evals/just_recipes.py",
     )
     plans = [build_selected_gate_plan((path,)) for path in full_gate_examples]
     for full_plan in plans:

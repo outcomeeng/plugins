@@ -33,6 +33,12 @@ from outcomeeng.validation._steps import (
     TEST_RECIPE,
     VALIDATION_STEPS,
 )
+from outcomeeng.validation.infrastructure_index import (
+    TEST_INFRASTRUCTURE_PACKAGE,
+    InfrastructureIndex,
+    InfrastructureReach,
+    index_test_infrastructure,
+)
 
 RECIPE_CHECK_FULL: Final = "check-full"
 DEFAULT_BASE_REF: Final = "origin/main"
@@ -60,6 +66,14 @@ SKILL_REASON: Final = "plugin skill, shared fragment, or generated runtime chang
 INSTRUCTION_BLOCK_REASON: Final = "managed instruction-block source changed"
 EVAL_REASON: Final = "eval definition, producer, or trigger surface changed"
 TEST_REASON: Final = "changed python assertion tests"
+REACHED_TESTS_REASON: Final = "tests reaching changed test infrastructure"
+SHARED_TEST_INFRASTRUCTURE_REASON: Final = "shared test infrastructure changed"
+UNTRACEABLE_TEST_INFRASTRUCTURE_REASON: Final = (
+    "test-infrastructure artifact reached by path changed"
+)
+# One pytest step can carry paths selected for different reasons; its label
+# names every reason that contributed a path.
+REASON_SEPARATOR: Final = "; "
 ROOT_README_PATH: Final = "README.md"
 SPX_CONFIG_PATH: Final = "spx.config.yaml"
 # Exact-match selection targets, named so a consumer imports the value rather
@@ -93,8 +107,10 @@ FULL_GATE_PATTERNS: Final = (
     "outcomeeng/distribution/**",
     "outcomeeng/validation/**",
     "outcomeeng_evals/**",
-    "outcomeeng_testing/**",
 )
+# A test-infrastructure change reaches only the tests that import it, so its
+# gate steps come from the static import index rather than a path pattern.
+TEST_INFRASTRUCTURE_PATTERNS: Final = (f"{TEST_INFRASTRUCTURE_PACKAGE}/**",)
 PYTHON_FORMAT_LINT_PATTERNS: Final = (
     "outcomeeng/**",
     "outcomeeng_testing/**",
@@ -246,6 +262,16 @@ class BaseRefDiscoveryError(RuntimeError):
     """The selected gate cannot resolve the remote default branch."""
 
 
+class InfrastructureIndexRequired(ValueError):
+    """A test-infrastructure path changed but no reach index was supplied."""
+
+    def __init__(self, paths: Sequence[str]) -> None:
+        self.paths: tuple[str, ...] = tuple(paths)
+        super().__init__(
+            "test-infrastructure paths need a reach index: " + ", ".join(self.paths)
+        )
+
+
 class ChangesetScopeModule(Protocol):
     """Typed subset of the canonical changeset-scope helper."""
 
@@ -330,23 +356,39 @@ def build_selected_gate_plan(
     changed_paths: tuple[str, ...],
     *,
     deleted_paths: tuple[str, ...] = (),
+    test_infrastructure: InfrastructureIndex | None = None,
 ) -> SelectedGatePlan:
-    """Build the selected local gate plan for changed paths."""
+    """Build the selected local gate plan for changed paths.
+
+    ``test_infrastructure`` is required whenever a changed path lies under
+    the test-infrastructure package; its reach decides between the tests that
+    import the changed module and the full surface.
+    """
 
     normalized = tuple(sorted(set(changed_paths)))
     if not normalized:
         return SelectedGatePlan(changed_paths=(), selected_steps=(), full_gate=False)
 
     if _matches_any(normalized, FULL_GATE_PATTERNS):
-        return SelectedGatePlan(
-            changed_paths=normalized,
-            selected_steps=tuple(
-                SelectedGateStep(step=step, reason=FULL_GATE_REASON)
-                for recipe in CHECK_RECIPES
-                for step in recipe.steps
-            ),
-            full_gate=True,
-        )
+        return _full_surface_plan(normalized, reason=FULL_GATE_REASON)
+
+    infrastructure_paths = tuple(
+        path for path in normalized if _is_test_infrastructure_path(path)
+    )
+    reached_tests: set[str] = set()
+    if infrastructure_paths:
+        if test_infrastructure is None:
+            raise InfrastructureIndexRequired(infrastructure_paths)
+        for report in (test_infrastructure.reach(p) for p in infrastructure_paths):
+            if report.kind is InfrastructureReach.SHARED:
+                return _full_surface_plan(
+                    normalized, reason=SHARED_TEST_INFRASTRUCTURE_REASON
+                )
+            if report.kind is InfrastructureReach.UNTRACEABLE:
+                return _full_surface_plan(
+                    normalized, reason=UNTRACEABLE_TEST_INFRASTRUCTURE_REASON
+                )
+            reached_tests.update(report.tests)
 
     selected_argvs: set[tuple[str, ...]] = set()
     reasons: dict[tuple[str, ...], str] = {}
@@ -400,24 +442,44 @@ def build_selected_gate_plan(
         if step.argv in selected_argvs
     ]
     deleted_path_set = set(deleted_paths)
-    test_paths = tuple(
+    changed_test_paths = tuple(
         path
         for path in normalized
         if _is_python_assertion_test(path) and path not in deleted_path_set
     )
+    reached_only = reached_tests - set(changed_test_paths) - deleted_path_set
+    test_paths = tuple(sorted(set(changed_test_paths) | reached_only))
     if test_paths:
+        test_reasons = (
+            *((TEST_REASON,) if changed_test_paths else ()),
+            *((REACHED_TESTS_REASON,) if reached_only else ()),
+        )
         selected_steps.append(
             SelectedGateStep(
                 step=Step(
                     label=TEST_RECIPE.steps[0].label, argv=(*PYTEST_ARGV, *test_paths)
                 ),
-                reason=TEST_REASON,
+                reason=REASON_SEPARATOR.join(test_reasons),
             )
         )
     return SelectedGatePlan(
         changed_paths=normalized,
         selected_steps=tuple(selected_steps),
         full_gate=False,
+    )
+
+
+def _full_surface_plan(
+    changed_paths: tuple[str, ...], *, reason: str
+) -> SelectedGatePlan:
+    return SelectedGatePlan(
+        changed_paths=changed_paths,
+        selected_steps=tuple(
+            SelectedGateStep(step=step, reason=reason)
+            for recipe in CHECK_RECIPES
+            for step in recipe.steps
+        ),
+        full_gate=True,
     )
 
 
@@ -446,11 +508,17 @@ def run_selected_check(
         sink.write(f"{GIT_DISCOVERY_ERROR_PREFIX}: {exc}\n")
         sink.flush()
         return GIT_DISCOVERY_FAILURE_EXIT_CODE
+    changed_paths = tuple(entry.path for entry in changed_path_entries)
     plan = build_selected_gate_plan(
-        tuple(entry.path for entry in changed_path_entries),
+        changed_paths,
         deleted_paths=deleted_paths_after_status_resolution(
             changed_path_entries,
             repo=repo,
+        ),
+        test_infrastructure=(
+            index_test_infrastructure(repo)
+            if any(_is_test_infrastructure_path(path) for path in changed_paths)
+            else None
         ),
     )
     _write_plan(sink, plan)
@@ -525,6 +593,10 @@ def _matches_any(paths: tuple[str, ...], patterns: tuple[str, ...]) -> bool:
 
 def _is_python_assertion_test(path: str) -> bool:
     return _matches_any((path,), PYTHON_ASSERTION_TEST_PATTERNS)
+
+
+def _is_test_infrastructure_path(path: str) -> bool:
+    return _matches_any((path,), TEST_INFRASTRUCTURE_PATTERNS)
 
 
 def _changed_path_entries_from_output(
