@@ -51,7 +51,7 @@ Marker recognition anchors to a standalone fence line — a router or `shared` m
 
 ## Verification
 
-The behavioral rules of the three content kinds — router marker format, full router regeneration, shared-region byte-identity and git-recency reconciliation, independent-content preservation, bootstrap wrapping, the five initial situations, legacy-block and symlink migration, obsolete `spx/` removal, and unresolved-delimiter refusal — are declared and tested as `[test]` assertions on the sibling spec `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md`. The rules below are the architectural constraints no deterministic test falsifies.
+The behavioral rules of the three content kinds — router marker format, full router regeneration, shared-region byte-identity and git-recency reconciliation, independent-content preservation, bootstrap wrapping, the five initial situations, legacy-block and symlink migration, obsolete `spx/` removal, and unresolved-delimiter refusal — are declared and tested as `[test]` assertions on the sibling spec `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md`. The `### Audit` rules below are the architectural constraints no deterministic test falsifies.
 
 ### Testing
 
