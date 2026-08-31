@@ -77,7 +77,6 @@ DISCOVERY_SELECTOR_CONTRACTS = (
 
 class GraphQLOption(StrEnum):
     HOSTNAME = "--hostname"
-    SILENT = "--silent"
     STRING_FIELD = "-f"
     TYPED_FIELD = "-F"
 
@@ -95,6 +94,9 @@ class GraphQLField(StrEnum):
 
 class GitHubResponseField(StrEnum):
     DATA = "data"
+    RESOLVE_REVIEW_THREAD = "resolveReviewThread"
+    THREAD = "thread"
+    IS_RESOLVED = "isResolved"
     REPOSITORY = "repository"
     PULL_REQUEST = "pullRequest"
     REVIEW_THREADS = "reviewThreads"
@@ -152,6 +154,15 @@ class ResolverErrorMessage(StrEnum):
     NODE_COMMENTS = "GitHub response node.comments must be an object"
     THREAD_CURSOR = "GitHub response reviewThreads page is missing endCursor"
     THREAD_CURSOR_PROGRESS = "GitHub response reviewThreads page repeated endCursor"
+    RESOLVE_REVIEW_THREAD_PAYLOAD = (
+        "GitHub response resolveReviewThread must be an object"
+    )
+    RESOLVED_THREAD_PAYLOAD = (
+        "GitHub response resolveReviewThread.thread must be an object"
+    )
+    RESOLVED_THREAD_STATE = (
+        "GitHub response resolveReviewThread.thread.isResolved must be true"
+    )
 
 
 class ResolverExitCode(IntEnum):
@@ -212,6 +223,7 @@ NODE_ID_SUFFIX_CONTRACT = TextInputContract(
     maximum_length=251,
 )
 GRAPHQL_INT_MAX = 2**31 - 1
+MAX_REPOSITORY_SEGMENT_LENGTH = 255
 THREAD_ID_CONTRACT = PrefixedTextInputContract(
     prefix="PRRT_",
     suffix=NODE_ID_SUFFIX_CONTRACT,
@@ -222,7 +234,7 @@ REPOSITORY_CONTRACT = RepositoryInputContract(
     segment=TextInputContract(
         allowed_characters=string.ascii_letters + string.digits + "_.-",
         minimum_length=1,
-        maximum_length=None,
+        maximum_length=MAX_REPOSITORY_SEGMENT_LENGTH,
     ),
 )
 NUMBER_CONTRACT = DecimalInputContract(
@@ -416,14 +428,10 @@ def graphql_argv(
     query: str,
     fields: dict[str, str | int],
     host: str | None,
-    *,
-    silent: bool = False,
 ) -> list[str]:
     argv = list(GRAPHQL_COMMAND)
     if host is not None:
         argv.extend([GraphQLOption.HOSTNAME.value, host])
-    if silent:
-        argv.append(GraphQLOption.SILENT.value)
     argv.extend(
         [GraphQLOption.STRING_FIELD.value, f"{GraphQLField.QUERY.value}={query}"]
     )
@@ -679,6 +687,33 @@ def find_thread_id(
     raise ValueError(ResolverErrorMessage.COMMENT_NOT_FOUND.value)
 
 
+def resolve_thread(
+    thread_id: str,
+    host: str | None,
+    runner: CommandRunner,
+) -> None:
+    payload = run_graphql(
+        QUERY,
+        {GraphQLField.ID.value: thread_id},
+        host,
+        runner,
+    )
+    data = require_object(
+        payload.get(GitHubResponseField.DATA.value),
+        ResolverErrorMessage.DATA_PAYLOAD.value,
+    )
+    resolved = require_object(
+        data.get(GitHubResponseField.RESOLVE_REVIEW_THREAD.value),
+        ResolverErrorMessage.RESOLVE_REVIEW_THREAD_PAYLOAD.value,
+    )
+    thread = require_object(
+        resolved.get(GitHubResponseField.THREAD.value),
+        ResolverErrorMessage.RESOLVED_THREAD_PAYLOAD.value,
+    )
+    if thread.get(GitHubResponseField.IS_RESOLVED.value) is not True:
+        raise ValueError(ResolverErrorMessage.RESOLVED_THREAD_STATE.value)
+
+
 def main(
     argv: list[str] | None = None,
     runner: CommandRunner = default_command_runner,
@@ -698,20 +733,11 @@ def main(
             pr_number = validate_number(args.pr, "pr")
             comment_id = validate_comment_id(args.review_comment_id)
             thread_id = find_thread_id(owner, repo, pr_number, comment_id, host, runner)
+        resolve_thread(thread_id, host, runner)
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return ResolverExitCode.INVALID_INPUT
-    completed = runner(
-        graphql_argv(
-            QUERY,
-            {GraphQLField.ID.value: thread_id},
-            host,
-            silent=True,
-        ),
-        check=False,
-        text=True,
-    )
-    return completed.returncode
+    return ResolverExitCode.SUCCESS
 
 
 if __name__ == "__main__":
