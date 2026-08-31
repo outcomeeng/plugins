@@ -436,12 +436,11 @@ def _observe_recipe_run(
             summary_path=summary_path,
         )
         summary = read_summary(summary_path)
-    written = getattr(spawner, "written_outputs", [])
     return RecipeRunObservation(
         exit_code=exit_code,
         output=sink.getvalue(),
         spawn_calls=tuple(spawner.spawn_calls),
-        written_outputs=tuple(written),
+        written_outputs=tuple(spawner.written_outputs),
         retained_logs=tuple(
             path.read_text(encoding="utf-8") if path.exists() else None
             for path in spawner.output_paths
@@ -875,6 +874,7 @@ class SpawnFailingSpawner:
     message: str
     spawn_calls: list[tuple[str, ...]] = field(default_factory=list)
     output_paths: list[Path] = field(default_factory=list)
+    written_outputs: list[str] = field(default_factory=list)
 
     def spawn(self, argv: Sequence[str], output_path: Path) -> ProcessHandle:
         self.spawn_calls.append(tuple(argv))
