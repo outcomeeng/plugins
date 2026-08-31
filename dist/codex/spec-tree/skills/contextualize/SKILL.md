@@ -292,7 +292,7 @@ lower-index runtime enabler emits resolved paths and concrete counts:
 <SPEC_TREE_CONTEXT target="spx/{target-node}">
 
 Product: Example Compiler
-Target: spx/21-parser.enabler (enabler)
+Target: spx/{target-node} (enabler)
 Bootstrap: false
 
 Documents loaded:
