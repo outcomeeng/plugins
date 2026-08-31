@@ -739,11 +739,11 @@ def budget_regression(
     )
 
 
-def _committed_byte_size(path_str: str) -> int | None:
+def _committed_byte_size(path_str: str, *, repo_root: Path = REPO_ROOT) -> int | None:
     """Byte size of the file's last committed content, or None when uncommitted."""
     result = subprocess.run(
         ["git", "show", f"HEAD:{path_str}"],
-        cwd=REPO_ROOT,
+        cwd=repo_root,
         capture_output=True,
         check=False,
     )
@@ -754,6 +754,8 @@ def _committed_byte_size(path_str: str) -> int | None:
 
 def budget_findings(
     module: InstructionBlockModule | None = None,
+    *,
+    repo_root: Path = REPO_ROOT,
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """Per-file budget report lines and the paths whose fresh render is a regression."""
     instruction_module = module or load_instruction_block_module()
@@ -761,7 +763,7 @@ def budget_findings(
     lines: list[str] = []
     regressions: list[str] = []
     for path_str in root_instruction_paths(instruction_module):
-        path = REPO_ROOT / path_str
+        path = repo_root / path_str
         if not path.exists():
             continue
         measurement = instruction_module.measure_budget(
@@ -769,7 +771,9 @@ def budget_findings(
         )
         lines.append(instruction_module.budget_report_line(measurement))
         if budget_regression(
-            _committed_byte_size(path_str), measurement.byte_size, budget
+            _committed_byte_size(path_str, repo_root=repo_root),
+            measurement.byte_size,
+            budget,
         ):
             regressions.append(path_str)
     return tuple(lines), tuple(regressions)

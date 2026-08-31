@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 
 from outcomeeng.distribution import instruction_block as gate
@@ -59,6 +61,34 @@ def test_gate_run_fails_a_regression_and_reports_it(
     assert gate.BUDGET_REGRESSION_HEADER in captured.out
     assert regressed in captured.out
     assert gate.BUDGET_REGRESSION_REMEDIATION in captured.out
+
+
+def test_budget_findings_derive_a_regression_from_committed_git_state(
+    tmp_path: pathlib.Path,
+) -> None:
+    # The real committed-versus-rendered comparison: a root file committed at a fitting
+    # size regresses above the ceiling in the working tree, while a file committed
+    # already breaching only grows — the first is the violating case the gate fails,
+    # the second the pre-existing breach it reports. Sizes derive from the ceiling and
+    # the boundary law; the committed side comes from a real git repository.
+    budget = MODULE.PROJECT_DOC_BUDGET_BYTES
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.init_git_identity(repo)
+    regressed, preexisting = gate.root_instruction_paths()[:2]
+
+    (repo / regressed).write_text("x" * budget, encoding="utf-8")
+    (repo / preexisting).write_text("x" * (budget + 1), encoding="utf-8")
+    harness.git_commit_at(repo, 1, regressed, preexisting)
+    (repo / regressed).write_text("x" * (budget + 1), encoding="utf-8")
+    (repo / preexisting).write_text("x" * (budget + 2), encoding="utf-8")
+
+    lines, regressions = gate.budget_findings(repo_root=repo)
+
+    assert regressions == (regressed,)
+    assert len(lines) == len(gate.root_instruction_paths())
+    breach_state = str(MODULE.BudgetState.BREACH)
+    assert all(breach_state in line for line in lines)
 
 
 def test_gate_run_reports_a_preexisting_breach_without_failing(
