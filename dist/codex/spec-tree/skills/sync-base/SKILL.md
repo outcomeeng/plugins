@@ -22,7 +22,7 @@ python3 "${SKILL_DIR}/scripts/sync_base.py" "$repo" [--base "$base"] [--no-fetch
 
 It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. When an attached branch is behind, it rebases the branch onto the fetched base. When a clean detached HEAD is an ancestor of the fetched base, it advances the worktree with `git switch --detach origin/<base>`; a detached HEAD carrying commits absent from the base fails without moving. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). It prints a JSON result (`status`, `base_ref`, `remote_ref`, `branch`, `detail`, `preservation` on a clean outcome, and `conflict` on an active rebase conflict) and exits:
 
-| `status`          | exit | meaning                                                                                                                                              | how Claude acts                                                                                                                                            |
+| `status`          | exit | meaning                                                                                                                                              | required action                                                                                                                                            |
 | ----------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `already_current` | 0    | the branch is not behind the base                                                                                                                    | proceed                                                                                                                                                    |
 | `rebased`         | 0    | the branch was rebased onto `origin/<base>`                                                                                                          | proceed; use `<readiness_preservation>` to identify which verification and review evidence the base movement invalidated                                   |
@@ -30,7 +30,7 @@ It resolves the base ref and `origin/<base>` through the shared changeset-scope 
 | `dirty_tree`      | 4    | the branch is behind, but uncommitted changes to tracked files block the rebase; no rebase is attempted and the tree is left untouched               | classify ownership per `<dirty_tree_resolution>`; commit authorized changes to the right branch, leave operator-owned work untouched, and re-run           |
 | `git_failure`     | 1    | a diverged detached HEAD carrying its own commits, an unresolved base, or a failed fetch — a clean behind-base detached HEAD is advanced, not failed | report `detail`; do not rebase                                                                                                                             |
 
-A `dirty_tree` from changes Claude owns is resolved end to end by this workflow: `<dirty_tree_resolution>` checkpoints the work through `/commit-changes`, then reruns the deterministic synchronizer. Operator-owned work remains untouched unless the active instruction already authorizes committing it. The bundled synchronizer never commits or stashes; the surrounding skill composes checkpoint policy through `/commit-changes`.
+Resolve a `dirty_tree` from session-owned changes end to end: `<dirty_tree_resolution>` checkpoints the work through `/commit-changes`, then reruns the deterministic synchronizer. Leave operator-owned work untouched unless the active instruction already authorizes committing it. The bundled synchronizer never commits or stashes; the surrounding skill composes checkpoint policy through `/commit-changes`.
 
 Pass `--no-fetch` only when the remote-tracking ref is already current and a fetch would be redundant.
 
@@ -40,7 +40,7 @@ Pass `--no-fetch` only when the remote-tracking ref is already current and a fet
 
 A `dirty_tree` outcome means uncommitted tracked changes block the rebase, not that a content conflict exists. Stash remains forbidden. Inspect the exact tracked paths and establish who owns the changes before mutating them:
 
-1. **Session-owned changes.** Classify changes Claude made during the active objective, then clear the precondition within the same invocation:
+1. **Session-owned changes.** Classify changes made during the active objective, then clear the precondition within the same invocation:
    - **Related to the objective** → when the worktree is detached or sitting on the default branch, create a neutral `work/<objective-slug>` branch from the current commit; invoke `/commit-changes` immediately on that branch, regardless of whether verification is passing, failing, or not run.
    - **An unrelated coordination note** — a `PLAN.md` / `ISSUES.md` recording future work that is not part of the objective → commit it onto its own local branch, and record in the imperfection ledger that the branch is pending `/merge`. At session end `/merge` routes a coordination-note-only changeset to the default branch on origin through its direct-push transport, exactly as the merge guidance prescribes for such a changeset.
 2. **Operator-owned work-in-progress.** Leave every file and the index untouched. When the current instruction already authorizes committing those paths, invoke `/commit-changes` on their owning branch and continue. Otherwise use the structured-question surface with two choices: commit the files through `/commit-changes` on their owning branch (recommended), or pause base sync for inspection. Never describe this authority boundary as a rebase conflict.
@@ -123,9 +123,9 @@ The proof scopes pre-push local work only. It never satisfies a merge gate: curr
 - Rebase, never reset — a behind-base branch is brought current only by replaying its own commits onto `origin/<base>`.
 - No operator decision for a clean rebase — the only operator touch-point is a product-intent conflict that deterministic evidence cannot resolve, or a hard git failure.
 - A dirty tree is a precondition, never a conflict — uncommitted tracked changes yield `dirty_tree`, cleared by committing, never by stashing and never surfaced as a conflict.
-- A dirty tree from Claude's own session changes is Claude's to clear per `<dirty_tree_resolution>` — committed to the right branch and re-synced, never stashed and never escalated to the operator.
+- Clear a dirty tree from session-owned changes per `<dirty_tree_resolution>` — commit it to the right branch and re-sync, never stash it or escalate it to the operator.
 - The bundled synchronizer fetches and advances the current checkout through exactly one topology-appropriate operation: rebase for an attached branch, or `git switch --detach` for an ancestor detached HEAD. It never commits or stashes the working tree; the skill may create an owning branch and invoke `/commit-changes` before rerunning it.
-- A conflicted rebase remains active at operator handoff — Claude offers `git rebase --abort` as an option and does not run it automatically.
+- A conflicted rebase remains active at operator handoff — offer `git rebase --abort` as an option and do not run it automatically.
 - One base derivation — the base ref and `origin/<base>` come from the changeset-scope primitives, never re-derived here.
 
 </invariants>
@@ -134,8 +134,8 @@ The proof scopes pre-push local work only. It never satisfies a merge gate: curr
 
 A base-sync stop reaches the operator for a product-intent conflict the rebase cannot resolve autonomously or a hard git failure that leaves no autonomous path (a diverged detached HEAD carrying its own commits, an unresolved base, a failed fetch). Resolve operator-owned work-in-progress through the authority branch in `<dirty_tree_resolution>` and never surface it as a base-sync conflict. None of the following is a valid reason to ask the operator:
 
-- A dirty tree from a file Claude created this session — commit it per `<dirty_tree_resolution>` and re-run.
-- A coordination note (`PLAN.md` / `ISSUES.md`) Claude wrote that now makes the tree dirty — commit it to its own branch, record the pending `/merge` in the imperfection ledger, and re-run.
+- A dirty tree from a file created during this session — commit it per `<dirty_tree_resolution>` and re-run.
+- A coordination note (`PLAN.md` / `ISSUES.md`) written during this session that now makes the tree dirty — commit it to its own branch, record the pending `/merge` in the imperfection ledger, and re-run.
 - A conflict in a coordination note where one side is stale or superseded — reconcile the note to still-true facts and continue the rebase.
 - A conflict in a generated artifact whose source of truth can be resolved — resolve the source, return the exact project-declared regeneration command, and continue after re-entry with regenerated output.
 - A version bump conflict with an objectively monotonic/latest valid value — choose it, return the exact validation command, and run validation after the rebase completes.

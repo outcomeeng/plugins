@@ -16,6 +16,8 @@ Covers the Compliance assertions in ``../sync-base.md``:
 - sync-base advances a clean ancestor-behind detached HEAD rather than waving it
   through; it never advances a dirty or diverged detached HEAD, preserving the
   diverged commits.
+- sync-base rejects malformed or ambiguous CLI input before it can select a
+  repository, base, or fetch policy.
 
 These are ``l1`` — direct in-process calls into ``sync_base`` against real git
 repositories seeded under ``tmp_path``.
@@ -54,6 +56,34 @@ def test_base_derivation_primitives_are_identity_equal_to_canonical() -> None:
     assert sync.detect_base_ref is canonical.detect_base_ref
     assert sync.remote_tracking_ref is canonical.remote_tracking_ref
     assert sync.detect_current_branch is canonical.detect_current_branch
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--base", "first", "--base", "second"],
+        ["--no-fetch", "--no-fetch"],
+        ["--base", ""],
+        ["--base"],
+        ["--unknown"],
+        ["first-repo", "second-repo"],
+    ],
+    ids=[
+        "duplicate-base",
+        "duplicate-no-fetch",
+        "empty-base",
+        "missing-base",
+        "unknown-option",
+        "extra-repository",
+    ],
+)
+def test_cli_rejects_malformed_or_ambiguous_arguments(argv: list[str]) -> None:
+    module = load_sync_base_module()
+
+    with pytest.raises(SystemExit) as raised:
+        module.main(argv)
+
+    assert raised.value.code == 2
 
 
 def test_rebase_preserves_branch_commit_rather_than_resetting(

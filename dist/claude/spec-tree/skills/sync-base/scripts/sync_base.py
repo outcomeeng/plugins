@@ -779,19 +779,28 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--base",
-        default=None,
+        action="append",
+        default=[],
         help="Bare base-branch name to sync onto (default: resolved from origin/HEAD).",
     )
     parser.add_argument(
         "--no-fetch",
-        action="store_true",
+        action="count",
+        default=0,
         help="Skip fetching the base; use the existing remote-tracking ref.",
     )
     args = parser.parse_args(argv)
+    if len(args.base) > 1:
+        parser.error("--base may be specified at most once")
+    if args.base and not args.base[0]:
+        parser.error("--base requires a non-empty branch name")
+    if args.no_fetch > 1:
+        parser.error("--no-fetch may be specified at most once")
+
     result = sync_base(
         pathlib.Path(args.repo).resolve(),
-        base_ref=args.base,
-        fetch=not args.no_fetch,
+        base_ref=args.base[0] if args.base else None,
+        fetch=args.no_fetch == 0,
     )
     print(json.dumps(result.to_json_dict()))
     return result.exit_code
