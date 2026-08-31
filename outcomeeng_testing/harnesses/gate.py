@@ -400,6 +400,7 @@ class RecipeRunObservation:
     spawn_calls: tuple[tuple[str, ...], ...]
     written_outputs: tuple[str, ...]
     retained_logs: tuple[str | None, ...]
+    log_paths: tuple[str, ...]
     summary: dict[str, object]
     summary_path: str
 
@@ -446,6 +447,7 @@ def _observe_recipe_run(
             path.read_text(encoding="utf-8") if path.exists() else None
             for path in spawner.output_paths
         ),
+        log_paths=tuple(str(path) for path in spawner.output_paths),
         summary=summary,
         summary_path=str(summary_path),
     )

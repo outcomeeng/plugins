@@ -172,7 +172,7 @@ def test_a_failing_recipe_step_records_excerpt_and_log_path() -> None:
     assert steps[1][SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
     assert steps[1][SUMMARY_KEY_EXCERPT] == failing_output
     assert run.retained_logs[1] == failing_output
-    assert steps[1][SUMMARY_KEY_LOG_PATH] is not None
+    assert steps[1][SUMMARY_KEY_LOG_PATH] == run.log_paths[1]
 
 
 def test_a_spawn_failure_is_recorded_with_its_message() -> None:
@@ -184,6 +184,7 @@ def test_a_spawn_failure_is_recorded_with_its_message() -> None:
     assert run.summary[SUMMARY_KEY_PHASE] == PHASE_PREFLIGHT
     assert run.summary[SUMMARY_KEY_EXIT_CODE] == SPAWN_FAILURE_EXIT_CODE
     assert steps[0][SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
+    assert steps[0][SUMMARY_KEY_LOG_PATH] == run.log_paths[0]
     assert SPAWN_FAILURE_MESSAGE in str(steps[0][SUMMARY_KEY_EXCERPT])
     assert run.retained_logs[0] is not None
     assert SPAWN_FAILURE_MESSAGE in run.retained_logs[0]
