@@ -180,6 +180,53 @@ INSTRUCTION_STATUS_PRECEDENCE = (
     InstructionStatus.CURRENT,
 )
 
+# The Codex combined project-doc budget default: the given ceiling the managed surface
+# renders against. The whole root instruction-file chain shares this budget, so a root
+# file above it reaches a Codex session truncated at the byte boundary.
+PROJECT_DOC_BUDGET_BYTES = 32768
+
+
+class BudgetState(StrEnum):
+    """Whether a rendered root instruction file fits the project-doc ceiling."""
+
+    FIT = "fit"
+    BREACH = "breach"
+
+
+@dataclass(frozen=True)
+class BudgetMeasurement:
+    """One rendered root instruction file's byte size measured against the ceiling."""
+
+    filename: str
+    byte_size: int
+    budget: int
+
+    @property
+    def state(self) -> BudgetState:
+        return BudgetState.BREACH if self.byte_size > self.budget else BudgetState.FIT
+
+    @property
+    def overage(self) -> int:
+        return max(self.byte_size - self.budget, 0)
+
+
+def measure_budget(
+    filename: str, text: str, budget: int = PROJECT_DOC_BUDGET_BYTES
+) -> BudgetMeasurement:
+    """Measure one root instruction file's UTF-8 byte size against the ceiling."""
+    return BudgetMeasurement(filename, len(text.encode("utf-8")), budget)
+
+
+def budget_report_line(measurement: BudgetMeasurement) -> str:
+    """Render the per-file budget report carrying the exact size, ceiling, and state."""
+    state = str(measurement.state)
+    if measurement.state is BudgetState.BREACH:
+        state = f"{state} ({measurement.overage} over)"
+    return (
+        f"budget: {measurement.filename} "
+        f"{measurement.byte_size}/{measurement.budget} {state}"
+    )
+
 
 class CliInputError(ValueError):
     """Raised when CLI path input would make instruction-block generation unsafe."""
@@ -1656,6 +1703,13 @@ def main(argv: list[str] | None = None) -> int:
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
+        # Per-file budget diagnostics go to stderr so the stdout verdict contract
+        # stays a single report word.
+        for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
+            text = _read_text_if_present(_repo_child(repo_root, filename), repo_root)
+            if text is None:
+                continue
+            print(budget_report_line(measure_budget(filename, text)), file=sys.stderr)
         # Absent dominates stale dominates current: report the worst across both files.
         for verdict in INSTRUCTION_STATUS_PRECEDENCE:
             if verdict in statuses:
@@ -1683,6 +1737,13 @@ def main(argv: list[str] | None = None) -> int:
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
+        # Generation measures each written root file against the project-doc ceiling
+        # and reports the exact size and breach state beside the write.
+        for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
+            text = _read_text_if_present(_repo_child(repo_root, filename), repo_root)
+            if text is None:
+                continue
+            print(budget_report_line(measure_budget(filename, text)), file=sys.stderr)
     else:
         for harness, content in rendered.items():
             sys.stdout.write(
