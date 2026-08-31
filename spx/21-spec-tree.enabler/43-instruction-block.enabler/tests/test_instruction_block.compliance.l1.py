@@ -1,3 +1,5 @@
+import pathlib
+
 import pytest
 
 from outcomeeng.distribution import instruction_block as source
@@ -39,6 +41,37 @@ def test_each_dispatch_reference_carries_only_its_own_mechanics() -> None:
                 assert marker in document
             else:
                 assert marker not in document
+
+
+def test_diverging_dispatch_reference_copies_are_rejected(
+    tmp_path: pathlib.Path,
+) -> None:
+    # The violating case for the byte-identical clause: the real per-target
+    # reference copies are laid out in a temporary repository, proven loadable
+    # while identical, then one skill's copy is mutated so the loader must
+    # refuse the divergence instead of silently picking a copy.
+    references = source.load_dispatch_references()
+    for diverging_harness in references:
+        repo_root = tmp_path / diverging_harness
+        for skill_dir in source.DISPATCH_REFERENCE_SKILL_DIRS:
+            for target, document in references.items():
+                path = source.dispatch_reference_path(
+                    target, skill_dir, repo_root=repo_root
+                )
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(document, encoding="utf-8")
+        assert source.load_dispatch_references(repo_root=repo_root) == references
+
+        diverged_path = source.dispatch_reference_path(
+            diverging_harness,
+            source.DISPATCH_REFERENCE_SKILL_DIRS[0],
+            repo_root=repo_root,
+        )
+        diverged_path.write_text(
+            references[diverging_harness] + "\ndiverged copy\n", encoding="utf-8"
+        )
+        with pytest.raises(source.DispatchReferencePolicyError):
+            source.load_dispatch_references(repo_root=repo_root)
 
 
 def test_router_blocks_carry_no_dispatch_mechanics() -> None:
