@@ -33,7 +33,7 @@ from outcomeeng.validation import (
     VALIDATION_STEPS,
     VERIFICATION_TYPE_TESTING,
     VERIFICATION_TYPE_VALIDATION,
-    test_recipe,
+    test_recipe as build_test_recipe,
 )
 from outcomeeng_testing.harnesses.gate import (
     HIGH_VOLUME_CHILD_OUTPUT,
@@ -86,8 +86,8 @@ def test_recipe_types_and_purposes_match_the_verification_taxonomy() -> None:
         TEST_RECIPE.verification_type,
     }
 
-    assert test_recipe() == TEST_RECIPE
-    targeted = test_recipe((PYTEST_TARGET_ARG,))
+    assert build_test_recipe() == TEST_RECIPE
+    targeted = build_test_recipe((PYTEST_TARGET_ARG,))
     assert targeted.name == TEST_RECIPE.name
     assert targeted.verification_type == TEST_RECIPE.verification_type
     assert targeted.purpose == TEST_RECIPE.purpose
