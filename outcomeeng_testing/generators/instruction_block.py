@@ -44,6 +44,68 @@ class InstructionBlockCases:
     template_harnesses: tuple[str, ...]
 
 
+class HarnessSeedTopology(StrEnum):
+    """Stable source-owned identities for the harness-seed mapping domain."""
+
+    ONLY_CLAUDE = "only-claude"
+    ONLY_AGENTS = "only-agents"
+    SEPARATE = "separate"
+    SYMLINKED = "symlinked"
+
+
+class RootInstructionFixture(StrEnum):
+    """Inert whole-document sources used by the harness-seed construction law."""
+
+    CLAUDE = "root-claude.md"
+    AGENTS = "root-agents.md"
+    SHARED = "root-shared.md"
+
+
+@dataclass(frozen=True)
+class HarnessSeedTopologyContract:
+    """Independent input-shape and seed-source law for one topology identity."""
+
+    declared_files: tuple[str, ...]
+    declared_symlinks: tuple[tuple[str, str], ...]
+    claude_seed_fixture: RootInstructionFixture
+    agents_seed_fixture: RootInstructionFixture
+
+
+def harness_seed_topology_contract(
+    kind: HarnessSeedTopology, cases: InstructionBlockCases
+) -> HarnessSeedTopologyContract:
+    """Construct the spec-declared topology and seed-source contract for ``kind``."""
+    if kind is HarnessSeedTopology.ONLY_CLAUDE:
+        return HarnessSeedTopologyContract(
+            declared_files=(cases.instruction_claude,),
+            declared_symlinks=(),
+            claude_seed_fixture=RootInstructionFixture.CLAUDE,
+            agents_seed_fixture=RootInstructionFixture.CLAUDE,
+        )
+    if kind is HarnessSeedTopology.ONLY_AGENTS:
+        return HarnessSeedTopologyContract(
+            declared_files=(cases.instruction_agents,),
+            declared_symlinks=(),
+            claude_seed_fixture=RootInstructionFixture.AGENTS,
+            agents_seed_fixture=RootInstructionFixture.AGENTS,
+        )
+    if kind is HarnessSeedTopology.SEPARATE:
+        return HarnessSeedTopologyContract(
+            declared_files=(cases.instruction_claude, cases.instruction_agents),
+            declared_symlinks=(),
+            claude_seed_fixture=RootInstructionFixture.CLAUDE,
+            agents_seed_fixture=RootInstructionFixture.AGENTS,
+        )
+    if kind is HarnessSeedTopology.SYMLINKED:
+        return HarnessSeedTopologyContract(
+            declared_files=(cases.instruction_agents,),
+            declared_symlinks=((cases.instruction_claude, cases.instruction_agents),),
+            claude_seed_fixture=RootInstructionFixture.SHARED,
+            agents_seed_fixture=RootInstructionFixture.SHARED,
+        )
+    raise AssertionError(f"unhandled harness-seed topology: {kind}")
+
+
 class BootstrapThresholdRelation(StrEnum):
     """Generated positions around the source-owned bootstrap threshold."""
 

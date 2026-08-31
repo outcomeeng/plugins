@@ -33,7 +33,6 @@ import subprocess
 from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
-from enum import Enum
 import sys
 from tempfile import TemporaryDirectory
 from types import ModuleType
@@ -44,7 +43,9 @@ from hypothesis import given, seed, settings
 from outcomeeng.distribution import instruction_block as distribution
 from outcomeeng_testing.generators.instruction_block import (
     DelegationCandidateCase,
+    HarnessSeedTopology,
     InstructionBlockCases,
+    RootInstructionFixture,
     build_macro as generate_build_macro,
     build_template as generate_template,
     adopted_body_heading as generate_adopted_body_heading,
@@ -97,6 +98,11 @@ def _fixture_text(name: str) -> str:
     return FIXTURES_DIR.joinpath(name).read_text(encoding="utf-8")
 
 
+def instruction_block_fixture_text(name: RootInstructionFixture) -> str:
+    """Read one source-identified inert root instruction fixture."""
+    return _fixture_text(name)
+
+
 @dataclass(frozen=True)
 class RootInstructionTopology:
     """Root instruction files and symlinks a consumer repository may already contain."""
@@ -111,15 +117,6 @@ class NamedRootInstructionTopology:
 
     name: str
     factory: Callable[[], RootInstructionTopology]
-
-
-class HarnessSeedTopology(Enum):
-    """Stable source-owned identities for the harness-seed mapping domain."""
-
-    ONLY_CLAUDE = "only-claude"
-    ONLY_AGENTS = "only-agents"
-    SEPARATE = "separate"
-    SYMLINKED = "symlinked"
 
 
 @dataclass(frozen=True)
@@ -583,9 +580,9 @@ def generated_cases() -> InstructionBlockCases:
 _GENERATED_CASES = generated_cases()
 INSTRUCTION_CLAUDE = _GENERATED_CASES.instruction_claude
 INSTRUCTION_AGENTS = _GENERATED_CASES.instruction_agents
-ROOT_CLAUDE_BODY = _fixture_text("root-claude.md")
-ROOT_AGENTS_BODY = _fixture_text("root-agents.md")
-ROOT_SHARED_BODY = _fixture_text("root-shared.md")
+ROOT_CLAUDE_BODY = _fixture_text(RootInstructionFixture.CLAUDE)
+ROOT_AGENTS_BODY = _fixture_text(RootInstructionFixture.AGENTS)
+ROOT_SHARED_BODY = _fixture_text(RootInstructionFixture.SHARED)
 SHARED_REGION_NAME = _GENERATED_CASES.shared_region_name
 SHARED_REGION_BODY = load_instruction_block_module().parse_shared_regions(
     _fixture_text("shared-region-primary.md")
