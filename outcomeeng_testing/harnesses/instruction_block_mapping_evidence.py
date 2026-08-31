@@ -45,6 +45,31 @@ class SpanRatioObservation:
     wrapped_regions: tuple[dict[str, str], dict[str, str]]
 
 
+@dataclass(frozen=True)
+class RouterStateObservation:
+    """Source facts and the report observed for one router-block state."""
+
+    name: str
+    block_present: bool
+    installed_version: str
+    block_version: str | None
+    recorded_languages: tuple[str, ...]
+    detected_languages: tuple[str, ...]
+    exit_code: int
+    report: str
+
+
+@dataclass(frozen=True)
+class SharedRegionStateObservation:
+    """Source region facts and the report observed for one shared-region state."""
+
+    name: str
+    claude_region: str | None
+    agents_region: str | None
+    exit_code: int
+    report: str
+
+
 def observe_duplicate_cli_flag(option: str) -> DuplicateFlagObservation:
     """Run the CLI with ``option`` repeated and report what it detected and printed."""
     with redirect_stderr(StringIO()) as stderr:
@@ -91,20 +116,46 @@ def observe_language_block(language: str) -> LanguageBlockObservation:
     )
 
 
-def observe_check_router_states(tmp_path: pathlib.Path) -> dict[str, tuple[int, str]]:
+def observe_check_router_states(
+    tmp_path: pathlib.Path,
+) -> tuple[RouterStateObservation, ...]:
     """Drive the router block through each recognized state; report `--check` per state."""
     repo = tmp_path / "repo"
     repo.mkdir()
     template = harness.write_template(tmp_path, harness.NEW_VERSION)
     harness.run_generator_write_primary(repo, template)
     claude = repo / harness.INSTRUCTION_CLAUDE
-    observed: dict[str, tuple[int, str]] = {}
+    observed: list[RouterStateObservation] = []
 
     # freshly written at the installed version and language
-    observed["current"] = harness.run_generator_check(repo, template)
+    exit_code, report = harness.run_generator_check(repo, template)
+    observed.append(
+        RouterStateObservation(
+            name="current",
+            block_present=True,
+            installed_version=harness.NEW_VERSION,
+            block_version=harness.NEW_VERSION,
+            recorded_languages=(harness.LANG_PRIMARY,),
+            detected_languages=(harness.LANG_PRIMARY,),
+            exit_code=exit_code,
+            report=report,
+        )
+    )
 
     claude.unlink()
-    observed["absent"] = harness.run_generator_check(repo, template)
+    exit_code, report = harness.run_generator_check(repo, template)
+    observed.append(
+        RouterStateObservation(
+            name="absent",
+            block_present=False,
+            installed_version=harness.NEW_VERSION,
+            block_version=None,
+            recorded_languages=(),
+            detected_languages=(harness.LANG_PRIMARY,),
+            exit_code=exit_code,
+            report=report,
+        )
+    )
 
     # a version numerically behind the installed one
     stale_block = MODULE.render(
@@ -114,7 +165,19 @@ def observe_check_router_states(tmp_path: pathlib.Path) -> dict[str, tuple[int, 
         harness.HARNESS_CLAUDE,
     )
     claude.write_text(MODULE.prepend_router_block(stale_block, ""), encoding="utf-8")
-    observed["version-behind"] = harness.run_generator_check(repo, template)
+    exit_code, report = harness.run_generator_check(repo, template)
+    observed.append(
+        RouterStateObservation(
+            name="version-behind",
+            block_present=True,
+            installed_version=harness.NEW_VERSION,
+            block_version=harness.OLD_VERSION,
+            recorded_languages=(harness.LANG_PRIMARY,),
+            detected_languages=(harness.LANG_PRIMARY,),
+            exit_code=exit_code,
+            report=report,
+        )
+    )
 
     # the recorded language set differs from the detected/expected set
     current_block = MODULE.render(
@@ -124,25 +187,46 @@ def observe_check_router_states(tmp_path: pathlib.Path) -> dict[str, tuple[int, 
         harness.HARNESS_CLAUDE,
     )
     claude.write_text(MODULE.prepend_router_block(current_block, ""), encoding="utf-8")
-    observed["language-set-differs"] = harness.run_generator_check(
+    exit_code, report = harness.run_generator_check(
         repo, template, languages=harness.LANG_SECONDARY
     )
-    return observed
+    observed.append(
+        RouterStateObservation(
+            name="language-set-differs",
+            block_present=True,
+            installed_version=harness.NEW_VERSION,
+            block_version=harness.NEW_VERSION,
+            recorded_languages=(harness.LANG_PRIMARY,),
+            detected_languages=(harness.LANG_SECONDARY,),
+            exit_code=exit_code,
+            report=report,
+        )
+    )
+    return tuple(observed)
 
 
 def observe_check_shared_region_states(
     tmp_path: pathlib.Path,
-) -> dict[str, tuple[int, str]]:
+) -> tuple[SharedRegionStateObservation, ...]:
     """Drive a `shared` region through each recognized state; report `--check` per state."""
     repo = tmp_path / "repo"
     repo.mkdir()
     template = harness.write_template(tmp_path, harness.NEW_VERSION)
-    observed: dict[str, tuple[int, str]] = {}
+    observed: list[SharedRegionStateObservation] = []
 
     harness.write_both_root_files_with_shared_region(
         MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
     )
-    observed["byte-identical"] = harness.run_generator_check(repo, template)
+    exit_code, report = harness.run_generator_check(repo, template)
+    observed.append(
+        SharedRegionStateObservation(
+            name="byte-identical",
+            claude_region=harness.SHARED_REGION_BODY,
+            agents_region=harness.SHARED_REGION_BODY,
+            exit_code=exit_code,
+            report=report,
+        )
+    )
 
     harness.write_both_root_files_with_shared_region(
         MODULE,
@@ -152,7 +236,16 @@ def observe_check_shared_region_states(
         claude_region=harness.SHARED_REGION_BODY,
         agents_region=harness.SHARED_REGION_BODY_ALT,
     )
-    observed["diverged"] = harness.run_generator_check(repo, template)
+    exit_code, report = harness.run_generator_check(repo, template)
+    observed.append(
+        SharedRegionStateObservation(
+            name="diverged",
+            claude_region=harness.SHARED_REGION_BODY,
+            agents_region=harness.SHARED_REGION_BODY_ALT,
+            exit_code=exit_code,
+            report=report,
+        )
+    )
 
     codex_block = MODULE.render(
         harness.build_template(harness.NEW_VERSION),
@@ -164,8 +257,17 @@ def observe_check_shared_region_states(
         MODULE.prepend_router_block(codex_block, harness.ROOT_AGENTS_BODY),
         encoding="utf-8",
     )
-    observed["one-sided"] = harness.run_generator_check(repo, template)
-    return observed
+    exit_code, report = harness.run_generator_check(repo, template)
+    observed.append(
+        SharedRegionStateObservation(
+            name="one-sided",
+            claude_region=harness.SHARED_REGION_BODY,
+            agents_region=None,
+            exit_code=exit_code,
+            report=report,
+        )
+    )
+    return tuple(observed)
 
 
 def observe_span_ratio(body_a: str, body_b: str) -> SpanRatioObservation:

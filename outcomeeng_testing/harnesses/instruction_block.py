@@ -105,6 +105,14 @@ class RootInstructionTopology:
 
 
 @dataclass(frozen=True)
+class NamedRootInstructionTopology:
+    """One member of the source-owned bootstrap-topology domain."""
+
+    name: str
+    factory: Callable[[], RootInstructionTopology]
+
+
+@dataclass(frozen=True)
 class BootstrapOutcome:
     """The seed bodies and both written root documents observed after one bootstrap write.
 
@@ -274,6 +282,37 @@ def root_instruction_topology_near_identical() -> RootInstructionTopology:
     )
 
 
+def bootstrap_topology_cases() -> tuple[NamedRootInstructionTopology, ...]:
+    """Return the complete source-owned bootstrap-topology domain."""
+
+    return (
+        NamedRootInstructionTopology(
+            "only_claude", root_instruction_topology_only_claude
+        ),
+        NamedRootInstructionTopology(
+            "only_agents", root_instruction_topology_only_agents
+        ),
+        NamedRootInstructionTopology("symlinked", root_instruction_topology_symlinked),
+        NamedRootInstructionTopology(
+            "delegating", root_instruction_topology_delegating
+        ),
+        NamedRootInstructionTopology(
+            "reverse_delegating", root_instruction_topology_reverse_delegating
+        ),
+        NamedRootInstructionTopology(
+            "mutual_delegation", root_instruction_topology_mutual_delegation
+        ),
+        NamedRootInstructionTopology("identical", root_instruction_topology_identical),
+        NamedRootInstructionTopology(
+            "legacy_managed", root_instruction_topology_legacy_managed
+        ),
+        NamedRootInstructionTopology(
+            "near_identical", root_instruction_topology_near_identical
+        ),
+        NamedRootInstructionTopology("separate", root_instruction_topology_separate),
+    )
+
+
 def _replace_path_with_text(path: pathlib.Path, body: str) -> None:
     """Write ``body`` as a regular file, replacing a symlink or file at ``path``."""
     if path.exists() or path.is_symlink():
@@ -365,9 +404,11 @@ class SymlinkedTopologyObservation:
 
 @dataclass(frozen=True)
 class TopologySeedObservation:
-    """Observed seed bodies for one named root topology."""
+    """Declared topology facts and observed seed bodies for one domain member."""
 
     topology_name: str
+    declared_files: tuple[tuple[str, str], ...]
+    declared_symlinks: tuple[tuple[str, str], ...]
     observed: tuple[tuple[str, str], ...]
 
 
@@ -422,6 +463,8 @@ def observe_root_instruction_topology_seed_mapping() -> tuple[
         return tuple(
             TopologySeedObservation(
                 topology_name=topology_name,
+                declared_files=tuple(sorted(topology.files.items())),
+                declared_symlinks=tuple(sorted(topology.symlinks.items())),
                 observed=tuple(
                     sorted(
                         materialize_root_instruction_topology(
