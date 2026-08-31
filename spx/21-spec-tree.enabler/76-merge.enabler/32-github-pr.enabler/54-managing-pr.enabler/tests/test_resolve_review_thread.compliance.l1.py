@@ -693,14 +693,17 @@ def test_overlong_json_integer_reaches_bounded_database_id_validation(
         )
     )
     serialized_payload = json.dumps(payload)
-    field = f'"databaseId": {inputs.database_ids[0]}'
+    field = (
+        f'"{RESOLVER.GitHubResponseField.DATABASE_ID.value}": '
+        f"{inputs.database_ids[0]}"
+    )
     maximum_length = cast(int, RESOLVER.NUMBER_CONTRACT.maximum_length)
     overlong_integer = RESOLVER.NUMBER_CONTRACT.first_characters[0] * (
         maximum_length + 1
     )
     serialized_payload = serialized_payload.replace(
         field,
-        f'"databaseId": {overlong_integer}',
+        f'"{RESOLVER.GitHubResponseField.DATABASE_ID.value}": {overlong_integer}',
         1,
     )
     run = run_resolver_with_response(
