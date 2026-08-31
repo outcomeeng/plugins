@@ -39,7 +39,7 @@ readiness-preservation proof: full before/after base and branch OIDs, the base
 delta, the branch's changed paths against the old and new base, their overlap,
 and whether the branch patch identity changed. A caller reads it to decide
 which pre-push readiness predicates survive the base movement. The proof is git
-facts only — validation-lane mapping and the governance-surface list are the
+facts only — deterministic-command selection and the governance-surface list are the
 project overlay's — and it never satisfies a merge gate.
 
 The base ref and its remote-tracking form are resolved through the shared

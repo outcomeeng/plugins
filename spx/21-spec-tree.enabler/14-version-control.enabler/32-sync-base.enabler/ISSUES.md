@@ -47,9 +47,3 @@ shares with its siblings extracts with the primitives tracked in
 Carry the rebase-never-reset invariant and the untracked-collision gap above
 into the ported surface rather than leaving either behind. Revisit when the
 capability publishes.
-
-## `preservation` is not an assertion-type token
-
-`tests/test_sync_base.preservation.l1.py` carries the evidence token `preservation`, outside the five assertion types the canonical test-filename model in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md` recognizes (scenario, mapping, conformance, property, compliance), so the file declares no recognized cell.
-
-**Resolution shape**: route the file's assertions through `/test` to select the correct assertion type, rename the file to that token, and update the `[test]` links in this node's spec. Deferred from the decision changeset that bound the model because re-typing this node's evidence requires this node's context, `/test` routing, and the test-evidence gate.

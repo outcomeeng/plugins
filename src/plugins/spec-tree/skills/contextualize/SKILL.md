@@ -2,7 +2,6 @@
 name: contextualize
 description: ALWAYS invoke this skill when asking about status, progress, or what exists in the spec tree. NEVER work on any part of the spec tree without loading context through this skill first.
 argument-hint: "[--at <full-head-oid>] <spx-root-or-full-node-path>"
-arguments: target
 allowed-tools: Read, Glob, Grep, Skill, Bash(git rev-parse HEAD)
 ---
 
@@ -23,7 +22,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 - Lower-index siblings' specs must be read at each directory level — they constrain the target
 - Explicit full-path ADR/PDR citations in loaded specs and decision records must be read before the context marker is emitted; coordination notes never add cited decisions.
 - A context-grounded answer requires the matching `<SPEC_TREE_CONTEXT target="...">` marker. Loading this skill and completing `/sync-base` are prerequisites, not context.
-- A verifier contextualizing an exact committed subject invokes `/contextualize --at <full-head-oid> <target>`. Exact-commit mode verifies that `git rev-parse HEAD` equals the supplied full OID, skips `/sync-base`, and never fetches, rebases, advances, or otherwise changes the checkout.
+- Exact-commit mode is invoked as `/contextualize --at <full-head-oid> <target>`. It verifies that `git rev-parse HEAD` equals the supplied full OID, skips `/sync-base`, and never fetches, rebases, advances, or otherwise changes the checkout.
 - Test files are not read by `/contextualize`. The node target spec or product-root product spec already exposes inline `[test](tests/...)` links; list those links and the applicable `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
 - **Always use canonical full paths** from `spx/` for targets and references. The product-root target is exactly `spx/`; a node target begins with `spx/` and contains only node-directory segments. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
   - Wrong: `/contextualize 32-parser.outcome`
@@ -49,7 +48,7 @@ If absent → STOP. Invoke `/understand` first, then resume from Step 0. Do not 
 
 **Step SYNC: Bring the branch current with its base**
 
-Parse the optional exact-commit prefix before any product-content lookup. Accept it only as `--at` followed by one 40-character lowercase hexadecimal OID and one canonical target. In exact-commit mode, run `git rev-parse HEAD` and require byte equality with the supplied OID. A missing, malformed, unreadable, or mismatched OID ABORTS with `Exact committed subject unavailable` and the supplied and observed values; never invoke `/sync-base` in this mode. Record `exact_commit` for the context marker and continue to Step 0 without mutating Git state.
+Parse the complete raw invocation string `$ARGUMENTS` once before any product-content lookup. Accept exactly one canonical target, optionally preceded by `--at` and one 40-character lowercase hexadecimal OID; bind the normalized target to `$target` for every later step. Reject extra values, duplicate options, and unknown options. In exact-commit mode, run `git rev-parse HEAD` and require byte equality with the supplied OID. A missing, malformed, unreadable, or mismatched OID ABORTS with `Exact committed subject unavailable` and the supplied and observed values; never invoke `/sync-base` in this mode. Record `exact_commit` for the context marker and continue to Step 0 without mutating Git state.
 
 Without `--at`, apply the normal currency workflow below.
 

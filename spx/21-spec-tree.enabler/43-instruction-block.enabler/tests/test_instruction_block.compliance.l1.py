@@ -421,10 +421,10 @@ def rendered_instruction_blocks(
 
 
 CONTEXT_FREE_POLICY_SECTION_HEADINGS = (
-    "### Before product-content access -> `/understand`",
-    "### Before working on a specific node -> `/contextualize`",
-    "### Sub-agent dispatch",
-    "## Quick Reference: Skills and Agents",
+    dist.FOUNDATION_POLICY_HEADING,
+    dist.NODE_CONTEXT_POLICY_HEADING,
+    dist.SUBAGENT_DISPATCH_POLICY_HEADING,
+    dist.ROLE_TASK_CONTRACT_POLICY_HEADING,
 )
 
 

@@ -45,13 +45,9 @@ When layers disagree, the lower layer is in violation.
 
 Product content is every artifact of the product a spec node governs or must govern: source, tests, evals, generated output, specs, decisions, coordination notes, and configuration a spec declares. Implementation — the code layer that complies with evidence — is one kind of product content; the term keeps its narrower meaning in `<node_states>` and the placement table. Governance is derived, never assumed: a path under `spx/<node>/` is governed by that node; any other path is governed by the node whose `spx/**/tests/` file names it and whose spec links that test, or whose spec or decision names that path in an `[audit]` assertion; several matching nodes resolve to their lowest common ancestor. That lookup is a search under the live foundation marker and opens no file body. Product content with no governing node is a coverage gap: it is not read or modified, and the gap is recorded.
 
-Not product content: operational configuration — the `spx/local/` overlays and the exclusion mechanism, which `<artifact_placement>` classifies as configuration and which the skill that declares them reads without the foundation marker and with no governing node — and the agent harness's own instruction and settings files it is told to read, tool and command output, the session store, and scratch space. `spx journal` and `spx verification` read, list, and render operations remain operational until their output is followed into product content.
+Not product content: operational configuration — the `spx/local/` overlays and the exclusion mechanism, which `<artifact_placement>` classifies as configuration and which the skill that declares them reads without the foundation marker and with no governing node — and the agent harness's own instruction and settings files it is told to read, tool and command output, the session store, and scratch space.
 
-Work that touches no product content — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof, or dispatching a configured named verifier or reviewer role from recorded exact-commit and path or node coordinates, collecting its result, rendering its returned journal token or projection, and recording its verdict and findings — is an operational continuation and triggers neither `/understand` nor `/contextualize`. The configured role carries a managed path-only task contract; implementation runners such as `spec-tree:applier`, simplifier agents, updater agents, general-purpose workers, explorers, and arbitrary delegated reads remain outside this boundary.
-
-Scope coordinates are operational data only when recorded before dispatch in the exact commit and its `Refs:` trailer, the session store, or sealed journal scope events. A missing coordinate derived by searching product content activates the normal gates. The verifier agent session establishes its own live foundation marker and contextualized-node set, then derives assertion text, eval and producer artifacts, implementation scope, language-scope classification, and owning-plugin classification from those paths.
-
-After compaction, the authoring agent session reruns the declared deterministic command and observes passing evidence for the exact committed subject before dispatching an agentic verifier or reviewer; a summary or prior-run claim does not re-establish that precondition. A returned token, projection, verdict, finding location, or finding record remains operational while recorded or accepted into the conversation-local imperfection ledger. Rejecting, downgrading, dropping as unbacked, or deferring a finding is a product judgment and requires a live foundation marker plus context for every governing node, as does opening or changing a referenced product artifact.
+Work that touches no product content — PR inspection, check wait, merge, deploy, release, `spx session` operations, and occupancy proof — is an operational continuation and triggers neither `/understand` nor `/contextualize`. Composing workflows define any further operational continuations and their preconditions; this foundation skill classifies product content and emits the foundation marker without defining another session's dispatch behavior.
 
 </product_content>
 
@@ -512,8 +508,7 @@ A blocker exists only when the immediate next action needs operator input or an 
    - `${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.pdr.md`
    - `${CLAUDE_SKILL_DIR}/templates/nodes/enabler-name.md`
    - `${CLAUDE_SKILL_DIR}/templates/nodes/outcome-name.md`
-6. Read the complete root `{{! file('root_guide') !}}` from disk only when the live conversation does not already carry it complete; a harness that injects the whole file satisfies this step, and a truncated or absent injection requires the read. It routes skill invocation and carries product commands outside the managed router.
-7. Emit the marker:
+6. Emit the marker:
 
 ```text
 <SPEC_TREE_FOUNDATION>
@@ -521,7 +516,6 @@ Loaded inline: truth-hierarchy, artifact-placement, node-model, assertion-model,
 Operational references available: excluded-nodes, product-domain-shapes
 Local lifecycle route: changes route through /merge; spx/local/merging.md refines the route when present
 Default-branch completion boundary: delivered value reaches the default branch on origin through /merge; verified local work remains unfinished unless explicitly limited or stopped at an explicit gate with no independent action remaining
-Routing guide: {{! file('root_guide') !}} carried complete by the harness | read from disk | absent
 Templates available: product, adr, pdr, enabler, outcome
 Examples available: adr, enabler, outcome, pdr
 </SPEC_TREE_FOUNDATION>
@@ -551,7 +545,7 @@ Claude treated a transport checkpoint as delivered value. Continue through `/mer
 
 - The foundation domains and artifact-placement taxonomy are present inline and require no secondary file reads.
 - Internal foundation sections contain no contradiction in truth flow, artifact ownership, node grammar, assertion selection, ordering, verification vocabulary, or imperfection handling.
-- Operational references, templates, examples, overlays, and the root guide are located or read according to the workflow.
+- Operational references, templates, examples, and overlays are located or read according to the workflow.
 - A live `<SPEC_TREE_FOUNDATION>` marker records the inline payload.
 
 </success_criteria>

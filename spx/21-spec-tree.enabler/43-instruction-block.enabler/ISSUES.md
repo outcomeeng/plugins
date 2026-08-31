@@ -46,7 +46,7 @@ The PR #525 repair exposes `OPERATIVE_POLICY_VALIDATIONS` as the source-owned fi
 3. Completed for compliance evidence: direct behavioral assertions replace the aggregate case-name boundary.
 4. Migrate the property evidence module and its linked property test using the same predicate seam.
 5. Migrate `symlinked_instruction_topology_materializes_as_regular_files()` and `root_instruction_topology_seed_mapping_is_valid()` under the child node, then retire `materialize_root_instruction_topology` after proving it has no remaining consumer.
-6. Run the complete parent and child node test directories, the changed-file Ruff formatting and lint lanes, Mypy, and the selected repository gate. Commit the exact passing subject before verifier dispatch.
+6. Run the complete parent and child node test directories, the changed-file Ruff formatting and lint commands, Mypy, and the selected repository gate. Commit the exact passing subject before verifier dispatch.
 7. Require `test-evidence-auditor` approval for each affected node, then run the implementation audit and changeset review required by the merge lifecycle. Remove this issue entry only after those exact committed subjects receive approval.
 
 **Revisit condition**: start the dedicated migration before the next change that edits `instruction_block_property_evidence.py`, its linked parent-node test, or the two named child-node harness predicates. A future evidence audit that reaches any of these aggregate runs also triggers immediate pickup.

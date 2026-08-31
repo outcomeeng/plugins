@@ -22,6 +22,13 @@ Covers the Scenario assertions in ``../sync-base.md``:
 - A detached HEAD with no resolvable remote base reports a hard git failure.
 - A clean detached HEAD behind the base whose only change is an untracked file is
   advanced rather than reported ``dirty_tree``.
+- A clean rebase reports whether the base delta overlaps the branch and whether
+  the branch diff remains reusable.
+- An already-current branch or detached HEAD reports an empty base delta and an
+  unchanged branch patch identity.
+- A caller that fetched before synchronization still receives the base delta
+  measured from the branch fork point.
+- A base rename reports both its old and new paths in the base delta.
 
 These are ``l1`` — direct in-process calls into ``sync_base`` against real git
 repositories (a bare origin and working clones) seeded under ``tmp_path``; git
@@ -45,8 +52,11 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_detached_no_remote_repo,
     build_detached_untracked_only_behind_base_repo,
     build_dirty_behind_base_repo,
+    build_overlapping_base_repo,
+    build_rename_base_repo,
     build_untracked_only_behind_base_repo,
     detach_head,
+    fetch_base,
     head_oid,
     load_sync_base_module,
     resolve_ref,
@@ -317,3 +327,120 @@ def test_explicit_valid_base_rebases_onto_that_base_not_origin_head(
     assert result.remote_ref == handle.alternate_remote_ref
     assert (handle.repo / handle.alternate_file).exists()
     assert (handle.repo / handle.feature_file).exists()
+
+
+def test_non_overlapping_rebase_preserves_local_review(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_behind_base_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    assert result.status is module.SyncStatus.REBASED
+    assert proof is not None
+    assert handle.base_file in proof.base_delta_paths
+    assert handle.feature_file in proof.branch_paths_after
+    assert proof.path_overlap == []
+    assert proof.branch_patch_changed is False
+    assert proof.branch_diff_unchanged is True
+
+
+def test_overlapping_rebase_does_not_preserve_local_review(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_overlapping_base_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    assert result.status is module.SyncStatus.REBASED
+    assert proof is not None
+    assert handle.overlap_file in proof.path_overlap
+    assert proof.branch_diff_unchanged is False
+
+
+def test_already_current_preserves_all_readiness(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_current_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    assert result.status is module.SyncStatus.ALREADY_CURRENT
+    assert proof is not None
+    assert proof.base_delta_paths == []
+    assert proof.branch_patch_changed is False
+    assert proof.branch_diff_unchanged is True
+    assert proof.old_head_oid == proof.new_head_oid
+
+
+def test_base_delta_accurate_when_caller_prefetched(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_behind_base_repo(_root(tmp_path))
+    fetch_base(handle.repo)
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    assert result.status is module.SyncStatus.REBASED
+    assert proof is not None
+    assert handle.base_file in proof.base_delta_paths
+    assert proof.path_overlap == []
+    assert proof.branch_diff_unchanged is True
+
+
+def test_advanced_detached_head_emits_preservation_proof(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_detached_behind_base_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    assert result.status is module.SyncStatus.REBASED
+    assert proof is not None
+    assert handle.base_file is not None
+    assert handle.base_file in proof.base_delta_paths
+    assert proof.path_overlap == []
+    assert proof.branch_patch_changed is False
+    assert proof.branch_diff_unchanged is True
+
+
+def test_already_current_detached_head_emits_preservation_proof(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_detached_current_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    assert result.status is module.SyncStatus.ALREADY_CURRENT
+    assert proof is not None
+    assert proof.base_delta_paths == []
+    assert proof.branch_patch_changed is False
+    assert proof.branch_diff_unchanged is True
+    assert proof.old_head_oid == proof.new_head_oid
+
+
+def test_base_rename_surfaces_both_paths_in_base_delta(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_rename_base_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    assert result.status is module.SyncStatus.REBASED
+    assert proof is not None
+    assert handle.old_path in proof.base_delta_paths
+    assert handle.new_path in proof.base_delta_paths

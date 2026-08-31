@@ -184,8 +184,9 @@ context needed to act on the result.
 ### Operational-continuation requirement
 
 Extend the existing operational-continuation enumeration in
-`spx/21-spec-tree.enabler/spec-tree.md` and the shipped `/understand` policy with
-one harness-neutral operation:
+`spx/21-spec-tree.enabler/spec-tree.md` and the managed router with one
+harness-neutral operation. Keep `/understand` independently invocable and
+limited to product-content classification plus foundation-marker output:
 
 > Dispatching a named verifier or reviewer role from recorded scope
 > coordinates, collecting its result, rendering its returned token or
@@ -207,7 +208,7 @@ The operation has these requirements:
   node by searching product content. An absent recorded coordinate makes that
   derivation product-content access and activates the normal gates.
 - Every named role-task contract accepts path-only coordinates. Assertion text,
-  eval artifacts, producer artifacts, language-scope classification, and
+  producer artifacts, language-scope classification, and
   owning-plugin classifications are resolved by the verifier agent session from
   those paths after it establishes its own live `<SPEC_TREE_FOUNDATION>` marker
   and contextualized-node set. The authoring agent session neither preloads nor
@@ -265,12 +266,11 @@ The operation has these requirements:
   addition, path-only dispatch contract, or product-content re-entry boundary.
 - Add `[audit]` assertions to
   `spx/21-spec-tree.enabler/18-context-loading.enabler/context-loading.md` for the
-  shipped `/understand` policy, path-only role contracts, verifier-owned context,
+  managed router policy, path-only role contracts, verifier-owned context,
   immutable exact-commit contextualization, finding-disposition boundary, and
   post-compaction deterministic precondition.
-- This prototype adds no `[eval]` assertion or eval artifact and makes no scored
-  claim about model behavior. Its new assertions cover policy design through
-  `[audit]` and rendered policy presence through `[test]`. Focused SPX validation,
+- The new assertions cover policy design through `[audit]` and rendered policy
+  presence through `[test]`. Focused SPX validation,
   render-compliance tests, skill checks, documentation checks, instruction
   checks, affected auditors, and changeset review pass on the same committed
   subject.
@@ -284,9 +284,10 @@ The operation has these requirements:
    `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md`,
    referencing the render-compliance test file. This refinement needs no new
    decision record.
-2. Amend `src/plugins/spec-tree/skills/understand/SKILL.md`; the managed
-   instruction template sections `Before product-content access`, `Before
-   working on a specific node`, and `Sub-agent dispatch`;
+2. Limit `src/plugins/spec-tree/skills/understand/SKILL.md` to caller-independent
+   foundation output; amend the managed instruction template sections `Before
+   product-content access`, `Before working on a specific node`, and `Sub-agent
+   dispatch`;
    `FOUNDATION_POLICY_REQUIREMENTS`, `SUBAGENT_DISPATCH_POLICY_REQUIREMENTS`, and
    the new `NODE_CONTEXT_POLICY_REQUIREMENTS` and
    `ROLE_TASK_CONTRACT_POLICY_REQUIREMENTS` tuples in
@@ -301,8 +302,8 @@ The operation has these requirements:
    `src/plugins/instructions/skills/audit-skill/SKILL.md` as the structural
    auditor-skeleton model when converting role-task contracts to path-only
    inputs.
-4. Author the instruction-render compliance test from the three source-owned
-   policy tuples. The prototype carries no eval work.
+4. Author the instruction-render compliance test from the source-owned policy
+   tuples.
 5. Run `just bump`, `just build-skills`, `just build-instructions`, and
    `just instructions-check` in that order.
 6. Run focused deterministic verification, the affected spec, skill,
@@ -317,4 +318,4 @@ The operation has these requirements:
 - Reload boundary: immediately before any authoring-agent-session product-content
   access or product judgment.
 - Deliverable: one final requirements review, followed by prototype
-  implementation without eval work.
+  implementation.
