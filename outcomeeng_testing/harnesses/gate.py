@@ -365,6 +365,7 @@ class PipelineRunObservation:
     spawn_calls: tuple[tuple[str, ...], ...]
     written_outputs: tuple[str, ...]
     retained_logs: tuple[str | None, ...]
+    log_paths: tuple[str, ...]
 
 
 def pipeline_run_observation(
@@ -387,6 +388,7 @@ def pipeline_run_observation(
             path.read_text(encoding="utf-8") if path.exists() else None
             for path in spawner.output_paths
         ),
+        log_paths=tuple(str(path) for path in spawner.output_paths),
     )
 
 

@@ -147,6 +147,7 @@ def test_a_failing_step_stops_the_pipeline_and_retains_its_log() -> None:
     assert steps[1].label in summary[summary.index("FAILED") :]
     assert f"{STEP_FAIL_STATUS}  {steps[1].label}" in run.output
     assert FULL_LOG_LABEL in run.output
+    assert run.log_paths[1] in run.output
     assert f"{FAILING_CHILD_OUTPUT_PREFIX} 0" not in run.output
     assert (
         f"{FAILING_CHILD_OUTPUT_PREFIX} {FAILURE_EXCERPT_LINE_LIMIT + 1}" in run.output
