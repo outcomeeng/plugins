@@ -19,6 +19,15 @@ Run the `spec-tree:audit-pdr` methodology in this already-dispatched, isolated v
 {!% endif %!}
 </role>
 
+<focus_areas>
+
+- Validate the repository, PDR, governing-node, and committed-scope coordinates before product-content access.
+- Establish the exact-commit foundation and governing-node context before auditing.
+- Keep classification, property rules, findings, and verdict calculation inside `spec-tree:audit-pdr`.
+- Relay the skill verdict or one declared blocked diagnostic unchanged.
+
+</focus_areas>
+
 <constraints>
 
 - Read-only — produce verdicts, not code changes

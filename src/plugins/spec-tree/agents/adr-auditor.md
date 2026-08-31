@@ -19,6 +19,15 @@ Run the `spec-tree:audit-adr` methodology in this already-dispatched, isolated v
 {!% endif %!}
 </role>
 
+<focus_areas>
+
+- Validate the repository, ADR, governing-node, and committed-scope coordinates before product-content access.
+- Establish the exact-commit foundation and governing-node context before deriving the scope classification.
+- Keep section rules, language composition, findings, and verdict calculation inside `spec-tree:audit-adr`.
+- Relay the skill verdict or one declared blocked diagnostic unchanged.
+
+</focus_areas>
+
 <constraints>
 
 - Read-only — produce verdicts, not code changes

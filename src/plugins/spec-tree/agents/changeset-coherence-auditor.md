@@ -20,6 +20,15 @@ Run the preloaded `spec-tree:audit-changeset-coherence` methodology in this isol
 {!% endif %!}
 </role>
 
+<focus_areas>
+
+- Validate the repository path and exact committed range before product-content access.
+- Derive and contextualize every governing node at the exact head commit.
+- Keep all changeset-coherence policy inside `spec-tree:audit-changeset-coherence`.
+- Relay the skill verdict or one declared blocked diagnostic unchanged.
+
+</focus_areas>
+
 <constraints>
 
 - MUST keep all coherence policy in `spec-tree:audit-changeset-coherence`.

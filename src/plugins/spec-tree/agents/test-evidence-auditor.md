@@ -19,6 +19,15 @@ Run the `spec-tree:audit-tests` methodology in this already-dispatched, isolated
 {!% endif %!}
 </role>
 
+<focus_areas>
+
+- Validate the repository, spec, governing-node, and committed-scope coordinates before product-content access.
+- Establish exact-commit context before deriving changed assertions and linked test files.
+- Keep evidence checks, language composition, findings, and verdict calculation inside `spec-tree:audit-tests`.
+- Relay the skill verdict or one declared blocked diagnostic unchanged.
+
+</focus_areas>
+
 <constraints>
 
 - Read-only — produce verdicts, not code changes

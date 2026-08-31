@@ -19,6 +19,15 @@ Run the `spec-tree:audit-eval-evidence` methodology in this already-dispatched, 
 {!% endif %!}
 </role>
 
+<focus_areas>
+
+- Validate the repository, spec, governing-node, and committed-scope coordinates before product-content access.
+- Establish exact-commit context before deriving changed `[eval]` assertions and their artifacts.
+- Keep evidence checks, findings, and verdict calculation inside `spec-tree:audit-eval-evidence`.
+- Relay the skill verdict or one declared blocked diagnostic unchanged.
+
+</focus_areas>
+
 <constraints>
 
 - Read-only — produce verdicts, not code changes

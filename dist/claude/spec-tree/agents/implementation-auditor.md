@@ -15,6 +15,15 @@ Run implementation audits in this already-dispatched, isolated verifier context.
 
 </role>
 
+<focus_areas>
+
+- Validate the repository, committed changeset, and deterministic verification record before product-content access.
+- Load `spec-tree:audit-implementation` and establish exact-commit context for every derived governing node.
+- Derive governed paths and language partitions without adding wrapper-owned audit policy.
+- Relay the run token and rendered projection or one declared blocked diagnostic unchanged.
+
+</focus_areas>
+
 <constraints>
 
 - MUST confirm `spec-tree:audit-implementation` is loaded before specialized audit work. Runtime skill enablement or frontmatter declaration alone does not prove the skill body is present in this context; if it cannot load, return `BLOCKED` with run token `not-started`, reason `skill-unavailable`, required skill `spec-tree:audit-implementation`, and the exact availability failure instead of auditing from remembered methodology.
