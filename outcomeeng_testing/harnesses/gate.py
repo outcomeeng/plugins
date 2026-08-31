@@ -382,7 +382,6 @@ def pipeline_run_observation(
         exit_code=exit_code,
         output=sink.getvalue(),
         spawn_calls=tuple(spawner.spawn_calls),
-        written_outputs=tuple(spawner.written_outputs),
         retained_logs=tuple(
             path.read_text(encoding="utf-8") if path.exists() else None
             for path in spawner.output_paths
@@ -397,7 +396,6 @@ class RecipeRunObservation:
     exit_code: int
     output: str
     spawn_calls: tuple[tuple[str, ...], ...]
-    written_outputs: tuple[str, ...]
     retained_logs: tuple[str | None, ...]
     log_paths: tuple[str, ...]
     summary: dict[str, object]
@@ -470,6 +468,22 @@ def check_run_observation(
     """Run the check wrapper over ``recipes`` with scripted children."""
 
     spawner = RecordingSpawner(exit_codes=list(exit_codes), outputs=list(outputs))
+    return _observe_check_run(recipes=recipes, spawner=spawner)
+
+
+def signal_interrupt_observation(signum: int) -> CheckRunObservation:
+    """Run the check wrapper with a spawner that raises ``signum`` during spawn."""
+
+    return _observe_check_run(
+        recipes=(VALIDATION_RECIPE,), spawner=SignalRaisingSpawner(signum=signum)
+    )
+
+
+def _observe_check_run(
+    *,
+    recipes: tuple[Recipe, ...],
+    spawner: RecordingSpawner | SignalRaisingSpawner,
+) -> CheckRunObservation:
     sink = io.StringIO()
     with TemporaryDirectory() as tmp:
         summary_path = Path(tmp) / "check-summary.json"
@@ -477,28 +491,6 @@ def check_run_observation(
             spawner=spawner,
             sink=sink,
             recipes=recipes,
-            summary_path=summary_path,
-        )
-        summary = read_summary(summary_path)
-    return CheckRunObservation(
-        exit_code=exit_code,
-        output=sink.getvalue(),
-        spawn_calls=tuple(spawner.spawn_calls),
-        summary=summary,
-    )
-
-
-def signal_interrupt_observation(signum: int) -> CheckRunObservation:
-    """Run the check wrapper with a spawner that raises ``signum`` during spawn."""
-
-    spawner = SignalRaisingSpawner(signum=signum)
-    sink = io.StringIO()
-    with TemporaryDirectory() as tmp:
-        summary_path = Path(tmp) / "signal-summary.json"
-        exit_code = run_check(
-            spawner=spawner,
-            sink=sink,
-            recipes=(VALIDATION_RECIPE,),
             summary_path=summary_path,
         )
         summary = read_summary(summary_path)
@@ -874,7 +866,6 @@ class SpawnFailingSpawner:
     message: str
     spawn_calls: list[tuple[str, ...]] = field(default_factory=list)
     output_paths: list[Path] = field(default_factory=list)
-    written_outputs: list[str] = field(default_factory=list)
 
     def spawn(self, argv: Sequence[str], output_path: Path) -> ProcessHandle:
         self.spawn_calls.append(tuple(argv))
