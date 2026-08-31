@@ -285,11 +285,11 @@ Higher-index siblings listed: {list}
 </SPEC_TREE_CONTEXT>
 ```
 
-For example, `/contextualize spx/21-parser.enabler` over a tree with one
+For example, `/contextualize spx/{target-node}` over a tree with one
 lower-index runtime enabler emits resolved paths and concrete counts:
 
 ```text
-<SPEC_TREE_CONTEXT target="spx/21-parser.enabler">
+<SPEC_TREE_CONTEXT target="spx/{target-node}">
 
 Product: Example Compiler
 Target: spx/21-parser.enabler (enabler)
@@ -301,29 +301,29 @@ Documents loaded:
   Lower-index sibling specs: 1 read
   ADRs: 1 found, 1 read
   PDRs: 0 found, 0 read
-  Cited governance decisions: spx/15-agent-tools.pdr.md cited by spx/21-parser.enabler/13-parser-contract.adr.md
+  Cited governance decisions: spx/{governing-decision}.pdr.md cited by spx/{target-node}/{target-decision}.adr.md
   Guide files: {{! file('root_guide') !}}
 Context source: current base via sync-base
 Sync-base status: already_current
 
 Hierarchy (node target):
   Example Compiler
-  └── spx/21-parser.enabler (enabler) ← TARGET
+  └── spx/{target-node} (enabler) ← TARGET
 
-Children: 1 (spx/21-parser.enabler/32-ast.enabler)
-Test links: spx/21-parser.enabler/tests/test_parser.scenario.l1.py, spx/21-parser.enabler/tests/test_parser.compliance.l1.py
+Children: 1 (spx/{target-node}/{child-node})
+Test links: spx/{target-node}/tests/{scenario-test}, spx/{target-node}/tests/{compliance-test}
 Co-located tests: 2 listed
 Implementation: unknown unless already established by a prior workflow
-Coordination notes: spx/PLAN.md, spx/21-parser.enabler/ISSUES.md
+Coordination notes: spx/PLAN.md, spx/{target-node}/ISSUES.md
 Local skill overlays: spx/local/skills.md, spx/local/merging.md
 Lifecycle overlays read: spx/local/merging.md
 Default-branch completion boundary: delivered value is value merged to the default branch on origin through /merge; local verification, review, audit, and commits are progress, not completion, while the branch carries changes ahead of its resolved base
 Governed next workflow: /merge after local verification when the work changes files and is destined for the default branch, unless explicitly scoped to proposal, analysis, review, or local-only work, or stopped at an explicit lifecycle gate with no independent local action remaining
 Progress verdict rule: status and progress answers must classify the lifecycle as complete, continuing, or blocked; a clean worktree, committed branch, or passing local gate cannot classify default-branch work as complete while changes remain ahead of the resolved base
 Continuation action: if the lifecycle is continuing, proceed to the governed next workflow instead of ending the turn; if blocked, report the exact gate, evidence, and operator decision required
-Lower-index siblings read: spx/18-runtime.enabler
-Same-index siblings (independent): spx/21-code-generation.enabler
-Higher-index siblings listed: spx/32-optimization.enabler
+Lower-index siblings read: spx/{lower-index-sibling}
+Same-index siblings (independent): spx/{same-index-sibling}
+Higher-index siblings listed: spx/{higher-index-sibling}
 
 </SPEC_TREE_CONTEXT>
 ```
