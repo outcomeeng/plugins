@@ -61,6 +61,7 @@ import sys
 from dataclasses import dataclass
 from enum import Enum
 from types import ModuleType
+from typing import Protocol
 
 _CHANGESET_SCOPE_PATH = (
     pathlib.Path(__file__).resolve().parent.parent.parent
@@ -300,35 +301,58 @@ class SyncBaseResult:
         }
 
 
-def _git(
-    repo: pathlib.Path, *args: str, stdin: str | None = None
-) -> subprocess.CompletedProcess[str]:
-    """Run a git command in ``repo``, capturing output without raising."""
-    return subprocess.run(  # noqa: S603 — fixed argv, no shell, args from callers
-        ["git", *args],  # noqa: S607
-        cwd=repo,
-        input=stdin,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+class GitRunner(Protocol):
+    """Command boundary used for every Git interaction."""
+
+    def run(
+        self,
+        repo: pathlib.Path,
+        *args: str,
+        stdin: str | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        """Run Git in ``repo`` and return its captured process result."""
+        ...
 
 
-def _rev(repo: pathlib.Path, ref: str) -> str | None:
+@dataclass(frozen=True)
+class SubprocessGitRunner:
+    """Production Git runner backed by ``subprocess``."""
+
+    def run(
+        self,
+        repo: pathlib.Path,
+        *args: str,
+        stdin: str | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        """Run a Git command, capturing output without raising."""
+        return subprocess.run(  # noqa: S603 — fixed argv, no shell, args from callers
+            ["git", *args],  # noqa: S607
+            cwd=repo,
+            input=stdin,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+
+DEFAULT_GIT_RUNNER: GitRunner = SubprocessGitRunner()
+
+
+def _rev(repo: pathlib.Path, ref: str, runner: GitRunner) -> str | None:
     """Resolve ``ref`` to a full OID, or ``None`` when it does not resolve."""
-    result = _git(repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+    result = runner.run(repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
     oid = result.stdout.strip()
     return oid if result.returncode == 0 and oid else None
 
 
-def _merge_base(repo: pathlib.Path, a: str, b: str) -> str | None:
+def _merge_base(repo: pathlib.Path, a: str, b: str, runner: GitRunner) -> str | None:
     """Return the merge-base OID of ``a`` and ``b``, or ``None`` when none exists."""
-    result = _git(repo, "merge-base", a, b)
+    result = runner.run(repo, "merge-base", a, b)
     oid = result.stdout.strip()
     return oid if result.returncode == 0 and oid else None
 
 
-def _diff_paths(repo: pathlib.Path, spec: str) -> list[str] | None:
+def _diff_paths(repo: pathlib.Path, spec: str, runner: GitRunner) -> list[str] | None:
     """Return the sorted changed paths for a diff spec, or ``None`` on failure.
 
     ``spec`` is a two-dot (``a..b``, net base advance) or three-dot
@@ -337,32 +361,34 @@ def _diff_paths(repo: pathlib.Path, spec: str) -> list[str] | None:
     rename of a path the branch also touched surfaces as a path overlap rather
     than hiding behind the new name and licensing a false reuse.
     """
-    result = _git(repo, "diff", "--name-only", "--no-renames", spec)
+    result = runner.run(repo, "diff", "--name-only", "--no-renames", spec)
     if result.returncode != 0:
         return None
     return sorted(p for p in result.stdout.splitlines() if p)
 
 
-def _conflicted_paths(repo: pathlib.Path) -> list[str]:
+def _conflicted_paths(repo: pathlib.Path, runner: GitRunner) -> list[str]:
     """Return sorted paths with unmerged index entries in the active conflict."""
-    result = _git(repo, "diff", "--name-only", "--diff-filter=U")
+    result = runner.run(repo, "diff", "--name-only", "--diff-filter=U")
     if result.returncode != 0:
         return []
     return sorted(p for p in result.stdout.splitlines() if p)
 
 
-def _patch_id(repo: pathlib.Path, base: str, head: str) -> str | None:
+def _patch_id(
+    repo: pathlib.Path, base: str, head: str, runner: GitRunner
+) -> str | None:
     """Return the stable patch identity of ``base...head``, or ``None`` on failure.
 
     An empty diff yields the empty string, which compares equal across a sync
     that left the branch's changes identical.
     """
-    diff = _git(repo, "diff", f"{base}...{head}")
+    diff = runner.run(repo, "diff", f"{base}...{head}")
     if diff.returncode != 0:
         return None
     if not diff.stdout.strip():
         return ""
-    identified = _git(repo, "patch-id", "--stable", stdin=diff.stdout)
+    identified = runner.run(repo, "patch-id", "--stable", stdin=diff.stdout)
     if identified.returncode != 0:
         return None
     return identified.stdout.split()[0] if identified.stdout.strip() else ""
@@ -370,6 +396,7 @@ def _patch_id(repo: pathlib.Path, base: str, head: str) -> str | None:
 
 def _build_preservation(
     repo: pathlib.Path,
+    runner: GitRunner,
     *,
     old_base_oid: str | None,
     new_base_oid: str | None,
@@ -384,17 +411,17 @@ def _build_preservation(
     prior local review reusable.
     """
     base_delta = (
-        _diff_paths(repo, f"{old_base_oid}..{new_base_oid}")
+        _diff_paths(repo, f"{old_base_oid}..{new_base_oid}", runner)
         if old_base_oid and new_base_oid
         else None
     )
     paths_before = (
-        _diff_paths(repo, f"{old_base_oid}...{old_head_oid}")
+        _diff_paths(repo, f"{old_base_oid}...{old_head_oid}", runner)
         if old_base_oid and old_head_oid
         else None
     )
     paths_after = (
-        _diff_paths(repo, f"{new_base_oid}...{new_head_oid}")
+        _diff_paths(repo, f"{new_base_oid}...{new_head_oid}", runner)
         if new_base_oid and new_head_oid
         else None
     )
@@ -404,12 +431,12 @@ def _build_preservation(
         else None
     )
     patch_before = (
-        _patch_id(repo, old_base_oid, old_head_oid)
+        _patch_id(repo, old_base_oid, old_head_oid, runner)
         if old_base_oid and old_head_oid
         else None
     )
     patch_after = (
-        _patch_id(repo, new_base_oid, new_head_oid)
+        _patch_id(repo, new_base_oid, new_head_oid, runner)
         if new_base_oid and new_head_oid
         else None
     )
@@ -437,6 +464,7 @@ def _build_preservation(
 
 def _build_conflict_details(
     repo: pathlib.Path,
+    runner: GitRunner,
     *,
     old_base_oid: str | None,
     new_base_oid: str | None,
@@ -445,16 +473,16 @@ def _build_conflict_details(
 ) -> ConflictDetails:
     """Build the active-conflict report without resolving or aborting it."""
     base_delta = (
-        _diff_paths(repo, f"{old_base_oid}..{new_base_oid}")
+        _diff_paths(repo, f"{old_base_oid}..{new_base_oid}", runner)
         if old_base_oid and new_base_oid
         else None
     )
     paths_before = (
-        _diff_paths(repo, f"{old_base_oid}...{old_head_oid}")
+        _diff_paths(repo, f"{old_base_oid}...{old_head_oid}", runner)
         if old_base_oid and old_head_oid
         else None
     )
-    conflicted = _conflicted_paths(repo)
+    conflicted = _conflicted_paths(repo, runner)
     overlap = (
         sorted(set(base_delta) & set(paths_before))
         if base_delta is not None and paths_before is not None
@@ -485,6 +513,7 @@ def _sync_detached(
     remote_ref: str,
     *,
     fetch: bool,
+    runner: GitRunner,
 ) -> SyncBaseResult:
     """Bring a detached-HEAD worktree current with its fetched base.
 
@@ -497,10 +526,10 @@ def _sync_detached(
     because advancing a diverged worktree would orphan its commits. The branch
     field is ``None`` for every detached outcome.
     """
-    old_head_oid = _rev(repo, "HEAD")
+    old_head_oid = _rev(repo, "HEAD", runner)
 
     if fetch:
-        fetched = _git(repo, "fetch", "origin", base_ref)
+        fetched = runner.run(repo, "fetch", "origin", base_ref)
         if fetched.returncode != 0:
             return SyncBaseResult(
                 SyncStatus.GIT_FAILURE,
@@ -511,7 +540,7 @@ def _sync_detached(
                 f"{fetched.stderr.strip()}",
             )
 
-    new_base_oid = _rev(repo, remote_ref)
+    new_base_oid = _rev(repo, remote_ref, runner)
     if old_head_oid is None or new_base_oid is None:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
@@ -526,7 +555,9 @@ def _sync_detached(
     # not an ancestor has diverged — it carries its own commits — and advancing
     # would orphan them, so it stays a git failure: a detached HEAD has no branch
     # to rebase those commits onto.
-    is_ancestor = _git(repo, "merge-base", "--is-ancestor", old_head_oid, new_base_oid)
+    is_ancestor = runner.run(
+        repo, "merge-base", "--is-ancestor", old_head_oid, new_base_oid
+    )
     if is_ancestor.returncode != 0:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
@@ -538,7 +569,7 @@ def _sync_detached(
         )
 
     # The fork point of an ancestor detached commit is the commit itself.
-    old_base_oid = _merge_base(repo, old_head_oid, new_base_oid)
+    old_base_oid = _merge_base(repo, old_head_oid, new_base_oid, runner)
 
     if old_head_oid == new_base_oid:
         return SyncBaseResult(
@@ -549,6 +580,7 @@ def _sync_detached(
             f"detached HEAD is already current with {remote_ref}",
             preservation=_build_preservation(
                 repo,
+                runner,
                 old_base_oid=old_base_oid,
                 new_base_oid=new_base_oid,
                 old_head_oid=old_head_oid,
@@ -558,7 +590,7 @@ def _sync_detached(
 
     # precondition: advancing a worktree over uncommitted tracked changes would
     # clobber them, so a dirty tree blocks the advance just as it blocks a rebase
-    dirty = _git(repo, "status", "--porcelain", "--untracked-files=no")
+    dirty = runner.run(repo, "status", "--porcelain", "--untracked-files=no")
     if dirty.returncode != 0:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
@@ -577,7 +609,7 @@ def _sync_detached(
             f"tracked files; commit them before advancing to {remote_ref}",
         )
 
-    advanced = _git(repo, "switch", "--detach", remote_ref)
+    advanced = runner.run(repo, "switch", "--detach", remote_ref)
     if advanced.returncode != 0:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
@@ -594,10 +626,11 @@ def _sync_detached(
         f"advanced detached HEAD to {remote_ref}",
         preservation=_build_preservation(
             repo,
+            runner,
             old_base_oid=old_base_oid,
             new_base_oid=new_base_oid,
             old_head_oid=old_head_oid,
-            new_head_oid=_rev(repo, "HEAD"),
+            new_head_oid=_rev(repo, "HEAD", runner),
         ),
     )
 
@@ -616,7 +649,11 @@ def _resolve_default_base(repo: pathlib.Path) -> str | SyncBaseResult:
 
 
 def sync_base(
-    repo: pathlib.Path, *, base_ref: str | None = None, fetch: bool = True
+    repo: pathlib.Path,
+    *,
+    base_ref: str | None = None,
+    fetch: bool = True,
+    runner: GitRunner = DEFAULT_GIT_RUNNER,
 ) -> SyncBaseResult:
     """Bring ``repo``'s current branch current with its fetched base.
 
@@ -633,11 +670,11 @@ def sync_base(
         if isinstance(resolved_base, SyncBaseResult):
             return resolved_base
         base_ref = resolved_base
-    return _sync_resolved_base(repo, base_ref=base_ref, fetch=fetch)
+    return _sync_resolved_base(repo, base_ref=base_ref, fetch=fetch, runner=runner)
 
 
 def _sync_resolved_base(
-    repo: pathlib.Path, *, base_ref: str, fetch: bool
+    repo: pathlib.Path, *, base_ref: str, fetch: bool, runner: GitRunner
 ) -> SyncBaseResult:
     """Synchronize onto a caller-resolved bare base branch."""
     remote_ref = remote_tracking_ref(base_ref)
@@ -645,15 +682,15 @@ def _sync_resolved_base(
     try:
         branch = detect_current_branch(repo)
     except DetachedHeadError:
-        return _sync_detached(repo, base_ref, remote_ref, fetch=fetch)
+        return _sync_detached(repo, base_ref, remote_ref, fetch=fetch, runner=runner)
 
     # Capture the pre-rebase HEAD for the preservation proof; the base fork point
     # is derived after the fetch (below) so the base delta stays accurate even
     # when the caller already fetched the base.
-    old_head_oid = _rev(repo, "HEAD")
+    old_head_oid = _rev(repo, "HEAD", runner)
 
     if fetch:
-        fetched = _git(repo, "fetch", "origin", base_ref)
+        fetched = runner.run(repo, "fetch", "origin", base_ref)
         if fetched.returncode != 0:
             return SyncBaseResult(
                 SyncStatus.GIT_FAILURE,
@@ -663,7 +700,7 @@ def _sync_resolved_base(
                 f"git fetch origin {base_ref} failed: {fetched.stderr.strip()}",
             )
 
-    resolved = _git(
+    resolved = runner.run(
         repo, "rev-parse", "--verify", "--quiet", f"{remote_ref}^{{commit}}"
     )
     if resolved.returncode != 0:
@@ -675,7 +712,7 @@ def _sync_resolved_base(
             f"base ref {remote_ref} does not resolve to a commit",
         )
 
-    behind = _git(repo, "rev-list", "--count", f"HEAD..{remote_ref}")
+    behind = runner.run(repo, "rev-list", "--count", f"HEAD..{remote_ref}")
     if behind.returncode != 0:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
@@ -684,13 +721,13 @@ def _sync_resolved_base(
             branch,
             f"cannot compute commits behind {remote_ref}: {behind.stderr.strip()}",
         )
-    new_base_oid = _rev(repo, remote_ref)
+    new_base_oid = _rev(repo, remote_ref, runner)
     # Anchor the base delta at the branch's fork point from the base — the
     # merge-base of the pre-rebase HEAD and the current base. This is stable
     # whether or not the caller pre-fetched, where the pre-fetch remote ref would
     # already equal the post-fetch base and report an empty base delta.
     old_base_oid = (
-        _merge_base(repo, old_head_oid, new_base_oid)
+        _merge_base(repo, old_head_oid, new_base_oid, runner)
         if old_head_oid and new_base_oid
         else None
     )
@@ -703,6 +740,7 @@ def _sync_resolved_base(
             f"branch {branch} is already current with {remote_ref}",
             preservation=_build_preservation(
                 repo,
+                runner,
                 old_base_oid=old_base_oid,
                 new_base_oid=new_base_oid,
                 old_head_oid=old_head_oid,
@@ -711,7 +749,7 @@ def _sync_resolved_base(
         )
 
     # precondition: git refuses to replay over uncommitted tracked changes; untracked excluded
-    dirty = _git(repo, "status", "--porcelain", "--untracked-files=no")
+    dirty = runner.run(repo, "status", "--porcelain", "--untracked-files=no")
     if dirty.returncode != 0:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
@@ -730,7 +768,7 @@ def _sync_resolved_base(
             f"commit them before rebasing onto {remote_ref}",
         )
 
-    rebased = _git(repo, "rebase", remote_ref)
+    rebased = runner.run(repo, "rebase", remote_ref)
     if rebased.returncode == 0:
         return SyncBaseResult(
             SyncStatus.REBASED,
@@ -740,15 +778,17 @@ def _sync_resolved_base(
             f"rebased {branch} onto {remote_ref}",
             preservation=_build_preservation(
                 repo,
+                runner,
                 old_base_oid=old_base_oid,
                 new_base_oid=new_base_oid,
                 old_head_oid=old_head_oid,
-                new_head_oid=_rev(repo, "HEAD"),
+                new_head_oid=_rev(repo, "HEAD", runner),
             ),
         )
 
     conflict_details = _build_conflict_details(
         repo,
+        runner,
         old_base_oid=old_base_oid,
         new_base_oid=new_base_oid,
         old_head_oid=old_head_oid,
