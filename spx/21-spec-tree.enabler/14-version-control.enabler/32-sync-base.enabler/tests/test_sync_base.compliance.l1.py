@@ -37,6 +37,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     detach_head,
     head_oid,
     load_sync_base_module,
+    resolve_ref,
     working_tree_has_tracked_changes,
 )
 
@@ -85,11 +86,27 @@ def test_clean_rebase_has_no_conflict_details_conflict_does(
     conflict_root = tmp_path / "conflict"
     conflict_root.mkdir()
     conflict_handle = build_conflicting_repo(conflict_root)
+    old_head_oid = head_oid(conflict_handle.repo)
     conflict = module.sync_base(conflict_handle.repo)
     assert conflict.status is module.SyncStatus.CONFLICT
     assert conflict.conflict is not None
     assert conflict.conflict.summary == module.CONFLICT_SUMMARY
+    assert conflict.conflict.conflicted_paths == [conflict_handle.conflict_file]
+    assert conflict.conflict.old_head_oid == old_head_oid
+    assert conflict.conflict.new_base_oid == resolve_ref(
+        conflict_handle.repo, conflict_handle.remote_ref
+    )
+    assert conflict.conflict.base_delta_paths == [conflict_handle.conflict_file]
+    assert conflict.conflict.branch_paths_before == [conflict_handle.conflict_file]
+    assert conflict.conflict.path_overlap == [conflict_handle.conflict_file]
     assert "CONFLICT (content): Merge conflict in" in conflict.conflict.git_output
+    assert conflict.conflict.operator_options == [
+        module.CONFLICT_INSPECT_STATUS,
+        module.CONFLICT_INSPECT_DIFF,
+        module.CONFLICT_INSPECT_STAGES,
+        module.CONFLICT_CONTINUE,
+        module.CONFLICT_ABORT,
+    ]
     assert (conflict_handle.repo / ".git" / "rebase-merge").exists() or (
         conflict_handle.repo / ".git" / "rebase-apply"
     ).exists()

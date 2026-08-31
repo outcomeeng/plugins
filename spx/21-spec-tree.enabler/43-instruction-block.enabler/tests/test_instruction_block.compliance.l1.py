@@ -717,15 +717,16 @@ def test_every_harness_router_authorizes_subagent_dispatch() -> None:
 
 
 def test_context_free_verification_dispatch_policy_is_rendered() -> None:
-    documents = rendered_instruction_blocks()
-    dist.validate_context_free_verification_dispatch_policy(documents)
-    for heading in CONTEXT_FREE_POLICY_SECTION_HEADINGS:
-        for agent_harness, document in documents.items():
-            violating_document = _without_markdown_section(document, heading)
-            with pytest.raises(dist.ContextFreeVerificationDispatchPolicyError):
-                dist.validate_context_free_verification_dispatch_policy(
-                    {agent_harness: violating_document}
-                )
+    for enabled_languages in harness.template_language_subsets():
+        documents = rendered_instruction_blocks(enabled_languages)
+        dist.validate_context_free_verification_dispatch_policy(documents)
+        for heading in CONTEXT_FREE_POLICY_SECTION_HEADINGS:
+            for agent_harness, document in documents.items():
+                violating_document = _without_markdown_section(document, heading)
+                with pytest.raises(dist.ContextFreeVerificationDispatchPolicyError):
+                    dist.validate_context_free_verification_dispatch_policy(
+                        {agent_harness: violating_document}
+                    )
 
 
 def test_each_harness_block_carries_only_its_own_dispatch_mechanics() -> None:

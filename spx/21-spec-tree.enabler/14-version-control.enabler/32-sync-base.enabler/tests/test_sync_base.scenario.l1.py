@@ -104,6 +104,7 @@ def test_rebase_conflict_stops_with_active_conflict_details(
 ) -> None:
     module = load_sync_base_module()
     handle = build_conflicting_repo(_root(tmp_path))
+    old_head_oid = head_oid(handle.repo)
 
     result = module.sync_base(handle.repo)
 
@@ -111,11 +112,21 @@ def test_rebase_conflict_stops_with_active_conflict_details(
     assert result.conflict is not None
     assert result.conflict.summary == module.CONFLICT_SUMMARY
     assert result.conflict.conflicted_paths == [handle.conflict_file]
+    assert result.conflict.old_head_oid == old_head_oid
+    assert result.conflict.new_base_oid == resolve_ref(handle.repo, handle.remote_ref)
+    assert result.conflict.base_delta_paths == [handle.conflict_file]
+    assert result.conflict.branch_paths_before == [handle.conflict_file]
+    assert result.conflict.path_overlap == [handle.conflict_file]
     assert f"CONFLICT (content): Merge conflict in {handle.conflict_file}" in (
         result.conflict.git_output
     )
-    assert module.CONFLICT_ABORT in result.conflict.operator_options
-    assert module.CONFLICT_CONTINUE in result.conflict.operator_options
+    assert result.conflict.operator_options == [
+        module.CONFLICT_INSPECT_STATUS,
+        module.CONFLICT_INSPECT_DIFF,
+        module.CONFLICT_INSPECT_STAGES,
+        module.CONFLICT_CONTINUE,
+        module.CONFLICT_ABORT,
+    ]
     # The rebase remains active so the operator can inspect, continue, or abort.
     assert (handle.repo / ".git" / "rebase-merge").exists() or (
         handle.repo / ".git" / "rebase-apply"

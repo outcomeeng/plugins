@@ -302,7 +302,7 @@ Documents loaded:
   ADRs: 1 found, 1 read
   PDRs: 0 found, 0 read
   Cited governance decisions: spx/15-agent-tools.pdr.md cited by spx/21-parser.enabler/13-parser-contract.adr.md
-  Guide files: AGENTS.md
+  Guide files: CLAUDE.md
 Context source: current base via sync-base
 Sync-base status: already_current
 
