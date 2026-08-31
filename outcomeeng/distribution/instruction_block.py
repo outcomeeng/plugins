@@ -304,6 +304,7 @@ HARNESS_DISPATCH_MECHANICS_MARKERS: Final = {
 DISPATCH_REFERENCE_SKILL_DIRS: Final = (
     "spec-tree/skills/merging-standards",
     "spec-tree/skills/apply",
+    "instructions/skills/create-skill",
 )
 DISPATCH_REFERENCE_FILENAME: Final = "references/verifier-dispatch.md"
 WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (

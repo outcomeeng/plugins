@@ -223,7 +223,7 @@ Avoid shorthand such as "config patch" or "ship it path" when the exact file, PR
 
 ## Quick Reference: Skills and Agents
 
-Skills run in the main conversation. Agents preload the skill and run autonomously in their own agent sessions. Audit agents return structured verdicts; changeset reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. Dispatch agents in parallel when auditing multiple targets; `### Sub-agent dispatch` above governs when to dispatch one. The dispatch mechanics and the per-role role-task contracts are not part of this router: they load with the dispatching skill — `/merging-standards` for the merge lifecycle and `/apply` for the TDD flow each carry them as a `verifier-dispatch` reference read before any dispatch.
+Skills run in the main conversation. Agents preload the skill and run autonomously in their own agent sessions. Audit agents return structured verdicts; changeset reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. Dispatch agents in parallel when auditing multiple targets; `### Sub-agent dispatch` above governs when to dispatch one. The dispatch mechanics and the per-role role-task contracts are not part of this router: they load with the dispatching skill — `/merging-standards` for the merge lifecycle, `/apply` for the TDD flow, and `/create-skill` for skill authoring each carry them as a `verifier-dispatch` reference read before any dispatch.
 
 <!-- harness:codex -->
 
