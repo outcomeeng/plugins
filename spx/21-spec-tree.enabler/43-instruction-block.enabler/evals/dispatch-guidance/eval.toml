@@ -6,8 +6,9 @@ owned_paths = [
   "src/_shared/agentic-execution/**",
   "src/plugins/spec-tree/skills/merging-standards/references/verifier-dispatch.md",
   "src/plugins/spec-tree/skills/apply/references/verifier-dispatch.md",
+  "src/plugins/instructions/skills/create-skill/references/verifier-dispatch.md",
 ]
-smoke_cases = ["claude-changes-reviewer", "codex-implementation-auditor"]
+smoke_cases = ["claude-changes-reviewer", "codex-implementation-auditor", "claude-skill-auditor"]
 
 [prompt_source]
 kind = "producer-files"
