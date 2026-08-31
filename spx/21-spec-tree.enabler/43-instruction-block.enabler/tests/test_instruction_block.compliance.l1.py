@@ -129,6 +129,29 @@ def test_quoted_dispatch_reference_requirements_are_rejected() -> None:
                 validation.validator(violating_references)
 
 
+def test_fenced_dispatch_reference_requirements_are_rejected() -> None:
+    references = source.load_dispatch_references()
+    for validation in source.DISPATCH_REFERENCE_POLICY_VALIDATIONS:
+        for _, required_text in validation.requirements:
+            violating_references = {
+                agent_harness: document.replace(
+                    required_text,
+                    "\n".join(
+                        (
+                            "",
+                            source.MARKDOWN_CODE_FENCE_MARKERS[0],
+                            required_text,
+                            source.MARKDOWN_CODE_FENCE_MARKERS[0],
+                            "",
+                        )
+                    ),
+                )
+                for agent_harness, document in references.items()
+            }
+            with pytest.raises(source.InstructionBlockRenderError):
+                validation.validator(violating_references)
+
+
 def test_quoted_policy_requirements_are_rejected() -> None:
     documents = evidence.rendered_instruction_blocks()
     for validation in source.OPERATIVE_POLICY_VALIDATIONS:
