@@ -829,7 +829,7 @@ def test_dropping_the_dispatch_policy_section_is_rejected() -> None:
         documents = rendered_instruction_blocks(enabled_languages)
         for agent_harness, document in documents.items():
             violating_document = _without_markdown_section(
-                document, "### Sub-agent dispatch"
+                document, dist.SUBAGENT_DISPATCH_POLICY_HEADING
             )
             with pytest.raises(dist.SubagentDispatchPolicyError):
                 dist.validate_subagent_dispatch_policy(
