@@ -3,7 +3,7 @@ name: sync-base
 description: >-
   ALWAYS invoke this skill to bring a branch behind its base current — before reading product truth, before verifying, and before every merge push. NEVER rebase a behind-base branch by hand or bring it current with git reset.
 argument-hint: "[repo] [--base <branch>] [--no-fetch]"
-allowed-tools: Read, Edit, Skill, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git switch -c:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*)
+allowed-tools: Read, Edit, Skill, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git switch -c:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git checkout --ours --:*), Bash(git checkout --theirs --:*), Bash(git rm --:*), Bash(git add:*), Bash(git rebase --continue:*)
 ---
 
 <objective>
@@ -84,7 +84,7 @@ Stop for the operator only when the remaining conflict is a product-intent confl
 Allowed direct commands:
 
 - Read state: `git status`, `git rev-parse`, `git symbolic-ref --short HEAD`, `git merge-base`, `git rev-list`, `git diff --name-only`, `git diff`, `git ls-files -u`, `git show :1:<path>`, `git show :2:<path>`, `git show :3:<path>`.
-- Resolve: edit files, `git add <resolved-paths>`, `git rebase --continue`.
+- Resolve after classification decides the product result: edit files, `git checkout --ours -- <path>`, `git checkout --theirs -- <path>`, `git rm -- <path>`, `git add <resolved-paths>`, `git rebase --continue`.
 
 The synchronizer script owns base movement. It runs `git fetch origin <base>` and either `git rebase origin/<base>` for an attached branch or `git switch --detach origin/<base>` for a clean detached HEAD that is an ancestor of the fetched base. Do not substitute direct sync commands for the script.
 
@@ -152,8 +152,11 @@ A product-intent conflict is the only thing on the other side. Name it precisely
 
 The bundled synchronizer is covered before release by this real-git test matrix:
 
+The authoring repository records the executable evidence in `test_sync_base.compliance.l1.py` and `test_sync_base.scenario.l1.py`; run those artifacts through `/test` so the active product supplies their full paths and declared command.
+
 | Input                                                | Expected result                                                                     |
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| malformed or ambiguous CLI arguments                 | argparse exit 2; repository synchronization is not entered                          |
 | attached branch at the fetched base tip              | exit 0; `status=already_current`; non-null `preservation`                           |
 | attached branch behind the fetched base              | exit 0; `status=rebased`; branch commit preserved; non-null `preservation`          |
 | attached branch with a tracked edit                  | exit 4; `status=dirty_tree`; HEAD and working tree unchanged; no `conflict`         |
