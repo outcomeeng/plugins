@@ -24,29 +24,6 @@ def _without_retired_managed_block(body: str) -> str:
     return stripped.strip("\n")
 
 
-def _maximal_common_whole_line_spans(left: str, right: str) -> tuple[str, ...]:
-    left_lines = left.splitlines(keepends=True)
-    right_lines = right.splitlines(keepends=True)
-    spans: set[str] = set()
-    for left_start in range(len(left_lines)):
-        for right_start in range(len(right_lines)):
-            length = 0
-            while (
-                left_start + length < len(left_lines)
-                and right_start + length < len(right_lines)
-                and left_lines[left_start + length] == right_lines[right_start + length]
-            ):
-                length += 1
-                spans.add("".join(left_lines[left_start : left_start + length]))
-    return tuple(
-        sorted(
-            span
-            for span in spans
-            if not any(span in other for other in spans if span != other)
-        )
-    )
-
-
 def _topology_seed_law(
     topology: harness.RootInstructionTopology,
 ) -> tuple[str, str]:
@@ -73,7 +50,7 @@ def _shared_region_law(topology: harness.RootInstructionTopology) -> str | None:
 
     claude = _without_retired_managed_block(claude)
     agents = _without_retired_managed_block(agents)
-    spans = _maximal_common_whole_line_spans(claude, agents)
+    spans = harness.maximal_common_whole_line_spans(claude, agents)
     if not spans:
         return None
     span = max(spans, key=len)

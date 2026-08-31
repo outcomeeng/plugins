@@ -55,18 +55,13 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_overlapping_base_repo,
     build_rename_base_repo,
     build_untracked_only_behind_base_repo,
+    create_repository_pool as _root,
     detach_head,
     fetch_base,
     head_oid,
     load_sync_base_module,
     resolve_ref,
 )
-
-
-def _root(tmp_path: pathlib.Path) -> pathlib.Path:
-    root = tmp_path / "pool"
-    root.mkdir()
-    return root
 
 
 def test_behind_base_branch_is_rebased_onto_remote_tracking_base(

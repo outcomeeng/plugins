@@ -112,6 +112,30 @@ class NamedRootInstructionTopology:
     factory: Callable[[], RootInstructionTopology]
 
 
+def maximal_common_whole_line_spans(left: str, right: str) -> tuple[str, ...]:
+    """Return longest contiguous common whole-line spans via an independent oracle."""
+    left_lines = left.splitlines(keepends=True)
+    right_lines = right.splitlines(keepends=True)
+    previous = [""] * (len(right_lines) + 1)
+    maximal: set[str] = set()
+    maximal_length = 0
+    for left_line in left_lines:
+        current = [""] * (len(right_lines) + 1)
+        for right_index, right_line in enumerate(right_lines, start=1):
+            if left_line != right_line:
+                continue
+            candidate = previous[right_index - 1] + left_line
+            current[right_index] = candidate
+            candidate_length = len(candidate)
+            if candidate_length > maximal_length:
+                maximal = {candidate}
+                maximal_length = candidate_length
+            elif candidate_length == maximal_length:
+                maximal.add(candidate)
+        previous = current
+    return tuple(sorted(maximal))
+
+
 @dataclass(frozen=True)
 class BootstrapOutcome:
     """The seed bodies and both written root documents observed after one bootstrap write.
@@ -313,6 +337,20 @@ def bootstrap_topology_cases() -> tuple[NamedRootInstructionTopology, ...]:
     )
 
 
+def harness_seed_topology_cases() -> tuple[NamedRootInstructionTopology, ...]:
+    """Return the complete source-owned harness-seed topology domain."""
+    return (
+        NamedRootInstructionTopology(
+            "only-claude", root_instruction_topology_only_claude
+        ),
+        NamedRootInstructionTopology(
+            "only-agents", root_instruction_topology_only_agents
+        ),
+        NamedRootInstructionTopology("separate", root_instruction_topology_separate),
+        NamedRootInstructionTopology("symlinked", root_instruction_topology_symlinked),
+    )
+
+
 def _replace_path_with_text(path: pathlib.Path, body: str) -> None:
     """Write ``body`` as a regular file, replacing a symlink or file at ``path``."""
     if path.exists() or path.is_symlink():
@@ -392,6 +430,9 @@ def materialize_declared_root_topology(
 class SymlinkedTopologyObservation:
     """Observed files and seeds after symlinked topology materialization."""
 
+    declared_claude_is_symlink: bool
+    declared_agents_is_symlink: bool
+    declared_claude_link_target: str | None
     claude_is_file: bool
     agents_is_file: bool
     claude_is_symlink: bool
@@ -412,6 +453,27 @@ class TopologySeedObservation:
     observed: tuple[tuple[str, str], ...]
 
 
+def _observe_root_instruction_topology_seed(
+    root: pathlib.Path,
+    index: int,
+    topology_case: NamedRootInstructionTopology,
+) -> TopologySeedObservation:
+    """Materialize and observe one member of the harness-seed topology domain."""
+    topology = topology_case.factory()
+    return TopologySeedObservation(
+        topology_name=topology_case.name,
+        declared_files=tuple(sorted(topology.files.items())),
+        declared_symlinks=tuple(sorted(topology.symlinks.items())),
+        observed=tuple(
+            sorted(
+                materialize_root_instruction_topology(
+                    root / str(index), topology
+                ).items()
+            )
+        ),
+    )
+
+
 def observe_symlinked_instruction_topology_materialization() -> (
     SymlinkedTopologyObservation
 ):
@@ -419,12 +481,20 @@ def observe_symlinked_instruction_topology_materialization() -> (
     cases = generated_cases()
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
-        materialized = materialize_root_instruction_topology(
-            root, root_instruction_topology_symlinked()
-        )
+        topology = root_instruction_topology_symlinked()
+        materialize_declared_root_topology(root, topology)
         claude_path = root / cases.instruction_claude
         agents_path = root / cases.instruction_agents
+        declared_claude_is_symlink = claude_path.is_symlink()
+        declared_agents_is_symlink = agents_path.is_symlink()
+        declared_claude_link_target = (
+            str(claude_path.readlink()) if declared_claude_is_symlink else None
+        )
+        materialized = materialize_root_instruction_topology(root, topology)
         return SymlinkedTopologyObservation(
+            declared_claude_is_symlink=declared_claude_is_symlink,
+            declared_agents_is_symlink=declared_agents_is_symlink,
+            declared_claude_link_target=declared_claude_link_target,
             claude_is_file=claude_path.is_file(),
             agents_is_file=agents_path.is_file(),
             claude_is_symlink=claude_path.is_symlink(),
@@ -440,40 +510,12 @@ def observe_root_instruction_topology_seed_mapping() -> tuple[
     TopologySeedObservation, ...
 ]:
     """Observe seed bodies for every source-owned root topology."""
-    cases = (
-        (
-            "only-claude",
-            root_instruction_topology_only_claude(),
-        ),
-        (
-            "only-agents",
-            root_instruction_topology_only_agents(),
-        ),
-        (
-            "separate",
-            root_instruction_topology_separate(),
-        ),
-        (
-            "symlinked",
-            root_instruction_topology_symlinked(),
-        ),
-    )
+    topology_cases = harness_seed_topology_cases()
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
         return tuple(
-            TopologySeedObservation(
-                topology_name=topology_name,
-                declared_files=tuple(sorted(topology.files.items())),
-                declared_symlinks=tuple(sorted(topology.symlinks.items())),
-                observed=tuple(
-                    sorted(
-                        materialize_root_instruction_topology(
-                            root / str(index), topology
-                        ).items()
-                    )
-                ),
-            )
-            for index, (topology_name, topology) in enumerate(cases)
+            _observe_root_instruction_topology_seed(root, index, topology_case)
+            for index, topology_case in enumerate(topology_cases)
         )
 
 

@@ -26,32 +26,9 @@ from outcomeeng_testing.harnesses.instruction_block import (
     TEMPLATE_LANGUAGES,
     build_template,
     load_instruction_block_module,
+    maximal_common_whole_line_spans,
     run_instruction_block_property,
 )
-
-
-def _maximal_common_whole_line_spans(root_pair: RootContentPair) -> tuple[str, ...]:
-    """Find maximal contiguous common line spans without production algorithms."""
-    lines_a = root_pair.content_a.splitlines(keepends=True)
-    lines_b = root_pair.content_b.splitlines(keepends=True)
-    previous = [""] * (len(lines_b) + 1)
-    maximal: set[str] = set()
-    maximal_length = 0
-    for line_a in lines_a:
-        current = [""] * (len(lines_b) + 1)
-        for index_b, line_b in enumerate(lines_b, start=1):
-            if line_a != line_b:
-                continue
-            candidate = previous[index_b - 1] + line_a
-            current[index_b] = candidate
-            candidate_length = len(candidate)
-            if candidate_length > maximal_length:
-                maximal = {candidate}
-                maximal_length = candidate_length
-            elif candidate_length == maximal_length:
-                maximal.add(candidate)
-        previous = current
-    return tuple(sorted(maximal))
 
 
 def test_render_output_version_equals_installed() -> None:
@@ -146,7 +123,9 @@ def test_bootstrap_matches_independent_oracle() -> None:
     @given(root_pair=bootstrap_content_pairs())
     def property_case(root_pair: RootContentPair) -> None:
         module = load_instruction_block_module()
-        maximal_spans = _maximal_common_whole_line_spans(root_pair)
+        maximal_spans = maximal_common_whole_line_spans(
+            root_pair.content_a, root_pair.content_b
+        )
         maximal_length = max((len(span) for span in maximal_spans), default=0)
         larger_length = max(len(root_pair.content_a), len(root_pair.content_b))
         should_wrap = (

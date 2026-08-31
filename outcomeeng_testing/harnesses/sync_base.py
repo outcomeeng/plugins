@@ -67,6 +67,13 @@ BASE_FILE = "base.txt"
 FEATURE_COMMIT_MESSAGE = "feature change"
 
 
+def create_repository_pool(tmp_path: pathlib.Path) -> pathlib.Path:
+    """Create the shared temporary root used by real-git sync-base evidence."""
+    root = tmp_path / "pool"
+    root.mkdir()
+    return root
+
+
 def load_sync_base_module() -> ModuleType:
     """Load the ``sync_base`` module via importlib and cache it."""
     cached = sys.modules.get("sync_base")

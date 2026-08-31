@@ -36,18 +36,13 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_detached_behind_base_repo,
     build_detached_dirty_behind_base_repo,
     build_dirty_behind_base_repo,
+    create_repository_pool as _root,
     detach_head,
     head_oid,
     load_sync_base_module,
     resolve_ref,
     working_tree_has_tracked_changes,
 )
-
-
-def _root(tmp_path: pathlib.Path) -> pathlib.Path:
-    root = tmp_path / "pool"
-    root.mkdir()
-    return root
 
 
 def test_base_derivation_primitives_are_identity_equal_to_canonical() -> None:
