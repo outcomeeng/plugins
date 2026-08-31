@@ -100,10 +100,7 @@ jobs:
       - name: Run quality gate
         # GH_TOKEN authenticates the gh CLI for the [test]-lane l3
         # workflow-observability tests; without it `gh auth status` fails and
-        # those tests fail loudly by design. OPENAI_API_KEY authenticates the
-        # disposable Codex home the [test]-lane l3 role-discovery probe logs
-        # into; without it that probe fails loudly by design.
+        # those tests fail loudly by design.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: just check-full
