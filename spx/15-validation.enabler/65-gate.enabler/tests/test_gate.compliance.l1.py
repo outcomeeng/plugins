@@ -43,7 +43,7 @@ from outcomeeng_testing.harnesses.gate import (
     bounded_shutdown_observation,
     call_keyword_map,
     check_run_observation,
-    modules_with_while_true_sleep,
+    while_loops_in_gate_modules,
     popen_calls_from,
     recipe_run_observation,
     validation_package_source_text,
@@ -148,7 +148,15 @@ def test_subprocess_lives_only_in_the_production_spawner() -> None:
 
 
 def test_no_gate_module_polls_with_while_true_sleep() -> None:
-    assert modules_with_while_true_sleep() == ()
+    for module_name, loop in while_loops_in_gate_modules():
+        is_while_true = isinstance(loop.test, ast.Constant) and loop.test.value is True
+        has_sleep_call = any(
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Attribute)
+            and child.func.attr == "sleep"
+            for child in ast.walk(loop)
+        )
+        assert not (is_while_true and has_sleep_call), module_name
     assert "gh run watch" not in validation_package_source_text()
 
 

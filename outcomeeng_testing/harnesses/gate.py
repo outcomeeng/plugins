@@ -536,26 +536,16 @@ def bounded_shutdown_observation() -> ShutdownObservation:
     )
 
 
-def modules_with_while_true_sleep() -> tuple[str, ...]:
-    """Name the gate modules holding a ``while True`` loop that sleeps."""
+def while_loops_in_gate_modules() -> tuple[tuple[str, ast.While], ...]:
+    """Every while loop in the gate package modules, paired with its module name."""
 
-    offenders: list[str] = []
+    loops: list[tuple[str, ast.While]] = []
     for module_path in validation_package_modules():
         tree = ast.parse(module_path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
-            if not isinstance(node, ast.While):
-                continue
-            test = node.test
-            if not (isinstance(test, ast.Constant) and test.value is True):
-                continue
-            for child in ast.walk(node):
-                if (
-                    isinstance(child, ast.Call)
-                    and isinstance(child.func, ast.Attribute)
-                    and child.func.attr == "sleep"
-                ):
-                    offenders.append(module_path.name)
-    return tuple(sorted(set(offenders)))
+            if isinstance(node, ast.While):
+                loops.append((module_path.name, node))
+    return tuple(loops)
 
 
 @dataclass(frozen=True)
