@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Final, cast
+from typing import Final
 
 from outcomeeng.validation import (
     FORWARDED_SIGNALS,
@@ -37,7 +37,7 @@ class SignalGroupObservation:
     received_group_signal: int
     child_alive_after: bool
     orchestrator_exit_code: int | None
-    summary: dict[str, object]
+    summary: object
 
 
 @dataclass(frozen=True)
@@ -167,7 +167,7 @@ def _read_grandchild_pid(pid_path: Path) -> int:
             return int(pid_path.read_text(encoding="utf-8"))
         except (FileNotFoundError, ValueError):
             time.sleep(GROUP_MARKER_POLL_SECONDS)
-    raise AssertionError("child did not announce grandchild PID in time")
+    raise RuntimeError("child did not announce grandchild PID in time")
 
 
 def _read_grandchild_received_group_signal(signal_path: Path) -> int:
@@ -179,7 +179,7 @@ def _read_grandchild_received_group_signal(signal_path: Path) -> int:
             time.sleep(GROUP_MARKER_POLL_SECONDS)
             continue
         return delivered_signal
-    raise AssertionError("grandchild did not receive process-group SIGTERM")
+    raise RuntimeError("grandchild did not receive process-group SIGTERM")
 
 
 def _terminate_child_group(child_pid: int | None) -> None:
@@ -200,7 +200,7 @@ def _read_child_pid_marker(
     buffer = b""
     child_pid: int | None = None
     if stderr_reader.stderr is None:
-        raise AssertionError("orchestrator stderr is unavailable")
+        raise RuntimeError("orchestrator stderr is unavailable")
     file_descriptor = stderr_reader.stderr.fileno()
     wait_marker_seen = False
     while time.monotonic() < deadline:
@@ -221,8 +221,8 @@ def _read_child_pid_marker(
             if child_pid is not None and (wait_marker_seen or not wait_for_handle):
                 return child_pid
     if wait_for_handle:
-        raise AssertionError("orchestrator did not enter child wait in time")
-    raise AssertionError("orchestrator did not announce child PID in time")
+        raise RuntimeError("orchestrator did not enter child wait in time")
+    raise RuntimeError("orchestrator did not announce child PID in time")
 
 
 def _spawn_wrapper(path: Path, program: str) -> subprocess.Popen[bytes]:
@@ -245,18 +245,15 @@ def _terminate_wrapper(orchestrator: subprocess.Popen[bytes]) -> None:
     orchestrator.wait(timeout=TERMINATION_DEADLINE_SECONDS)
 
 
-def _read_summary(orchestrator: subprocess.Popen[bytes]) -> dict[str, object]:
+def _read_summary(orchestrator: subprocess.Popen[bytes]) -> object:
     if orchestrator.stdout is None:
-        raise AssertionError("orchestrator stdout is unavailable")
+        raise RuntimeError("orchestrator stdout is unavailable")
     stdout_text = orchestrator.stdout.read().decode()
     summary_line = next(
         line for line in stdout_text.splitlines() if line.startswith(SUMMARY_PATH_LABEL)
     )
     summary_path = Path(summary_line.removeprefix(SUMMARY_PATH_LABEL).strip())
-    parsed = cast(object, json.loads(summary_path.read_text(encoding="utf-8")))
-    if not isinstance(parsed, dict):
-        raise AssertionError("orchestrator summary is not a JSON object")
-    return cast(dict[str, object], parsed)
+    return json.loads(summary_path.read_text(encoding="utf-8"))
 
 
 def observe_signals_terminate_process_groups_within_grace() -> tuple[

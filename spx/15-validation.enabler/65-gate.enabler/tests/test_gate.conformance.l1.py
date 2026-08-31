@@ -45,10 +45,8 @@ def _recipe() -> Recipe:
     )
 
 
-def _read_summary(path: Path) -> dict[str, object]:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    assert isinstance(data, dict)
-    return cast("dict[str, object]", data)
+def _read_summary(path: Path) -> object:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def test_check_summary_conforms_to_schema_for_primitive_and_wrapper(
@@ -66,7 +64,9 @@ def test_check_summary_conforms_to_schema_for_primitive_and_wrapper(
         summary_path=summary_path,
     )
 
-    summary = _read_summary(summary_path)
+    raw_summary = _read_summary(summary_path)
+    assert isinstance(raw_summary, dict)
+    summary = cast(dict[str, object], raw_summary)
     assert_json_schema(summary, CHECK_SUMMARY_SCHEMA)
     assert exit_code == PASS
 
@@ -87,7 +87,9 @@ def test_failed_primitive_summary_conforms_to_schema(tmp_path: Path) -> None:
         summary_path=summary_path,
     )
 
-    summary = _read_summary(summary_path)
+    raw_summary = _read_summary(summary_path)
+    assert isinstance(raw_summary, dict)
+    summary = cast(dict[str, object], raw_summary)
     assert_json_schema(summary, PRIMITIVE_SUMMARY_SCHEMA)
     assert exit_code == FAIL
 
@@ -103,7 +105,9 @@ def test_ad_hoc_run_summary_conforms_to_gate_schema(tmp_path: Path) -> None:
     )
 
     summary_path = Path(sink.getvalue().split(f"{SUMMARY_PATH_LABEL} ")[1].strip())
-    summary = _read_summary(summary_path)
+    raw_summary = _read_summary(summary_path)
+    assert isinstance(raw_summary, dict)
+    summary = cast(dict[str, object], raw_summary)
     assert_json_schema(summary, AD_HOC_SUMMARY_SCHEMA)
     assert_json_schema(summary, GATE_SUMMARY_SCHEMA)
     assert summary["recipe"] == RECIPE_AD_HOC
@@ -123,7 +127,9 @@ def test_primitive_summary_schema_requires_summary_path(tmp_path: Path) -> None:
         summary_path=summary_path,
     )
 
-    summary = _read_summary(summary_path)
+    raw_summary = _read_summary(summary_path)
+    assert isinstance(raw_summary, dict)
+    summary = cast(dict[str, object], raw_summary)
     summary.pop(SUMMARY_KEY_SUMMARY_PATH)
     with pytest.raises(AssertionError, match=SUMMARY_KEY_SUMMARY_PATH):
         assert_json_schema(summary, PRIMITIVE_SUMMARY_SCHEMA)
@@ -148,7 +154,9 @@ def test_failed_preflight_primitive_summary_conforms_to_schema(
         summary_path=summary_path,
     )
 
-    summary = _read_summary(summary_path)
+    raw_summary = _read_summary(summary_path)
+    assert isinstance(raw_summary, dict)
+    summary = cast(dict[str, object], raw_summary)
     assert_json_schema(summary, PRIMITIVE_SUMMARY_SCHEMA)
     assert summary["phase"] == PHASE_PREFLIGHT
     assert exit_code == FAIL
@@ -172,7 +180,9 @@ def test_failed_preflight_wrapper_summary_conforms_to_schema(
         summary_path=summary_path,
     )
 
-    summary = _read_summary(summary_path)
+    raw_summary = _read_summary(summary_path)
+    assert isinstance(raw_summary, dict)
+    summary = cast(dict[str, object], raw_summary)
     assert_json_schema(summary, CHECK_SUMMARY_SCHEMA)
     assert summary["phase"] == PHASE_PREFLIGHT
     assert exit_code == FAIL

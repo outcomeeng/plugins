@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from outcomeeng.validation import (
@@ -29,6 +31,7 @@ from outcomeeng.validation import (
     SUMMARY_KEY_PHASE,
     SUMMARY_KEY_PURPOSE,
     SUMMARY_KEY_RECIPE,
+    SUMMARY_KEY_RECIPES,
     SUMMARY_KEY_STATUS,
     SUMMARY_KEY_STEPS,
     SUMMARY_KEY_SUMMARY_PATH,
@@ -52,8 +55,6 @@ from outcomeeng_testing.harnesses.gate import (
     signal_interrupt_observation,
     single_step_recipe,
     spawn_failure_observation,
-    summary_recipes,
-    summary_steps,
     three_no_op_steps,
 )
 
@@ -68,13 +69,19 @@ def test_the_validation_recipe_runs_preflight_first_and_reports_conformance() ->
     assert run.exit_code == PASS_EXIT_CODE
     assert run.spawn_calls[0] == VALIDATION_RECIPE.preflight_steps[0].argv
     assert PYTEST_ARGV not in run.spawn_calls
-    assert run.summary[SUMMARY_KEY_RECIPE] == RECIPE_VALIDATION
-    assert run.summary[SUMMARY_KEY_VERIFICATION_TYPE] == VERIFICATION_TYPE_VALIDATION
-    assert run.summary[SUMMARY_KEY_PURPOSE] == PURPOSE_CONFORMANCE
-    assert run.summary[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
-    assert run.summary[SUMMARY_KEY_PHASE] == PHASE_COMPLETE
-    assert run.summary[SUMMARY_KEY_SUMMARY_PATH] == run.summary_path
-    for step in summary_steps(run.summary):
+    assert isinstance(run.summary, dict)
+    summary = cast(dict[str, object], run.summary)
+    assert summary[SUMMARY_KEY_RECIPE] == RECIPE_VALIDATION
+    assert summary[SUMMARY_KEY_VERIFICATION_TYPE] == VERIFICATION_TYPE_VALIDATION
+    assert summary[SUMMARY_KEY_PURPOSE] == PURPOSE_CONFORMANCE
+    assert summary[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
+    assert summary[SUMMARY_KEY_PHASE] == PHASE_COMPLETE
+    assert summary[SUMMARY_KEY_SUMMARY_PATH] == run.summary_path
+    assert isinstance(summary[SUMMARY_KEY_STEPS], list)
+    steps = cast(list[object], summary[SUMMARY_KEY_STEPS])
+    for raw_step in steps:
+        assert isinstance(raw_step, dict)
+        step = cast(dict[str, object], raw_step)
         assert SUMMARY_KEY_LOG_PATH not in step
         assert step[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
         assert isinstance(step[SUMMARY_KEY_EXIT_CODE], int)
@@ -92,11 +99,17 @@ def test_the_test_recipe_runs_pytest_after_preflight() -> None:
         TEST_RECIPE.preflight_steps[0].argv,
         TEST_RECIPE.steps[0].argv,
     )
-    assert run.summary[SUMMARY_KEY_RECIPE] == RECIPE_TEST
-    assert run.summary[SUMMARY_KEY_VERIFICATION_TYPE] == VERIFICATION_TYPE_TESTING
-    assert run.summary[SUMMARY_KEY_PURPOSE] == PURPOSE_CORRECTNESS
-    assert run.summary[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
-    for step in summary_steps(run.summary):
+    assert isinstance(run.summary, dict)
+    summary = cast(dict[str, object], run.summary)
+    assert summary[SUMMARY_KEY_RECIPE] == RECIPE_TEST
+    assert summary[SUMMARY_KEY_VERIFICATION_TYPE] == VERIFICATION_TYPE_TESTING
+    assert summary[SUMMARY_KEY_PURPOSE] == PURPOSE_CORRECTNESS
+    assert summary[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
+    assert isinstance(summary[SUMMARY_KEY_STEPS], list)
+    steps = cast(list[object], summary[SUMMARY_KEY_STEPS])
+    for raw_step in steps:
+        assert isinstance(raw_step, dict)
+        step = cast(dict[str, object], raw_step)
         assert SUMMARY_KEY_LOG_PATH not in step
         assert step[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
         assert isinstance(step[SUMMARY_KEY_EXIT_CODE], int)
@@ -167,11 +180,16 @@ def test_a_failing_recipe_step_records_excerpt_and_log_path() -> None:
         outputs=[PASSING_CHILD_OUTPUT, failing_output],
     )
 
-    steps = summary_steps(run.summary)
+    assert isinstance(run.summary, dict)
+    summary = cast(dict[str, object], run.summary)
+    assert isinstance(summary[SUMMARY_KEY_STEPS], list)
+    raw_steps = cast(list[object], summary[SUMMARY_KEY_STEPS])
+    assert all(isinstance(step, dict) for step in raw_steps)
+    steps = cast(list[dict[str, object]], raw_steps)
     assert run.exit_code == FAIL_EXIT_CODE
-    assert run.summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert run.summary[SUMMARY_KEY_PHASE] == PHASE_RECIPE
-    assert run.summary[SUMMARY_KEY_EXIT_CODE] == FAIL_EXIT_CODE
+    assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
+    assert summary[SUMMARY_KEY_PHASE] == PHASE_RECIPE
+    assert summary[SUMMARY_KEY_EXIT_CODE] == FAIL_EXIT_CODE
     assert steps[1][SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
     assert steps[1][SUMMARY_KEY_ARGV] == list(recipe.steps[0].argv)
     assert steps[1][SUMMARY_KEY_EXCERPT] == failing_output
@@ -185,12 +203,17 @@ def test_a_spawn_failure_is_recorded_with_its_message() -> None:
 
     run = spawn_failure_observation(recipe=recipe)
 
-    steps = summary_steps(run.summary)
+    assert isinstance(run.summary, dict)
+    summary = cast(dict[str, object], run.summary)
+    assert isinstance(summary[SUMMARY_KEY_STEPS], list)
+    raw_steps = cast(list[object], summary[SUMMARY_KEY_STEPS])
+    assert all(isinstance(step, dict) for step in raw_steps)
+    steps = cast(list[dict[str, object]], raw_steps)
     assert run.exit_code == SPAWN_FAILURE_EXIT_CODE
     assert f"{STEP_FAIL_STATUS}  {recipe.preflight_steps[0].label}" in run.output
-    assert run.summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert run.summary[SUMMARY_KEY_PHASE] == PHASE_PREFLIGHT
-    assert run.summary[SUMMARY_KEY_EXIT_CODE] == SPAWN_FAILURE_EXIT_CODE
+    assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
+    assert summary[SUMMARY_KEY_PHASE] == PHASE_PREFLIGHT
+    assert summary[SUMMARY_KEY_EXIT_CODE] == SPAWN_FAILURE_EXIT_CODE
     assert steps[0][SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
     assert steps[0][SUMMARY_KEY_LOG_PATH] == run.log_paths[0]
     assert SPAWN_FAILURE_MESSAGE in str(steps[0][SUMMARY_KEY_EXCERPT])
@@ -207,14 +230,19 @@ def test_the_check_wrapper_stops_at_the_first_failing_recipe() -> None:
         exit_codes=[PASS_EXIT_CODE, FAIL_EXIT_CODE, PASS_EXIT_CODE, PASS_EXIT_CODE],
     )
 
-    recipes = summary_recipes(run.summary)
+    assert isinstance(run.summary, dict)
+    summary = cast(dict[str, object], run.summary)
+    assert isinstance(summary[SUMMARY_KEY_RECIPES], list)
+    raw_recipes = cast(list[object], summary[SUMMARY_KEY_RECIPES])
+    assert all(isinstance(recipe, dict) for recipe in raw_recipes)
+    recipes = cast(list[dict[str, object]], raw_recipes)
     assert run.exit_code == FAIL_EXIT_CODE
     assert len(run.spawn_calls) == len(validation.preflight_steps) + len(
         validation.steps
     )
-    assert run.summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
-    assert run.summary[SUMMARY_KEY_VERIFICATION_TYPE] is None
-    assert run.summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
+    assert summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
+    assert summary[SUMMARY_KEY_VERIFICATION_TYPE] is None
+    assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
     assert len(recipes) == 1
     assert recipes[0][SUMMARY_KEY_RECIPE] == RECIPE_VALIDATION
 
@@ -228,7 +256,12 @@ def test_the_check_wrapper_runs_both_recipes_when_validation_passes() -> None:
         exit_codes=[PASS_EXIT_CODE] * 4,
     )
 
-    recipes = summary_recipes(run.summary)
+    assert isinstance(run.summary, dict)
+    summary = cast(dict[str, object], run.summary)
+    assert isinstance(summary[SUMMARY_KEY_RECIPES], list)
+    raw_recipes = cast(list[object], summary[SUMMARY_KEY_RECIPES])
+    assert all(isinstance(recipe, dict) for recipe in raw_recipes)
+    recipes = cast(list[dict[str, object]], raw_recipes)
     assert run.exit_code == PASS_EXIT_CODE
     assert run.spawn_calls == (
         validation.preflight_steps[0].argv,
@@ -240,19 +273,21 @@ def test_the_check_wrapper_runs_both_recipes_when_validation_passes() -> None:
         RECIPE_VALIDATION,
         RECIPE_TEST,
     ]
-    assert run.summary[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
+    assert summary[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
 
 
 @pytest.mark.parametrize("signum", FORWARDED_SIGNALS)
 def test_a_signal_before_a_child_handle_writes_a_failed_summary(signum: int) -> None:
     run = signal_interrupt_observation(signum)
 
+    assert isinstance(run.summary, dict)
+    summary = cast(dict[str, object], run.summary)
     assert run.exit_code == 128 + signum
-    assert run.summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
-    assert run.summary[SUMMARY_KEY_PHASE] == PHASE_RECIPE
-    assert run.summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert run.summary[SUMMARY_KEY_EXIT_CODE] == 128 + signum
-    assert run.summary[SUMMARY_KEY_STEPS] == []
+    assert summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
+    assert summary[SUMMARY_KEY_PHASE] == PHASE_RECIPE
+    assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
+    assert summary[SUMMARY_KEY_EXIT_CODE] == 128 + signum
+    assert summary[SUMMARY_KEY_STEPS] == []
 
 
 def test_the_production_step_lists_run_end_to_end() -> None:

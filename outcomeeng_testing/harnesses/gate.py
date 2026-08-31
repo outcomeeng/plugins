@@ -22,7 +22,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import TextIO, cast
+from typing import TextIO
 
 from hypothesis import given, seed, settings
 
@@ -128,32 +128,10 @@ def single_step_recipe(name: str) -> Recipe:
     )
 
 
-def read_summary(path: Path) -> dict[str, object]:
-    """Read a validation summary JSON object."""
+def read_summary(path: Path) -> object:
+    """Decode a validation summary without judging its runtime shape."""
 
-    data = json.loads(path.read_text(encoding="utf-8"))
-    assert isinstance(data, dict)
-    return cast("dict[str, object]", data)
-
-
-def summary_steps(summary: dict[str, object]) -> list[dict[str, object]]:
-    """Return typed step summaries."""
-
-    steps = summary["steps"]
-    assert isinstance(steps, list)
-    for step in steps:
-        assert isinstance(step, dict)
-    return cast("list[dict[str, object]]", steps)
-
-
-def summary_recipes(summary: dict[str, object]) -> list[dict[str, object]]:
-    """Return typed recipe summaries."""
-
-    recipes = summary["recipes"]
-    assert isinstance(recipes, list)
-    for recipe in recipes:
-        assert isinstance(recipe, dict)
-    return cast("list[dict[str, object]]", recipes)
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def selected_gate_runner_for_paths(
@@ -419,7 +397,7 @@ class RecipeRunObservation:
     spawn_calls: tuple[tuple[str, ...], ...]
     retained_logs: tuple[str | None, ...]
     log_paths: tuple[str, ...]
-    summary: dict[str, object]
+    summary: object
     summary_path: str
 
 
@@ -476,7 +454,7 @@ class CheckRunObservation:
     exit_code: int
     output: str
     spawn_calls: tuple[tuple[str, ...], ...]
-    summary: dict[str, object]
+    summary: object
 
 
 def check_run_observation(
@@ -531,6 +509,11 @@ class ShutdownObservation:
     monotonic_calls: int
     poll_calls: int
     sleep_budget: int
+    sleep_budget_exceeded: bool
+
+
+class SleepBudgetExceeded(RuntimeError):
+    """Internal control signal stopping a simulated unbounded wait."""
 
 
 def bounded_shutdown_observation() -> ShutdownObservation:
@@ -540,17 +523,21 @@ def bounded_shutdown_observation() -> ShutdownObservation:
     sleep_budget = grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
     clock = BoundedAdvancingClock(max_sleep_calls=sleep_budget)
     handle = HangingHandle(pid=10_000, exit_on_kill=False)
-    terminate_process_group(
-        handle,
-        monotonic=clock.monotonic,
-        sleep=clock.sleep,
-    )
+    try:
+        terminate_process_group(
+            handle,
+            monotonic=clock.monotonic,
+            sleep=clock.sleep,
+        )
+    except SleepBudgetExceeded:
+        pass
     return ShutdownObservation(
         received_signals=tuple(handle.received_signals),
         sleep_call_count=len(clock.sleep_calls),
         monotonic_calls=clock.monotonic_calls,
         poll_calls=handle.poll_calls,
         sleep_budget=sleep_budget,
+        sleep_budget_exceeded=clock.sleep_budget_exceeded,
     )
 
 
@@ -926,6 +913,7 @@ class BoundedAdvancingClock:
     current: float = 0.0
     monotonic_calls: int = 0
     sleep_calls: list[float] = field(default_factory=list)
+    sleep_budget_exceeded: bool = False
 
     def monotonic(self) -> float:
         self.monotonic_calls += 1
@@ -933,7 +921,8 @@ class BoundedAdvancingClock:
 
     def sleep(self, seconds: float) -> None:
         if len(self.sleep_calls) >= self.max_sleep_calls:
-            raise AssertionError("signal shutdown exceeded its bounded sleep budget")
+            self.sleep_budget_exceeded = True
+            raise SleepBudgetExceeded
         self.sleep_calls.append(seconds)
         self.current += seconds
 

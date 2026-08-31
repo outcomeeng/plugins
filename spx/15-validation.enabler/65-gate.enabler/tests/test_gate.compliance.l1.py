@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import math
 import signal
+from typing import cast
 
 from outcomeeng.validation import (
     CHECK_RECIPES,
@@ -105,9 +106,11 @@ def test_the_check_wrapper_reports_no_verification_type() -> None:
     )
 
     assert run.exit_code == PASS_EXIT_CODE
-    assert run.summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
-    assert run.summary[SUMMARY_KEY_VERIFICATION_TYPE] is None
-    assert run.summary[SUMMARY_KEY_PURPOSE] is None
+    assert isinstance(run.summary, dict)
+    summary = cast(dict[str, object], run.summary)
+    assert summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
+    assert summary[SUMMARY_KEY_VERIFICATION_TYPE] is None
+    assert summary[SUMMARY_KEY_PURPOSE] is None
 
 
 def test_child_output_is_captured_never_streamed() -> None:
@@ -166,6 +169,7 @@ def test_signal_shutdown_waits_are_bounded() -> None:
     shutdown = bounded_shutdown_observation()
 
     grace_sleep_calls = math.ceil(SIGNAL_GRACE_SECONDS / SIGNAL_POLL_INTERVAL_SECONDS)
+    assert not shutdown.sleep_budget_exceeded
     assert shutdown.sleep_budget == grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
     assert shutdown.received_signals == (signal.SIGTERM, signal.SIGKILL)
     assert shutdown.sleep_call_count == shutdown.sleep_budget
