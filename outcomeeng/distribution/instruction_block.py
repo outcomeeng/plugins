@@ -739,10 +739,47 @@ def budget_regression(
     )
 
 
-def _committed_byte_size(path_str: str, *, repo_root: Path = REPO_ROOT) -> int | None:
-    """Byte size of the file's last committed content, or None when uncommitted."""
+def _git_stdout(args: Sequence[str], *, repo_root: Path) -> str | None:
+    """A git command's stripped stdout, or None when the command fails."""
     result = subprocess.run(
-        ["git", "show", f"HEAD:{path_str}"],
+        list(args), cwd=repo_root, capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def _budget_baseline_commit(*, repo_root: Path = REPO_ROOT) -> str | None:
+    """A commit predating the changeset under test, or None when none exists.
+
+    The tip commit already carries the regenerated root files, so measuring against
+    it can never observe a regression the changeset itself introduces. The baseline
+    is the merge-base with the default branch when it resolves and differs from the
+    tip; otherwise the first parent — the base tip in a pull-request merge-commit
+    checkout, and the previous commit on a default-branch push.
+    """
+    head = _git_stdout(["git", "rev-parse", "HEAD"], repo_root=repo_root)
+    default_ref = _git_stdout(
+        ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+        repo_root=repo_root,
+    )
+    if head is not None and default_ref is not None:
+        merge_base = _git_stdout(
+            ["git", "merge-base", "HEAD", default_ref], repo_root=repo_root
+        )
+        if merge_base is not None and merge_base != head:
+            return merge_base
+    return _git_stdout(["git", "rev-parse", "--verify", "HEAD^"], repo_root=repo_root)
+
+
+def _committed_byte_size(
+    path_str: str, baseline: str | None, *, repo_root: Path = REPO_ROOT
+) -> int | None:
+    """Byte size of the file at the baseline commit, or None without a baseline."""
+    if baseline is None:
+        return None
+    result = subprocess.run(
+        ["git", "show", f"{baseline}:{path_str}"],
         cwd=repo_root,
         capture_output=True,
         check=False,
@@ -760,6 +797,7 @@ def budget_findings(
     """Per-file budget report lines and the paths whose fresh render is a regression."""
     instruction_module = module or load_instruction_block_module()
     budget = instruction_module.PROJECT_DOC_BUDGET_BYTES
+    baseline = _budget_baseline_commit(repo_root=repo_root)
     lines: list[str] = []
     regressions: list[str] = []
     for path_str in root_instruction_paths(instruction_module):
@@ -771,7 +809,7 @@ def budget_findings(
         )
         lines.append(instruction_module.budget_report_line(measurement))
         if budget_regression(
-            _committed_byte_size(path_str, repo_root=repo_root),
+            _committed_byte_size(path_str, baseline, repo_root=repo_root),
             measurement.byte_size,
             budget,
         ):

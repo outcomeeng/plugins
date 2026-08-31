@@ -63,14 +63,16 @@ def test_gate_run_fails_a_regression_and_reports_it(
     assert gate.BUDGET_REGRESSION_REMEDIATION in captured.out
 
 
-def test_budget_findings_derive_a_regression_from_committed_git_state(
+def test_budget_findings_derive_a_regression_from_the_baseline_commit(
     tmp_path: pathlib.Path,
 ) -> None:
-    # The real committed-versus-rendered comparison: a root file committed at a fitting
-    # size regresses above the ceiling in the working tree, while a file committed
-    # already breaching only grows — the first is the violating case the gate fails,
-    # the second the pre-existing breach it reports. Sizes derive from the ceiling and
-    # the boundary law; the committed side comes from a real git repository.
+    # The real prior-state comparison: a root file that fit at the baseline commit is
+    # committed breaching by the changeset, while a file already breaching at the
+    # baseline only grows — the first is the violating case the gate fails, the
+    # second the pre-existing breach it reports. The baseline is the parent commit,
+    # so the tip commit carrying the changeset's own regenerated files is never its
+    # own baseline. Sizes derive from the ceiling and the boundary law; both states
+    # come from real commits in a real git repository.
     budget = MODULE.PROJECT_DOC_BUDGET_BYTES
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -82,6 +84,7 @@ def test_budget_findings_derive_a_regression_from_committed_git_state(
     harness.git_commit_at(repo, 1, regressed, preexisting)
     (repo / regressed).write_text("x" * (budget + 1), encoding="utf-8")
     (repo / preexisting).write_text("x" * (budget + 2), encoding="utf-8")
+    harness.git_commit_at(repo, 2, regressed, preexisting)
 
     lines, regressions = gate.budget_findings(repo_root=repo)
 
@@ -89,6 +92,59 @@ def test_budget_findings_derive_a_regression_from_committed_git_state(
     assert len(lines) == len(gate.root_instruction_paths())
     breach_state = str(MODULE.BudgetState.BREACH)
     assert all(breach_state in line for line in lines)
+
+
+def test_budget_baseline_prefers_the_default_branch_merge_base(
+    tmp_path: pathlib.Path,
+) -> None:
+    # On a branch whose own parent commit already breaches, the baseline is the
+    # merge-base with the default branch — the changeset's true prior state — so a
+    # first-time crossing by a multi-commit branch is still a regression. A
+    # parent-commit baseline would read the branch's own breaching commit and
+    # misclassify it as pre-existing.
+    budget = MODULE.PROJECT_DOC_BUDGET_BYTES
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.init_git_identity(repo)
+    regressed = gate.root_instruction_paths()[0]
+
+    (repo / regressed).write_text("x" * budget, encoding="utf-8")
+    harness.git_commit_at(repo, 1, regressed)
+    default_branch = harness.git_command(
+        repo, "branch", "--show-current"
+    ).stdout.strip()
+    harness.git_command(repo, "remote", "add", "origin", str(repo))
+    harness.git_command(repo, "fetch", "origin")
+    harness.git_command(repo, "remote", "set-head", "origin", default_branch)
+    harness.git_command(repo, "checkout", "-b", "work")
+    (repo / regressed).write_text("x" * (budget + 1), encoding="utf-8")
+    harness.git_commit_at(repo, 2, regressed)
+    (repo / regressed).write_text("x" * (budget + 2), encoding="utf-8")
+    harness.git_commit_at(repo, 3, regressed)
+
+    _lines, regressions = gate.budget_findings(repo_root=repo)
+
+    assert regressions == (regressed,)
+
+
+def test_budget_findings_report_without_failing_when_no_baseline_exists(
+    tmp_path: pathlib.Path,
+) -> None:
+    # A repository whose only commit already carries the breach has no prior state
+    # to regress from: the breach is reported, never failed.
+    budget = MODULE.PROJECT_DOC_BUDGET_BYTES
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.init_git_identity(repo)
+    reported = gate.root_instruction_paths()[0]
+
+    (repo / reported).write_text("x" * (budget + 1), encoding="utf-8")
+    harness.git_commit_at(repo, 1, reported)
+
+    lines, regressions = gate.budget_findings(repo_root=repo)
+
+    assert regressions == ()
+    assert any(str(MODULE.BudgetState.BREACH) in line for line in lines)
 
 
 def test_gate_run_reports_a_preexisting_breach_without_failing(
