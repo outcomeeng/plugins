@@ -1394,7 +1394,14 @@ def render_report(
     return "\n".join(sections)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    regenerate: Callable[[], None] = regenerate_instruction_blocks,
+    budget: Callable[[], tuple[tuple[str, ...], tuple[str, ...]]] = budget_findings,
+    drift_files: Callable[[], list[str]] = drifting_instruction_files,
+    shared_regions: Callable[[], tuple[str, ...]] = drifting_shared_regions,
+) -> int:
     parser = argparse.ArgumentParser(
         description="Regenerate root instruction blocks from rendered dist templates."
     )
@@ -1405,14 +1412,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     try:
-        regenerate_instruction_blocks()
-        budget_lines, budget_regressions = budget_findings()
+        regenerate()
+        budget_lines, budget_regressions = budget()
         for line in budget_lines:
             print(line, file=sys.stderr)
         if args.write:
             return 0
-        drift = drifting_instruction_files()
-        shared_drift = drifting_shared_regions()
+        drift = drift_files()
+        shared_drift = shared_regions()
     except InstructionBlockRenderError as exc:
         print(str(exc), file=sys.stderr)
         return 1
