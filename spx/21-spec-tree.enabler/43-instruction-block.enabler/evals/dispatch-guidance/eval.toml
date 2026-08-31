@@ -1,0 +1,18 @@
+title = "Dispatch guidance loads with the dispatching skill"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "src/_shared/agentic-execution/**",
+  "src/plugins/spec-tree/skills/merging-standards/references/verifier-dispatch.md",
+  "src/plugins/spec-tree/skills/apply/references/verifier-dispatch.md",
+]
+smoke_cases = ["claude-changes-reviewer", "codex-implementation-auditor"]
+
+[prompt_source]
+kind = "producer-files"
+producers = [
+  "dist/claude/spec-tree/skills/merging-standards/references/verifier-dispatch.md",
+  "dist/codex/spec-tree/skills/merging-standards/references/verifier-dispatch.md",
+]
+template = "prompt.template.md"
