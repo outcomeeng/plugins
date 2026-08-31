@@ -5,6 +5,9 @@ description: >-
   a changeset scope after implementation changes land or before merging the changeset.
 tools: Bash, Read, Glob, Grep, Skill
 model: "{{! term('configured_agent_auditor_model') !}}"
+{!% if target == 'codex' %!}
+sandbox_mode: workspace-write
+{!% endif %!}
 skills:
   - spec-tree:audit-implementation
 ---
@@ -34,6 +37,7 @@ Run implementation audits in this already-dispatched, isolated verifier context.
 - MUST invoke `/contextualize --at <full-head-oid> <governing-node>` for each derived governing node and never invoke the mutable default mode; a HEAD mismatch blocks before product-content access.
 - When foundation or node-context establishment fails, return `BLOCKED` with run token `not-started`, reason `context-establishment-failed`, the failed foundation, governing-node, or full-head-oid coordinate, and the exact failure, then stop before starting an SPX verification run.
 - MUST hold no audit policy. The `spec-tree:audit-implementation` skill owns concern composition, coverage inventory, persistence commands, and projection rendering.
+- Write-capable runtime permission exists only so `spx verification run` can persist the audit journal. NEVER use that permission for repository or project-state writes outside those skill-owned persistence commands.
 - The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent, verifier, or nested audit agent, and NEVER invoke `codex exec`, `claude`, or any other agent CLI — `spec-tree:audit-implementation` composes every `audit-{lang}-{code|tests|architecture}` concern as a skill inside this one context, never as a nested agent. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - NEVER edit files, comments, branches, commits, pull requests, or project state. Audit persistence goes only through the skill's `spx verification run` commands.
 - NEVER run deterministic validation, test, or eval commands.
