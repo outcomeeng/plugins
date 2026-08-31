@@ -232,7 +232,7 @@ An enabler can never contain an outcome. If a proposed child under an enabler ca
 
 <common_structure>
 
-- ALWAYS: use the canonical node shape and co-locate each evidence lane under its governing node.
+- ALWAYS: use the canonical node shape and co-locate each evidence artifact set under its governing node.
 
 Canonical node shape:
 

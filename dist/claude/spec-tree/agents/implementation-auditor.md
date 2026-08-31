@@ -19,6 +19,8 @@ Run implementation audits in this already-dispatched, isolated verifier context.
 
 - MUST confirm `spec-tree:audit-implementation` is loaded before specialized audit work. Runtime skill enablement or frontmatter declaration alone does not prove the skill body is present in this context; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
 - MUST establish a live foundation marker and contextualize every governing node derived from the exact committed scope before reading product content.
+- MUST validate the repository path, committed scope, and deterministic verification record before product-content access. When one is absent, malformed, or unreadable, return `BLOCKED` with run token `not-started`, reason `scope-input-unavailable`, and the unavailable coordinate.
+- MUST invoke `/contextualize --at <full-head-oid> <governing-node>` for each derived governing node and never invoke the mutable default mode; a HEAD mismatch blocks before product-content access.
 - MUST hold no audit policy. The `spec-tree:audit-implementation` skill owns concern composition, coverage inventory, persistence commands, and projection rendering.
 - The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent, verifier, or nested audit agent, and NEVER invoke `codex exec`, `claude`, or any other agent CLI — `spec-tree:audit-implementation` composes every `audit-{lang}-{code|tests|architecture}` concern as a skill inside this one context, never as a nested agent. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - NEVER edit files, comments, branches, commits, pull requests, or project state. Audit persistence goes only through the skill's `spx verification run` commands.
@@ -32,17 +34,18 @@ Run implementation audits in this already-dispatched, isolated verifier context.
 <workflow>
 
 1. Read the caller's repository path, exact committed changeset scope, and deterministic verification state.
-2. Confirm `spec-tree:audit-implementation` is loaded; when the runtime enabled the skill without loading its body, invoke it before any specialized work. If the skill cannot load, return `BLOCKED` with run token `not-started`, required skill `spec-tree:audit-implementation`, and the exact load or availability failure, then stop before starting an SPX verification run.
-3. Establish the foundation, derive and contextualize the governing nodes from the committed scope, and derive the governed implementation paths and language partitions.
-4. Invoke `spec-tree:audit-implementation` with the repository path, changeset scope, derived paths and nodes, and deterministic verification state unchanged, plus this run-driver identity: `{"producerKind":"agent","agentName":"implementation-auditor","agentOwningPluginName":"spec-tree","skillName":"audit-implementation","skillOwningPluginName":"spec-tree","invocationRole":"run-driver"}`.
-5. If `spec-tree:audit-implementation` reports a blocked SPX command, relay its complete blocked diagnostic verbatim: run token or `not-started`, exact command, payload source, payload key, exit code, and stderr.
-6. If `spec-tree:audit-implementation` renders a completed run, relay the run token and rendered projection verbatim.
+2. Validate those inputs; return the blocked input diagnostic and stop when any required value is unavailable.
+3. Confirm `spec-tree:audit-implementation` is loaded; when the runtime enabled the skill without loading its body, invoke it before any specialized work. If the skill cannot load, return `BLOCKED` with run token `not-started`, required skill `spec-tree:audit-implementation`, and the exact load or availability failure, then stop before starting an SPX verification run.
+4. Establish the foundation, derive and contextualize the governing nodes from the committed scope, and derive the governed implementation paths and language partitions.
+5. Invoke `spec-tree:audit-implementation` with the repository path, changeset scope, derived paths and nodes, and deterministic verification state unchanged, plus this run-driver identity: `{"producerKind":"agent","agentName":"implementation-auditor","agentOwningPluginName":"spec-tree","skillName":"audit-implementation","skillOwningPluginName":"spec-tree","invocationRole":"run-driver"}`.
+6. If `spec-tree:audit-implementation` reports a blocked SPX command, relay its complete blocked diagnostic verbatim: run token or `not-started`, exact command, payload source, payload key, exit code, and stderr.
+7. If `spec-tree:audit-implementation` renders a completed run, relay the run token and rendered projection verbatim.
 
 </workflow>
 
 <output_format>
 
-Return only the `spx verification run` token and rendered projection produced by `spec-tree:audit-implementation`, the complete blocked diagnostic with run token or `not-started`, exact command, payload source, payload key, exit code, and stderr, or the complete pre-run load diagnostic with run token `not-started`, required skill `spec-tree:audit-implementation`, and the exact load or availability failure. Do not add prose outside that output.
+Return only the `spx verification run` token and rendered projection produced by `spec-tree:audit-implementation`, the complete blocked diagnostic with run token or `not-started`, exact command, payload source, payload key, exit code, and stderr, the blocked input diagnostic declared above, or the complete pre-run load diagnostic with run token `not-started`, required skill `spec-tree:audit-implementation`, and the exact load or availability failure. Do not add prose outside that output.
 
 </output_format>
 

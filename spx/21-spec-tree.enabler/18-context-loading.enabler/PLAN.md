@@ -212,6 +212,10 @@ The operation has these requirements:
   those paths after it establishes its own live `<SPEC_TREE_FOUNDATION>` marker
   and contextualized-node set. The authoring agent session neither preloads nor
   relays content-bearing fields.
+- The verifier agent session invokes `/contextualize --at <full-head-oid>` for
+  each governing node. Exact-commit mode requires the checkout HEAD to equal the
+  recorded subject and skips `/sync-base`; a mismatch blocks before product
+  access, so concurrent verifiers never rebase or advance the authoring checkout.
 - `spx journal` and `spx verification` read, list, and render operations are
   operational commands under the same boundary as `spx session`,
   `spx worktree status`, and `spx diagnose`. Following any path from their
@@ -262,7 +266,8 @@ The operation has these requirements:
 - Add `[audit]` assertions to
   `spx/21-spec-tree.enabler/18-context-loading.enabler/context-loading.md` for the
   shipped `/understand` policy, path-only role contracts, verifier-owned context,
-  finding-disposition boundary, and post-compaction deterministic precondition.
+  immutable exact-commit contextualization, finding-disposition boundary, and
+  post-compaction deterministic precondition.
 - This prototype adds no `[eval]` assertion or eval artifact and makes no scored
   claim about model behavior. Its new assertions cover policy design through
   `[audit]` and rendered policy presence through `[test]`. Focused SPX validation,
@@ -297,7 +302,7 @@ The operation has these requirements:
    auditor-skeleton model when converting role-task contracts to path-only
    inputs.
 4. Author the instruction-render compliance test from the three source-owned
-   policy tuples. The prototype carries no eval lane.
+   policy tuples. The prototype carries no eval work.
 5. Run `just bump`, `just build-skills`, `just build-instructions`, and
    `just instructions-check` in that order.
 6. Run focused deterministic verification, the affected spec, skill,
@@ -312,4 +317,4 @@ The operation has these requirements:
 - Reload boundary: immediately before any authoring-agent-session product-content
   access or product judgment.
 - Deliverable: one final requirements review, followed by prototype
-  implementation without an eval lane.
+  implementation without eval work.

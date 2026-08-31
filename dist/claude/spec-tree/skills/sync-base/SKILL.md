@@ -109,7 +109,7 @@ On `rebased` or `already_current`, the result carries a `preservation` object th
 - `branch_patch_changed` — whether the branch's patch identity differs across the sync.
 - `branch_diff_unchanged` — the git-only reuse signal: the branch patch is unchanged and the base delta does not overlap the branch.
 
-Read `branch_diff_unchanged` to consider a prior local review reusable — and **also** confirm, against the project's overlay, that no `base_delta_paths` entry is a governance surface the reviewer judges against. Run the project overlay's narrowest deterministic lane covering `base_delta_paths`, falling back to the full gate when any path is unclassified or `path_overlap` is non-empty. The proof carries no lane name — lane mapping is the project overlay's.
+Read `branch_diff_unchanged` to consider a prior local review reusable — and **also** confirm, against the project's overlay, that no `base_delta_paths` entry is a governance surface the reviewer judges against. Run the project overlay's narrowest deterministic command covering `base_delta_paths`, falling back to the full gate when any path is unclassified or `path_overlap` is non-empty. The proof carries no project-specific command name — command selection is the project overlay's.
 
 The proof scopes pre-push local work only. It never satisfies a merge gate: current-head pull-request checks and the current-head CI review still decide `MERGE_READINESS` after the push.
 
@@ -199,7 +199,7 @@ How to avoid: Keep `dirty_tree` as the bundled script's deterministic result, re
 - Exit 4 carries `status=dirty_tree` and `conflict=null`; HEAD, index, and tracked working-tree content match their pre-invocation state.
 - Exit 3 carries `status=conflict`, a non-null `conflict` object with paths, git facts, conflict text, and operator options, and an active rebase state remains available for inspection.
 - Exit 1 carries `status=git_failure` and a non-empty `detail`; a diverged detached HEAD remains at its original full OID.
-- Every clean outcome's `preservation` object carries `schema_version`, full old/new base and head OIDs, base and branch path sets, overlap, and patch-identity booleans; it carries no project lane name.
+- Every clean outcome's `preservation` object carries `schema_version`, full old/new base and head OIDs, base and branch path sets, overlap, and patch-identity booleans; it carries no project-specific command name.
 - Git state and command output show no synchronization through `git reset`, no commit or stash created by the bundled synchronizer, and no automatic `git rebase --abort` at conflict handoff.
 - Session-owned `dirty_tree` state produces an owning branch when needed, an atomic checkpoint with verification state recorded, and a same-invocation synchronizer retry; the final result is never that intermediate `dirty_tree`.
 

@@ -139,7 +139,7 @@ The `/merge` dispatcher and the direct-push variant-1 execution path (direct to 
 
 ## Prose-grep-test lint (next session, validation gate)
 
-Prose-grep conformance tests — `assert "<heading>" in skill_body` — verify a string was typed, not that the skill behaves. Add a validation gate (the `reference-portability` gate is the model) that flags a test asserting the presence/absence of a string in a *skill/spec body* (a `.md` read into a `[test]`-lane Python test) as a non-coupling test. Home: the validation enabler (`spx/15-validation.enabler/`). Like the transport-selection eval suite that replaced prose-grep conformance tests, this gate restores real coupling where a prose-grep would otherwise stand in.
+Prose-grep conformance tests — `assert "<heading>" in skill_body` — verify a string was typed, not that the skill behaves. Add a validation gate (the `reference-portability` gate is the model) that flags a test asserting the presence/absence of a string in a *skill/spec body* (a `.md` read into a linked `[test]` Python file) as a non-coupling test. Home: the validation enabler (`spx/15-validation.enabler/`). Like the transport-selection eval suite that replaced prose-grep conformance tests, this gate restores real coupling where a prose-grep would otherwise stand in.
 
 ## Add an explicit absent-overlay case to the transport-selection eval
 

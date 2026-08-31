@@ -506,6 +506,10 @@ Use this shape for one subagent audit. When several custom-agent configurations 
 
 The caller supplies only repository and recorded exact-commit, artifact-path, or governing-node coordinates, plus deterministic command output when a gate requires it. Each verifier establishes its own live foundation and node context before reading product content and derives every content-bearing assertion, artifact set, language partition, and owning-plugin classification from those coordinates.
 
+Every verifier validates its required coordinates before product-content access. An absent, malformed, or unreadable coordinate produces the role's machine-readable blocked diagnostic and no audit or review verdict; the caller treats that result as a blocked gate.
+
+Every verifier invokes `/contextualize --at <full-head-oid> <governing-node>` for its recorded subject. A verifier never invokes the mutable default context-loading mode; an exact-head mismatch blocks the gate before product-content access.
+
 - `changes-reviewer`: the raw scope token — `HEAD`, `origin/<base>...HEAD`, a branch, or a PR reference. Its final message MUST be the raw sealed review-journal run token.
 - `implementation-auditor`: repository path, exact committed `<base>..<head>` scope, deterministic verification commands and observed results, and the task to derive governed paths and language partitions before running the implementation audit through `spx verification run` with the role's six-field run-driver identity. Its final message MUST carry the raw run token and rendered projection; only `terminalStatus: approved` passes.
 - `test-evidence-auditor`: repository path, exact committed scope, governing-node path, exact spec path, and the task to derive the changed assertions and linked test files before auditing coupling, falsifiability, alignment, and coverage without weakening the evidence type. Its final message MUST be the `spec-tree:audit-tests` JSON verdict with `schema_version: 1`, `skill: "audit-tests"`, `overall: "APPROVED" | "REJECTED"`, `rows`, and `metadata`, with no prose outside the JSON object. Treat `overall` as authoritative. Malformed JSON, a missing required field, an unexpected `skill`, or an `overall` value outside that vocabulary blocks the gate.
@@ -526,6 +530,10 @@ The caller supplies only repository and recorded exact-commit, artifact-path, or
 **Configured verifier and reviewer role-task contracts.** Supply only the fields named for the role:
 
 The caller supplies only repository and recorded exact-commit, artifact-path, or governing-node coordinates, plus deterministic command output when a gate requires it. Each verifier establishes its own live foundation and node context before reading product content and derives every content-bearing assertion, artifact set, language partition, and owning-plugin classification from those coordinates.
+
+Every verifier validates its required coordinates before product-content access. An absent, malformed, or unreadable coordinate produces the role's machine-readable blocked diagnostic and no audit or review verdict; the caller treats that result as a blocked gate.
+
+Every verifier invokes `/contextualize --at <full-head-oid> <governing-node>` for its recorded subject. A verifier never invokes the mutable default context-loading mode; an exact-head mismatch blocks the gate before product-content access.
 
 - `spec-tree_changes-reviewer`: the raw scope token — `HEAD`, `origin/<base>...HEAD`, a branch, or a PR reference. Its final message MUST be the raw sealed review-journal run token.
 - `spec-tree_implementation-auditor`: repository path, exact committed `<base>..<head>` scope, deterministic verification commands and observed results, and the task to derive governed paths and language partitions before running the implementation audit through `spx verification run` with the role's six-field run-driver identity. Its final message MUST carry the raw run token and rendered projection; only `terminalStatus: approved` passes.

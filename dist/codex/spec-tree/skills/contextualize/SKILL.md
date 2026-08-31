@@ -1,9 +1,9 @@
 ---
 name: contextualize
 description: ALWAYS invoke this skill when asking about status, progress, or what exists in the spec tree. NEVER work on any part of the spec tree without loading context through this skill first.
-argument-hint: "<spx-root-or-full-node-path>"
+argument-hint: "[--at <full-head-oid>] <spx-root-or-full-node-path>"
 arguments: target
-allowed-tools: Read, Glob, Grep, Skill
+allowed-tools: Read, Glob, Grep, Skill, Bash(git rev-parse HEAD)
 ---
 
 <objective>
@@ -23,6 +23,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 - Lower-index siblings' specs must be read at each directory level — they constrain the target
 - Explicit full-path ADR/PDR citations in loaded specs and decision records must be read before the context marker is emitted; coordination notes never add cited decisions.
 - A context-grounded answer requires the matching `<SPEC_TREE_CONTEXT target="...">` marker. Loading this skill and completing `/sync-base` are prerequisites, not context.
+- A verifier contextualizing an exact committed subject invokes `/contextualize --at <full-head-oid> <target>`. Exact-commit mode verifies that `git rev-parse HEAD` equals the supplied full OID, skips `/sync-base`, and never fetches, rebases, advances, or otherwise changes the checkout.
 - Test files are not read by `/contextualize`. The node target spec or product-root product spec already exposes inline `[test](tests/...)` links; list those links and the applicable `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
 - **Always use canonical full paths** from `spx/` for targets and references. The product-root target is exactly `spx/`; a node target begins with `spx/` and contains only node-directory segments. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
   - Wrong: `/contextualize 32-parser.outcome`
@@ -47,6 +48,10 @@ If absent → STOP. Invoke `/understand` first, then resume from Step 0. Do not 
 <step name="sync_base">
 
 **Step SYNC: Bring the branch current with its base**
+
+Parse the optional exact-commit prefix before any product-content lookup. Accept it only as `--at` followed by one 40-character lowercase hexadecimal OID and one canonical target. In exact-commit mode, run `git rev-parse HEAD` and require byte equality with the supplied OID. A missing, malformed, unreadable, or mismatched OID ABORTS with `Exact committed subject unavailable` and the supplied and observed values; never invoke `/sync-base` in this mode. Record `exact_commit` for the context marker and continue to Step 0 without mutating Git state.
+
+Without `--at`, apply the normal currency workflow below.
 
 Before reading any product or spec content, invoke `/sync-base` so the loaded context reflects current product truth rather than a stale checkout — a branch or detached worktree behind its base reads superseded specs and decisions. `/sync-base` fetches the base and brings the checkout current automatically from observable git state — rebasing a branch, or advancing a clean detached worktree to the base tip; never ask the operator whether to rebase. Act on its result:
 
@@ -251,7 +256,8 @@ Documents loaded:
   PDRs: {count} found, {count} read
   Cited governance decisions: {list of path cited by path} | none
   Guide files: {list} | none
-Sync-base status: {already_current|rebased}
+Context source: {current base via sync-base | exact committed subject {full-head-oid}}
+Sync-base status: {already_current|rebased|not-run-exact-commit}
 
 Hierarchy (node target):
   {product-name}
@@ -371,6 +377,7 @@ Context loading is complete when:
 - [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest
 - [ ] `spx/local/merging.md` read when present and lifecycle continuation state emitted in the manifest
 - [ ] A clean `/sync-base` result is recorded as context-load state and followed immediately by Step 0 for the same target before any answer or branch lifecycle work
+- [ ] Exact-commit mode validates a full OID against `git rev-parse HEAD`, records `not-run-exact-commit`, and performs no fetch, rebase, detached advance, or other Git mutation
 - [ ] Status and progress contexts include a lifecycle verdict and continuation action rather than treating local verification, commits, or worktree cleanliness as completion
 - [ ] All node, ADR, PDR, test, and coordination-note references in the manifest use full paths from `spx/`
 - [ ] Bootstrap state derives only from `$target` and the observed tree: exact `spx/` with a product spec and no nodes is `true`; every node target is `false`, and a missing node target aborts

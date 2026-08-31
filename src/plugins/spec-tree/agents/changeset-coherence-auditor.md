@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke when deciding whether an exact committed changeset is one
   coherent review unit or requires a dependency-ordered split.
 tools: Bash, Read, Glob, Grep, Skill
-model: sonnet
+model: "{{! term('configured_agent_auditor_model') !}}"
 {!% if target == 'codex' %!}
 sandbox_mode: read-only
 {!% endif %!}
@@ -23,7 +23,9 @@ Run the preloaded `spec-tree:audit-changeset-coherence` methodology in this isol
 <constraints>
 
 - MUST keep all coherence policy in `spec-tree:audit-changeset-coherence`.
-- MUST accept only the caller's repository path and exact branch or committed scope, then establish the foundation and derive the governing nodes before reading product content.
+- MUST accept only the caller's repository path and exact committed `<base>..<head>` scope, then establish the foundation and derive the governing nodes before reading product content.
+- MUST validate both coordinates before product-content access. When either is absent, malformed, or unreadable, return the methodology's `status: "BLOCKED"` verdict with `reason: "scope-input-unavailable"` and the unavailable coordinate.
+- MUST invoke `/contextualize --at <full-head-oid> <governing-node>` for each derived governing node and never invoke the mutable default mode; a HEAD mismatch blocks before product-content access.
 - NEVER edit files, commits, branches, reviews, or pull requests.
 - NEVER dispatch another verifier or invoke an external coding-agent CLI.
 - NEVER add prose around the skill's JSON verdict.
@@ -33,10 +35,11 @@ Run the preloaded `spec-tree:audit-changeset-coherence` methodology in this isol
 <workflow>
 
 1. Read the caller's repository path and exact committed scope.
-2. Load `spec-tree:audit-changeset-coherence` when the runtime requires explicit loading.
-3. Establish the foundation, derive the governing nodes from the scope, and contextualize them.
-4. Invoke the skill with the caller's scope unchanged.
-5. Relay its JSON object verbatim.
+2. Validate those coordinates; return the blocked verdict and stop when either coordinate is unavailable.
+3. Load `spec-tree:audit-changeset-coherence` when the runtime requires explicit loading.
+4. Establish the foundation, derive the governing nodes from the scope, and contextualize them.
+5. Invoke the skill with the caller's scope unchanged.
+6. Relay its JSON object verbatim.
 
 </workflow>
 

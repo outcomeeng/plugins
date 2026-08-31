@@ -13,7 +13,7 @@ Every MUST/NEVER bullet in the ADR and PDR decision templates carries a single e
 - The evidence type is the **minimum**. The spec node enforcing the rule carries at least that evidence type and may add more (more cases, deeper levels, a second type).
 - The evidence type is chosen by invoking `/test` against the rule's claim shape — never hand-picked. The template instructs the author to route through `/test`.
 - The evidence-type tag is a claim-shape classification, not a test reference: it carries no path, so it does not violate live `/understand` `<artifact_placement>`, where decision records contain no `[test](path)` links. The path lives on the downstream spec assertion.
-- Evidence type and mechanism are distinct axes. The per-rule tag is one of the five **evidence types** above. The evidence **mechanism** (`[test]` / `[audit]` / `[eval]`) is the downstream spec assertion's concern and never a per-rule tag — `([eval])` is not a decision-rule evidence type. The five-type set is therefore complete; a rule whose downstream enforcement runs through the eval lane still carries an evidence-type tag (typically `([compliance])`), and the `[eval]` mechanism attaches to the spec assertion that enforces it.
+- Evidence type and mechanism are distinct axes. The per-rule tag is one of the five **evidence types** above. The evidence **mechanism** (`[test]` / `[audit]` / `[eval]`) is the downstream spec assertion's concern and never a per-rule tag — `([eval])` is not a decision-rule evidence type. The five-type set is therefore complete; a rule whose downstream enforcement uses evaluate verification still carries an evidence-type tag (typically `([compliance])`), and the `[eval]` mechanism attaches to the spec assertion that enforces it.
 
 ## Files
 

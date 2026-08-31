@@ -166,7 +166,7 @@ class Preservation:
     ``branch_diff_unchanged`` is ``False``.
 
     This proof scopes pre-push local verification only; it never satisfies a
-    merge gate. Validation-lane mapping over ``base_delta_paths`` and the
+    merge gate. Deterministic-command selection over ``base_delta_paths`` and the
     governance-surface list are the project overlay's, not this primitive's.
     """
 

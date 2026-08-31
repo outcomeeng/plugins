@@ -1,21 +1,21 @@
-# Status Derivation
+# Node State Derivation
 
-Node status is derived exclusively from the presence and pass/fail state of co-located tests — a pure, computed property, never a stored label. No status field exists in any file.
+Node state is derived from the presence of a spec, linked evidence, implementation, and the evidence result. The derived states are `Declared`, `Specified`, `Failing`, and `Passing`; no state field exists in a committed artifact.
 
 ## Rationale
 
-Stored status requires someone to keep it synchronized with reality, and that synchronization always drifts. Deriving status from tests guarantees accuracy — the status is literally "do the tests pass?" Rejected alternatives: a `status.yaml` per node (manual synchronization) and CI-badge integration (external dependency).
+Stored state requires manual synchronization and drifts from the artifacts it summarizes. Derivation keeps the state tied to the declaration → evidence → implementation chain. Rejected alternatives: a `status.yaml` per node and CI-badge integration.
 
 ## Invariants
 
-- Status is a pure function of test results — same test results always produce the same status.
-- Adding tests can only improve status precision, never degrade it.
+- State is a pure function of the spec, linked evidence, implementation presence, and evidence result.
+- `Declared` means the spec exists without evidence; `Specified` means spec and evidence exist while implementation is absent; `Failing` and `Passing` distinguish the evidence result when implementation exists.
 
 ## Verification
 
 ### Testing
 
-- ALWAYS: compute status fresh on every invocation — ensures accuracy ([property])
-- ALWAYS: use only test pass/fail as input — no other signals ([mapping])
-- NEVER: store status in any committed file — prevents drift ([compliance])
-- NEVER: allow manual status override — defeats the derivation principle ([scenario])
+- ALWAYS: compute node state from the current declaration, evidence, implementation, and evidence result ([property])
+- ALWAYS: map each artifact combination to exactly one of `Declared`, `Specified`, `Failing`, or `Passing` ([mapping])
+- NEVER: store node state in a committed file ([compliance])
+- NEVER: allow a manual state override ([scenario])

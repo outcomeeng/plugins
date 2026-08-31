@@ -418,6 +418,14 @@ ROLE_TASK_CONTRACT_POLICY_REQUIREMENTS: Final = (
         "establishes its own live `<SPEC_TREE_FOUNDATION>` marker and contextualized-node set",
     ),
     (
+        "fail-closed coordinate validation",
+        "validates its required coordinates before product-content access",
+    ),
+    (
+        "immutable exact-commit context",
+        "invokes `/contextualize --at <full-head-oid> <governing-node>`",
+    ),
+    (
         "verifier-derived content",
         "derives assertion text, eval and producer artifacts, implementation scope, language-scope classification, and owning-plugin classification",
     ),

@@ -14,7 +14,7 @@ Covers the readiness-preservation Scenario and Compliance assertions in
 - A clean detached HEAD already at the base tip emits a proof reporting an empty
   base delta and an unchanged branch patch identity.
 - The proof carries a schema version, full unabbreviated OIDs, and no
-  project-specific validation-lane name.
+  only portable Git-fact fields.
 
 These are ``l1`` — direct in-process calls into ``sync_base`` against real git
 repositories seeded under ``tmp_path``.
@@ -181,7 +181,7 @@ def test_base_rename_surfaces_both_paths_in_base_delta(
     assert handle.new_path in proof.base_delta_paths
 
 
-def test_proof_carries_schema_version_and_full_oids_no_lane_name(
+def test_proof_carries_schema_version_full_oids_and_portable_fields(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
@@ -194,6 +194,16 @@ def test_proof_carries_schema_version_and_full_oids_no_lane_name(
     for key in ("old_base_oid", "new_base_oid", "old_head_oid", "new_head_oid"):
         assert len(proof[key]) == _FULL_OID_LEN
         assert proof[key] == proof[key].lower()
-    # The primitive emits git facts only — lane mapping is the project overlay's.
-    assert not any("lane" in key or "validation" in key for key in proof)
-    assert "recommended_validation" not in proof
+    assert set(proof) == {
+        "schema_version",
+        "old_base_oid",
+        "new_base_oid",
+        "old_head_oid",
+        "new_head_oid",
+        "base_delta_paths",
+        "branch_paths_before",
+        "branch_paths_after",
+        "path_overlap",
+        "branch_patch_changed",
+        "branch_diff_unchanged",
+    }

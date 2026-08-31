@@ -94,7 +94,7 @@ Worklist:
    changesets. Keep skill-content, review-journal, and broader methodology
    changes separate when they can be verified and merged independently.
 5. For each retained changeset, align its governing specs and decisions, run the
-   applicable deterministic lane, dispatch every required typed auditor and the
+   applicable deterministic command, dispatch every required typed auditor and the
    changeset reviewer, run the terminal full gate only after agentic convergence
    when required, and ship through `/merge`.
 6. Delete a preservation ref only after its retained changes are reachable from
