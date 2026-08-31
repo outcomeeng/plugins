@@ -348,11 +348,6 @@ WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
         "for a nested waiter or selected command.",
     ),
 )
-ROUTER_POLICY_NAMES: Final = (
-    "operator-question-interrupt",
-    "codex-verifier-dispatch",
-    "codex-deferred-agent-discovery",
-)
 SUBAGENT_DISPATCH_POLICY_HEADING: Final = "### Sub-agent dispatch"
 SUBAGENT_DISPATCH_POLICY_REQUIREMENTS: Final = (
     ("named-role pre-authorization", "roles this router names are pre-authorized"),

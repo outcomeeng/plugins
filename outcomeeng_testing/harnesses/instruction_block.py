@@ -514,45 +514,6 @@ def property_evidence_contract() -> tuple[str, ...]:
     )
 
 
-def compliance_evidence_contract() -> tuple[str, ...]:
-    """Return the independent case manifest required by compliance evidence."""
-    return (
-        "all_routers_enforce_operator_question_interrupt",
-        "authority_hierarchy_policy_is_complete",
-        "claude_router_uses_native_configured_agent_dispatch",
-        "codex_role_input_uses_runtime_capability",
-        "codex_router_bounds_dispatched_verifiers",
-        "codex_router_discovers_deferred_agent_tools",
-        "dist_template_copies_stay_equivalent",
-        "drift_gate_marks_untracked_root_file_intent_to_add",
-        "drift_gate_reports_a_missing_root_instruction_file",
-        "drift_gate_skips_missing_obsolete_spx_file",
-        "former_command_slot_fence_is_ordinary_content",
-        "foundation_policy_guard_rejects_forbidden_router_token",
-        "foundation_policy_guard_rejects_missing_requirement",
-        "generation_reads_dist_templates",
-        "generation_writes_both_root_files",
-        "justfile_binds_build_and_check_recipes",
-        "lefthook_regenerates_through_build_instructions",
-        "obsolete_spx_instruction_files_are_removed",
-        "reconcile_replaces_the_losing_region_whole",
-        "refresh_workflow_checks_out_main",
-        "refresh_workflow_installs_dprint",
-        "refresh_workflow_regenerates_and_opens_pr",
-        "refresh_workflow_regeneration_drives_pr_decision",
-        "refresh_workflow_verifies_just_download",
-        "regenerate_overwrites_router_drift",
-        "render_passes_brace_token_through_unchanged",
-        "rendered_router_omits_forbidden_session_tokens",
-        *(
-            f"router_is_first_and_carries_read_whole_file_instruction[{agent_harness}]"
-            for agent_harness in TEMPLATE_HARNESSES
-        ),
-        "unresolved_build_macro_is_rejected",
-        "wait_for_load_stop_trigger_policy",
-    )
-
-
 def harness_line(harness: str) -> str:
     """Return generator-owned carrier content for one source-owned harness."""
     return generate_harness_line(harness)

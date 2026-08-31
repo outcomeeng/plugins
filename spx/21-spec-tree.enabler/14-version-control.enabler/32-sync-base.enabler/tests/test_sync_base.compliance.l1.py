@@ -84,11 +84,15 @@ def test_clean_rebase_has_no_conflict_details_conflict_does(
 
     conflict_root = tmp_path / "conflict"
     conflict_root.mkdir()
-    conflict = module.sync_base(build_conflicting_repo(conflict_root).repo)
+    conflict_handle = build_conflicting_repo(conflict_root)
+    conflict = module.sync_base(conflict_handle.repo)
     assert conflict.status is module.SyncStatus.CONFLICT
     assert conflict.conflict is not None
     assert conflict.conflict.summary == module.CONFLICT_SUMMARY
     assert "CONFLICT (content): Merge conflict in" in conflict.conflict.git_output
+    assert (conflict_handle.repo / ".git" / "rebase-merge").exists() or (
+        conflict_handle.repo / ".git" / "rebase-apply"
+    ).exists()
 
 
 @pytest.mark.parametrize("stage", [False, True], ids=["unstaged", "staged"])

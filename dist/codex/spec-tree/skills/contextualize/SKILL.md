@@ -28,7 +28,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
   - Wrong: `/contextualize 32-parser.outcome`
   - Right: `/contextualize spx/{path-to-node}`
 
-**BOOTSTRAP MODE**: Bootstrap is derived from the documented target and tree state, never from an undeclared operation. When `$target` is exactly `spx/`, one product spec exists, and no node directories exist, emit the product-root manifest with `bootstrap=true`. A missing node target always aborts; authoring a new node contextualizes its existing parent (`spx/` for a top-level node or the canonical full parent node path for a nested node).
+**BOOTSTRAP MODE**: Bootstrap is derived from the documented target and tree state, never from an undeclared operation. When `target` is exactly `spx/`, one product spec exists, and no node directories exist, emit the product-root manifest with `bootstrap=true`. A missing node target always aborts; authoring a new node contextualizes its existing parent (`spx/` for a top-level node or the canonical full parent node path for a nested node).
 
 </essential_principles>
 
@@ -48,7 +48,7 @@ If absent → STOP. Invoke `/understand` first, then resume from Step 0. Do not 
 
 **Step SYNC: Bring the branch current with its base**
 
-Parse the complete raw invocation string `$ARGUMENTS` once before any product-content lookup. Accept exactly one canonical target, optionally preceded by `--at` and one 40-character lowercase hexadecimal OID; bind the normalized target to `$target` for every later step. Reject extra values, duplicate options, and unknown options. In exact-commit mode, run `git rev-parse HEAD` and require byte equality with the supplied OID. A missing, malformed, unreadable, or mismatched OID ABORTS with `Exact committed subject unavailable` and the supplied and observed values; never invoke `/sync-base` in this mode. Record `exact_commit` for the context marker and continue to Step 0 without mutating Git state.
+Parse the complete raw invocation string `$ARGUMENTS` once before any product-content lookup. Accept exactly one canonical target, optionally preceded by `--at` and one 40-character lowercase hexadecimal OID; bind the normalized target to the local `target` value for every later step. Reject extra values, duplicate options, and unknown options. In exact-commit mode, run `git rev-parse HEAD` and require byte equality with the supplied OID. A missing, malformed, unreadable, or mismatched OID ABORTS with `Exact committed subject unavailable` and the supplied and observed values; never invoke `/sync-base` in this mode. Record `exact_commit` for the context marker and continue to Step 0 without mutating Git state.
 
 Without `--at`, apply the normal currency workflow below.
 
@@ -67,7 +67,7 @@ Before reading any product or spec content, invoke `/sync-base` so the loaded co
 
 If the invocation supplies no target path, ABORT: "A canonical target is required. Invoke `/contextualize spx/` for the product root or `/contextualize spx/{path-to-node}` for a node."
 
-Before the first filesystem lookup, accept `$target` only when it is the exact product-root target `spx/` or a repository-relative node target beginning with `spx/` whose non-empty segments after `spx/` each match `{index}-{slug}.{enabler|outcome}`. Reject absolute paths, empty targets, repeated separators, `.` or `..` segments, trailing separators on node targets, and malformed node segments. Otherwise ABORT: "Invalid target path: $target. Supply `spx/` or one canonical full `spx/...` node path."
+Before the first filesystem lookup, accept `target` only when it is the exact product-root target `spx/` or a repository-relative node target beginning with `spx/` whose non-empty segments after `spx/` each match `{index}-{slug}.{enabler|outcome}`. Reject absolute paths, empty targets, repeated separators, `.` or `..` segments, trailing separators on node targets, and malformed node segments. Otherwise ABORT: "Invalid target path: {target}. Supply `spx/` or one canonical full `spx/...` node path."
 
 Set `product_root_target=true` only for the exact target `spx/`. Every other accepted target is a node target.
 
@@ -76,12 +76,12 @@ Set `product_root_target=true` only for the exact target `spx/`. Every other acc
 Glob: "spx/*.product.md"
 
 # Verify a node target exists; product-root mode already addresses spx/
-Glob: "$target/*.md"  (node targets only)
+Glob: "{target}/*.md"  (node targets only)
 ```
 
 If the product file is missing, ABORT: "No product file found in spx/. Create one with `/bootstrap` first."
 
-If a node target path doesn't exist, ABORT: "Target path not found: $target. Check the path or contextualize its existing parent before creating it with `/author`."
+If a node target path doesn't exist, ABORT: "Target path not found: {target}. Check the path or contextualize its existing parent before creating it with `/author`."
 
 For the exact product-root target `spx/`, list top-level node directories after locating the product spec. Set `bootstrap=true` when none exist and `bootstrap=false` otherwise. For every node target, set `bootstrap=false`.
 
@@ -193,21 +193,21 @@ For a node target, load the target context below.
 
 ```bash
 # Read target spec
-Read: $target/{slug}.md
+Read: {target}/{slug}.md
 
 # Read target ADRs and PDRs
-Glob: "$target/*-*.adr.md"
-Glob: "$target/*-*.pdr.md"
+Glob: "{target}/*-*.adr.md"
+Glob: "{target}/*-*.pdr.md"
 
 # Enumerate children (if any)
-Glob: "$target/*-*.{enabler,outcome}/"
+Glob: "{target}/*-*.{enabler,outcome}/"
 
 # Check for tests directory
-Glob: "$target/tests/*"
+Glob: "{target}/tests/*"
 
 # Check for coordination notes
-Glob: "$target/PLAN.md"
-Glob: "$target/ISSUES.md"
+Glob: "{target}/PLAN.md"
+Glob: "{target}/ISSUES.md"
 ```
 
 **If PLAN.md or ISSUES.md exist, read them.** These are stale-prone coordination notes left by previous sessions via `/handoff`. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
@@ -244,7 +244,7 @@ Emit the `<SPEC_TREE_CONTEXT>` marker with all collected information:
 <SPEC_TREE_CONTEXT target="{full-target-path}">
 
 Product: {product-name}
-Target: $target ({enabler|outcome|product root})
+Target: {target} ({enabler|outcome|product root})
 Bootstrap: {true|false}
 
 Documents loaded:
@@ -282,6 +282,28 @@ Lower-index siblings read: {list}
 Same-index siblings (independent): {list}
 Higher-index siblings listed: {list}
 
+</SPEC_TREE_CONTEXT>
+```
+
+For example, `/contextualize spx/21-parser.enabler` over a tree with one
+lower-index runtime enabler emits resolved paths and concrete counts:
+
+```text
+<SPEC_TREE_CONTEXT target="spx/21-parser.enabler">
+Product: Example Compiler
+Target: spx/21-parser.enabler (enabler)
+Bootstrap: false
+Documents loaded:
+  Product spec: spx/example-compiler.product.md
+  Ancestor specs: 0 read
+  Lower-index sibling specs: 1 read
+  ADRs: 1 found, 1 read
+  PDRs: 0 found, 0 read
+Context source: current base via sync-base
+Sync-base status: already_current
+Hierarchy: Example Compiler -> spx/21-parser.enabler (enabler) <- TARGET
+Children: 0
+Co-located tests: 2 listed
 </SPEC_TREE_CONTEXT>
 ```
 
@@ -379,7 +401,7 @@ Context loading is complete when:
 - [ ] Exact-commit mode validates a full OID against `git rev-parse HEAD`, records `not-run-exact-commit`, and performs no fetch, rebase, detached advance, or other Git mutation
 - [ ] Status and progress contexts include a lifecycle verdict and continuation action rather than treating local verification, commits, or worktree cleanliness as completion
 - [ ] All node, ADR, PDR, test, and coordination-note references in the manifest use full paths from `spx/`
-- [ ] Bootstrap state derives only from `$target` and the observed tree: exact `spx/` with a product spec and no nodes is `true`; every node target is `false`, and a missing node target aborts
+- [ ] Bootstrap state derives only from `target` and the observed tree: exact `spx/` with a product spec and no nodes is `true`; every node target is `false`, and a missing node target aborts
 - [ ] `<SPEC_TREE_CONTEXT target="...">` marker emitted with full manifest
 - [ ] No ABORT conditions triggered (or appropriate error shown with remediation)
 

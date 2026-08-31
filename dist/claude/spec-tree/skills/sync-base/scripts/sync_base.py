@@ -79,6 +79,21 @@ CONFLICT_ABORT = "git rebase --abort"
 #: Schema version of the readiness-preservation proof embedded in the result.
 READINESS_SCHEMA_VERSION = 1
 
+#: Stable serialized field order for the readiness-preservation proof.
+READINESS_PROOF_FIELDS = (
+    "schema_version",
+    "old_base_oid",
+    "new_base_oid",
+    "old_head_oid",
+    "new_head_oid",
+    "base_delta_paths",
+    "branch_paths_before",
+    "branch_paths_after",
+    "path_overlap",
+    "branch_patch_changed",
+    "branch_diff_unchanged",
+)
+
 
 def _load_changeset_scope() -> ModuleType:
     """Load the canonical ``changeset_scope`` module via importlib and cache it."""
@@ -183,7 +198,7 @@ class Preservation:
 
     def to_json_dict(self) -> dict[str, object]:
         """Serialize the proof with the schema version and stable keys."""
-        return {
+        values: dict[str, object] = {
             "schema_version": READINESS_SCHEMA_VERSION,
             "old_base_oid": self.old_base_oid,
             "new_base_oid": self.new_base_oid,
@@ -196,6 +211,7 @@ class Preservation:
             "branch_patch_changed": self.branch_patch_changed,
             "branch_diff_unchanged": self.branch_diff_unchanged,
         }
+        return {field: values[field] for field in READINESS_PROOF_FIELDS}
 
 
 @dataclass(frozen=True)

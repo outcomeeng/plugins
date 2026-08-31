@@ -1,4 +1,4 @@
-"""Compliance harness evidence for the instruction-block render model.
+"""Compliance evidence for the instruction-block render model.
 
 The ALWAYS/NEVER rules of ``instruction-block.md`` with deterministic test evidence: both root
 files are written together, the router is first and carries a read-the-whole-file instruction,
@@ -8,18 +8,15 @@ drift, the refresh workflow regenerates and opens a PR only on drift while verif
 tooling, no product-specific string enters the router, a former command-slot fence is ordinary
 content, a reconcile never blends bodies, the retired session tokens never render, an unresolved
 build macro is rejected, and retired ``spx/`` instruction files are removed. Real repository
-config (``justfile``, ``lefthook.yml``, the workflow) is read through harness helpers.
+config (``justfile``, ``lefthook.yml``, the workflow) is read through infrastructure observations.
 """
 
 from __future__ import annotations
 
 import pytest
 
-import inspect
 import pathlib
 import re
-from collections.abc import Callable
-from tempfile import TemporaryDirectory
 from typing import cast
 
 from outcomeeng.distribution import instruction_block as dist
@@ -46,7 +43,7 @@ def _template(tmp_path: pathlib.Path) -> pathlib.Path:
     return harness.write_template(tmp_path, harness.NEW_VERSION)
 
 
-def _assert_generation_writes_both_root_files(tmp_path: pathlib.Path) -> None:
+def test_generation_writes_both_root_files(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     harness.run_generator_write_primary(repo, _template(tmp_path))
@@ -54,7 +51,8 @@ def _assert_generation_writes_both_root_files(tmp_path: pathlib.Path) -> None:
     assert (repo / harness.INSTRUCTION_AGENTS).is_file()
 
 
-def _assert_router_is_first_and_carries_read_whole_file_instruction(
+@pytest.mark.parametrize("agent_harness", harness.TEMPLATE_HARNESSES)
+def test_router_is_first_and_carries_read_whole_file_instruction(
     agent_harness: str,
 ) -> None:
     template = harness.read_canonical_template(agent_harness)
@@ -70,7 +68,7 @@ def _assert_router_is_first_and_carries_read_whole_file_instruction(
     assert harness.READ_ENTIRE_FILE_INSTRUCTION in router_block
 
 
-def _assert_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
+def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
     expected: dict[str, str] = {}
     for agent_harness in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES:
         path = dist.dist_template_path(agent_harness)
@@ -100,7 +98,7 @@ def _assert_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
         )
 
 
-def _assert_justfile_binds_build_and_check_recipes() -> None:
+def test_justfile_binds_build_and_check_recipes() -> None:
     justfile = dist.REPO_ROOT.joinpath(dist.JUSTFILE_NAME).read_text(encoding="utf-8")
     build_body = harness.justfile_recipe_body(justfile, dist.BUILD_INSTRUCTIONS_RECIPE)
     check_body = harness.justfile_recipe_body(justfile, dist.INSTRUCTIONS_CHECK_RECIPE)
@@ -109,7 +107,7 @@ def _assert_justfile_binds_build_and_check_recipes() -> None:
     assert dist.WRITE_FLAG not in check_body
 
 
-def _assert_lefthook_regenerates_through_build_instructions() -> None:
+def test_lefthook_regenerates_through_build_instructions() -> None:
     lefthook = dist.REPO_ROOT.joinpath("lefthook.yml").read_text(encoding="utf-8")
     # the hook's run directive regenerates through the recipe
     assert f"run: just {dist.BUILD_INSTRUCTIONS_RECIPE}" in lefthook
@@ -118,7 +116,7 @@ def _assert_lefthook_regenerates_through_build_instructions() -> None:
     assert "--repo-root ." not in lefthook
 
 
-def _assert_drift_gate_reports_a_missing_root_instruction_file(
+def test_drift_gate_reports_a_missing_root_instruction_file(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -138,7 +136,7 @@ def _assert_drift_gate_reports_a_missing_root_instruction_file(
     assert harness.INSTRUCTION_CLAUDE in drift
 
 
-def _assert_drift_gate_marks_untracked_root_file_intent_to_add(
+def test_drift_gate_marks_untracked_root_file_intent_to_add(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -156,7 +154,7 @@ def _assert_drift_gate_marks_untracked_root_file_intent_to_add(
     assert harness.INSTRUCTION_AGENTS in drift
 
 
-def _assert_drift_gate_skips_missing_obsolete_spx_file(tmp_path: pathlib.Path) -> None:
+def test_drift_gate_skips_missing_obsolete_spx_file(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     harness.init_git_identity(repo)
@@ -175,7 +173,7 @@ def _assert_drift_gate_skips_missing_obsolete_spx_file(tmp_path: pathlib.Path) -
     assert "spx/AGENTS.md" not in drift
 
 
-def _assert_refresh_workflow_regeneration_drives_pr_decision(
+def test_refresh_workflow_regeneration_drives_pr_decision(
     tmp_path: pathlib.Path,
 ) -> None:
     gh_log = tmp_path / "gh.log"
@@ -264,7 +262,7 @@ def _assert_refresh_workflow_regeneration_drives_pr_decision(
     assert MODULE.parse_instruction_version(updated_agents) == update_version
 
 
-def _assert_regenerate_overwrites_router_drift(tmp_path: pathlib.Path) -> None:
+def test_regenerate_overwrites_router_drift(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     template = _template(tmp_path)
@@ -287,7 +285,7 @@ def _assert_regenerate_overwrites_router_drift(tmp_path: pathlib.Path) -> None:
     assert hand_edited_body not in regenerated
 
 
-def _assert_refresh_workflow_regenerates_and_opens_pr() -> None:
+def test_refresh_workflow_regenerates_and_opens_pr() -> None:
     workflow = WORKFLOW.path().read_text(encoding="utf-8")
     assert WORKFLOW.dispatch_key in workflow
     regenerate = harness.workflow_run_block(WORKFLOW.regenerate_step)
@@ -304,12 +302,12 @@ def _assert_refresh_workflow_regenerates_and_opens_pr() -> None:
     )
 
 
-def _assert_refresh_workflow_checks_out_main() -> None:
+def test_refresh_workflow_checks_out_main() -> None:
     checkout = harness.workflow_step_block(WORKFLOW.checkout_step)
     assert WORKFLOW.default_branch in checkout
 
 
-def _assert_refresh_workflow_verifies_just_download() -> None:
+def test_refresh_workflow_verifies_just_download() -> None:
     install = harness.workflow_run_block(WORKFLOW.install_just_step)
     just_sha256 = harness.workflow_env_value(WORKFLOW.just_checksum_env)
     # the pinned checksum is declared
@@ -326,7 +324,7 @@ def _assert_refresh_workflow_verifies_just_download() -> None:
     assert "tar -xzf just.tar.gz" not in install
 
 
-def _assert_refresh_workflow_installs_dprint() -> None:
+def test_refresh_workflow_installs_dprint() -> None:
     install = harness.workflow_run_block(WORKFLOW.install_dprint_step)
     dprint_version = harness.workflow_env_value(WORKFLOW.dprint_version_env)
     assert dprint_version
@@ -339,7 +337,7 @@ def _assert_refresh_workflow_installs_dprint() -> None:
     ) < workflow.index(f"      - name: {WORKFLOW.regenerate_step}")
 
 
-def _assert_render_passes_brace_token_through_unchanged() -> None:
+def test_render_passes_brace_token_through_unchanged() -> None:
     templates = tuple(
         harness.read_canonical_template(agent_harness)
         for agent_harness in harness.TEMPLATE_HARNESSES
@@ -369,7 +367,7 @@ def _assert_render_passes_brace_token_through_unchanged() -> None:
     assert not missing, f"rendering changed or removed brace tokens: {missing!r}"
 
 
-def _assert_former_command_slot_fence_is_ordinary_content(
+def test_former_command_slot_fence_is_ordinary_content(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -388,7 +386,7 @@ def _assert_former_command_slot_fence_is_ordinary_content(
     assert set(MODULE.parse_shared_regions(result)) == {harness.SHARED_REGION_NAME}
 
 
-def _assert_reconcile_replaces_the_losing_region_whole() -> None:
+def test_reconcile_replaces_the_losing_region_whole() -> None:
     open_marker = MODULE.shared_open_marker(harness.SHARED_REGION_NAME)
     close_marker = MODULE.shared_close_marker(harness.SHARED_REGION_NAME)
     doc_a = f"{open_marker}\n\n{harness.SHARED_REGION_BODY}\n\n{close_marker}\n"
@@ -434,7 +432,8 @@ def _markdown_section(document: str, heading: str) -> str:
     match = re.search(
         rf"(?ms)^{re.escape(heading)}\n.*?(?=^#{{1,{level}}} |\Z)", document
     )
-    assert match is not None, f"missing fixture section: {heading}"
+    if match is None:
+        raise ValueError(f"missing fixture section: {heading}")
     return match.group(0)
 
 
@@ -443,7 +442,7 @@ def _without_markdown_section(document: str, heading: str) -> str:
     return document.replace(_markdown_section(document, heading), "", 1)
 
 
-def _assert_codex_role_input_uses_runtime_capability() -> None:
+def test_codex_role_input_uses_runtime_capability() -> None:
     """Assert role-task submission renders through a discoverable runtime token."""
     authored = dist.AUTHORED_TEMPLATE_PATH.read_text(encoding="utf-8")
     token = format_runtime_token(
@@ -465,7 +464,7 @@ def _assert_codex_role_input_uses_runtime_capability() -> None:
     ) in router
 
 
-def _assert_dist_template_copies_stay_equivalent() -> None:
+def test_dist_template_copies_stay_equivalent() -> None:
     """Assert both dist template copies carry the same complete harness spans."""
     templates = dist.load_harness_templates(_distribution_module())
     claude_copy = templates[harness.HARNESS_CLAUDE]
@@ -485,7 +484,7 @@ def _assert_dist_template_copies_stay_equivalent() -> None:
         assert marker in codex_copy
 
 
-def _assert_claude_router_uses_native_configured_agent_dispatch() -> None:
+def test_claude_router_uses_native_configured_agent_dispatch() -> None:
     """Assert Claude keeps native configured-agent dispatch."""
     document = _render_shipped_instruction_blocks()[harness.HARNESS_CLAUDE]
     router = dist.managed_router_block(document)
@@ -494,65 +493,62 @@ def _assert_claude_router_uses_native_configured_agent_dispatch() -> None:
     assert "OUTCOMEENG_CODEX_AGENT_NAME" not in router
 
 
-def _require_wait_for_load_policy_error(documents: dict[str, str]) -> None:
-    """Require the production validator to reject an invalid policy render."""
-    try:
-        dist.validate_wait_for_load_policy(documents)
-    except dist.WaitForLoadPolicyError:
-        return
-    raise AssertionError("invalid wait-for-load policy was accepted")
-
-
-def _assert_wait_for_load_stop_trigger_policy() -> None:
+def test_wait_for_load_stop_trigger_policy() -> None:
     """Challenge every wait-for-load requirement across all renders."""
     for enabled_languages in harness.template_language_subsets():
         documents = _render_shipped_instruction_blocks(enabled_languages)
         dist.validate_wait_for_load_policy(documents)
         for _, requirement in dist.WAIT_FOR_LOAD_POLICY_REQUIREMENTS:
-            _require_wait_for_load_policy_error(
-                {
-                    agent_harness: document.replace(requirement, "", 1)
-                    for agent_harness, document in documents.items()
-                }
-            )
-            _require_wait_for_load_policy_error(
-                {
-                    agent_harness: document.replace(
-                        dist.managed_router_block(document),
-                        dist.managed_router_block(document)
-                        .replace(requirement, "", 1)
-                        .replace("\n", f"\n{requirement}\n", 1),
-                        1,
-                    )
-                    for agent_harness, document in documents.items()
-                }
-            )
+            with pytest.raises(dist.WaitForLoadPolicyError):
+                dist.validate_wait_for_load_policy(
+                    {
+                        agent_harness: document.replace(requirement, "", 1)
+                        for agent_harness, document in documents.items()
+                    }
+                )
+            with pytest.raises(dist.WaitForLoadPolicyError):
+                dist.validate_wait_for_load_policy(
+                    {
+                        agent_harness: document.replace(
+                            dist.managed_router_block(document),
+                            dist.managed_router_block(document)
+                            .replace(requirement, "", 1)
+                            .replace("\n", f"\n{requirement}\n", 1),
+                            1,
+                        )
+                        for agent_harness, document in documents.items()
+                    }
+                )
         codex_document = documents[harness.HARNESS_CODEX]
         claude_router = dist.managed_router_block(documents[harness.HARNESS_CLAUDE])
         for _, requirement in dist.WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS:
             assert requirement not in claude_router
-            _require_wait_for_load_policy_error(
-                {
-                    **documents,
-                    harness.HARNESS_CODEX: codex_document.replace(requirement, "", 1),
-                }
-            )
-        for contradiction in dist.WAIT_FOR_LOAD_POLICY_CONTRADICTIONS:
-            _require_wait_for_load_policy_error(
-                {
-                    agent_harness: document.replace(
-                        dist.managed_router_block(document),
-                        dist.managed_router_block(document).replace(
-                            "\n", f"\n{contradiction.violating_directive}\n", 1
+            with pytest.raises(dist.WaitForLoadPolicyError):
+                dist.validate_wait_for_load_policy(
+                    {
+                        **documents,
+                        harness.HARNESS_CODEX: codex_document.replace(
+                            requirement, "", 1
                         ),
-                        1,
-                    )
-                    for agent_harness, document in documents.items()
-                }
-            )
+                    }
+                )
+        for contradiction in dist.WAIT_FOR_LOAD_POLICY_CONTRADICTIONS:
+            with pytest.raises(dist.WaitForLoadPolicyError):
+                dist.validate_wait_for_load_policy(
+                    {
+                        agent_harness: document.replace(
+                            dist.managed_router_block(document),
+                            dist.managed_router_block(document).replace(
+                                "\n", f"\n{contradiction.violating_directive}\n", 1
+                            ),
+                            1,
+                        )
+                        for agent_harness, document in documents.items()
+                    }
+                )
 
 
-def _assert_authority_hierarchy_policy_is_complete() -> None:
+def test_authority_hierarchy_policy_is_complete() -> None:
     """Challenge every authority-hierarchy requirement across all renders."""
     for enabled_languages in harness.template_language_subsets():
         documents = _render_shipped_instruction_blocks(enabled_languages)
@@ -572,7 +568,7 @@ def _assert_authority_hierarchy_policy_is_complete() -> None:
                     )
 
 
-def _assert_all_routers_enforce_operator_question_interrupt() -> None:
+def test_all_routers_enforce_operator_question_interrupt() -> None:
     """Challenge question policy across every declared language subset."""
     for enabled_languages in harness.template_language_subsets():
         documents = _render_shipped_instruction_blocks(enabled_languages)
@@ -621,7 +617,7 @@ def _assert_all_routers_enforce_operator_question_interrupt() -> None:
                     )
 
 
-def _assert_codex_router_bounds_dispatched_verifiers() -> None:
+def test_codex_router_bounds_dispatched_verifiers() -> None:
     """Challenge verifier policy across every declared language subset."""
     for enabled_languages in harness.template_language_subsets():
         document = _render_shipped_instruction_blocks(enabled_languages)[
@@ -665,18 +661,7 @@ def _assert_codex_router_bounds_dispatched_verifiers() -> None:
                 )
 
 
-def _require_deferred_agent_discovery_policy_error(
-    document: str, accepted_message: str
-) -> None:
-    """Require the production validator to reject a deferred-discovery render."""
-    try:
-        dist.validate_deferred_agent_discovery_policy({dist.CODEX_HARNESS: document})
-    except dist.DeferredAgentDiscoveryPolicyError:
-        return
-    raise AssertionError(accepted_message)
-
-
-def _assert_codex_router_discovers_deferred_agent_tools() -> None:
+def test_codex_router_discovers_deferred_agent_tools() -> None:
     """Challenge deferred typed-agent discovery across every language subset."""
     for enabled_languages in harness.template_language_subsets():
         documents = _render_shipped_instruction_blocks(enabled_languages)
@@ -695,23 +680,17 @@ def _assert_codex_router_discovers_deferred_agent_tools() -> None:
             invalid_document = codex_document.replace(
                 policy, policy.replace(required_text, "", 1), 1
             )
-            _require_deferred_agent_discovery_policy_error(
-                invalid_document,
-                (
-                    "incomplete deferred-agent discovery policy was accepted: "
-                    f"{required_text}"
-                ),
-            )
+            with pytest.raises(dist.DeferredAgentDiscoveryPolicyError):
+                dist.validate_deferred_agent_discovery_policy(
+                    {dist.CODEX_HARNESS: invalid_document}
+                )
 
         for _, required_text in dist.DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS:
             invalid_document = codex_document.replace(required_text, "", 1)
-            _require_deferred_agent_discovery_policy_error(
-                invalid_document,
-                (
-                    "incomplete deferred-agent discovery policy was accepted: "
-                    f"{required_text}"
-                ),
-            )
+            with pytest.raises(dist.DeferredAgentDiscoveryPolicyError):
+                dist.validate_deferred_agent_discovery_policy(
+                    {dist.CODEX_HARNESS: invalid_document}
+                )
 
         for contradiction in dist.DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS:
             invalid_document = codex_document.replace(
@@ -719,37 +698,13 @@ def _assert_codex_router_discovers_deferred_agent_tools() -> None:
                 f"{contradiction.violating_directive}\n\n{MODULE.ROUTER_BLOCK_END}",
                 1,
             )
-            _require_deferred_agent_discovery_policy_error(
-                invalid_document,
-                (
-                    "contradictory deferred-agent discovery directive was accepted: "
-                    f"{contradiction.name}"
-                ),
-            )
+            with pytest.raises(dist.DeferredAgentDiscoveryPolicyError):
+                dist.validate_deferred_agent_discovery_policy(
+                    {dist.CODEX_HARNESS: invalid_document}
+                )
 
 
-def router_policy_evidence_run() -> harness.EvidenceRun:
-    """Run every source-declared router-policy evidence obligation."""
-    assertions = {
-        dist.ROUTER_POLICY_NAMES[
-            0
-        ]: _assert_all_routers_enforce_operator_question_interrupt,
-        dist.ROUTER_POLICY_NAMES[1]: (_assert_codex_router_bounds_dispatched_verifiers),
-        dist.ROUTER_POLICY_NAMES[2]: (
-            _assert_codex_router_discovers_deferred_agent_tools
-        ),
-    }
-    executed: list[str] = []
-    for policy_name in dist.ROUTER_POLICY_NAMES:
-        assertions[policy_name]()
-        executed.append(policy_name)
-    return harness.EvidenceRun(
-        declared=dist.ROUTER_POLICY_NAMES,
-        executed=tuple(executed),
-    )
-
-
-def _assert_rendered_router_omits_forbidden_session_tokens() -> None:
+def test_rendered_router_omits_forbidden_session_tokens() -> None:
     """Assert forbidden session-result vocabulary stays outside every router."""
     for agent_harness, document in _render_shipped_instruction_blocks().items():
         router = dist.managed_router_block(document)
@@ -759,7 +714,7 @@ def _assert_rendered_router_omits_forbidden_session_tokens() -> None:
         dist.validate_foundation_access_policy({agent_harness: independent_prose})
 
 
-def _assert_foundation_policy_guard_rejects_missing_requirement() -> None:
+def test_foundation_policy_guard_rejects_missing_requirement() -> None:
     """Assert the foundation validator rejects a missing policy section."""
     agent_harness, document = next(iter(_render_shipped_instruction_blocks().items()))
     invalid_document = _without_markdown_section(
@@ -773,7 +728,7 @@ def _assert_foundation_policy_guard_rejects_missing_requirement() -> None:
         raise AssertionError("incomplete foundation policy was accepted")
 
 
-def _assert_foundation_policy_guard_rejects_forbidden_router_token() -> None:
+def test_foundation_policy_guard_rejects_forbidden_router_token() -> None:
     """Assert forbidden session-result vocabulary is rejected inside the router."""
     agent_harness, document = next(iter(_render_shipped_instruction_blocks().items()))
     module = harness.load_instruction_block_module()
@@ -790,7 +745,7 @@ def _assert_foundation_policy_guard_rejects_forbidden_router_token() -> None:
         raise AssertionError("forbidden router token was accepted")
 
 
-def _assert_unresolved_build_macro_is_rejected() -> None:
+def test_unresolved_build_macro_is_rejected() -> None:
     # exercise the production pipeline function the build recipes call, not just the primitive: one
     # harness's dist template still carries an unresolved build macro, and the guard must propagate
     # through render_instruction_blocks_from_harness_templates
@@ -809,7 +764,7 @@ def _assert_unresolved_build_macro_is_rejected() -> None:
         raise AssertionError("unresolved build macro was accepted")
 
 
-def _assert_obsolete_spx_instruction_files_are_removed(tmp_path: pathlib.Path) -> None:
+def test_obsolete_spx_instruction_files_are_removed(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     spx_dir = repo / "spx"
@@ -820,54 +775,6 @@ def _assert_obsolete_spx_instruction_files_are_removed(tmp_path: pathlib.Path) -
     harness.run_generator_write_primary(repo, _template(tmp_path))
     assert not (spx_dir / harness.INSTRUCTION_CLAUDE).exists()
     assert not (spx_dir / harness.INSTRUCTION_AGENTS).exists()
-
-
-def _compliance_assertions() -> list[tuple[str, Callable[..., None]]]:
-    """Return every compliance assertion callable in deterministic order."""
-    return sorted(
-        (name, cast(Callable[..., None], assertion))
-        for name, assertion in globals().items()
-        if name.startswith("_assert_") and callable(assertion)
-    )
-
-
-def compliance_evidence_declarations() -> tuple[str, ...]:
-    """Return every compliance case identity in execution order."""
-    return harness.compliance_evidence_contract()
-
-
-def compliance_evidence_run() -> harness.EvidenceRun:
-    """Run every declared compliance check through harness-owned resources."""
-    assertions = _compliance_assertions()
-    declared: list[str] = []
-    executed: list[str] = []
-    with TemporaryDirectory() as directory:
-        root = pathlib.Path(directory).resolve()
-        for index, (name, assertion) in enumerate(assertions):
-            parameters = inspect.signature(assertion).parameters
-            if "agent_harness" in parameters:
-                for agent_harness in harness.TEMPLATE_HARNESSES:
-                    case_name = f"{name.removeprefix('_assert_')}[{agent_harness}]"
-                    declared.append(case_name)
-                    assertion(agent_harness=agent_harness)
-                    executed.append(case_name)
-                continue
-            case_name = name.removeprefix("_assert_")
-            declared.append(case_name)
-            if "tmp_path" in parameters:
-                tmp_path = root / f"{index:02d}-{name.removeprefix('_assert_')}"
-                tmp_path.mkdir()
-                assertion(tmp_path=tmp_path)
-                executed.append(case_name)
-                continue
-            assertion()
-            executed.append(case_name)
-    return harness.EvidenceRun(declared=tuple(declared), executed=tuple(executed))
-
-
-def test_instruction_block_compliance_evidence() -> None:
-    assert compliance_evidence_run().executed == compliance_evidence_declarations()
-    assert router_policy_evidence_run().executed == dist.ROUTER_POLICY_NAMES
 
 
 def test_every_harness_router_authorizes_subagent_dispatch() -> None:
