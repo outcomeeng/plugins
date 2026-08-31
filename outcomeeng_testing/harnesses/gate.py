@@ -18,61 +18,28 @@ import io
 import json
 import math
 import os
-import signal
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Final, TextIO, cast
+from typing import TextIO, cast
 
 from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation import (
     CHECK_RECIPES,
-    FAILURE_EXCERPT_LINE_LIMIT,
-    FMT_CHECK_ARGV,
-    FORWARDED_SIGNALS,
-    FULL_LOG_LABEL,
-    HOOK_SAFETY_ARGV,
     MYPY_ARGV,
-    PHASE_COMPLETE,
-    PHASE_PREFLIGHT,
-    PHASE_RECIPE,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
-    PURPOSE_CORRECTNESS,
     PREFLIGHT_STEPS,
-    PYTEST_ARGV,
     PYRIGHT_ARGV,
-    RECIPE_CHECK,
-    RECIPE_TEST,
-    RECIPE_VALIDATION,
-    RUFF_FORMAT_ARGV,
     RUFF_CHECK_ARGV,
-    RUN_FAIL_STATUS,
-    RUN_PASS_STATUS,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
-    SPAWN_FAILURE_EXIT_CODE,
-    SPX_MARKDOWN_ARGV,
-    STEP_FAIL_STATUS,
-    STEP_PASS_STATUS,
-    SUMMARY_KEY_EXIT_CODE,
-    SUMMARY_KEY_EXCERPT,
-    SUMMARY_KEY_LOG_PATH,
-    SUMMARY_KEY_PHASE,
-    SUMMARY_KEY_PURPOSE,
-    SUMMARY_KEY_RECIPE,
-    SUMMARY_KEY_STATUS,
-    SUMMARY_KEY_STEPS,
-    SUMMARY_KEY_SUMMARY_PATH,
-    SUMMARY_KEY_VERIFICATION_TYPE,
-    TEST_RECIPE,
     TEST_STEPS,
     VALIDATION_RECIPE,
     VALIDATION_STEPS,
-    VERIFICATION_TYPE_TESTING,
     VERIFICATION_TYPE_VALIDATION,
     ProcessHandle,
     ProcessSpawner,
@@ -81,7 +48,6 @@ from outcomeeng.validation import (
     run,
     run_check,
     run_recipe,
-    test_recipe,
     terminate_process_group,
 )
 from outcomeeng.validation._git import GitCommandResult
@@ -119,7 +85,6 @@ PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
 PASSING_CHILD_OUTPUT = "passing validator output"
 FAILING_CHILD_OUTPUT_PREFIX = "failing validator output line"
-DECLARED_SIGNAL_GRACE_SECONDS: Final = 2.0
 SPAWN_FAILURE_MESSAGE = "missing executable"
 HIGH_VOLUME_CHILD_OUTPUT = "\n".join("captured child output" for _ in range(200))
 PYTEST_TARGET_ARG = (
@@ -391,429 +356,196 @@ def call_keyword_map(call: ast.Call) -> dict[str, ast.expr]:
     return {kw.arg: kw.value for kw in call.keywords if kw.arg is not None}
 
 
-def assert_gate_compliance_contract() -> None:
-    """Assert the gate orchestrator's compliance contract."""
+@dataclass(frozen=True)
+class PipelineRunObservation:
+    """One ad-hoc pipeline run's exit code, live output, and child records."""
 
-    assert isinstance(VALIDATION_STEPS, tuple)
-    assert isinstance(TEST_STEPS, tuple)
-    assert len(VALIDATION_STEPS) >= 1
-    assert len(TEST_STEPS) >= 1
-    for step in (*VALIDATION_STEPS, *TEST_STEPS):
-        assert isinstance(step, Step)
+    exit_code: int
+    output: str
+    spawn_calls: tuple[tuple[str, ...], ...]
+    written_outputs: tuple[str, ...]
+    retained_logs: tuple[str | None, ...]
+    log_paths: tuple[str, ...]
 
-    assert VALIDATION_RECIPE.name == RECIPE_VALIDATION
-    assert VALIDATION_RECIPE.verification_type == VERIFICATION_TYPE_VALIDATION
-    assert VALIDATION_RECIPE.purpose == PURPOSE_CONFORMANCE
-    assert TEST_RECIPE.name == RECIPE_TEST
-    assert TEST_RECIPE.verification_type == VERIFICATION_TYPE_TESTING
-    assert TEST_RECIPE.purpose == PURPOSE_CORRECTNESS
 
-    step_argvs = {step.argv for step in VALIDATION_STEPS}
-    assert FMT_CHECK_ARGV in step_argvs
-    assert RUFF_CHECK_ARGV in step_argvs
-    assert RUFF_FORMAT_ARGV in step_argvs
-    assert set(STATIC_ANALYSIS_ARGVS).issubset(step_argvs)
-    assert "--strict" in MYPY_ARGV
-    assert SPX_MARKDOWN_ARGV in step_argvs
-    assert HOOK_SAFETY_ARGV in step_argvs
-    assert PYTEST_ARGV not in step_argvs
-    assert TEST_STEPS == (Step(label="pytest", argv=PYTEST_ARGV),)
+def pipeline_run_observation(
+    *,
+    steps: tuple[Step, ...],
+    exit_codes: Sequence[int],
+    outputs: Sequence[str] = (),
+) -> PipelineRunObservation:
+    """Run the ad-hoc pipeline over ``steps`` with scripted children."""
 
-    assert test_recipe() == TEST_RECIPE
-    pytest_target_recipe = test_recipe((PYTEST_TARGET_ARG,))
-    assert pytest_target_recipe.name == TEST_RECIPE.name
-    assert pytest_target_recipe.verification_type == TEST_RECIPE.verification_type
-    assert pytest_target_recipe.purpose == TEST_RECIPE.purpose
-    assert pytest_target_recipe.preflight_steps == TEST_RECIPE.preflight_steps
-    assert pytest_target_recipe.steps == (
-        Step(label="pytest", argv=(*PYTEST_ARGV, PYTEST_TARGET_ARG)),
+    spawner = RecordingSpawner(exit_codes=list(exit_codes), outputs=list(outputs))
+    sink = io.StringIO()
+    exit_code = run(spawner=spawner, sink=sink, steps=steps)
+    return PipelineRunObservation(
+        exit_code=exit_code,
+        output=sink.getvalue(),
+        spawn_calls=tuple(spawner.spawn_calls),
+        written_outputs=tuple(spawner.written_outputs),
+        retained_logs=tuple(
+            path.read_text(encoding="utf-8") if path.exists() else None
+            for path in spawner.output_paths
+        ),
+        log_paths=tuple(str(path) for path in spawner.output_paths),
     )
 
-    assert RECIPE_CHECK not in {
-        VALIDATION_RECIPE.verification_type,
-        TEST_RECIPE.verification_type,
-    }
 
+@dataclass(frozen=True)
+class RecipeRunObservation:
+    """One recipe run's exit code, output, child records, and summary."""
+
+    exit_code: int
+    output: str
+    spawn_calls: tuple[tuple[str, ...], ...]
+    retained_logs: tuple[str | None, ...]
+    log_paths: tuple[str, ...]
+    summary: dict[str, object]
+    summary_path: str
+
+
+def recipe_run_observation(
+    *,
+    recipe: Recipe,
+    exit_codes: Sequence[int],
+    outputs: Sequence[str] = (),
+) -> RecipeRunObservation:
+    """Run one recipe with scripted children and report its summary."""
+
+    spawner = RecordingSpawner(exit_codes=list(exit_codes), outputs=list(outputs))
+    return _observe_recipe_run(recipe=recipe, spawner=spawner)
+
+
+def spawn_failure_observation(*, recipe: Recipe) -> RecipeRunObservation:
+    """Run one recipe whose spawner fails before returning a handle."""
+
+    spawner = SpawnFailingSpawner(message=SPAWN_FAILURE_MESSAGE)
+    return _observe_recipe_run(recipe=recipe, spawner=spawner)
+
+
+def _observe_recipe_run(
+    *, recipe: Recipe, spawner: RecordingSpawner | SpawnFailingSpawner
+) -> RecipeRunObservation:
+    sink = io.StringIO()
+    with TemporaryDirectory() as tmp:
+        summary_path = Path(tmp) / "summary.json"
+        exit_code = run_recipe(
+            spawner=spawner,
+            sink=sink,
+            recipe=recipe,
+            summary_path=summary_path,
+        )
+        summary = read_summary(summary_path)
+    return RecipeRunObservation(
+        exit_code=exit_code,
+        output=sink.getvalue(),
+        spawn_calls=tuple(spawner.spawn_calls),
+        retained_logs=tuple(
+            path.read_text(encoding="utf-8") if path.exists() else None
+            for path in spawner.output_paths
+        ),
+        log_paths=tuple(str(path) for path in spawner.output_paths),
+        summary=summary,
+        summary_path=str(summary_path),
+    )
+
+
+@dataclass(frozen=True)
+class CheckRunObservation:
+    """One check-wrapper run's exit code, output, child records, and summary."""
+
+    exit_code: int
+    output: str
+    spawn_calls: tuple[tuple[str, ...], ...]
+    summary: dict[str, object]
+
+
+def check_run_observation(
+    *,
+    recipes: tuple[Recipe, ...],
+    exit_codes: Sequence[int],
+    outputs: Sequence[str] = (),
+) -> CheckRunObservation:
+    """Run the check wrapper over ``recipes`` with scripted children."""
+
+    spawner = RecordingSpawner(exit_codes=list(exit_codes), outputs=list(outputs))
+    return _observe_check_run(recipes=recipes, spawner=spawner)
+
+
+def signal_interrupt_observation(signum: int) -> CheckRunObservation:
+    """Run the check wrapper with a spawner that raises ``signum`` during spawn."""
+
+    return _observe_check_run(
+        recipes=(VALIDATION_RECIPE,), spawner=SignalRaisingSpawner(signum=signum)
+    )
+
+
+def _observe_check_run(
+    *,
+    recipes: tuple[Recipe, ...],
+    spawner: RecordingSpawner | SignalRaisingSpawner,
+) -> CheckRunObservation:
+    sink = io.StringIO()
     with TemporaryDirectory() as tmp:
         summary_path = Path(tmp) / "check-summary.json"
-        spawner = RecordingSpawner(
-            exit_codes=[PASS_EXIT_CODE]
-            * (len(VALIDATION_RECIPE.preflight_steps) + len(VALIDATION_RECIPE.steps))
-        )
-        sink = io.StringIO()
-
         exit_code = run_check(
             spawner=spawner,
             sink=sink,
-            recipes=(VALIDATION_RECIPE,),
+            recipes=recipes,
             summary_path=summary_path,
         )
-
         summary = read_summary(summary_path)
-        assert exit_code == PASS_EXIT_CODE
-        assert summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
-        assert summary[SUMMARY_KEY_VERIFICATION_TYPE] is None
-        assert summary[SUMMARY_KEY_PURPOSE] is None
-
-    spawner = RecordingSpawner(
-        exit_codes=[PASS_EXIT_CODE, PASS_EXIT_CODE],
-        outputs=[HIGH_VOLUME_CHILD_OUTPUT, HIGH_VOLUME_CHILD_OUTPUT],
-    )
-    sink = io.StringIO()
-    exit_code = run_recipe(spawner=spawner, sink=sink, recipe=TEST_RECIPE)
-    output = sink.getvalue()
-    assert exit_code == PASS_EXIT_CODE
-    assert HIGH_VOLUME_CHILD_OUTPUT not in output
-    assert len(output.splitlines()) < len(HIGH_VOLUME_CHILD_OUTPUT.splitlines())
-
-    importers = validation_subprocess_importers()
-    assert len(importers) == 1, (
-        f"`subprocess` must be imported by exactly one module "
-        f"(the production adapter); found: {importers}"
+    return CheckRunObservation(
+        exit_code=exit_code,
+        output=sink.getvalue(),
+        spawn_calls=tuple(spawner.spawn_calls),
+        summary=summary,
     )
 
-    _assert_signal_shutdown_waits_are_bounded()
 
-    source_text = validation_package_source_text()
-    assert "gh run watch" not in source_text
+@dataclass(frozen=True)
+class ShutdownObservation:
+    """One bounded shutdown of a hanging child under a controlled clock."""
+
+    received_signals: tuple[int, ...]
+    sleep_call_count: int
+    monotonic_calls: int
+    poll_calls: int
+    sleep_budget: int
+
+
+def bounded_shutdown_observation() -> ShutdownObservation:
+    """Terminate a hanging child under a clock that rejects unbounded waits."""
+
+    grace_sleep_calls = math.ceil(SIGNAL_GRACE_SECONDS / SIGNAL_POLL_INTERVAL_SECONDS)
+    sleep_budget = grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
+    clock = BoundedAdvancingClock(max_sleep_calls=sleep_budget)
+    handle = HangingHandle(pid=10_000, exit_on_kill=False)
+    terminate_process_group(
+        handle,
+        monotonic=clock.monotonic,
+        sleep=clock.sleep,
+    )
+    return ShutdownObservation(
+        received_signals=tuple(handle.received_signals),
+        sleep_call_count=len(clock.sleep_calls),
+        monotonic_calls=clock.monotonic_calls,
+        poll_calls=handle.poll_calls,
+        sleep_budget=sleep_budget,
+    )
+
+
+def while_loops_in_gate_modules() -> tuple[tuple[str, ast.While], ...]:
+    """Every while loop in the gate package modules, paired with its module name."""
+
+    loops: list[tuple[str, ast.While]] = []
     for module_path in validation_package_modules():
-        _assert_no_while_true_sleep(module_path)
-
-    spawner_path = importers[0]
-    source = spawner_path.read_text(encoding="utf-8")
-    popen_calls = popen_calls_from(spawner_path)
-    assert popen_calls, "production spawner must call subprocess.Popen"
-    for call in popen_calls:
-        kwargs = call_keyword_map(call)
-        assert "start_new_session" in kwargs, "Popen call must pass start_new_session"
-        value = kwargs["start_new_session"]
-        assert isinstance(value, ast.Constant) and value.value is True, (
-            "start_new_session must be the literal True"
-        )
-        assert "preexec_fn" in kwargs, "Popen call must pass preexec_fn"
-        preexec_fn = kwargs["preexec_fn"]
-        assert isinstance(preexec_fn, ast.Name)
-        assert preexec_fn.id == "_restore_child_signal_mask"
-    assert "signal.pthread_sigmask(signal.SIG_UNBLOCK" in source
-    for signal_name in ("SIGTERM", "SIGINT", "SIGHUP"):
-        assert f"signal.{signal_name}" in source
-
-
-def _assert_no_while_true_sleep(module_path: Path) -> None:
-    tree = ast.parse(module_path.read_text(encoding="utf-8"))
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.While):
-            continue
-        test = node.test
-        is_while_true = isinstance(test, ast.Constant) and test.value is True
-        if not is_while_true:
-            continue
-        for child in ast.walk(node):
-            if (
-                isinstance(child, ast.Call)
-                and isinstance(child.func, ast.Attribute)
-                and child.func.attr == "sleep"
-            ):
-                msg = (
-                    f"{module_path.name} contains a `while True:` loop "
-                    f"with `time.sleep()` — forbidden polling pattern"
-                )
-                raise AssertionError(msg)
-
-
-def assert_gate_scenario_contract() -> None:
-    """Assert the gate orchestrator's scenario contract."""
-
-    with TemporaryDirectory() as tmp:
-        root = Path(tmp)
-        _assert_primitive_recipes(root)
-        _assert_passing_pipeline()
-        _assert_failing_step(root)
-        _assert_check_wrapper(root)
-        _assert_production_step_lists_smoke()
-
-
-def _assert_primitive_recipes(root: Path) -> None:
-    summary_path = root / "validation-summary.json"
-    spawner = RecordingSpawner(
-        exit_codes=[PASS_EXIT_CODE]
-        * (len(VALIDATION_RECIPE.preflight_steps) + len(VALIDATION_RECIPE.steps))
-    )
-    sink = io.StringIO()
-
-    exit_code = run_recipe(
-        spawner=spawner,
-        sink=sink,
-        recipe=VALIDATION_RECIPE,
-        summary_path=summary_path,
-    )
-
-    summary = read_summary(summary_path)
-    assert exit_code == PASS_EXIT_CODE
-    assert spawner.spawn_calls[0] == VALIDATION_RECIPE.preflight_steps[0].argv
-    assert PYTEST_ARGV not in spawner.spawn_calls
-    assert summary[SUMMARY_KEY_RECIPE] == RECIPE_VALIDATION
-    assert summary[SUMMARY_KEY_VERIFICATION_TYPE] == VERIFICATION_TYPE_VALIDATION
-    assert summary[SUMMARY_KEY_PURPOSE] == PURPOSE_CONFORMANCE
-    assert summary[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
-    assert summary[SUMMARY_KEY_PHASE] == PHASE_COMPLETE
-    assert summary[SUMMARY_KEY_SUMMARY_PATH] == str(summary_path)
-    for step in summary_steps(summary):
-        assert SUMMARY_KEY_LOG_PATH not in step
-        assert step[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
-        assert isinstance(step[SUMMARY_KEY_EXIT_CODE], int)
-
-    summary_path = root / "test-summary.json"
-    spawner = RecordingSpawner(
-        exit_codes=[PASS_EXIT_CODE]
-        * (len(TEST_RECIPE.preflight_steps) + len(TEST_RECIPE.steps))
-    )
-    sink = io.StringIO()
-
-    exit_code = run_recipe(
-        spawner=spawner,
-        sink=sink,
-        recipe=TEST_RECIPE,
-        summary_path=summary_path,
-    )
-
-    summary = read_summary(summary_path)
-    assert exit_code == PASS_EXIT_CODE
-    assert spawner.spawn_calls == [
-        TEST_RECIPE.preflight_steps[0].argv,
-        TEST_RECIPE.steps[0].argv,
-    ]
-    assert summary[SUMMARY_KEY_RECIPE] == RECIPE_TEST
-    assert summary[SUMMARY_KEY_VERIFICATION_TYPE] == VERIFICATION_TYPE_TESTING
-    assert summary[SUMMARY_KEY_PURPOSE] == PURPOSE_CORRECTNESS
-    assert summary[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
-    for step in summary_steps(summary):
-        assert SUMMARY_KEY_LOG_PATH not in step
-        assert step[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
-        assert isinstance(step[SUMMARY_KEY_EXIT_CODE], int)
-
-
-def _assert_passing_pipeline() -> None:
-    steps = three_no_op_steps()
-    spawner = RecordingSpawner(
-        exit_codes=[PASS_EXIT_CODE, PASS_EXIT_CODE, PASS_EXIT_CODE],
-        outputs=[PASSING_CHILD_OUTPUT, PASSING_CHILD_OUTPUT, PASSING_CHILD_OUTPUT],
-    )
-    sink = io.StringIO()
-
-    exit_code = run(spawner=spawner, sink=sink, steps=steps)
-
-    output = sink.getvalue()
-    assert exit_code == PASS_EXIT_CODE
-    assert "━━━ Timing Summary ━━━" in output
-    summary_start = output.index("━━━ Timing Summary ━━━")
-    summary = output[summary_start:]
-    assert "TOTAL" in summary
-    assert PASSING_CHILD_OUTPUT not in output
-    assert spawner.written_outputs == [
-        PASSING_CHILD_OUTPUT,
-        PASSING_CHILD_OUTPUT,
-        PASSING_CHILD_OUTPUT,
-    ]
-    header_positions = [output.index(f"━━━ {step.label} ━━━") for step in steps]
-    assert header_positions == sorted(header_positions)
-    for step in steps:
-        assert f"━━━ {step.label} ━━━" in output
-        assert step.label in summary
-        assert f"{STEP_PASS_STATUS}  {step.label}" in output
-    for output_path in spawner.output_paths:
-        assert not output_path.exists()
-
-
-def _assert_failing_step(root: Path) -> None:
-    steps = three_no_op_steps()
-    failing_output = "\n".join(
-        f"{FAILING_CHILD_OUTPUT_PREFIX} {index}"
-        for index in range(FAILURE_EXCERPT_LINE_LIMIT + 2)
-    )
-    spawner = RecordingSpawner(
-        exit_codes=[PASS_EXIT_CODE, FAIL_EXIT_CODE, PASS_EXIT_CODE],
-        outputs=[PASSING_CHILD_OUTPUT, failing_output, PASSING_CHILD_OUTPUT],
-    )
-    sink = io.StringIO()
-
-    exit_code = run(spawner=spawner, sink=sink, steps=steps)
-
-    output = sink.getvalue()
-    summary_start = output.index("━━━ Timing Summary ━━━")
-    summary = output[summary_start:]
-    failing_log_path = spawner.output_paths[1]
-    assert exit_code == FAIL_EXIT_CODE
-    assert len(spawner.spawn_calls) == 2
-    assert steps[0].label in summary
-    assert steps[1].label in summary
-    assert steps[2].label not in summary
-    assert "FAILED" in summary
-    failed_idx = summary.index("FAILED")
-    assert steps[1].label in summary[failed_idx:]
-    assert f"{STEP_FAIL_STATUS}  {steps[1].label}" in output
-    assert FULL_LOG_LABEL in output
-    assert str(failing_log_path) in output
-    assert f"{FAILING_CHILD_OUTPUT_PREFIX} 0" not in output
-    assert f"{FAILING_CHILD_OUTPUT_PREFIX} {FAILURE_EXCERPT_LINE_LIMIT + 1}" in output
-    assert not spawner.output_paths[0].exists()
-    assert failing_log_path.read_text(encoding="utf-8") == failing_output
-
-    _assert_failing_primitive_retains_log(root)
-    _assert_spawn_failure_retains_log(root)
-
-
-def _assert_failing_primitive_retains_log(root: Path) -> None:
-    failing_output = f"{FAILING_CHILD_OUTPUT_PREFIX} retained"
-    summary_path = root / "failure-summary.json"
-    recipe = single_step_recipe(RECIPE_VALIDATION)
-    spawner = RecordingSpawner(
-        exit_codes=[PASS_EXIT_CODE, FAIL_EXIT_CODE],
-        outputs=[PASSING_CHILD_OUTPUT, failing_output],
-    )
-    sink = io.StringIO()
-
-    exit_code = run_recipe(
-        spawner=spawner,
-        sink=sink,
-        recipe=recipe,
-        summary_path=summary_path,
-    )
-
-    summary = read_summary(summary_path)
-    steps = summary_steps(summary)
-    failing_log_path = spawner.output_paths[1]
-    assert exit_code == FAIL_EXIT_CODE
-    assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert summary[SUMMARY_KEY_PHASE] == PHASE_RECIPE
-    assert summary[SUMMARY_KEY_EXIT_CODE] == FAIL_EXIT_CODE
-    assert steps[1][SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert steps[1][SUMMARY_KEY_EXCERPT] == failing_output
-    assert steps[1][SUMMARY_KEY_LOG_PATH] == str(failing_log_path)
-    assert failing_log_path.read_text(encoding="utf-8") == failing_output
-
-
-def _assert_spawn_failure_retains_log(root: Path) -> None:
-    summary_path = root / "spawn-failure-summary.json"
-    recipe = single_step_recipe(RECIPE_VALIDATION)
-    spawner = SpawnFailingSpawner(message=SPAWN_FAILURE_MESSAGE)
-    sink = io.StringIO()
-
-    exit_code = run_recipe(
-        spawner=spawner,
-        sink=sink,
-        recipe=recipe,
-        summary_path=summary_path,
-    )
-
-    summary = read_summary(summary_path)
-    steps = summary_steps(summary)
-    failing_log_path = spawner.output_paths[0]
-    assert exit_code == SPAWN_FAILURE_EXIT_CODE
-    assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert summary[SUMMARY_KEY_PHASE] == PHASE_PREFLIGHT
-    assert summary[SUMMARY_KEY_EXIT_CODE] == SPAWN_FAILURE_EXIT_CODE
-    assert steps[0][SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert steps[0][SUMMARY_KEY_LOG_PATH] == str(failing_log_path)
-    assert SPAWN_FAILURE_MESSAGE in str(steps[0][SUMMARY_KEY_EXCERPT])
-    assert SPAWN_FAILURE_MESSAGE in failing_log_path.read_text(encoding="utf-8")
-
-
-def _assert_check_wrapper(root: Path) -> None:
-    validation = single_step_recipe(RECIPE_VALIDATION)
-    test = single_step_recipe(RECIPE_TEST)
-    summary_path = root / "check-summary.json"
-    spawner = RecordingSpawner(
-        exit_codes=[PASS_EXIT_CODE, FAIL_EXIT_CODE, PASS_EXIT_CODE, PASS_EXIT_CODE]
-    )
-    sink = io.StringIO()
-
-    exit_code = run_check(
-        spawner=spawner,
-        sink=sink,
-        recipes=(validation, test),
-        summary_path=summary_path,
-    )
-
-    summary = read_summary(summary_path)
-    recipes = summary_recipes(summary)
-    assert exit_code == FAIL_EXIT_CODE
-    assert len(spawner.spawn_calls) == len(validation.preflight_steps) + len(
-        validation.steps
-    )
-    assert summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
-    assert summary[SUMMARY_KEY_VERIFICATION_TYPE] is None
-    assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert len(recipes) == 1
-    assert recipes[0][SUMMARY_KEY_RECIPE] == RECIPE_VALIDATION
-
-    summary_path = root / "check-pass-summary.json"
-    spawner = RecordingSpawner(
-        exit_codes=[PASS_EXIT_CODE, PASS_EXIT_CODE, PASS_EXIT_CODE, PASS_EXIT_CODE]
-    )
-    sink = io.StringIO()
-
-    exit_code = run_check(
-        spawner=spawner,
-        sink=sink,
-        recipes=(validation, test),
-        summary_path=summary_path,
-    )
-
-    summary = read_summary(summary_path)
-    recipes = summary_recipes(summary)
-    assert exit_code == PASS_EXIT_CODE
-    assert spawner.spawn_calls == [
-        validation.preflight_steps[0].argv,
-        validation.steps[0].argv,
-        test.preflight_steps[0].argv,
-        test.steps[0].argv,
-    ]
-    assert [recipe[SUMMARY_KEY_RECIPE] for recipe in recipes] == [
-        RECIPE_VALIDATION,
-        RECIPE_TEST,
-    ]
-    assert summary[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
-    assert [recipe.name for recipe in CHECK_RECIPES] == [
-        RECIPE_VALIDATION,
-        RECIPE_TEST,
-    ]
-
-    for signum in FORWARDED_SIGNALS:
-        _assert_signal_before_child_handle(root, signum)
-
-
-def _assert_signal_before_child_handle(root: Path, signum: int) -> None:
-    summary_path = root / f"signal-summary-{signum}.json"
-    spawner = SignalRaisingSpawner(signum=signum)
-    sink = io.StringIO()
-
-    exit_code = run_check(
-        spawner=spawner,
-        sink=sink,
-        recipes=(VALIDATION_RECIPE,),
-        summary_path=summary_path,
-    )
-
-    summary = read_summary(summary_path)
-    expected_exit_code = 128 + signum
-    assert exit_code == expected_exit_code
-    assert summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
-    assert summary[SUMMARY_KEY_PHASE] == PHASE_RECIPE
-    assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert summary[SUMMARY_KEY_EXIT_CODE] == expected_exit_code
-    assert summary[SUMMARY_KEY_STEPS] == []
-
-
-def _assert_production_step_lists_smoke() -> None:
-    steps = (*VALIDATION_STEPS, *TEST_STEPS)
-    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE] * len(steps))
-    sink = io.StringIO()
-
-    exit_code = run(spawner=spawner, sink=sink, steps=steps)
-
-    assert exit_code == PASS_EXIT_CODE
-    assert len(spawner.spawn_calls) == len(steps)
+        tree = ast.parse(module_path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.While):
+                loops.append((module_path.name, node))
+    return tuple(loops)
 
 
 @dataclass(frozen=True)
@@ -1186,25 +918,6 @@ class BoundedAdvancingClock:
             raise AssertionError("signal shutdown exceeded its bounded sleep budget")
         self.sleep_calls.append(seconds)
         self.current += seconds
-
-
-def _assert_signal_shutdown_waits_are_bounded() -> None:
-    assert SIGNAL_GRACE_SECONDS == DECLARED_SIGNAL_GRACE_SECONDS
-    grace_sleep_calls = math.ceil(SIGNAL_GRACE_SECONDS / SIGNAL_POLL_INTERVAL_SECONDS)
-    sleep_budget = grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
-    clock = BoundedAdvancingClock(max_sleep_calls=sleep_budget)
-    handle = HangingHandle(pid=10_000, exit_on_kill=False)
-
-    terminate_process_group(
-        handle,
-        monotonic=clock.monotonic,
-        sleep=clock.sleep,
-    )
-
-    assert handle.received_signals == [signal.SIGTERM, signal.SIGKILL]
-    assert len(clock.sleep_calls) == sleep_budget
-    assert clock.monotonic_calls == grace_sleep_calls + 2
-    assert handle.poll_calls == grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
 
 
 __all__ = [

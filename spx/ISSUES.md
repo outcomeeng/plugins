@@ -128,3 +128,23 @@ decomposition can carry.
 ## Plugin changelog titles use two forms
 
 Ten plugin changelogs open with "# Changelog — {plugin} plugin"; the prose changelog opens with "# Prose plugin changelog", the form the prose canon's em dash rule requires. One sweep renames the other ten titles to the dash-free form. Surfaced by the CI changeset review on the chat-voice branch; deferred there because the sweep touches ten plugins outside that changeset.
+
+## Two verifier rules collide on pinning a spec-declared tuning value
+
+The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's two-second
+grace period with an independent literal, citing the mutation-check rule in
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`;
+the test-evidence-auditor rejects exactly that literal as a source-ownership violation, citing
+`spx/12-shipped-scripting.adr.md` — a test restating a spec-declared value is a second declaration
+whose agreement is audit evidence. The operator ruled the ADR governs: no literal pin, the
+spec-to-constant agreement stays audit evidence, and the reviewer finding is dropped as unbacked.
+
+**Resolution shape**: amend one of the two decisions so they compose — either scope the
+mutation-check rule to exclude spec-declared values whose agreement the ADR routes to audit, or
+carve an exception in the ADR for magnitude pins — so a reviewer and an evidence auditor reading
+both rules reach one verdict.
+
+**Evidence**: review runs `2026-08-31_00-51-25-312-913144ba274d`, `2026-08-31_00-56-11-491-d5964232aade`,
+and `2026-08-31_01-31-25-945-65d0eb76b2fc` (blocking) each requested the pin; evidence-audit
+verdicts on heads `629c24b790980aefa873ee6ffd4212e5f8611151` and `4ede96f0d1cb1c3855792f6c04bcca2c65e3e1ee`
+rejected or upheld removal of the same literal; operator ruling recorded in the PR #549 body.
