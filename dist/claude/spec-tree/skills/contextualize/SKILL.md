@@ -131,7 +131,7 @@ Read: spx/local/merging.md  (if exists)
 
 **Step 2: Walk the tree from root to target**
 
-For each directory along the path from product root to a node target. In product-root mode the path contains zero node directories, so skip Step 2.
+For each ancestor node directory strictly between the product root and the node target. Step 3 owns the target directory, so Step 2 never reads the target spec or target decisions. A top-level node target and product-root mode both have zero ancestor node directories and skip Step 2.
 
 **2a. Read the directory's spec file**
 
@@ -199,6 +199,9 @@ Read: {target}/{slug}.md
 Glob: "{target}/*-*.adr.md"
 Glob: "{target}/*-*.pdr.md"
 
+# List target siblings (same parent, different from target)
+Glob: "{parent-path}/*-*.{enabler,outcome}/"
+
 # Enumerate children (if any)
 Glob: "{target}/*-*.{enabler,outcome}/"
 
@@ -209,6 +212,10 @@ Glob: "{target}/tests/*"
 Glob: "{target}/PLAN.md"
 Glob: "{target}/ISSUES.md"
 ```
+
+**Read EVERY target ADR and PDR returned.** Verification: the target-level ADR glob count must equal its ADR read count, and the target-level PDR glob count must equal its PDR read count.
+
+For every target sibling with a lower index, read that sibling's spec because it constrains the target. List same-index siblings as independent and higher-index siblings as possible dependents without reading either class. Apply the sibling classification rules from Step 2d and Step 2e.
 
 **If PLAN.md or ISSUES.md exist, read them.** These are stale-prone coordination notes left by previous sessions via `/handoff`. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
 
@@ -285,8 +292,7 @@ Higher-index siblings listed: {list}
 </SPEC_TREE_CONTEXT>
 ```
 
-For example, `/contextualize spx/{target-node}` over a tree with one
-lower-index runtime enabler emits resolved paths and concrete counts:
+For example, `/contextualize spx/{target-node}` over a tree with one lower-index sibling emits resolved path variables and concrete counts:
 
 ```text
 <SPEC_TREE_CONTEXT target="spx/{target-node}">
@@ -297,18 +303,19 @@ Bootstrap: false
 
 Documents loaded:
   Product spec: spx/example-compiler.product.md
-  Ancestor specs: 0 read
+  Ancestor specs: 1 read
   Lower-index sibling specs: 1 read
-  ADRs: 1 found, 1 read
-  PDRs: 0 found, 0 read
+  ADRs: 2 found, 2 read
+  PDRs: 1 found, 1 read
   Cited governance decisions: spx/{governing-decision}.pdr.md cited by spx/{target-node}/{target-decision}.adr.md
-  Guide files: CLAUDE.md
+  Guide files: none
 Context source: current base via sync-base
 Sync-base status: already_current
 
 Hierarchy (node target):
   Example Compiler
-  └── spx/{target-node} (enabler) ← TARGET
+  └── spx/{ancestor-node} (enabler)
+      └── spx/{target-node} (enabler) ← TARGET
 
 Children: 1 (spx/{target-node}/{child-node})
 Test links: spx/{target-node}/tests/{scenario-test}, spx/{target-node}/tests/{compliance-test}

@@ -2,6 +2,7 @@
 name: sync-base
 description: >-
   ALWAYS invoke this skill to bring a branch behind its base current — before reading product truth, before verifying, and before every merge push. NEVER rebase a behind-base branch by hand or bring it current with git reset.
+argument-hint: "[repo] [--base <branch>] [--no-fetch]"
 allowed-tools: Read, Edit, Skill, request_user_input, Bash(python3 "${SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git switch -c:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*)
 ---
 
@@ -11,10 +12,12 @@ The current checkout brought current with its fetched base, with authorized dirt
 
 <workflow>
 
+Parse the complete raw invocation string `$ARGUMENTS` once before running the synchronizer. Accept at most one positional repository path, at most one `--base` option followed by one non-empty branch value, and at most one `--no-fetch` flag. Preserve the supplied argument boundaries; reject duplicate options, unknown options, missing option values, and extra positional values. Bind the normalized values as `repo`, `base`, and `no_fetch`; when the repository path is absent, bind `repo` to `.`. Omit `--base` or `--no-fetch` from the command entirely when its parsed value is absent or false.
+
 Run the synchronizer against the repository working tree (default: the current directory):
 
 ```bash
-python3 "${SKILL_DIR}/scripts/sync_base.py" [repo] [--base <branch>]
+python3 "${SKILL_DIR}/scripts/sync_base.py" "$repo" [--base "$base"] [--no-fetch]
 ```
 
 It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. When an attached branch is behind, it rebases the branch onto the fetched base. When a clean detached HEAD is an ancestor of the fetched base, it advances the worktree with `git switch --detach origin/<base>`; a detached HEAD carrying commits absent from the base fails without moving. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). It prints a JSON result (`status`, `base_ref`, `remote_ref`, `branch`, `detail`, `preservation` on a clean outcome, and `conflict` on an active rebase conflict) and exits:
@@ -109,7 +112,7 @@ On `rebased` or `already_current`, the result carries a `preservation` object th
 - `branch_patch_changed` — whether the branch's patch identity differs across the sync.
 - `branch_diff_unchanged` — the git-only reuse signal: the branch patch is unchanged and the base delta does not overlap the branch.
 
-Read `branch_diff_unchanged` to consider a prior local review reusable — and **also** confirm, against the project's overlay, that no `base_delta_paths` entry is a governance surface the reviewer judges against. Run the project overlay's narrowest deterministic command covering `base_delta_paths`, falling back to the full gate when any path is unclassified or `path_overlap` is non-empty. The proof carries no project-specific command name — command selection is the project overlay's.
+Read `branch_diff_unchanged` to consider a prior local review reusable — and **also** confirm, against the merge lifecycle's optional `spx/local/merging.md` overlay or its default mapping when the overlay is absent, that no `base_delta_paths` entry is a governance surface the reviewer judges against. Run that source's narrowest deterministic command covering `base_delta_paths`, falling back to the full gate when any path is unclassified or `path_overlap` is non-empty. The proof carries no project-specific command name — command selection belongs to the merge lifecycle overlay or default mapping.
 
 The proof scopes pre-push local work only. It never satisfies a merge gate: current-head pull-request checks and the current-head CI review still decide `MERGE_READINESS` after the push.
 
