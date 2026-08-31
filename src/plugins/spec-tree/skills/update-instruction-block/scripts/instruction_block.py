@@ -219,6 +219,19 @@ def measure_budget(
     return BudgetMeasurement(filename, len(text.encode("utf-8")), budget)
 
 
+def _print_budget_diagnostics(repo_root: pathlib.Path) -> None:
+    """Print each present root file's budget report to stderr.
+
+    Per-file budget diagnostics go to stderr so the stdout contract of every verb
+    stays unchanged; both the check and the write report through this one owner.
+    """
+    for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
+        text = _read_text_if_present(_repo_child(repo_root, filename), repo_root)
+        if text is None:
+            continue
+        print(budget_report_line(measure_budget(filename, text)), file=sys.stderr)
+
+
 def budget_report_line(measurement: BudgetMeasurement) -> str:
     """Render the per-file budget report carrying the exact size, ceiling, and state."""
     state = str(measurement.state)
@@ -1705,13 +1718,7 @@ def main(argv: list[str] | None = None) -> int:
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
-        # Per-file budget diagnostics go to stderr so the stdout verdict contract
-        # stays a single report word.
-        for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
-            text = _read_text_if_present(_repo_child(repo_root, filename), repo_root)
-            if text is None:
-                continue
-            print(budget_report_line(measure_budget(filename, text)), file=sys.stderr)
+        _print_budget_diagnostics(repo_root)
         # Absent dominates stale dominates current: report the worst across both files.
         for verdict in INSTRUCTION_STATUS_PRECEDENCE:
             if verdict in statuses:
@@ -1741,11 +1748,7 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         # Generation measures each written root file against the project-doc ceiling
         # and reports the exact size and breach state beside the write.
-        for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
-            text = _read_text_if_present(_repo_child(repo_root, filename), repo_root)
-            if text is None:
-                continue
-            print(budget_report_line(measure_budget(filename, text)), file=sys.stderr)
+        _print_budget_diagnostics(repo_root)
     else:
         for harness, content in rendered.items():
             sys.stdout.write(

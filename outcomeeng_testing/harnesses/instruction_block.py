@@ -926,25 +926,15 @@ def run_generator_check(
     *,
     languages: str | None = None,
 ) -> tuple[int, str]:
-    """Run the real ``--check`` surface and return its exit code and report word."""
-    output = io.StringIO()
-    cases = generated_cases()
-    selected_languages = cases.lang_primary if languages is None else languages
-    with redirect_stdout(output):
-        result = cast(
-            int,
-            load_instruction_block_module().main(
-                [
-                    "--template",
-                    str(template_path),
-                    "--repo-root",
-                    str(repo_root),
-                    f"--languages={selected_languages}",
-                    "--check",
-                ]
-            ),
-        )
-    return result, output.getvalue().strip()
+    """Run the real ``--check`` surface and return its exit code and report word.
+
+    Implemented on the diagnostics runner so the CLI-invocation shape has one owner;
+    this form discards the stderr diagnostics stream.
+    """
+    result, verdict, _diagnostics = run_generator_check_with_diagnostics(
+        repo_root, template_path, languages=languages
+    )
+    return result, verdict
 
 
 def run_generator_check_with_diagnostics(
