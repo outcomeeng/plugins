@@ -27,15 +27,13 @@ CAN run conformance and correctness verification with bounded live output, retai
 - For any non-empty step list, the order in which subprocesses are started matches the order of the step list ([test](tests/test_gate.property.l1.py))
 - For any step that exits 0, the elapsed-time value recorded in the timing summary is a non-negative integer ([test](tests/test_gate.property.l1.py))
 
-### Compliance
+### Mappings
 
-- ALWAYS: the full gate step list includes a `fmt-check` (`dprint check`) step, a `ruff format --check` step, a `ruff check` step, a `mypy --strict` package step, a `pyright` package step, a `spx validation markdown` step, and a hook-safety step — so repository formatting, Python formatting, lint, package type checking, Markdown link integrity, and shipped-hook safety are each enforced on every `just check-full` ([test](tests/test_gate.compliance.l1.py))
-- ALWAYS: the `validation` primitive recipe reports `verification_type: validation` and `purpose: conformance`, and the `test` primitive recipe reports `verification_type: testing` and `purpose: correctness`, matching `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` and the `/understanding` verification taxonomy ([test](tests/test_gate.compliance.l1.py))
-- NEVER: the full wrapper introduces a third verification type — it reports aggregate primitive results only ([test](tests/test_gate.compliance.l1.py))
-- ALWAYS: the `validation` primitive recipe includes a `fmt-check` (`dprint check`) step, a `ruff format --check` step, a `ruff check` step, a `mypy --strict` package step, a `pyright` package step, and a `spx validation markdown` step, and excludes the pytest-backed `[test]` evidence step ([test](tests/test_gate.compliance.l1.py))
-- ALWAYS: the `test` primitive recipe executes pytest-backed `[test]` evidence through the configured runner and excludes deterministic validation steps ([test](tests/test_gate.compliance.l1.py))
-- ALWAYS: passing child stdout/stderr is captured to temp logs and never streamed line-by-line to the live session; passing live output grows with recipe step count, not child output volume ([test](tests/test_gate.compliance.l1.py))
-- ALWAYS: each child subprocess is started with `start_new_session=True` so signal forwarding targets a process group, never a single PID — prevents orphaned grandchildren when the orchestrator is interrupted ([test](tests/test_gate.compliance.l1.py))
-- ALWAYS: each production child subprocess unblocks SIGTERM, SIGINT, and SIGHUP before exec so the orchestrator's protected spawn window does not make validators inherit a blocked forwarded-signal mask ([test](tests/test_gate.compliance.l1.py))
-- ALWAYS: the SIGKILL grace-period wait is bounded by a single `time.monotonic()` deadline computed once per signal, and the post-kill direct-child reap check is fixed-count — bounded polling for process exit is the only wait the orchestrator performs, consistent with `spx/13-plugin-and-runtime-conventions.adr.md` `<no_until_polling>` ([test](tests/test_gate.compliance.l1.py))
-- NEVER: the orchestrator source contains a literal `gh run watch` invocation or a `while True:` loop containing `time.sleep` — unbounded polling waits are forbidden across the marketplace per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_gate.compliance.l1.py))
+- The primitive recipe maps to its deterministic command surface: `validation` includes `fmt-check` (`dprint check`), `ruff format --check`, `ruff check`, `mypy --strict`, `pyright`, `spx validation markdown`, and hook safety while excluding pytest-backed `[test]` evidence; `test` executes only the configured pytest-backed `[test]` step; the full wrapper composes both primitive recipes in that order ([test](tests/test_gate.mapping.l1.py))
+- The primitive recipe maps to its verification contract: `validation` reports `verification_type: validation` and `purpose: conformance`; `test` reports `verification_type: testing` and `purpose: correctness`; a targeted test recipe preserves that contract while appending the selected pytest target ([test](tests/test_gate.mapping.l1.py))
+
+### Audit
+
+- ALWAYS: each production child subprocess starts a new session and unblocks SIGTERM, SIGINT, and SIGHUP before exec so forwarded signals target its process group without inheriting the orchestrator's protected spawn mask ([audit])
+- ALWAYS: signal shutdown uses one monotonic grace deadline and a fixed-count direct-child reap check, consistent with `spx/13-plugin-and-runtime-conventions.adr.md` `<no_until_polling>` ([audit])
+- NEVER: the orchestrator introduces an unbounded polling wait or a `gh run watch` invocation, consistent with `spx/13-plugin-and-runtime-conventions.adr.md` ([audit])
