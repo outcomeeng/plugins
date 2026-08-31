@@ -57,6 +57,8 @@ def test_the_full_gate_carries_every_required_step() -> None:
     assert isinstance(VALIDATION_STEPS, tuple)
     assert isinstance(TEST_STEPS, tuple)
     assert len(VALIDATION_STEPS) >= 1
+    assert len(TEST_STEPS) >= 1
+    assert all(isinstance(step, Step) for step in (*VALIDATION_STEPS, *TEST_STEPS))
     assert FMT_CHECK_ARGV in step_argvs
     assert RUFF_FORMAT_ARGV in step_argvs
     assert RUFF_CHECK_ARGV in step_argvs
