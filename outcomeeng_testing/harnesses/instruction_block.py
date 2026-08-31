@@ -42,7 +42,6 @@ from hypothesis import given, seed, settings
 
 from outcomeeng.distribution import instruction_block as distribution
 from outcomeeng_testing.generators.instruction_block import (
-    BootstrapThresholdRelation,
     DelegationCandidateCase,
     InstructionBlockCases,
     build_macro as generate_build_macro,
@@ -103,14 +102,6 @@ class RootInstructionTopology:
 
     files: dict[str, str]
     symlinks: dict[str, str]
-
-
-@dataclass(frozen=True)
-class EvidenceRun:
-    """Declared and successfully executed checks for one typed evidence file."""
-
-    declared: tuple[str, ...]
-    executed: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -358,8 +349,32 @@ def materialize_declared_root_topology(
     return placed
 
 
-def symlinked_instruction_topology_materializes_as_regular_files() -> bool:
-    """Check symlink normalization and source-body preservation in one owned workspace."""
+@dataclass(frozen=True)
+class SymlinkedTopologyObservation:
+    """Observed files and seeds after symlinked topology materialization."""
+
+    claude_is_file: bool
+    agents_is_file: bool
+    claude_is_symlink: bool
+    agents_is_symlink: bool
+    claude_body: str
+    agents_body: str
+    claude_seed: str
+    agents_seed: str
+
+
+@dataclass(frozen=True)
+class TopologySeedObservation:
+    """Expected and observed seed bodies for one root topology."""
+
+    expected: tuple[tuple[str, str], ...]
+    observed: tuple[tuple[str, str], ...]
+
+
+def observe_symlinked_instruction_topology_materialization() -> (
+    SymlinkedTopologyObservation
+):
+    """Observe symlink normalization and source-body preservation."""
     cases = generated_cases()
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
@@ -368,20 +383,22 @@ def symlinked_instruction_topology_materializes_as_regular_files() -> bool:
         )
         claude_path = root / cases.instruction_claude
         agents_path = root / cases.instruction_agents
-        return (
-            claude_path.is_file()
-            and agents_path.is_file()
-            and not claude_path.is_symlink()
-            and not agents_path.is_symlink()
-            and claude_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
-            and agents_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
-            and materialized[cases.instruction_claude] == ROOT_SHARED_BODY
-            and materialized[cases.instruction_agents] == ROOT_SHARED_BODY
+        return SymlinkedTopologyObservation(
+            claude_is_file=claude_path.is_file(),
+            agents_is_file=agents_path.is_file(),
+            claude_is_symlink=claude_path.is_symlink(),
+            agents_is_symlink=agents_path.is_symlink(),
+            claude_body=claude_path.read_text(encoding="utf-8"),
+            agents_body=agents_path.read_text(encoding="utf-8"),
+            claude_seed=materialized[cases.instruction_claude],
+            agents_seed=materialized[cases.instruction_agents],
         )
 
 
-def root_instruction_topology_seed_mapping_is_valid() -> bool:
-    """Check every source-owned root topology against its expected harness seed bodies."""
+def observe_root_instruction_topology_seed_mapping() -> tuple[
+    TopologySeedObservation, ...
+]:
+    """Observe every source-owned root topology and its expected seed bodies."""
     generated = generated_cases()
     cases = (
         (
@@ -415,9 +432,17 @@ def root_instruction_topology_seed_mapping_is_valid() -> bool:
     )
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
-        return all(
-            materialize_root_instruction_topology(root / str(index), topology)
-            == expected
+        return tuple(
+            TopologySeedObservation(
+                expected=tuple(sorted(expected.items())),
+                observed=tuple(
+                    sorted(
+                        materialize_root_instruction_topology(
+                            root / str(index), topology
+                        ).items()
+                    )
+                ),
+            )
             for index, (topology, expected) in enumerate(cases)
         )
 
@@ -496,22 +521,6 @@ BUILD_MACRO_HARNESS = _GENERATED_CASES.build_macro_harness
 HARNESS_CLAUDE = _GENERATED_CASES.harness_claude
 HARNESS_CODEX = _GENERATED_CASES.harness_codex
 TEMPLATE_HARNESSES = _GENERATED_CASES.template_harnesses
-
-
-def property_evidence_contract() -> tuple[str, ...]:
-    """Return the independent case manifest required by property evidence."""
-    return (
-        *(f"render-version[{agent_harness}]" for agent_harness in TEMPLATE_HARNESSES),
-        "trailing-newline",
-        "stale-order",
-        "reconcile-identity",
-        "reconcile-idempotence",
-        "bootstrap-general-domain",
-        *(
-            f"bootstrap-threshold[{relation.value}]"
-            for relation in BootstrapThresholdRelation
-        ),
-    )
 
 
 def harness_line(harness: str) -> str:

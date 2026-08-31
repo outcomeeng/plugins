@@ -80,6 +80,11 @@ SELECTED_GATE_PROPERTY_REPLAY_PATH = (
     "test_selection_is_deterministic_for_path_order_and_duplicates"
 )
 SELECTED_GATE_PROPERTY_EXAMPLES = 40
+GATE_PROPERTY_SEED = 20260831
+GATE_PROPERTY_REPLAY_PATH = (
+    "just test spx/15-validation.enabler/65-gate.enabler/tests/test_gate.property.l1.py"
+)
+GATE_PROPERTY_EXAMPLES = 50
 STATIC_ANALYSIS_ARGVS = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
@@ -283,6 +288,19 @@ def selected_gate_property(
         )
 
     return wrapper
+
+
+def run_gate_property(assertion: Callable[[], None]) -> None:
+    """Run a gate property with reproducible harness-owned settings."""
+
+    configured = seed(GATE_PROPERTY_SEED)(
+        settings(max_examples=GATE_PROPERTY_EXAMPLES, deadline=None)(assertion)
+    )
+    run_replayable_property(
+        configured,
+        seed_value=GATE_PROPERTY_SEED,
+        replay_path=GATE_PROPERTY_REPLAY_PATH,
+    )
 
 
 def expected_full_check_spawn_calls() -> tuple[tuple[str, ...], ...]:
@@ -925,6 +943,7 @@ __all__ = [
     "RecordingGitRunner",
     "RecordingHandle",
     "RecordingSpawner",
+    "run_gate_property",
     "SignalRaisingSpawner",
     "SpawnFailingSpawner",
 ]

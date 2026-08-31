@@ -9,6 +9,7 @@ import signal
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final, cast
@@ -16,11 +17,6 @@ from typing import Final, cast
 from outcomeeng.validation import (
     FORWARDED_SIGNALS,
     ProductionSpawner,
-    RUN_FAIL_STATUS,
-    SUMMARY_KEY_EXIT_CODE,
-    SUMMARY_KEY_LOG_PATH,
-    SUMMARY_KEY_STATUS,
-    SUMMARY_KEY_STEPS,
     SUMMARY_PATH_LABEL,
 )
 
@@ -29,6 +25,35 @@ TERMINATION_DEADLINE_SECONDS: Final = 6.0
 CONTROLLED_CHILD_SLEEP_SECONDS: Final = 60.0
 GROUP_MARKER_WAIT_SECONDS: Final = ORCHESTRATOR_STARTUP_SECONDS
 GROUP_MARKER_POLL_SECONDS: Final = 0.01
+
+
+@dataclass(frozen=True)
+class SignalGroupObservation:
+    """Observed state from one forwarded signal reaching a real child group."""
+
+    delivered_signal: signal.Signals
+    child_alive_before: bool
+    grandchild_alive_before: bool
+    received_group_signal: int
+    child_alive_after: bool
+    orchestrator_exit_code: int | None
+    summary: dict[str, object]
+
+
+@dataclass(frozen=True)
+class SpawnerOutputObservation:
+    """Observed output and exit status from the production spawner."""
+
+    exit_code: int
+    output: str
+
+
+@dataclass(frozen=True)
+class SpawnerSignalObservation:
+    """Observed child state around production process-group signalling."""
+
+    alive_before: bool
+    exit_code: int
 
 
 def _process_group_command(pid_path: Path, signal_path: Path) -> tuple[str, ...]:
@@ -145,7 +170,7 @@ def _read_grandchild_pid(pid_path: Path) -> int:
     raise AssertionError("child did not announce grandchild PID in time")
 
 
-def _assert_grandchild_received_group_signal(signal_path: Path) -> None:
+def _read_grandchild_received_group_signal(signal_path: Path) -> int:
     deadline = time.monotonic() + GROUP_MARKER_WAIT_SECONDS
     while time.monotonic() < deadline:
         try:
@@ -153,8 +178,7 @@ def _assert_grandchild_received_group_signal(signal_path: Path) -> None:
         except (FileNotFoundError, ValueError):
             time.sleep(GROUP_MARKER_POLL_SECONDS)
             continue
-        assert delivered_signal == int(signal.SIGTERM)
-        return
+        return delivered_signal
     raise AssertionError("grandchild did not receive process-group SIGTERM")
 
 
@@ -235,22 +259,11 @@ def _read_summary(orchestrator: subprocess.Popen[bytes]) -> dict[str, object]:
     return cast(dict[str, object], parsed)
 
 
-def _assert_failed_signal_summary(
-    orchestrator: subprocess.Popen[bytes], delivered_signal: signal.Signals
-) -> None:
-    expected_exit_code = 128 + int(delivered_signal)
-    assert orchestrator.returncode == expected_exit_code
-    summary = _read_summary(orchestrator)
-    assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert summary[SUMMARY_KEY_EXIT_CODE] == expected_exit_code
-    steps = cast(list[dict[str, object]], summary[SUMMARY_KEY_STEPS])
-    assert steps[0][SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert steps[0][SUMMARY_KEY_EXIT_CODE] == expected_exit_code
-    assert SUMMARY_KEY_LOG_PATH in steps[0]
-
-
-def assert_signals_terminate_process_groups_within_grace() -> None:
-    """Exercise every forwarded signal against a real in-flight child group."""
+def observe_signals_terminate_process_groups_within_grace() -> tuple[
+    SignalGroupObservation, ...
+]:
+    """Observe every forwarded signal against a real in-flight child group."""
+    observations: list[SignalGroupObservation] = []
     for delivered_signal in FORWARDED_SIGNALS:
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -264,22 +277,35 @@ def assert_signals_terminate_process_groups_within_grace() -> None:
             try:
                 child_pid = _read_child_pid_marker(orchestrator, wait_for_handle=True)
                 grandchild_pid = _read_grandchild_pid(grandchild_pid_path)
-                assert _process_is_alive(child_pid)
-                assert _process_is_alive(grandchild_pid)
+                child_alive_before = _process_is_alive(child_pid)
+                grandchild_alive_before = _process_is_alive(grandchild_pid)
                 os.kill(orchestrator.pid, delivered_signal)
                 orchestrator.wait(timeout=TERMINATION_DEADLINE_SECONDS)
-                _assert_grandchild_received_group_signal(grandchild_signal_path)
-                assert not _process_is_alive(child_pid), (
-                    f"child PID {child_pid} survived signal {delivered_signal}"
+                received_group_signal = _read_grandchild_received_group_signal(
+                    grandchild_signal_path
                 )
-                _assert_failed_signal_summary(orchestrator, delivered_signal)
+                observations.append(
+                    SignalGroupObservation(
+                        delivered_signal=delivered_signal,
+                        child_alive_before=child_alive_before,
+                        grandchild_alive_before=grandchild_alive_before,
+                        received_group_signal=received_group_signal,
+                        child_alive_after=_process_is_alive(child_pid),
+                        orchestrator_exit_code=orchestrator.returncode,
+                        summary=_read_summary(orchestrator),
+                    )
+                )
             finally:
                 _terminate_wrapper(orchestrator)
                 _terminate_child_group(child_pid)
+    return tuple(observations)
 
 
-def assert_spawn_window_signals_reach_child_groups() -> None:
-    """Exercise every forwarded signal raised during production child spawn."""
+def observe_spawn_window_signals_reach_child_groups() -> tuple[
+    SignalGroupObservation, ...
+]:
+    """Observe every forwarded signal raised during production child spawn."""
+    observations: list[SignalGroupObservation] = []
     for delivered_signal in FORWARDED_SIGNALS:
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -295,21 +321,31 @@ def assert_spawn_window_signals_reach_child_groups() -> None:
             try:
                 child_pid = _read_child_pid_marker(orchestrator, wait_for_handle=False)
                 grandchild_pid = _read_grandchild_pid(grandchild_pid_path)
-                assert _process_is_alive(child_pid)
-                assert _process_is_alive(grandchild_pid)
+                child_alive_before = _process_is_alive(child_pid)
+                grandchild_alive_before = _process_is_alive(grandchild_pid)
                 orchestrator.wait(timeout=TERMINATION_DEADLINE_SECONDS)
-                _assert_grandchild_received_group_signal(grandchild_signal_path)
-                assert not _process_is_alive(child_pid), (
-                    f"child PID {child_pid} survived spawn-window signal {delivered_signal}"
+                received_group_signal = _read_grandchild_received_group_signal(
+                    grandchild_signal_path
                 )
-                _assert_failed_signal_summary(orchestrator, delivered_signal)
+                observations.append(
+                    SignalGroupObservation(
+                        delivered_signal=delivered_signal,
+                        child_alive_before=child_alive_before,
+                        grandchild_alive_before=grandchild_alive_before,
+                        received_group_signal=received_group_signal,
+                        child_alive_after=_process_is_alive(child_pid),
+                        orchestrator_exit_code=orchestrator.returncode,
+                        summary=_read_summary(orchestrator),
+                    )
+                )
             finally:
                 _terminate_wrapper(orchestrator)
                 _terminate_child_group(child_pid)
+    return tuple(observations)
 
 
-def assert_production_spawner_captures_child_output() -> None:
-    """Exercise the production spawner's real file-backed output capture."""
+def observe_production_spawner_captures_child_output() -> SpawnerOutputObservation:
+    """Observe the production spawner's real file-backed output capture."""
     with TemporaryDirectory() as directory:
         output_path = Path(directory) / "child.log"
         captured_output = ProductionSpawner.__name__
@@ -317,12 +353,14 @@ def assert_production_spawner_captures_child_output() -> None:
             (sys.executable, "-c", f"print({captured_output!r})"),
             output_path,
         )
-        assert handle.wait() == 0
-        assert output_path.read_text(encoding="utf-8") == f"{captured_output}\n"
+        return SpawnerOutputObservation(
+            exit_code=handle.wait(),
+            output=output_path.read_text(encoding="utf-8"),
+        )
 
 
-def assert_production_spawner_signal_terminates_child() -> None:
-    """Exercise production process-group signalling against a real child."""
+def observe_production_spawner_signal_terminates_child() -> SpawnerSignalObservation:
+    """Observe production process-group signalling against a real child."""
     with TemporaryDirectory() as directory:
         output_path = Path(directory) / "sleep.log"
         handle = ProductionSpawner().spawn(
@@ -334,9 +372,13 @@ def assert_production_spawner_signal_terminates_child() -> None:
             output_path,
         )
         try:
-            assert handle.poll() is None
+            alive_before = handle.poll() is None
             handle.send_signal_to_group(signal.SIGTERM)
-            assert handle.wait() != 0
+            exit_code = handle.wait()
+            return SpawnerSignalObservation(
+                alive_before=alive_before,
+                exit_code=exit_code,
+            )
         finally:
             if handle.poll() is None:
                 handle.send_signal_to_group(signal.SIGKILL)
@@ -344,8 +386,11 @@ def assert_production_spawner_signal_terminates_child() -> None:
 
 
 __all__ = [
-    "assert_production_spawner_captures_child_output",
-    "assert_production_spawner_signal_terminates_child",
-    "assert_signals_terminate_process_groups_within_grace",
-    "assert_spawn_window_signals_reach_child_groups",
+    "SignalGroupObservation",
+    "SpawnerOutputObservation",
+    "SpawnerSignalObservation",
+    "observe_production_spawner_captures_child_output",
+    "observe_production_spawner_signal_terminates_child",
+    "observe_signals_terminate_process_groups_within_grace",
+    "observe_spawn_window_signals_reach_child_groups",
 ]
