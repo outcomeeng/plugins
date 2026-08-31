@@ -26,6 +26,7 @@ from outcomeeng_testing.harnesses.installation import (
     CODEX_CREDENTIAL_TOKEN_FIELDS,
     CODEX_TOKEN_METADATA_FIELDS,
     CodexRoleDiscoveryHarness,
+    RoleDiscoveryCredentialSurface,
     observe_interrupted_reconciliation,
     ScopeSplitClassification,
     racing_digest_reader,
@@ -433,6 +434,30 @@ def test_role_discovery_rejects_each_known_credential_in_timeout_output(
         harness.observe()
 
     assert len(harness.commands) == 2
+
+
+@pytest.mark.parametrize(
+    "surface",
+    tuple(RoleDiscoveryCredentialSurface),
+)
+@pytest.mark.parametrize("credential_field", sorted(CODEX_CREDENTIAL_TOKEN_FIELDS))
+def test_role_discovery_rejects_credentials_across_session_process_surfaces(
+    tmp_path: Path,
+    credential_field: str,
+    surface: RoleDiscoveryCredentialSurface,
+) -> None:
+    login = generated_codex_login_payload(credential_field)
+    harness = CodexRoleDiscoveryHarness.with_session_credential_surface(
+        tmp_path,
+        login_payload=login.text,
+        credential=login.credential,
+        surface=surface,
+    )
+
+    with pytest.raises(RuntimeError, match="login material appeared"):
+        harness.observe()
+
+    assert len(harness.commands) == 3
 
 
 def test_role_discovery_rejects_an_unknown_token_field_as_a_credential(

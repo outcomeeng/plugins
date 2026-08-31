@@ -14,6 +14,7 @@ import tomllib
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
+from enum import StrEnum
 from functools import cache
 from io import StringIO
 from pathlib import Path
@@ -115,6 +116,7 @@ CODEX_CREDENTIAL_TOKEN_FIELDS: frozenset[str] = frozenset(
 )
 CODEX_TOKEN_METADATA_FIELDS: frozenset[str] = frozenset({"account_id"})
 CODEX_LOGIN_STATUS_COMMAND: tuple[str, ...] = (CODEX_EXECUTABLE, "login", "status")
+CODEX_EXEC_COMMAND_PREFIX: tuple[str, ...] = (CODEX_EXECUTABLE, "exec")
 CODEX_API_KEY_ENVIRONMENT_NAMES: tuple[str, ...] = ("OPENAI_API_KEY",)
 ROLE_DISCOVERY_ROLES_FIELD = "roles"
 RENAMED_CHECKOUT_AGENT_NAME = "local_helper.toml"
@@ -1887,6 +1889,15 @@ class RoleDiscoveryProcessRunner(Protocol):
     ) -> subprocess.CompletedProcess[str]: ...
 
 
+class RoleDiscoveryCredentialSurface(StrEnum):
+    """Session process surfaces guarded against copied login material."""
+
+    COMMAND_ARGUMENT = "command-argument"
+    SESSION_STDOUT = "session-stdout"
+    SESSION_STDERR = "session-stderr"
+    SESSION_LAST_MESSAGE = "session-last-message"
+
+
 @dataclass
 class SubprocessRoleDiscoveryRunner:
     """Real subprocess adapter bound at the role-discovery composition edge."""
@@ -1986,6 +1997,48 @@ class TimeoutRoleDiscoveryRunner:
 
 
 @dataclass
+class SessionSurfaceRoleDiscoveryRunner:
+    """Controlled session-surface failure simulation for credential guards."""
+
+    credential: str
+    surface: RoleDiscoveryCredentialSurface
+    commands: list[tuple[str, ...]] = field(default_factory=list)
+
+    def run(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: Path,
+        env: Mapping[str, str],
+        timeout: float | None,
+    ) -> subprocess.CompletedProcess[str]:
+        del cwd, timeout
+        command = tuple(argv)
+        Path(env[CODEX_HOME_ENV]).mkdir(parents=True, exist_ok=True)
+        if command[: len(CODEX_EXEC_COMMAND_PREFIX)] != CODEX_EXEC_COMMAND_PREFIX:
+            self.commands.append(command)
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        recorded_command = command
+        stdout = ""
+        stderr = ""
+        if self.surface is RoleDiscoveryCredentialSurface.COMMAND_ARGUMENT:
+            recorded_command = (*command, self.credential)
+        elif self.surface is RoleDiscoveryCredentialSurface.SESSION_STDOUT:
+            stdout = self.credential
+        elif self.surface is RoleDiscoveryCredentialSurface.SESSION_STDERR:
+            stderr = self.credential
+        else:
+            last_message_index = command.index("--output-last-message") + 1
+            Path(command[last_message_index]).write_text(
+                self.credential,
+                encoding="utf-8",
+            )
+        self.commands.append(recorded_command)
+        return subprocess.CompletedProcess(recorded_command, 0, stdout, stderr)
+
+
+@dataclass
 class CodexRoleDiscoveryHarness:
     """Selected-home and process-boundary setup for role-discovery evidence."""
 
@@ -2022,6 +2075,22 @@ class CodexRoleDiscoveryHarness:
         """Create login state and a controlled timeout-output runner."""
         selected_codex_home = cls._write_login(temporary_root, login_payload)
         return cls(selected_codex_home, TimeoutRoleDiscoveryRunner(stream_text))
+
+    @classmethod
+    def with_session_credential_surface(
+        cls,
+        temporary_root: Path,
+        *,
+        login_payload: str,
+        credential: str,
+        surface: RoleDiscoveryCredentialSurface,
+    ) -> CodexRoleDiscoveryHarness:
+        """Create login state and inject its credential at the session boundary."""
+        selected_codex_home = cls._write_login(temporary_root, login_payload)
+        return cls(
+            selected_codex_home,
+            SessionSurfaceRoleDiscoveryRunner(credential, surface),
+        )
 
     @staticmethod
     def _write_login(temporary_root: Path, login_payload: str) -> Path:
@@ -2118,8 +2187,7 @@ def observe_codex_role_discovery(
         last_message_path = temporary_root / "role-discovery-last-message.json"
         session = _run_codex_probe(
             (
-                CODEX_EXECUTABLE,
-                "exec",
+                *CODEX_EXEC_COMMAND_PREFIX,
                 "--ephemeral",
                 "--skip-git-repo-check",
                 "-C",
@@ -2882,6 +2950,7 @@ __all__ = [
     "RealInstallationObservation",
     "RecordingRoleDiscoveryRunner",
     "RecordingRunner",
+    "RoleDiscoveryCredentialSurface",
     "ScopeSplitClassification",
     "ScopeSplitObservation",
     "UnpublishedPluginObservation",
