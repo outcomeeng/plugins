@@ -365,9 +365,9 @@ class SymlinkedTopologyObservation:
 
 @dataclass(frozen=True)
 class TopologySeedObservation:
-    """Expected and observed seed bodies for one root topology."""
+    """Observed seed bodies for one named root topology."""
 
-    expected: tuple[tuple[str, str], ...]
+    topology_name: str
     observed: tuple[tuple[str, str], ...]
 
 
@@ -398,43 +398,30 @@ def observe_symlinked_instruction_topology_materialization() -> (
 def observe_root_instruction_topology_seed_mapping() -> tuple[
     TopologySeedObservation, ...
 ]:
-    """Observe every source-owned root topology and its expected seed bodies."""
-    generated = generated_cases()
+    """Observe seed bodies for every source-owned root topology."""
     cases = (
         (
+            "only-claude",
             root_instruction_topology_only_claude(),
-            {
-                generated.instruction_claude: ROOT_CLAUDE_BODY,
-                generated.instruction_agents: ROOT_CLAUDE_BODY,
-            },
         ),
         (
+            "only-agents",
             root_instruction_topology_only_agents(),
-            {
-                generated.instruction_claude: ROOT_AGENTS_BODY,
-                generated.instruction_agents: ROOT_AGENTS_BODY,
-            },
         ),
         (
+            "separate",
             root_instruction_topology_separate(),
-            {
-                generated.instruction_claude: ROOT_CLAUDE_BODY,
-                generated.instruction_agents: ROOT_AGENTS_BODY,
-            },
         ),
         (
+            "symlinked",
             root_instruction_topology_symlinked(),
-            {
-                generated.instruction_claude: ROOT_SHARED_BODY,
-                generated.instruction_agents: ROOT_SHARED_BODY,
-            },
         ),
     )
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
         return tuple(
             TopologySeedObservation(
-                expected=tuple(sorted(expected.items())),
+                topology_name=topology_name,
                 observed=tuple(
                     sorted(
                         materialize_root_instruction_topology(
@@ -443,7 +430,7 @@ def observe_root_instruction_topology_seed_mapping() -> tuple[
                     )
                 ),
             )
-            for index, (topology, expected) in enumerate(cases)
+            for index, (topology_name, topology) in enumerate(cases)
         )
 
 
@@ -1141,7 +1128,7 @@ def run_refresh_pr_step(
     gh_log: pathlib.Path,
     *,
     existing_pr_number: str | None = None,
-) -> str:
+) -> subprocess.CompletedProcess[str]:
     """Run the refresh workflow's PR-opening step against ``repo_root`` with a stubbed ``gh``.
 
     Executes the extracted step's bash block with a fake ``gh`` on PATH so the drift-driven
@@ -1167,8 +1154,7 @@ def run_refresh_pr_step(
         text=True,
         env=env,
     )
-    assert result.returncode == 0, result.stderr
-    return result.stdout
+    return result
 
 
 def materialize_refresh_repository(root: pathlib.Path) -> pathlib.Path:
@@ -1195,7 +1181,9 @@ def materialize_refresh_repository(root: pathlib.Path) -> pathlib.Path:
     return repo
 
 
-def run_refresh_regeneration_step(repo_root: pathlib.Path) -> str:
+def run_refresh_regeneration_step(
+    repo_root: pathlib.Path,
+) -> subprocess.CompletedProcess[str]:
     """Execute the refresh workflow's regeneration block with an owned toolchain stub."""
     bin_dir = repo_root.parent / f"{repo_root.name}-refresh-toolchain"
     bin_dir.mkdir(exist_ok=True)
@@ -1252,8 +1240,7 @@ def run_refresh_regeneration_step(repo_root: pathlib.Path) -> str:
         text=True,
         env=env,
     )
-    assert result.returncode == 0, result.stderr
-    return result.stdout
+    return result
 
 
 def advance_authored_template_version(repo_root: pathlib.Path) -> tuple[str, str]:
@@ -1262,13 +1249,15 @@ def advance_authored_template_version(repo_root: pathlib.Path) -> tuple[str, str
     path = repo_root / distribution.AUTHORED_TEMPLATE_RELATIVE_PATH
     source = path.read_text(encoding="utf-8")
     current = module.parse_template_version(source)
-    assert current is not None
+    if current is None:
+        raise ValueError("authored instruction template has no parseable version")
     parts = [int(part) for part in current.split(".")]
     parts[-1] += 1
     advanced = ".".join(str(part) for part in parts)
     current_field = f'{module.TEMPLATE_VERSION_KEY}: "{current}"'
     advanced_field = f'{module.TEMPLATE_VERSION_KEY}: "{advanced}"'
     updated = source.replace(current_field, advanced_field, 1)
-    assert updated != source
+    if updated == source:
+        raise RuntimeError("authored instruction template version was not replaced")
     path.write_text(updated, encoding="utf-8")
     return current, advanced

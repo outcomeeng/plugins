@@ -159,7 +159,8 @@ def test_refresh_workflow_regeneration_drives_pr_decision(
     gh_log = tmp_path / "gh.log"
     repo = harness.materialize_refresh_repository(tmp_path)
 
-    harness.run_refresh_regeneration_step(repo)
+    regeneration = harness.run_refresh_regeneration_step(repo)
+    assert regeneration.returncode == 0, regeneration.stderr
     harness.git_command(
         repo,
         "add",
@@ -169,9 +170,11 @@ def test_refresh_workflow_regeneration_drives_pr_decision(
     )
     harness.git_command(repo, "commit", "-m", "seed generated workflow output")
     harness.git_command(repo, "push", "origin", WORKFLOW.default_branch)
-    harness.run_refresh_regeneration_step(repo)
-    output = harness.run_refresh_pr_step(repo, gh_log)
-    assert output == "Root instruction blocks are current.\n"
+    regeneration = harness.run_refresh_regeneration_step(repo)
+    assert regeneration.returncode == 0, regeneration.stderr
+    pr_step = harness.run_refresh_pr_step(repo, gh_log)
+    assert pr_step.returncode == 0, pr_step.stderr
+    assert pr_step.stdout == "Root instruction blocks are current.\n"
     assert not gh_log.exists()
 
     spx_dir = repo / "spx"
@@ -184,7 +187,8 @@ def test_refresh_workflow_regeneration_drives_pr_decision(
     harness.git_command(repo, "push", "origin", WORKFLOW.default_branch)
 
     _, advanced_version = harness.advance_authored_template_version(repo)
-    harness.run_refresh_regeneration_step(repo)
+    regeneration = harness.run_refresh_regeneration_step(repo)
+    assert regeneration.returncode == 0, regeneration.stderr
     for agent_harness in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES:
         rendered_template = dist.dist_template_path(
             agent_harness, repo_root=repo
@@ -195,7 +199,8 @@ def test_refresh_workflow_regeneration_drives_pr_decision(
         assert MODULE.parse_instruction_version(rendered_root) == advanced_version
     assert not (spx_dir / harness.INSTRUCTION_CLAUDE).exists()
     assert not (spx_dir / harness.INSTRUCTION_AGENTS).exists()
-    harness.run_refresh_pr_step(repo, gh_log)
+    pr_step = harness.run_refresh_pr_step(repo, gh_log)
+    assert pr_step.returncode == 0, pr_step.stderr
 
     committed = harness.git_command(
         repo,
@@ -220,15 +225,17 @@ def test_refresh_workflow_regeneration_drives_pr_decision(
 
     harness.git_command(repo, "switch", WORKFLOW.default_branch)
     _, update_version = harness.advance_authored_template_version(repo)
-    harness.run_refresh_regeneration_step(repo)
+    regeneration = harness.run_refresh_regeneration_step(repo)
+    assert regeneration.returncode == 0, regeneration.stderr
     update_log = tmp_path / "gh-update.log"
     existing_pr_number = harness.git_command(
         repo, "rev-list", "--count", WORKFLOW.default_branch
     ).stdout.strip()
-    update_output = harness.run_refresh_pr_step(
+    update_pr_step = harness.run_refresh_pr_step(
         repo, update_log, existing_pr_number=existing_pr_number
     )
-    assert update_output.endswith(
+    assert update_pr_step.returncode == 0, update_pr_step.stderr
+    assert update_pr_step.stdout.endswith(
         f"Updated existing pull request #{existing_pr_number}.\n"
     )
     update_calls = update_log.read_text(encoding="utf-8")
