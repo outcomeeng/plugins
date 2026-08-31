@@ -41,7 +41,9 @@ apply it; a reconcile reporting a pointer body; every section gated on language 
 language enabled and with each non-empty subset of the declared languages; a diverged, one-sided, duplicated, and unclosed shared region; a recency tie
 and an operator tie break; a dirty root file; and the CLI rejections (missing or non-directory repo root, missing or directory template, a
 template without ``template_version``, a symlink escaping the repository, an unsupported language
-token, a duplicate flag). The executable cases live in the governing node's ``tests/`` directory.
+token, a duplicate flag); and a fitting and a breaching root instruction file measured against
+the project-doc ceiling, with exact byte-size and overage assertions on the reported budget
+lines. The executable cases live in the governing node's ``tests/`` directory.
 
 """
 
@@ -179,6 +181,66 @@ INSTRUCTION_STATUS_PRECEDENCE = (
     InstructionStatus.STALE,
     InstructionStatus.CURRENT,
 )
+
+# The Codex combined project-doc budget default: the given ceiling the managed surface
+# renders against. The whole root instruction-file chain shares this budget, so a root
+# file above it reaches a Codex session truncated at the byte boundary.
+PROJECT_DOC_BUDGET_BYTES = 32768
+
+
+class BudgetState(StrEnum):
+    """Whether a rendered root instruction file fits the project-doc ceiling."""
+
+    FIT = "fit"
+    BREACH = "breach"
+
+
+@dataclass(frozen=True)
+class BudgetMeasurement:
+    """One rendered root instruction file's byte size measured against the ceiling."""
+
+    filename: str
+    byte_size: int
+    budget: int
+
+    @property
+    def state(self) -> BudgetState:
+        return BudgetState.BREACH if self.byte_size > self.budget else BudgetState.FIT
+
+    @property
+    def overage(self) -> int:
+        return max(self.byte_size - self.budget, 0)
+
+
+def measure_budget(
+    filename: str, text: str, budget: int = PROJECT_DOC_BUDGET_BYTES
+) -> BudgetMeasurement:
+    """Measure one root instruction file's UTF-8 byte size against the ceiling."""
+    return BudgetMeasurement(filename, len(text.encode("utf-8")), budget)
+
+
+def _print_budget_diagnostics(repo_root: pathlib.Path) -> None:
+    """Print each present root file's budget report to stderr.
+
+    Per-file budget diagnostics go to stderr so the stdout contract of every verb
+    stays unchanged; both the check and the write report through this one owner.
+    """
+    for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
+        text = _read_text_if_present(_repo_child(repo_root, filename), repo_root)
+        if text is None:
+            continue
+        print(budget_report_line(measure_budget(filename, text)), file=sys.stderr)
+
+
+def budget_report_line(measurement: BudgetMeasurement) -> str:
+    """Render the per-file budget report carrying the exact size, ceiling, and state."""
+    state = str(measurement.state)
+    if measurement.state is BudgetState.BREACH:
+        state = f"{state} ({measurement.overage} over)"
+    return (
+        f"budget: {measurement.filename} "
+        f"{measurement.byte_size}/{measurement.budget} {state}"
+    )
 
 
 class CliInputError(ValueError):
@@ -1656,6 +1718,7 @@ def main(argv: list[str] | None = None) -> int:
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
+        _print_budget_diagnostics(repo_root)
         # Absent dominates stale dominates current: report the worst across both files.
         for verdict in INSTRUCTION_STATUS_PRECEDENCE:
             if verdict in statuses:
@@ -1683,6 +1746,9 @@ def main(argv: list[str] | None = None) -> int:
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
+        # Generation measures each written root file against the project-doc ceiling
+        # and reports the exact size and breach state beside the write.
+        _print_budget_diagnostics(repo_root)
     else:
         for harness, content in rendered.items():
             sys.stdout.write(

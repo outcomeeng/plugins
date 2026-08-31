@@ -42,6 +42,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ### Mappings
 
+- Generation and the `--check` verb measure each rendered root instruction file's byte size against the 32768-byte combined Codex project-doc ceiling declared in `spx/21-spec-tree.enabler/43-instruction-block.enabler/21-render-model.adr.md` and map it to a per-file report carrying the exact size and breach state ([test](tests/test_budget_measurement.mapping.l1.py))
 - For every agent harness and enabled-language subset, rendering the canonical instruction-block template maps to a router block with exactly one blank line between its opening marker and first body content ([test](tests/test_router_spacing.mapping.l1.py))
 - Each supported CLI flag maps to a duplicate-flag rejection when it appears more than once in raw arguments, before argument parsing reads a template or repository path ([test](tests/test_instruction_block.mapping.l1.py))
 - Over the languages the template defines blocks for, a language's block appears in a rendered router block when the language is in the detected enabled set and is omitted otherwise ([test](tests/test_instruction_block.mapping.l1.py))
@@ -65,6 +66,8 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ### Compliance
 
+- ALWAYS: a rendered root instruction file exceeding the ceiling is reported as a breach carrying the exact byte counts — file size, ceiling, and overage ([test](tests/test_budget_measurement.compliance.l1.py))
+- ALWAYS: the drift gate reports a breach the checked change did not introduce and fails a regression above the ceiling by a surface that previously fit ([test](tests/test_budget_gate.compliance.l1.py))
 - ALWAYS: the Codex router states that the selected agent home contains one current canonical role per authored marketplace agent, with the owning plugin identity appearing exactly once in each canonical role name ([test](tests/test_agent_registry.compliance.l1.py))
 - ALWAYS: the Codex router directs a missing-role repair to refresh the owning plugin's definitions in the selected `CODEX_HOME/agents/` directory and then reload the harness plugin index or start a new session; it never directs the reader to create or commit checkout agent definitions ([test](tests/test_agent_registry.compliance.l1.py))
 - ALWAYS: the Codex router identifies plugin-owned checkout agent definitions whose invoked skills live in the selected agent home as a scope split, directs removal only for byte-identical plugin copies, and directs inspection of changed or unrecognized copies as shadowing collisions ([test](tests/test_agent_registry.compliance.l1.py))

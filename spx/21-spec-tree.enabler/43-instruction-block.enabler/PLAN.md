@@ -27,17 +27,11 @@ That first row is applied. The deletion left both root files citing a rule that 
 
 ### Sequencing
 
-The four router additions total roughly thirteen lines. The node's `ISSUES.md` records that the router block carries no size ceiling and that every methodology advance grows an eager per-session cost for every consumer; this migration adds to that cost with no offsetting removal, so it is the natural changeset in which to settle the budget question rather than compound it silently.
+The four router additions total roughly thirteen lines. The render model declares the 32768-byte project-doc ceiling and the gate measures every render against it, so these additions land against a measured budget; the remaining router-reduction units below own the room they spend into.
 
-## Codex project-doc budget for the managed root instruction surface
+## Codex project-doc budget: remaining units of Change #7
 
-Codex injects the root instruction file only up to its `project_doc_max_bytes` budget (32 KiB by default, combined across the instruction-file chain), so a root `AGENTS.md` above that size reaches a Codex session truncated — the router block survives, the product's own phase commands and conventions below it do not. The render model in `spx/21-spec-tree.enabler/43-instruction-block.enabler/21-render-model.adr.md` rests on the root file being read whole, and the `ISSUES.md` entry "The router block carries no size ceiling" records that nothing measures the surface against any budget.
+The 32768-byte combined Codex project-doc budget is the given ceiling — no consumer setting is raised. The ceiling declaration and measurement (render-model ADR amendment, spec assertions, generator `--check` and gate report) are the first unit. The remaining units, coordinated in `https://github.com/outcomeeng/changes/issues/7` under its recorded constraints:
 
-Steps, in order:
-
-1. Amend `spx/21-spec-tree.enabler/43-instruction-block.enabler/21-render-model.adr.md` to state the size budget the managed surface is rendered against and what a breach requires; align the first affected assertions in `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md` (a rendered-size measurement per harness, a `--check` report on breach) and `spx/21-spec-tree.enabler/54-bootstrapping.enabler/bootstrapping.md` (bootstrap declares the budget for a new product).
-2. `/update-instruction-block`: measure each rendered root file against the budget and report a breach with the exact size and the Codex setting to raise; `/bootstrap`: write the repository Codex configuration `project_doc_max_bytes` for a new product so a consumer inherits the budget without discovering the truncation.
-3. This repository: set `project_doc_max_bytes = 131072` in `.codex/config.toml`, the setting Codex honors from the repository configuration.
-4. Regenerate the shipped trees and both root instruction blocks, bump the plugin, and gate with `spec-auditor`, `adr-auditor`, and `instructions:skill-auditor` before `/merge`.
-
-Sequenced after the reload-timing change (PR #532) at the operator's direction so the budget lands as its own reviewable changeset.
+1. Router reduction: relocate dispatch-time guidance — the per-role role-task contracts and the subagent lifecycle mechanics — out of the router into content authored once and build-injected into every skill whose flow dispatches a verifier or reviewer. Injection ships before or with removal; no released plugin version lacks the guidance in both places; the spec assertions and `outcomeeng/distribution/instruction_block.py` `*_POLICY_REQUIREMENTS` tuples pinning router sections move in the same changesets; dispatch behavior after the relocation carries `[eval]` evidence.
+2. Repository fit: this repository's own root instruction content shrinks until the rendered `AGENTS.md` fits the ceiling, and the gate flips from report to fail for fitting surfaces.

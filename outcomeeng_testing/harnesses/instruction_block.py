@@ -926,11 +926,34 @@ def run_generator_check(
     *,
     languages: str | None = None,
 ) -> tuple[int, str]:
-    """Run the real ``--check`` surface and return its exit code and report word."""
+    """Run the real ``--check`` surface and return its exit code and report word.
+
+    Implemented on the diagnostics runner so the CLI-invocation shape has one owner;
+    this form discards the stderr diagnostics stream.
+    """
+    result, verdict, _diagnostics = run_generator_check_with_diagnostics(
+        repo_root, template_path, languages=languages
+    )
+    return result, verdict
+
+
+def run_generator_check_with_diagnostics(
+    repo_root: pathlib.Path,
+    template_path: pathlib.Path,
+    *,
+    languages: str | None = None,
+) -> tuple[int, str, str]:
+    """Run the real ``--check`` surface and return exit code, stdout verdict, and stderr.
+
+    The verdict word stays the stdout contract; per-file diagnostics such as the budget
+    report lines go to stderr, so this runner captures both streams for tests that read
+    the diagnostics beside the verdict.
+    """
     output = io.StringIO()
+    errors = io.StringIO()
     cases = generated_cases()
     selected_languages = cases.lang_primary if languages is None else languages
-    with redirect_stdout(output):
+    with redirect_stdout(output), redirect_stderr(errors):
         result = cast(
             int,
             load_instruction_block_module().main(
@@ -944,7 +967,7 @@ def run_generator_check(
                 ]
             ),
         )
-    return result, output.getvalue().strip()
+    return result, output.getvalue().strip(), errors.getvalue()
 
 
 def run_generator_reconcile(

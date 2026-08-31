@@ -53,6 +53,13 @@ SHARED_DRIFT_REMEDIATION: Final = (
     "Reconcile the shared region with `/update-instruction-block`, which takes the "
     "git-more-recent side, then commit the reconciled root CLAUDE.md and AGENTS.md."
 )
+BUDGET_REGRESSION_HEADER: Final = (
+    "a root instruction file that fit the project-doc ceiling renders above it."
+)
+BUDGET_REGRESSION_REMEDIATION: Final = (
+    "Shrink the managed surface or the file's own content back under the ceiling; "
+    "never direct a consumer to raise the harness project-doc budget."
+)
 FORBIDDEN_ROUTER_TOKENS: Final = (
     "Before archiving a claimed session",
     "`result`",
@@ -669,6 +676,20 @@ class InstructionBlockModule(Protocol):
 
     def shared_region_drift(self, repo_root: Path) -> tuple[str, ...]: ...
 
+    PROJECT_DOC_BUDGET_BYTES: int
+
+    def measure_budget(self, filename: str, text: str) -> "BudgetMeasurementLike": ...
+
+    def budget_report_line(self, measurement: "BudgetMeasurementLike") -> str: ...
+
+
+class BudgetMeasurementLike(Protocol):
+    """The measurement shape the generator returns for one root instruction file."""
+
+    filename: str
+    byte_size: int
+    budget: int
+
 
 @dataclass(frozen=True)
 class OperativePolicyValidation:
@@ -700,6 +721,100 @@ def load_instruction_block_module() -> InstructionBlockModule:
     sys.modules["instruction_block"] = module
     spec.loader.exec_module(module)
     return cast(InstructionBlockModule, module)
+
+
+def budget_regression(
+    committed_size: int | None, rendered_size: int, budget: int
+) -> bool:
+    """True only when a surface that fit the ceiling as committed renders above it.
+
+    A breach the checked change did not introduce — the committed file already above
+    the ceiling — is reported, never failed; a file with no committed form cannot
+    regress.
+    """
+    return (
+        rendered_size > budget
+        and committed_size is not None
+        and committed_size <= budget
+    )
+
+
+def _git_stdout(args: Sequence[str], *, repo_root: Path) -> str | None:
+    """A git command's stripped stdout, or None when the command fails."""
+    result = subprocess.run(
+        list(args), cwd=repo_root, capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def _budget_baseline_commit(*, repo_root: Path = REPO_ROOT) -> str | None:
+    """A commit predating the changeset under test, or None when none exists.
+
+    The tip commit already carries the regenerated root files, so measuring against
+    it can never observe a regression the changeset itself introduces. The baseline
+    is the merge-base with the default branch when it resolves and differs from the
+    tip; otherwise the first parent — the base tip in a pull-request merge-commit
+    checkout, and the previous commit on a default-branch push.
+    """
+    head = _git_stdout(["git", "rev-parse", "HEAD"], repo_root=repo_root)
+    default_ref = _git_stdout(
+        ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+        repo_root=repo_root,
+    )
+    if head is not None and default_ref is not None:
+        merge_base = _git_stdout(
+            ["git", "merge-base", "HEAD", default_ref], repo_root=repo_root
+        )
+        if merge_base is not None and merge_base != head:
+            return merge_base
+    return _git_stdout(["git", "rev-parse", "--verify", "HEAD^"], repo_root=repo_root)
+
+
+def _committed_byte_size(
+    path_str: str, baseline: str | None, *, repo_root: Path = REPO_ROOT
+) -> int | None:
+    """Byte size of the file at the baseline commit, or None without a baseline."""
+    if baseline is None:
+        return None
+    result = subprocess.run(
+        ["git", "show", f"{baseline}:{path_str}"],
+        cwd=repo_root,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return len(result.stdout)
+
+
+def budget_findings(
+    module: InstructionBlockModule | None = None,
+    *,
+    repo_root: Path = REPO_ROOT,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Per-file budget report lines and the paths whose fresh render is a regression."""
+    instruction_module = module or load_instruction_block_module()
+    budget = instruction_module.PROJECT_DOC_BUDGET_BYTES
+    baseline = _budget_baseline_commit(repo_root=repo_root)
+    lines: list[str] = []
+    regressions: list[str] = []
+    for path_str in root_instruction_paths(instruction_module):
+        path = repo_root / path_str
+        if not path.exists():
+            continue
+        measurement = instruction_module.measure_budget(
+            path_str, path.read_text(encoding="utf-8")
+        )
+        lines.append(instruction_module.budget_report_line(measurement))
+        if budget_regression(
+            _committed_byte_size(path_str, baseline, repo_root=repo_root),
+            measurement.byte_size,
+            budget,
+        ):
+            regressions.append(path_str)
+    return tuple(lines), tuple(regressions)
 
 
 def instruction_paths(module: InstructionBlockModule | None = None) -> tuple[str, ...]:
@@ -1321,7 +1436,14 @@ def render_report(
     return "\n".join(sections)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    regenerate: Callable[[], None] = regenerate_instruction_blocks,
+    budget: Callable[[], tuple[tuple[str, ...], tuple[str, ...]]] = budget_findings,
+    drift_files: Callable[[], list[str]] = drifting_instruction_files,
+    shared_regions: Callable[[], tuple[str, ...]] = drifting_shared_regions,
+) -> int:
     parser = argparse.ArgumentParser(
         description="Regenerate root instruction blocks from rendered dist templates."
     )
@@ -1332,11 +1454,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     try:
-        regenerate_instruction_blocks()
+        regenerate()
+        budget_lines, budget_regressions = budget()
+        for line in budget_lines:
+            print(line, file=sys.stderr)
         if args.write:
             return 0
-        drift = drifting_instruction_files()
-        shared_drift = drifting_shared_regions()
+        drift = drift_files()
+        shared_drift = shared_regions()
     except InstructionBlockRenderError as exc:
         print(str(exc), file=sys.stderr)
         return 1
@@ -1348,9 +1473,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"{HEADER}\n  the root instruction-block gate failed; see the error above."
         )
         return 1
-    if not drift and not shared_drift:
+    if budget_regressions:
+        regressed = ", ".join(budget_regressions)
+        print(
+            f"{BUDGET_REGRESSION_HEADER} ({regressed})\n  {BUDGET_REGRESSION_REMEDIATION}"
+        )
+    if not drift and not shared_drift and not budget_regressions:
         return 0
-    print(render_report(drift, shared_drift))
+    if drift or shared_drift:
+        print(render_report(drift, shared_drift))
     return 1
 
 
