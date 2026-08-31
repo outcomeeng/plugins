@@ -18,6 +18,8 @@ The **bootstrap pass** is the single assumption the tool makes on first encounte
 - Both present and identical carrying a retired managed block → the retired block is replaced by the router block at the top and the remainder wrapped shared.
 - Both present and differing → the biggest contiguous identical span over 80% of the larger file becomes one shared region under the router block and the differing remainder stays independent; at or below the threshold, only the router block is inserted.
 
+The managed surface is rendered against a fixed byte **budget**. Codex delivers the root instruction-file chain only up to its `project_doc_max_bytes` setting — 32768 bytes by default, one combined budget across the chain, with the file truncated at the byte boundary where it runs out — and the render model takes that default as the given ceiling, because the read-the-whole-file instruction holds only for a file the harness delivers whole. Generation and the `--check` verb therefore measure each rendered root file's byte size and report the exact size and breach state against the ceiling. A breach is resolved on the producing side: content leaves the router for content the build injects into the skills that consume it at the moment they need it, so the surface shrinks to fit — never by directing a consumer to raise the harness setting, which is shared with the product's own instruction content and defaulted in every consumer repository. While a rendered surface exceeds the ceiling for reasons a change does not introduce, the drift gate reports the breach beside the sizes; once a surface fits, the gate fails any regression back above the ceiling.
+
 Generation reads the built harness templates under `dist/`, not the authored `src/` template, because authored templates can carry build-time macros — runtime-token calls — that are valid source but invalid instruction-block output; the built copies are the authority for what a router block may contain, and an unresolved-macro guard fails generation when `dist/` is stale or malformed. The parse, version-compare, language-filter, harness-filter, render, biggest-identical-span, and shared-region parse-and-set functions are pure over content strings; language detection, git-state and filesystem reads (including the per-region commit-timestamp recency read that decides a diverged region's winner), symlink replacement, obsolete `spx/` instruction-file removal, and the two root file writes live only at the writer's thin CLI edge and the gate that drives it.
 
 ## Rationale
@@ -32,6 +34,8 @@ A root file that says only "read the other file" states the same intent by other
 
 The router reads `dist/` rather than `src/` because authored templates can contain build-time macros, valid source but invalid output; consuming the rendered copies makes the build output the authority. The renderer uses stdlib-parseable fence delimiters rather than a templating engine because the generator ships as a stdlib-only script under `spx/13-plugin-and-runtime-conventions.adr.md`. The accepted cost is that a re-render does not preserve unmodeled hand-prose edits inside the router block; the router is generated boilerplate, and the product's durable truth lives in its specs and decisions and in the root instruction content outside the router block.
 
+The ceiling is the harness default rather than a number this product chooses, because the managed surface ships into consumer repositories whose harness configuration is unknown and overwhelmingly default: a surface that is only whole after every consumer edits a config file fails closed for exactly the sessions the router exists to serve. The budget is combined across the chain and shared with each product's own instruction content, so the router never owns the whole 32768 — the render model's obligation is to leave room, and the measurement makes each product's remaining room visible rather than guessing at a fixed apportionment. Report-then-fail keeps a pre-existing breach from blocking unrelated changesets: a reporting gate keeps the number in view while a breach stands, and holds the line once a surface fits.
+
 Marker recognition anchors to a standalone fence line — a router or `shared` marker quoted inline in a sentence is not a delimiter — but it is not Markdown-fenced-code-block aware: a marker placed alone on its own line inside a `` ``` `` code fence is still read as a real delimiter. The accepted cost is that a product documenting the exact marker syntax keeps the example inline (backticked in a sentence) rather than standalone inside a code fence; the stdlib parser stays a line scanner rather than a Markdown block parser.
 
 ## Invariants
@@ -42,10 +46,17 @@ Marker recognition anchors to a standalone fence line — a router or `shared` m
 - A delegation candidate is reported and holds the surface stale; no body is adopted until the operator names the side both files take. A body is never replaced on the tool's own reading of it.
 - The router block carries no product-specific string and references no per-product command; a product's commands are content the agent reaches through the router's read-the-whole-file instruction.
 - The router re-render runs as a no-agent pre-commit hook and refresh workflow; the shared-region reconcile is reducible to the same and runs through the `/update-instruction-block` skill, which escalates only the cases a deterministic step cannot decide.
+- The Codex combined project-doc budget default, 32768 bytes, is the ceiling the managed surface renders against; a breach is resolved by relocating router content into build-injected skill content, never by a consumer setting change.
+- Every generation and check measures each rendered root file's byte size against the ceiling and reports the exact size and breach state; a surface that fits never regresses above the ceiling without failing the gate.
 
 ## Verification
 
 The behavioral rules of the three content kinds — router marker format, full router regeneration, shared-region byte-identity and git-recency reconciliation, independent-content preservation, bootstrap wrapping, the five initial situations, legacy-block and symlink migration, obsolete `spx/` removal, and unresolved-delimiter refusal — are declared and tested as `[test]` assertions on the sibling spec `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md`. The rules below are the architectural constraints no deterministic test falsifies.
+
+- ALWAYS: the managed surface renders against the Codex combined project-doc budget default of 32768 bytes as the given ceiling; a breach relocates router content into build-injected skill content, never a consumer setting change
+- ALWAYS: generation and the check verb measure each rendered root file's byte size and report the exact size and breach state against the ceiling
+- ALWAYS: the drift gate reports a breach a change did not introduce and fails a regression above the ceiling by a surface that fits
+- NEVER: generated output, a skill, or shipped documentation directs a consumer to raise the harness project-doc budget to accommodate the managed surface
 
 ### Audit
 

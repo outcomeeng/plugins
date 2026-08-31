@@ -6,6 +6,10 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ## Assertions
 
+- Generation and the `--check` verb measure each rendered root instruction file's byte size against the 32768-byte combined Codex project-doc ceiling declared in `spx/21-spec-tree.enabler/43-instruction-block.enabler/21-render-model.adr.md` and report the exact size and breach state per file
+- A rendered root instruction file exceeding the ceiling is reported as a breach carrying the exact byte counts — file size, ceiling, and overage
+- The drift gate reports a breach the checked change did not introduce and fails a regression above the ceiling by a surface that previously fit
+
 ### Scenarios
 
 - Given a template with language blocks and per-harness blocks, when the managed surface is generated for an enabled-language set, then both `CLAUDE.md` and `AGENTS.md` are written, each with its router block first, preserving content outside every managed fence, and containing inside the router block exactly the enabled languages' blocks and only its own harness's blocks ([test](tests/test_instruction_block.scenario.l1.py))
