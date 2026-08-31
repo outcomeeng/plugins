@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from outcomeeng.distribution.installation import (
     Agent,
     FIRST_INSTALL_WARNING,
@@ -9,9 +11,10 @@ from outcomeeng.distribution.installation import (
     SPEC_TREE_PLUGIN,
 )
 from outcomeeng_testing.harnesses.installation import (
-    observe_codex_role_discovery,
+    observe_real_codex_role_discovery,
     observe_real_first_install,
     observe_real_installation,
+    selected_codex_login_state_available,
 )
 
 
@@ -59,10 +62,12 @@ def test_real_agent_clis_place_home_agents_and_repeat_full_installation() -> Non
 
 
 def test_fresh_codex_session_discovers_every_placed_canonical_role() -> None:
-    observation = observe_codex_role_discovery()
+    if not selected_codex_login_state_available():
+        pytest.skip("selected Codex login state is unavailable")
+    observation = observe_real_codex_role_discovery()
 
     assert observation.install_exit_code == 0, observation.install_stderr
-    assert observation.login_exit_code == 0, observation.login_stderr
+    assert observation.login_status_exit_code == 0, observation.login_status_stderr
     assert observation.session_exit_code == 0, observation.session_stderr
     assert observation.placed_roles
     assert observation.discovered_roles is not None, observation.session_last_message
