@@ -1616,10 +1616,6 @@ def observe_real_installation() -> RealInstallationObservation:
     Both source actions are read from the pre-run agent state, so they are the
     reconciliation each agent's run actually takes. Reading them afterwards
     would report a canonical registration whichever action produced it.
-
-    Persistent setup seeds only plugins the base marketplace publishes. A
-    checkout-only plugin has no real persistent installation to observe before
-    publication; isolated setup still installs the checkout's complete catalog.
     """
     checkout = repository_root()
     _require_binaries(REQUIRED_BINARIES)
@@ -1639,16 +1635,10 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mirror,
             selected_environment,
         )
-        generated_subsets = generated_agent_subsets(
+        persistent_subsets = generated_agent_subsets(
             persistent_mirror,
             include_spec_tree=True,
         )
-        persistent_subsets = {
-            Agent.CLAUDE: generated_subsets[Agent.CLAUDE]
-            & _base_ref_catalog_names(checkout, CLAUDE_CATALOG_PATH),
-            Agent.CODEX: generated_subsets[Agent.CODEX]
-            & _base_ref_catalog_names(checkout, CODEX_CATALOG_PATH),
-        }
         _seed_persistent_plugins(
             persistent_mirror,
             selected_environment,
@@ -2970,6 +2960,7 @@ __all__ = [
     "UnpublishedPluginObservation",
     "UnpublishedPluginRunner",
     "VerificationRecipeObservation",
+    "canonical_catalog_plugin_names",
     "committed_catalog_plugin_names",
     "observe_agent_home_collision",
     "observe_interrupted_reconciliation",
@@ -3184,6 +3175,21 @@ def observe_designated_failure(
         isolated=isolated,
         source=source,
     )
+
+
+def canonical_catalog_plugin_names() -> frozenset[str]:
+    """Plugins the canonical marketplace publishes, read from the base ref.
+
+    An independent oracle: the published branch's own committed catalogs, read
+    through git rather than through the installation run whose classification is
+    under test. A missing base ref raises rather than reporting an empty set,
+    because an empty oracle would make every pending claim vacuously true.
+    """
+    root = repository_root()
+    names: set[str] = set()
+    for path in (CLAUDE_CATALOG_PATH, CODEX_CATALOG_PATH):
+        names.update(_base_ref_catalog_names(root, path))
+    return frozenset(names)
 
 
 def _base_ref_catalog_names(root: Path, path: Path) -> set[str]:
