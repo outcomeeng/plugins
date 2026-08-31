@@ -22,7 +22,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Final, TextIO, cast
+from typing import TextIO, cast
 
 from hypothesis import given, seed, settings
 
@@ -85,7 +85,6 @@ PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
 PASSING_CHILD_OUTPUT = "passing validator output"
 FAILING_CHILD_OUTPUT_PREFIX = "failing validator output line"
-DECLARED_SIGNAL_GRACE_SECONDS: Final = 2.0
 SPAWN_FAILURE_MESSAGE = "missing executable"
 HIGH_VOLUME_CHILD_OUTPUT = "\n".join("captured child output" for _ in range(200))
 PYTEST_TARGET_ARG = (

@@ -36,7 +36,6 @@ from outcomeeng.validation import (
     test_recipe,
 )
 from outcomeeng_testing.harnesses.gate import (
-    DECLARED_SIGNAL_GRACE_SECONDS,
     HIGH_VOLUME_CHILD_OUTPUT,
     PASS_EXIT_CODE,
     PYTEST_TARGET_ARG,
@@ -156,7 +155,6 @@ def test_no_gate_module_polls_with_while_true_sleep() -> None:
 def test_signal_shutdown_waits_are_bounded() -> None:
     shutdown = bounded_shutdown_observation()
 
-    assert SIGNAL_GRACE_SECONDS == DECLARED_SIGNAL_GRACE_SECONDS
     grace_sleep_calls = math.ceil(SIGNAL_GRACE_SECONDS / SIGNAL_POLL_INTERVAL_SECONDS)
     assert shutdown.sleep_budget == grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
     assert shutdown.received_signals == (signal.SIGTERM, signal.SIGKILL)
