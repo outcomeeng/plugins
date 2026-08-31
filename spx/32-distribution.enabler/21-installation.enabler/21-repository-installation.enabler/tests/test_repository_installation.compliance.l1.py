@@ -417,6 +417,9 @@ def test_unusable_selected_codex_login_state_is_unavailable_before_probe(
 
     available = selected_codex_login_state_available(harness.selected_codex_home)
 
+    with pytest.raises(RuntimeError, match="required Codex login state"):
+        harness.observe()
+
     assert available is False
     assert harness.commands == ()
 
