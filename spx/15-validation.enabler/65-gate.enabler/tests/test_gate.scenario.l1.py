@@ -13,8 +13,6 @@ from outcomeeng.validation import (
     PHASE_COMPLETE,
     PHASE_PREFLIGHT,
     PHASE_RECIPE,
-    PURPOSE_CONFORMANCE,
-    PURPOSE_CORRECTNESS,
     PYTEST_ARGV,
     RECIPE_CHECK,
     RECIPE_TEST,
@@ -40,8 +38,6 @@ from outcomeeng.validation import (
     TEST_STEPS,
     VALIDATION_RECIPE,
     VALIDATION_STEPS,
-    VERIFICATION_TYPE_TESTING,
-    VERIFICATION_TYPE_VALIDATION,
 )
 from outcomeeng_testing.harnesses.gate import (
     FAIL_EXIT_CODE,
@@ -71,9 +67,9 @@ def test_the_validation_recipe_runs_preflight_first_and_reports_conformance() ->
     assert PYTEST_ARGV not in run.spawn_calls
     assert isinstance(run.summary, dict)
     summary = cast(dict[str, object], run.summary)
-    assert summary[SUMMARY_KEY_RECIPE] == RECIPE_VALIDATION
-    assert summary[SUMMARY_KEY_VERIFICATION_TYPE] == VERIFICATION_TYPE_VALIDATION
-    assert summary[SUMMARY_KEY_PURPOSE] == PURPOSE_CONFORMANCE
+    assert summary[SUMMARY_KEY_RECIPE] == VALIDATION_RECIPE.name
+    assert summary[SUMMARY_KEY_VERIFICATION_TYPE] == VALIDATION_RECIPE.verification_type
+    assert summary[SUMMARY_KEY_PURPOSE] == VALIDATION_RECIPE.purpose
     assert summary[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
     assert summary[SUMMARY_KEY_PHASE] == PHASE_COMPLETE
     assert summary[SUMMARY_KEY_SUMMARY_PATH] == run.summary_path
@@ -101,9 +97,9 @@ def test_the_test_recipe_runs_pytest_after_preflight() -> None:
     )
     assert isinstance(run.summary, dict)
     summary = cast(dict[str, object], run.summary)
-    assert summary[SUMMARY_KEY_RECIPE] == RECIPE_TEST
-    assert summary[SUMMARY_KEY_VERIFICATION_TYPE] == VERIFICATION_TYPE_TESTING
-    assert summary[SUMMARY_KEY_PURPOSE] == PURPOSE_CORRECTNESS
+    assert summary[SUMMARY_KEY_RECIPE] == TEST_RECIPE.name
+    assert summary[SUMMARY_KEY_VERIFICATION_TYPE] == TEST_RECIPE.verification_type
+    assert summary[SUMMARY_KEY_PURPOSE] == TEST_RECIPE.purpose
     assert summary[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS
     assert isinstance(summary[SUMMARY_KEY_STEPS], list)
     steps = cast(list[object], summary[SUMMARY_KEY_STEPS])
