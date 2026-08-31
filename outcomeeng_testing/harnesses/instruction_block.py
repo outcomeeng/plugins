@@ -33,6 +33,7 @@ import subprocess
 from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
+from enum import Enum
 import sys
 from tempfile import TemporaryDirectory
 from types import ModuleType
@@ -109,6 +110,23 @@ class NamedRootInstructionTopology:
     """One member of the source-owned bootstrap-topology domain."""
 
     name: str
+    factory: Callable[[], RootInstructionTopology]
+
+
+class HarnessSeedTopology(Enum):
+    """Stable source-owned identities for the harness-seed mapping domain."""
+
+    ONLY_CLAUDE = "only-claude"
+    ONLY_AGENTS = "only-agents"
+    SEPARATE = "separate"
+    SYMLINKED = "symlinked"
+
+
+@dataclass(frozen=True)
+class HarnessSeedTopologyCase:
+    """One identified member of the harness-seed mapping domain."""
+
+    kind: HarnessSeedTopology
     factory: Callable[[], RootInstructionTopology]
 
 
@@ -337,17 +355,21 @@ def bootstrap_topology_cases() -> tuple[NamedRootInstructionTopology, ...]:
     )
 
 
-def harness_seed_topology_cases() -> tuple[NamedRootInstructionTopology, ...]:
+def harness_seed_topology_cases() -> tuple[HarnessSeedTopologyCase, ...]:
     """Return the complete source-owned harness-seed topology domain."""
     return (
-        NamedRootInstructionTopology(
-            "only-claude", root_instruction_topology_only_claude
+        HarnessSeedTopologyCase(
+            HarnessSeedTopology.ONLY_CLAUDE, root_instruction_topology_only_claude
         ),
-        NamedRootInstructionTopology(
-            "only-agents", root_instruction_topology_only_agents
+        HarnessSeedTopologyCase(
+            HarnessSeedTopology.ONLY_AGENTS, root_instruction_topology_only_agents
         ),
-        NamedRootInstructionTopology("separate", root_instruction_topology_separate),
-        NamedRootInstructionTopology("symlinked", root_instruction_topology_symlinked),
+        HarnessSeedTopologyCase(
+            HarnessSeedTopology.SEPARATE, root_instruction_topology_separate
+        ),
+        HarnessSeedTopologyCase(
+            HarnessSeedTopology.SYMLINKED, root_instruction_topology_symlinked
+        ),
     )
 
 
@@ -447,7 +469,7 @@ class SymlinkedTopologyObservation:
 class TopologySeedObservation:
     """Declared topology facts and observed seed bodies for one domain member."""
 
-    topology_name: str
+    topology_kind: HarnessSeedTopology
     declared_files: tuple[tuple[str, str], ...]
     declared_symlinks: tuple[tuple[str, str], ...]
     observed: tuple[tuple[str, str], ...]
@@ -456,12 +478,12 @@ class TopologySeedObservation:
 def _observe_root_instruction_topology_seed(
     root: pathlib.Path,
     index: int,
-    topology_case: NamedRootInstructionTopology,
+    topology_case: HarnessSeedTopologyCase,
 ) -> TopologySeedObservation:
     """Materialize and observe one member of the harness-seed topology domain."""
     topology = topology_case.factory()
     return TopologySeedObservation(
-        topology_name=topology_case.name,
+        topology_kind=topology_case.kind,
         declared_files=tuple(sorted(topology.files.items())),
         declared_symlinks=tuple(sorted(topology.symlinks.items())),
         observed=tuple(

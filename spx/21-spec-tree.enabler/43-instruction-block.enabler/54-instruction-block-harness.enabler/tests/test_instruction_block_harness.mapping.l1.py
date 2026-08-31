@@ -6,9 +6,13 @@ from outcomeeng_testing.harnesses import instruction_block as harness
 def test_root_instruction_topology_maps_to_harness_seed_bodies() -> None:
     observations = harness.observe_root_instruction_topology_seed_mapping()
     topology_cases = harness.harness_seed_topology_cases()
+    topology_domain = tuple(harness.HarnessSeedTopology)
 
-    assert tuple(observation.topology_name for observation in observations) == tuple(
-        topology_case.name for topology_case in topology_cases
+    assert (
+        tuple(topology_case.kind for topology_case in topology_cases) == topology_domain
+    )
+    assert tuple(observation.topology_kind for observation in observations) == (
+        topology_domain
     )
     for observation, topology_case in zip(observations, topology_cases, strict=True):
         topology = topology_case.factory()
@@ -34,4 +38,4 @@ def test_root_instruction_topology_maps_to_harness_seed_bodies() -> None:
                 }.items()
             )
         )
-        assert observation.observed == expected, observation.topology_name
+        assert observation.observed == expected, observation.topology_kind
