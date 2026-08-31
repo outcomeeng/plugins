@@ -42,3 +42,8 @@ Rejected: emitting a project-specific deterministic-command name (a `just check`
 - ALWAYS: a clean synchronization (`rebased` or `already_current`) emits a readiness-preservation proof — a schema version, the full OIDs of the new base, the branch before and after, and the branch's fork point from the base, the base-delta paths, the branch's paths against the fork point and new base, path overlap, and whether the branch patch identity changed — computed from git facts alone ([compliance])
 - ALWAYS: the readiness-preservation proof reports full, unabbreviated OIDs and carries no project-specific deterministic-command name — command selection and the governance-surface list are the project overlay's, not the primitive's ([compliance])
 - NEVER: the readiness-preservation proof satisfies a merge gate — it scopes pre-push local verification only, leaving current-head pull-request checks and the current-head CI review as required `MERGE_READINESS` predicates after every push ([compliance])
+
+### Audit
+
+- ALWAYS: every Git subprocess interaction crosses a dependency-injected runner parameter typed by a Protocol; the production default implements that Protocol with `subprocess`, while controlled implementations expose observations and leave every predicate to the linked test ([audit])
+- NEVER: framework mocking, monkeypatching, matcher-driven spies, or collaborator-owned verdict methods replace the Git runner boundary; tests inject Protocol implementations and own every assertion ([audit])
