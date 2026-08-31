@@ -94,6 +94,7 @@ class GraphQLField(StrEnum):
 
 class GitHubResponseField(StrEnum):
     DATA = "data"
+    ERRORS = "errors"
     RESOLVE_REVIEW_THREAD = "resolveReviewThread"
     THREAD = "thread"
     IS_RESOLVED = "isResolved"
@@ -119,6 +120,7 @@ class ResolverErrorMessage(StrEnum):
     MIXED_MODE = "pass either thread_id or --repo/--pr/--review-comment-id"
     INVALID_JSON = "GitHub response must be valid JSON"
     RESPONSE_PAYLOAD = "GitHub response must be an object"
+    GRAPHQL_ERRORS = "GitHub response contains GraphQL errors"
     COMMENT_NOT_FOUND = (
         "review comment was not found after complete review-thread pagination"
     )
@@ -468,7 +470,10 @@ def run_graphql(
         payload = json.loads(completed.stdout, parse_int=_ParsedJsonInteger)
     except json.JSONDecodeError as exc:
         raise ValueError(ResolverErrorMessage.INVALID_JSON.value) from exc
-    return require_object(payload, ResolverErrorMessage.RESPONSE_PAYLOAD.value)
+    response = require_object(payload, ResolverErrorMessage.RESPONSE_PAYLOAD.value)
+    if GitHubResponseField.ERRORS.value in response:
+        raise ValueError(ResolverErrorMessage.GRAPHQL_ERRORS.value)
+    return response
 
 
 def require_object(value: object, message: str) -> dict[str, object]:

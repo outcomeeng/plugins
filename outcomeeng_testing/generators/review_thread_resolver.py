@@ -132,12 +132,12 @@ def resolver_inputs(draw: st.DrawFn) -> ResolverInputs:
 
     owner = draw(_valid_repository_segment())
     repository_name = draw(_valid_repository_segment())
-    repository = RESOLVER.REPOSITORY_CONTRACT.separator.join(
-        (owner, repository_name)
-    )
+    repository = RESOLVER.REPOSITORY_CONTRACT.separator.join((owner, repository_name))
     maximum_number = RESOLVER.NUMBER_CONTRACT.maximum_value
     if maximum_number is None:
-        raise RuntimeError("review-thread decimal inputs require a finite maximum value")
+        raise RuntimeError(
+            "review-thread decimal inputs require a finite maximum value"
+        )
     node_suffixes = draw(
         st.lists(
             _valid_node_suffix(),

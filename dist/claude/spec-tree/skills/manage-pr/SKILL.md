@@ -164,13 +164,13 @@ If `MERGE_READINESS` does not hold, directly read /merging-standards `action-tok
 
 Tested inputs and expected outputs:
 
-- Direct thread node ID: `--host ghe.example.com PRRT_thread0002` resolves that thread by calling `gh api graphql --silent` with `id=PRRT_thread0002`.
+- Direct thread node ID: `--host ghe.example.com PRRT_thread0002` resolves that thread by calling `gh api graphql` with `id=PRRT_thread0002`, capturing the response, and requiring `resolveReviewThread.thread.isResolved` to be true.
 - Review-comment discovery: `--host ghe.example.com --repo outcomeeng/plugins --pr 405 --review-comment-id 12345` discovers the owning review-thread node before resolving it.
 - Thread pagination: a first review-thread page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `threadsAfter=<cursor>` query, then resolves the discovered thread.
 - Comment pagination: a thread comments page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `commentsAfter=<cursor>` query before resolving the owning thread.
 - Malformed resolver CLI inputs: empty and incomplete discovery selector sets, generated thread IDs, repositories, PR numbers, comment IDs, hosts, and mixed direct/discovery modes outside the helper's source-owned validators return exit code `2`, print a validation message, and make no GitHub mutation call.
 - Missing review comment: complete review-thread pagination without a matching comment returns exit code `2` with `review comment was not found after complete review-thread pagination`.
-- Malformed GitHub payloads: null repository, null pull request, null paginated thread node, missing comment pagination metadata, and missing pagination cursor responses return exit code `2` with the exact failing response shape named.
+- Malformed GitHub payloads: GraphQL errors, null repository, null pull request, null paginated thread node, missing comment pagination metadata, missing pagination cursors, and an absent, null, or unresolved mutation result return exit code `2` with the exact failing response shape named.
 - Cleanup: the helper creates no temporary files and owns no persistent state; tests assert only subprocess calls, stdout/stderr payload handling, and exit codes.
 
 </script_testing>

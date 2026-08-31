@@ -171,8 +171,7 @@ def test_review_comment_node_id_discovers_thread_before_resolving(
         in discovery.command
     )
     assert (
-        f"{RESOLVER.GraphQLField.ID.value}={inputs.thread_ids[1]}"
-        in resolution.command
+        f"{RESOLVER.GraphQLField.ID.value}={inputs.thread_ids[1]}" in resolution.command
     )
 
 
@@ -220,9 +219,7 @@ def test_review_thread_discovery_pages_threads_until_comment_is_found(
         )
     )
     mutation_field = f"{RESOLVER.GraphQLField.QUERY.value}={RESOLVER.QUERY}"
-    cursor_field = (
-        f"{RESOLVER.GraphQLField.THREADS_AFTER.value}={inputs.cursors[0]}"
-    )
+    cursor_field = f"{RESOLVER.GraphQLField.THREADS_AFTER.value}={inputs.cursors[0]}"
 
     def responder(
         command: list[str],
@@ -246,8 +243,7 @@ def test_review_thread_discovery_pages_threads_until_comment_is_found(
         RESOLVER.GraphQLOption.STRING_FIELD.value
     )
     assert (
-        f"{RESOLVER.GraphQLField.ID.value}={inputs.thread_ids[1]}"
-        in resolution.command
+        f"{RESOLVER.GraphQLField.ID.value}={inputs.thread_ids[1]}" in resolution.command
     )
 
 
@@ -326,8 +322,7 @@ def test_review_thread_discovery_checks_all_first_pages_before_later_comments(
         for interaction in run.interactions
     )
     assert (
-        f"{RESOLVER.GraphQLField.ID.value}={inputs.thread_ids[1]}"
-        in resolution.command
+        f"{RESOLVER.GraphQLField.ID.value}={inputs.thread_ids[1]}" in resolution.command
     )
 
 
@@ -367,12 +362,8 @@ def test_review_thread_discovery_pages_comments_until_comment_is_found(
         )
     )
     mutation_field = f"{RESOLVER.GraphQLField.QUERY.value}={RESOLVER.QUERY}"
-    thread_field = (
-        f"{RESOLVER.GraphQLField.THREAD_ID.value}={inputs.thread_ids[0]}"
-    )
-    cursor_field = (
-        f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}={inputs.cursors[0]}"
-    )
+    thread_field = f"{RESOLVER.GraphQLField.THREAD_ID.value}={inputs.thread_ids[0]}"
+    cursor_field = f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}={inputs.cursors[0]}"
 
     def responder(
         command: list[str],
@@ -400,8 +391,7 @@ def test_review_thread_discovery_pages_comments_until_comment_is_found(
         RESOLVER.GraphQLOption.STRING_FIELD.value
     )
     assert (
-        f"{RESOLVER.GraphQLField.ID.value}={inputs.thread_ids[0]}"
-        in resolution.command
+        f"{RESOLVER.GraphQLField.ID.value}={inputs.thread_ids[0]}" in resolution.command
     )
 
 
@@ -472,6 +462,9 @@ def test_review_thread_discovery_checks_peer_pages_before_deeper_pages(
     second_cursor_field = (
         f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}={inputs.cursors[1]}"
     )
+    deeper_cursor_field = (
+        f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}={inputs.cursors[2]}"
+    )
 
     def responder(
         command: list[str],
@@ -504,10 +497,9 @@ def test_review_thread_discovery_checks_peer_pages_before_deeper_pages(
         in second_second_page.command
     )
     assert all(
-        inputs.cursors[2] not in interaction.command
+        deeper_cursor_field not in interaction.command
         for interaction in run.interactions
     )
     assert (
-        f"{RESOLVER.GraphQLField.ID.value}={inputs.thread_ids[1]}"
-        in resolution.command
+        f"{RESOLVER.GraphQLField.ID.value}={inputs.thread_ids[1]}" in resolution.command
     )

@@ -97,6 +97,21 @@ def test_non_object_data_payload_returns_error(inputs: ResolverInputs) -> None:
 
 @resolver_generated_evidence
 @given(inputs=resolver_inputs())
+def test_graphql_error_response_returns_error(inputs: ResolverInputs) -> None:
+    fields = RESOLVER.GitHubResponseField
+    payload = GITHUB_RESPONSE.resolution_payload()
+    payload[fields.ERRORS.value] = [{"message": inputs.cursors[0]}]
+    run = run_resolver_with_response(
+        [inputs.thread_ids[0]],
+        json.dumps(payload),
+    )
+
+    assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
+    assert RESOLVER.ResolverErrorMessage.GRAPHQL_ERRORS.value in run.stderr
+
+
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
 def test_null_repository_payload_returns_error(inputs: ResolverInputs) -> None:
     run = run_resolver_with_response(
         inputs.discovery_argv(inputs.database_ids[0]),
@@ -679,10 +694,9 @@ def test_overlong_json_integer_reaches_bounded_database_id_validation(
     )
     serialized_payload = json.dumps(payload)
     field = f'"databaseId": {inputs.database_ids[0]}'
-    maximum_length = RESOLVER.NUMBER_CONTRACT.maximum_length
-    assert maximum_length is not None
-    overlong_integer = (
-        RESOLVER.NUMBER_CONTRACT.first_characters[0] * (maximum_length + 1)
+    maximum_length = cast(int, RESOLVER.NUMBER_CONTRACT.maximum_length)
+    overlong_integer = RESOLVER.NUMBER_CONTRACT.first_characters[0] * (
+        maximum_length + 1
     )
     serialized_payload = serialized_payload.replace(
         field,
@@ -810,8 +824,7 @@ def test_null_mutation_result_returns_error(inputs: ResolverInputs) -> None:
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert (
-        RESOLVER.ResolverErrorMessage.RESOLVE_REVIEW_THREAD_PAYLOAD.value
-        in run.stderr
+        RESOLVER.ResolverErrorMessage.RESOLVE_REVIEW_THREAD_PAYLOAD.value in run.stderr
     )
 
 
@@ -821,9 +834,7 @@ def test_null_resolved_thread_returns_error(inputs: ResolverInputs) -> None:
     fields = RESOLVER.GitHubResponseField
     run = run_resolver_with_response(
         [inputs.thread_ids[0]],
-        json.dumps(
-            GITHUB_RESPONSE.mutation_payload({fields.THREAD.value: None})
-        ),
+        json.dumps(GITHUB_RESPONSE.mutation_payload({fields.THREAD.value: None})),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
@@ -850,9 +861,7 @@ def test_missing_mutation_resolution_state_returns_error(
     fields = RESOLVER.GitHubResponseField
     run = run_resolver_with_response(
         [inputs.thread_ids[0]],
-        json.dumps(
-            GITHUB_RESPONSE.mutation_payload({fields.THREAD.value: {}})
-        ),
+        json.dumps(GITHUB_RESPONSE.mutation_payload({fields.THREAD.value: {}})),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
