@@ -53,12 +53,15 @@ Marker recognition anchors to a standalone fence line — a router or `shared` m
 
 The behavioral rules of the three content kinds — router marker format, full router regeneration, shared-region byte-identity and git-recency reconciliation, independent-content preservation, bootstrap wrapping, the five initial situations, legacy-block and symlink migration, obsolete `spx/` removal, and unresolved-delimiter refusal — are declared and tested as `[test]` assertions on the sibling spec `spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md`. The rules below are the architectural constraints no deterministic test falsifies.
 
-- ALWAYS: the managed surface renders against the Codex combined project-doc budget default of 32768 bytes as the given ceiling; a breach relocates router content into build-injected skill content, never a consumer setting change
-- ALWAYS: generation and the check verb measure each rendered root file's byte size and report the exact size and breach state against the ceiling
-- ALWAYS: the drift gate reports a breach a change did not introduce and fails a regression above the ceiling by a surface that fits
-- NEVER: generated output, a skill, or shipped documentation directs a consumer to raise the harness project-doc budget to accommodate the managed surface
+### Testing
+
+- ALWAYS: generation and the check verb measure each rendered root file's byte size and report the exact size and breach state against the ceiling ([mapping])
+- ALWAYS: the drift gate reports a breach a change did not introduce and fails a regression above the ceiling by a surface that fits ([compliance])
 
 ### Audit
+
+- ALWAYS: the managed surface renders against the Codex combined project-doc budget default of 32768 bytes as the given ceiling; a breach relocates router content into build-injected skill content, never a consumer setting change ([audit])
+- NEVER: generated output, a skill, or shipped documentation directs a consumer to raise the harness project-doc budget to accommodate the managed surface ([audit])
 
 - ALWAYS: the product's Spec Tree instructions are a generated router block at the top of each root harness instruction file — `CLAUDE.md` for Claude Code and `AGENTS.md` for Codex — because each harness retains its root instruction file across compaction ([audit])
 - ALWAYS: each root file's managed surface is three content kinds — a generated router block always first, `shared` regions kept byte-identical across both files, and independent content free to differ per file ([audit])
