@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import string
+from dataclasses import dataclass
 
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
@@ -10,6 +11,36 @@ from hypothesis.strategies import SearchStrategy
 from outcomeeng_testing.harnesses.review_thread_resolver import RESOLVER
 
 MAX_GENERATED_TEXT_LENGTH = 32
+GENERATED_INPUT_COUNT = 4
+
+
+@dataclass(frozen=True)
+class ResolverInputs:
+    """Generated incidental values for one resolver interaction."""
+
+    repository: str
+    owner: str
+    repository_name: str
+    pull_request: str
+    host: str
+    thread_ids: tuple[str, ...]
+    comment_node_ids: tuple[str, ...]
+    database_ids: tuple[int, ...]
+    cursors: tuple[str, ...]
+
+    def discovery_argv(self, comment_id: str | int) -> tuple[str, ...]:
+        """Build one complete discovery selector from generated values."""
+
+        return (
+            RESOLVER.ResolverOption.HOST.value,
+            self.host,
+            RESOLVER.ResolverOption.REPOSITORY.value,
+            self.repository,
+            RESOLVER.ResolverOption.PULL_REQUEST.value,
+            self.pull_request,
+            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
+            str(comment_id),
+        )
 
 
 def _forbidden_characters(allowed_characters: str) -> str:
@@ -49,6 +80,116 @@ def _mixed_mode_argv(
     )
 
 
+def _valid_repository_segment() -> SearchStrategy[str]:
+    contract = RESOLVER.REPOSITORY_CONTRACT.segment
+    maximum_length = contract.maximum_length
+    if maximum_length is None:
+        raise RuntimeError("repository segments require a finite maximum length")
+    return st.text(
+        alphabet=contract.allowed_characters,
+        min_size=contract.minimum_length,
+        max_size=min(maximum_length, MAX_GENERATED_TEXT_LENGTH),
+    )
+
+
+def _valid_node_suffix() -> SearchStrategy[str]:
+    contract = RESOLVER.NODE_ID_SUFFIX_CONTRACT
+    maximum_length = contract.maximum_length
+    if maximum_length is None:
+        raise RuntimeError("review-thread node IDs require a finite maximum length")
+    return st.text(
+        alphabet=contract.allowed_characters,
+        min_size=contract.minimum_length,
+        max_size=min(maximum_length, MAX_GENERATED_TEXT_LENGTH),
+    )
+
+
+def _valid_host() -> SearchStrategy[str]:
+    contract = RESOLVER.HOST_CONTRACT
+    maximum_label_length = contract.label.maximum_length
+    if maximum_label_length is None:
+        raise RuntimeError("GitHub host labels require a finite maximum length")
+    label = st.one_of(
+        st.sampled_from(contract.endpoint_characters),
+        st.tuples(
+            st.sampled_from(contract.endpoint_characters),
+            st.text(
+                alphabet=contract.label.allowed_characters,
+                max_size=min(
+                    maximum_label_length - 2,
+                    MAX_GENERATED_TEXT_LENGTH - 2,
+                ),
+            ),
+            st.sampled_from(contract.endpoint_characters),
+        ).map(lambda parts: "".join(parts)),
+    )
+    return st.lists(label, min_size=2, max_size=4).map(contract.separator.join)
+
+
+@st.composite
+def resolver_inputs(draw: st.DrawFn) -> ResolverInputs:
+    """Generate variable incidental values for resolver evidence."""
+
+    owner = draw(_valid_repository_segment())
+    repository_name = draw(_valid_repository_segment())
+    repository = RESOLVER.REPOSITORY_CONTRACT.separator.join(
+        (owner, repository_name)
+    )
+    maximum_number = RESOLVER.NUMBER_CONTRACT.maximum_value
+    if maximum_number is None:
+        raise RuntimeError("review-thread decimal inputs require a finite maximum value")
+    node_suffixes = draw(
+        st.lists(
+            _valid_node_suffix(),
+            min_size=GENERATED_INPUT_COUNT * 2,
+            max_size=GENERATED_INPUT_COUNT * 2,
+            unique=True,
+        )
+    )
+    database_ids = tuple(
+        draw(
+            st.lists(
+                st.integers(min_value=1, max_value=maximum_number),
+                min_size=GENERATED_INPUT_COUNT,
+                max_size=GENERATED_INPUT_COUNT,
+                unique=True,
+            )
+        )
+    )
+    cursor_alphabet = string.ascii_letters + string.digits + "_-="
+    cursors = tuple(
+        draw(
+            st.lists(
+                st.text(
+                    alphabet=cursor_alphabet,
+                    min_size=1,
+                    max_size=MAX_GENERATED_TEXT_LENGTH,
+                ),
+                min_size=GENERATED_INPUT_COUNT,
+                max_size=GENERATED_INPUT_COUNT,
+                unique=True,
+            )
+        )
+    )
+    return ResolverInputs(
+        repository=repository,
+        owner=owner,
+        repository_name=repository_name,
+        pull_request=str(draw(st.integers(min_value=1, max_value=maximum_number))),
+        host=draw(_valid_host()),
+        thread_ids=tuple(
+            RESOLVER.format_thread_id(suffix)
+            for suffix in node_suffixes[:GENERATED_INPUT_COUNT]
+        ),
+        comment_node_ids=tuple(
+            RESOLVER.format_review_comment_node_id(suffix)
+            for suffix in node_suffixes[GENERATED_INPUT_COUNT:]
+        ),
+        database_ids=database_ids,
+        cursors=cursors,
+    )
+
+
 def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
     """Generate malformed argv from independent CLI grammar violations."""
 
@@ -72,6 +213,9 @@ def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
     maximum_host_label_length = host_contract.label.maximum_length
     if maximum_host_label_length is None:
         raise RuntimeError("GitHub host labels require a finite maximum length")
+    maximum_repository_segment_length = repository_contract.segment.maximum_length
+    if maximum_repository_segment_length is None:
+        raise RuntimeError("repository segments require a finite maximum length")
 
     safe_name = st.text(
         alphabet=repository_contract.segment.allowed_characters,
@@ -123,6 +267,15 @@ def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
             lambda segments: repository_contract.separator.join(segments)
         ),
         forbidden_repository_text,
+        st.just(
+            repository_contract.separator.join(
+                (
+                    repository_contract.segment.allowed_characters[0]
+                    * (maximum_repository_segment_length + 1),
+                    repository_contract.segment.allowed_characters[0],
+                )
+            )
+        ),
     )
     malformed_numbers = st.one_of(
         st.integers(min_value=-maximum_number, max_value=0).map(str),

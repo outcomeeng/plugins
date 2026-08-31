@@ -33,6 +33,8 @@ ResolverResponder = Callable[
 ]
 MALFORMED_INPUT_PROPERTY_SEED = 20260707
 MALFORMED_INPUT_PROPERTY_EXAMPLES = 50
+GENERATED_EVIDENCE_SEED = 20260831
+GENERATED_EVIDENCE_EXAMPLES = 10
 P = ParamSpec("P")
 R = TypeVar("R")
 
@@ -182,6 +184,29 @@ class GitHubResponseFactory:
         fields = RESOLVER.GitHubResponseField
         return {fields.DATA.value: {fields.NODE.value: None}}
 
+    @staticmethod
+    def resolution_payload(
+        *,
+        is_resolved: object = True,
+    ) -> dict[str, object]:
+        fields = RESOLVER.GitHubResponseField
+        return GitHubResponseFactory.mutation_payload(
+            {
+                fields.THREAD.value: {
+                    fields.IS_RESOLVED.value: is_resolved,
+                }
+            }
+        )
+
+    @staticmethod
+    def mutation_payload(resolution: object) -> dict[str, object]:
+        fields = RESOLVER.GitHubResponseField
+        return {
+            fields.DATA.value: {
+                fields.RESOLVE_REVIEW_THREAD.value: resolution,
+            }
+        }
+
 
 GITHUB_RESPONSE = GitHubResponseFactory()
 RESOLVER = load_script()
@@ -193,6 +218,14 @@ def resolver_property(test: Callable[P, R]) -> Callable[P, R]:
         print_blob=True,
     )(test)
     return seed(MALFORMED_INPUT_PROPERTY_SEED)(configured)
+
+
+def resolver_generated_evidence(test: Callable[P, R]) -> Callable[P, R]:
+    configured = settings(
+        max_examples=GENERATED_EVIDENCE_EXAMPLES,
+        print_blob=True,
+    )(test)
+    return seed(GENERATED_EVIDENCE_SEED)(configured)
 
 
 def run_resolver(
@@ -234,6 +267,18 @@ def run_resolver(
         stdout=stdout.getvalue(),
         stderr=stderr.getvalue(),
         interactions=tuple(interactions),
+    )
+
+
+def run_resolver_with_response(
+    argv: list[str] | tuple[str, ...],
+    response_text: str,
+) -> ResolverRun:
+    """Run the resolver with one response body at every command boundary."""
+
+    return run_resolver(
+        argv,
+        lambda command, _kwargs: completed(command, stdout=response_text),
     )
 
 

@@ -5,702 +5,509 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import cast
 
+from hypothesis import given
+
+from outcomeeng_testing.generators.review_thread_resolver import (
+    ResolverInputs,
+    resolver_inputs,
+)
 from outcomeeng_testing.harnesses.review_thread_resolver import (
     GITHUB_RESPONSE,
     RESOLVER,
     completed,
+    resolver_generated_evidence,
     run_resolver,
+    run_resolver_with_response,
 )
 
 
-def test_review_comment_not_found_after_complete_pagination_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_review_comment_not_found_after_complete_pagination_returns_error(
+    inputs: ResolverInputs,
+) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=GITHUB_RESPONSE.comments(
                         nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0008"),
-                                comments=GITHUB_RESPONSE.comments(
-                                    nodes=[
-                                        GITHUB_RESPONSE.comment(
-                                            node_id=RESOLVER.format_review_comment_node_id(
-                                                "comment0008"
-                                            ),
-                                            database_id=808,
-                                        )
-                                    ],
-                                    has_next_page=False,
-                                ),
+                            GITHUB_RESPONSE.comment(
+                                node_id=inputs.comment_node_ids[0],
+                                database_id=inputs.database_ids[0],
                             )
-                        ]
-                    )
+                        ],
+                        has_next_page=False,
+                    ),
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[1]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENT_NOT_FOUND.value in run.stderr
 
 
-def test_invalid_json_payload_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=Path(
-                "outcomeeng_testing/fixtures/review_thread_resolver/invalid.txt"
-            ).read_text(encoding="utf-8"),
-        ),
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_invalid_json_payload_returns_error(inputs: ResolverInputs) -> None:
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        Path(
+            "outcomeeng_testing/fixtures/review_thread_resolver/invalid.txt"
+        ).read_text(encoding="utf-8"),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.INVALID_JSON.value in run.stderr
 
 
-def test_non_object_json_payload_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=Path(
-                "outcomeeng_testing/fixtures/review_thread_resolver/non_object.json"
-            ).read_text(encoding="utf-8"),
-        ),
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_object_json_payload_returns_error(inputs: ResolverInputs) -> None:
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        Path(
+            "outcomeeng_testing/fixtures/review_thread_resolver/non_object.json"
+        ).read_text(encoding="utf-8"),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.RESPONSE_PAYLOAD.value in run.stderr
 
 
-def test_non_object_data_payload_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps({RESOLVER.GitHubResponseField.DATA.value: None}),
-        ),
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_object_data_payload_returns_error(inputs: ResolverInputs) -> None:
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps({RESOLVER.GitHubResponseField.DATA.value: None}),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.DATA_PAYLOAD.value in run.stderr
 
 
-def test_null_repository_payload_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(GITHUB_RESPONSE.null_repository_payload()),
-        ),
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_null_repository_payload_returns_error(inputs: ResolverInputs) -> None:
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(GITHUB_RESPONSE.null_repository_payload()),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.REPOSITORY_PAYLOAD.value in run.stderr
 
 
-def test_null_pull_request_payload_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(GITHUB_RESPONSE.null_pull_request_payload()),
-        ),
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_null_pull_request_payload_returns_error(inputs: ResolverInputs) -> None:
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(GITHUB_RESPONSE.null_pull_request_payload()),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.PULL_REQUEST_PAYLOAD.value in run.stderr
 
 
-def test_non_object_review_threads_payload_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(GITHUB_RESPONSE.threads_payload(None)),
-        ),
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_object_review_threads_payload_returns_error(
+    inputs: ResolverInputs,
+) -> None:
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(GITHUB_RESPONSE.threads_payload(None)),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.REVIEW_THREADS_PAYLOAD.value in run.stderr
 
 
-def test_missing_review_thread_nodes_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(nodes=None)
-                )
-            ),
-        ),
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_missing_review_thread_nodes_returns_error(inputs: ResolverInputs) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(nodes=None)
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.THREAD_NODES.value in run.stderr
 
 
-def test_non_object_review_thread_node_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(nodes=[None])
-                )
-            ),
-        ),
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_object_review_thread_node_returns_error(inputs: ResolverInputs) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(nodes=[None])
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.THREAD_NODE.value in run.stderr
 
 
-def test_malformed_review_thread_node_id_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
-                        nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_review_comment_node_id(
-                                    "comment0023"
-                                ),
-                                comments=GITHUB_RESPONSE.comments(
-                                    nodes=[],
-                                    has_next_page=False,
-                                ),
-                            )
-                        ]
-                    )
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_malformed_review_thread_node_id_returns_error(
+    inputs: ResolverInputs,
+) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.comment_node_ids[0],
+                    comments=GITHUB_RESPONSE.comments(
+                        nodes=[],
+                        has_next_page=False,
+                    ),
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.THREAD_NODE_ID.value in run.stderr
 
 
-def test_non_object_thread_comments_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
-                        nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0011"),
-                                comments=None,
-                            )
-                        ]
-                    )
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_object_thread_comments_returns_error(inputs: ResolverInputs) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=None,
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.THREAD_COMMENTS.value in run.stderr
 
 
-def test_non_object_comment_node_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
-                        nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0012"),
-                                comments=GITHUB_RESPONSE.comments(
-                                    nodes=[None],
-                                    has_next_page=False,
-                                ),
-                            )
-                        ]
-                    )
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_object_comment_node_returns_error(inputs: ResolverInputs) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=GITHUB_RESPONSE.comments(
+                        nodes=[None],
+                        has_next_page=False,
+                    ),
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENT_NODE.value in run.stderr
 
 
-def test_matching_comment_does_not_hide_later_malformed_node_id() -> None:
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_matching_comment_does_not_hide_later_malformed_node_id(
+    inputs: ResolverInputs,
+) -> None:
     fields = RESOLVER.GitHubResponseField
     comments = GITHUB_RESPONSE.comments(
         nodes=[
             GITHUB_RESPONSE.comment(
-                node_id=RESOLVER.format_review_comment_node_id("comment0020"),
-                database_id=2020,
+                node_id=inputs.comment_node_ids[0],
+                database_id=inputs.database_ids[0],
             ),
-            {fields.DATABASE_ID.value: 2121},
+            {fields.DATABASE_ID.value: inputs.database_ids[1]},
         ],
         has_next_page=False,
     )
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "2020",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
-                        nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0020"),
-                                comments=comments,
-                            )
-                        ]
-                    )
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=comments,
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENT_NODE_ID.value in run.stderr
 
 
-def test_non_positive_comment_database_id_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_positive_comment_database_id_returns_error(
+    inputs: ResolverInputs,
+) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=GITHUB_RESPONSE.comments(
                         nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0021"),
-                                comments=GITHUB_RESPONSE.comments(
-                                    nodes=[
-                                        GITHUB_RESPONSE.comment(
-                                            node_id=RESOLVER.format_review_comment_node_id(
-                                                "comment0021"
-                                            ),
-                                            database_id=0,
-                                        )
-                                    ],
-                                    has_next_page=False,
-                                ),
+                            GITHUB_RESPONSE.comment(
+                                node_id=inputs.comment_node_ids[0],
+                                database_id=0,
                             )
-                        ]
-                    )
+                        ],
+                        has_next_page=False,
+                    ),
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENT_DATABASE_ID.value in run.stderr
 
 
-def test_boolean_comment_database_id_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_boolean_comment_database_id_returns_error(inputs: ResolverInputs) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=GITHUB_RESPONSE.comments(
                         nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0026"),
-                                comments=GITHUB_RESPONSE.comments(
-                                    nodes=[
-                                        GITHUB_RESPONSE.comment(
-                                            node_id=RESOLVER.format_review_comment_node_id(
-                                                "comment0026"
-                                            ),
-                                            database_id=True,
-                                        )
-                                    ],
-                                    has_next_page=False,
-                                ),
+                            GITHUB_RESPONSE.comment(
+                                node_id=inputs.comment_node_ids[0],
+                                database_id=True,
                             )
-                        ]
-                    )
+                        ],
+                        has_next_page=False,
+                    ),
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENT_DATABASE_ID.value in run.stderr
 
 
-def test_missing_comment_database_id_returns_error() -> None:
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_missing_comment_database_id_returns_error(inputs: ResolverInputs) -> None:
     fields = RESOLVER.GitHubResponseField
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
-                        nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0027"),
-                                comments=GITHUB_RESPONSE.comments(
-                                    nodes=[
-                                        {
-                                            fields.ID.value: RESOLVER.format_review_comment_node_id(
-                                                "comment0027"
-                                            )
-                                        }
-                                    ],
-                                    has_next_page=False,
-                                ),
-                            )
-                        ]
-                    )
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=GITHUB_RESPONSE.comments(
+                        nodes=[{fields.ID.value: inputs.comment_node_ids[0]}],
+                        has_next_page=False,
+                    ),
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENT_DATABASE_ID.value in run.stderr
 
 
-def test_string_comment_database_id_returns_error() -> None:
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_string_comment_database_id_returns_error(inputs: ResolverInputs) -> None:
     fields = RESOLVER.GitHubResponseField
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=GITHUB_RESPONSE.comments(
                         nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0028"),
-                                comments=GITHUB_RESPONSE.comments(
-                                    nodes=[
-                                        {
-                                            fields.ID.value: RESOLVER.format_review_comment_node_id(
-                                                "comment0028"
-                                            ),
-                                            fields.DATABASE_ID.value: "909",
-                                        }
-                                    ],
-                                    has_next_page=False,
-                                ),
-                            )
-                        ]
-                    )
+                            {
+                                fields.ID.value: inputs.comment_node_ids[0],
+                                fields.DATABASE_ID.value: str(inputs.database_ids[0]),
+                            }
+                        ],
+                        has_next_page=False,
+                    ),
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[1]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENT_DATABASE_ID.value in run.stderr
 
 
-def test_non_list_comment_nodes_returns_error() -> None:
-    comments = GITHUB_RESPONSE.comments(
-        nodes=[],
-        has_next_page=False,
-    )
-    comments[RESOLVER.GitHubResponseField.NODES.value] = None
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
-                        nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0013"),
-                                comments=comments,
-                            )
-                        ]
-                    )
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_list_comment_nodes_returns_error(inputs: ResolverInputs) -> None:
+    fields = RESOLVER.GitHubResponseField
+    comments = GITHUB_RESPONSE.comments(nodes=[], has_next_page=False)
+    comments[fields.NODES.value] = None
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=comments,
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENTS_NODES.value in run.stderr
 
 
-def test_missing_comment_page_info_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "1111",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
-                        nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0010"),
-                                comments=GITHUB_RESPONSE.comments(
-                                    nodes=[
-                                        GITHUB_RESPONSE.comment(
-                                            node_id=RESOLVER.format_review_comment_node_id(
-                                                "comment0010"
-                                            ),
-                                            database_id=1010,
-                                        )
-                                    ],
-                                    has_next_page=False,
-                                    include_page_info=False,
-                                ),
-                            )
-                        ]
-                    )
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_missing_comment_page_info_returns_error(inputs: ResolverInputs) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=GITHUB_RESPONSE.comments(
+                        nodes=[],
+                        has_next_page=False,
+                        include_page_info=False,
+                    ),
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENTS_PAGE_INFO.value in run.stderr
 
 
-def test_non_boolean_comment_has_next_page_returns_error() -> None:
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_boolean_comment_has_next_page_returns_error(
+    inputs: ResolverInputs,
+) -> None:
     fields = RESOLVER.GitHubResponseField
     comments = GITHUB_RESPONSE.comments(nodes=[], has_next_page=False)
-    page_info = comments[fields.PAGE_INFO.value]
-    assert isinstance(page_info, dict)
+    page_info = cast(dict[str, object], comments[fields.PAGE_INFO.value])
     page_info[fields.HAS_NEXT_PAGE.value] = "false"
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
-                        nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0022"),
-                                comments=comments,
-                            )
-                        ]
-                    )
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=comments,
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENTS_HAS_NEXT_PAGE.value in run.stderr
 
 
-def test_missing_comment_page_cursor_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "1111",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
-                        nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0014"),
-                                comments=GITHUB_RESPONSE.comments(
-                                    nodes=[],
-                                    has_next_page=True,
-                                    end_cursor=None,
-                                ),
-                            )
-                        ]
-                    )
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_missing_comment_page_cursor_returns_error(inputs: ResolverInputs) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=GITHUB_RESPONSE.comments(
+                        nodes=[],
+                        has_next_page=True,
+                        end_cursor=None,
+                    ),
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENTS_CURSOR.value in run.stderr
 
 
-def test_null_paginated_thread_node_returns_error() -> None:
-    thread_id = RESOLVER.format_thread_id("thread0009")
-    comment_node_id = RESOLVER.format_review_comment_node_id("comment0009")
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_null_paginated_thread_node_returns_error(inputs: ResolverInputs) -> None:
     threads_page = GITHUB_RESPONSE.threads_payload(
         GITHUB_RESPONSE.review_threads(
             nodes=[
                 GITHUB_RESPONSE.thread(
-                    thread_id=thread_id,
+                    thread_id=inputs.thread_ids[0],
                     comments=GITHUB_RESPONSE.comments(
-                        nodes=[
-                            GITHUB_RESPONSE.comment(
-                                node_id=comment_node_id,
-                                database_id=909,
-                            )
-                        ],
+                        nodes=[],
                         has_next_page=True,
-                        end_cursor="comment-cursor-2",
+                        end_cursor=inputs.cursors[0],
                     ),
                 )
             ]
@@ -711,40 +518,34 @@ def test_null_paginated_thread_node_returns_error() -> None:
         command: list[str],
         _kwargs: dict[str, object],
     ) -> subprocess.CompletedProcess[str]:
-        if f"{RESOLVER.GraphQLField.THREAD_ID.value}={thread_id}" in command:
-            return completed(
-                command,
-                stdout=json.dumps(GITHUB_RESPONSE.null_thread_payload()),
-            )
-        return completed(command, stdout=json.dumps(threads_page))
+        response = (
+            GITHUB_RESPONSE.null_thread_payload()
+            if f"{RESOLVER.GraphQLField.THREAD_ID.value}={inputs.thread_ids[0]}"
+            in command
+            else threads_page
+        )
+        return completed(command, stdout=json.dumps(response))
 
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "1001",
-        ],
-        responder,
-    )
+    run = run_resolver(inputs.discovery_argv(inputs.database_ids[0]), responder)
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.PAGINATED_THREAD.value in run.stderr
 
 
-def test_non_object_paginated_node_comments_returns_error() -> None:
-    thread_id = RESOLVER.format_thread_id("thread0015")
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_object_paginated_node_comments_returns_error(
+    inputs: ResolverInputs,
+) -> None:
     threads_page = GITHUB_RESPONSE.threads_payload(
         GITHUB_RESPONSE.review_threads(
             nodes=[
                 GITHUB_RESPONSE.thread(
-                    thread_id=thread_id,
+                    thread_id=inputs.thread_ids[0],
                     comments=GITHUB_RESPONSE.comments(
                         nodes=[],
                         has_next_page=True,
-                        end_cursor="comment-cursor-3",
+                        end_cursor=inputs.cursors[0],
                     ),
                 )
             ]
@@ -755,158 +556,119 @@ def test_non_object_paginated_node_comments_returns_error() -> None:
         command: list[str],
         _kwargs: dict[str, object],
     ) -> subprocess.CompletedProcess[str]:
-        if f"{RESOLVER.GraphQLField.THREAD_ID.value}={thread_id}" in command:
-            return completed(
-                command,
-                stdout=json.dumps(GITHUB_RESPONSE.thread_comments_payload(None)),
-            )
-        return completed(command, stdout=json.dumps(threads_page))
+        response = (
+            GITHUB_RESPONSE.thread_comments_payload(None)
+            if f"{RESOLVER.GraphQLField.THREAD_ID.value}={inputs.thread_ids[0]}"
+            in command
+            else threads_page
+        )
+        return completed(command, stdout=json.dumps(response))
 
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "1111",
-        ],
-        responder,
-    )
+    run = run_resolver(inputs.discovery_argv(inputs.database_ids[0]), responder)
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.NODE_COMMENTS.value in run.stderr
 
 
-def test_missing_thread_page_cursor_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
-                        nodes=[],
-                        has_next_page=True,
-                        end_cursor=None,
-                    )
-                )
-            ),
-        ),
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_missing_thread_page_cursor_returns_error(inputs: ResolverInputs) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[],
+            has_next_page=True,
+            end_cursor=None,
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.THREAD_CURSOR.value in run.stderr
 
 
-def test_non_object_thread_page_info_returns_error() -> None:
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_object_thread_page_info_returns_error(inputs: ResolverInputs) -> None:
+    fields = RESOLVER.GitHubResponseField
     review_threads = GITHUB_RESPONSE.review_threads(nodes=[])
-    review_threads[RESOLVER.GitHubResponseField.PAGE_INFO.value] = None
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(GITHUB_RESPONSE.threads_payload(review_threads)),
-        ),
+    review_threads[fields.PAGE_INFO.value] = None
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(GITHUB_RESPONSE.threads_payload(review_threads)),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.THREAD_PAGE_INFO.value in run.stderr
 
 
-def test_non_boolean_thread_has_next_page_returns_error() -> None:
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_non_boolean_thread_has_next_page_returns_error(
+    inputs: ResolverInputs,
+) -> None:
     fields = RESOLVER.GitHubResponseField
     review_threads = GITHUB_RESPONSE.review_threads(nodes=[])
-    page_info = review_threads[fields.PAGE_INFO.value]
-    assert isinstance(page_info, dict)
+    page_info = cast(dict[str, object], review_threads[fields.PAGE_INFO.value])
     page_info[fields.HAS_NEXT_PAGE.value] = "false"
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(GITHUB_RESPONSE.threads_payload(review_threads)),
-        ),
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(GITHUB_RESPONSE.threads_payload(review_threads)),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.THREAD_HAS_NEXT_PAGE.value in run.stderr
 
 
-def test_comment_database_id_above_graphql_int_range_returns_error() -> None:
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(
-            command,
-            stdout=json.dumps(
-                GITHUB_RESPONSE.threads_payload(
-                    GITHUB_RESPONSE.review_threads(
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_comment_database_id_above_graphql_int_range_returns_error(
+    inputs: ResolverInputs,
+) -> None:
+    payload = GITHUB_RESPONSE.threads_payload(
+        GITHUB_RESPONSE.review_threads(
+            nodes=[
+                GITHUB_RESPONSE.thread(
+                    thread_id=inputs.thread_ids[0],
+                    comments=GITHUB_RESPONSE.comments(
                         nodes=[
-                            GITHUB_RESPONSE.thread(
-                                thread_id=RESOLVER.format_thread_id("thread0023"),
-                                comments=GITHUB_RESPONSE.comments(
-                                    nodes=[
-                                        GITHUB_RESPONSE.comment(
-                                            node_id=RESOLVER.format_review_comment_node_id(
-                                                "comment0023"
-                                            ),
-                                            database_id=RESOLVER.GRAPHQL_INT_MAX + 1,
-                                        )
-                                    ],
-                                    has_next_page=False,
-                                ),
+                            GITHUB_RESPONSE.comment(
+                                node_id=inputs.comment_node_ids[0],
+                                database_id=RESOLVER.GRAPHQL_INT_MAX + 1,
                             )
-                        ]
-                    )
+                        ],
+                        has_next_page=False,
+                    ),
                 )
-            ),
-        ),
+            ]
+        )
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[0]),
+        json.dumps(payload),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENT_DATABASE_ID.value in run.stderr
 
 
-def test_overlong_json_integer_reaches_bounded_database_id_validation() -> None:
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_overlong_json_integer_reaches_bounded_database_id_validation(
+    inputs: ResolverInputs,
+) -> None:
     payload = GITHUB_RESPONSE.threads_payload(
         GITHUB_RESPONSE.review_threads(
             nodes=[
                 GITHUB_RESPONSE.thread(
-                    thread_id=RESOLVER.format_thread_id("thread0029"),
+                    thread_id=inputs.thread_ids[0],
                     comments=GITHUB_RESPONSE.comments(
                         nodes=[
                             GITHUB_RESPONSE.comment(
-                                node_id=RESOLVER.format_review_comment_node_id(
-                                    "comment0029"
-                                ),
-                                database_id=909,
+                                node_id=inputs.comment_node_ids[0],
+                                database_id=inputs.database_ids[0],
                             )
                         ],
                         has_next_page=False,
@@ -916,157 +678,182 @@ def test_overlong_json_integer_reaches_bounded_database_id_validation() -> None:
         )
     )
     serialized_payload = json.dumps(payload)
-    database_id_field = '"databaseId": 909'
-    assert serialized_payload.count(database_id_field) == 1
-    serialized_payload = serialized_payload.replace(
-        database_id_field,
-        f'"databaseId": {"9" * 5000}',
+    field = f'"databaseId": {inputs.database_ids[0]}'
+    maximum_length = RESOLVER.NUMBER_CONTRACT.maximum_length
+    assert maximum_length is not None
+    overlong_integer = (
+        RESOLVER.NUMBER_CONTRACT.first_characters[0] * (maximum_length + 1)
     )
-
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        lambda command, _kwargs: completed(command, stdout=serialized_payload),
+    serialized_payload = serialized_payload.replace(
+        field,
+        f'"databaseId": {overlong_integer}',
+        1,
+    )
+    run = run_resolver_with_response(
+        inputs.discovery_argv(inputs.database_ids[1]),
+        serialized_payload,
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENT_DATABASE_ID.value in run.stderr
 
 
-def test_repeated_comment_page_cursor_returns_error() -> None:
-    thread_id = RESOLVER.format_thread_id("thread0024")
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_repeated_comment_page_cursor_returns_error(inputs: ResolverInputs) -> None:
     initial_comments = GITHUB_RESPONSE.comments(
         nodes=[],
         has_next_page=True,
-        end_cursor="comment-cursor-a",
+        end_cursor=inputs.cursors[0],
     )
     middle_comments = GITHUB_RESPONSE.comments(
         nodes=[],
         has_next_page=True,
-        end_cursor="comment-cursor-b",
+        end_cursor=inputs.cursors[1],
     )
     repeated_comments = GITHUB_RESPONSE.comments(
-        nodes=[
-            GITHUB_RESPONSE.comment(
-                node_id=RESOLVER.format_review_comment_node_id("comment0024"),
-                database_id=909,
-            )
-        ],
+        nodes=[],
         has_next_page=True,
-        end_cursor="comment-cursor-a",
+        end_cursor=inputs.cursors[0],
     )
     threads_page = GITHUB_RESPONSE.threads_payload(
         GITHUB_RESPONSE.review_threads(
             nodes=[
                 GITHUB_RESPONSE.thread(
-                    thread_id=thread_id,
+                    thread_id=inputs.thread_ids[0],
                     comments=initial_comments,
                 )
             ]
         )
+    )
+    first_cursor_field = (
+        f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}={inputs.cursors[0]}"
+    )
+    second_cursor_field = (
+        f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}={inputs.cursors[1]}"
     )
 
     def responder(
         command: list[str],
         _kwargs: dict[str, object],
     ) -> subprocess.CompletedProcess[str]:
-        if f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}=comment-cursor-a" in command:
-            return completed(
-                command,
-                stdout=json.dumps(
-                    GITHUB_RESPONSE.thread_comments_payload(middle_comments)
-                ),
-            )
-        if f"{RESOLVER.GraphQLField.COMMENTS_AFTER.value}=comment-cursor-b" in command:
-            return completed(
-                command,
-                stdout=json.dumps(
-                    GITHUB_RESPONSE.thread_comments_payload(repeated_comments)
-                ),
-            )
-        return completed(command, stdout=json.dumps(threads_page))
+        if first_cursor_field in command:
+            response = GITHUB_RESPONSE.thread_comments_payload(middle_comments)
+        elif second_cursor_field in command:
+            response = GITHUB_RESPONSE.thread_comments_payload(repeated_comments)
+        else:
+            response = threads_page
+        return completed(command, stdout=json.dumps(response))
 
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        responder,
-    )
+    run = run_resolver(inputs.discovery_argv(inputs.database_ids[0]), responder)
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.COMMENTS_CURSOR_PROGRESS.value in run.stderr
 
 
-def test_repeated_thread_page_cursor_returns_error() -> None:
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_repeated_thread_page_cursor_returns_error(inputs: ResolverInputs) -> None:
     initial_page = GITHUB_RESPONSE.threads_payload(
         GITHUB_RESPONSE.review_threads(
             nodes=[],
             has_next_page=True,
-            end_cursor="thread-cursor-a",
+            end_cursor=inputs.cursors[0],
         )
     )
     middle_page = GITHUB_RESPONSE.threads_payload(
         GITHUB_RESPONSE.review_threads(
             nodes=[],
             has_next_page=True,
-            end_cursor="thread-cursor-b",
+            end_cursor=inputs.cursors[1],
         )
     )
     repeated_page = GITHUB_RESPONSE.threads_payload(
         GITHUB_RESPONSE.review_threads(
-            nodes=[
-                GITHUB_RESPONSE.thread(
-                    thread_id=RESOLVER.format_thread_id("thread0025"),
-                    comments=GITHUB_RESPONSE.comments(
-                        nodes=[
-                            GITHUB_RESPONSE.comment(
-                                node_id=RESOLVER.format_review_comment_node_id(
-                                    "comment0025"
-                                ),
-                                database_id=909,
-                            )
-                        ],
-                        has_next_page=False,
-                    ),
-                )
-            ],
+            nodes=[],
             has_next_page=True,
-            end_cursor="thread-cursor-a",
+            end_cursor=inputs.cursors[0],
         )
+    )
+    first_cursor_field = (
+        f"{RESOLVER.GraphQLField.THREADS_AFTER.value}={inputs.cursors[0]}"
+    )
+    second_cursor_field = (
+        f"{RESOLVER.GraphQLField.THREADS_AFTER.value}={inputs.cursors[1]}"
     )
 
     def responder(
         command: list[str],
         _kwargs: dict[str, object],
     ) -> subprocess.CompletedProcess[str]:
-        if f"{RESOLVER.GraphQLField.THREADS_AFTER.value}=thread-cursor-a" in command:
-            return completed(command, stdout=json.dumps(middle_page))
-        if f"{RESOLVER.GraphQLField.THREADS_AFTER.value}=thread-cursor-b" in command:
-            return completed(command, stdout=json.dumps(repeated_page))
-        return completed(command, stdout=json.dumps(initial_page))
+        if first_cursor_field in command:
+            response = middle_page
+        elif second_cursor_field in command:
+            response = repeated_page
+        else:
+            response = initial_page
+        return completed(command, stdout=json.dumps(response))
 
-    run = run_resolver(
-        [
-            RESOLVER.ResolverOption.REPOSITORY.value,
-            "outcomeeng/plugins",
-            RESOLVER.ResolverOption.PULL_REQUEST.value,
-            "405",
-            RESOLVER.ResolverOption.REVIEW_COMMENT_ID.value,
-            "909",
-        ],
-        responder,
-    )
+    run = run_resolver(inputs.discovery_argv(inputs.database_ids[0]), responder)
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
     assert RESOLVER.ResolverErrorMessage.THREAD_CURSOR_PROGRESS.value in run.stderr
+
+
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_null_mutation_result_returns_error(inputs: ResolverInputs) -> None:
+    run = run_resolver_with_response(
+        [inputs.thread_ids[0]],
+        json.dumps(GITHUB_RESPONSE.mutation_payload(None)),
+    )
+
+    assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
+    assert (
+        RESOLVER.ResolverErrorMessage.RESOLVE_REVIEW_THREAD_PAYLOAD.value
+        in run.stderr
+    )
+
+
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_null_resolved_thread_returns_error(inputs: ResolverInputs) -> None:
+    fields = RESOLVER.GitHubResponseField
+    run = run_resolver_with_response(
+        [inputs.thread_ids[0]],
+        json.dumps(
+            GITHUB_RESPONSE.mutation_payload({fields.THREAD.value: None})
+        ),
+    )
+
+    assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
+    assert RESOLVER.ResolverErrorMessage.RESOLVED_THREAD_PAYLOAD.value in run.stderr
+
+
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_unresolved_mutation_result_returns_error(inputs: ResolverInputs) -> None:
+    run = run_resolver_with_response(
+        [inputs.thread_ids[0]],
+        json.dumps(GITHUB_RESPONSE.resolution_payload(is_resolved=False)),
+    )
+
+    assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
+    assert RESOLVER.ResolverErrorMessage.RESOLVED_THREAD_STATE.value in run.stderr
+
+
+@resolver_generated_evidence
+@given(inputs=resolver_inputs())
+def test_missing_mutation_resolution_state_returns_error(
+    inputs: ResolverInputs,
+) -> None:
+    fields = RESOLVER.GitHubResponseField
+    run = run_resolver_with_response(
+        [inputs.thread_ids[0]],
+        json.dumps(
+            GITHUB_RESPONSE.mutation_payload({fields.THREAD.value: {}})
+        ),
+    )
+
+    assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
+    assert RESOLVER.ResolverErrorMessage.RESOLVED_THREAD_STATE.value in run.stderr

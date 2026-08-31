@@ -20,7 +20,7 @@ from outcomeeng_testing.harnesses.review_thread_resolver import (
 def test_malformed_inputs_fail_before_github_calls(argv: tuple[str, ...]) -> None:
     run = run_resolver(
         argv,
-        lambda command, _kwargs: completed(command, returncode=97),
+        lambda command, _kwargs: completed(command),
     )
 
     assert run.returncode == RESOLVER.ResolverExitCode.INVALID_INPUT
