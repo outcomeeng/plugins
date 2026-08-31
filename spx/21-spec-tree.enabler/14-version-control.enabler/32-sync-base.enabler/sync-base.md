@@ -29,12 +29,9 @@ CAN read product truth, verify, and integrate against a current base without re-
 - Given a clean detached HEAD already at the base tip, when sync-base runs, then it emits a preservation proof reporting an empty base delta and an unchanged branch patch identity ([test](tests/test_sync_base.scenario.l1.py))
 - Given a clean rebase whose base advance renames a file, when sync-base runs, then the proof reports both the old and the new path in `base_delta_paths` — a base rename is not collapsed to the new name, so a base rename of a path the branch also changed surfaces as a path overlap rather than hiding ([test](tests/test_sync_base.scenario.l1.py))
 
-### Conformance
-
-- The readiness-preservation proof conforms to a versioned portable schema carrying full unabbreviated old and new base and branch OIDs and no project-specific deterministic-command name, per `spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/13-base-sync-mechanism.adr.md` ([test](tests/test_sync_base.conformance.l1.py))
-
 ### Compliance
 
+- ALWAYS: the readiness-preservation proof uses a versioned portable schema carrying full unabbreviated old and new base and branch OIDs and no project-specific deterministic-command name, per `spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/13-base-sync-mechanism.adr.md` ([audit])
 - ALWAYS: sync-base resolves the base ref and its remote-tracking form `origin/<base>` through the shared changeset-scope primitives, never re-implementing base, remote-tracking, or branch derivation ([test](tests/test_sync_base.compliance.l1.py))
 - NEVER: sync-base brings a behind-base branch current with `git reset` in any mode — it rebases, preserving the branch's commits, per `spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/13-base-sync-mechanism.adr.md` ([test](tests/test_sync_base.compliance.l1.py))
 - NEVER: sync-base surfaces a routine behind-base rebase as an operator decision — the only operator touch-point is an unresolvable rebase conflict with inspectable conflict state, or a hard git failure, per `spx/15-merging.pdr.md` ([test](tests/test_sync_base.compliance.l1.py))

@@ -1099,47 +1099,6 @@ def workflow_run_block(step_name: str) -> str:
     return "\n".join(block) + "\n"
 
 
-def workflow_step_block(step_name: str) -> str:
-    """Return the full YAML block of one refresh-workflow step, for step assertions."""
-    workflow = distribution.REFRESH_WORKFLOW.path().read_text(encoding="utf-8")
-    lines = workflow.splitlines()
-    step_line = f"      - name: {step_name}"
-    start = lines.index(step_line)
-    block: list[str] = []
-    for line in lines[start:]:
-        if line.startswith("      - name: ") and block:
-            break
-        block.append(line)
-    return "\n".join(block) + "\n"
-
-
-def workflow_env_value(name: str) -> str:
-    """Return the value of one refresh-workflow ``env`` entry, for env assertions."""
-    workflow = distribution.REFRESH_WORKFLOW.path().read_text(encoding="utf-8")
-    prefix = f"      {name}: "
-    for line in workflow.splitlines():
-        if line.startswith(prefix):
-            return line.removeprefix(prefix).split(" #", maxsplit=1)[0].strip('"')
-    raise AssertionError(f"workflow env value not found: {name}")
-
-
-def justfile_recipe_body(justfile: str, recipe: str) -> str:
-    """Return the indented body of one justfile recipe, for recipe-binding assertions.
-
-    A recipe header is ``<recipe>:`` at column 0; its body is the following indented lines up to
-    the next unindented line. Scoping an invocation to the recipe body, rather than to the whole
-    file, is what makes a recipe-body swap falsifiable.
-    """
-    lines = justfile.splitlines()
-    start = lines.index(f"{recipe}:")
-    body: list[str] = []
-    for line in lines[start + 1 :]:
-        if line and not line[0].isspace():
-            break
-        body.append(line)
-    return "\n".join(body)
-
-
 def write_gh_stub(bin_dir: pathlib.Path, log_path: pathlib.Path) -> None:
     """Write a fake ``gh`` CLI into ``bin_dir`` that logs its args and accepts pr list/create."""
     stub = bin_dir / "gh"

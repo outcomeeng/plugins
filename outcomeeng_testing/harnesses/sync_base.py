@@ -383,11 +383,6 @@ def resolve_ref(repo: pathlib.Path, ref: str) -> str:
     return _git(repo, "rev-parse", ref)
 
 
-def merge_base_oid(repo: pathlib.Path, left: str, right: str) -> str:
-    """Return the full OID of the merge base between two refs in ``repo``."""
-    return _git(repo, "merge-base", left, right)
-
-
 def working_tree_has_tracked_changes(repo: pathlib.Path) -> bool:
     """Report whether the working tree has uncommitted changes to tracked files.
 

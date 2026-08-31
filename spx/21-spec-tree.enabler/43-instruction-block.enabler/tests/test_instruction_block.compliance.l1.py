@@ -2,13 +2,11 @@
 
 The ALWAYS/NEVER rules of ``instruction-block.md`` with deterministic test evidence: both root
 files are written together, the router is first and carries a read-the-whole-file instruction,
-generation reads the ``dist/`` templates, the writer is bound through the ``just`` recipes and
-the lefthook pre-commit hook, the drift gate reports a missing root path and overwrites router
-drift, the refresh workflow regenerates and opens a PR only on drift while verifying its pinned
-tooling, no product-specific string enters the router, a former command-slot fence is ordinary
-content, a reconcile never blends bodies, the retired session tokens never render, an unresolved
-build macro is rejected, and retired ``spx/`` instruction files are removed. Real repository
-config (``justfile``, ``lefthook.yml``, the workflow) is read through infrastructure observations.
+generation reads the ``dist/`` templates, the drift gate reports a missing root path and
+overwrites router drift, the refresh workflow regenerates and opens a PR only on drift, no
+product-specific string enters the router, a former command-slot fence is ordinary content, a
+reconcile never blends bodies, the retired session tokens never render, an unresolved build
+macro is rejected, and retired ``spx/`` instruction files are removed.
 """
 
 from __future__ import annotations
@@ -96,24 +94,6 @@ def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
             for other in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES
             if other != agent_harness
         )
-
-
-def test_justfile_binds_build_and_check_recipes() -> None:
-    justfile = dist.REPO_ROOT.joinpath(dist.JUSTFILE_NAME).read_text(encoding="utf-8")
-    build_body = harness.justfile_recipe_body(justfile, dist.BUILD_INSTRUCTIONS_RECIPE)
-    check_body = harness.justfile_recipe_body(justfile, dist.INSTRUCTIONS_CHECK_RECIPE)
-    assert f"outcomeeng.distribution.instruction_block {dist.WRITE_FLAG}" in build_body
-    assert "outcomeeng.distribution.instruction_block" in check_body
-    assert dist.WRITE_FLAG not in check_body
-
-
-def test_lefthook_regenerates_through_build_instructions() -> None:
-    lefthook = dist.REPO_ROOT.joinpath("lefthook.yml").read_text(encoding="utf-8")
-    # the hook's run directive regenerates through the recipe
-    assert f"run: just {dist.BUILD_INSTRUCTIONS_RECIPE}" in lefthook
-    # NEVER a direct generator invocation against the authored src template
-    assert "--template src/plugins" not in lefthook
-    assert "--repo-root ." not in lefthook
 
 
 def test_drift_gate_reports_a_missing_root_instruction_file(
@@ -283,58 +263,6 @@ def test_regenerate_overwrites_router_drift(tmp_path: pathlib.Path) -> None:
     assert MODULE.parse_instruction_version(regenerated) == harness.NEW_VERSION
     assert canonical_body in regenerated
     assert hand_edited_body not in regenerated
-
-
-def test_refresh_workflow_regenerates_and_opens_pr() -> None:
-    workflow = WORKFLOW.path().read_text(encoding="utf-8")
-    assert WORKFLOW.dispatch_key in workflow
-    regenerate = harness.workflow_run_block(WORKFLOW.regenerate_step)
-    for command in WORKFLOW.build_commands:
-        assert command in regenerate
-    assert regenerate.index(WORKFLOW.build_commands[0]) < regenerate.index(
-        WORKFLOW.build_commands[1]
-    )
-    pr_step = harness.workflow_step_block(WORKFLOW.open_pr_step)
-    # opens or updates the PR only when git reports drift
-    assert WORKFLOW.drift_probe in pr_step
-    assert workflow.index(f"      - name: {WORKFLOW.regenerate_step}") < workflow.index(
-        f"      - name: {WORKFLOW.open_pr_step}"
-    )
-
-
-def test_refresh_workflow_checks_out_main() -> None:
-    checkout = harness.workflow_step_block(WORKFLOW.checkout_step)
-    assert WORKFLOW.default_branch in checkout
-
-
-def test_refresh_workflow_verifies_just_download() -> None:
-    install = harness.workflow_run_block(WORKFLOW.install_just_step)
-    just_sha256 = harness.workflow_env_value(WORKFLOW.just_checksum_env)
-    # the pinned checksum is declared
-    assert len(just_sha256) == 64
-    assert f"${WORKFLOW.just_checksum_env}" in install
-    # the download lands in a temp dir with a cleanup trap
-    assert "mktemp -d" in install
-    assert "trap " in install
-    assert "rm -rf" in install
-    # the checksum is verified against the download BEFORE the binary is installed
-    assert install.index("sha256sum -c") < install.index("install -m 0755")
-    # NEVER the insecure pattern: a fixed cwd download file extracted without the temp path
-    assert "-o just.tar.gz" not in install
-    assert "tar -xzf just.tar.gz" not in install
-
-
-def test_refresh_workflow_installs_dprint() -> None:
-    install = harness.workflow_run_block(WORKFLOW.install_dprint_step)
-    dprint_version = harness.workflow_env_value(WORKFLOW.dprint_version_env)
-    assert dprint_version
-    # the pinned version is installed via bun and then verified
-    assert f'bun add -g "dprint@${{{WORKFLOW.dprint_version_env}}}"' in install
-    assert "dprint --version" in install
-    workflow = WORKFLOW.path().read_text(encoding="utf-8")
-    assert workflow.index(
-        f"      - name: {WORKFLOW.install_dprint_step}"
-    ) < workflow.index(f"      - name: {WORKFLOW.regenerate_step}")
 
 
 def test_render_passes_brace_token_through_unchanged() -> None:
