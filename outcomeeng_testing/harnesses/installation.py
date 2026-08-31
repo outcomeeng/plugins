@@ -2053,6 +2053,17 @@ class CodexRoleDiscoveryHarness:
         return cls(selected_codex_home, RecordingRoleDiscoveryRunner())
 
     @classmethod
+    def with_login(
+        cls,
+        temporary_root: Path,
+        *,
+        login_payload: str,
+    ) -> CodexRoleDiscoveryHarness:
+        """Create selected login state with no process execution."""
+        selected_codex_home = cls._write_login(temporary_root, login_payload)
+        return cls(selected_codex_home, RecordingRoleDiscoveryRunner())
+
+    @classmethod
     def with_captured_stream(
         cls,
         temporary_root: Path,
@@ -2283,10 +2294,13 @@ def _required_selected_codex_login_path(
     return login_path
 
 
-def selected_codex_login_state_available() -> bool:
+def selected_codex_login_state_available(
+    selected_codex_home: Path | None = None,
+) -> bool:
     """Report whether the selected Codex home can authenticate a real probe."""
     try:
-        _required_selected_codex_login_path()
+        login_path = _required_selected_codex_login_path(selected_codex_home)
+        _credential_scalars(login_path)
     except RuntimeError:
         return False
     return True

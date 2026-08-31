@@ -21,6 +21,7 @@ from outcomeeng_testing.generators.installation import (
     generated_codex_login_payload,
     generated_codex_login_payload_with_metadata,
     generated_unknown_codex_login_payload,
+    generated_unusable_codex_login_payloads,
 )
 from outcomeeng_testing.harnesses.installation import (
     CODEX_CREDENTIAL_TOKEN_FIELDS,
@@ -38,6 +39,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_failed_run_restore,
     observe_noncanonical_reconciliation,
     observe_scope_split,
+    selected_codex_login_state_available,
     skill_enabling_definition,
 )
 
@@ -397,6 +399,42 @@ def test_missing_selected_codex_login_state_fails_before_any_agent_process(
     with pytest.raises(RuntimeError, match="required Codex login state"):
         harness.observe()
 
+    assert harness.commands == ()
+
+
+@pytest.mark.parametrize(
+    "login_payload",
+    generated_unusable_codex_login_payloads(CODEX_TOKEN_METADATA_FIELDS),
+)
+def test_unusable_selected_codex_login_state_is_unavailable_before_probe(
+    tmp_path: Path,
+    login_payload: str,
+) -> None:
+    harness = CodexRoleDiscoveryHarness.with_login(
+        tmp_path,
+        login_payload=login_payload,
+    )
+
+    available = selected_codex_login_state_available(harness.selected_codex_home)
+
+    assert available is False
+    assert harness.commands == ()
+
+
+@pytest.mark.parametrize("credential_field", sorted(CODEX_CREDENTIAL_TOKEN_FIELDS))
+def test_credential_bearing_selected_codex_login_state_is_available(
+    tmp_path: Path,
+    credential_field: str,
+) -> None:
+    login = generated_codex_login_payload(credential_field)
+    harness = CodexRoleDiscoveryHarness.with_login(
+        tmp_path,
+        login_payload=login.text,
+    )
+
+    available = selected_codex_login_state_available(harness.selected_codex_home)
+
+    assert available is True
     assert harness.commands == ()
 
 

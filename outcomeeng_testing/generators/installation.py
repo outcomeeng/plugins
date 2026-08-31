@@ -81,6 +81,20 @@ def generated_codex_login_payload_with_metadata(
     )
 
 
+def generated_unusable_codex_login_payloads(
+    metadata_fields: Collection[str],
+) -> tuple[str, ...]:
+    """Generate every login-document shape that cannot authenticate a probe."""
+    metadata_tokens = {
+        field: f"generated-{field}-metadata-value" for field in metadata_fields
+    }
+    return (
+        "{",
+        json.dumps({"tokens": {}}),
+        json.dumps({"tokens": metadata_tokens}),
+    )
+
+
 def catalog_plugin_names_from_bytes(payload: bytes) -> tuple[str, ...]:
     """Read catalog order from raw bytes independently of the production parser."""
     document = cast(
@@ -268,5 +282,6 @@ __all__ = [
     "generated_invalid_catalog_subsets",
     "generated_persistent_catalog_selections",
     "generated_unknown_codex_login_payload",
+    "generated_unusable_codex_login_payloads",
     "generated_valid_catalog_subsets",
 ]
