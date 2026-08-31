@@ -27,7 +27,7 @@ That first row is applied. The deletion left both root files citing a rule that 
 
 ### Sequencing
 
-The four router additions total roughly thirteen lines. The node's `ISSUES.md` records that the router block carries no size ceiling and that every methodology advance grows an eager per-session cost for every consumer; this migration adds to that cost with no offsetting removal, so it is the natural changeset in which to settle the budget question rather than compound it silently.
+The four router additions total roughly thirteen lines. The render model declares the 32768-byte project-doc ceiling and the gate measures every render against it, so these additions land against a measured budget; the remaining router-reduction units below own the room they spend into.
 
 ## Codex project-doc budget: remaining units of Change #7
 
