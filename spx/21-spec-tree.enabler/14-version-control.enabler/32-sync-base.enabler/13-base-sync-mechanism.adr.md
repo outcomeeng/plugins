@@ -45,5 +45,6 @@ Rejected: emitting a project-specific deterministic-command name (a `just check`
 
 ### Audit
 
-- ALWAYS: every Git subprocess interaction crosses a dependency-injected runner parameter typed by a Protocol; the production default implements that Protocol with `subprocess`, while controlled implementations expose observations and leave every predicate to the linked test ([audit])
-- NEVER: framework mocking, monkeypatching, matcher-driven spies, or collaborator-owned verdict methods replace the Git runner boundary; tests inject Protocol implementations and own every assertion ([audit])
+- ALWAYS: every Git subprocess interaction crosses a dependency-injected runner parameter typed by a Protocol; the production default and ordinary linked tests use `SubprocessGitRunner` to exercise real Git ([audit])
+- ALWAYS: an alternative Git runner is admissible only when `/test` records the applicable Stage 5 `failure simulation`, `interaction protocols`, or `observability` exception; it preserves the Git command boundary, exposes observations only, and leaves every predicate to the linked test ([audit])
+- NEVER: framework mocking, monkeypatching, matcher-driven spies, or collaborator-owned verdict methods replace the Git runner boundary; linked tests own every assertion ([audit])
