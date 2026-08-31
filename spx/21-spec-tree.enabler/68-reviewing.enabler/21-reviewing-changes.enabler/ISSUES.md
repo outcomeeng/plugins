@@ -208,3 +208,22 @@ Reconstruct the preserved review-journal and result-contract work from current `
 The extraction includes this node's spec, review prompt, journal runner and result contracts, co-located tests and evals, and the smallest review-specific harness or generator changes they require. Eval-harness capabilities that can merge independently remain in `spx/13-infrastructure.enabler/25-eval-harness.enabler/PLAN.md`; merge policy that consumes the token remains in `spx/21-spec-tree.enabler/76-merge.enabler/PLAN.md`.
 
 **Revisit condition:** replace this section with the extracted branch and PR identity after focused tests, evidence audits, and rollback analysis establish one review-owned cluster.
+
+## The property test declares Hypothesis settings the harness owns
+
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
+places property-run execution configuration — seed selection, run counts, replay
+input, and failure diagnostics — in a property-test harness.
+`tests/test_review_result.property.l1.py` declares `@settings(...)` Hypothesis
+configuration in the test file instead. The replayable-property wrapper pattern
+exists in `outcomeeng_testing/harnesses/gate.py` (`selected_gate_property`); a
+shared wrapper in `outcomeeng_testing/harnesses/` can serve this node and the
+two others carrying the same pattern (each tracked in its own `ISSUES.md`).
+
+**Resolution shape**: route the property test through a harness-owned wrapper
+that owns the Hypothesis profile and replay diagnostics, then re-run
+`test-evidence-auditor` over the node — folding into entry 2's evidence rewrite
+when that lands first.
+
+**Evidence**: surfaced by the test-evidence audit on PR #549 as the same
+pattern used identically in this file.

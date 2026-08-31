@@ -48,3 +48,30 @@ rather than bundled into a bug fix.
 **Revisit condition**: resolve before the next behavioral change to
 `outcomeeng_testing/harnesses/gate_signal.py`, so the seam is repaired while that
 harness is already in context.
+
+## The property tests declare Hypothesis settings the harness owns
+
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
+places property-run execution configuration — seed selection, run counts, replay
+input, and failure diagnostics — in a property-test harness.
+`tests/test_gate.property.l1.py` declares `@settings(max_examples=MAX_EXAMPLES,
+deadline=None)` and the module-level `MAX_EXAMPLES` constant in the test file
+instead. The replayable-property wrapper pattern already exists in
+`outcomeeng_testing/harnesses/gate.py` (`selected_gate_property`), so the fix is
+to route both property tests through a harness-owned wrapper of that shape.
+
+The same pattern sits in two other nodes' property files, each tracked in its
+own `ISSUES.md`; one shared wrapper in `outcomeeng_testing/harnesses/` can serve
+all three.
+
+**Resolution shape**: add a harness-owned property wrapper for this node's
+generated step-list domain, move the settings into it, and re-run
+`test-evidence-auditor` over the node.
+
+**Evidence**: test-evidence audit on the gate predicate-seam changeset
+(PR #549, head `23ebaa5d7e56ab311a40641151c5c048382efba2`), findings f-001 and
+f-002, WARNING severity — non-blocking because Hypothesis's default failure
+report carries the replay hint.
+
+**Revisit condition**: resolve with the next behavioral change to this node's
+test evidence, alongside the signal-harness seam entry above.

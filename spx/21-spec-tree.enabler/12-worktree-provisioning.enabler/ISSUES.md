@@ -42,3 +42,22 @@ refusal and fail-fast cases plus the origin-URL derivation cases — and re-poin
 the four assertion links. The scenario file keeps its genuinely existential
 cases. Route the work through `/test`, which owns assertion typing and level
 selection.
+
+## The property test declares Hypothesis settings the harness owns
+
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
+places property-run execution configuration — seed selection, run counts, replay
+input, and failure diagnostics — in a property-test harness.
+`tests/test_worktree_provisioning.property.l1.py` declares `@settings(...)`
+Hypothesis configuration in the test file instead. The replayable-property
+wrapper pattern exists in `outcomeeng_testing/harnesses/gate.py`
+(`selected_gate_property`); a shared wrapper in `outcomeeng_testing/harnesses/`
+can serve this node and the two others carrying the same pattern (each tracked
+in its own `ISSUES.md`).
+
+**Resolution shape**: route the property test through a harness-owned wrapper
+that owns the Hypothesis profile and replay diagnostics, then re-run
+`test-evidence-auditor` over the node.
+
+**Evidence**: surfaced by the test-evidence audit on PR #549 as the same
+pattern used identically in this file.
