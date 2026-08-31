@@ -382,6 +382,7 @@ def pipeline_run_observation(
         exit_code=exit_code,
         output=sink.getvalue(),
         spawn_calls=tuple(spawner.spawn_calls),
+        written_outputs=tuple(spawner.written_outputs),
         retained_logs=tuple(
             path.read_text(encoding="utf-8") if path.exists() else None
             for path in spawner.output_paths
@@ -438,7 +439,6 @@ def _observe_recipe_run(
         exit_code=exit_code,
         output=sink.getvalue(),
         spawn_calls=tuple(spawner.spawn_calls),
-        written_outputs=tuple(spawner.written_outputs),
         retained_logs=tuple(
             path.read_text(encoding="utf-8") if path.exists() else None
             for path in spawner.output_paths
