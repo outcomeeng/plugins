@@ -22,6 +22,7 @@ from outcomeeng.validation import (
     SPAWN_FAILURE_EXIT_CODE,
     STEP_FAIL_STATUS,
     STEP_PASS_STATUS,
+    SUMMARY_KEY_ARGV,
     SUMMARY_KEY_EXCERPT,
     SUMMARY_KEY_EXIT_CODE,
     SUMMARY_KEY_LOG_PATH,
@@ -158,9 +159,10 @@ def test_a_failing_step_stops_the_pipeline_and_retains_its_log() -> None:
 
 def test_a_failing_recipe_step_records_excerpt_and_log_path() -> None:
     failing_output = f"{FAILING_CHILD_OUTPUT_PREFIX} retained"
+    recipe = single_step_recipe(RECIPE_VALIDATION)
 
     run = recipe_run_observation(
-        recipe=single_step_recipe(RECIPE_VALIDATION),
+        recipe=recipe,
         exit_codes=[PASS_EXIT_CODE, FAIL_EXIT_CODE],
         outputs=[PASSING_CHILD_OUTPUT, failing_output],
     )
@@ -171,16 +173,21 @@ def test_a_failing_recipe_step_records_excerpt_and_log_path() -> None:
     assert run.summary[SUMMARY_KEY_PHASE] == PHASE_RECIPE
     assert run.summary[SUMMARY_KEY_EXIT_CODE] == FAIL_EXIT_CODE
     assert steps[1][SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
+    assert steps[1][SUMMARY_KEY_ARGV] == list(recipe.steps[0].argv)
     assert steps[1][SUMMARY_KEY_EXCERPT] == failing_output
     assert run.retained_logs[1] == failing_output
     assert steps[1][SUMMARY_KEY_LOG_PATH] == run.log_paths[1]
+    assert run.summary_path in run.output
 
 
 def test_a_spawn_failure_is_recorded_with_its_message() -> None:
-    run = spawn_failure_observation(recipe=single_step_recipe(RECIPE_VALIDATION))
+    recipe = single_step_recipe(RECIPE_VALIDATION)
+
+    run = spawn_failure_observation(recipe=recipe)
 
     steps = summary_steps(run.summary)
     assert run.exit_code == SPAWN_FAILURE_EXIT_CODE
+    assert f"{STEP_FAIL_STATUS}  {recipe.preflight_steps[0].label}" in run.output
     assert run.summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
     assert run.summary[SUMMARY_KEY_PHASE] == PHASE_PREFLIGHT
     assert run.summary[SUMMARY_KEY_EXIT_CODE] == SPAWN_FAILURE_EXIT_CODE
