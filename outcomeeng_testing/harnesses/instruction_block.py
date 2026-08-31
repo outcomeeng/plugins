@@ -947,6 +947,39 @@ def run_generator_check(
     return result, output.getvalue().strip()
 
 
+def run_generator_check_with_diagnostics(
+    repo_root: pathlib.Path,
+    template_path: pathlib.Path,
+    *,
+    languages: str | None = None,
+) -> tuple[int, str, str]:
+    """Run the real ``--check`` surface and return exit code, stdout verdict, and stderr.
+
+    The verdict word stays the stdout contract; per-file diagnostics such as the budget
+    report lines go to stderr, so this runner captures both streams for tests that read
+    the diagnostics beside the verdict.
+    """
+    output = io.StringIO()
+    errors = io.StringIO()
+    cases = generated_cases()
+    selected_languages = cases.lang_primary if languages is None else languages
+    with redirect_stdout(output), redirect_stderr(errors):
+        result = cast(
+            int,
+            load_instruction_block_module().main(
+                [
+                    "--template",
+                    str(template_path),
+                    "--repo-root",
+                    str(repo_root),
+                    f"--languages={selected_languages}",
+                    "--check",
+                ]
+            ),
+        )
+    return result, output.getvalue().strip(), errors.getvalue()
+
+
 def run_generator_reconcile(
     repo_root: pathlib.Path, template_path: pathlib.Path
 ) -> tuple[int, str]:
