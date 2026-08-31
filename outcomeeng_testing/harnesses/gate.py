@@ -28,7 +28,6 @@ from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation import (
-    CHECK_RECIPES,
     MYPY_ARGV,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
@@ -278,16 +277,6 @@ def run_gate_property(assertion: Callable[[], None]) -> None:
         configured,
         seed_value=GATE_PROPERTY_SEED,
         replay_path=GATE_PROPERTY_REPLAY_PATH,
-    )
-
-
-def expected_full_check_spawn_calls() -> tuple[tuple[str, ...], ...]:
-    """Expected argv calls when selected-check escalates to the full wrapper."""
-
-    return tuple(
-        step.argv
-        for recipe in CHECK_RECIPES
-        for step in (*PREFLIGHT_STEPS, *recipe.steps)
     )
 
 
