@@ -3,7 +3,7 @@ The shared merge-lifecycle vocabulary of concepts, predicates, gates, commands, 
 </objective>
 
 <contents>
-Top-level sections in this reference, in order: `<repo_local_overlay>`, `<overlay_safety_checks>`, `<delivered_value_boundary>`, `<close_phase>`, `<branch_state_closeout>`, `<local_deterministic_scope>`, `<assigned_cwd_worktree_discipline>`, `<occupancy_preflight>`, `<branch_hygiene>`, `<branch_topology>`, `<push_semantics>`, `<base_sync>`, `<local_review_invocation>`, `<local_review_process_exception>`, `<authority_gates>`, `<merge_cleanup>`, `<pr_check_wait>`, `<review_inspection>`, `<review_classification>`, `<auditor_verdicts>`, `<action_tokens>`, `<self_reference>`, `<failure_modes>`, `<success_criteria>`.
+Top-level sections in this reference, in order: `<repo_local_overlay>`, `<overlay_safety_checks>`, `<delivered_value_boundary>`, `<close_phase>`, `<branch_state_closeout>`, `<local_deterministic_scope>`, `<assigned_cwd_worktree_discipline>`, `<occupancy_preflight>`, `<branch_hygiene>`, `<branch_topology>`, `<push_semantics>`, `<base_sync>`, `<verification_dispatch_readiness>`, `<local_review_invocation>`, `<local_review_process_exception>`, `<authority_gates>`, `<merge_cleanup>`, `<pr_check_wait>`, `<review_inspection>`, `<review_classification>`, `<verification_result_projection>`, `<auditor_verdicts>`, `<action_tokens>`, `<self_reference>`, `<failure_modes>`, `<success_criteria>`.
 </contents>
 
 <repo_local_overlay>
@@ -248,6 +248,37 @@ Integrate base movement only by rebase through `/sync-base`. The same prohibitio
 
 </base_sync>
 
+<verification_dispatch_readiness>
+
+Before every local auditor or reviewer dispatch, emit one structured `VERIFICATION_DISPATCH_READY` record for the exact subject:
+
+```json
+{
+  "schemaVersion": 1,
+  "objective": "one active objective",
+  "subjectHead": "full committed HEAD SHA",
+  "worktreeClean": true,
+  "changedPaths": ["complete repository-relative path set"],
+  "governingNodes": ["complete canonical spx/... node set"],
+  "deterministicResults": [{ "command": "exact command", "exitCode": 0 }],
+  "sameClassScans": [{ "defectClass": "class or preflight concern", "scope": "files inspected", "method": "query or structural inspection", "matches": ["paths"], "dispositions": ["fixed or isolated"] }],
+  "assertionDesignRecords": [{ "assertion": "changed test assertion", "caseProvenance": "owner", "oracleOwner": "owner", "rejectedMutation": "production mutation", "failureObservation": "linked predicate" }],
+  "runOwnership": { "verificationType": "audit or review", "runIdentity": "fresh identity", "writer": "one dispatch owner", "state": "reserved" },
+  "priorRejections": [],
+  "unresolved": []
+}
+```
+
+The record is complete only when all changed paths serve the active objective or have been split from the changeset, every applicable deterministic command passed on `subjectHead`, every known finding has a same-class scan and disposition, every added or repaired test carries the assertion-design record required by `/test-evidence-standards`, and `unresolved` is empty. Relocating an expected value preserves its provenance; a new file or symbol never makes an implementation-derived expectation independent.
+
+The record is ready only when `runOwnership` reserves a fresh run identity for one named dispatch owner and no conflicting writer exists. Reconcile any active, completed, abandoned, or colliding run before dispatch. Never send two verifiers to write the same run, reuse a run identity for a changed head, or treat a journal collision as permission to retry under another path.
+
+After a rejection, append a `priorRejections` entry naming the verifier, exact head, finding identifiers, defect classes, failed repair invariant, root cause, widened repair rule, and same-class scan. Do not redispatch until the new head's record proves every rejection resolved. If a later rejection belongs to a recorded defect class, invalidate the prior repair invariant: stop localized patching, analyze why the class survived, widen the repair and scan, and amend the governing workflow, standard, or source contract before another dispatch. A new line number, file, or example does not create a new class.
+
+Missing fields, a dirty or changed subject, a nonzero deterministic result, a reused run identity, a conflicting writer, an objective/path mismatch, an unresolved item, or a repeated class with no amended invariant produces `VERIFICATION_DISPATCH_BLOCKED`; do not dispatch.
+
+</verification_dispatch_readiness>
+
 <local_review_invocation>
 
 The local `changes-reviewer` gate is the author-side, pre-push instance of the same review kind the CI review runs post-push — the two are the same class of gate on opposite sides of each push. Invoke it the way CI invokes its reviewer, passing nothing that narrows it:
@@ -257,7 +288,7 @@ The local `changes-reviewer` gate is the author-side, pre-push instance of the s
 - **Add no severity pre-filter.** Do not ask only for `BLOCKING`, do not suppress `DEBT`. The reviewer emits every finding; handling is by validity and phase per `<review_classification>`, downstream of the review and never inside its invocation.
 - **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions (CLAUDE.md and the standards skills) and the shared taxonomy itself.
 
-Run it via the `changes-reviewer` agent. The verifier agent session stays isolated from the authoring agent session that produced the changeset. Iterate to convergence: each round, act on findings by validity and phase per `<review_classification>`, until no valid finding remains unaddressed.
+Apply `<verification_dispatch_readiness>`, then run it via the `changes-reviewer` agent. The verifier agent session stays isolated from the authoring agent session that produced the changeset. Iterate to convergence: each round, act on findings by validity and phase per `<review_classification>`, until no valid finding remains unaddressed.
 
 This is the review predicate `VERIFICATION_READINESS` reads, and it runs before every push — the opening push and every managing-flow follow-up push — against the diff that push would publish. Narrowing the invocation diverges the local gate from the CI reviewer it parallels, so its convergence no longer means what `VERIFICATION_READINESS` claims it means.
 
@@ -347,6 +378,8 @@ Immediately before the merge mutation, apply the merge-cleanup reference loaded 
 </merge_cleanup>
 
 <pr_check_wait>
+
+Before starting the blocking wait, finish every author-side action that does not depend on new external state: inspect the current diff, resolve known findings, complete their same-class scans, run the applicable deterministic checks, update the readiness record, and commit the exact subject when a verifier or reviewer must read it. Start the wait only when external check or review state is the sole remaining input.
 
 Waiting for PR checks or the current-head CI review uses exactly one foreground command:
 
@@ -439,6 +472,14 @@ Required: <concrete change>
 
 </review_classification>
 
+<verification_result_projection>
+
+Preserve each complete verifier result once in its owning run journal or structured result record. Keep the working context to a bounded projection of at most 12 lines containing the result reference or raw review token, exact head, verdict, finding identifiers, defect classes, and next required action. Reopen the complete result by reference when a finding needs exact detail.
+
+Never paste, inject, or summarize the same complete verifier payload more than once during convergence or closeout. A later status, handoff, or merge record cites the stored result and bounded projection; it does not duplicate the full payload. This projection rule reduces context load without discarding the authoritative result.
+
+</verification_result_projection>
+
 <auditor_verdicts>
 
 Local auditor agents — `test-evidence-auditor`, `eval-evidence-auditor`, `adr-auditor`, `pdr-auditor`, `spec-auditor`, and `implementation-auditor` — emit structured findings for the slice they inspect. Language-specific audit concerns are composed through the installed `audit-{lang}-{code|tests|architecture}` skills, not through language-specific auditor agents.
@@ -447,7 +488,7 @@ Local auditor agents — `test-evidence-auditor`, `eval-evidence-auditor`, `adr-
 
 **Why auditor verdicts are authoritative.** Auditor agents invoke the same audit skills the operator would invoke directly; each verdict is the audit skill's structured output for its specific concern, not a separate discretionary decision. CI green and reviewer-bot approval do not erase an auditor REJECT because audit and review inspect different concerns: test evidence, PDR quality, architectural fitness, or language-specific code quality.
 
-**Loop semantics.** When an invoked workflow surfaces auditor verdicts while preparing or repairing a PR, handle every `REJECTED` or `UNKNOWN` overall verdict, `FAIL` or `UNKNOWN` row, and `REJECT` finding as in-slice work under `<review_classification>`: fix it or resolve the audit uncertainty, re-run the auditor, and repeat until no rejected or unknown in-slice audit work remains. `APPROVED` means the auditor found nothing in its scope. Auditor findings do not add a fourth PR-lifecycle gate and do not change the `MERGE_READINESS` predicate set in `<authority_gates>`.
+**Loop semantics.** When an invoked workflow surfaces auditor verdicts while preparing or repairing a PR, handle every `REJECTED` or `UNKNOWN` overall verdict, `FAIL` or `UNKNOWN` row, and `REJECT` finding as in-slice work under `<review_classification>`: fix it or resolve the audit uncertainty, update `<verification_dispatch_readiness>`, and repeat until no rejected or unknown in-slice audit work remains. A repeated defect class triggers the invariant-invalidating stop in that section before redispatch. `APPROVED` means the auditor found nothing in its scope. Auditor findings do not add a fourth PR-lifecycle gate and do not change the `MERGE_READINESS` predicate set in `<authority_gates>`. Apply `<verification_result_projection>` to every collected result.
 
 </auditor_verdicts>
 
@@ -490,6 +531,10 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - The PR opens `ready_for_review` once `VERIFICATION_READINESS` holds — local deterministic verification per `<local_deterministic_scope>` passes, every required evidence-auditor predicate has passed, and the local review has converged — with no draft phase as a gating mechanism (a stacked PR held draft per `<branch_topology>` is the one exception).
 - All `VERIFICATION_READINESS` predicates — local deterministic verification per `<local_deterministic_scope>`, required evidence-auditor predicates, and a converged local review — are re-established on the diff every push publishes: the opening push and every content-changing follow-up push; a push that only rebased onto an advanced base re-establishes them scoped by the `<base_sync>` preservation proof.
 - The local `changes-reviewer` gate is invoked per `<local_review_invocation>` over an exact committed subject from a clean worktree; the review derives its base/head scope, with no interpretive scope, severity pre-filter, or emphasis steering added.
+- Every local auditor and reviewer dispatch has a complete `VERIFICATION_DISPATCH_READY` record for the exact head, with objective/path alignment, deterministic success, same-class dispositions, required assertion-design records, one run writer, and no unresolved work.
+- A repeated rejected defect class invalidates the prior repair invariant and causes workflow, standard, or source-contract amendment before redispatch.
+- Complete verifier payloads are preserved once and later passes carry only the bounded projection defined by `<verification_result_projection>`.
+- Blocking waits begin only after every independent author-side inspection, repair, scan, check, record update, and required commit is complete.
 - Waiting for CI review or checks uses the exact PR-check wait command from `<pr_check_wait>`.
 - All three surfaces in `<review_inspection>` are inspected after every push, with `comments` always present in the `gh pr view --json` field list.
 - Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and acted on by validity and phase, never by severity.
