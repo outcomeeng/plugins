@@ -91,6 +91,8 @@ The case source and oracle remain independent of the implementation author and t
 
 Two mutation checks expose invalid seams and oracles. Inverting the predicate changes only the linked test; any required harness change means the harness encodes the assertion. Mutating or disabling the production behavior makes the evidence fail; continued success means the case source, oracle, or execution path is not independent.
 
+Before evidence is authored or repaired, its assertion design names the exact assertion and quantifier, production subject and observable seam, case-provenance owner, oracle owner, one concrete production mutation the evidence rejects, and the linked failure observation that mutation produces. An incomplete record stops evidence authoring. Moving a case or expected value into another artifact preserves its provenance; relocation never converts author-invented or implementation-derived truth into an independent source or oracle.
+
 ## Spec Traceability
 
 A test-infrastructure artifact is traceable to the spec tree through the same declaration path as any other infrastructure artifact. Category names are semantics, not required node slugs. A test-infrastructure artifact is traceable in one of two ways:
@@ -134,6 +136,7 @@ The decision accepts these trade-offs:
 - **Placement and derivability**: every test-infrastructure artifact lives at the language's normative path outside `spx/` and outside any `tests/` directory, and every such artifact is governed by a naturally placed spec node — so a methodology user derives the category from the implementation home or artifact behavior, derives the governing node from the evidence chain, and scans a test's imports to know whether each imported artifact is governed by this PDR.
 - **Ownership and one-way dependency**: source-owned domain truth comes from source modules, generated values from variable input domains, fixtures stay inert whole-payload inputs, harnesses manage resources and expose observations, and the linked test alone owns predicates and assertion calls; the dependency direction is one-way (test assertion files depend on test infrastructure; product modules never import it) — so a methodology user inspects the evidence chain to identify which layer owns each value and relies on shipping code carrying no test-infrastructure references.
 - **Full-chain audit**: test audits inspect the complete test-infrastructure chain, semantic binding ownership, case provenance, and oracle independence before approving evidence, naming the exact artifact that weakens evidence and the evidence property affected — not only the visible test file.
+- **Assertion design before implementation**: every authored or repaired test starts from a complete assertion-design record naming its seam, provenance, oracle, rejected production mutation, and failure observation; relocation preserves provenance and never creates independence.
 
 ## Verification
 
@@ -149,3 +152,5 @@ The decision accepts these trade-offs:
 - NEVER: the terms "test support", "test helpers", "test utilities", or "test tools" appear in the methodology, language standards, examples, paths, or audit skills as governing categories for harnesses, generators, or fixtures ([audit])
 - NEVER: a test-infrastructure module is imported into a product module — the dependency direction is `tests → infrastructure`, never `product → infrastructure` ([audit])
 - NEVER: a property, mapping, scenario, or compliance assertion relies on test infrastructure that weakens the assertion type it names; framework syntax or directory placement cannot upgrade example evidence into property, mapping, or compliance evidence ([audit])
+- ALWAYS: before authoring or repairing test evidence, record the assertion and quantifier, production subject and observable seam, case-provenance owner, oracle owner, one concrete assertion-relevant production mutation, and the linked failure observation that mutation must produce ([audit])
+- NEVER: treat relocating a case or expected value into production, a harness, a generator, a fixture, or an oracle module as changing its provenance or making it independent of the implementation path ([audit])
