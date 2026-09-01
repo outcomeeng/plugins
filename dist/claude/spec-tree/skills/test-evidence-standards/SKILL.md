@@ -129,6 +129,25 @@ Construction-derived expectations are valid only when the construction law is in
 
 </case_provenance_and_oracles>
 
+<assertion_design_record>
+
+Before writing or repairing test evidence, record the complete assertion design:
+
+| Field               | Required value                                                                                                                                |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Assertion           | Exact governing assertion and its quantifier                                                                                                  |
+| Production subject  | Behavior under test and the observable seam the test crosses                                                                                  |
+| Case provenance     | Spec sentence, source-owned domain, generator, governing rule, or whole-payload artifact that selects each case                               |
+| Oracle owner        | Independent standard, schema, contract, construction law, reference implementation, or real-system response that selects each expected result |
+| Rejected mutation   | One concrete mutation or disablement of assertion-relevant production behavior                                                                |
+| Failure observation | The exact linked-test observation or predicate that the mutation makes fail                                                                   |
+
+Do not author evidence while any field is missing, while the oracle reuses the production path, or while the named production mutation would leave the evidence passing. The record is a design prerequisite, not a post-hoc explanation for a test already written.
+
+Moving a case or expected value never changes its provenance. Relocating a value from a test into production, a harness, a generator, a fixture, or an oracle module preserves the source that originally selected it. Accept the relocated value only when the destination already owns that kind of truth and the record names an independent provenance source. Reject relocation used to turn an author-invented value or implementation-derived expectation into an apparently source-owned contract.
+
+</assertion_design_record>
+
 <type_level_permissions>
 
 The artifact set each assertion type permits and requires, per level where the type changes the answer. Each section composes with `<execution_levels>` — the level adds harness obligations, floor, and availability identically for every type — and defers case-source and oracle authority to `<assertion_type_litmus>`.
@@ -194,9 +213,11 @@ Language test standards are expression only. A language test standard cites its 
 
 <success_criteria>
 
+- Every authored or repaired test has a complete `<assertion_design_record>` naming an independent case source, oracle owner, rejected production mutation, and resulting failure observation.
 - Every behavioral predicate and assertion API call is lexically visible in the linked executed test function or callback.
 - Test-file bindings introduce no independently chosen data, expectations, setup policy, runner configuration, or verdict rules, with unlisted concerns decided by the two probes in `<artifact_ownership>`.
 - Every case and expected result has assertion-type-appropriate provenance independent of the implementation path under test.
+- Relocating a case or expected value preserves its provenance and never converts an author-invented or implementation-derived value into an independent oracle.
 - Every executed test file declares exactly one assertion type and one execution level through the canonical filename model, and its evidence satisfies that cell's permissions in `<type_level_permissions>` composed with `<execution_levels>`.
 - Execution level derives from dependency class alone, floored by the heaviest dependency among behavior, oracle, and enforcement mechanism.
 - Controlled implementations and recording collaborators preserve the real boundary and expose observations only.
