@@ -1627,10 +1627,19 @@ def observe_real_installation() -> RealInstallationObservation:
             persistent_mirror,
             selected_environment,
         )
-        persistent_subsets = generated_agent_subsets(
-            persistent_mirror,
-            include_spec_tree=True,
-        )
+        # The seed installs from the canonical marketplace, so it can seed only
+        # the plugins that marketplace publishes. A checkout plugin the
+        # marketplace has not published can never be installed state, so the
+        # persistent run never selects it; the pending-publication carve-out is
+        # exercised by the l1 scenario evidence with simulated agent output.
+        published = canonical_catalog_plugin_names()
+        persistent_subsets = {
+            agent: subset & published
+            for agent, subset in generated_agent_subsets(
+                persistent_mirror,
+                include_spec_tree=True,
+            ).items()
+        }
         _seed_persistent_plugins(
             persistent_mirror,
             selected_environment,
