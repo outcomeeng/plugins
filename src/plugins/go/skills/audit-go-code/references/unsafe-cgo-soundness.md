@@ -22,12 +22,12 @@ For each `unsafe` conversion:
 2. **Invariant holds.** Read the surrounding code and cross-reference the documented invariant against the hazard categories below. The comment must name the real precondition, not restate the operation.
 3. **Hazard categories.** Check the conversion against each category that applies; the first violated category rejects the site.
 
-| Category  | Rule prefix | Hazard                                                                                      |
-| --------- | ----------- | ------------------------------------------------------------------------------------------- |
-| Lifetime  | `ptr-*`     | The referent outlives every use; no pointer derived from a value the garbage collector may move or free |
-| Aliasing  | `ptr-*`     | A string produced by `unsafe.String` is never mutated through the original bytes             |
-| Layout    | `ptr-*`     | Struct layout assumptions match the Go spec and are not dependent on field reordering        |
-| Validity  | `ptr-*`     | No pointer arithmetic outside the six `unsafe.Pointer` patterns `go vet` accepts             |
+| Category | Rule prefix | Hazard                                                                                                  |
+| -------- | ----------- | ------------------------------------------------------------------------------------------------------- |
+| Lifetime | `ptr-*`     | The referent outlives every use; no pointer derived from a value the garbage collector may move or free |
+| Aliasing | `ptr-*`     | A string produced by `unsafe.String` is never mutated through the original bytes                        |
+| Layout   | `ptr-*`     | Struct layout assumptions match the Go spec and are not dependent on field reordering                   |
+| Validity | `ptr-*`     | No pointer arithmetic outside the six `unsafe.Pointer` patterns `go vet` accepts                        |
 
 ## Per-cgo-boundary checks
 

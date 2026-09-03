@@ -189,10 +189,10 @@ Use this path to access skill files:
 <reference_index>
 Detailed patterns and principles:
 
-| File                                              | Purpose                                                          |
-| ------------------------------------------------- | ---------------------------------------------------------------- |
-| `${CLAUDE_SKILL_DIR}/references/adr-patterns.md`  | Common ADR patterns for Go                                       |
-| `${CLAUDE_SKILL_DIR}/references/go-principles.md` | Packages, type-driven design, errors, concurrency, and modules   |
+| File                                              | Purpose                                                        |
+| ------------------------------------------------- | -------------------------------------------------------------- |
+| `${CLAUDE_SKILL_DIR}/references/adr-patterns.md`  | Common ADR patterns for Go                                     |
+| `${CLAUDE_SKILL_DIR}/references/go-principles.md` | Packages, type-driven design, errors, concurrency, and modules |
 
 </reference_index>
 

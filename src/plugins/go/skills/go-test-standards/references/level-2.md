@@ -17,12 +17,12 @@ Level 2 covers behavior that needs a local service, container, or an installed p
 
 <what_belongs_here>
 
-| Concern                          | Typical tooling                                  |
-| -------------------------------- | ------------------------------------------------ |
-| an installed or downloaded binary | harness-resolved binary, `os/exec`               |
-| local databases or queues        | `testcontainers-go`, repo-native harness         |
-| protocol adapters                | real local server, local sockets                 |
-| local browsers                   | a browser harness against a local server         |
+| Concern                           | Typical tooling                          |
+| --------------------------------- | ---------------------------------------- |
+| an installed or downloaded binary | harness-resolved binary, `os/exec`       |
+| local databases or queues         | `testcontainers-go`, repo-native harness |
+| protocol adapters                 | real local server, local sockets         |
+| local browsers                    | a browser harness against a local server |
 
 </what_belongs_here>
 

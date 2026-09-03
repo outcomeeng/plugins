@@ -52,12 +52,12 @@ Apply `go:test-go` principles. Tests MUST:
 
 **Rejection Criteria:**
 
-| Pattern Found                                | Verdict | Action                                                     |
-| -------------------------------------------- | ------- | ---------------------------------------------------------- |
-| `gomock`, `mockery`, `moq`, or `mock.Mock`   | REJECT  | Flag: "Tests use generated mocks — cannot safely refactor" |
-| Assertions on call counts only               | REJECT  | Flag: "Tests verify implementation, not behavior"          |
-| No tests found                               | REJECT  | Flag: "No test coverage — cannot safely refactor"          |
-| Tests use DI + behavior assertions           | ACCEPT  | Proceed with refactoring                                   |
+| Pattern Found                              | Verdict | Action                                                     |
+| ------------------------------------------ | ------- | ---------------------------------------------------------- |
+| `gomock`, `mockery`, `moq`, or `mock.Mock` | REJECT  | Flag: "Tests use generated mocks — cannot safely refactor" |
+| Assertions on call counts only             | REJECT  | Flag: "Tests verify implementation, not behavior"          |
+| No tests found                             | REJECT  | Flag: "No test coverage — cannot safely refactor"          |
+| Tests use DI + behavior assertions         | ACCEPT  | Proceed with refactoring                                   |
 
 **Step 3: Run Tests Before Changes**
 

@@ -81,11 +81,11 @@ var status string = "running"
 
 Choose the right Go construct for grouped constant values:
 
-| Pattern                                            | When to use                                                                      |
-| -------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `const Name Type = value`                          | Simple scalar compile-time constant                                              |
-| typed constants with `iota` and `String()`         | Closed set of values with type safety — prefer over bare string constants        |
-| package-level `var` map initialized once, or `sync.OnceValue` | Map-like constants with complex initialization                        |
+| Pattern                                                       | When to use                                                               |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `const Name Type = value`                                     | Simple scalar compile-time constant                                       |
+| typed constants with `iota` and `String()`                    | Closed set of values with type safety — prefer over bare string constants |
+| package-level `var` map initialized once, or `sync.OnceValue` | Map-like constants with complex initialization                            |
 
 ```go
 // ✅ preferred: a typed set for a closed vocabulary
@@ -273,15 +273,15 @@ Prefer Go-native tools and idioms unless a repo-local overlay says otherwise:
 
 <anti_patterns>
 
-| Anti-pattern                                   | Why it is rejected                                |
-| ---------------------------------------------- | ------------------------------------------------- |
-| stringly-typed domain states                   | loses invariants and discoverability              |
-| `context.Context` stored in a struct           | hides lifetime and cancellation from callers      |
-| discarded errors (`_ = f()`) in production paths | turns expected failures into silent corruption  |
-| exported mutable fields by default             | breaks encapsulation and invariant control        |
-| a mutex held across a blocking call            | deadlock and contention risk                      |
-| a goroutine with no exit condition             | leaks and unbounded resource growth               |
-| generated mocks as the default seam            | weakens evidence and severs reality-based testing |
-| `unsafe` used to bypass type design            | replaces clear design with soundness risk         |
+| Anti-pattern                                     | Why it is rejected                                |
+| ------------------------------------------------ | ------------------------------------------------- |
+| stringly-typed domain states                     | loses invariants and discoverability              |
+| `context.Context` stored in a struct             | hides lifetime and cancellation from callers      |
+| discarded errors (`_ = f()`) in production paths | turns expected failures into silent corruption    |
+| exported mutable fields by default               | breaks encapsulation and invariant control        |
+| a mutex held across a blocking call              | deadlock and contention risk                      |
+| a goroutine with no exit condition               | leaks and unbounded resource growth               |
+| generated mocks as the default seam              | weakens evidence and severs reality-based testing |
+| `unsafe` used to bypass type design              | replaces clear design with soundness risk         |
 
 </anti_patterns>

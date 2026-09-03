@@ -144,12 +144,12 @@ func SyncRepo(ctx context.Context, source, destination string, run RunFunc) (Syn
 
 **ADR Compliance rule to code mapping:**
 
-| ADR Verification rule                 | Code implements                                                   |
-| ------------------------------------- | ----------------------------------------------------------------- |
-| "ALWAYS accept runner as parameter"   | `func f(ctx, deps Runner)` or `func f(ctx, run RunFunc)`          |
-| "ALWAYS validate config at load time" | `encoding/json` + raw struct + parse function into a typed struct |
+| ADR Verification rule                 | Code implements                                                     |
+| ------------------------------------- | ------------------------------------------------------------------- |
+| "ALWAYS accept runner as parameter"   | `func f(ctx, deps Runner)` or `func f(ctx, run RunFunc)`            |
+| "ALWAYS validate config at load time" | `encoding/json` + raw struct + parse function into a typed struct   |
 | "NEVER use mock frameworks"           | hand-written interface implementations or recorder structs in tests |
-| "NEVER shell out without DI wrapper"  | no bare `exec.Command` in core logic                              |
+| "NEVER shell out without DI wrapper"  | no bare `exec.Command` in core logic                                |
 
 **Mocking prohibition in ADR language:**
 
@@ -167,11 +167,11 @@ Correct ADR language: "Use dependency injection to isolate X from Y" or "Accept 
 
 The architect needs enough testing context to write effective Verification rules. The auditor uses the same context to check whether those rules actually enable the right tests.
 
-| Level | Name        | Go Infrastructure                                                        | When to Use                                                 |
-| ----- | ----------- | ------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| 1     | Unit        | Go stdlib, `go test`, `t.TempDir()`, git, a binary built in-cycle        | Pure logic, parsing, validation, command building, in-cycle CLI |
-| 2     | Integration | local services, containers, databases, an installed binary               | Real DB adapters, local worker flows, released CLI          |
-| 3     | E2E         | external network, SaaS APIs, browsers, deployed systems                  | Full workflows with remote systems or browser UI            |
+| Level | Name        | Go Infrastructure                                                 | When to Use                                                     |
+| ----- | ----------- | ----------------------------------------------------------------- | --------------------------------------------------------------- |
+| 1     | Unit        | Go stdlib, `go test`, `t.TempDir()`, git, a binary built in-cycle | Pure logic, parsing, validation, command building, in-cycle CLI |
+| 2     | Integration | local services, containers, databases, an installed binary        | Real DB adapters, local worker flows, released CLI              |
+| 3     | E2E         | external network, SaaS APIs, browsers, deployed systems           | Full workflows with remote systems or browser UI                |
 
 **Key rules:**
 

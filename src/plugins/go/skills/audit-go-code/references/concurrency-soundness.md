@@ -40,12 +40,12 @@ For each `sync.Mutex` or `sync.RWMutex`:
 
 ## Hazard categories
 
-| Category     | Rule prefix | Hazard                                                                      |
-| ------------ | ----------- | --------------------------------------------------------------------------- |
-| Leak         | `goroutine-*` | Goroutine with no owner or no exit condition                              |
-| Cancellation | `context-*`   | Context not propagated, stored in a struct, or timeout hardcoded          |
+| Category     | Rule prefix   | Hazard                                                                          |
+| ------------ | ------------- | ------------------------------------------------------------------------------- |
+| Leak         | `goroutine-*` | Goroutine with no owner or no exit condition                                    |
+| Cancellation | `context-*`   | Context not propagated, stored in a struct, or timeout hardcoded                |
 | Deadlock     | `mutex-*`     | Lock held across a blocking call, lock copied by value, undocumented lock order |
-| Race         | `race-*`      | Shared state mutated from two goroutines without a channel, mutex, or atomic |
+| Race         | `race-*`      | Shared state mutated from two goroutines without a channel, mutex, or atomic    |
 
 Record each violation as a finding with `file`, `line`, the rule prefix, and the exact invariant that fails.
 

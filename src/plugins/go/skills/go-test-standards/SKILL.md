@@ -57,11 +57,11 @@ spx/.../tests/<subject>.<evidence>.<level>[.<runner>]_test.go
 
 **Level tokens** — the execution level, whose infrastructure `<level_tooling>` details:
 
-| Token | Level | Build constraint                                    |
-| ----- | ----- | --------------------------------------------------- |
-| `l1`  | 1     | none — `go test ./...` runs it                      |
-| `l2`  | 2     | `//go:build l2` as the file's first line             |
-| `l3`  | 3     | `//go:build l3` as the file's first line             |
+| Token | Level | Build constraint                         |
+| ----- | ----- | ---------------------------------------- |
+| `l1`  | 1     | none — `go test ./...` runs it           |
+| `l2`  | 2     | `//go:build l2` as the file's first line |
+| `l3`  | 3     | `//go:build l3` as the file's first line |
 
 `go test` is the default runner an omitted `<runner>` token names. A runner token appears only when the product declares a non-default runner such as `ginkgo`.
 
@@ -81,11 +81,11 @@ Product specs or decisions may restrict which levels the product supports. Follo
 <level_tooling>
 Choose the level from the heaviest dependency class among the behavior under test, the oracle, and the enforcement mechanism:
 
-| Level | Infrastructure                                                                                        | Typical mechanisms                                                    |
-| ----- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| 1     | Go stdlib, `go test`, `t.TempDir()`, the toolchain itself, a product binary the harness builds in-cycle | `testing`, pure functions, interface seams, `httptest`, `os/exec`  |
-| 2     | Local services, containers, databases, an installed or downloaded product binary, local browsers        | `testcontainers-go`, real adapters, harness-owned service lifecycle   |
-| 3     | External network, deployed systems, SaaS APIs, browser UI, shared environments                          | live API probes, browser automation, deployed CLI/API workflows       |
+| Level | Infrastructure                                                                                          | Typical mechanisms                                                  |
+| ----- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 1     | Go stdlib, `go test`, `t.TempDir()`, the toolchain itself, a product binary the harness builds in-cycle | `testing`, pure functions, interface seams, `httptest`, `os/exec`   |
+| 2     | Local services, containers, databases, an installed or downloaded product binary, local browsers        | `testcontainers-go`, real adapters, harness-owned service lifecycle |
+| 3     | External network, deployed systems, SaaS APIs, browser UI, shared environments                          | live API probes, browser automation, deployed CLI/API workflows     |
 
 Level rules:
 
@@ -101,22 +101,22 @@ Level rules:
 <router_mapping>
 After `/test` chooses the evidence and level, implement it with these Go patterns:
 
-| Router Decision                            | Go implementation                                                                   |
-| ------------------------------------------ | ----------------------------------------------------------------------------------- |
-| Stage 2 -> Level 1                         | `testing`, pure functions, `t.TempDir()`, hand-written interface implementations   |
-| Stage 2 -> Level 2                         | container and service harnesses, real local adapters, installed binaries           |
+| Router Decision                            | Go implementation                                                                    |
+| ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| Stage 2 -> Level 1                         | `testing`, pure functions, `t.TempDir()`, hand-written interface implementations     |
+| Stage 2 -> Level 2                         | container and service harnesses, real local adapters, installed binaries             |
 | Stage 2 -> Level 3                         | live API probes, deployed workflow tests, browser automation, remote contract checks |
-| Stage 3A: pure computation                 | direct function tests with structural assertions                                    |
-| Stage 3B: extract pure part                | pure function at Level 1, boundary at the outer level                               |
-| Stage 5 exception 1: failure simulation    | interface implementation returning deterministic errors                             |
-| Stage 5 exception 2: interaction protocols | recording implementation capturing calls                                            |
-| Stage 5 exception 3: time/concurrency      | injected clock, deterministic channels, `synctest` where the toolchain provides it  |
-| Stage 5 exception 4: safety                | recording or no-op implementation preserving the seam                               |
-| Stage 5 exception 5: combinatorial cost    | configurable in-memory implementation with real-shaped behavior                     |
-| Stage 5 exception 6: observability         | capture implementation for `slog` handlers, events, or serialized output            |
-| Stage 5 exception 7: contract probes       | `httptest` stub validated against the same contract schema                          |
-| compile-time contract                      | toolchain oracle — `go vet` or `go build` on an inert fixture package               |
-| universal invariant                        | property harness backed by `rapid`                                                  |
+| Stage 3A: pure computation                 | direct function tests with structural assertions                                     |
+| Stage 3B: extract pure part                | pure function at Level 1, boundary at the outer level                                |
+| Stage 5 exception 1: failure simulation    | interface implementation returning deterministic errors                              |
+| Stage 5 exception 2: interaction protocols | recording implementation capturing calls                                             |
+| Stage 5 exception 3: time/concurrency      | injected clock, deterministic channels, `synctest` where the toolchain provides it   |
+| Stage 5 exception 4: safety                | recording or no-op implementation preserving the seam                                |
+| Stage 5 exception 5: combinatorial cost    | configurable in-memory implementation with real-shaped behavior                      |
+| Stage 5 exception 6: observability         | capture implementation for `slog` handlers, events, or serialized output             |
+| Stage 5 exception 7: contract probes       | `httptest` stub validated against the same contract schema                           |
+| compile-time contract                      | toolchain oracle — `go vet` or `go build` on an inert fixture package                |
+| universal invariant                        | property harness backed by `rapid`                                                   |
 
 </router_mapping>
 
@@ -159,18 +159,18 @@ Apply every question in `/test-evidence-standards` `<common_litmus_questions>`, 
 <tooling>
 Use the lightest Go-native tool that preserves evidence:
 
-| Need                          | Preferred tooling                                                        |
-| ----------------------------- | ------------------------------------------------------------------------ |
-| L1 scenario and mapping tests | `testing`, `t.Run` tables, `cmp.Diff` for structured comparison          |
-| temp files or dirs            | `t.TempDir()`                                                            |
-| concurrency and time          | injected clock, `context.WithCancel`, `testing/synctest` where available |
-| property testing              | harness wrapper backed by `pgregory.net/rapid`                           |
-| CLI binaries                  | harness-built binary through `os/exec`, `exec.Cmd.Output()` to the test  |
-| HTTP boundaries               | `net/http/httptest`                                                      |
+| Need                          | Preferred tooling                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| L1 scenario and mapping tests | `testing`, `t.Run` tables, `cmp.Diff` for structured comparison                                            |
+| temp files or dirs            | `t.TempDir()`                                                                                              |
+| concurrency and time          | injected clock, `context.WithCancel`, `testing/synctest` where available                                   |
+| property testing              | harness wrapper backed by `pgregory.net/rapid`                                                             |
+| CLI binaries                  | harness-built binary through `os/exec`, `exec.Cmd.Output()` to the test                                    |
+| HTTP boundaries               | `net/http/httptest`                                                                                        |
 | textual golden output         | golden files under `internal/testinfra/fixtures/testdata/` when the output surface itself is the assertion |
-| compile-time or diagnostics   | `go vet` or `go build` run by a harness on an inert fixture package      |
-| local services or containers  | `testcontainers-go` or repo-native harnesses                             |
-| coverage                      | `go test -cover -coverprofile` when the repository uses coverage as evidence |
+| compile-time or diagnostics   | `go vet` or `go build` run by a harness on an inert fixture package                                        |
+| local services or containers  | `testcontainers-go` or repo-native harnesses                                                               |
+| coverage                      | `go test -cover -coverprofile` when the repository uses coverage as evidence                               |
 
 Golden-file tests are valid only when the textual or structured output surface is itself the contract. They are weak evidence for business logic that has a stronger structural assertion available.
 </tooling>
@@ -179,14 +179,14 @@ Golden-file tests are valid only when the textual or structured output surface i
 
 **Every value in a test has exactly one valid origin.** Run through this table for each test value before writing it.
 
-| Origin             | What it means                                                 | Where it lives                              |
-| ------------------ | ------------------------------------------------------------- | ------------------------------------------- |
-| Source-owned       | The production package defines and exports the value          | Import from that package                    |
-| Generator-produced | Pure code emits varied values each run                        | `internal/testinfra/generators/`            |
-| Harness-managed    | Infrastructure mediates interaction with an external resource | `internal/testinfra/harnesses/`             |
-| Fixture files      | An inert whole payload the code under test reads by path      | `internal/testinfra/fixtures/testdata/`     |
-| Assertion-assigned | The case the assertion type fixes rather than the test author | Inline in the `Test*` body                  |
-| Descriptive inline | Human-readable text in the subtest name or failure message    | Inline in the test file                     |
+| Origin             | What it means                                                 | Where it lives                          |
+| ------------------ | ------------------------------------------------------------- | --------------------------------------- |
+| Source-owned       | The production package defines and exports the value          | Import from that package                |
+| Generator-produced | Pure code emits varied values each run                        | `internal/testinfra/generators/`        |
+| Harness-managed    | Infrastructure mediates interaction with an external resource | `internal/testinfra/harnesses/`         |
+| Fixture files      | An inert whole payload the code under test reads by path      | `internal/testinfra/fixtures/testdata/` |
+| Assertion-assigned | The case the assertion type fixes rather than the test author | Inline in the `Test*` body              |
+| Descriptive inline | Human-readable text in the subtest name or failure message    | Inline in the test file                 |
 
 Each origin below has its own section; assertion-assigned and descriptive inline are the two exceptions and need none. An assertion-assigned case is one the assertion type places in the test itself — a scenario's exact interaction as the spec declares it, a conformance expectation from the external oracle, or the violating input a compliance rule names. Such a literal is correct in the `Test*` body, and moving it into a production package so the test can import it gives the case a production address without a production contract. A vocabulary token inside that case — a command name, status value, or rule identifier — stays source-owned and is imported per `<source_owned_values>`; the origin covers the case, never the vocabulary the case is written in. `<test_infrastructure_layout>` is a layout note, not an origin: it closes the section by placing harnesses, generators, and fixtures inside `internal/testinfra/`, with fixtures split into loader code and data.
 
@@ -440,7 +440,7 @@ Reject or rewrite these patterns:
 | missing `t.Cleanup` for a started service                                          | leaves shared state that changes later test outcomes                                                                                         |
 | test-file bindings that choose data, expectations, configuration, or verdict rules | valid bindings receive values selected by source contracts, harnesses, generators, or fixtures, or carry the case the assertion type assigns |
 | a case value moved into a production package so the test can cite that package     | a production address is not a production contract; nothing outside the test requires the symbol                                              |
-| a `t.Helper()` function that calls `t.Fatal` on the test's behalf                  | the helper owns the verdict; the linked `Test*` function owns every predicate and failure call                                                |
+| a `t.Helper()` function that calls `t.Fatal` on the test's behalf                  | the helper owns the verdict; the linked `Test*` function owns every predicate and failure call                                               |
 | a command name, subcommand, or flag written as a literal in the test               | the binary's argument vocabulary is a source contract the owning package exports                                                             |
 | `rapid` check count or seed set in a test file                                     | the property harness owns seed, check count, and replay diagnostics                                                                          |
 | `t.Skip` on a missing mandatory dependency                                         | unavailable required evidence never passes; it fails through `t.Fatal`                                                                       |

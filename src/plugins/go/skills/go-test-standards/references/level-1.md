@@ -17,15 +17,15 @@ Level 1 covers logic that can run with the Go stdlib, normal developer tooling, 
 
 <what_belongs_here>
 
-| Concern                            | Typical tooling                          |
-| ---------------------------------- | ---------------------------------------- |
-| parsing, validation, encoding      | `testing`, `cmp.Diff`                    |
-| tempdir-backed filesystem logic    | `t.TempDir()`                            |
-| deterministic command building     | hand-written interface seams             |
-| finite input/output mappings       | table-driven `t.Run` over a source-owned enumeration |
-| universal invariants               | property harness wrapper over `rapid`    |
-| HTTP client behavior               | `httptest.Server`                        |
-| a binary built with `go build` in-cycle | harness-owned build, `os/exec`      |
+| Concern                                 | Typical tooling                                      |
+| --------------------------------------- | ---------------------------------------------------- |
+| parsing, validation, encoding           | `testing`, `cmp.Diff`                                |
+| tempdir-backed filesystem logic         | `t.TempDir()`                                        |
+| deterministic command building          | hand-written interface seams                         |
+| finite input/output mappings            | table-driven `t.Run` over a source-owned enumeration |
+| universal invariants                    | property harness wrapper over `rapid`                |
+| HTTP client behavior                    | `httptest.Server`                                    |
+| a binary built with `go build` in-cycle | harness-owned build, `os/exec`                       |
 
 </what_belongs_here>
 

@@ -90,13 +90,13 @@ The linked tests must exercise every clause with an assertion. A single assertio
 <step name="evidence">
 Match the Go evidence method to the assertion type:
 
-| Type        | Required Go evidence                                                                             | Reject if                                 |
-| ----------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| Scenario    | concrete inputs through the governed function, package, or binary                                | only existence or truthiness is checked   |
-| Mapping     | table-driven `t.Run` cases iterating a source-owned enumeration with at least two members         | one example stands in for a mapping       |
-| Conformance | parser, schema, protocol harness, CLI contract, or toolchain oracle for compile-time contracts    | manual shape checks replace the validator |
-| Property    | `rapid` through the property harness with meaningful generators and invariants                   | examples are wrapped in property syntax   |
-| Compliance  | violating fixture or analyzer harness for a current `[test]` link                                | no violating input or rule oracle exists  |
+| Type        | Required Go evidence                                                                           | Reject if                                 |
+| ----------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Scenario    | concrete inputs through the governed function, package, or binary                              | only existence or truthiness is checked   |
+| Mapping     | table-driven `t.Run` cases iterating a source-owned enumeration with at least two members      | one example stands in for a mapping       |
+| Conformance | parser, schema, protocol harness, CLI contract, or toolchain oracle for compile-time contracts | manual shape checks replace the validator |
+| Property    | `rapid` through the property harness with meaningful generators and invariants                 | examples are wrapped in property syntax   |
+| Compliance  | violating fixture or analyzer harness for a current `[test]` link                              | no violating input or rule oracle exists  |
 
 For property tests, inspect the generator domain. `rapid.Just`, one-value ranges, or tiny enumerations reduce the property to examples unless the spec explicitly declares a finite set.
 
@@ -194,17 +194,17 @@ Applied during Gate 1.
 
 This supplement specializes each category of the coupling taxonomy `/audit-tests` owns to Go paths. Classify from the table below rather than a subset of it; every category the canonical taxonomy names appears here, so a category missing from this table would silently narrow the verdict.
 
-| Category           | Definition                                                                                                                 | Verdict                                         |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Direct             | Test calls the governed Go function, type, package, or binary                                                              | Proceed                                         |
-| Indirect           | Test calls test infrastructure that calls the governed path                                                                | Proceed after harness tracing                   |
-| Transitive         | Test calls a public consumer of the governed path                                                                          | Proceed if the level matches                    |
-| Laundered indirect | Calls an `internal/testinfra` package that exists only to expose hardcoded values back to the test                         | REJECT — laundering                             |
-| False              | Test imports the package but never calls assertion-relevant symbols                                                        | REJECT                                          |
-| Partial            | Test calls the right package with wrong inputs or wrong path                                                               | REJECT                                          |
-| None               | Test imports only `testing` and third-party modules, with zero product-package coupling                                    | REJECT — tautology                              |
-| Severed            | Test or harness replaces the governed behavior with a mock, fake, generated mock, reassigned function variable, or bypassing stub | REJECT — coupling severed                 |
-| Prose-coupling     | Reads an authored prose/doc body and asserts its content, including through a harness constant or an infrastructure reader | REJECT — couples to authored text, not behavior |
+| Category           | Definition                                                                                                                        | Verdict                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Direct             | Test calls the governed Go function, type, package, or binary                                                                     | Proceed                                         |
+| Indirect           | Test calls test infrastructure that calls the governed path                                                                       | Proceed after harness tracing                   |
+| Transitive         | Test calls a public consumer of the governed path                                                                                 | Proceed if the level matches                    |
+| Laundered indirect | Calls an `internal/testinfra` package that exists only to expose hardcoded values back to the test                                | REJECT — laundering                             |
+| False              | Test imports the package but never calls assertion-relevant symbols                                                               | REJECT                                          |
+| Partial            | Test calls the right package with wrong inputs or wrong path                                                                      | REJECT                                          |
+| None               | Test imports only `testing` and third-party modules, with zero product-package coupling                                           | REJECT — tautology                              |
+| Severed            | Test or harness replaces the governed behavior with a mock, fake, generated mock, reassigned function variable, or bypassing stub | REJECT — coupling severed                       |
+| Prose-coupling     | Reads an authored prose/doc body and asserts its content, including through a harness constant or an infrastructure reader        | REJECT — couples to authored text, not behavior |
 
 Framework/library imports such as `testing`, `context`, `os/exec`, `net/http/httptest`, `pgregory.net/rapid`, and `github.com/google/go-cmp/cmp` do not count as coupling by themselves. A harness-provided product binary run through `os/exec` counts as coupling to the named binary contract. The Prose-coupling row is the table-side form of the source-file read that `<structural_reading>` screens for; both reach the same REJECT.
 

@@ -57,14 +57,14 @@ For each function or method:
 
 Use this table to classify surprises:
 
-| Surprise                                  | What it suggests                                                    |
-| ----------------------------------------- | ------------------------------------------------------------------- |
-| parameter unused in body                  | dead parameter, interface-driven signature, or unfinished logic     |
-| function does more than its name promises | SRP violation or misleading name                                    |
-| function does less than its name promises | missing behavior or overclaiming name                               |
-| error discarded or returned unwrapped     | weak error boundary; `errors.Is` and `errors.As` stop resolving     |
-| branch appears impossible from call sites | dead branch or mismatched abstraction                               |
-| `context.Context` accepted but not passed on | cancellation lost at this frame                                  |
+| Surprise                                     | What it suggests                                                |
+| -------------------------------------------- | --------------------------------------------------------------- |
+| parameter unused in body                     | dead parameter, interface-driven signature, or unfinished logic |
+| function does more than its name promises    | SRP violation or misleading name                                |
+| function does less than its name promises    | missing behavior or overclaiming name                           |
+| error discarded or returned unwrapped        | weak error boundary; `errors.Is` and `errors.As` stop resolving |
+| branch appears impossible from call sites    | dead branch or mismatched abstraction                           |
+| `context.Context` accepted but not passed on | cancellation lost at this frame                                 |
 
 **1.2 Design evaluation**
 
@@ -80,13 +80,13 @@ Evaluate the codebase for:
 
 Classify import paths like this:
 
-| Pattern                               | Classification                            |
-| ------------------------------------- | ----------------------------------------- |
-| `"context"`, `"encoding/json"`        | stdlib, not reviewed                      |
-| `"golang.org/x/sync/errgroup"`        | external module, not reviewed             |
-| `"<module>/internal/domain"`          | cross-package codebase import, review     |
-| `"<module>/internal/testinfra/..."`   | test infrastructure — rejection in production code |
-| an import cycle broken by an interface | review the dependency direction          |
+| Pattern                                | Classification                                     |
+| -------------------------------------- | -------------------------------------------------- |
+| `"context"`, `"encoding/json"`         | stdlib, not reviewed                               |
+| `"golang.org/x/sync/errgroup"`         | external module, not reviewed                      |
+| `"<module>/internal/domain"`           | cross-package codebase import, review              |
+| `"<module>/internal/testinfra/..."`    | test infrastructure — rejection in production code |
+| an import cycle broken by an interface | review the dependency direction                    |
 
 Import rules:
 
