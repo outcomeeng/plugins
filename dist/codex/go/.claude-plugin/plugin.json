@@ -1,0 +1,22 @@
+{
+  "name": "go",
+  "version": "0.1.0",
+  "description": "Go development workflow with testing, implementation, review, and architecture skills",
+  "author": {
+    "name": "Simon Heimlicher"
+  },
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": [
+    "go",
+    "golang",
+    "code",
+    "architecture",
+    "testing",
+    "review",
+    "concurrency",
+    "tdd",
+    "bdd",
+    "sdd"
+  ]
+}

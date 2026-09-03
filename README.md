@@ -255,6 +255,23 @@ Frontend design: /design-frontend skill
 | ----- | ------------------ | ---------------------------------------------------------- |
 | Skill | `/design-frontend` | Designing or building web components, pages, or dashboards |
 
+### go
+
+Go engineering: /test-go, /code-go, /audit-go-code, /audit-go-tests, /audit-go-architecture, /architect-go, go-simplifier agent
+
+| Type  | Name                         | Purpose                                                                                                                         |
+| ----- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/architect-go`              | Writing ADRs for Go                                                                                                             |
+| Skill | `/audit-go-architecture`     | Go-specific architecture audit                                                                                                  |
+| Skill | `/audit-go-code`             | Go implementation-code audit methodology                                                                                        |
+| Skill | `/audit-go-tests`            | Go test-evidence audit methodology                                                                                              |
+| Skill | `/code-go`                   | Writing or fixing implementation code for Go                                                                                    |
+| Skill | `/go-architecture-standards` | Go ADR conventions enforced across architect and auditor skills                                                                 |
+| Skill | `/go-standards`              | Go code standards enforced across all skills                                                                                    |
+| Skill | `/go-test-standards`         | Go test standards enforced across all skills                                                                                    |
+| Skill | `/test-go`                   | Writing or fixing tests for Go                                                                                                  |
+| Agent | `go-simplifier`              | Simplifying recently modified Go code while preserving behavior, concurrency ownership, testability, and verified test coverage |
+
 ### hdl
 
 HDL engineering: /review-vhdl, /review-systemverilog (idiomatic VHDL-2008 and SystemVerilog IEEE 1800-2017 review)

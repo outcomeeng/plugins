@@ -50,7 +50,7 @@ CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted dev
 - Verification and evidence skills (`/verify`, `/test`, `/audit-tests`) as supersets of standalone methodology
 - TDD flow orchestration (`/apply`) with language-specific delegation
 - Commit workflow (`/commit-changes`) with Conventional Commits
-- Language-specific plugins (Python, TypeScript, Rust) for architecture, tests, code, and review
+- Language-specific plugins (Python, TypeScript, Rust, Go) for architecture, tests, code, and review
 - Session management (handoff, pickup) for conversation continuity
 - Pre-commit validation infrastructure for plugin and skill quality
 - Persistent marketplace installation and isolated end-to-end install verification, governed by `spx/12-marketplace-state.adr.md`

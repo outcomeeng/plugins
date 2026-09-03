@@ -1,0 +1,34 @@
+{
+  "name": "go",
+  "version": "0.1.0",
+  "description": "Go development workflow with testing, implementation, review, and architecture skills",
+  "author": {
+    "name": "Simon Heimlicher",
+    "url": "https://github.com/outcomeeng"
+  },
+  "homepage": "https://github.com/outcomeeng/plugins",
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": [
+    "go",
+    "golang",
+    "code",
+    "architecture",
+    "testing",
+    "review",
+    "concurrency",
+    "tdd",
+    "bdd",
+    "sdd"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Go Engineering",
+    "shortDescription": "Go testing, coding, architecture, and concurrency skills",
+    "longDescription": "Go development workflows covering testing, implementation, review, architecture guidance, and concurrency and unsafe-boundary auditing.",
+    "developerName": "Outcome Engineering",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://outcome.engineering"
+  }
+}
