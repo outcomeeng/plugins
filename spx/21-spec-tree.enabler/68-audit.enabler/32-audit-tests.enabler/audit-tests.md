@@ -100,6 +100,7 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - ALWAYS: the Codex runtime rendering of `/audit-tests` satisfies the same non-Python full-chain ownership verdict contract as the shared authored skill ([eval](evals/full-chain-ownership-codex/eval.toml))
 - ALWAYS: `/audit-tests` names no caller and stays invocable on its own; the author context produces a verdict by dispatching the audit to a separate verifier context rather than grading its own work in place, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([audit])
 - ALWAYS: `/audit-tests` invokes `/contextualize` on the target spec node before any audit phase ([audit])
+- ALWAYS: when the audit inputs carry no language partition, `/audit-tests` derives one for every test-file extension an installed language plugin's test standards declare, and rejects with `unsupported-language` and remediation target `language-partition` only an extension no installed plugin claims ([audit])
 - ALWAYS: check testability before coupling — a test cannot evidence an assertion the source code cannot expose ([audit])
 - ALWAYS: target findings against the source file when testability fails — the test cannot remediate untestable source ([audit])
 - ALWAYS: screen executed test files for test-owned declarations before the coupling check — coupling remains prerequisite to falsifiability, alignment, and coverage analysis ([audit])
