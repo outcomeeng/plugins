@@ -253,7 +253,7 @@ class UnresolvedInstructionTemplateError(ValueError):
 
 # Test-file extension -> the language it denotes. The enabled-language set is read from the
 # product's own test files, the in-use ground truth, rather than from agent judgment.
-LANGUAGE_BY_EXTENSION = {"py": "python", "ts": "typescript", "rs": "rust"}
+LANGUAGE_BY_EXTENSION = {"py": "python", "ts": "typescript", "rs": "rust", "go": "go"}
 
 _BLANK_RUN = re.compile(r"\n{3,}")
 
