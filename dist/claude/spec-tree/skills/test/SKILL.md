@@ -422,7 +422,7 @@ For each assertion needing a new test:
 4. Name the file using `<naming_and_co_location>`.
 5. Scaffold the test structure based on assertion type and language-specific patterns.
 
-Delegate language-specific structure to `/test-python` or `/test-rust` or `/test-typescript` or `/test-go`.
+Delegate language-specific structure to `/test-go` or `/test-python` or `/test-rust` or `/test-typescript`.
 
 In decision-rule mode, update each `### Testing` rule with exactly one selected assertion-type tag and create no test scaffold. Continue directly to the report step.
 
