@@ -22,7 +22,7 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
 
 ### Mappings
 
-- For each supported agent, a generated valid installed subset containing `spec-tree` maps through `just install-marketplace` to exactly those catalog plugins for that agent, with selected unpublished plugins reported as pending and the project's activation selection preserved. ([test](tests/test_repository_installation.mapping.l3.py))
+- For each supported agent, a generated valid installed subset containing `spec-tree` and drawn from the plugins the canonical marketplace publishes maps through `just install-marketplace` to exactly those catalog plugins for that agent, with no published plugin reported as pending and the project's activation selection preserved. ([test](tests/test_repository_installation.mapping.l3.py))
 - Each isolated verification selection — the complete committed catalogs and a generated valid subset containing `spec-tree` — maps to registration of the invocation checkout and exactly that selection reported as installed and enabled by the corresponding real agent CLI. ([test](tests/test_repository_installation.mapping.l3.py))
 - For each supported agent, an explicitly selected valid isolated subset maps to a plan containing exactly its members in catalog order. ([test](tests/test_repository_installation.mapping.l1.py))
 - Each marketplace, plugin, and lifecycle operation a repository-installation plan performs maps to a failure report naming that operation and its agent, with the attempted commands ending at that operation and no later operation performed. ([test](tests/test_repository_installation.mapping.l1.py))
