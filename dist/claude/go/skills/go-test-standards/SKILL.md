@@ -73,7 +73,7 @@ spx/55-example.enabler/21-auth.outcome/tests/registry_fetch.conformance.l2_test.
 spx/55-example.enabler/21-auth.outcome/tests/login_flow.scenario.l3_test.go
 ```
 
-A `tests/` directory is its own package (`package tests` or `package <node>_test`); it holds only `_test.go` files and imports the module's packages by their import paths. One file declares one assertion type and one execution level; `t.Run` subtests partition cases inside that cell and never combine cells.
+The declared deterministic test command is `go test -race ./...` — the race detector runs on every Level 1 pass, so data-race safety is deterministic evidence rather than an audit-only claim. A `tests/` directory is its own package (`package tests` or `package <node>_test`); it holds only `_test.go` files and imports the module's packages by their import paths. One file declares one assertion type and one execution level; `t.Run` subtests partition cases inside that cell and never combine cells.
 
 Product specs or decisions may restrict which levels the product supports. Follow the repo-local Go test overlay when it points to the governing spec or decision.
 </core_model>
@@ -132,7 +132,7 @@ Preferred controlled implementations:
 
 Reject by default:
 
-- `gomock`, `mockery`, `moq`, or other generated mocks as the primary strategy
+- `gomock`, `mockery`, `moq`, a `mock.Mock` embedding, or other generated or framework mocks as the primary strategy
 - monkey-patching a package-level function variable to spy on the function under test
 - replacing the package under test with a fake implementation
 
@@ -170,7 +170,7 @@ Use the lightest Go-native tool that preserves evidence:
 | textual golden output         | golden files under `internal/testinfra/fixtures/testdata/` when the output surface itself is the assertion |
 | compile-time or diagnostics   | `go vet` or `go build` run by a harness on an inert fixture package                                        |
 | local services or containers  | `testcontainers-go` or repo-native harnesses                                                               |
-| coverage                      | `go test -cover -coverprofile` when the repository uses coverage as evidence                               |
+| coverage                      | `go test -race -cover -coverprofile` when the repository uses coverage as evidence                         |
 
 Golden-file tests are valid only when the textual or structured output surface is itself the contract. They are weak evidence for business logic that has a stronger structural assertion available.
 </tooling>
@@ -300,110 +300,15 @@ Compile-time contracts such as interface satisfaction, `go vet` diagnostics, or 
 </alignment_rules>
 
 <level_1_patterns>
-Use Level 1 when the governed logic can run with the Go stdlib, normal developer tooling, and temporary local fixtures.
-
-Pure function example:
-
-```go
-func TestRejectsEmptyURLSets(t *testing.T) {
-    _, err := config.Validate(config.Input{URLSets: nil})
-
-    if !errors.Is(err, config.ErrNoURLSets) {
-        t.Fatalf("Validate: got %v, want %v", err, config.ErrNoURLSets)
-    }
-}
-```
-
-Dependency seam example:
-
-```go
-import "<module>/internal/testinfra/harnesses"
-
-func TestCommandBuilderReportsSuccess(t *testing.T) {
-    cfg := sync.NewConfig("origin", sync.ModePush)
-
-    result, err := sync.Repo(context.Background(), cfg, harnesses.SuccessRunner())
-    if err != nil {
-        t.Fatalf("Repo: %v", err)
-    }
-
-    if !result.Success {
-        t.Errorf("Success: got false, want true")
-    }
-}
-```
-
-Tempdir example. The harness owns the temporary product; `t.TempDir()` owns cleanup; the fixture arrives by path; the `Test*` function calls the governed function and asserts:
-
-```go
-import (
-    "<module>/internal/testinfra/fixtures"
-    "<module>/internal/testinfra/harnesses"
-)
-
-func TestLoadsYAMLFromTempDir(t *testing.T) {
-    product := harnesses.NewTempProduct(t).SeededFrom(fixtures.ValidSiteConfigPath())
-
-    cfg, err := config.Load(product.Path())
-    if err != nil {
-        t.Fatalf("Load: %v", err)
-    }
-
-    if cfg.BaseURL != config.DefaultBaseURL {
-        t.Errorf("BaseURL: got %q, want %q", cfg.BaseURL, config.DefaultBaseURL)
-    }
-}
-```
-
+Use Level 1 when the governed logic can run with the Go stdlib, normal developer tooling, a product binary built in-cycle, and temporary local fixtures. The pure-function, dependency-seam, and tempdir examples are worked in `${CLAUDE_SKILL_DIR}/references/level-1.md`: the harness owns the temporary product and `t.TempDir()` owns cleanup, the fixture arrives by path, and the `Test*` function calls the governed function and asserts.
 </level_1_patterns>
 
 <property_and_compile_time_patterns>
-Use the product property harness for universal invariants. The harness runs the domain through `rapid.Check`; the invariant and its `t.Fatalf` stay in the closure the `Test*` function passes:
-
-```go
-import (
-    "pgregory.net/rapid"
-
-    "<module>/internal/testinfra/generators"
-    "<module>/internal/testinfra/harnesses"
-)
-
-func TestConfigRoundTrips(t *testing.T) {
-    harnesses.RunProperty(t, generators.ValidConfigs(), func(t *rapid.T, cfg config.Config) {
-        encoded := config.Encode(cfg)
-
-        decoded, err := config.Decode(encoded)
-        if err != nil {
-            t.Fatalf("Decode: %v", err)
-        }
-        if diff := cmp.Diff(cfg, decoded); diff != "" {
-            t.Fatalf("round trip mismatch (-want +got):\n%s", diff)
-        }
-    })
-}
-```
-
-Property tests MUST run through a harness or wrapper that owns `rapid` configuration, seed policy, check count, and replay diagnostics. The test file supplies the invariant and imports generated domains; it does not declare runner tuning or seed policy. On failure, output must include the seed or replay command needed to reproduce the generated case — `rapid` prints both when the harness leaves its reporting intact.
+Use the product property harness for universal invariants. The harness runs the domain through `rapid.Check`; the invariant and its `t.Fatalf` stay in the closure the `Test*` function passes. Property tests MUST run through a harness or wrapper that owns `rapid` configuration, seed policy, check count, and replay diagnostics. The test file supplies the invariant and imports generated domains; it does not declare runner tuning or seed policy. On failure, output must include the seed or replay command needed to reproduce the generated case — `rapid` prints both when the harness leaves its reporting intact.
 
 That split is exact: the harness owns everything about *how many* cases run and *which* seed produced a failure, and the closure owns *what makes a case pass*. A harness signature that accepts the encode and decode functions and fails inside itself moves the invariant out of the test and fails the seam.
 
-Use the toolchain as the oracle for compile-time guarantees. The executed test runs `go vet` or `go build` on an inert fixture package under `internal/testinfra/fixtures/testdata/` and asserts on the diagnostic the toolchain reports; the compiler is an oracle outside the product, and inverting the claim changes only the test:
-
-```go
-import "<module>/internal/testinfra/fixtures"
-
-func TestBuilderRejectsUntypedField(t *testing.T) {
-    out, err := harnesses.GoVet(t, fixtures.CompileCasePath("builder_rejects_untyped_field"))
-
-    if err == nil {
-        t.Fatalf("go vet: got success, want a diagnostic")
-    }
-    if !strings.Contains(out, "cannot use") {
-        t.Errorf("diagnostic: got %q, want it to name the type mismatch", out)
-    }
-}
-```
-
+Use the toolchain as the oracle for compile-time guarantees. The executed test runs `go vet` or `go build` on an inert fixture package under `internal/testinfra/fixtures/testdata/` and asserts on the diagnostic the toolchain reports; the compiler is an oracle outside the product, and inverting the claim changes only the test. Both patterns are worked in `${CLAUDE_SKILL_DIR}/references/level-1.md`.
 </property_and_compile_time_patterns>
 
 <level_2_patterns>
@@ -419,7 +324,7 @@ Level 3 tests must declare their isolation boundary, credentials, cleanup behavi
 <coverage_rules>
 Keep deterministic measurement and audit-time evidence judgment distinct:
 
-- The deterministic gate prefers `go test -cover -coverprofile`, compares the baseline without the test against the run with the test, and reports the actual per-file or per-function delta. When tooling is unavailable, the gate records that limitation.
+- The deterministic gate prefers `go test -race -cover -coverprofile`, compares the baseline without the test against the run with the test, and reports the actual per-file or per-function delta. When tooling is unavailable, the gate records that limitation.
 - `/audit-go-tests` runs no coverage command. It reads the evidence chain and judges whether the test drives execution into the assertion-relevant source path, marking trivially total paths `saturated`.
 - A structural reachability judgment never claims a measured percentage or replaces the deterministic gate's coverage result.
 
@@ -456,9 +361,9 @@ Do not require `spx validation literal` for Go tests. The literal validator is T
 </failure_modes>
 
 <reference_guides>
-Levels 2 and 3 carry no inline examples — their reference files are the only worked examples for those levels.
+The skill body states the rules; the reference files carry the only worked examples for every level.
 
-- `${CLAUDE_SKILL_DIR}/references/level-1.md` - the interface-seam and recording-collaborator shapes beyond the inline patterns
+- `${CLAUDE_SKILL_DIR}/references/level-1.md` - the worked pure-function, dependency-seam, recorder, tempdir, property, and compile-time examples
 - `${CLAUDE_SKILL_DIR}/references/level-2.md` - the worked installed-binary, database-adapter, and containerized collaborator examples
 - `${CLAUDE_SKILL_DIR}/references/level-3.md` - the worked remote API, sandboxed CLI, and browser workflow examples, with credentials, isolation, and cleanup
 

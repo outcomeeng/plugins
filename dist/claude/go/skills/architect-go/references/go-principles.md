@@ -1,17 +1,17 @@
-# Go Architectural Principles
+<contents>
 
-## Contents
+- `<packages_are_architecture>`
+- `<type_driven_invariants>`
+- `<clean_architecture>`
+- `<error_boundaries>`
+- `<concurrency_ownership>`
+- `<resource_lifecycle>`
+- `<security_and_unsafe_boundaries>`
+- `<module_selection>`
 
-- Packages Are Architecture
-- Type-Driven Invariants
-- Clean Architecture in Go
-- Error Boundaries Are a Design Decision
-- Concurrency Needs an Owner
-- Resource Lifecycle and Close
-- Security and Unsafe Boundaries
-- Module Selection Is Architectural
+</contents>
 
-## Packages Are Architecture
+<packages_are_architecture>
 
 - Model ownership explicitly in ADRs: which package owns each concern, and what stays under `internal/`
 - Define interfaces where they are consumed; keep them small; return concrete types
@@ -26,7 +26,9 @@ type Store interface {
 }
 ```
 
-## Type-Driven Invariants
+</packages_are_architecture>
+
+<type_driven_invariants>
 
 - Prefer defined types for domain identifiers and validated values
 - Use typed constant sets with `iota` when a closed vocabulary matters
@@ -44,7 +46,9 @@ func NewEmail(raw string) (Email, error) {
 }
 ```
 
-## Clean Architecture in Go
+</type_driven_invariants>
+
+<clean_architecture>
 
 - Prefer interfaces at architectural seams and concrete types inside packages
 - Inject dependencies through constructors or function parameters
@@ -63,7 +67,9 @@ type Service struct {
 func NewService(clock Clock) *Service { return &Service{clock: clock} }
 ```
 
-## Error Boundaries Are a Design Decision
+</clean_architecture>
+
+<error_boundaries>
 
 - Use sentinel errors for conditions callers branch on and error structs for conditions that carry data
 - Wrap with `%w` at every boundary so `errors.Is` and `errors.As` resolve through the chain
@@ -79,7 +85,9 @@ func (e *StorageError) Error() string { return "storage: " + e.Err.Error() }
 func (e *StorageError) Unwrap() error { return e.Err }
 ```
 
-## Concurrency Needs an Owner
+</error_boundaries>
+
+<concurrency_ownership>
 
 - Every goroutine has an owner, a `context.Context`, and an exit condition
 - Choose `errgroup` or a `sync.WaitGroup` with a results channel for fan-out
@@ -96,14 +104,18 @@ func (s *Service) Handle(ctx context.Context, items []Item) error {
 }
 ```
 
-## Resource Lifecycle and Close
+</concurrency_ownership>
+
+<resource_lifecycle>
 
 - Treat connection pools, file handles, transactions, and listeners as lifecycle decisions
 - Expose a `Close` method the caller defers; never rely on finalizers for correctness
 - Prefer `sync.Once` or `sync.OnceValue` for application-wide initialization
 - Document pooling, caching, and cleanup strategy in the ADR when resource cost matters
 
-## Security and Unsafe Boundaries
+</resource_lifecycle>
+
+<security_and_unsafe_boundaries>
 
 - Validate external input at boundaries
 - Keep secrets out of source and config defaults
@@ -115,9 +127,12 @@ func (s *Service) Handle(ctx context.Context, items []Item) error {
 s := unsafe.String(unsafe.SliceData(b), len(b))
 ```
 
-## Module Selection Is Architectural
+</security_and_unsafe_boundaries>
+
+<module_selection>
 
 - Treat HTTP framework, serialization, persistence, and logging modules as ADR-level choices
 - Prefer the standard library where it suffices, then mature modules with clear maintenance and compatibility stories
 - Minimize architectural commitment to modules that leak through exported APIs
 - Record why a module is chosen and what switching cost it creates
+  </module_selection>

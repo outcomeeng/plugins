@@ -12,20 +12,9 @@ allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(gofmt:*), Bash(go vet:
 Go implementation code with spec-driven behavior, explicit seams, and full validation passing.
 </objective>
 
-<accessing_skill_files>
-When this skill is invoked, the skill loader provides the base directory in the loading message:
-
-```text
-Base directory for this skill: ${CLAUDE_SKILL_DIR}
-```
-
-Use this path to access skill files:
-
-- References: `${CLAUDE_SKILL_DIR}/references/`
-- Workflows: `${CLAUDE_SKILL_DIR}/workflows/`
-
-Do not search the product directory for skill files when the loading message already provides the base path.
-</accessing_skill_files>
+<bundled_files>
+References live at `${CLAUDE_SKILL_DIR}/references/` and workflows at `${CLAUDE_SKILL_DIR}/workflows/`; the loading message supplies that base directory. Do not search the product directory for skill files.
+</bundled_files>
 
 <quick_start>
 

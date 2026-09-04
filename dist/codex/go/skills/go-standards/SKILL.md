@@ -6,11 +6,11 @@ allowed-tools: Read
 ---
 
 <objective>
-The canonical Go standards for type usage, value and pointer semantics, error handling, package boundaries, concurrency and context, testing seams, and `unsafe` and cgo boundaries, enforced across implementation, testing, architecture, and review.
+The canonical Go standards every Go skill enforces across implementation, testing, architecture, and review.
 </objective>
 
 <success_criteria>
-Go work follows this standard when compiler, vet, lint, test, and review evidence show the code preserves meaningful type design, wrapped structured errors, explicit package boundaries, justified concurrency with context propagation, testable seams, and documented `unsafe` and cgo invariants, with repo-local overlays applied when present.
+Go work follows this standard when `gofmt -l .` prints nothing, `go vet ./...`, the repository's linter (`staticcheck ./...` or `golangci-lint run`), and `go test -race ./...` pass, review finds no row of `<anti_patterns>` present, and the code preserves meaningful type design, wrapped structured errors, explicit package boundaries, justified concurrency with context propagation, testable seams, and documented `unsafe` and cgo invariants, with repo-local overlays applied when present.
 </success_criteria>
 
 <reference_note>
@@ -218,12 +218,12 @@ if err := g.Wait(); err != nil {
 
 <testing_seams>
 
-Code should support evidence-rich tests without generated mocks.
+Code supports evidence-rich tests without generated mocks.
 
 - inject external process runners, clocks, and boundary adapters through small interfaces or function parameters
 - use small hand-written fakes when a controlled implementation is needed
 - keep pure logic separable from boundary glue
-- do not make `gomock`, `mockery`, or similar generated mocks the default strategy
+- do not make `gomock`, `mockery`, `moq`, a `mock.Mock` embedding, or similar generated or framework mocks the default strategy
 
 ```go
 type Clock interface {

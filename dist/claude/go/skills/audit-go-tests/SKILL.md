@@ -31,8 +31,7 @@ Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailabl
 
 Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 
-Read `spx/local/go.md` if it exists; otherwise apply the loaded skills only.
-Read `spx/local/go-tests.md` if it exists; otherwise apply the loaded skills only.
+Read `spx/local/go.md` and `spx/local/go-tests.md` when they exist; otherwise apply the loaded skills only.
 
 Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 

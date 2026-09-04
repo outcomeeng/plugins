@@ -49,13 +49,22 @@ This skill checks only the Go-specific concerns:
 
 1. Testability constraints: ADR targets express DI seams in `## Verification` / `### Audit`; implementation targets conform to loaded architecture decisions.
 2. Mocking prohibition
-3. Level accuracy when testing levels are mentioned
-4. Go anti-patterns — package-level mutable state, interfaces defined at the producer with one implementation, `context.Context` stored in structs, unowned goroutines, `unsafe` bypassing type design
+3. Level accuracy when testing levels are mentioned — a remote API, SaaS system, browser UI, or deployed environment is Level 3, never Level 2; a boundary that reaches such a collaborator jumps from Level 1 to Level 3 with no Level 2 in between, per `/go-architecture-standards` `<level_context>`
+4. Go anti-patterns — package-level mutable state, interfaces defined at the producer with one implementation, `context.Context` stored in structs, unowned goroutines, `unsafe` bypassing type design; the authoritative catalog and corrective examples are `<anti_patterns>`, `<values_pointers_and_sharing>`, `<package_boundaries>`, and `<concurrency_and_context>` in `/go-standards`
 5. Ancestor consistency for spec-tree work
 
 Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — they are judged against the canonical decision template, outside this Go-architecture subject.
 
 </principles_to_enforce>
+
+<what_to_avoid>
+
+- Do not cite line numbers as the finding's identity; cite the rule, the seam, and the section of the ADR or the package of the implementation.
+- Do not approve on an interface definition alone; a seam counts only when a Verification rule mandates its use or the implementation injects it.
+- Do not accept "dependency injection" paired with a generated mock; DI delivers a controlled real implementation.
+- Do reference the standards section a finding rests on by name, so the author reads the corrective example there.
+
+</what_to_avoid>
 
 <verdict_format>
 

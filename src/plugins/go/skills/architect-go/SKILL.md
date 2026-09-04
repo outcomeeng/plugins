@@ -165,10 +165,10 @@ Use the authoritative template (from `/understand`). The ADR is decision-first:
 
 <out_of_scope>
 
-1. **Do NOT write implementation code**. ADRs constrain implementation; they are not it.
-2. **Do NOT review code**. That's a separate concern.
-3. **Do NOT fix bugs**. That's an implementation concern.
-4. **Do NOT create work items**. That's a product management concern.
+1. NEVER write implementation code — ADRs constrain implementation; they are not it.
+2. NEVER review code — that is a separate concern.
+3. NEVER fix bugs — that is an implementation concern.
+4. NEVER create work items — that is a product management concern.
 
 </out_of_scope>
 
@@ -221,8 +221,8 @@ Key Constraints
 ADR is complete when:
 
 - [ ] Verification (`### Audit`) includes testability constraints (DI, no mocking) per `/go-architecture-standards`
-- [ ] `/go-standards` was loaded before `/go-architecture-standards`
-- [ ] `/go-test-standards` was loaded before testing methodology was applied
+- [ ] Every Verification rule cites a Go seam, type, error, concurrency, or lifecycle constraint `/go-standards` names, in Go terms
+- [ ] Every test-level reference in the ADR matches the level vocabulary `/go-test-standards` declares
 - [ ] All architectural choices documented
 - [ ] Verification rules defined as ALWAYS/NEVER guarantees and boundaries
 - [ ] No contradictions with existing ADRs

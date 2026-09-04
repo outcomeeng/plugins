@@ -1,7 +1,7 @@
 ---
 name: test-go
 description: ALWAYS invoke this skill when writing or fixing tests for Go. NEVER write or repair Go tests without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(go test:*), Bash(go vet:*), Bash(go build:*), Bash(gofmt:*), Bash(staticcheck:*), Bash(golangci-lint:*), Bash(spx validation:*), Bash(just test:*), Bash(just check:*), Bash(just verify:*), Bash(just validate:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(go test:*), Bash(go vet:*), Bash(go build:*), Bash(gofmt:*), Bash(staticcheck:*), Bash(golangci-lint:*)
 ---
 
 {!% require_skill 'go:go-standards' %!}
@@ -11,7 +11,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(go test:*), Bash(go ve
 {!% require_skill 'spec-tree:test' %!}
 
 <objective>
-Go tests for what the `/test` router selected, at the chosen level.
+Go test files that supply evidence, at the level and assertion type `/test` selects, for a spec-tree node's assertions.
 </objective>
 
 <prerequisites>
@@ -24,6 +24,32 @@ Before writing or revising tests, also check:
 
 </prerequisites>
 
+<mode_detection>
+Read the request before editing:
+
+- **Write** — an assertion has no linked Go test, or `/verify` routed a new assertion to test: run `<workflow>`.
+- **Fix** — an `/audit-go-tests` or `/audit-tests` verdict rejected existing Go evidence: run `<fix_workflow>`, then the affected steps of `<workflow>`.
+- **Split** — a rejected file carries more than one assertion type or execution level: separate it into one file per cell first, then continue as Fix.
+
+</mode_detection>
+
+<fix_workflow>
+Map each rejecting finding's property to the remediation it implies before editing:
+
+| Finding property or rule | Remediation                                                                                                                   |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `coupling`               | call the governed function, type, package, or harness-built binary; remove the reassigned function variable or generated mock |
+| `falsifiability`         | replace the severed seam with a hand-written implementation of the same interface; assert on observations                     |
+| `alignment`              | exercise every clause of the assertion; match the evidence method to the assertion type                                       |
+| `coverage`               | drive execution into the assertion-relevant path; remove `t.Skip` on a mandatory dependency                                   |
+| `oracle-independence`    | derive the expectation from the spec, an exported constant of another package, an external schema, or a fixture               |
+| `declarations`           | move the chosen data, expectation, or runner setting to its owner: source contract, generator, harness, or fixture            |
+| `predicate-ownership`    | move the comparison and the `testing.T` failure call back into the `Test*` function or its subtest                            |
+| `extraction_target`      | move the harness, generator, or fixture resolver into `internal/testinfra/`                                                   |
+| `filename_policy`        | rename to `<subject>.<evidence>.<level>[.<runner>]_test.go`; add the `//go:build` constraint an `l2` or `l3` file needs       |
+
+</fix_workflow>
+
 <workflow>
 1. Load the governing spec context before editing any co-located `spx/.../tests/` file.
 2. Map each assertion to the assertion type and level chosen by `/test`.
@@ -33,7 +59,7 @@ Before writing or revising tests, also check:
 6. Keep every predicate and `testing.T` failure call in the linked `Test*` function or its `t.Run` subtest. Permit `:=`, `var`, `const`, closure, and property-generated parameters that only receive actual results, source contracts, generated values, harness observations, callback inputs, resource handles, or fixture paths; reject bindings that choose data, expectations, configuration, setup policy, generator domains, fixture contents, or verdict rules. A `t.Helper()` mark never moves a predicate into infrastructure.
 7. Keep test infrastructure — harnesses, generators, and inert fixtures — in the canonical `internal/testinfra/` location prescribed by `/go-test-standards`. A repo-local overlay may route to a governing product spec or decision that explicitly amends this contract; the overlay does not redefine the location itself.
 8. Put `//go:build l2` or `//go:build l3` on the first line of every Level 2 or Level 3 file, so `go test ./...` runs Level 1 alone.
-9. Run the repository's Go validation commands before reporting the tests complete.
+9. Run the repository's Go validation commands before reporting the tests complete, or the fallback sequence `gofmt -l .`, `go vet ./...`, the repository's linter, and `go test -race ./...`. `allowed-tools` preapproves only the listed raw-tool fallbacks; a repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path, and a fallback is never selected merely to avoid that approval.
 
 </workflow>
 
@@ -79,6 +105,6 @@ Go test work is complete when:
 - property claims use property-based testing through the harness
 - compile-time claims use toolchain-oracle evidence
 - Level 2 and Level 3 files carry their build constraint
-- repository validation passes or any unavailable validation tool is reported explicitly
+- the repository's Go validation commands pass, or the fallback sequence in step 9 passes, with any unavailable tool named explicitly
 
 </success_criteria>

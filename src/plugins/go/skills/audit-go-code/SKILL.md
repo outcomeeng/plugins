@@ -147,6 +147,16 @@ Each `NOT_APPLICABLE` row carries `explanation` naming why the concern does not 
 
 </verdict_format>
 
+<failure_modes>
+
+**Failure 1: Approved code on the strength of green mechanical gates.** `gofmt`, `go vet`, the linter, and `go test -race` were green, and Claude treated the audit as complete without reading every function. Why it failed: mechanical gates do not catch functions that mix pure logic with I/O, a lost cancellation, weak seams, or ADR/PDR drift — and this audit does not run them anyway; a race-detector-clean run proves only that the executed schedules raced nowhere, not that every goroutine has an owner. How to avoid: spend the whole audit on Phase 1's predict-and-verify pass over every production function in scope; green gates are not the audit.
+
+**Failure 2: Missed a boundary dependency hidden behind a coherent package.** Claude approved a package whose imports looked organized, while a concrete HTTP client was still constructed directly inside business logic. Why it failed: import coherence is separate from boundary design; a module-internal import path can still point at the wrong dependency direction. How to avoid: during design coherence and ADR/PDR compliance, trace each process, network, clock, storage, and cgo boundary to an injected interface or narrow function seam.
+
+**Failure 3: Skipped soundness because no tests failed.** Claude treated green tests as evidence that goroutine ownership, context propagation, and `unsafe` conversions were sound. Why it failed: tests rarely cover the schedule that leaks a goroutine, the blocking call that ignores its context, the pointer that outlives its referent, or the C memory nobody frees. How to avoid: whenever scope contains a `go` statement, a `sync` primitive, a `context.Context` parameter, `unsafe.Pointer`, or `import "C"`, run the matching soundness reference and reject any missing or restated invariant.
+
+</failure_modes>
+
 <success_criteria>
 
 - `APPROVED` means every applicable concern row is `PASS`, every `NOT_APPLICABLE` row explains why the concern does not apply, and every production function in scope was covered.

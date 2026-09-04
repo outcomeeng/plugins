@@ -1,19 +1,21 @@
-# Common ADR Patterns for Go
-
+<overview>
 These patterns show how testability constraints appear under the `## Verification` section's `### Audit` subsection. See `/go-architecture-standards` for the canonical ADR section structure.
 
-## Contents
-
-- Pattern: External Tool Integration
-- Pattern: Configuration Loading
-- Pattern: CLI Structure
-- Pattern: Error Handling
-- Pattern: Concurrent Work
-- Pattern: Unsafe or cgo Boundary
-
 Each pattern carries its own `## Verification` section with an `### Audit` subsection.
+</overview>
 
-## Pattern: External Tool Integration
+<contents>
+
+- `<external_tool_integration>`
+- `<configuration_loading>`
+- `<cli_structure>`
+- `<error_handling>`
+- `<concurrent_work>`
+- `<unsafe_or_cgo_boundary>`
+
+</contents>
+
+<external_tool_integration>
 
 When integrating with external tools:
 
@@ -31,7 +33,9 @@ Use dependency injection for all external tool invocations.
 - NEVER: direct `os/exec` construction in core domain logic without an injected seam -- prevents isolated testing ([audit])
 ```
 
-## Pattern: Configuration Loading
+</external_tool_integration>
+
+<configuration_loading>
 
 When defining configuration approach:
 
@@ -50,7 +54,9 @@ Use typed configuration structs with boundary validation and fail-fast loading.
 - NEVER: a config field read through a package-level variable -- couples every caller to process-global state ([audit])
 ```
 
-## Pattern: CLI Structure
+</configuration_loading>
+
+<cli_structure>
 
 When defining CLI architecture:
 
@@ -69,7 +75,9 @@ Use thin command handlers with delegated runners and an exported command vocabul
 - NEVER: direct I/O in command packages without DI -- couples commands to environment ([audit])
 ```
 
-## Pattern: Error Handling
+</cli_structure>
+
+<error_handling>
 
 When defining error handling approach:
 
@@ -89,7 +97,9 @@ Use sentinel and typed errors with `%w` wrapping at every boundary.
 - NEVER: swallowing errors without logging or propagation -- hides failures ([audit])
 ```
 
-## Pattern: Concurrent Work
+</error_handling>
+
+<concurrent_work>
 
 When defining concurrency patterns:
 
@@ -110,7 +120,9 @@ Every goroutine has an owner, a context, and an exit condition; shared state mov
 - NEVER: hardcoded timeout values -- prevents testing and configuration ([audit])
 ```
 
-## Pattern: Unsafe or cgo Boundary
+</concurrent_work>
+
+<unsafe_or_cgo_boundary>
 
 When defining unsafe code or interop boundaries:
 
@@ -128,3 +140,5 @@ Confine `unsafe` and cgo to one package with documented safety contracts and saf
 - NEVER: using `unsafe` as a shortcut around type design problems ([audit])
 - NEVER: exposing C pointers or layout-sensitive details directly to high-level application code without a documented boundary ([audit])
 ```
+
+</unsafe_or_cgo_boundary>

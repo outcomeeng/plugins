@@ -82,7 +82,7 @@ When the validation passes, summarize:
 
 - the changed behavior, boundaries, and failure modes were identified before code edits
 - selected tests were written or extended first, selected evals meet their thresholds, and the `Audit requirements` report matches `/verify`'s audit routing rows
-- implementation follows existing repository seams and Go type discipline
+- `/audit-go-code`'s design-coherence, import-structure, concurrency-soundness, and unsafe-soundness rows leave no unresolved finding against the implementation
 - the repository validation sequence passed
 - the final summary names changed behavior, evidence, and remaining trade-offs
 

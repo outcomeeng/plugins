@@ -15,7 +15,7 @@ Some surprises in a Go review are legitimate once the boundary and invariant are
 
 <real_findings>
 
-- the reviewer cannot explain the boundary or invariant in one sentence
+- Claude cannot explain the boundary or invariant in one sentence
 - `unsafe` exists only to sidestep type design
 - shell commands are assembled from user-controlled string fragments
 - errors are discarded with `_` or returned unwrapped across a domain boundary
@@ -24,14 +24,14 @@ Some surprises in a Go review are legitimate once the boundary and invariant are
 
 </real_findings>
 
-<reviewer_response_pattern>
+<valid_pattern_response>
 When a suspicious pattern is valid:
 
 1. name the boundary or invariant that makes it valid
 2. state why that context changes the verdict
 3. verify the explanation matches the actual code, not a hoped-for future state
 
-</reviewer_response_pattern>
+</valid_pattern_response>
 
 <example>
     type Handler interface {
