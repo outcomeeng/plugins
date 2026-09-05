@@ -14,21 +14,6 @@ Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is 
 Rust implementation code with spec-driven behavior, explicit seams, and full validation passing.
 </objective>
 
-<accessing_skill_files>
-When this skill is invoked, the skill loader provides the base directory in the loading message:
-
-```text
-Base directory for this skill: ${SKILL_DIR}
-```
-
-Use this path to access skill files:
-
-- References: `${SKILL_DIR}/references/`
-- Workflows: `${SKILL_DIR}/workflows/`
-
-Do not search the product directory for skill files when the loading message already provides the base path.
-</accessing_skill_files>
-
 <quick_start>
 
 1. Read the repo-local Rust overlays when present; the standards above are already loaded.

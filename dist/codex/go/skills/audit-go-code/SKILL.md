@@ -5,7 +5,7 @@ description: >-
   scope for design flaws, architecture-decision compliance, concurrency
   soundness, and unsafe/cgo soundness.
 model: sonnet
-allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(grep:*), Skill
+allowed-tools: Read, Grep, Glob, Bash(grep:*), Skill
 ---
 
 Invoke the `go:go-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
