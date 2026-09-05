@@ -26,7 +26,7 @@ The count is the wrong unit. What binds is each decision's `### Audit` and `### 
 
 Two further readings show the same gap from the CLI side. `spx diagnose` reports `methodology-context` as `unavailable` with `observedSource` and `observedVersion` absent, because no installed methodology package is configured. `spx spec context show --understand`, which serves the foundation payload from that package, fails for the same reason: `methodology.packageDir` is unset. Whether the `/understand` foundation is delivered through that payload is a separate decision the context-enumeration ADR does not yet make.
 
-**Interim**: the managed instruction block instructs Claude to read the methodology source and version from the spx configuration file at the repository root, and states that an absent file means the version the installed spec-tree plugin provides. That line violates the `NEVER` assertion above by design and is removed when the consumption slice lands.
+**Interim**: the managed instruction block instructs Claude to read the methodology source and version from the spx configuration file at the repository root, to read it again whenever `/understand` runs, and states that an absent file or one without a `methodology` block means the version the installed spec-tree plugin provides. That line violates the `NEVER` assertion above by design and is removed when the consumption slice lands.
 
 **Resolution shape**: land the consumption slice in `PLAN.md` (floor and pin advanced to a release whose bundle satisfies the contract, `/contextualize` reading the bundle), emit the `methodology` block in the manifest, retag the assertion's evidence against the CLI output, and delete the interim instruction-block line in the same change.
 
