@@ -77,7 +77,7 @@ Require a live `<SPEC_TREE_FOUNDATION>` marker before directly reading, searchin
 
 A compacted summary, session file, statement that `/understand` ran, or read of the skill file does not prove the foundation is live. After every compaction, invoke `/understand` again before the next product-content access.
 
-The methodology a repository follows is declared in `spx.config.yaml` at the repository root, under `methodology.source` and `methodology.version`. **ALWAYS** read that declaration before applying methodology rules. When the file is absent, the version is the one the installed spec-tree plugin provides.
+The methodology a repository follows is declared in `spx.config.yaml` at the repository root, under `methodology.source` and `methodology.version`. **ALWAYS** read that declaration before applying methodology rules, and read it again whenever `/understand` runs. When the file is absent or declares no `methodology` block, the version is the one the installed spec-tree plugin provides.
 
 ### Before working on a specific node -> `/contextualize`
 
