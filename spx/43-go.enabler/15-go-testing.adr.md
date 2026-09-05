@@ -25,4 +25,4 @@
 - ALWAYS: Go skills teach the declared deterministic test command with `-race` ([audit])
 - NEVER: Go skills teach `testing/quick` or another non-shrinking source for property evidence ([audit])
 - NEVER: Go skills teach `t.Skip` for a missing mandatory dependency — a missing credential, binary, or service fails through `t.Fatal` unless the suite declares that evidence optional ([audit])
-- NEVER: Go skills teach a `_test.go` file in a `tests/` directory, an in-package harness, or a `testdata/` directory outside `internal/testinfra/fixtures/` ([audit])
+- NEVER: Go skills teach a file other than `_test.go` in a `tests/` directory, an in-package harness, or a `testdata/` directory outside `internal/testinfra/fixtures/` ([audit])
