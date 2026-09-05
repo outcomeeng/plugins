@@ -14,7 +14,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Added
 
-- **The router names the methodology declaration.** The managed instruction block's `/understand` section now directs the reader to `spx.config.yaml` at the repository root, where `methodology.source` and `methodology.version` declare the methodology the repository follows, and states that an absent file means the version the installed spec-tree plugin provides. The template advances to 0.37.0, so `/update-instruction-block` re-renders a consumer's router block with the new paragraph; the re-render also carries the Go language block and the registry check command that shipped since 0.36.0 without a template bump.
+- **The router names the methodology declaration.** The managed instruction block's `/understand` section now directs the reader to `spx.config.yaml` at the repository root, where `methodology.source` and `methodology.version` declare the methodology the repository follows, and states that an absent file means the version the installed spec-tree plugin provides.
+- **The template advances to 0.37.0.** `/update-instruction-block` re-renders a consumer's router block once its recorded version is behind. New in this release is the methodology-declaration paragraph above. Already present in the template, and reaching consumer routers only through this bump, are the Go language block and the registry check command that shipped after 0.36.0 without a template version change.
 
 ## 0.92.3
 
