@@ -4,7 +4,7 @@ description: >-
   TypeScript implementation-code audit methodology — judges the TypeScript code
   files in scope for design flaws and architecture-decision compliance.
 model: sonnet
-allowed-tools: Read, Bash, Glob, Grep, Skill
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(grep:*), Skill
 ---
 
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

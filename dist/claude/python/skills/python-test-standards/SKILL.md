@@ -2,7 +2,7 @@
 name: python-test-standards
 user-invocable: false
 description: >-
-  Python testing standards enforced across all skills. Loaded by other skills, not invoked directly.
+  Python test standards enforced across all skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 

@@ -2,6 +2,7 @@
 name: architect-typescript
 description: >-
   ALWAYS invoke this skill when writing ADRs for TypeScript.
+  NEVER author a TypeScript ADR without this skill.
 allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 
@@ -161,20 +162,6 @@ Use the authoritative template (from `/understand`). The ADR is decision-first:
 4. **Do NOT create work items**. That's a product management concern.
 
 </out_of_scope>
-
-<accessing_skill_files>
-When this skill is invoked, Claude Code provides the base directory in the loading message:
-
-```
-Base directory for this skill: ${SKILL_DIR}
-```
-
-Use this path to access skill files:
-
-- References: `${SKILL_DIR}/references/`
-
-**IMPORTANT**: Do NOT search the product directory for skill files.
-</accessing_skill_files>
 
 <reference_index>
 Detailed patterns and principles:

@@ -1,7 +1,8 @@
 ---
 name: rust-test-standards
 user-invocable: false
-description: Rust test standards enforced across all skills. Loaded by other skills, not invoked directly.
+description: >-
+  Rust test standards enforced across all skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 

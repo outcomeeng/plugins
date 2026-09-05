@@ -136,9 +136,9 @@ Each finding's `rule` carries the violation pattern (e.g., `missing-testability`
 
 </what_to_avoid>
 
-<example_review>
+<example_reference>
 Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete ADR-target `REJECTED` JSON verdict showing the Python concern types: SaaS `l2` violation, mocking language, and missing testability in `## Verification`.
-</example_review>
+</example_reference>
 
 <success_criteria>
 The verdict is sound when:
