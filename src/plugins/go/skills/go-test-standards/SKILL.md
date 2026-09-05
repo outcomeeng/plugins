@@ -46,6 +46,8 @@ Every co-located Go spec test file name encodes two orthogonal dimensions: the a
 spx/.../tests/<subject>.<evidence>.<level>[.<runner>]_test.go
 ```
 
+The subject — the text before the first dot — never ends in a Go operating-system or architecture name as its last underscore-separated word: `linux`, `darwin`, `windows`, `amd64`, `arm64`, any other `GOOS` or `GOARCH` value, or a `GOOS_GOARCH` pair. The toolchain reads that trailing word as an implicit build constraint and silently excludes the file on every other platform; the evidence, level, and runner tokens after the first dot carry no such risk. A subject such as `parser_linux` becomes `linux_parser` or `parser_linux_support`.
+
 **Evidence tokens** — the assertion type from `/test`:
 
 | Token         | Assertion type | Meaning                                                                        |

@@ -261,7 +261,7 @@ Go engineering: /test-go, /code-go, /audit-go-code, /audit-go-tests, /audit-go-a
 
 | Type  | Name                         | Purpose                                                                                                                         |
 | ----- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/architect-go`              | Writing ADRs for Go                                                                                                             |
+| Skill | `/architect-go`              | Writing ADRs for Go. NEVER author a Go ADR without this skill                                                                   |
 | Skill | `/audit-go-architecture`     | Go-specific architecture audit                                                                                                  |
 | Skill | `/audit-go-code`             | Go implementation-code audit methodology                                                                                        |
 | Skill | `/audit-go-tests`            | Go test-evidence audit methodology                                                                                              |
@@ -322,7 +322,7 @@ Python engineering: /test-python, /code-python, /audit-python-code, /audit-pytho
 | Skill | `/code-python`                   | Writing or fixing implementation code for Python                    |
 | Skill | `/python-architecture-standards` | Python ADR conventions enforced across architect and auditor skills |
 | Skill | `/python-standards`              | Python code standards enforced across all skills                    |
-| Skill | `/python-test-standards`         | Python testing standards enforced across all skills                 |
+| Skill | `/python-test-standards`         | Python test standards enforced across all skills                    |
 | Skill | `/test-python`                   | Writing or fixing tests for Python                                  |
 
 ### rust
@@ -412,7 +412,7 @@ TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript-co
 | Skill | `/test-typescript`                   | Writing or fixing tests for TypeScript                                                                                        |
 | Skill | `/typescript-architecture-standards` | TypeScript ADR conventions enforced across architect and auditor skills                                                       |
 | Skill | `/typescript-standards`              | TypeScript code standards enforced across all skills                                                                          |
-| Skill | `/typescript-test-standards`         | TypeScript testing standards enforced across all skills                                                                       |
+| Skill | `/typescript-test-standards`         | TypeScript test standards enforced across all skills                                                                          |
 | Agent | `typescript-simplifier`              | Simplifying recently modified TypeScript code while preserving behavior, type safety, testability, and verified test coverage |
 
 ### work

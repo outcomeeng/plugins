@@ -1,6 +1,8 @@
 ---
 name: architect-go
-description: ALWAYS invoke this skill when writing ADRs for Go.
+description: >-
+  ALWAYS invoke this skill when writing ADRs for Go.
+  NEVER author a Go ADR without this skill.
 allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 

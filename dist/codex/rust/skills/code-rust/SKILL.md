@@ -1,6 +1,8 @@
 ---
 name: code-rust
-description: ALWAYS invoke this skill when writing or fixing implementation code for Rust. NEVER write or repair Rust implementation code without this skill.
+description: >-
+  ALWAYS invoke this skill when writing or fixing implementation code for Rust.
+  NEVER write or fix Rust implementation without this skill.
 allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(cargo fmt --check:*), Bash(cargo clippy:*), Bash(cargo test:*)
 ---
 
@@ -11,21 +13,6 @@ Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is 
 <objective>
 Rust implementation code with spec-driven behavior, explicit seams, and full validation passing.
 </objective>
-
-<accessing_skill_files>
-When this skill is invoked, the skill loader provides the base directory in the loading message:
-
-```text
-Base directory for this skill: ${SKILL_DIR}
-```
-
-Use this path to access skill files:
-
-- References: `${SKILL_DIR}/references/`
-- Workflows: `${SKILL_DIR}/workflows/`
-
-Do not search the product directory for skill files when the loading message already provides the base path.
-</accessing_skill_files>
 
 <quick_start>
 

@@ -5,7 +5,7 @@ description: >-
   scope for dependency injection, mocking prohibition, execution-level accuracy,
   Python anti-patterns, and test-double exception cases.
 model: sonnet
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Skill
 ---
 
 Invoke the `python:python-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -136,9 +136,9 @@ Each finding's `rule` carries the violation pattern (e.g., `missing-testability`
 
 </what_to_avoid>
 
-<example_review>
+<example_reference>
 Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete ADR-target `REJECTED` JSON verdict showing the Python concern types: SaaS `l2` violation, mocking language, and missing testability in `## Verification`.
-</example_review>
+</example_reference>
 
 <success_criteria>
 The verdict is sound when:

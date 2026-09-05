@@ -5,7 +5,7 @@ description: >-
   target in scope for dependency injection, mocking prohibition, execution-level
   accuracy, TypeScript anti-patterns, and ancestor consistency.
 model: sonnet
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Skill
 ---
 
 Invoke the `typescript:typescript-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -129,9 +129,9 @@ Each finding's `rule` field carries the violation pattern (e.g., `missing-testab
 
 </what_to_avoid>
 
-<example_review>
+<example_reference>
 Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete ADR-target `REJECTED` JSON verdict showing the TypeScript concern types: missing testability in `## Verification`, mocking language, unjustified test-double language, and SaaS `l2` violation.
-</example_review>
+</example_reference>
 
 <success_criteria>
 The verdict is sound when:

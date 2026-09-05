@@ -5,7 +5,7 @@ description: >-
   scope for design flaws, architecture-decision compliance, and unsafe/FFI
   soundness.
 model: sonnet
-allowed-tools: Read, Bash, Glob, Grep, Skill
+allowed-tools: Read, Grep, Glob, Bash(grep:*), Skill
 ---
 
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

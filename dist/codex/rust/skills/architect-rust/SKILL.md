@@ -1,6 +1,8 @@
 ---
 name: architect-rust
-description: ALWAYS invoke this skill when writing ADRs for Rust.
+description: >-
+  ALWAYS invoke this skill when writing ADRs for Rust.
+  NEVER author a Rust ADR without this skill.
 allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 
@@ -171,20 +173,6 @@ Use the authoritative template (from `/understand`). The ADR is decision-first:
 4. **Do NOT create work items**. That's a product management concern.
 
 </out_of_scope>
-
-<accessing_skill_files>
-When this skill is invoked, the skill loader provides the base directory in the loading message:
-
-```text
-Base directory for this skill: ${SKILL_DIR}
-```
-
-Use this path to access skill files:
-
-- References: `${SKILL_DIR}/references/`
-
-**IMPORTANT**: Do NOT search the product directory for skill files.
-</accessing_skill_files>
 
 <reference_index>
 Detailed patterns and principles:

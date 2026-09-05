@@ -2,6 +2,7 @@
 name: test-typescript
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for TypeScript.
+  NEVER write or fix TypeScript tests without this skill.
 argument-hint: "<full-spx-node-path>"
 arguments: node_path
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)

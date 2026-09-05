@@ -1,6 +1,8 @@
 ---
 name: test-rust
-description: ALWAYS invoke this skill when writing or fixing tests for Rust. NEVER write or repair Rust tests without this skill.
+description: >-
+  ALWAYS invoke this skill when writing or fixing tests for Rust.
+  NEVER write or fix Rust tests without this skill.
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo check:*), Bash(cargo clippy:*), Bash(cargo fmt --check:*), Bash(cargo llvm-cov:*), Bash(spx validation:*), Bash(just test:*), Bash(just check:*), Bash(just verify:*), Bash(just validate:*)
 ---
 

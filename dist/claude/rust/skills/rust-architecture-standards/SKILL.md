@@ -1,7 +1,8 @@
 ---
 name: rust-architecture-standards
 user-invocable: false
-description: Rust ADR conventions enforced across architect and auditor skills. Loaded by other skills, not invoked directly.
+description: >-
+  Rust ADR conventions enforced across architect and auditor skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 
