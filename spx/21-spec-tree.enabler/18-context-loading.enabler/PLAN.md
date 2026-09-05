@@ -1,5 +1,9 @@
 # PLAN: Land SPX-CLI context enumeration
 
+## Checkpoint recovery prerequisite
+
+Align `src/plugins/spec-tree/skills/contextualize/SKILL.md` with this node's synchronization assertions and `spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/13-base-sync-mechanism.adr.md`: consume `/sync-base`'s completed result for the same checkout, preserve the exact blocked action and evidence when recovery fails, and continue the same context target only after `already_current` or `rebased`. Replace ambiguous "clean result" wording with the named successful outcomes; base currency alone does not certify a clean working tree. Keep skill loading, checkpoint creation, and pre-compaction summaries distinct from completed context loading. Validate and independently audit the changed skill before release. This work is independent of the CLI enumeration migration below.
+
 ## Status
 
 The architecture is decided in
