@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-The canonical Go ADR conventions — allowed sections, how Go testability appears in Verification rules, acceptable dependency-injection patterns, and which architectural claims belong in ADRs versus downstream testing.
+The canonical Go ADR conventions — the template source, how Go testability appears in Verification rules, acceptable dependency-injection patterns, and which architectural claims belong in ADRs versus downstream testing.
 </objective>
 
 <success_criteria>
@@ -26,20 +26,15 @@ When evaluating test-level references in ADRs, also check for `spx/local/go-test
 A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
-<adr_sections>
+<template_source>
 
-The ADR template (from `/understand`) is decision-first — the decision is stated directly under the title, with no `Purpose` heading and no preamble:
+The ADR's shape is owned by the `/understand` foundation's decision template. Load that template through the live foundation before authoring or auditing a Go ADR; this standard never restates its sections, because a restated shape drifts the moment the template advances. The template settles which sections exist and in what order; this standard settles only where Go content goes inside it.
 
-1. **Title + decision** -- `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences: what it governs and what it decides.
-2. **Rationale** -- Why this is right given the constraints. Name a rejected alternative only when it sharpens the decision. Omit if self-evident.
-3. **Invariants** (optional) -- Algebraic properties that hold for ALL governed code. Omit if none apply.
-4. **Verification** -- Each rule is an ALWAYS guarantee or a NEVER boundary, grouped under the one subsection naming how it is verified: `### Testing` (deterministic test, `([{assertion type}])`), `### Eval` (graded LLM behavior, `([eval])`), `### Audit` (agent judgment, `([audit])`), ordered by decreasing enforcement strength. Include only the subsections that apply.
-
-**This is the complete list.** An ADR has no other sections. There is no `Purpose` heading, no `Context` section, no `Trade-offs` section, no `Testing Strategy` section, no `Status` field, no `Level Assignments` table — business context and trade-offs fold into the decision statement and Rationale. Go architecture rules — DI mandates, mocking prohibitions, goroutine ownership, `unsafe` boundaries — require agent judgment, so they live under `### Audit` with `([audit])`.
+Go architecture rules — DI mandates, mocking prohibitions, goroutine ownership, `unsafe` boundaries — require agent judgment, so they live under `## Verification` `### Audit` with `([audit])`.
 
 **When an ADR is required:** Every package or boundary that makes architectural decisions -- package layout, interface seams, module choice, concurrency model, DI patterns, persistence boundaries, `unsafe` or cgo boundaries -- requires an ADR. Missing ADRs are violations.
 
-</adr_sections>
+</template_source>
 
 <testability_in_verification>
 

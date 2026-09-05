@@ -9,15 +9,15 @@ Invoke the `go:go-standards` skill before proceeding. If that skill is unavailab
 Invoke the `go:go-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-A Go ADR that follows the standard Go architecture template, preserves spec-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.
+A Go ADR authored to the decision template the `/understand` foundation provides, that preserves spec-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.
 </objective>
 
 <essential_principles>
-**Standards are pre-loaded above.** The first skill defines shared Go standards; the architecture standard defines canonical ADR sections, how testability appears in `## Verification` `### Audit` rules, and what does not belong in an ADR.
+**Standards are pre-loaded above.** The first skill defines shared Go standards; the architecture standard names the decision template as the source of the ADR's shape, how testability appears in `## Verification` `### Audit` rules, and what does not belong in an ADR.
 
 After reading those standards, check for `spx/local/go.md` and `spx/local/go-architecture.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 
-- ADRs follow the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification
+- ADRs take their shape from the decision template loaded through the live `/understand` foundation; no skill restates it
 - Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules -- not in a separate Testing Strategy section
 - Prefer type-level invariants and validating constructors over runtime-only checks when the domain allows it
 - Design around package boundaries, `internal/` visibility, goroutine ownership, and context propagation explicitly
@@ -119,7 +119,7 @@ Execute these phases IN ORDER.
 7. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes
-8. Read `/author` skill for ADR template
+8. Load the decision template through the live `/understand` foundation
 
 **Phase 1: Identify Decisions Needed**
 
@@ -148,12 +148,7 @@ For each decision, consider:
 
 **Phase 3: Write ADRs**
 
-Use the authoritative template (from `/understand`). The ADR is decision-first:
-
-1. **Title + decision**: `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences -- what it governs and what it decides. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale
-2. **Rationale**: Why this is right given the constraints; name a rejected alternative only when it sharpens the decision
-3. **Invariants** (optional): Algebraic properties for all governed code
-4. **Verification**: ALWAYS/NEVER rules grouped under `### Testing` (`[{assertion type}]`), `### Eval` (`[eval]`), `### Audit` (`[audit]`), ordered by decreasing enforcement strength; the DI/mocking testability constraints are `### Audit` rules carrying `([audit])`
+Load the decision template through the live `/understand` foundation and author to it. The template settles the sections and their order; `/go-architecture-standards` `<template_source>` and `<testability_in_verification>` settle the Go placement: the DI/mocking testability constraints are `## Verification` `### Audit` rules carrying `([audit])`, and Go architecture rules that need agent judgment carry the same tag.
 
 **Phase 4: Verify Consistency**
 
