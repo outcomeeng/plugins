@@ -2,6 +2,7 @@
 name: code-typescript
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for TypeScript.
+  NEVER write or fix TypeScript implementation without this skill.
 allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)
 ---
 

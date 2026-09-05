@@ -5,7 +5,7 @@ description: >-
   scope for dependency injection, mocking prohibition, execution-level accuracy,
   Python anti-patterns, and test-double exception cases.
 model: sonnet
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Skill
 ---
 
 {!% require_skill 'python:python-architecture-standards' %!}

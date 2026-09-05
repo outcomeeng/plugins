@@ -5,7 +5,7 @@ description: >-
   target in scope for dependency injection, mocking prohibition, execution-level
   accuracy, TypeScript anti-patterns, and ancestor consistency.
 model: sonnet
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Skill
 ---
 
 Invoke the `typescript:typescript-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
