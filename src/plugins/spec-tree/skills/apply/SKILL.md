@@ -39,6 +39,7 @@ Before starting Step 3, determine the product language:
 - `tsconfig.json` exists -> **TypeScript**
 - `pyproject.toml` or `setup.py` exists -> **Python**
 - `Cargo.toml` or `rust-toolchain.toml` exists -> **Rust**
+- `go.mod` exists -> **Go**
 - Multiple supported language markers exist -> inspect the loaded spec node for a single applicable language; when ambiguity remains, ask the operator and stop before Step 3 until one language is selected
 - No supported marker exists, or the selected language has no installed architecture, test, and code skills -> stop before Step 3 and report the exact marker state plus the missing language-plugin capability
 
@@ -100,20 +101,20 @@ Before dispatching an applicable evidence auditor, apply `<verification_checkpoi
 
 Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
 
-| Step | Purpose                  | TypeScript                                                       | Python                      | Rust                      |
-| ---- | ------------------------ | ---------------------------------------------------------------- | --------------------------- | ------------------------- |
-| 0 §  | Select the slice         | `Skill("spec-tree:slice")`                                       | same                        | same                      |
-| 1    | Load methodology         | `Skill("spec-tree:understand")`                                  | same                        | same                      |
-| 2    | Load context             | `Skill("spec-tree:contextualize", args: "{full-spx-node-path}")` | same                        | same                      |
-| 3    | Architect                | `Skill("architect-typescript")`                                  | `Skill("architect-python")` | `Skill("architect-rust")` |
-| 4    | Architecture audit       | `adr-auditor` agent                                              | same                        | same                      |
-| 5    | Establish evidence       | `Skill("spec-tree:verify")`                                      | same                        | same                      |
-| 6    | Evidence audit           | `test-evidence-auditor`, `eval-evidence-auditor` agents          | same                        | same                      |
-| 7    | Implement                | `Skill("code-typescript")`                                       | `Skill("code-python")`      | `Skill("code-rust")`      |
-| 8    | Implementation audit     | `implementation-auditor` agent                                   | same                        | same                      |
-| 8a   | Evidence-auditor gates   | `test-evidence-auditor`, `eval-evidence-auditor` agents          | same                        | same                      |
-| 9    | Whole-changeset review † | `changes-reviewer` agent                                         | same                        | same                      |
-| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                                       | same                        | same                      |
+| Step | Purpose                  | TypeScript                                                       | Python                      | Rust                      | Go                      |
+| ---- | ------------------------ | ---------------------------------------------------------------- | --------------------------- | ------------------------- | ----------------------- |
+| 0 §  | Select the slice         | `Skill("spec-tree:slice")`                                       | same                        | same                      | same                    |
+| 1    | Load methodology         | `Skill("spec-tree:understand")`                                  | same                        | same                      | same                    |
+| 2    | Load context             | `Skill("spec-tree:contextualize", args: "{full-spx-node-path}")` | same                        | same                      | same                    |
+| 3    | Architect                | `Skill("architect-typescript")`                                  | `Skill("architect-python")` | `Skill("architect-rust")` | `Skill("architect-go")` |
+| 4    | Architecture audit       | `adr-auditor` agent                                              | same                        | same                      | same                    |
+| 5    | Establish evidence       | `Skill("spec-tree:verify")`                                      | same                        | same                      | same                    |
+| 6    | Evidence audit           | `test-evidence-auditor`, `eval-evidence-auditor` agents          | same                        | same                      | same                    |
+| 7    | Implement                | `Skill("code-typescript")`                                       | `Skill("code-python")`      | `Skill("code-rust")`      | `Skill("code-go")`      |
+| 8    | Implementation audit     | `implementation-auditor` agent                                   | same                        | same                      | same                    |
+| 8a   | Evidence-auditor gates   | `test-evidence-auditor`, `eval-evidence-auditor` agents          | same                        | same                      | same                    |
+| 9    | Whole-changeset review † | `changes-reviewer` agent                                         | same                        | same                      | same                    |
+| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                                       | same                        | same                      | same                    |
 
 § Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue; it selects the observable slice whose node set becomes the work queue (see `<invocation_modes>`).
 † Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).

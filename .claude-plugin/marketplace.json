@@ -59,6 +59,11 @@
       "description": "Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /audit-rust-architecture, /architect-rust, rust-simplifier agent"
     },
     {
+      "name": "go",
+      "source": "./dist/claude/go",
+      "description": "Go engineering: /test-go, /code-go, /audit-go-code, /audit-go-tests, /audit-go-architecture, /architect-go, go-simplifier agent"
+    },
+    {
       "name": "contribute",
       "source": "./dist/claude/contribute",
       "description": "Contributions to repositories you do not control: /upstream, /open-upstream-pr, /manage-upstream-pr, /open-upstream-issue, /manage-upstream-issue, /sync-fork"

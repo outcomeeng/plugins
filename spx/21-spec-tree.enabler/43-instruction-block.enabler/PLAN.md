@@ -35,15 +35,3 @@ The 32768-byte combined Codex project-doc budget is the given ceiling — no con
 
 1. Router reduction: relocate dispatch-time guidance — the per-role role-task contracts and the subagent lifecycle mechanics — out of the router into content authored once and build-injected into every skill whose flow dispatches a verifier or reviewer. Injection ships before or with removal; no released plugin version lacks the guidance in both places; the spec assertions and `outcomeeng/distribution/instruction_block.py` `*_POLICY_REQUIREMENTS` tuples pinning router sections move in the same changesets; dispatch behavior after the relocation carries `[eval]` evidence.
 2. Repository fit: this repository's own root instruction content shrinks until the rendered `AGENTS.md` fits the ceiling, and the gate flips from report to fail for fitting surfaces.
-
-## Render a Go language block once the go plugin ships
-
-Governing declarations: `spx/43-go.enabler/go.md` and `spx/43-go.enabler/15-go-testing.adr.md` declare the Go evidence cell `<subject>.<evidence>.<level>[.<runner>]_test.go`, and `spx/21-spec-tree.enabler/17-audit.adr.md` requires every language plugin to ship `audit-go-code`, `audit-go-tests`, and `audit-go-architecture`.
-
-The router renders no Go block: `LANGUAGE_BY_EXTENSION` in `src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py` maps only `py`, `ts`, and `rs`, and `templates/instruction-block.md` declares only `lang:python`, `lang:typescript`, and `lang:rust` blocks. A Go product therefore renders an empty language list and no Go test-naming row.
-
-Steps, carried by the plugin lane of `https://github.com/outcomeeng/changes/issues/10` in the same change that ships `src/plugins/go/`, because the audit-skill table the block introduces names skills that exist only then:
-
-1. Add `go` to `LANGUAGE_BY_EXTENSION`; the mapping test over that source-owned domain covers the new entry.
-2. Add a `lang:go` block to each of the three per-language groups in the template: the Claude and Codex audit-skill tables naming `/audit-go-code`, `/audit-go-architecture`, and `/audit-go-tests`, and the Go row of the test-naming convention.
-3. Update a `*_POLICY_REQUIREMENTS` tuple in `outcomeeng/distribution/instruction_block.py` only where a pinned section changes; run `just build-skills`, `just build-instructions`, `just instructions-check`, and `just test spx/21-spec-tree.enabler/43-instruction-block.enabler/tests/`.

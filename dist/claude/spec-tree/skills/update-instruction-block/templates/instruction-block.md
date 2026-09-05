@@ -567,6 +567,16 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 | "Audit these tests"   | `/audit-rust-tests`        | `test-evidence-auditor`  |
 
 <!-- /lang:rust -->
+<!-- lang:go -->
+
+| User Says...              | Skill (composed)         | Composing agent          |
+| ------------------------- | ------------------------ | ------------------------ |
+| "Audit this code"         | `/audit-go-code`         | `implementation-auditor` |
+| "Audit concurrency in Go" | `/audit-go-code`         | `implementation-auditor` |
+| "Audit ADRs for Go"       | `/audit-go-architecture` | `adr-auditor`            |
+| "Audit these tests"       | `/audit-go-tests`        | `test-evidence-auditor`  |
+
+<!-- /lang:go -->
 
 <!-- /harness:claude -->
 <!-- harness:codex -->
@@ -620,6 +630,16 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 | "Audit these tests"   | `/audit-rust-tests`        | `spec-tree_test-evidence-auditor`  |
 
 <!-- /lang:rust -->
+<!-- lang:go -->
+
+| User Says...              | Skill (composed)         | Composing agent                    |
+| ------------------------- | ------------------------ | ---------------------------------- |
+| "Audit this code"         | `/audit-go-code`         | `spec-tree_implementation-auditor` |
+| "Audit concurrency in Go" | `/audit-go-code`         | `spec-tree_implementation-auditor` |
+| "Audit ADRs for Go"       | `/audit-go-architecture` | `spec-tree_adr-auditor`            |
+| "Audit these tests"       | `/audit-go-tests`        | `spec-tree_test-evidence-auditor`  |
+
+<!-- /lang:go -->
 
 <!-- /harness:codex -->
 
@@ -655,6 +675,18 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 | 1-3   | `{subject}.{evidence}.{level}.{runner}.rs` | `workflow.property.l2.tokio.rs` |
 
 <!-- /lang:rust -->
+<!-- lang:go -->
+
+### Go
+
+| Level | Pattern                                         | Example                               |
+| ----- | ----------------------------------------------- | ------------------------------------- |
+| 1     | `{subject}.{evidence}.l1_test.go`               | `parsing.scenario.l1_test.go`         |
+| 2     | `{subject}.{evidence}.l2_test.go`               | `cli.mapping.l2_test.go`              |
+| 3     | `{subject}.{evidence}.l3_test.go`               | `workflow.property.l3_test.go`        |
+| 1-3   | `{subject}.{evidence}.{level}.{runner}_test.go` | `workflow.property.l2.ginkgo_test.go` |
+
+<!-- /lang:go -->
 <!-- lang:python -->
 
 ### Python

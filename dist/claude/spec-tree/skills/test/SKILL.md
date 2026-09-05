@@ -298,6 +298,7 @@ Canonical filename model:
 - TypeScript and JavaScript: `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Python: `test_<subject>.<evidence>.<level>[.<runner>].py`
 - Rust: `<subject>.<evidence>.<level>[.<runner>].rs`
+- Go: `<subject>.<evidence>.<level>[.<runner>]_test.go`
 
 Evidence tokens are `scenario`, `mapping`, `conformance`, `property`, and `compliance`. Level tokens are `l1`, `l2`, and `l3`. Omit the runner token for the default runner and add it for a non-default runner.
 
@@ -382,6 +383,7 @@ For a decision target, skip evidence-link and filename checks. Report a rule as 
 | TypeScript | `<subject>.<evidence>.<level>[.<runner>].test.ts` | `*.unit.test.ts`, `*.integration.test.ts`, `*.e2e.test.ts`, `*.spec.ts` |
 | Python     | `test_<subject>.<evidence>.<level>[.<runner>].py` | `test_*.py` with no evidence or level segment                           |
 | Rust       | `<subject>.<evidence>.<level>[.<runner>].rs`      | `*_test.rs` or `test_*.rs` with no evidence or level segment            |
+| Go         | `<subject>.<evidence>.<level>[.<runner>]_test.go` | `*_test.go` with no evidence or level segment                           |
 
 evidence ∈ {scenario, mapping, conformance, property, compliance} — level ∈ {l1, l2, l3}
 
@@ -420,7 +422,7 @@ For each assertion needing a new test:
 4. Name the file using `<naming_and_co_location>`.
 5. Scaffold the test structure based on assertion type and language-specific patterns.
 
-Delegate language-specific structure to `/test-python` or `/test-rust` or `/test-typescript`.
+Delegate language-specific structure to `/test-go` or `/test-python` or `/test-rust` or `/test-typescript`.
 
 In decision-rule mode, update each `### Testing` rule with exactly one selected assertion-type tag and create no test scaffold. Continue directly to the report step.
 

@@ -4,17 +4,13 @@ import json
 from typing import cast
 
 from outcomeeng.distribution.installation import (
-    Agent,
     ReportField,
     SourceAction,
 )
 from outcomeeng_testing.generators.installation import (
     catalog_plugin_names_from_bytes,
 )
-from outcomeeng_testing.harnesses.installation import (
-    canonical_catalog_plugin_names,
-    observe_real_installation,
-)
+from outcomeeng_testing.harnesses.installation import observe_real_installation
 
 
 def test_real_agent_clis_map_full_and_generated_subsets() -> None:
@@ -31,17 +27,6 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
     pending_entries = cast(
         list[dict[str, str]], persistent_report[ReportField.PENDING_PUBLICATION]
     )
-    claude_pending = frozenset(
-        entry[ReportField.PLUGIN]
-        for entry in pending_entries
-        if entry[ReportField.AGENT] == Agent.CLAUDE.value
-    )
-    codex_pending = frozenset(
-        entry[ReportField.PLUGIN]
-        for entry in pending_entries
-        if entry[ReportField.AGENT] == Agent.CODEX.value
-    )
-    published = canonical_catalog_plugin_names()
     subset_claude_plugins = frozenset(
         catalog_plugin_names_from_bytes(observation.subset_claude_catalog)
     )
@@ -54,24 +39,17 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
         persistent_report[ReportField.COMPLETED_OPERATIONS]
         == observation.persistent_planned_operations
     )
+    assert pending_entries == [], pending_entries
     assert (
-        claude_pending | codex_pending
-        == (
-            observation.persistent_claude_selected
-            | observation.persistent_codex_selected
-        )
-        - published
+        observation.persistent_claude_plugins.installed
+        == observation.persistent_claude_selected
     )
-    assert observation.persistent_claude_plugins.installed == (
-        observation.persistent_claude_selected - claude_pending
+    assert observation.persistent_claude_plugins.enabled == (
+        observation.persistent_selection & observation.persistent_claude_selected
     )
     assert (
-        observation.persistent_claude_plugins.enabled
-        == (observation.persistent_selection & observation.persistent_claude_selected)
-        - claude_pending
-    )
-    assert observation.persistent_codex_plugins.installed == (
-        observation.persistent_codex_selected - codex_pending
+        observation.persistent_codex_plugins.installed
+        == observation.persistent_codex_selected
     )
     assert not observation.persistent_claude_plugins.installed & (
         claude_plugins - observation.persistent_claude_selected
