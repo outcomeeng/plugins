@@ -26,7 +26,7 @@ MUST preserve exact functionality — all tests must pass after refinement.
 MUST preserve dependency injection patterns — NEVER remove injected parameters or seam boundaries.
 MUST preserve concurrency ownership — NEVER remove a context parameter, a cancellation path, or a goroutine's owner.
 MUST follow product standards from CLAUDE.md when present.
-MUST verify refactored code satisfies the `/code-go` verification checklist (its bundled `references/verification-checklist.md`).
+MUST verify refactored code satisfies the `go:code-go` verification checklist (its bundled `references/verification-checklist.md`).
 
 NEVER modify code that lacks test coverage — flag it and stop.
 NEVER modify code with inadequate tests (generated mocks, implementation testing) — flag it and stop.
@@ -208,7 +208,7 @@ If uncertain whether a change affects concurrency ownership or behavior: do not 
 - [ ] Tests pass (same tests that passed before)
 - [ ] `go vet ./...` clean
 - [ ] Functionality preserved
-- [ ] Satisfies the `/code-go` verification checklist
+- [ ] Satisfies the `go:code-go` verification checklist
 
 </output_format>
 

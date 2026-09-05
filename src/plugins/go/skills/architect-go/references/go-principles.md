@@ -135,4 +135,5 @@ s := unsafe.String(unsafe.SliceData(b), len(b))
 - Prefer the standard library where it suffices, then mature modules with clear maintenance and compatibility stories
 - Minimize architectural commitment to modules that leak through exported APIs
 - Record why a module is chosen and what switching cost it creates
-  </module_selection>
+
+</module_selection>
