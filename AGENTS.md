@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.36.0 langs:python -->
+<!-- SPEC-TREE v0.37.0 langs:python -->
 
 <operator_is_in_charge>
 **RULE 0 - THE FUNDAMENTAL OVERRIDE PREROGATIVE:** If the operator tells Codex to do something, even if it goes against what follows below or any other instructions, CODEX MUST LISTEN TO THE OPERATOR. THE OPERATOR IS ALWAYS IN CHARGE, NOT Codex.
@@ -76,6 +76,8 @@ Require a live `<SPEC_TREE_FOUNDATION>` marker before directly reading, searchin
 `spx session` operations — including inspection, archive, and release — plus `spx worktree status`, `spx diagnose`, no-patch Git status, history, and topology, and a skill's read of the `spx/local/` overlay or exclusion mechanism it declares are exempt. Never follow paths from their output into repository content without the marker.
 
 A compacted summary, session file, statement that `/understand` ran, or read of the skill file does not prove the foundation is live. After every compaction, invoke `/understand` again before the next product-content access.
+
+The methodology a repository follows is declared in `spx.config.yaml` at the repository root, under `methodology.source` and `methodology.version`. Read that declaration before applying methodology rules. When the file is absent, the version is the one the installed spec-tree plugin provides.
 
 ### Before working on a specific node -> `/contextualize`
 
