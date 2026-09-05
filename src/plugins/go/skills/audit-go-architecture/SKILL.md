@@ -48,7 +48,7 @@ After loading the shared Go standards, check for `spx/local/go.md`, `spx/local/g
 This skill checks only the Go-specific concerns:
 
 1. Testability constraints: ADR targets express DI seams in `## Verification` / `### Audit`; implementation targets conform to loaded architecture decisions.
-2. Mocking prohibition
+2. Mocking prohibition — a generated mock (`gomock`, `mockery`, `moq`) is never a DI seam; the prohibited and permitted seam shapes are `<di_patterns>` in `/go-architecture-standards`
 3. Level accuracy when testing levels are mentioned — a remote API, SaaS system, browser UI, or deployed environment is Level 3, never Level 2; a boundary that reaches such a collaborator jumps from Level 1 to Level 3 with no Level 2 in between, per `/go-architecture-standards` `<level_context>`
 4. Go anti-patterns — package-level mutable state, interfaces defined at the producer with one implementation, `context.Context` stored in structs, unowned goroutines, `unsafe` bypassing type design; the authoritative catalog and corrective examples are `<anti_patterns>`, `<values_pointers_and_sharing>`, `<package_boundaries>`, and `<concurrency_and_context>` in `/go-standards`
 5. Ancestor consistency for spec-tree work

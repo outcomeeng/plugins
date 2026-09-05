@@ -65,7 +65,7 @@ Before creating ADRs, understand:
 
 Read these files to understand product structure and workflow:
 
-- `CLAUDE.md` - Product navigation, work item status, BSP dependencies
+- `CLAUDE.md` - Product navigation, work item status, sparse integer index dependencies
 
 For evidence routing, invoke `/verify`. After test is selected, read `/go-test-standards` and invoke `/test-go` for Go expression.
 
@@ -90,15 +90,15 @@ Produce ADRs. The scope depends on the decision:
 
 **ADR Numbering:**
 
-- BSP range: [10, 99]
-- Lower BSP = dependency (higher-BSP ADRs may rely on it)
+- Sparse integer index range: [10, 99]
+- Lower sparse integer index = dependency (higher-index ADRs may rely on it)
 - Insert using midpoint calculation: `new = floor((left + right) / 2)`
 - Append using: `new = floor((last + 99) / 2)`
 - First ADR in scope: use 21
 
 See `/author` skill for complete ordering rules.
 
-**Within-scope dependency order**: adr-21 must be decided before adr-37 (lower BSP = dependency).
+**Within-scope dependency order**: adr-21 must be decided before adr-37 (lower sparse integer index = dependency).
 
 **Cross-scope dependencies**: Must be documented explicitly in the ADR decision statement or Rationale using markdown links.
 
@@ -171,20 +171,6 @@ Use the authoritative template (from `/understand`). The ADR is decision-first:
 4. NEVER create work items — that is a product management concern.
 
 </out_of_scope>
-
-<accessing_skill_files>
-When this skill is invoked, the skill loader provides the base directory in the loading message:
-
-```text
-Base directory for this skill: ${CLAUDE_SKILL_DIR}
-```
-
-Use this path to access skill files:
-
-- References: `${CLAUDE_SKILL_DIR}/references/`
-
-**IMPORTANT**: Do NOT search the product directory for skill files.
-</accessing_skill_files>
 
 <reference_index>
 Detailed patterns and principles:

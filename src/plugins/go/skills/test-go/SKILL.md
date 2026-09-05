@@ -25,11 +25,13 @@ Before writing or revising tests, also check:
 </prerequisites>
 
 <mode_detection>
-Read the request before editing:
+Determine the mode before editing:
 
-- **Write** — an assertion has no linked Go test, or `/verify` routed a new assertion to test: run `<workflow>`.
-- **Fix** — an `/audit-go-tests` or `/audit-tests` verdict rejected existing Go evidence: run `<fix_workflow>`, then the affected steps of `<workflow>`.
-- **Split** — a rejected file carries more than one assertion type or execution level: separate it into one file per cell first, then continue as Fix.
+| Mode  | Signal                                                                          | Action                                                                                  |
+| ----- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Write | An assertion has no linked Go test, or `/verify` routed a new assertion to test | Follow `<workflow>`                                                                     |
+| Fix   | An `/audit-go-tests` or `/audit-tests` verdict rejected existing Go evidence    | Follow `<fix_workflow>`, then rerun `<workflow>` steps 5 through 9 on the repaired file |
+| Split | A rejected file carries more than one assertion type or execution level         | Separate it into one file per cell, then continue as Fix                                |
 
 </mode_detection>
 

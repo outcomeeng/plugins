@@ -1,7 +1,8 @@
 ---
 name: go-test-standards
 user-invocable: false
-description: Go test standards enforced across all skills. Loaded by other skills, not invoked directly.
+description: >-
+  Go test standards enforced across all skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 
@@ -267,7 +268,7 @@ Harnesses, generators, and inert fixtures are production code. They live in the 
 - `internal/testinfra/fixtures/<name>.go` — fixture-resolving code that returns paths under `testdata/`.
 - `internal/testinfra/fixtures/testdata/` — inert input files.
 
-The package is `testinfra`, never `test`, which reads as the standard `testing` package and the `go test` verb. Do not create co-located test-infrastructure modules as homes for setup, data, generator selection, fixture loading, harness behavior, diagnostics, credentials, or source vocabulary. Those concerns belong in `internal/testinfra/` even when one test file consumes them today. Never use an in-package `testutil` or `testhelpers` package, an `export_test.go` that hands a harness or fixture to a test, or a `testdata/` directory outside `internal/testinfra/fixtures/` as homes for shared test infrastructure — those keep ungoverned utility code inside production packages or beside executed tests.
+The package is `testinfra`, never `test`, which reads as the standard `testing` package and the `go test` verb. Do not create co-located test-infrastructure modules as homes for setup, data, generator selection, fixture loading, harness behavior, diagnostics, credentials, or source vocabulary. Those concerns belong in `internal/testinfra/` even when one test file consumes them today. Never use a file other than `_test.go` in a `tests/` directory, an in-package harness — a `testutil` or `testhelpers` package, or an `export_test.go` that hands a harness or fixture to a test — or a `testdata/` directory outside `internal/testinfra/fixtures/` as homes for shared test infrastructure — those keep ungoverned utility code beside executed tests or inside production packages.
 
 </test_infrastructure_layout>
 

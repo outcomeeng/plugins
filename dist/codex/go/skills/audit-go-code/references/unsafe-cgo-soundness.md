@@ -48,6 +48,8 @@ For each cgo call and `//export` function:
 3. **Panic containment.** An `//export` function never panics into C; it recovers and returns an error code.
 4. **Thread safety.** C callbacks into Go document which goroutine or thread runs them and hold no Go lock across the C call.
 
+Findings from this list carry the `cgo-*` rule prefix; findings from `<per_conversion_checks>` keep `ptr-*`, so a boundary violation and a conversion violation never share a rule name.
+
 </per_cgo_boundary_checks>
 
 <verdict_row>

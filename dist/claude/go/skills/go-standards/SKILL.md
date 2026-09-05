@@ -1,7 +1,8 @@
 ---
 name: go-standards
 user-invocable: false
-description: Go code standards enforced across all skills. Loaded by other skills, not invoked directly.
+description: >-
+  Go code standards enforced across all skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 
