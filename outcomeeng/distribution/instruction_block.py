@@ -92,6 +92,17 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("no-patch Git exemption", "no-patch Git status, history, and topology"),
     ("product-path follow guard", "Never follow paths from their output"),
 )
+METHODOLOGY_DECLARATION_POLICY_REQUIREMENTS: Final = (
+    ("declaration file", "`spx.config.yaml`"),
+    ("declared fields", "`methodology.source` and `methodology.version`"),
+    ("read before applying", "read that declaration before applying methodology rules"),
+    ("re-read cadence", "read it again whenever `/understand` runs"),
+    ("absent declaration", "declares no methodology version"),
+    (
+        "forbidden inference",
+        "never infer one from a plugin's distribution version, a changelog, or prose",
+    ),
+)
 AUTHORITY_HIERARCHY_POLICY_HEADING: Final = "## Authority Hierarchy"
 DANGEROUS_COMMAND_GUARD_POLICY_HEADING: Final = "### Dangerous-command guard"
 DANGEROUS_BRANCH_DYNAMIC_PROHIBITION_REQUIREMENT: Final = (
@@ -604,6 +615,10 @@ class FoundationAccessPolicyError(InstructionBlockRenderError):
     """Raised when a rendered router omits part of its foundation access policy."""
 
 
+class MethodologyDeclarationPolicyError(InstructionBlockRenderError):
+    """Raised when a harness router omits the methodology-declaration instruction."""
+
+
 class AuthorityHierarchyPolicyError(InstructionBlockRenderError):
     """Raised when a rendered router omits part of its authority hierarchy."""
 
@@ -1002,6 +1017,25 @@ def validate_foundation_access_policy(
             )
 
 
+def validate_methodology_declaration_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a rendered harness router whose foundation section omits the declaration read."""
+    for harness, document in blocks_by_harness.items():
+        router = managed_router_block(document)
+        section = _markdown_section(router, FOUNDATION_POLICY_HEADING)
+        missing = [
+            name
+            for name, required_text in METHODOLOGY_DECLARATION_POLICY_REQUIREMENTS
+            if not _operative_policy_line_contains(section, required_text)
+        ]
+        if missing:
+            details = ", ".join(missing)
+            raise MethodologyDeclarationPolicyError(
+                f"{harness} router methodology-declaration policy is incomplete: {details}"
+            )
+
+
 def validate_authority_hierarchy_policy(
     blocks_by_harness: Mapping[str, str],
 ) -> None:
@@ -1296,6 +1330,11 @@ OPERATIVE_POLICY_VALIDATIONS: Final = (
         name="foundation-access",
         requirements=FOUNDATION_POLICY_REQUIREMENTS,
         validator=validate_foundation_access_policy,
+    ),
+    OperativePolicyValidation(
+        name="methodology-declaration",
+        requirements=METHODOLOGY_DECLARATION_POLICY_REQUIREMENTS,
+        validator=validate_methodology_declaration_policy,
     ),
     OperativePolicyValidation(
         name="authority-hierarchy",
