@@ -182,14 +182,14 @@ The architect needs enough testing context to write effective Verification rules
 
 <anti_patterns>
 
-| Anti-pattern                  | Why it is wrong                                | Where it belongs                   |
-| ----------------------------- | ---------------------------------------------- | ---------------------------------- |
-| `## Testing Strategy` section | Not in the authoritative ADR template          | `/test` skill output               |
-| Level assignment tables       | Downstream concern; depends on spec assertions | `/test` Stage 2                    |
-| Escalation rationale          | Downstream concern; depends on product infra   | `/test` Stage 2                    |
-| `## Status` field             | Not in the authoritative ADR template          | Git history / commit metadata      |
-| File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants |
-| Migration plans               | Temporal; narrates a transition                | Code review / work items           |
-| Implementation code           | ADRs constrain implementation, not provide it  | `/code-go`                         |
+| Anti-pattern                  | Why it is wrong                                             | Where it belongs                   |
+| ----------------------------- | ----------------------------------------------------------- | ---------------------------------- |
+| `## Testing Strategy` section | Downstream concern; the verification lane, not the decision | `/test` skill output               |
+| Level assignment tables       | Downstream concern; depends on spec assertions              | `/test` Stage 2                    |
+| Escalation rationale          | Downstream concern; depends on product infra                | `/test` Stage 2                    |
+| `## Status` field             | Temporal; a decision is permanent truth                     | Git history / commit metadata      |
+| File names to delete          | Temporal; becomes stale immediately                         | Code review against ADR invariants |
+| Migration plans               | Temporal; narrates a transition                             | Code review / work items           |
+| Implementation code           | ADRs constrain implementation, not provide it               | `/code-go`                         |
 
 </anti_patterns>
