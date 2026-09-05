@@ -8,7 +8,7 @@ Never ask the operator whether to merge.
 
 Deployment is declared as advancing the designated main checkout to the merged tip, governed by `DEPLOYMENT_READINESS` and detailed under `## Deploy`. It mutates local environment state — a checkout this repository's own later sessions resolve against — and nothing a consumer of the published plugins observes, which is the boundary `spx/15-merging.pdr.md` draws between the two phases. It reaches outside the assigned worktree and surfaces its own approval prompt.
 
-Release is declared as persistent marketplace installation from the merged assigned checkout, governed by `RELEASE_READINESS` and detailed under `## Release`.
+Release is declared as persistent marketplace installation with the designated main checkout, fast-forwarded by `DEPLOY`, as its working directory, governed by `RELEASE_READINESS` and detailed under `## Release`.
 
 ## Canonical checkout safety
 
@@ -101,10 +101,10 @@ Record the checkout's full path and its new full HEAD SHA, or the named skip rea
 
 ## Release: refresh persistent plugin installation
 
-The `RELEASE` phase, governed by `RELEASE_READINESS`, runs after `DEPLOY`. Switch the assigned worktree to `origin/main` (detached; never check out `main` anywhere other than the main checkout), then refresh the selected persistent Claude Code project and Codex home from that checkout:
+The `RELEASE` phase, governed by `RELEASE_READINESS`, runs after `DEPLOY`. Run the refresh with the designated main checkout `DEPLOY` fast-forwarded as its working directory, without leaving the assigned worktree: Claude Code project scope is keyed by checkout path, the main checkout is where the operator's plugin selection is installed, and a linked worktree's project scope is empty, so a refresh run there installs only `spec-tree` into that worktree and refreshes nothing the operator selected. The path is `readings.mainCheckoutPath` from the canonical checkout safety diagnosis above:
 
 ```bash
-just install-marketplace
+just --working-directory <main-checkout-path> --justfile <main-checkout-path>/Justfile install-marketplace
 ```
 
 The command inspects each agent's installed `outcomeeng` plugins, bounds and orders them through the merged checkout's committed catalog, enforces the canonical GitHub source, and refreshes exactly that set in Claude Code project scope and the selected `CODEX_HOME`. Empty agent state receives only `spec-tree` with a warning; nonempty state without `spec-tree` withholds `RELEASE_READINESS` before mutation. It reconciles the selected plugins' generated Codex definitions into the selected `CODEX_HOME/agents/` registry under the marketplace ownership record: one current owned definition per authored agent of a selected plugin, stale owned definitions pruned only while their recorded digest matches, and every foreign or modified collision preserved and reported. A plugin-owned checkout definition whose invoked skills live in the selected home is a scope-split fault; byte-identical generated copies receive directed-removal guidance, changed or unrecognized copies require inspection, and either class stops the release before mutation. A colliding Claude Code user-scope `outcomeeng` registration likewise withholds `RELEASE_READINESS` before mutation. Preserve the structured first-failure diagnostic when the command fails. After a successful refresh, reload the harness plugin index or start a new session before judging role availability, because a running session retains its already-loaded registry.
