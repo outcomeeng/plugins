@@ -1,3 +1,5 @@
+import pathlib
+
 import pytest
 
 from outcomeeng.distribution import instruction_block as source
@@ -13,6 +15,10 @@ def test_instruction_block_compliance_evidence() -> None:
         == evidence.compliance_evidence_declarations()
     )
     assert evidence.router_policy_evidence_run().executed == source.ROUTER_POLICY_NAMES
+    assert (
+        evidence.dispatch_reference_policy_evidence_run().executed
+        == source.DISPATCH_REFERENCE_POLICY_NAMES
+    )
 
 
 def test_every_harness_router_authorizes_subagent_dispatch() -> None:
@@ -26,21 +32,61 @@ def test_every_harness_router_authorizes_subagent_dispatch() -> None:
             assert section is not None
 
 
-def test_each_harness_block_carries_only_its_own_dispatch_mechanics() -> None:
-    documents = evidence.rendered_instruction_blocks()
-    source.validate_harness_dispatch_mechanics(documents)
+def test_each_dispatch_reference_carries_only_its_own_mechanics() -> None:
+    references = source.load_dispatch_references()
+    source.validate_harness_dispatch_mechanics(references)
     for owning_harness, marker in source.HARNESS_DISPATCH_MECHANICS_MARKERS.items():
-        for agent_harness, document in documents.items():
-            router = source.managed_router_block(document)
+        for agent_harness, document in references.items():
             if agent_harness == owning_harness:
-                assert marker in router
+                assert marker in document
             else:
-                assert marker not in router
+                assert marker not in document
+
+
+def test_diverging_dispatch_reference_copies_are_rejected(
+    tmp_path: pathlib.Path,
+) -> None:
+    # The violating case for the byte-identical clause: the real per-target
+    # reference copies are laid out in a temporary repository, proven loadable
+    # while identical, then one skill's copy is mutated so the loader must
+    # refuse the divergence instead of silently picking a copy.
+    references = source.load_dispatch_references()
+    for diverging_harness in references:
+        repo_root = tmp_path / diverging_harness
+        for skill_dir in source.DISPATCH_REFERENCE_SKILL_DIRS:
+            for target, document in references.items():
+                path = source.dispatch_reference_path(
+                    target, skill_dir, repo_root=repo_root
+                )
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(document, encoding="utf-8")
+        assert source.load_dispatch_references(repo_root=repo_root) == references
+
+        diverged_path = source.dispatch_reference_path(
+            diverging_harness,
+            source.DISPATCH_REFERENCE_SKILL_DIRS[0],
+            repo_root=repo_root,
+        )
+        diverged_path.write_text(
+            references[diverging_harness] + "\ndiverged copy\n", encoding="utf-8"
+        )
+        with pytest.raises(source.DispatchReferencePolicyError):
+            source.load_dispatch_references(repo_root=repo_root)
+
+
+def test_router_blocks_carry_no_dispatch_mechanics() -> None:
+    # The relocation invariant: the mechanics load with the dispatching skill,
+    # so neither harness router carries either harness's mechanics marker.
+    documents = evidence.rendered_instruction_blocks()
+    for document in documents.values():
+        router = source.managed_router_block(document)
+        for marker in source.HARNESS_DISPATCH_MECHANICS_MARKERS.values():
+            assert marker not in router
 
 
 def test_leaked_harness_dispatch_mechanics_are_rejected() -> None:
-    documents = evidence.rendered_instruction_blocks()
-    for agent_harness, document in documents.items():
+    references = source.load_dispatch_references()
+    for agent_harness, document in references.items():
         own_marker = source.HARNESS_DISPATCH_MECHANICS_MARKERS[agent_harness]
         for owning_harness, marker in source.HARNESS_DISPATCH_MECHANICS_MARKERS.items():
             if owning_harness == agent_harness:
@@ -66,6 +112,44 @@ def test_dropping_a_required_dispatch_literal_is_rejected() -> None:
                     source.validate_subagent_dispatch_policy(
                         {agent_harness: violating_document}
                     )
+
+
+def test_quoted_dispatch_reference_requirements_are_rejected() -> None:
+    references = source.load_dispatch_references()
+    for validation in source.DISPATCH_REFERENCE_POLICY_VALIDATIONS:
+        for _, required_text in validation.requirements:
+            violating_references = {
+                agent_harness: document.replace(
+                    required_text,
+                    f"\n{source.MARKDOWN_BLOCKQUOTE_MARKER} {required_text}\n",
+                )
+                for agent_harness, document in references.items()
+            }
+            with pytest.raises(source.InstructionBlockRenderError):
+                validation.validator(violating_references)
+
+
+def test_fenced_dispatch_reference_requirements_are_rejected() -> None:
+    references = source.load_dispatch_references()
+    for validation in source.DISPATCH_REFERENCE_POLICY_VALIDATIONS:
+        for _, required_text in validation.requirements:
+            violating_references = {
+                agent_harness: document.replace(
+                    required_text,
+                    "\n".join(
+                        (
+                            "",
+                            source.MARKDOWN_CODE_FENCE_MARKERS[0],
+                            required_text,
+                            source.MARKDOWN_CODE_FENCE_MARKERS[0],
+                            "",
+                        )
+                    ),
+                )
+                for agent_harness, document in references.items()
+            }
+            with pytest.raises(source.InstructionBlockRenderError):
+                validation.validator(violating_references)
 
 
 def test_quoted_policy_requirements_are_rejected() -> None:

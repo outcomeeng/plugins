@@ -420,24 +420,24 @@ def rendered_instruction_blocks(
 
 def _assert_codex_role_input_uses_runtime_capability() -> None:
     """Assert role-task submission renders through a discoverable runtime token."""
-    authored = dist.AUTHORED_TEMPLATE_PATH.read_text(encoding="utf-8")
+    authored = dist.AUTHORED_DISPATCH_MECHANICS_FRAGMENT_PATH.read_text(
+        encoding="utf-8"
+    )
     token = format_runtime_token(
         RUNTIME_TOKEN_TOOL_KIND,
         RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY,
-        Target.CODEX.value,
     )
     runtime_name = RUNTIME_TOKEN_SPAWN_AGENT_NAMES[Target.CODEX.value]
 
     assert token in authored
     assert runtime_name not in authored
 
-    document = _render_shipped_instruction_blocks()[harness.HARNESS_CODEX]
-    router = dist.managed_router_block(document)
-    assert token not in router
-    assert runtime_name in router
+    document = dist.load_dispatch_references()[dist.CODEX_HARNESS]
+    assert token not in document
+    assert runtime_name in document
     assert (
         "**Spawn each verifier or reviewer with its role task as the initial turn.**"
-    ) in router
+    ) in document
 
 
 def _assert_dist_template_copies_stay_equivalent() -> None:
@@ -451,21 +451,21 @@ def _assert_dist_template_copies_stay_equivalent() -> None:
     for marker in (
         "<!-- harness:codex -->",
         "<!-- harness:claude -->",
-        "multi_agent_v1.spawn_agent",
-        "**Collect, preserve, then close.**",
-        "**Spawn each verifier or reviewer with its role task as the initial turn.**",
-        "Use the `Agent` tool for every configured verifier or reviewer.",
+        "**Already-dispatched verifier boundary.**",
     ):
         assert marker in claude_copy
         assert marker in codex_copy
 
 
 def _assert_claude_router_uses_native_configured_agent_dispatch() -> None:
-    """Assert Claude keeps native configured-agent dispatch."""
+    """Assert Claude keeps native configured-agent dispatch in its dispatch reference."""
+    reference = dist.load_dispatch_references()[dist.CLAUDE_HARNESS]
+    assert (
+        "Use the `Agent` tool for every configured verifier or reviewer." in reference
+    )
+
     document = _render_shipped_instruction_blocks()[harness.HARNESS_CLAUDE]
     router = dist.managed_router_block(document)
-
-    assert "Use the `Agent` tool for every configured verifier or reviewer." in router
     assert "OUTCOMEENG_CODEX_AGENT_NAME" not in router
 
 
@@ -651,56 +651,60 @@ def _require_deferred_agent_discovery_policy_error(
     raise AssertionError(accepted_message)
 
 
-def _assert_codex_router_discovers_deferred_agent_tools() -> None:
-    """Challenge deferred typed-agent discovery across every language subset."""
-    for enabled_languages in harness.template_language_subsets():
-        documents = _render_shipped_instruction_blocks(enabled_languages)
-        codex_document = documents[harness.HARNESS_CODEX]
-        codex_router = dist.managed_router_block(codex_document)
-        policy = dist.deferred_agent_discovery_policy_paragraph(codex_router)
-        assert policy is not None
-        dist.validate_deferred_agent_discovery_policy(
-            {dist.CODEX_HARNESS: codex_document}
+def _assert_dispatch_reference_carries_each_harness_mechanics() -> None:
+    """Assert each built dispatch reference carries only its own mechanics."""
+    references = dist.load_dispatch_references()
+    dist.validate_harness_dispatch_mechanics(references)
+    for owning_harness, marker in dist.HARNESS_DISPATCH_MECHANICS_MARKERS.items():
+        for agent_harness, document in references.items():
+            if agent_harness == owning_harness:
+                assert marker in document
+            else:
+                assert marker not in document
+
+
+def _assert_codex_dispatch_reference_discovers_deferred_agent_tools() -> None:
+    """Challenge deferred typed-agent discovery in the built dispatch reference."""
+    references = dist.load_dispatch_references()
+    codex_document = references[dist.CODEX_HARNESS]
+    policy = dist.deferred_agent_discovery_policy_paragraph(codex_document)
+    assert policy is not None
+    dist.validate_deferred_agent_discovery_policy(references)
+
+    claude_document = references[dist.CLAUDE_HARNESS]
+    assert dist.DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR not in claude_document
+
+    for _, required_text in dist.DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS:
+        invalid_document = codex_document.replace(
+            policy, policy.replace(required_text, "", 1), 1
+        )
+        _require_deferred_agent_discovery_policy_error(
+            invalid_document,
+            (
+                "incomplete deferred-agent discovery policy was accepted: "
+                f"{required_text}"
+            ),
         )
 
-        claude_router = dist.managed_router_block(documents[harness.HARNESS_CLAUDE])
-        assert dist.DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR not in claude_router
+    for _, required_text in dist.DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS:
+        invalid_document = codex_document.replace(required_text, "", 1)
+        _require_deferred_agent_discovery_policy_error(
+            invalid_document,
+            (
+                "incomplete deferred-agent discovery policy was accepted: "
+                f"{required_text}"
+            ),
+        )
 
-        for _, required_text in dist.DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS:
-            invalid_document = codex_document.replace(
-                policy, policy.replace(required_text, "", 1), 1
-            )
-            _require_deferred_agent_discovery_policy_error(
-                invalid_document,
-                (
-                    "incomplete deferred-agent discovery policy was accepted: "
-                    f"{required_text}"
-                ),
-            )
-
-        for _, required_text in dist.DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS:
-            invalid_document = codex_document.replace(required_text, "", 1)
-            _require_deferred_agent_discovery_policy_error(
-                invalid_document,
-                (
-                    "incomplete deferred-agent discovery policy was accepted: "
-                    f"{required_text}"
-                ),
-            )
-
-        for contradiction in dist.DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS:
-            invalid_document = codex_document.replace(
-                MODULE.ROUTER_BLOCK_END,
-                f"{contradiction.violating_directive}\n\n{MODULE.ROUTER_BLOCK_END}",
-                1,
-            )
-            _require_deferred_agent_discovery_policy_error(
-                invalid_document,
-                (
-                    "contradictory deferred-agent discovery directive was accepted: "
-                    f"{contradiction.name}"
-                ),
-            )
+    for contradiction in dist.DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS:
+        invalid_document = f"{codex_document}\n\n{contradiction.violating_directive}\n"
+        _require_deferred_agent_discovery_policy_error(
+            invalid_document,
+            (
+                "contradictory deferred-agent discovery directive was accepted: "
+                f"{contradiction.name}"
+            ),
+        )
 
 
 def router_policy_evidence_run() -> harness.EvidenceRun:
@@ -710,9 +714,6 @@ def router_policy_evidence_run() -> harness.EvidenceRun:
             0
         ]: _assert_all_routers_enforce_operator_question_interrupt,
         dist.ROUTER_POLICY_NAMES[1]: (_assert_codex_router_bounds_dispatched_verifiers),
-        dist.ROUTER_POLICY_NAMES[2]: (
-            _assert_codex_router_discovers_deferred_agent_tools
-        ),
     }
     executed: list[str] = []
     for policy_name in dist.ROUTER_POLICY_NAMES:
@@ -720,6 +721,26 @@ def router_policy_evidence_run() -> harness.EvidenceRun:
         executed.append(policy_name)
     return harness.EvidenceRun(
         declared=dist.ROUTER_POLICY_NAMES,
+        executed=tuple(executed),
+    )
+
+
+def dispatch_reference_policy_evidence_run() -> harness.EvidenceRun:
+    """Run every source-declared dispatch-reference policy evidence obligation."""
+    assertions = {
+        dist.DISPATCH_REFERENCE_POLICY_NAMES[0]: (
+            _assert_dispatch_reference_carries_each_harness_mechanics
+        ),
+        dist.DISPATCH_REFERENCE_POLICY_NAMES[1]: (
+            _assert_codex_dispatch_reference_discovers_deferred_agent_tools
+        ),
+    }
+    executed: list[str] = []
+    for policy_name in dist.DISPATCH_REFERENCE_POLICY_NAMES:
+        assertions[policy_name]()
+        executed.append(policy_name)
+    return harness.EvidenceRun(
+        declared=dist.DISPATCH_REFERENCE_POLICY_NAMES,
         executed=tuple(executed),
     )
 

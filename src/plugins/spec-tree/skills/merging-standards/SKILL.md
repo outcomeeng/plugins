@@ -36,6 +36,7 @@ Load each required bundled reference directly from this index:
   - review inspection, classification, check waits, failure modes, and success criteria.
 - Read `${CLAUDE_SKILL_DIR}/references/merge-cleanup.md` immediately before a merge mutation. It owns the merge command, overlay checks, worktree transition, and branch cleanup sequence.
 - Read `${CLAUDE_SKILL_DIR}/references/action-tokens.md` before emitting a merge-lifecycle action token. It owns every token's trigger condition and required follow-up.
+- Read `${CLAUDE_SKILL_DIR}/references/verifier-dispatch.md` before dispatching any configured verifier or reviewer role. It owns the dispatch mechanics and the per-role role-task contracts, which load with this skill rather than with the managed router block.
 
 The composing skill names the tagged section or operation it needs. Read the matching one-level reference directly from this index and apply it without reimplementing it. A bundled reference never dispatches another bundled reference.
 

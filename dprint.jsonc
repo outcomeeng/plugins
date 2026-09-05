@@ -18,6 +18,10 @@
     "**/semgrep_*.yaml",
     "outcomeeng/vendor/**",
     "pyproject.toml",
+    // Generated producer-coupled eval prompts: `outcomeeng-evals
+    // materialize-prompts` is their sole writer and its `--check` form is
+    // their drift gate, so the formatter never rewrites their bytes.
+    "spx/**/evals/**/prompt.md",
   ],
   "dockerfile": {},
   "json": {

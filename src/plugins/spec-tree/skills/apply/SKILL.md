@@ -32,6 +32,12 @@ If a node's flow cannot reach its gate-specific passing state or a converged rev
 
 </invocation_modes>
 
+<verifier_dispatch_reference>
+
+Before the first dispatch of any configured verifier or reviewer in this flow — the Step 4 decision audit, the Step 6 and Step 8a evidence audits, the Step 8 implementation audit, or the Step 9 whole-changeset review — read `${CLAUDE_SKILL_DIR}/references/verifier-dispatch.md`. It owns the dispatch mechanics and the per-role role-task contracts, which load with this skill rather than with the managed router block.
+
+</verifier_dispatch_reference>
+
 <language_detection>
 
 Before starting Step 3, determine the product language:
@@ -184,11 +190,11 @@ Establish every selected path-bearing evidence definition before implementation.
 
 Dispatch the auditor matching every path-bearing evidence artifact Step 5 created or changed:
 
-- For test evidence, dispatch `test-evidence-auditor` with the router-owned prompt contract: repository path, governing node, assertion text or spec path plus assertion headings, and linked test files. The auditor detects and composes the applicable `audit-{lang}-tests` concern inside its isolated agent session.
+- For test evidence, dispatch `test-evidence-auditor` with the role-task contract from `${CLAUDE_SKILL_DIR}/references/verifier-dispatch.md`: repository path, governing node, assertion text or spec path plus assertion headings, and linked test files. The auditor detects and composes the applicable `audit-{lang}-tests` concern inside its isolated agent session.
 - For eval evidence, dispatch `eval-evidence-auditor` with the governing node, `[eval]` assertions, eval definition, materialized prompt, cases, history, and real producer artifacts. Require the audit-eval-evidence JSON verdict.
 - A pathless audit requirement creates no authoring artifact for Step 6. Its isolated verifier remains the workflow that produces the eventual audit verdict.
 
-When the scope is cross-node (see `<scope_detection>`), enumerate every governed node whose current linked test or eval evidence the change creates, modifies, or invalidates. Dispatch one router-owned singular-node prompt per governed node and evidence type, in parallel when independent. Step 6 passes only when every applicable dispatched audit approves. Never pass a whole changeset as one singular `Governing node` prompt; Step 8a covers the final changed evidence set and Step 9 reviews the whole changeset.
+When the scope is cross-node (see `<scope_detection>`), enumerate every governed node whose current linked test or eval evidence the change creates, modifies, or invalidates. Dispatch one singular-node role-task prompt per governed node and evidence type, per `${CLAUDE_SKILL_DIR}/references/verifier-dispatch.md`, in parallel when independent. Step 6 passes only when every applicable dispatched audit approves. Never pass a whole changeset as one singular `Governing node` prompt; Step 8a covers the final changed evidence set and Step 9 reviews the whole changeset.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
 

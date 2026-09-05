@@ -43,6 +43,9 @@ AUTHORED_TEMPLATE_RELATIVE_PATH: Final = Path(
     "src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md"
 )
 AUTHORED_TEMPLATE_PATH: Final = REPO_ROOT / AUTHORED_TEMPLATE_RELATIVE_PATH
+AUTHORED_DISPATCH_MECHANICS_FRAGMENT_PATH: Final = REPO_ROOT / Path(
+    "src/_shared/agentic-execution/subagent-dispatch-mechanics/fragment.md"
+)
 DIST_TEMPLATE_RELATIVE_PATH: Final = Path(
     "spec-tree/skills/update-instruction-block/templates/instruction-block.md"
 )
@@ -298,6 +301,12 @@ HARNESS_DISPATCH_MECHANICS_MARKERS: Final = {
     CLAUDE_HARNESS: "Use the `Agent` tool for every configured verifier or reviewer",
     CODEX_HARNESS: "exposed typed-subagent spawn capability",
 }
+DISPATCH_REFERENCE_SKILL_DIRS: Final = (
+    "spec-tree/skills/merging-standards",
+    "spec-tree/skills/apply",
+    "instructions/skills/create-skill",
+)
+DISPATCH_REFERENCE_FILENAME: Final = "references/verifier-dispatch.md"
 WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
     (
         "standalone waiter call",
@@ -349,6 +358,9 @@ WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
 ROUTER_POLICY_NAMES: Final = (
     "operator-question-interrupt",
     "codex-verifier-dispatch",
+)
+DISPATCH_REFERENCE_POLICY_NAMES: Final = (
+    "harness-dispatch-mechanics",
     "codex-deferred-agent-discovery",
 )
 SUBAGENT_DISPATCH_POLICY_HEADING: Final = "### Sub-agent dispatch"
@@ -629,11 +641,15 @@ class SubagentDispatchPolicyError(InstructionBlockRenderError):
 
 
 class HarnessDispatchMechanicsError(InstructionBlockRenderError):
-    """A rendered harness router carries another harness's dispatch mechanics."""
+    """A built dispatch reference carries another harness's dispatch mechanics."""
 
 
 class DeferredAgentDiscoveryPolicyError(InstructionBlockRenderError):
-    """Raised when the Codex router omits deferred typed-agent discovery policy."""
+    """Raised when the Codex dispatch reference omits deferred typed-agent discovery policy."""
+
+
+class DispatchReferencePolicyError(InstructionBlockRenderError):
+    """Raised when the built verifier-dispatch references are missing or diverge."""
 
 
 class InstructionBlockModule(Protocol):
@@ -847,6 +863,38 @@ def obsolete_spx_instruction_paths(
 def dist_template_path(harness: str, *, repo_root: Path = REPO_ROOT) -> Path:
     """Return the rendered harness template path for one instruction-block harness."""
     return repo_root / DIST_DIR_NAME / harness / DIST_TEMPLATE_RELATIVE_PATH
+
+
+def dispatch_reference_path(
+    harness: str, skill_dir: str, *, repo_root: Path = REPO_ROOT
+) -> Path:
+    """Return one built verifier-dispatch reference path for one harness target."""
+    return repo_root / DIST_DIR_NAME / harness / skill_dir / DISPATCH_REFERENCE_FILENAME
+
+
+def load_dispatch_references(*, repo_root: Path = REPO_ROOT) -> dict[str, str]:
+    """Read the built verifier-dispatch reference for each harness target.
+
+    The build renders every consuming skill's copy from the same authored
+    fragments, so the per-target copies are byte-identical; a divergence means
+    the authored-once injection broke, and it fails here before any policy
+    validation reads a single copy as the target's dispatch reference.
+    """
+    references: dict[str, str] = {}
+    for harness in (CLAUDE_HARNESS, CODEX_HARNESS):
+        documents = {
+            skill_dir: dispatch_reference_path(
+                harness, skill_dir, repo_root=repo_root
+            ).read_text(encoding="utf-8")
+            for skill_dir in DISPATCH_REFERENCE_SKILL_DIRS
+        }
+        if len(set(documents.values())) != 1:
+            diverging = ", ".join(sorted(documents))
+            raise DispatchReferencePolicyError(
+                f"{harness} verifier-dispatch references diverge across skills: {diverging}"
+            )
+        references[harness] = next(iter(documents.values()))
+    return references
 
 
 def load_harness_templates(
@@ -1068,23 +1116,25 @@ def validate_codex_agent_registry_policy(
         )
 
 
-def validate_harness_dispatch_mechanics(blocks_by_harness: Mapping[str, str]) -> None:
-    """Reject a rendered router carrying another harness's dispatch mechanics.
+def validate_harness_dispatch_mechanics(
+    references_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a built dispatch reference carrying another harness's mechanics.
 
-    The dispatch authorization is harness-neutral, so each marker belongs to
-    exactly one render; a marker crossing over means harness filtering broke.
+    The mechanics are authored once behind a build-target conditional, so each
+    marker belongs to exactly one target's render; a marker crossing over means
+    the build's target filtering broke.
     """
-    for harness, document in blocks_by_harness.items():
-        router = managed_router_block(document)
+    for harness, document in references_by_harness.items():
         for owning_harness, marker in HARNESS_DISPATCH_MECHANICS_MARKERS.items():
-            present = _operative_policy_line_contains(router, marker)
+            present = _operative_policy_line_contains(document, marker)
             if owning_harness == harness and not present:
                 raise HarnessDispatchMechanicsError(
-                    f"{harness} router is missing its own dispatch mechanics: {marker}"
+                    f"{harness} dispatch reference is missing its own dispatch mechanics: {marker}"
                 )
             if owning_harness != harness and present:
                 raise HarnessDispatchMechanicsError(
-                    f"{harness} router carries {owning_harness} dispatch mechanics: {marker}"
+                    f"{harness} dispatch reference carries {owning_harness} dispatch mechanics: {marker}"
                 )
 
 
@@ -1242,9 +1292,9 @@ def validate_verifier_dispatch_policy(
         )
 
 
-def deferred_agent_discovery_policy_paragraph(router: str) -> str | None:
+def deferred_agent_discovery_policy_paragraph(document: str) -> str | None:
     """Return the Codex deferred-agent discovery heading and body."""
-    paragraphs = router.split("\n\n")
+    paragraphs = document.split("\n\n")
     for index, paragraph in enumerate(paragraphs):
         if DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR not in paragraph:
             continue
@@ -1255,14 +1305,13 @@ def deferred_agent_discovery_policy_paragraph(router: str) -> str | None:
 
 
 def validate_deferred_agent_discovery_policy(
-    blocks_by_harness: Mapping[str, str],
+    references_by_harness: Mapping[str, str],
 ) -> None:
-    """Reject a Codex router that omits or contradicts deferred agent discovery."""
-    document = blocks_by_harness.get(CODEX_HARNESS)
+    """Reject a Codex dispatch reference that omits or contradicts deferred agent discovery."""
+    document = references_by_harness.get(CODEX_HARNESS)
     if document is None:
-        raise DeferredAgentDiscoveryPolicyError("missing Codex router")
-    router = managed_router_block(document)
-    policy = deferred_agent_discovery_policy_paragraph(router) or ""
+        raise DeferredAgentDiscoveryPolicyError("missing Codex dispatch reference")
+    policy = deferred_agent_discovery_policy_paragraph(document) or ""
     missing_policy = [
         name
         for name, required_text in DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS
@@ -1271,7 +1320,7 @@ def validate_deferred_agent_discovery_policy(
     missing_lifecycle = [
         name
         for name, required_text in DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS
-        if not _operative_policy_line_contains(router, required_text)
+        if not _operative_policy_line_contains(document, required_text)
     ]
     missing = [*missing_policy, *missing_lifecycle]
     if missing:
@@ -1282,12 +1331,20 @@ def validate_deferred_agent_discovery_policy(
     contradictions = [
         rule.name
         for rule in DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS
-        if rule.pattern.search(router)
+        if rule.pattern.search(document)
     ]
     if contradictions:
         details = ", ".join(contradictions)
         raise DeferredAgentDiscoveryPolicyError(
             f"Codex deferred-agent discovery policy is contradictory: {details}"
+        )
+    claude_document = references_by_harness.get(CLAUDE_HARNESS)
+    if (
+        claude_document is not None
+        and DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR in claude_document
+    ):
+        raise DeferredAgentDiscoveryPolicyError(
+            "Claude dispatch reference carries the Codex deferred-agent discovery policy"
         )
 
 
@@ -1329,14 +1386,21 @@ OPERATIVE_POLICY_VALIDATIONS: Final = (
         validator=validate_subagent_dispatch_policy,
     ),
     OperativePolicyValidation(
-        name="harness-dispatch-mechanics",
-        requirements=tuple(HARNESS_DISPATCH_MECHANICS_MARKERS.items()),
-        validator=validate_harness_dispatch_mechanics,
-    ),
-    OperativePolicyValidation(
         name="verifier-dispatch",
         requirements=CODEX_VERIFIER_DISPATCH_REQUIREMENTS,
         validator=validate_verifier_dispatch_policy,
+    ),
+)
+
+# The dispatch mechanics and deferred-agent discovery policy live in the built
+# verifier-dispatch reference of every dispatching skill, not in the router, so
+# their pinned requirements are validated on the injected skill surface they
+# ship in.
+DISPATCH_REFERENCE_POLICY_VALIDATIONS: Final = (
+    OperativePolicyValidation(
+        name="harness-dispatch-mechanics",
+        requirements=tuple(HARNESS_DISPATCH_MECHANICS_MARKERS.items()),
+        validator=validate_harness_dispatch_mechanics,
     ),
     OperativePolicyValidation(
         name="deferred-agent-discovery",
@@ -1366,6 +1430,9 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     )
     for validation in OPERATIVE_POLICY_VALIDATIONS:
         validation.validator(rendered)
+    references = load_dispatch_references(repo_root=repo_root)
+    for validation in DISPATCH_REFERENCE_POLICY_VALIDATIONS:
+        validation.validator(references)
     module.write_root_instruction_files(repo_root, rendered)
     module.remove_obsolete_spx_instruction_files(repo_root)
 
