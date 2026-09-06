@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import os
 import shutil
@@ -13,12 +14,13 @@ import tomllib
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
+from enum import StrEnum
 from functools import cache
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
-from typing import cast
+from typing import Protocol, cast
 
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
@@ -100,7 +102,6 @@ from outcomeeng_testing.generators.installation import (
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
 )
-from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT
 
 UNOWNED_AGENT_FILENAME = "developer-owned.toml"
 UNOWNED_AGENT_CONTENT = 'name = "developer-owned"\n'
@@ -109,7 +110,14 @@ _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
 PLUGIN_DISABLING_CODEX_CONFIG = b"[plugins]\nenabled = false\n"
 
-CODEX_LOGIN_COMMAND: tuple[str, ...] = (CODEX_EXECUTABLE, "login", "--with-api-key")
+CODEX_AUTH_FILENAME = "auth.json"
+CODEX_CREDENTIAL_TOKEN_FIELDS: frozenset[str] = frozenset(
+    {"access_token", "id_token", "refresh_token"}
+)
+CODEX_TOKEN_METADATA_FIELDS: frozenset[str] = frozenset({"account_id"})
+CODEX_LOGIN_STATUS_COMMAND: tuple[str, ...] = (CODEX_EXECUTABLE, "login", "status")
+CODEX_EXEC_COMMAND_PREFIX: tuple[str, ...] = (CODEX_EXECUTABLE, "exec")
+CODEX_API_KEY_ENVIRONMENT_NAMES: tuple[str, ...] = ("OPENAI_API_KEY",)
 ROLE_DISCOVERY_ROLES_FIELD = "roles"
 RENAMED_CHECKOUT_AGENT_NAME = "local_helper.toml"
 RENAMED_CHECKOUT_SKILL_NAME = "renamed-skill"
@@ -1845,33 +1853,296 @@ class CodexRoleDiscoveryObservation:
     """
 
     install_exit_code: int
+    install_stdout: str
     install_stderr: str
-    login_exit_code: int
-    login_stderr: str
+    login_status_exit_code: int
+    login_status_stdout: str
+    login_status_stderr: str
     session_exit_code: int
+    session_stdout: str
     session_stderr: str
     session_last_message: str
+    command_argv: tuple[tuple[str, ...], ...]
     discovered_roles: frozenset[str] | None
     placed_roles: frozenset[str]
+    selected_login_digest_before: str
+    selected_login_digest_after: str
+    disposable_login_digest: str
+    credential_scalar_count: int
+    credential_surface_match_count: int
     codex_home: Path
 
 
-def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
+class RoleDiscoveryProcessRunner(Protocol):
+    """Process boundary for role-discovery installation and probe commands."""
+
+    commands: list[tuple[str, ...]]
+
+    def run(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: Path,
+        env: Mapping[str, str],
+        timeout: float | None,
+    ) -> subprocess.CompletedProcess[str]: ...
+
+
+class RoleDiscoveryCredentialSurface(StrEnum):
+    """Session process surfaces guarded against copied login material."""
+
+    COMMAND_ARGUMENT = "command-argument"
+    SESSION_STDOUT = "session-stdout"
+    SESSION_STDERR = "session-stderr"
+    SESSION_LAST_MESSAGE = "session-last-message"
+
+
+@dataclass
+class SubprocessRoleDiscoveryRunner:
+    """Real subprocess adapter bound at the role-discovery composition edge."""
+
+    commands: list[tuple[str, ...]] = field(default_factory=list)
+
+    def run(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: Path,
+        env: Mapping[str, str],
+        timeout: float | None,
+    ) -> subprocess.CompletedProcess[str]:
+        command = tuple(argv)
+        self.commands.append(command)
+        return subprocess.run(
+            command,
+            cwd=cwd,
+            env=dict(env),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+
+
+@dataclass
+class RecordingRoleDiscoveryRunner:
+    """Recording collaborator for process-order evidence."""
+
+    commands: list[tuple[str, ...]] = field(default_factory=list)
+
+    def run(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: Path,
+        env: Mapping[str, str],
+        timeout: float | None,
+    ) -> subprocess.CompletedProcess[str]:
+        del cwd, env, timeout
+        command = tuple(argv)
+        self.commands.append(command)
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+
+@dataclass
+class ControlledRoleDiscoveryRunner:
+    """Controlled process failure simulation for captured-stream security."""
+
+    stream_text: str
+    commands: list[tuple[str, ...]] = field(default_factory=list)
+
+    def run(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: Path,
+        env: Mapping[str, str],
+        timeout: float | None,
+    ) -> subprocess.CompletedProcess[str]:
+        del cwd, timeout
+        command = tuple(argv)
+        self.commands.append(command)
+        Path(env[CODEX_HOME_ENV]).mkdir(parents=True, exist_ok=True)
+        return subprocess.CompletedProcess(command, 0, self.stream_text, "")
+
+
+@dataclass
+class TimeoutRoleDiscoveryRunner:
+    """Controlled timeout simulation carrying captured process output."""
+
+    stream_text: str
+    commands: list[tuple[str, ...]] = field(default_factory=list)
+
+    def run(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: Path,
+        env: Mapping[str, str],
+        timeout: float | None,
+    ) -> subprocess.CompletedProcess[str]:
+        del cwd
+        command = tuple(argv)
+        self.commands.append(command)
+        if not command or command[0] != CODEX_EXECUTABLE:
+            Path(env[CODEX_HOME_ENV]).mkdir(parents=True, exist_ok=True)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        raise subprocess.TimeoutExpired(
+            command,
+            timeout if timeout is not None else 0.0,
+            output=self.stream_text,
+            stderr="",
+        )
+
+
+@dataclass
+class SessionSurfaceRoleDiscoveryRunner:
+    """Controlled session-surface failure simulation for credential guards."""
+
+    credential: str
+    surface: RoleDiscoveryCredentialSurface
+    commands: list[tuple[str, ...]] = field(default_factory=list)
+
+    def run(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: Path,
+        env: Mapping[str, str],
+        timeout: float | None,
+    ) -> subprocess.CompletedProcess[str]:
+        del cwd, timeout
+        command = tuple(argv)
+        Path(env[CODEX_HOME_ENV]).mkdir(parents=True, exist_ok=True)
+        if command[: len(CODEX_EXEC_COMMAND_PREFIX)] != CODEX_EXEC_COMMAND_PREFIX:
+            self.commands.append(command)
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        recorded_command = command
+        stdout = ""
+        stderr = ""
+        if self.surface is RoleDiscoveryCredentialSurface.COMMAND_ARGUMENT:
+            recorded_command = (*command, self.credential)
+        elif self.surface is RoleDiscoveryCredentialSurface.SESSION_STDOUT:
+            stdout = self.credential
+        elif self.surface is RoleDiscoveryCredentialSurface.SESSION_STDERR:
+            stderr = self.credential
+        else:
+            last_message_index = command.index("--output-last-message") + 1
+            Path(command[last_message_index]).write_text(
+                self.credential,
+                encoding="utf-8",
+            )
+        self.commands.append(recorded_command)
+        return subprocess.CompletedProcess(recorded_command, 0, stdout, stderr)
+
+
+@dataclass
+class CodexRoleDiscoveryHarness:
+    """Selected-home and process-boundary setup for role-discovery evidence."""
+
+    selected_codex_home: Path
+    process_runner: RoleDiscoveryProcessRunner
+
+    @classmethod
+    def without_login(cls, temporary_root: Path) -> CodexRoleDiscoveryHarness:
+        """Create a selected home with no login state and a recording runner."""
+        selected_codex_home = temporary_root / "selected-codex-home"
+        selected_codex_home.mkdir()
+        return cls(selected_codex_home, RecordingRoleDiscoveryRunner())
+
+    @classmethod
+    def with_login(
+        cls,
+        temporary_root: Path,
+        *,
+        login_payload: str,
+    ) -> CodexRoleDiscoveryHarness:
+        """Create selected login state with no process execution."""
+        selected_codex_home = cls._write_login(temporary_root, login_payload)
+        return cls(selected_codex_home, RecordingRoleDiscoveryRunner())
+
+    @classmethod
+    def with_captured_stream(
+        cls,
+        temporary_root: Path,
+        *,
+        login_payload: str,
+        stream_text: str,
+    ) -> CodexRoleDiscoveryHarness:
+        """Create login state and a controlled captured-stream runner."""
+        selected_codex_home = cls._write_login(temporary_root, login_payload)
+        return cls(selected_codex_home, ControlledRoleDiscoveryRunner(stream_text))
+
+    @classmethod
+    def with_timeout_stream(
+        cls,
+        temporary_root: Path,
+        *,
+        login_payload: str,
+        stream_text: str,
+    ) -> CodexRoleDiscoveryHarness:
+        """Create login state and a controlled timeout-output runner."""
+        selected_codex_home = cls._write_login(temporary_root, login_payload)
+        return cls(selected_codex_home, TimeoutRoleDiscoveryRunner(stream_text))
+
+    @classmethod
+    def with_session_credential_surface(
+        cls,
+        temporary_root: Path,
+        *,
+        login_payload: str,
+        credential: str,
+        surface: RoleDiscoveryCredentialSurface,
+    ) -> CodexRoleDiscoveryHarness:
+        """Create login state and inject its credential at the session boundary."""
+        selected_codex_home = cls._write_login(temporary_root, login_payload)
+        return cls(
+            selected_codex_home,
+            SessionSurfaceRoleDiscoveryRunner(credential, surface),
+        )
+
+    @staticmethod
+    def _write_login(temporary_root: Path, login_payload: str) -> Path:
+        selected_codex_home = temporary_root / "selected-codex-home"
+        selected_codex_home.mkdir()
+        (selected_codex_home / CODEX_AUTH_FILENAME).write_text(
+            login_payload,
+            encoding="utf-8",
+        )
+        return selected_codex_home
+
+    @property
+    def commands(self) -> tuple[tuple[str, ...], ...]:
+        """Expose recorded command arguments for linked-test predicates."""
+        return tuple(self.process_runner.commands)
+
+    def observe(self) -> CodexRoleDiscoveryObservation:
+        """Run role discovery through this selected home and process boundary."""
+        return observe_codex_role_discovery(
+            process_runner=self.process_runner,
+            selected_codex_home=self.selected_codex_home,
+        )
+
+
+def observe_codex_role_discovery(
+    *,
+    process_runner: RoleDiscoveryProcessRunner | None = None,
+    selected_codex_home: Path | None = None,
+) -> CodexRoleDiscoveryObservation:
     """Populate a disposable Codex home by isolated installation and probe it.
 
-    The credential named by ``CODEX_API_KEY_ENVIRONMENT`` reaches only the agent
-    CLI's login command over standard input; the session environment carries no
-    credential variable, so authentication demonstrably comes from the disposable
-    home. A missing credential is a dependency error, never a silent pass.
+    The selected Codex home's login state is copied into the disposable home.
+    Ambient API-key variables are removed from the probe environment, so the login
+    status and session commands can authenticate only through that copied state.
+    Missing selected-home login state is a dependency error, never a silent pass.
     """
+    runner = process_runner or SubprocessRoleDiscoveryRunner()
+    selected_login_path = _required_selected_codex_login_path(selected_codex_home)
+    credential_scalars = _credential_scalars(selected_login_path)
     checkout = repository_root()
     _require_binaries(REQUIRED_BINARIES)
-    credential = os.environ.get(CODEX_API_KEY_ENVIRONMENT)
-    if not credential:
-        raise RuntimeError(
-            f"required credential {CODEX_API_KEY_ENVIRONMENT} is unavailable for "
-            "the Codex role-discovery probe"
-        )
+    selected_login_digest_before = _login_state_digest(selected_login_path)
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
@@ -1880,29 +2151,53 @@ def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
         base_environment = {
             name: value
             for name, value in os.environ.items()
-            if name != CODEX_API_KEY_ENVIRONMENT
+            if name not in CODEX_API_KEY_ENVIRONMENT_NAMES
         }
         plan = build_isolated_installation_plan(mirror, state, base_environment)
         environment = dict(plan.commands[0].environment)
-        install = _run_recipe(checkout, mirror, state, environment)
+        install = _run_recipe(
+            checkout,
+            mirror,
+            state,
+            environment,
+            process_runner=runner,
+        )
+        _guard_login_material(
+            credential_scalars,
+            command_argv=runner.commands,
+            captured=(install.stdout, install.stderr),
+        )
         codex_home = state / "codex"
         placed_roles = _placed_role_names(codex_home)
-        login = scrubbed_probe_run(
-            CODEX_LOGIN_COMMAND,
+        disposable_login_path = codex_home / CODEX_AUTH_FILENAME
+        shutil.copy2(selected_login_path, disposable_login_path)
+        disposable_login_path.chmod(stat.S_IRUSR | stat.S_IWUSR)
+        disposable_login_digest = _login_state_digest(disposable_login_path)
+        login_status = _run_codex_probe(
+            CODEX_LOGIN_STATUS_COMMAND,
             cwd=mirror,
             env=environment,
-            credential=credential,
-            input_text=credential,
+            process_runner=runner,
+            credential_scalars=credential_scalars,
+        )
+        _guard_login_material(
+            credential_scalars,
+            command_argv=runner.commands,
+            captured=(
+                install.stdout,
+                install.stderr,
+                login_status.stdout,
+                login_status.stderr,
+            ),
         )
         schema_path = temporary_root / "role-discovery-schema.json"
         schema_path.write_text(
             json.dumps(ROLE_DISCOVERY_OUTPUT_SCHEMA), encoding="utf-8"
         )
         last_message_path = temporary_root / "role-discovery-last-message.json"
-        session = scrubbed_probe_run(
+        session = _run_codex_probe(
             (
-                CODEX_EXECUTABLE,
-                "exec",
+                *CODEX_EXEC_COMMAND_PREFIX,
                 "--ephemeral",
                 "--skip-git-repo-check",
                 "-C",
@@ -1915,69 +2210,213 @@ def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
             ),
             cwd=mirror,
             env=environment,
-            credential=credential,
+            process_runner=runner,
+            credential_scalars=credential_scalars,
         )
         last_message = (
             last_message_path.read_text(encoding="utf-8")
             if last_message_path.exists()
             else ""
         )
-    scrubbed_last_message = scrub_credential(last_message, credential)
+        _guard_login_material(
+            credential_scalars,
+            command_argv=runner.commands,
+            captured=(
+                install.stdout,
+                install.stderr,
+                login_status.stdout,
+                login_status.stderr,
+                session.stdout,
+                session.stderr,
+                last_message,
+            ),
+        )
+        credential_surface_match_count = _credential_surface_match_count(
+            credential_scalars,
+            command_argv=runner.commands,
+            captured=(
+                install.stdout,
+                install.stderr,
+                login_status.stdout,
+                login_status.stderr,
+                session.stdout,
+                session.stderr,
+                last_message,
+            ),
+        )
+        selected_login_digest_after = _login_state_digest(selected_login_path)
     return CodexRoleDiscoveryObservation(
         install_exit_code=install.returncode,
-        install_stderr=scrub_credential(install.stderr, credential),
-        login_exit_code=login.returncode,
-        login_stderr=scrub_credential(login.stderr, credential),
+        install_stdout=install.stdout,
+        install_stderr=install.stderr,
+        login_status_exit_code=login_status.returncode,
+        login_status_stdout=login_status.stdout,
+        login_status_stderr=login_status.stderr,
         session_exit_code=session.returncode,
-        session_stderr=scrub_credential(session.stderr, credential),
-        session_last_message=scrubbed_last_message,
-        discovered_roles=_discovered_roles(scrubbed_last_message),
+        session_stdout=session.stdout,
+        session_stderr=session.stderr,
+        session_last_message=last_message,
+        command_argv=tuple(runner.commands),
+        discovered_roles=_discovered_roles(last_message),
         placed_roles=placed_roles,
+        selected_login_digest_before=selected_login_digest_before,
+        selected_login_digest_after=selected_login_digest_after,
+        disposable_login_digest=disposable_login_digest,
+        credential_scalar_count=len(credential_scalars),
+        credential_surface_match_count=credential_surface_match_count,
         codex_home=codex_home,
     )
 
 
-def scrubbed_probe_run(
+@cache
+def observe_real_codex_role_discovery() -> CodexRoleDiscoveryObservation:
+    """Share one real role-discovery observation across the L3 evidence files."""
+    return observe_codex_role_discovery()
+
+
+def _required_selected_codex_login_path(
+    selected_codex_home: Path | None = None,
+) -> Path:
+    """Return the selected Codex login file or fail before a probe process runs."""
+    selected_home = selected_codex_home
+    if selected_home is None:
+        selected_home_value = os.environ.get(CODEX_HOME_ENV)
+        if selected_home_value:
+            selected_home = Path(selected_home_value).expanduser()
+    if selected_home is None:
+        raise RuntimeError(
+            f"required Codex login state is unavailable: {CODEX_HOME_ENV} is unset"
+        )
+    login_path = selected_home / CODEX_AUTH_FILENAME
+    if not login_path.is_file():
+        raise RuntimeError(f"required Codex login state is unavailable at {login_path}")
+    return login_path
+
+
+def selected_codex_login_state_available(
+    selected_codex_home: Path | None = None,
+) -> bool:
+    """Report whether the selected Codex home can authenticate a real probe."""
+    try:
+        login_path = _required_selected_codex_login_path(selected_codex_home)
+        _credential_scalars(login_path)
+    except RuntimeError:
+        return False
+    return True
+
+
+def _login_state_digest(path: Path) -> str:
+    """Return a one-way observation of login-state bytes without exposing them."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _credential_scalars(path: Path) -> tuple[str, ...]:
+    """Read credential-bearing token values without returning them to tests."""
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError("required Codex login state is unreadable") from error
+
+    if not isinstance(document, dict) or not isinstance(document.get("tokens"), dict):
+        raise RuntimeError("required Codex login state contains no token document")
+
+    tokens = document["tokens"]
+    values = {
+        scalar
+        for field, value in tokens.items()
+        if field not in CODEX_TOKEN_METADATA_FIELDS
+        for scalar in _nonempty_string_scalars(value)
+    }
+    if not values:
+        raise RuntimeError("required Codex login state contains no credentials")
+    return tuple(sorted(values))
+
+
+def _nonempty_string_scalars(value: object) -> tuple[str, ...]:
+    """Return every nonempty string nested in a token-field value."""
+    if isinstance(value, str):
+        return (value,) if value else ()
+    if isinstance(value, dict):
+        return tuple(
+            scalar
+            for nested in value.values()
+            for scalar in _nonempty_string_scalars(nested)
+        )
+    if isinstance(value, list):
+        return tuple(
+            scalar for nested in value for scalar in _nonempty_string_scalars(nested)
+        )
+    return ()
+
+
+def _guard_login_material(
+    credential_scalars: Sequence[str],
+    *,
+    command_argv: Sequence[Sequence[str]],
+    captured: Sequence[str],
+) -> None:
+    """Stop before returning observations that expose login material."""
+    if _credential_surface_match_count(
+        credential_scalars,
+        command_argv=command_argv,
+        captured=captured,
+    ):
+        raise RuntimeError(
+            "Codex login material appeared in role-discovery process output"
+        )
+
+
+def _credential_surface_match_count(
+    credential_scalars: Sequence[str],
+    *,
+    command_argv: Sequence[Sequence[str]],
+    captured: Sequence[str],
+) -> int:
+    """Count credential-bearing scalar appearances across process surfaces."""
+    arguments = tuple(argument for command in command_argv for argument in command)
+    return sum(
+        sum(credential in argument for argument in arguments)
+        + sum(credential in surface for surface in captured)
+        for credential in credential_scalars
+    )
+
+
+def _run_codex_probe(
     argv: Sequence[str],
     *,
     cwd: Path,
     env: Mapping[str, str],
-    credential: str,
-    input_text: str | None = None,
+    process_runner: RoleDiscoveryProcessRunner,
+    credential_scalars: Sequence[str],
     timeout: float = ROLE_DISCOVERY_TIMEOUT_SECONDS,
 ) -> subprocess.CompletedProcess[str]:
-    """Run one probe command with every captured stream scrubbed on every path.
-
-    ``subprocess.TimeoutExpired`` carries the partial capture collected before
-    the kill; scrubbing it before the exception leaves this helper keeps the
-    credential out of tracebacks and CI logs on the timeout path as well.
-    """
+    """Run one Codex probe command against the explicit disposable environment."""
     try:
-        return subprocess.run(
+        result = process_runner.run(
             argv,
             cwd=cwd,
             env=env,
-            input=input_text,
-            capture_output=True,
-            text=True,
-            check=False,
             timeout=timeout,
         )
     except subprocess.TimeoutExpired as error:
-        error.output = _scrub_captured_bytes(error.output, credential)
-        error.stderr = _scrub_captured_bytes(error.stderr, credential)
+        captured = tuple(
+            value.decode("utf-8", errors="replace")
+            if isinstance(value, bytes)
+            else value or ""
+            for value in (error.stdout, error.stderr)
+        )
+        _guard_login_material(
+            credential_scalars,
+            command_argv=(tuple(argv),),
+            captured=captured,
+        )
         raise
-
-
-def _scrub_captured_bytes(captured: bytes | None, credential: str) -> bytes | None:
-    """Scrub one captured stream in the raw representation the runtime kept.
-
-    ``subprocess.TimeoutExpired`` stores the partial capture as raw bytes even
-    under ``text=True``, so the credential is replaced byte-for-byte.
-    """
-    if captured is None:
-        return None
-    return captured.replace(credential.encode("utf-8"), b"[REDACTED-CREDENTIAL]")
+    _guard_login_material(
+        credential_scalars,
+        command_argv=(tuple(argv),),
+        captured=(result.stdout, result.stderr),
+    )
+    return result
 
 
 def racing_digest_reader(
@@ -2000,16 +2439,6 @@ def racing_digest_reader(
         return real(path)
 
     return reader
-
-
-def scrub_credential(text: str, credential: str) -> str:
-    """Replace the credential's bytes so no captured stream can carry them.
-
-    Assertion messages surface these streams verbatim in a failure report, and
-    exact-literal CI secret masking does not cover a transformed echo, so the
-    substitution happens at capture time before any storage.
-    """
-    return text.replace(credential, "[REDACTED-CREDENTIAL]")
 
 
 def _placed_role_names(codex_home: Path) -> frozenset[str]:
@@ -2199,17 +2628,27 @@ def _run_recipe(
     mirror: Path,
     state: Path,
     environment: Mapping[str, str],
+    *,
+    process_runner: RoleDiscoveryProcessRunner | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    argv = (
+        "just",
+        "install-marketplace",
+        "--checkout",
+        str(mirror),
+        "--state-root",
+        str(state),
+        "--json",
+    )
+    if process_runner is not None:
+        return process_runner.run(
+            argv,
+            cwd=source_checkout,
+            env=environment,
+            timeout=None,
+        )
     return subprocess.run(
-        (
-            "just",
-            "install-marketplace",
-            "--checkout",
-            str(mirror),
-            "--state-root",
-            str(state),
-            "--json",
-        ),
+        argv,
         cwd=source_checkout,
         env=dict(environment),
         capture_output=True,
@@ -2510,6 +2949,7 @@ __all__ = [
     "InterruptedReconciliationObservation",
     "AgentHomeReconciliationObservation",
     "CodexRoleDiscoveryObservation",
+    "CodexRoleDiscoveryHarness",
     "CollisionObservation",
     "ConfigObservation",
     "FailureObservation",
@@ -2521,7 +2961,9 @@ __all__ = [
     "DesignatedFailureRunner",
     "RealFirstInstallObservation",
     "RealInstallationObservation",
+    "RecordingRoleDiscoveryRunner",
     "RecordingRunner",
+    "RoleDiscoveryCredentialSurface",
     "ScopeSplitClassification",
     "ScopeSplitObservation",
     "UnpublishedPluginObservation",
@@ -2553,8 +2995,7 @@ __all__ = [
     "observe_repository_plan",
     "observe_scope_split",
     "racing_digest_reader",
-    "scrub_credential",
-    "scrubbed_probe_run",
+    "selected_codex_login_state_available",
     "skill_enabling_definition",
     "RENAMED_CHECKOUT_AGENT_NAME",
     "RENAMED_CHECKOUT_SKILL_NAME",

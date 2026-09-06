@@ -1,7 +1,8 @@
 """Generated finite plugin selections for installation evidence."""
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
@@ -23,6 +24,75 @@ from outcomeeng.distribution.installation import (
     Operation,
     SPEC_TREE_PLUGIN,
 )
+
+
+@dataclass(frozen=True)
+class GeneratedCodexLoginPayload:
+    """Variable credential and metadata values encoded as one login document."""
+
+    text: str
+    credential: str
+    metadata_value: str = ""
+
+
+def generated_codex_login_payload(
+    credential_field: str,
+    *,
+    nested: bool = False,
+) -> GeneratedCodexLoginPayload:
+    """Generate a login document for one credential-bearing token field."""
+    credential = f"generated-{credential_field}-credential-scalar"
+    token_value: object = {"parts": [credential]} if nested else credential
+    return GeneratedCodexLoginPayload(
+        text=json.dumps({"tokens": {credential_field: token_value}}),
+        credential=credential,
+    )
+
+
+def generated_unknown_codex_login_payload(
+    *,
+    nested: bool = False,
+) -> GeneratedCodexLoginPayload:
+    """Generate a future credential field absent from the known field registry."""
+    return generated_codex_login_payload("future_secret", nested=nested)
+
+
+def generated_codex_login_payload_with_metadata(
+    credential_fields: Collection[str],
+    metadata_field: str,
+) -> GeneratedCodexLoginPayload:
+    """Generate one credential and one harmless token-metadata value."""
+    if not credential_fields:
+        raise ValueError("credential field collection must not be empty")
+    credential_field = sorted(credential_fields)[0]
+    credential = f"generated-{credential_field}-credential-scalar"
+    metadata_value = f"generated-{metadata_field}-metadata-value"
+    return GeneratedCodexLoginPayload(
+        text=json.dumps(
+            {
+                "tokens": {
+                    credential_field: credential,
+                    metadata_field: metadata_value,
+                }
+            }
+        ),
+        credential=credential,
+        metadata_value=metadata_value,
+    )
+
+
+def generated_unusable_codex_login_payloads(
+    metadata_fields: Collection[str],
+) -> tuple[str, ...]:
+    """Generate every login-document shape that cannot authenticate a probe."""
+    metadata_tokens = {
+        field: f"generated-{field}-metadata-value" for field in metadata_fields
+    }
+    return (
+        "{",
+        json.dumps({"tokens": {}}),
+        json.dumps({"tokens": metadata_tokens}),
+    )
 
 
 def catalog_plugin_names_from_bytes(payload: bytes) -> tuple[str, ...]:
@@ -185,7 +255,7 @@ def generated_failure_classification_cases(
 ) -> tuple[tuple[InstallationMode, str, Operation], ...]:
     """Compose each reachable mode-operation pair with a plan source.
 
-    Several source configurations can reach the same operation.  Keep the
+    Several source configurations can reach the same operation. Keep the
     first source that reaches each mode-operation pair so every finite mapping
     case appears exactly once.
     """
@@ -199,14 +269,19 @@ def generated_failure_classification_cases(
 
 
 __all__ = [
+    "GeneratedCodexLoginPayload",
     "catalog_plugin_names_from_bytes",
     "catalog_plugin_names_from_document",
     "generated_agent_subsets",
     "generated_catalog_subset",
     "generated_claude_listing_entries",
+    "generated_codex_login_payload",
+    "generated_codex_login_payload_with_metadata",
     "generated_codex_listing_entries",
     "generated_failure_classification_cases",
     "generated_invalid_catalog_subsets",
     "generated_persistent_catalog_selections",
+    "generated_unknown_codex_login_payload",
+    "generated_unusable_codex_login_payloads",
     "generated_valid_catalog_subsets",
 ]

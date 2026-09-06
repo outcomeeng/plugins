@@ -2,33 +2,44 @@
 
 import hashlib
 import json
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 
 from outcomeeng.distribution.installation import (
+    AGENT_OWNERSHIP_DESTINATION_FIELD,
+    AGENT_OWNERSHIP_DIGEST_FIELD,
+    AGENT_OWNERSHIP_ENTRIES_FIELD,
+    AGENT_OWNERSHIP_PLUGIN_FIELD,
+    AGENT_OWNERSHIP_SCHEMA_FIELD,
+    AGENT_OWNERSHIP_SCHEMA_VERSION,
     CODEX_CONFIG_PATH,
     Operation,
     SourceAction,
 )
-from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT
+from outcomeeng_testing.generators.installation import (
+    generated_codex_login_payload,
+    generated_codex_login_payload_with_metadata,
+    generated_unknown_codex_login_payload,
+    generated_unusable_codex_login_payloads,
+)
 from outcomeeng_testing.harnesses.installation import (
+    CODEX_CREDENTIAL_TOKEN_FIELDS,
+    CODEX_TOKEN_METADATA_FIELDS,
+    CodexRoleDiscoveryHarness,
+    RoleDiscoveryCredentialSurface,
     observe_interrupted_reconciliation,
     ScopeSplitClassification,
     racing_digest_reader,
-    scrubbed_probe_run,
     RENAMED_CHECKOUT_AGENT_NAME,
     PluginLifecycleHarness,
     observe_agent_home_collision,
     observe_agent_home_reconciliation,
     observe_codex_config_independence,
-    observe_codex_role_discovery,
     observe_failed_run_restore,
     observe_noncanonical_reconciliation,
     observe_scope_split,
-    scrub_credential,
+    selected_codex_login_state_available,
     skill_enabling_definition,
 )
 
@@ -53,14 +64,16 @@ def test_plugin_lifecycle_places_owned_definitions_and_is_idempotent(
     assert destination.read_bytes() == shipped.read_bytes()
     ownership = json.loads(lifecycle.ownership_path.read_text(encoding="utf-8"))
     assert ownership == {
-        "entries": [
+        AGENT_OWNERSHIP_ENTRIES_FIELD: [
             {
-                "destination": f"agents/{shipped.name}",
-                "digest": hashlib.sha256(destination.read_bytes()).hexdigest(),
-                "plugin": "fixture",
+                AGENT_OWNERSHIP_DESTINATION_FIELD: f"agents/{shipped.name}",
+                AGENT_OWNERSHIP_DIGEST_FIELD: hashlib.sha256(
+                    destination.read_bytes()
+                ).hexdigest(),
+                AGENT_OWNERSHIP_PLUGIN_FIELD: "fixture",
             }
         ],
-        "schema_version": 1,
+        AGENT_OWNERSHIP_SCHEMA_FIELD: AGENT_OWNERSHIP_SCHEMA_VERSION,
     }
 
     ownership_identity = lifecycle.file_identity(lifecycle.ownership_path)
@@ -122,12 +135,12 @@ def test_plugin_lifecycle_rejects_a_non_hex_ownership_digest_without_mutation(
     lifecycle.write_shipped("fixture_auditor.toml", b'name = "fixture-auditor"\n')
     lifecycle.write_ownership(
         {
-            "schema_version": 1,
-            "entries": [
+            AGENT_OWNERSHIP_SCHEMA_FIELD: AGENT_OWNERSHIP_SCHEMA_VERSION,
+            AGENT_OWNERSHIP_ENTRIES_FIELD: [
                 {
-                    "destination": "agents/fixture_auditor.toml",
-                    "plugin": "fixture",
-                    "digest": "z" * 64,
+                    AGENT_OWNERSHIP_DESTINATION_FIELD: "agents/fixture_auditor.toml",
+                    AGENT_OWNERSHIP_PLUGIN_FIELD: "fixture",
+                    AGENT_OWNERSHIP_DIGEST_FIELD: "z" * 64,
                 }
             ],
         }
@@ -353,12 +366,12 @@ def test_a_prune_destination_changed_after_preflight_stops_before_mutation(
     stale = lifecycle.write_home("fixture_retired.toml", retired)
     lifecycle.write_ownership(
         {
-            "schema_version": 1,
-            "entries": [
+            AGENT_OWNERSHIP_SCHEMA_FIELD: AGENT_OWNERSHIP_SCHEMA_VERSION,
+            AGENT_OWNERSHIP_ENTRIES_FIELD: [
                 {
-                    "destination": "agents/fixture_retired.toml",
-                    "plugin": "fixture",
-                    "digest": hashlib.sha256(retired).hexdigest(),
+                    AGENT_OWNERSHIP_DESTINATION_FIELD: "agents/fixture_retired.toml",
+                    AGENT_OWNERSHIP_PLUGIN_FIELD: "fixture",
+                    AGENT_OWNERSHIP_DIGEST_FIELD: hashlib.sha256(retired).hexdigest(),
                 }
             ],
         }
@@ -378,46 +391,167 @@ def test_a_prune_destination_changed_after_preflight_stops_before_mutation(
     assert stale.read_bytes() == b"edited while the run was planning\n"
 
 
-def test_a_missing_probe_credential_fails_loudly_before_any_agent_process(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv(CODEX_API_KEY_ENVIRONMENT, raising=False)
-
-    with pytest.raises(RuntimeError, match="required credential"):
-        observe_codex_role_discovery()
-
-
-def test_a_timed_out_probe_command_scrubs_its_partial_capture(
+def test_missing_selected_codex_login_state_fails_before_any_agent_process(
     tmp_path: Path,
 ) -> None:
-    credential = "probe-credential-value"
-    with pytest.raises(subprocess.TimeoutExpired) as raised:
-        scrubbed_probe_run(
-            (
-                sys.executable,
-                "-c",
-                "import sys, time; print('leak " + credential + " leak');"
-                " sys.stdout.flush(); time.sleep(30)",
-            ),
-            cwd=tmp_path,
-            env={},
-            credential=credential,
-            timeout=1,
-        )
-    assert credential not in str(raised.value.output)
-    assert "[REDACTED-CREDENTIAL]" in str(raised.value.output)
-    assert credential not in str(raised.value.stderr or "")
+    harness = CodexRoleDiscoveryHarness.without_login(tmp_path)
+
+    with pytest.raises(RuntimeError, match="required Codex login state"):
+        harness.observe()
+
+    assert harness.commands == ()
 
 
-def test_scrubbing_replaces_every_credential_occurrence() -> None:
-    credential = "sk-fake-credential-0123456789"
-    text = f"login failed: key {credential} rejected\ntail {credential}"
+@pytest.mark.parametrize(
+    "login_payload",
+    generated_unusable_codex_login_payloads(CODEX_TOKEN_METADATA_FIELDS),
+)
+def test_unusable_selected_codex_login_state_is_unavailable_before_probe(
+    tmp_path: Path,
+    login_payload: str,
+) -> None:
+    harness = CodexRoleDiscoveryHarness.with_login(
+        tmp_path,
+        login_payload=login_payload,
+    )
 
-    scrubbed = scrub_credential(text, credential)
+    available = selected_codex_login_state_available(harness.selected_codex_home)
 
-    assert credential not in scrubbed
-    assert scrubbed.count("[REDACTED-CREDENTIAL]") == 2
-    assert scrub_credential("no secret here", credential) == "no secret here"
+    with pytest.raises(RuntimeError, match="required Codex login state"):
+        harness.observe()
+
+    assert available is False
+    assert harness.commands == ()
+
+
+@pytest.mark.parametrize("credential_field", sorted(CODEX_CREDENTIAL_TOKEN_FIELDS))
+def test_credential_bearing_selected_codex_login_state_is_available(
+    tmp_path: Path,
+    credential_field: str,
+) -> None:
+    login = generated_codex_login_payload(credential_field)
+    harness = CodexRoleDiscoveryHarness.with_login(
+        tmp_path,
+        login_payload=login.text,
+    )
+
+    available = selected_codex_login_state_available(harness.selected_codex_home)
+
+    assert available is True
+    assert harness.commands == ()
+
+
+@pytest.mark.parametrize("credential_field", sorted(CODEX_CREDENTIAL_TOKEN_FIELDS))
+def test_role_discovery_rejects_each_known_credential_in_a_captured_stream(
+    tmp_path: Path,
+    credential_field: str,
+) -> None:
+    login = generated_codex_login_payload(credential_field)
+    harness = CodexRoleDiscoveryHarness.with_captured_stream(
+        tmp_path,
+        login_payload=login.text,
+        stream_text=login.credential,
+    )
+
+    with pytest.raises(RuntimeError, match="login material appeared"):
+        harness.observe()
+
+    assert len(harness.commands) == 1
+
+
+@pytest.mark.parametrize("credential_field", sorted(CODEX_CREDENTIAL_TOKEN_FIELDS))
+def test_role_discovery_rejects_each_known_credential_in_timeout_output(
+    tmp_path: Path,
+    credential_field: str,
+) -> None:
+    login = generated_codex_login_payload(credential_field)
+    harness = CodexRoleDiscoveryHarness.with_timeout_stream(
+        tmp_path,
+        login_payload=login.text,
+        stream_text=login.credential,
+    )
+
+    with pytest.raises(RuntimeError, match="login material appeared"):
+        harness.observe()
+
+    assert len(harness.commands) == 2
+
+
+@pytest.mark.parametrize(
+    "surface",
+    tuple(RoleDiscoveryCredentialSurface),
+)
+@pytest.mark.parametrize("credential_field", sorted(CODEX_CREDENTIAL_TOKEN_FIELDS))
+def test_role_discovery_rejects_credentials_across_session_process_surfaces(
+    tmp_path: Path,
+    credential_field: str,
+    surface: RoleDiscoveryCredentialSurface,
+) -> None:
+    login = generated_codex_login_payload(credential_field)
+    harness = CodexRoleDiscoveryHarness.with_session_credential_surface(
+        tmp_path,
+        login_payload=login.text,
+        credential=login.credential,
+        surface=surface,
+    )
+
+    with pytest.raises(RuntimeError, match="login material appeared"):
+        harness.observe()
+
+    assert len(harness.commands) == 3
+
+
+def test_role_discovery_rejects_an_unknown_token_field_as_a_credential(
+    tmp_path: Path,
+) -> None:
+    login = generated_unknown_codex_login_payload()
+    harness = CodexRoleDiscoveryHarness.with_captured_stream(
+        tmp_path,
+        login_payload=login.text,
+        stream_text=login.credential,
+    )
+
+    with pytest.raises(RuntimeError, match="login material appeared"):
+        harness.observe()
+
+    assert len(harness.commands) == 1
+
+
+def test_role_discovery_rejects_a_nested_unknown_token_credential(
+    tmp_path: Path,
+) -> None:
+    login = generated_unknown_codex_login_payload(nested=True)
+    harness = CodexRoleDiscoveryHarness.with_captured_stream(
+        tmp_path,
+        login_payload=login.text,
+        stream_text=login.credential,
+    )
+
+    with pytest.raises(RuntimeError, match="login material appeared"):
+        harness.observe()
+
+    assert len(harness.commands) == 1
+
+
+@pytest.mark.parametrize("metadata_field", sorted(CODEX_TOKEN_METADATA_FIELDS))
+def test_role_discovery_allows_each_token_metadata_field_in_captured_output(
+    tmp_path: Path,
+    metadata_field: str,
+) -> None:
+    login = generated_codex_login_payload_with_metadata(
+        CODEX_CREDENTIAL_TOKEN_FIELDS,
+        metadata_field,
+    )
+    harness = CodexRoleDiscoveryHarness.with_captured_stream(
+        tmp_path,
+        login_payload=login.text,
+        stream_text=login.metadata_value,
+    )
+
+    observation = harness.observe()
+
+    assert login.metadata_value in observation.install_stdout
+    assert len(harness.commands) == 3
 
 
 def test_a_malformed_ownership_record_still_reports_every_scope_split(
@@ -428,12 +562,12 @@ def test_a_malformed_ownership_record_still_reports_every_scope_split(
     lifecycle.write_checkout(exact.name, exact.read_bytes())
     lifecycle.write_ownership(
         {
-            "schema_version": 1,
-            "entries": [
+            AGENT_OWNERSHIP_SCHEMA_FIELD: AGENT_OWNERSHIP_SCHEMA_VERSION,
+            AGENT_OWNERSHIP_ENTRIES_FIELD: [
                 {
-                    "destination": "agents/fixture_exact.toml",
-                    "plugin": "fixture",
-                    "digest": "z" * 64,
+                    AGENT_OWNERSHIP_DESTINATION_FIELD: "agents/fixture_exact.toml",
+                    AGENT_OWNERSHIP_PLUGIN_FIELD: "fixture",
+                    AGENT_OWNERSHIP_DIGEST_FIELD: "z" * 64,
                 }
             ],
         }
@@ -461,12 +595,12 @@ def test_a_recorded_destination_that_is_a_directory_names_its_cause(
     destination.mkdir(parents=True)
     lifecycle.write_ownership(
         {
-            "schema_version": 1,
-            "entries": [
+            AGENT_OWNERSHIP_SCHEMA_FIELD: AGENT_OWNERSHIP_SCHEMA_VERSION,
+            AGENT_OWNERSHIP_ENTRIES_FIELD: [
                 {
-                    "destination": f"agents/{shipped.name}",
-                    "plugin": "fixture",
-                    "digest": hashlib.sha256(content).hexdigest(),
+                    AGENT_OWNERSHIP_DESTINATION_FIELD: f"agents/{shipped.name}",
+                    AGENT_OWNERSHIP_PLUGIN_FIELD: "fixture",
+                    AGENT_OWNERSHIP_DIGEST_FIELD: hashlib.sha256(content).hexdigest(),
                 }
             ],
         }
