@@ -36,8 +36,7 @@ this block ahead of it.
 This is a separate content-consolidation refactor across the overview and five
 references. Each skill audit binds to the exact committed head it ran against, so
 this entry records finding content only and makes no standing approval claim.
-`spx/43-instructions.enabler/21-subagents.enabler/PLAN.md` carries the
-`/subagent-standards` extraction that subsumes the duplication half of this entry;
+The `/subagent-standards` entry below subsumes the duplication half of this entry;
 the unstable-figure findings below stand on their own.
 
 A complete-bundle skill audit added four `WARNING` findings that belong to this
@@ -121,3 +120,55 @@ auditor objectives onto the chosen shape.
 
 Source: `instructions:skill-auditor` finding `f-009`, severity `WARNING`, on the
 changeset merged as PR 488, reconciled against an earlier run's opposing finding.
+
+## `/subagent-standards` is declared and not built; both auditors carry rulebooks
+
+`subagents.md` declares three peers. `/create-subagent` and `/audit-subagent` ship;
+`/subagent-standards` does not, so the node's first two assertions lead their
+implementation. Because the auditor has no canonical-rules owner to load,
+`src/plugins/instructions/skills/audit-subagent/SKILL.md` carries an
+`<evaluation_areas>` and `<anti_patterns>` rulebook that restates
+`/agent-prompt-standards`. The same defect class sits in
+`src/plugins/instructions/skills/audit-skill/SKILL.md` against `/skill-standards`;
+`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` property 7
+requires both to be swept together, so fixing one alone is an invalid single-site fix.
+
+**Resolution shape.** Author `/subagent-standards` as a reference skill owning the
+canonical subagent rules — configuration fields, tool grants, model selection, context
+isolation, invocation contract — migrated out of `/create-subagent`'s overview and
+references and out of both embedded rulebooks; strip `<evaluation_areas>` and
+`<anti_patterns>` from `/audit-subagent` and `/audit-skill` so each loads its standards
+skill and enforces without restating; regenerate both runtime trees, run the focused
+skill and documentation checks, dispatch `instructions:skill-auditor` over every changed
+skill surface, then run the changeset review. The bundle-consolidation entry above
+resolves inside this work: extracting the canonical rules is that consolidation under a
+governing principle.
+
+## The model-reproducibility rule belongs in `/subagent-standards`
+
+`/subagent-standards` owns model selection, so the canonical rule belongs in it: a
+subagent that produces a verification verdict never inherits its model from the invoking
+context, because a verdict a later invocation cannot reproduce is not evidence. Its
+`[test]` evidence follows the structural-constraint shape
+`spx/15-validation.enabler/32-hook-safety.enabler` uses — a source-owned validator
+exercised against violating cases, never a scan asserting this repository's own files
+comply, which would be the second declaration `spx/12-shipped-scripting.adr.md` forbids.
+The validator needs two contracts `outcomeeng/distribution/agents.py` does not yet
+expose: a predicate deciding which agents produce a verification verdict, and the
+violation check itself; `INHERIT_MODEL_VALUE` and `iter_agent_files` exist. Build the
+source contract before the test, per `/test-python`'s split mode.
+
+## The `invocation-scope` eval suite is unbuilt; its assertion carries an interim `[audit]` tag
+
+The per-invocation-scope assertion — `/audit-subagent` judges exactly one configuration
+per invocation — carries `[audit]` as an explicit interim so no evidence link dangles.
+Its real verification type is evaluate: `/audit-subagent` is an LLM-driven producer
+emitting a structured verdict whose `target` a grader scores, which
+`spx/15-spec-coverage.adr.md` sends to the eval lane. The interim tag was an operator
+decision (2026-09-07). `spx/43-instructions.enabler/ISSUES.md` entry 4 records the
+matching gap for `/audit-skill`; both auditors need the instructions plugin's first eval
+suite. Author `evals/invocation-scope/` (producer
+`src/plugins/instructions/skills/audit-subagent/SKILL.md`, `plugin_dir`
+`dist/claude/instructions`, cases for one configuration versus several), regenerate the
+eval CI triggers with `just build-eval-triggers`, run it at the default budget, and
+restore the `[eval](evals/invocation-scope/eval.toml)` tag once it passes.

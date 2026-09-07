@@ -143,5 +143,3 @@ Likely descendants, created only when assertions justify the extra depth:
 | `54-workflow-review.enabler`    | `21-correctness-audit.enabler`, `32-security-audit.enabler`, `43-maintainability-audit.enabler`                         |
 | `54-runtime-operations.enabler` | `21-failure-triage.enabler`, `32-explicit-run-control.enabler`                                                          |
 | `65-workflow-evolution.enabler` | `21-dependency-maintenance.enabler`, `32-runner-runtime-upgrades.enabler`, `43-workflow-rearchitecture.enabler`         |
-
-Coordinate with the sibling `22-github-actions.enabler` before creating these children. That directory may be another agent's active work on the same problem, and the final tree should have one coherent GitHub Actions branch rather than duplicate siblings.
