@@ -8,4 +8,4 @@ CAN reason about hosted-CI and host-authentication state through native runtime 
 
 ### Properties
 
-- Hosted-platform state is sourced from native APIs: host authentication from `gh api`, workflow state from `gh run view --json`, repository identity from `git remote` parsed against the host's URL forms — never from filesystem timestamps, directory enumeration, or pattern matching against user prose ([test](tests/test_infrastructure.property.l1.py))
+- Hosted-platform state is sourced from native APIs: host authentication from `gh api`, workflow state from `gh run view --json`, repository identity from `git remote` parsed against the host's URL forms — never from filesystem timestamps, directory enumeration, or pattern matching against user prose ([audit])
