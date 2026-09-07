@@ -707,7 +707,7 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 - `.claude/settings.json` — product-scoped Claude Code plugin selection, committed for collaborators.
 - `.codex/config.toml` — repository Codex settings unrelated to plugin installation or enablement.
 - `CHANGELOG.md` — the pointer table naming this repository's two changelog lines, plugin and marketplace, where each is authored, and how each ships. It carries no entries itself, because a changelog reaches its reader only from inside an installed plugin.
-- `spx.config.yaml` — the methodology source and exact version this repository follows as a consumer, read by the SPX CLI; `spx diagnose` compares it with the methodology the installed spec-tree plugin provides.
+- `spx.config.yaml` — the methodology source and exact version this repository follows as a consumer, read by the SPX CLI.
 - `AGENTS.md` (this file), `CLAUDE.md` (harness-specific copy) — repo-level instruction surfaces.
 
 For the contents of any plugin or `spx/` subdirectory, run `ls` or read the catalog. The authored directory layout under each plugin follows the conventions in `src/plugins/instructions/skills/`.
