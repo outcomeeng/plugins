@@ -8,7 +8,7 @@
 
 **Agent session.** One running or resumable interaction for one agent.
 
-**Role.** What an agent session does for a Change — the unit of coordinated work the methodology refines and executes. A role name is capitalized, so it stands apart from the everyday word. One round is one Author or Fixer pass together with every Verifier pass it triggers.
+**Role.** What an agent session does for a Change. A Change is the methodology's mutable coordination object for one intended Output, and its Activities are its mutable, ordered execution plan; a repository's coordination overlay realizes them where one is declared, and the roles hold whether or not that overlay is present. A role name is capitalized, so it stands apart from the everyday word. One round is one Author or Fixer pass together with every Verifier pass it triggers.
 
 **Refiner.** The holder of a Change during refinement. The Refiner is the agent session in conversation with the operator, realized by loading the refinement skill into that conversation; it is never dispatched as a subagent and never loaded from an agent definition.
 
