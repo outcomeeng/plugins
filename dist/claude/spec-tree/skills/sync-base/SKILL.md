@@ -6,7 +6,7 @@ allowed-tools: Read, Edit, Skill, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_
 ---
 
 <objective>
-The current checkout brought current with its fetched base, with authorized dirty work checkpointed on its owning branch and detached-head safety preserved.
+The current checkout brought current with its fetched base, with authorized dirty work that blocks base movement checkpointed on its owning branch and detached-head safety preserved.
 </objective>
 
 <workflow>
@@ -122,9 +122,9 @@ The proof scopes pre-push local work only. It never satisfies a merge gate: curr
 
 - Rebase, never reset — a behind-base branch is brought current only by replaying its own commits onto `origin/<base>`.
 - A routine rebase needs no new operator decision. Missing mutation authority, failed checkpoint creation, hard Git failure, and unresolved product intent retain their distinct blocked actions and evidence.
-- A dirty tree is a precondition, never a conflict — uncommitted tracked changes yield `dirty_tree`, cleared by committing, never by stashing and never surfaced as a conflict.
-- Authorized session-owned tracked changes are checkpointed on the owning branch and re-synced through `<dirty_tree_resolution>`; verification state alone never blocks the checkpoint.
-- The bundled synchronizer fetches and advances the current checkout through exactly one topology-appropriate operation: rebase for an attached branch, or `git switch --detach` for an ancestor detached HEAD. It never commits or stashes the working tree; the skill may create an owning branch and invoke `/commit-changes` before rerunning it.
+- A `dirty_tree` result is a precondition, never a conflict — tracked changes blocking base movement are resolved through `<dirty_tree_resolution>`, never by stashing and never surfaced as a conflict.
+- Authorized session-owned tracked changes that block base movement are checkpointed on the owning branch and re-synced through `<dirty_tree_resolution>`; verification state alone never blocks the checkpoint.
+- The bundled synchronizer fetches the base and, when movement is required, advances the current checkout through exactly one topology-appropriate operation: rebase for an attached branch, or `git switch --detach` for an ancestor detached HEAD. It never commits or stashes the working tree; the skill may create an owning branch and invoke `/commit-changes` to resolve a `dirty_tree` result before rerunning it.
 - A conflicted rebase remains active at operator handoff — Claude offers `git rebase --abort` as an option and does not run it automatically.
 - One base derivation — the base ref and `origin/<base>` come from the changeset-scope primitives, never re-derived here.
 
@@ -132,15 +132,15 @@ The proof scopes pre-push local work only. It never satisfies a merge gate: curr
 
 <invalid_operator_escalations>
 
-Apply the authority and checkpoint checks in `<dirty_tree_resolution>` first. Report any remaining stop with its exact blocked action, paths, and evidence: absent authority identifies the missing permission; checkpoint failure carries the commit or hook diagnostic; hard Git failure carries `detail`; unresolved product intent carries the active conflict facts. Finish every independent authorized action before asking. Once authority is established and no checkpoint failure remains, none of the following alone warrants an operator question:
+Apply the authority and checkpoint checks in `<dirty_tree_resolution>` before dirty-tree recovery. Report any remaining stop with its exact blocked action, paths, and evidence: absent authority identifies the missing permission; checkpoint failure carries the commit or hook diagnostic; hard Git failure carries `detail`; unresolved product intent carries the active conflict facts. Finish every independent authorized action before asking. Once authority is established and no checkpoint failure remains, none of the following alone warrants an operator question:
 
-- A dirty tree from a file Claude created this session — commit it per `<dirty_tree_resolution>` and re-run.
-- A coordination note (`PLAN.md` / `ISSUES.md`) Claude wrote that now makes the tree dirty — commit it to its own branch, record the pending `/merge` in the imperfection ledger, and re-run.
+- A tracked edit Claude made this session that blocks base movement — commit it per `<dirty_tree_resolution>` and re-run.
+- An unrelated tracked coordination note (`PLAN.md` / `ISSUES.md`) Claude edited that blocks base movement — commit it to its own branch, record the pending `/merge` in the imperfection ledger, and re-run.
 - A conflict in a coordination note where one side is stale or superseded — reconcile the note to still-true facts and continue the rebase.
 - A conflict in a generated artifact whose source of truth can be resolved — resolve the source, return the exact project-declared regeneration command, and continue after re-entry with regenerated output.
 - A version bump conflict with an objectively monotonic/latest valid value — choose it, return the exact validation command, and run validation after the rebase completes.
 - "Stash is forbidden, so the tree cannot be cleared" — committing clears it; the forbidden tool is not a blocker.
-- A detached worktree with no branch to commit onto — create a local branch from the current commit and commit there.
+- A detached worktree with authorized tracked changes blocking base movement and no branch to commit onto — create a local branch from the current commit and commit there.
 - Uncertainty about which branch a change belongs on — objective work goes on the change branch, an unrelated coordination note on its own branch routed by `/merge`.
 - A clean behind-base detached HEAD — sync-base advances it to the base tip; it returns `rebased` / `already_current`, not a stop.
 
