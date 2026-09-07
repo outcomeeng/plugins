@@ -24,7 +24,7 @@
 
 **Fixer.** The Author role in a later round on the same subject, held by an agent session independent of the round's Author. The Executor hands the Fixer the earlier round's artifacts and verdicts.
 
-**Verifier.** The role held by the agent session that produces an Agentic verdict: an Auditor for audit, a Reviewer for review.
+**Verifier.** The role held by the agent session that produces an agentic verdict: an Auditor for audit, a Reviewer for review.
 
 ## Rationale
 
