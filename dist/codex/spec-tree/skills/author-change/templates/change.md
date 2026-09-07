@@ -1,4 +1,11 @@
-<!-- Authoring guidance: apply /change-standards. Replace placeholders and remove these comments before publication. Title, Product, Maturity, and Lifecycle use the configured store's native fields. Omit sections whose maturity requirements do not yet apply; expose unresolved questions instead of inventing answers. -->
+---
+title: "[Title naming the Output]"
+product: "[Exactly one configured Product]"
+maturity: Proposed
+lifecycle: Available
+---
+
+<!-- Local authoring guidance: apply /change-standards. For revision, add change_ref with the canonical reference and use confirmed Lifecycle and holder metadata from the store. Maturity names the level being authored and audited. Replace placeholders and remove these comments before audit. Publication maps metadata to native store fields and sends only the body below. Omit sections whose maturity requirements do not yet apply; expose unresolved questions instead of inventing answers. -->
 
 # Output
 

@@ -18,7 +18,9 @@ ALWAYS retain why the Output is worth producing under `# Value`. Use `## Outcome
 
 <rule id="identity-and-input">
 
-ALWAYS identify the title, exactly one Product, current Maturity, and current Lifecycle through the configured Change store. Prefer its native fields; do not maintain competing copies in the body.
+ALWAYS identify the title, exactly one Product, Maturity, and Lifecycle. The local working file carries these as metadata above the body so the complete candidate can be inspected and audited locally. An existing Change also carries its canonical reference; its Lifecycle and holder come from the configured store's confirmed state. A new local draft grants no claim or integration authority.
+
+Publication maps the approved metadata to the configured store's native fields and publishes the body without duplicate metadata sections. The local candidate and published record are successive versions of the same Change; the workflow checks for intervening remote edits before publishing.
 
 At Proposed maturity, the received input remains available through the Change infrastructure; an Input section may present it. From Framed maturity onward, NEVER include an Input section, reproduced prompt, or conversation transcript in the Change body. The Change infrastructure owns preservation of the original input and edit history. NEVER manufacture a local history file or audit comment to replace that responsibility.
 
@@ -92,6 +94,8 @@ NEVER use Activities to hide an unresolved product or architecture choice inside
 </rule>
 
 <rule id="verification-separation">
+
+ALWAYS draft, revise, audit, and repair the Change in a local working file. Publish the approved candidate only after independent verification passes. NEVER publish draft iterations or rejected candidates to an issue, comment, or other remote Change store. Store configuration and publication are authoring concerns; SPX audits the local file through its file-scoped verification contract.
 
 Evidence obligations in the Frame describe what execution must establish. Verification runs, tokens, verdicts, findings, digests, command results, and verification history remain outside the Change. NEVER add a Verification status section or a verifier-result archive to the body. Findings can cause revisions to Output, Frame, or Activities; the finding record remains in the verification system.
 
