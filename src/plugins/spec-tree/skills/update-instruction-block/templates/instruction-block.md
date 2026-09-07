@@ -1,5 +1,5 @@
 ---
-template_version: "0.37.0"
+template_version: "0.37.1"
 template_source: spec-tree
 ---
 
@@ -156,7 +156,7 @@ Default-branch work is complete only when it reaches the default branch on origi
 
 ## Commit Before Another Session Reads
 
-Changes may remain uncommitted while the authoring agent session works on them. When repository writes are authorized, commit the exact current version through `/commit-changes` before another agent session or human reads it for collaboration or reusable verification; the commit may record `passing`, `failing`, or `not-run`. After any further change, commit the new version before another such reading. An explicit advisory audit or review may inspect modified or untracked work, but its verdict is not reusable gate evidence. Without repository-write authorization, defer a reading that requires a committed subject. Agentic gate dispatch additionally requires its declared deterministic verification to pass on the exact committed subject.
+Changes may remain uncommitted while the Author's agent session works on them. When repository writes are authorized, commit the exact current version through `/commit-changes` before another agent session or human reads it for collaboration or reusable verification; the commit may record `passing`, `failing`, or `not-run`. After any further change, commit the new version before another such reading. An explicit advisory audit or review may inspect modified or untracked work, but its verdict is not reusable gate evidence. Without repository-write authorization, defer a reading that requires a committed subject. Agentic gate dispatch additionally requires its declared deterministic verification to pass on the exact committed subject.
 
 ## Worktree Occupancy
 
@@ -182,11 +182,11 @@ Default-branch git and version-control mutation — branching, committing, pushi
 
 ### Sub-agent dispatch
 
-The configured verifier and reviewer roles this router names are pre-authorized. A harness rule may require the operator to request sub-agent use before one is dispatched; treat this section as that standing request. Authorization follows the named role, never a role resemblance.
+The configured Verifier roles this router names are pre-authorized. A harness rule may require the operator to request sub-agent use before one is dispatched; treat this section as that standing request. Authorization follows the named role, never a role resemblance.
 
 - **NEVER** ask the operator to confirm dispatching one — not at a gate, not per node, not once per session, and never as a structured-question option set. A harness permission prompt is the operator's to answer, never a question to raise.
 - **NEVER** dispatch a sub-agent this router does not name merely because it is discovered, available, or plausibly useful.
-- **NEVER** run a verification skill — audit or review — in the main conversation; the separate verifier agent session keeps the verdict free of the authoring agent session's bias.
+- **NEVER** run a verification skill — audit or review — in the main conversation; the separate Verifier's agent session keeps the verdict free of the Author's agent session's bias.
 - **ALWAYS** treat the gate as blocked when a named role cannot be dispatched or does not return: finish the deterministic verification, then report the exact dispatch attempted and how it failed.
 
 ### Agent identity in generated artifacts
@@ -225,21 +225,21 @@ Avoid shorthand such as "config patch" or "ship it path" when the exact file, PR
 
 ## Quick Reference: Skills and Agents
 
-Skills run in the main conversation. Agents preload the skill and run autonomously in their own agent sessions. Audit agents return structured verdicts; changeset reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. Dispatch agents in parallel when auditing multiple targets; `### Sub-agent dispatch` above governs when to dispatch one.
+Skills run in the main conversation. Agents preload the skill and run autonomously in their own agent sessions. Audit agents return structured verdicts; changeset Reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. Dispatch agents in parallel when auditing multiple targets; `### Sub-agent dispatch` above governs when to dispatch one.
 
 <!-- harness:codex -->
 
-**Read each file fully in its designated context.** A file the user names is read in the main conversation. A file this conversation authored is verified by a configured verifier or reviewer in an independent context. Subagents may locate files; a file the main conversation needs is then read in the main conversation in full.
+**Read each file fully in its designated context.** A file the user names is read in the main conversation. A file this conversation authored is verified by a configured Verifier in an independent context. Subagents may locate files; a file the main conversation needs is then read in the main conversation in full.
 
 **Dispatch each named role through the runtime's exposed typed-subagent spawn capability** (`{{! tool('spawn_agent', 'codex') !}}` when that identifier is available), spawning the matching subagents in parallel when several roles apply. `### Sub-agent dispatch` above governs when to dispatch, forbids asking the operator to confirm, and blocks the gate when a named role cannot be dispatched; this section governs only the Codex mechanics. Act only on the result the subagent returns.
 
-**Already-dispatched verifier boundary.** Apply the typed-spawn rules above only in the main authoring conversation. Once running as a named verifier or reviewer, treat the current context as the required isolation and execute the configured audit or review skill directly. NEVER search for or spawn another verifier, use `tool_search` to discover multi-agent tools, or invoke `codex exec`, `claude`, `pi`, or another agent CLI. Missing nested-verifier tools is expected inside the dispatched verifier and does not block direct execution.
+**Already-dispatched Verifier boundary.** Apply the typed-spawn rules above only in the Author's main conversation. Once running as a named Verifier, treat the current context as the required isolation and execute the configured audit or review skill directly. NEVER search for or spawn another Verifier, use `tool_search` to discover multi-agent tools, or invoke `codex exec`, `claude`, `pi`, or another agent CLI. Missing nested-Verifier tools is expected inside the dispatched Verifier and does not block direct execution.
 
-**STOP TRIGGER — in the main authoring conversation, discover deferred agent tools before reporting an agent unavailable.**
+**STOP TRIGGER — in the Author's main conversation, discover deferred agent tools before reporting an agent unavailable.**
 
 If a named agent or lifecycle tool is absent from the initial list, inspect the runtime's complete deferred-tool registry. Use top-level `functions.exec`; inside it, inspect `ALL_TOOLS`. Treat `exec_command` as the nested shell tool. Check typed `{{! tool('spawn_agent', 'codex') !}}` and its `Available roles`; an exact match proves availability. Report unavailable only when discovery finds no typed spawn capability or omits the exact role, and include that result. Visible catalogs, initial tools, generated rosters, and local `agents/*.md` files are not availability evidence.
 
-**Use the exposed multi-agent tool schema exactly.** The examples below use the `multi_agent_v1` identifiers emitted by this Codex harness. When the runtime exposes different identifiers, discover the equivalent typed spawn, wait, send-input, and close capabilities and preserve the same fields and result contracts. The initial turn goes in `message`; use `items` only when the turn must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named verifier/reviewer roles already carry their own model settings. Store every returned agent id verbatim. The role task is the spawn's initial `message`, so one spawn and one wait complete a role. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with the exposed wait capability and close the child immediately. Completed agents remain open until closed and can interfere with future spawns.
+**Use the exposed multi-agent tool schema exactly.** The examples below use the `multi_agent_v1` identifiers emitted by this Codex harness. When the runtime exposes different identifiers, discover the equivalent typed spawn, wait, send-input, and close capabilities and preserve the same fields and result contracts. The initial turn goes in `message`; use `items` only when the turn must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named Verifier roles already carry their own model settings. Store every returned agent id verbatim. The role task is the spawn's initial `message`, so one spawn and one wait complete a role. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with the exposed wait capability and close the child immediately. Completed agents remain open until closed and can interfere with future spawns.
 
 ### Subagent lifecycle — preserve every handle and close every thread
 
@@ -314,9 +314,9 @@ Close a completed or no-longer-needed agent:
 }
 ```
 
-In the main authoring conversation, if `{{! tool('spawn_agent', 'codex') !}}`, `{{! tool('wait_agent', 'codex') !}}`, or `{{! tool('close_agent', 'codex') !}}` is not initially exposed, discover it through the runtime's complete deferred-tool registry before concluding the capability or role is unavailable. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user', 'codex') !}}` or any other tools as a substitute for result collection.
+In the Author's main conversation, if `{{! tool('spawn_agent', 'codex') !}}`, `{{! tool('wait_agent', 'codex') !}}`, or `{{! tool('close_agent', 'codex') !}}` is not initially exposed, discover it through the runtime's complete deferred-tool registry before concluding the capability or role is unavailable. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user', 'codex') !}}` or any other tools as a substitute for result collection.
 
-**Result collection for verifier and reviewer agents.** The exposed typed wait capability (`{{! tool('wait_agent', 'codex') !}}` in the examples below) is the planned result-collection mechanism for the role task. Read its returned JSON, keyed by the spawned subagent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the turn result; when that final status carries a final message, that message is the turn output. Do not infer success from a subagent notification, a pending handle, or an open subagent id.
+**Result collection for Verifier agents.** The exposed typed wait capability (`{{! tool('wait_agent', 'codex') !}}` in the examples below) is the planned result-collection mechanism for the role task. Read its returned JSON, keyed by the spawned subagent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the turn result; when that final status carries a final message, that message is the turn output. Do not infer success from a subagent notification, a pending handle, or an open subagent id.
 
 Successful `spec-tree_changes-reviewer` result shape:
 
@@ -341,15 +341,15 @@ Blocked or incomplete result shape:
 }
 ```
 
-**Codex `spec-tree_changes-reviewer` output contract.** For `agent_type: "spec-tree_changes-reviewer"`, a successful final message is the raw `spx journal --type review` run token. Treat that token as the only review result. Inspect the review by reading or rendering the sealed journal prefix for that token. Do not ask the reviewer to summarize findings, do not accept a prose summary as the gate result, and do not run `spec-tree:review-changes` in the main thread to replace a missing token.
+**Codex `spec-tree_changes-reviewer` output contract.** For `agent_type: "spec-tree_changes-reviewer"`, a successful final message is the raw `spx journal --type review` run token. Treat that token as the only review result. Inspect the review by reading or rendering the sealed journal prefix for that token. Do not ask the Reviewer to summarize findings, do not accept a prose summary as the gate result, and do not run `spec-tree:review-changes` in the main thread to replace a missing token.
 
 **Codex blocked-result rule.** If `wait_agent` returns an error, `not_found`, timeout with no final status, usage-limit failure, model-capacity failure, or any final message that is not a raw review journal token, the review gate is blocked. Record the exact agent id, tool result, and blocking reason. Do not publish, merge, or mark the gate passed. When repairing a finding or blocked subject, rerun deterministic verification, create a new local checkpoint commit, and review that new head; an operator-approved process exception is the only other path past the gate.
 
-**Use raw scope only for the `spec-tree_changes-reviewer` role task.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token as the spawn `message`: `HEAD` for the current committed branch scope, `origin/<base>...HEAD` for a specific committed range, a branch name, or a PR reference. Confirm the worktree is clean before dispatch; commit the exact current version before the reviewer agent session reads it.
+**Use raw scope only for the `spec-tree_changes-reviewer` role task.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token as the spawn `message`: `HEAD` for the current committed branch scope, `origin/<base>...HEAD` for a specific committed range, a branch name, or a PR reference. Confirm the worktree is clean before dispatch; commit the exact current version before the Reviewer's agent session reads it.
 
-- ALWAYS prepare the worktree first: isolate the intended changes, sync to the base using the `spec-tree:sync-base` skill when the governing workflow requires it, pass deterministic verification, create a local checkpoint commit, and leave the worktree clean so the reviewer judges an exact committed head. Never dispatch the reviewer over a working diff.
-- NEVER invoke the `spec-tree:review-changes` skill in the main authoring conversation; the `spec-tree_changes-reviewer` invokes it inside its isolated role workflow.
-- NEVER pass a prose prompt, restate review instructions, add severity filters, or tell the reviewer to focus only on new changes, or what to emphasize.
+- ALWAYS prepare the worktree first: isolate the intended changes, sync to the base using the `spec-tree:sync-base` skill when the governing workflow requires it, pass deterministic verification, create a local checkpoint commit, and leave the worktree clean so the Reviewer judges an exact committed head. Never dispatch the Reviewer over a working diff.
+- NEVER invoke the `spec-tree:review-changes` skill in the Author's main conversation; the `spec-tree_changes-reviewer` invokes it inside its isolated role workflow.
+- NEVER pass a prose prompt, restate review instructions, add severity filters, or tell the Reviewer to focus only on new changes, or what to emphasize.
 
 ```json
 {
@@ -371,7 +371,7 @@ Blocked or incomplete result shape:
 }
 ```
 
-**Use explicit prompts for audit-agent role tasks.** The `message` field comes from the `{{! tool('spawn_agent', 'codex') !}}` schema. This instruction block owns the prompt content below for required verifier roles. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
+**Use explicit prompts for audit-agent role tasks.** The `message` field comes from the `{{! tool('spawn_agent', 'codex') !}}` schema. This instruction block owns the prompt content below for required Verifier roles. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
 
 Use this shape for an implementation audit:
 
