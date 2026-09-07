@@ -97,6 +97,7 @@ METHODOLOGY_DECLARATION_POLICY_REQUIREMENTS: Final = (
     ("declared fields", "`methodology.source` and `methodology.version`"),
     ("read before applying", "read that declaration before applying methodology rules"),
     ("re-read cadence", "read it again whenever `/understand` runs"),
+    ("installed sentinel", "`methodology.version` is the sentinel `installed`"),
     ("absent declaration", "declares no methodology version"),
     (
         "forbidden inference",
