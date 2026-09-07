@@ -40,7 +40,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 
 Check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker.
 A marker mentioned only in a compaction summary, session file, handoff note, prior run description, or statement that `/understand` ran does not count. Reading the `/understand` SKILL.md file alone does not count.
-If absent → STOP. Invoke `/understand` first, then resume from Step 0. Do not inspect git, session state, product files, or spec-tree content before the live marker is present.
+If absent → STOP. Invoke `/understand` first, then continue with Step SYNC before Step 0. Do not inspect git, session state, product files, or spec-tree content before the live marker is present.
 
 </step>
 
@@ -50,10 +50,12 @@ If absent → STOP. Invoke `/understand` first, then resume from Step 0. Do not 
 
 Before reading any product or spec content, invoke `/sync-base` so the loaded context reflects current product truth rather than a stale checkout — a branch or detached worktree behind its base reads superseded specs and decisions. `/sync-base` fetches the base and brings the checkout current automatically from observable git state — rebasing a branch, or advancing a clean detached worktree to the base tip; never ask the operator whether to rebase. Act on its result:
 
-- `already_current` or `rebased` → record the status for the eventual context marker, then immediately proceed to Step 0 for the same target on the now-current checkout. This also covers a detached worktree `/sync-base` advanced to the base tip — the loaded context reads the current base, not the stale parked commit. Do not answer the context-grounded question, inspect pull-request state, push, or manage branch ahead/behind status between the clean sync result and Step 0; lifecycle work resumes after context loading completes.
+- `already_current` or `rebased` → record the status, checkout root, and selected base for the eventual context marker, then immediately proceed to Step 0 for the same target in that checkout. These outcomes establish base currency independently of working-tree cleanliness; an already-current checkout may carry pending edits. Do not answer the context-grounded question, inspect pull-request state, push, or manage branch ahead/behind status between that result and Step 0; lifecycle work resumes after context loading completes.
 - `conflict` → STOP and surface the `/sync-base` `conflict` details. The branch cannot be brought current autonomously, and reading stale-or-conflicted context is the failure this gate prevents; leave the rebase active and resume once the operator resolves, continues, or aborts it.
-- `dirty_tree` → treat the result as an unresolved ownership boundary returned by `/sync-base`, which already owns session-authorized checkpointing and retry. ABORT before reading product truth, preserve the exact reported paths, and resume this target only after `/sync-base` reaches a clean result. Never duplicate its branch, commit, or retry protocol here.
+- `dirty_tree` or a reported checkpoint failure → `/sync-base` owns authorized checkpoint recovery and retry. ABORT before reading product truth, preserving its exact blocked action, reported paths, and evidence. Distinguish missing authority from a failed commit or hook; a checkpoint failure is a recovery condition, not an additional primitive status. Never duplicate branch creation, checkpoint policy, or retry logic here. Resume this target only after `/sync-base` returns `already_current` or `rebased` for the same checkout and base.
 - `git_failure` → ABORT with the reported `detail`. A failed fetch, unresolved base, or non-advanceable detached checkout leaves currency unestablished, so no authoritative context can be loaded. Resolve the reported git condition, invoke `/sync-base` again, and then restart `/contextualize` for the same target.
+
+While any synchronization condition remains unresolved, emit no context marker and present no context-grounded answer. Loading a skill, creating a checkpoint, or reading a pre-compaction summary does not complete this prerequisite. An analysis or interview label changes neither the required context nor existing mutation authority; `/sync-base` applies the operator's explicit limits during recovery.
 
 </step>
 
@@ -252,6 +254,8 @@ Documents loaded:
   Cited governance decisions: {list of path cited by path} | none
   Guide files: {list} | none
 Sync-base status: {already_current|rebased}
+Synchronized checkout: {absolute checkout root}
+Synchronized base: {remote_ref from the successful sync result}
 
 Hierarchy (node target):
   {product-name}
@@ -334,7 +338,7 @@ Claude answered a progress question by reporting the clean worktree and local ve
 
 **Failure 8: Let sync-base become the task**
 
-Claude invoked `/sync-base`, received `already_current` or completed a clean rebase, then drifted into branch or pull-request lifecycle work before emitting `<SPEC_TREE_CONTEXT>`. The context-grounded question stayed unanswered because the prerequisite displaced the workflow. Clean sync results are recorded only as context-load state; the next action is Step 0 for the same target, and lifecycle work waits until context loading completes.
+Claude invoked `/sync-base`, received `already_current` or completed a clean rebase, then drifted into branch or pull-request lifecycle work before emitting `<SPEC_TREE_CONTEXT>`. The context-grounded question stayed unanswered because the prerequisite displaced the workflow. Successful sync results are recorded only as context-load state; the next action is Step 0 for the same target, and lifecycle work waits until context loading completes.
 
 **Failure 9: Missed cited methodology governance**
 
@@ -370,7 +374,8 @@ Context loading is complete when:
 - [ ] Coordination-note citations excluded from cited-governance loading
 - [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest
 - [ ] `spx/local/merging.md` read when present and lifecycle continuation state emitted in the manifest
-- [ ] A clean `/sync-base` result is recorded as context-load state and followed immediately by Step 0 for the same target before any answer or branch lifecycle work
+- [ ] `/sync-base` returned `already_current` or `rebased` for the recorded checkout and base, followed immediately by Step 0 for the same target before any answer or branch lifecycle work
+- [ ] No unresolved authority, checkpoint, conflict, or Git failure was treated as completed synchronization; neither a checkpoint nor a pre-compaction summary substituted for the prerequisite
 - [ ] Status and progress contexts include a lifecycle verdict and continuation action rather than treating local verification, commits, or worktree cleanliness as completion
 - [ ] All node, ADR, PDR, test, and coordination-note references in the manifest use full paths from `spx/`
 - [ ] Bootstrap state derives only from `$target` and the observed tree: exact `spx/` with a product spec and no nodes is `true`; every node target is `false`, and a missing node target aborts
