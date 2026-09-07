@@ -412,17 +412,17 @@ OPERATOR_QUESTION_CONTRADICTIONS: Final = (
     ),
 )
 CODEX_VERIFIER_DISPATCH_POLICY_ANCHOR: Final = (
-    "**Already-dispatched verifier boundary.**"
+    "**Already-dispatched Verifier boundary.**"
 )
 CODEX_VERIFIER_DISPATCH_REQUIREMENTS: Final = (
-    ("boundary heading", "Already-dispatched verifier boundary"),
-    ("main-conversation scope", "only in the main authoring conversation"),
+    ("boundary heading", "Already-dispatched Verifier boundary"),
+    ("main-conversation scope", "only in the Author's main conversation"),
     ("existing isolation", "treat the current context as the required isolation"),
     ("direct methodology", "execute the configured audit or review skill directly"),
-    ("no nested verifier", "NEVER search for or spawn another verifier"),
+    ("no nested verifier", "NEVER search for or spawn another Verifier"),
     ("no tool discovery", "`tool_search`"),
     ("no agent CLI", "`codex exec`"),
-    ("missing nested tools expected", "Missing nested-verifier tools is expected"),
+    ("missing nested tools expected", "Missing nested-Verifier tools is expected"),
 )
 
 
@@ -473,7 +473,7 @@ CODEX_VERIFIER_DISPATCH_CONTRADICTIONS: Final = (
         ),
     ),
 )
-DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR: Final = "**STOP TRIGGER — in the main authoring conversation, discover deferred agent tools before reporting an agent unavailable.**"
+DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR: Final = "**STOP TRIGGER — in the Author's main conversation, discover deferred agent tools before reporting an agent unavailable.**"
 DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS: Final = (
     ("stop trigger", DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR),
     ("complete registry", "complete deferred-tool registry"),

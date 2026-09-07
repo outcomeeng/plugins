@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.2.3
+
+### Changed
+
+- **The prose-review rule names the Verifier's agent session.** `contribution-standards` states that an outward-facing text's verdict comes from a separate Verifier's agent session, the role name the spec-tree methodology defines, in place of "verifier agent session".
+
 ## 0.2.1
 
 ### Fixed

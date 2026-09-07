@@ -392,7 +392,7 @@ When vocabulary overlaps another grammar, resolve verification vocabulary here f
 
 - ALWAYS: when repository writes are authorized, commit the exact current version before another agent session or human reads it for collaboration or reusable verification; without repository-write authorization, defer a reading that requires a committed subject.
 
-Changes may remain uncommitted while the authoring agent session works on them. When repository writes are authorized, the commit records verification state as `passing`, `failing`, or `not-run`; that state controls gate eligibility, never commit permission. After any further change, commit the new version before another agent session or human reads it for collaboration or reusable verification. An explicit advisory audit or review may inspect modified or untracked work, but its verdict is not reusable gate evidence. An agentic verification gate additionally requires applicable deterministic verification to pass on the exact committed subject.
+Changes may remain uncommitted while the Author's agent session works on them. When repository writes are authorized, the commit records verification state as `passing`, `failing`, or `not-run`; that state controls gate eligibility, never commit permission. After any further change, commit the new version before another agent session or human reads it for collaboration or reusable verification. An explicit advisory audit or review may inspect modified or untracked work, but its verdict is not reusable gate evidence. An agentic verification gate additionally requires applicable deterministic verification to pass on the exact committed subject.
 
 </commit_before_another_session_reads>
 
