@@ -1,41 +1,4 @@
-"""Test harness for the sync-base git base-synchronization module.
-
-Exposes:
-
-- An importlib loader for ``sync_base.py``. The module ships under a
-  runtime-substituted plugin skill directory and is not importable by package
-  name; tests load it through ``importlib``.
-- ``build_behind_base_repo``. Constructs a real bare ``origin`` plus two clones
-  so the working clone is genuinely behind ``origin/<base>`` until it fetches:
-  the feature branch is cut before the base advances, and the base commit is
-  pushed from a second clone the working clone has not fetched. A clean rebase
-  replays the feature commit onto the advanced base.
-- ``build_current_repo``. A working clone whose feature branch already contains
-  every base commit, so synchronization performs no rebase.
-- ``build_conflicting_repo``. The feature branch and the advanced base edit the
-  same file divergently, so the rebase conflicts.
-- ``build_dirty_behind_base_repo``. A behind-base clone with an uncommitted edit
-  to a tracked file, so the rebase precondition fails before any replay.
-- ``build_overlapping_base_repo``. A behind-base clone where base and branch edit
-  one file in distinct regions, so the rebase auto-merges and the base delta
-  overlaps the branch's changed paths.
-- ``detach_head``. Detaches HEAD so the branch cannot be resolved.
-- ``build_detached_behind_base_repo``. A worktree parked detached at a commit
-  that is an ancestor of the advanced base — the stale-but-clean pool-worktree
-  case — so synchronization advances it to the base tip.
-- ``build_detached_current_repo``. A worktree parked detached at the base tip
-  with no base advance, so synchronization reports it already current.
-- ``build_detached_dirty_behind_base_repo``. A behind-base detached worktree
-  with an uncommitted tracked edit, so synchronization reports ``dirty_tree``.
-- ``build_detached_untracked_only_behind_base_repo``. A behind-base detached
-  worktree whose only change is a non-colliding untracked file, so
-  synchronization advances it rather than reporting ``dirty_tree``.
-- ``build_detached_no_remote_repo``. A detached worktree with no ``origin``
-  remote, so the base cannot be fetched and synchronization fails.
-
-The harness owns the git lifecycle and the invented payload (file names and
-commit messages); tests assert behavior against the returned handle.
-"""
+"""Real Git lifecycle and observations for synchronization evidence."""
 
 from __future__ import annotations
 
@@ -45,7 +8,14 @@ import pathlib
 import subprocess
 import sys
 from dataclasses import dataclass
+from tempfile import mkdtemp
 from types import ModuleType
+
+from outcomeeng_testing.generators.sync_base import (
+    RepositoryDomain,
+    TrackedEdit,
+    repository_domain,
+)
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 SYNC_BASE_MODULE_PATH = (
@@ -59,12 +29,10 @@ SYNC_BASE_MODULE_PATH = (
     / "sync_base.py"
 )
 
-BASE_BRANCH = "main"
-FEATURE_BRANCH = "feature/x"
-INITIAL_FILE = "README.md"
-FEATURE_FILE = "feature.txt"
-BASE_FILE = "base.txt"
-FEATURE_COMMIT_MESSAGE = "feature change"
+
+def repository_root(tmp_path: pathlib.Path) -> pathlib.Path:
+    """Allocate a unique root beneath pytest's cleanup-owned directory."""
+    return pathlib.Path(mkdtemp(dir=tmp_path))
 
 
 def load_sync_base_module() -> ModuleType:
@@ -126,30 +94,31 @@ def _commit_file(repo: pathlib.Path, name: str, content: str, message: str) -> N
     _git(repo, "commit", "-q", "-m", message)
 
 
-def _init_origin_with_base(root: pathlib.Path) -> pathlib.Path:
+def _init_origin_with_base(root: pathlib.Path, data: RepositoryDomain) -> pathlib.Path:
     """Create a bare origin seeded with an initial base commit; return its path.
 
-    A ``pusher`` clone makes the initial commit and pushes it so ``origin`` has a
-    ``main`` branch and default HEAD. The pusher is reused by callers that need
-    to advance the base out of band.
+    A ``pusher`` clone seeds the generated base branch and default HEAD, then
+    remains available to advance the base out of band.
     """
     origin = root / "origin.git"
-    _git(root, "init", "--bare", "-b", BASE_BRANCH, str(origin), cwd=root)
+    _git(root, "init", "--bare", "-b", data.base_branch, str(origin), cwd=root)
     pusher = root / "pusher"
     _git(root, "clone", "-q", str(origin), str(pusher), cwd=root)
     _configure(pusher)
-    _commit_file(pusher, INITIAL_FILE, "hello\n", "initial")
-    _git(pusher, "push", "-q", "origin", BASE_BRANCH)
+    _commit_file(pusher, data.initial_file, data.initial_content, data.initial_message)
+    _git(pusher, "push", "-q", "origin", data.base_branch)
     return origin
 
 
-def _working_clone_on_feature(root: pathlib.Path, origin: pathlib.Path) -> pathlib.Path:
+def _working_clone_on_feature(
+    root: pathlib.Path, origin: pathlib.Path, data: RepositoryDomain
+) -> pathlib.Path:
     """Clone ``origin`` into ``repo`` and cut the feature branch off the base."""
     repo = root / "repo"
     _git(root, "clone", "-q", str(origin), str(repo), cwd=root)
     _configure(repo)
-    _git(repo, "remote", "set-head", "origin", BASE_BRANCH)
-    _git(repo, "switch", "-q", "-c", FEATURE_BRANCH)
+    _git(repo, "remote", "set-head", "origin", data.base_branch)
+    _git(repo, "switch", "-q", "-c", data.feature_branch)
     return repo
 
 
@@ -169,30 +138,30 @@ class BehindBaseRepo:
     feature_file: str
     base_file: str
     feature_commit_message: str
+    data: RepositoryDomain
 
 
 def build_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
     """Build a working clone behind its base by a not-yet-fetched base commit."""
-    origin = _init_origin_with_base(root)
-    repo = _working_clone_on_feature(root, origin)
-    _commit_file(repo, FEATURE_FILE, "feature change\n", FEATURE_COMMIT_MESSAGE)
+    data = repository_domain()
+    origin = _init_origin_with_base(root, data)
+    repo = _working_clone_on_feature(root, origin, data)
+    _commit_file(repo, data.feature_file, data.feature_content, data.feature_message)
 
     pusher = root / "pusher"
-    _commit_file(pusher, BASE_FILE, "base advance\n", "advance base")
-    _git(pusher, "push", "-q", "origin", BASE_BRANCH)
+    _commit_file(pusher, data.base_file, data.base_content, data.base_message)
+    _git(pusher, "push", "-q", "origin", data.base_branch)
 
     return BehindBaseRepo(
         repo=repo,
-        base_ref=BASE_BRANCH,
-        remote_ref=f"origin/{BASE_BRANCH}",
-        feature_branch=FEATURE_BRANCH,
-        feature_file=FEATURE_FILE,
-        base_file=BASE_FILE,
-        feature_commit_message=FEATURE_COMMIT_MESSAGE,
+        base_ref=data.base_branch,
+        remote_ref=f"origin/{data.base_branch}",
+        feature_branch=data.feature_branch,
+        feature_file=data.feature_file,
+        base_file=data.base_file,
+        feature_commit_message=data.feature_message,
+        data=data,
     )
-
-
-DIRTY_MARKER = "uncommitted change\n"
 
 
 @dataclass(frozen=True)
@@ -215,11 +184,11 @@ class DirtyBehindBaseRepo:
 
 
 def build_dirty_behind_base_repo(
-    root: pathlib.Path, *, stage: bool = False
+    root: pathlib.Path, *, edit: TrackedEdit
 ) -> DirtyBehindBaseRepo:
     """Build a behind-base working clone with an uncommitted change to a tracked file.
 
-    ``stage=True`` stages the change (``git add``) without committing, so the
+    A staged edit runs ``git add`` without committing, so the
     dirty state is staged-but-uncommitted rather than unstaged. Both forms block
     a rebase and both must report ``dirty_tree``; ``git status --porcelain
     --untracked-files=no`` reports either.
@@ -227,9 +196,9 @@ def build_dirty_behind_base_repo(
     behind = build_behind_base_repo(root)
     dirty_path = behind.repo / behind.feature_file
     dirty_path.write_text(
-        dirty_path.read_text(encoding="utf-8") + DIRTY_MARKER, encoding="utf-8"
+        dirty_path.read_text(encoding="utf-8") + edit.content, encoding="utf-8"
     )
-    if stage:
+    if edit.staged:
         _git(behind.repo, "add", behind.feature_file)
     return DirtyBehindBaseRepo(
         repo=behind.repo,
@@ -237,13 +206,9 @@ def build_dirty_behind_base_repo(
         remote_ref=behind.remote_ref,
         feature_branch=behind.feature_branch,
         dirty_file=behind.feature_file,
-        dirty_marker=DIRTY_MARKER,
+        dirty_marker=edit.content,
         base_file=behind.base_file,
     )
-
-
-ALTERNATE_BRANCH = "release"
-ALTERNATE_FILE = "release.txt"
 
 
 @dataclass(frozen=True)
@@ -268,28 +233,29 @@ class AlternateBaseRepo:
 
 def build_alternate_base_repo(root: pathlib.Path) -> AlternateBaseRepo:
     """Build a working clone current with the default base but behind an alternate."""
-    origin = _init_origin_with_base(root)
+    data = repository_domain()
+    origin = _init_origin_with_base(root, data)
     pusher = root / "pusher"
-    _git(pusher, "switch", "-q", "-c", ALTERNATE_BRANCH)
-    _git(pusher, "push", "-q", "origin", ALTERNATE_BRANCH)
+    _git(pusher, "switch", "-q", "-c", data.alternate_branch)
+    _git(pusher, "push", "-q", "origin", data.alternate_branch)
 
-    repo = _working_clone_on_feature(root, origin)
-    _commit_file(repo, FEATURE_FILE, "feature change\n", FEATURE_COMMIT_MESSAGE)
+    repo = _working_clone_on_feature(root, origin, data)
+    _commit_file(repo, data.feature_file, data.feature_content, data.feature_message)
 
-    _git(pusher, "switch", "-q", ALTERNATE_BRANCH)
+    _git(pusher, "switch", "-q", data.alternate_branch)
     _commit_file(
-        pusher, ALTERNATE_FILE, "alternate advance\n", "advance alternate base"
+        pusher, data.alternate_file, data.alternate_content, data.alternate_message
     )
-    _git(pusher, "push", "-q", "origin", ALTERNATE_BRANCH)
+    _git(pusher, "push", "-q", "origin", data.alternate_branch)
 
     return AlternateBaseRepo(
         repo=repo,
-        default_ref=BASE_BRANCH,
-        alternate_ref=ALTERNATE_BRANCH,
-        alternate_remote_ref=f"origin/{ALTERNATE_BRANCH}",
-        feature_branch=FEATURE_BRANCH,
-        feature_file=FEATURE_FILE,
-        alternate_file=ALTERNATE_FILE,
+        default_ref=data.base_branch,
+        alternate_ref=data.alternate_branch,
+        alternate_remote_ref=f"origin/{data.alternate_branch}",
+        feature_branch=data.feature_branch,
+        feature_file=data.feature_file,
+        alternate_file=data.alternate_file,
     )
 
 
@@ -301,18 +267,21 @@ class CurrentRepo:
     base_ref: str
     remote_ref: str
     feature_branch: str
+    missing_branch: str
 
 
 def build_current_repo(root: pathlib.Path) -> CurrentRepo:
     """Build a working clone already current with its base (no base advance)."""
-    origin = _init_origin_with_base(root)
-    repo = _working_clone_on_feature(root, origin)
-    _commit_file(repo, FEATURE_FILE, "feature change\n", FEATURE_COMMIT_MESSAGE)
+    data = repository_domain()
+    origin = _init_origin_with_base(root, data)
+    repo = _working_clone_on_feature(root, origin, data)
+    _commit_file(repo, data.feature_file, data.feature_content, data.feature_message)
     return CurrentRepo(
         repo=repo,
-        base_ref=BASE_BRANCH,
-        remote_ref=f"origin/{BASE_BRANCH}",
-        feature_branch=FEATURE_BRANCH,
+        base_ref=data.base_branch,
+        remote_ref=f"origin/{data.base_branch}",
+        feature_branch=data.feature_branch,
+        missing_branch=data.missing_branch,
     )
 
 
@@ -329,24 +298,22 @@ class ConflictRepo:
 
 def build_conflicting_repo(root: pathlib.Path) -> ConflictRepo:
     """Build a working clone whose rebase onto the advanced base conflicts."""
-    origin = _init_origin_with_base(root)
-    repo = _working_clone_on_feature(root, origin)
-    _commit_file(repo, INITIAL_FILE, "feature edit\n", "feature edits readme")
+    data = repository_domain()
+    origin = _init_origin_with_base(root, data)
+    repo = _working_clone_on_feature(root, origin, data)
+    _commit_file(repo, data.initial_file, data.feature_content, data.feature_message)
 
     pusher = root / "pusher"
-    _commit_file(pusher, INITIAL_FILE, "base edit\n", "base edits readme")
-    _git(pusher, "push", "-q", "origin", BASE_BRANCH)
+    _commit_file(pusher, data.initial_file, data.base_content, data.base_message)
+    _git(pusher, "push", "-q", "origin", data.base_branch)
 
     return ConflictRepo(
         repo=repo,
-        base_ref=BASE_BRANCH,
-        remote_ref=f"origin/{BASE_BRANCH}",
-        feature_branch=FEATURE_BRANCH,
-        conflict_file=INITIAL_FILE,
+        base_ref=data.base_branch,
+        remote_ref=f"origin/{data.base_branch}",
+        feature_branch=data.feature_branch,
+        conflict_file=data.initial_file,
     )
-
-
-UNTRACKED_FILE = "scratch.local"
 
 
 def build_untracked_only_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
@@ -359,11 +326,13 @@ def build_untracked_only_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
     without it the untracked file would read as dirty and force ``dirty_tree``.
     """
     behind = build_behind_base_repo(root)
-    (behind.repo / UNTRACKED_FILE).write_text("scratch\n", encoding="utf-8")
+    (behind.repo / behind.data.untracked_file).write_text(
+        behind.data.scratch_content, encoding="utf-8"
+    )
     return behind
 
 
-def fetch_base(repo: pathlib.Path, base_ref: str = BASE_BRANCH) -> None:
+def fetch_base(repo: pathlib.Path, base_ref: str) -> None:
     """Fetch the base into ``repo`` to simulate a caller that pre-fetched.
 
     After this the working clone's ``origin/<base>`` already points at the
@@ -381,6 +350,11 @@ def head_oid(repo: pathlib.Path) -> str:
 def resolve_ref(repo: pathlib.Path, ref: str) -> str:
     """Return the full OID ``ref`` resolves to in ``repo``."""
     return _git(repo, "rev-parse", ref)
+
+
+def merge_base_oid(repo: pathlib.Path, ref: str) -> str:
+    """Observe the complete shared ancestor object ID through Git."""
+    return _git(repo, "merge-base", "HEAD", ref)
 
 
 def working_tree_has_tracked_changes(repo: pathlib.Path) -> bool:
@@ -411,31 +385,39 @@ class OverlappingBaseRepo:
 
 def build_overlapping_base_repo(root: pathlib.Path) -> OverlappingBaseRepo:
     """Build a behind-base clone whose base advance overlaps the branch's file."""
-    origin = _init_origin_with_base(root)
-    repo = _working_clone_on_feature(root, origin)
-    _commit_file(repo, INITIAL_FILE, "hello\nfeature line\n", "feature edits readme")
+    data = repository_domain()
+    origin = _init_origin_with_base(root, data)
+    repo = _working_clone_on_feature(root, origin, data)
+    _commit_file(
+        repo,
+        data.initial_file,
+        data.initial_content + data.feature_content,
+        data.feature_message,
+    )
 
     pusher = root / "pusher"
-    _commit_file(pusher, INITIAL_FILE, "base line\nhello\n", "base edits readme top")
-    _git(pusher, "push", "-q", "origin", BASE_BRANCH)
+    _commit_file(
+        pusher,
+        data.initial_file,
+        data.base_content + data.initial_content,
+        data.base_message,
+    )
+    _git(pusher, "push", "-q", "origin", data.base_branch)
 
     return OverlappingBaseRepo(
         repo=repo,
-        base_ref=BASE_BRANCH,
-        remote_ref=f"origin/{BASE_BRANCH}",
-        feature_branch=FEATURE_BRANCH,
-        overlap_file=INITIAL_FILE,
+        base_ref=data.base_branch,
+        remote_ref=f"origin/{data.base_branch}",
+        feature_branch=data.feature_branch,
+        overlap_file=data.initial_file,
     )
-
-
-RENAMED_FILE = "renamed.txt"
 
 
 @dataclass(frozen=True)
 class RenameBaseRepo:
     """A behind-base clone whose base advance renames a file the branch ignores.
 
-    The base renames ``INITIAL_FILE`` to ``RENAMED_FILE``; the branch changes an
+    The base renames ``old_path`` to ``new_path``; the branch changes an
     unrelated file, so the rebase is clean. With ``--no-renames`` the base delta
     reports both the old and the new path, the property a caller relies on to
     catch a base rename of a path the branch also touched.
@@ -451,22 +433,23 @@ class RenameBaseRepo:
 
 def build_rename_base_repo(root: pathlib.Path) -> RenameBaseRepo:
     """Build a behind-base clone whose base advance is a rename."""
-    origin = _init_origin_with_base(root)
-    repo = _working_clone_on_feature(root, origin)
-    _commit_file(repo, FEATURE_FILE, "feature change\n", FEATURE_COMMIT_MESSAGE)
+    data = repository_domain()
+    origin = _init_origin_with_base(root, data)
+    repo = _working_clone_on_feature(root, origin, data)
+    _commit_file(repo, data.feature_file, data.feature_content, data.feature_message)
 
     pusher = root / "pusher"
-    _git(pusher, "mv", INITIAL_FILE, RENAMED_FILE)
-    _git(pusher, "commit", "-q", "-m", "rename initial file")
-    _git(pusher, "push", "-q", "origin", BASE_BRANCH)
+    _git(pusher, "mv", data.initial_file, data.renamed_file)
+    _git(pusher, "commit", "-q", "-m", data.rename_message)
+    _git(pusher, "push", "-q", "origin", data.base_branch)
 
     return RenameBaseRepo(
         repo=repo,
-        base_ref=BASE_BRANCH,
-        remote_ref=f"origin/{BASE_BRANCH}",
-        feature_branch=FEATURE_BRANCH,
-        old_path=INITIAL_FILE,
-        new_path=RENAMED_FILE,
+        base_ref=data.base_branch,
+        remote_ref=f"origin/{data.base_branch}",
+        feature_branch=data.feature_branch,
+        old_path=data.initial_file,
+        new_path=data.renamed_file,
     )
 
 
@@ -477,7 +460,7 @@ def detach_head(repo: pathlib.Path) -> None:
 
 
 def _working_clone_detached_on_base(
-    root: pathlib.Path, origin: pathlib.Path
+    root: pathlib.Path, origin: pathlib.Path, data: RepositoryDomain
 ) -> pathlib.Path:
     """Clone ``origin`` into ``repo`` and park HEAD detached at the base tip.
 
@@ -489,7 +472,7 @@ def _working_clone_detached_on_base(
     repo = root / "repo"
     _git(root, "clone", "-q", str(origin), str(repo), cwd=root)
     _configure(repo)
-    _git(repo, "remote", "set-head", "origin", BASE_BRANCH)
+    _git(repo, "remote", "set-head", "origin", data.base_branch)
     sha = _git(repo, "rev-parse", "HEAD")
     _git(repo, "checkout", "-q", "--detach", sha)
     return repo
@@ -509,6 +492,7 @@ class DetachedRepo:
     base_ref: str
     remote_ref: str
     detached_oid: str
+    data: RepositoryDomain
     base_file: str | None = None
     dirty_file: str | None = None
     dirty_marker: str | None = None
@@ -522,20 +506,22 @@ def build_detached_behind_base_repo(root: pathlib.Path) -> DetachedRepo:
     ancestor of ``origin/<base>``. Synchronization must advance the worktree to
     the base tip and bring the base advance into the working tree.
     """
-    origin = _init_origin_with_base(root)
-    repo = _working_clone_detached_on_base(root, origin)
+    data = repository_domain()
+    origin = _init_origin_with_base(root, data)
+    repo = _working_clone_detached_on_base(root, origin, data)
     detached_oid = _git(repo, "rev-parse", "HEAD")
 
     pusher = root / "pusher"
-    _commit_file(pusher, BASE_FILE, "base advance\n", "advance base")
-    _git(pusher, "push", "-q", "origin", BASE_BRANCH)
+    _commit_file(pusher, data.base_file, data.base_content, data.base_message)
+    _git(pusher, "push", "-q", "origin", data.base_branch)
 
     return DetachedRepo(
         repo=repo,
-        base_ref=BASE_BRANCH,
-        remote_ref=f"origin/{BASE_BRANCH}",
+        base_ref=data.base_branch,
+        remote_ref=f"origin/{data.base_branch}",
         detached_oid=detached_oid,
-        base_file=BASE_FILE,
+        data=data,
+        base_file=data.base_file,
     )
 
 
@@ -546,17 +532,21 @@ def build_detached_current_repo(root: pathlib.Path) -> DetachedRepo:
     fetch the detached commit equals ``origin/<base>`` and synchronization
     reports it already current without advancing.
     """
-    origin = _init_origin_with_base(root)
-    repo = _working_clone_detached_on_base(root, origin)
+    data = repository_domain()
+    origin = _init_origin_with_base(root, data)
+    repo = _working_clone_detached_on_base(root, origin, data)
     return DetachedRepo(
         repo=repo,
-        base_ref=BASE_BRANCH,
-        remote_ref=f"origin/{BASE_BRANCH}",
+        base_ref=data.base_branch,
+        remote_ref=f"origin/{data.base_branch}",
         detached_oid=_git(repo, "rev-parse", "HEAD"),
+        data=data,
     )
 
 
-def build_detached_dirty_behind_base_repo(root: pathlib.Path) -> DetachedRepo:
+def build_detached_dirty_behind_base_repo(
+    root: pathlib.Path, *, edit: TrackedEdit
+) -> DetachedRepo:
     """Build a behind-base detached worktree with an uncommitted tracked edit.
 
     Same parked-behind state as ``build_detached_behind_base_repo``, plus an
@@ -565,18 +555,22 @@ def build_detached_dirty_behind_base_repo(root: pathlib.Path) -> DetachedRepo:
     the worktree.
     """
     behind = build_detached_behind_base_repo(root)
-    dirty_path = behind.repo / INITIAL_FILE
+    data = behind.data
+    dirty_path = behind.repo / data.initial_file
     dirty_path.write_text(
-        dirty_path.read_text(encoding="utf-8") + DIRTY_MARKER, encoding="utf-8"
+        dirty_path.read_text(encoding="utf-8") + edit.content, encoding="utf-8"
     )
+    if edit.staged:
+        _git(behind.repo, "add", data.initial_file)
     return DetachedRepo(
         repo=behind.repo,
         base_ref=behind.base_ref,
         remote_ref=behind.remote_ref,
         detached_oid=behind.detached_oid,
+        data=data,
         base_file=behind.base_file,
-        dirty_file=INITIAL_FILE,
-        dirty_marker=DIRTY_MARKER,
+        dirty_file=data.initial_file,
+        dirty_marker=edit.content,
     )
 
 
@@ -592,7 +586,9 @@ def build_detached_untracked_only_behind_base_repo(
     case, proving the advance's ``--untracked-files=no`` scope is necessary.
     """
     behind = build_detached_behind_base_repo(root)
-    (behind.repo / UNTRACKED_FILE).write_text("scratch\n", encoding="utf-8")
+    (behind.repo / behind.data.untracked_file).write_text(
+        behind.data.scratch_content, encoding="utf-8"
+    )
     return behind
 
 
@@ -603,15 +599,17 @@ def build_detached_no_remote_repo(root: pathlib.Path) -> DetachedRepo:
     cannot be fetched and no remote base resolves, so synchronization reports a
     hard git failure rather than advancing.
     """
+    data = repository_domain()
     repo = root / "repo"
-    _git(root, "init", "-q", "-b", BASE_BRANCH, str(repo), cwd=root)
+    _git(root, "init", "-q", "-b", data.base_branch, str(repo), cwd=root)
     _configure(repo)
-    _commit_file(repo, INITIAL_FILE, "hello\n", "initial")
+    _commit_file(repo, data.initial_file, data.initial_content, data.initial_message)
     sha = _git(repo, "rev-parse", "HEAD")
     _git(repo, "checkout", "-q", "--detach", sha)
     return DetachedRepo(
         repo=repo,
-        base_ref=BASE_BRANCH,
-        remote_ref=f"origin/{BASE_BRANCH}",
+        base_ref=data.base_branch,
+        remote_ref=f"origin/{data.base_branch}",
         detached_oid=sha,
+        data=data,
     )

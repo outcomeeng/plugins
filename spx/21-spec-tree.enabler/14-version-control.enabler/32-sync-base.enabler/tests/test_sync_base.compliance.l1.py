@@ -1,25 +1,4 @@
-"""Compliance tests for the sync-base base-synchronization module.
-
-Covers the Compliance assertions in ``../sync-base.md``:
-
-- sync-base resolves the base ref and remote-tracking form through the shared
-  changeset-scope primitives, never re-implementing them — proved by object
-  identity between the sync-base re-exports and the canonical symbols.
-- sync-base brings a behind-base branch current by rebasing, preserving the
-  branch's commits — never by ``git reset``, which would strand the working
-  tree at the old base and drop the branch's commit.
-- sync-base surfaces no operator decision for a routine, clean rebase; conflict
-  stops carry structured details instead of an opaque action token.
-- sync-base neither commits nor stashes a dirty working tree and does not
-  surface it as a conflict — a dirty tree is a distinct precondition the caller
-  clears through the commit workflow.
-- sync-base advances a clean ancestor-behind detached HEAD rather than waving it
-  through; it never advances a dirty or diverged detached HEAD, preserving the
-  diverged commits.
-
-These are ``l1`` — direct in-process calls into ``sync_base`` against real git
-repositories seeded under ``tmp_path``.
-"""
+"""Real Git compliance evidence for base synchronization."""
 
 from __future__ import annotations
 
@@ -27,6 +6,7 @@ import pathlib
 
 import pytest
 
+from outcomeeng_testing.generators.sync_base import TrackedEdit, tracked_edits
 from outcomeeng_testing.harnesses.changeset_scope import load_changeset_scope_module
 from outcomeeng_testing.harnesses.sync_base import (
     build_behind_base_repo,
@@ -37,14 +17,9 @@ from outcomeeng_testing.harnesses.sync_base import (
     detach_head,
     head_oid,
     load_sync_base_module,
+    repository_root,
     working_tree_has_tracked_changes,
 )
-
-
-def _root(tmp_path: pathlib.Path) -> pathlib.Path:
-    root = tmp_path / "pool"
-    root.mkdir()
-    return root
 
 
 def test_base_derivation_primitives_are_identity_equal_to_canonical() -> None:
@@ -59,7 +34,7 @@ def test_rebase_preserves_branch_commit_rather_than_resetting(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_behind_base_repo(_root(tmp_path))
+    handle = build_behind_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
@@ -76,14 +51,12 @@ def test_clean_rebase_has_no_conflict_details_conflict_does(
 ) -> None:
     module = load_sync_base_module()
 
-    clean_root = tmp_path / "clean"
-    clean_root.mkdir()
+    clean_root = repository_root(tmp_path)
     clean = module.sync_base(build_behind_base_repo(clean_root).repo)
     assert clean.status is module.SyncStatus.REBASED
     assert clean.conflict is None
 
-    conflict_root = tmp_path / "conflict"
-    conflict_root.mkdir()
+    conflict_root = repository_root(tmp_path)
     conflict = module.sync_base(build_conflicting_repo(conflict_root).repo)
     assert conflict.status is module.SyncStatus.CONFLICT
     assert conflict.conflict is not None
@@ -91,14 +64,14 @@ def test_clean_rebase_has_no_conflict_details_conflict_does(
     assert "CONFLICT (content): Merge conflict in" in conflict.conflict.git_output
 
 
-@pytest.mark.parametrize("stage", [False, True], ids=["unstaged", "staged"])
+@pytest.mark.parametrize("edit", tracked_edits())
 def test_dirty_tree_is_neither_committed_stashed_nor_a_conflict(
-    tmp_path: pathlib.Path, stage: bool
+    tmp_path: pathlib.Path, edit: TrackedEdit
 ) -> None:
     # An unstaged change and a staged-but-uncommitted change are both dirty: in
     # neither case does sync-base commit, stash, or surface a rebase conflict.
     module = load_sync_base_module()
-    handle = build_dirty_behind_base_repo(_root(tmp_path), stage=stage)
+    handle = build_dirty_behind_base_repo(repository_root(tmp_path), edit=edit)
 
     result = module.sync_base(handle.repo)
 
@@ -122,7 +95,7 @@ def test_clean_behind_detached_head_is_advanced_not_waved_through(
     # origin/<base> — rather than waved through as a hard git failure, the gap
     # that let context loading and pickup read a stale base.
     module = load_sync_base_module()
-    handle = build_detached_behind_base_repo(_root(tmp_path))
+    handle = build_detached_behind_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
@@ -132,13 +105,14 @@ def test_clean_behind_detached_head_is_advanced_not_waved_through(
     assert (handle.repo / handle.base_file).exists()
 
 
+@pytest.mark.parametrize("edit", tracked_edits())
 def test_dirty_detached_head_is_never_advanced(
-    tmp_path: pathlib.Path,
+    tmp_path: pathlib.Path, edit: TrackedEdit
 ) -> None:
     # A behind-base detached worktree with an uncommitted tracked edit is never
     # advanced: sync-base reports dirty_tree and leaves the worktree untouched.
     module = load_sync_base_module()
-    handle = build_detached_dirty_behind_base_repo(_root(tmp_path))
+    handle = build_detached_dirty_behind_base_repo(repository_root(tmp_path), edit=edit)
 
     result = module.sync_base(handle.repo)
 
@@ -156,7 +130,7 @@ def test_diverged_detached_head_is_never_advanced_commits_preserved(
     # Advancing it would orphan that commit, so sync-base reports git_failure and
     # leaves HEAD — and the feature commit — intact.
     module = load_sync_base_module()
-    handle = build_behind_base_repo(_root(tmp_path))
+    handle = build_behind_base_repo(repository_root(tmp_path))
     feature_oid_before = head_oid(handle.repo)
     detach_head(handle.repo)
 
