@@ -8,17 +8,17 @@
 
 **Agent session.** One running or resumable interaction for one agent.
 
-**Role.** What an agent session does for a Change. A Change is the methodology's mutable coordination object for one intended Output, and its Activities are its mutable, ordered execution plan; a repository's coordination overlay realizes them where one is declared, and the roles hold whether or not that overlay is present. A role name is capitalized, so it stands apart from the everyday word. One round is one Author or Fixer pass together with every Verifier pass it triggers.
+**Role.** What an agent session does for a Change; a session holds a role for that Change and may hold another in a different one. A Change is the methodology's mutable coordination object for one intended Output, and its Activities are its mutable, ordered execution plan; a repository's coordination overlay realizes them where one is declared, and the roles hold whether or not that overlay is present. A role name is capitalized, so it stands apart from the everyday word. One round is one Author or Fixer pass together with every Verifier pass it triggers.
 
-**Refiner.** The holder of a Change during refinement. The Refiner is the agent session in conversation with the operator, realized by loading the refinement skill into that conversation; it is never dispatched as a subagent and never loaded from an agent definition.
+**Refiner.** The role of the Change's holder during refinement. The agent session in conversation with the operator holds it, realized by loading the refinement skill into that conversation; the role is never dispatched as a subagent and never loaded from an agent definition.
 
-**Executor.** The holder of a Change during execution. The Executor sequences the Change's Activities, delegates production and verification, integrates the changeset, and escalates a reopened product or architecture judgment to the operator. The Executor produces no artifact.
+**Executor.** The role of the Change's holder during execution. The Executor sequences the Change's Activities, delegates production and verification, integrates the changeset, and escalates a reopened product or architecture judgment to the operator. The Executor produces no artifact.
 
-**Author.** The agent session that produces the artifacts of one round: decisions, specs, verification artifacts, or implementation.
+**Author.** The role held by the agent session that produces the artifacts of one round: decisions, specs, verification artifacts, or implementation.
 
-**Fixer.** An Author of a later round on the same subject, independent of the round's Author. The Executor hands the Fixer the earlier round's artifacts and verdicts.
+**Fixer.** The Author role in a later round on the same subject, held by an agent session independent of the round's Author. The Executor hands the Fixer the earlier round's artifacts and verdicts.
 
-**Verifier.** The agent session that produces an Agentic verdict: an Auditor for audit, a Reviewer for review.
+**Verifier.** The role held by the agent session that produces an Agentic verdict: an Auditor for audit, a Reviewer for review.
 
 ## Rationale
 
@@ -32,7 +32,7 @@ The five roles name what a session does for a Change independently of which harn
 2. Agent configuration, invocation, observation, and resume behavior preserve the distinction between those four roles.
 3. Product domains that configure, launch, resume, isolate, equip, or observe coding agents identify the specific role they govern.
 4. Agent-facing decisions, specs, skills, and instructions name who refines, executes, produces, repairs, or verifies a Change with the capitalized role names Refiner, Executor, Author, Fixer, and Verifier, with Auditor and Reviewer as the two Verifier kinds.
-5. The Refiner is the operator's conversation, and a Fixer is never the round's own Author.
+5. The Refiner role is held by the operator's conversation, and the Fixer role is never held by the round's own Author.
 
 ## Verification
 
@@ -42,6 +42,6 @@ The five roles name what a session does for a Change independently of which harn
 - ALWAYS: each product domain whose behavior configures, launches, resumes, isolates, equips, or observes coding agents states in its governing spec or decision whether it governs the agent harness, an agent, an agent adapter, or an agent session ([audit])
 - NEVER: use unqualified agent for adapter implementation, session identity, plugin package, marketplace package, or the repository-managed agent harness when that specific role is meant ([audit])
 - ALWAYS: decisions, specs, skills, and instructions that describe who refines, executes, produces, repairs, or verifies a Change name the role — Refiner, Executor, Author, Fixer, or Verifier, with Auditor and Reviewer as the Verifier kinds — capitalized ([audit])
-- ALWAYS: the Refiner is the agent session in conversation with the operator, realized by loading the refinement skill into that conversation, never by dispatching a subagent or loading an agent definition ([audit])
-- NEVER: an Author revises its own subject in a later round — a Fixer is an Author independent of the round's Author ([audit])
+- ALWAYS: the Refiner role is held by the agent session in conversation with the operator, realized by loading the refinement skill into that conversation, never by dispatching a subagent or loading an agent definition ([audit])
+- NEVER: the agent session holding the Author role revises its own subject in a later round — the Fixer role is held by an agent session independent of the round's Author ([audit])
 - NEVER: an SPX payload field name — `producer`, `expectedProducer`, `recordedByRunDriver`, the run driver — or a dispatch-pattern word such as orchestrator or applier stands in for a role name ([audit])
