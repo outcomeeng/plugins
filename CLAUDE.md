@@ -42,7 +42,7 @@ These instructions explain WHEN to invoke spec-tree skills for this product. The
 
 The product's operational command for each spec-tree phase lives in this file's own content below the router. Read the whole file to find each one:
 
-- **Author** — after creating, updating, or deleting a spec, test, or implementation file, to rebuild or regenerate artifacts.
+- **author** — after creating, updating, or deleting a spec, test, or implementation file, to rebuild or regenerate artifacts.
 - **verify** — for `/apply` and pre-merge checks, over the node and the changeset.
 - **gate** — for the full deterministic bundle.
 - **merge** — for the transport step of `/merge`.
