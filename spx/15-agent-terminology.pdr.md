@@ -30,7 +30,7 @@
 
 The terms agent harness, agent, agent adapter, and agent session stay separate so configuration, connection mechanics, and interaction identity do not collapse into one term.
 
-The five roles name what a session does for a Change independently of which harness, agent, or adapter runs it, so one agent session can hold different roles in different Changes and a role can move between sessions without renaming either. The Refiner is the operator's conversation because refinement is an interview; a subagent cannot interview the operator. The Fixer is a separate role because an Author receiving a rejected verdict tends to relocate the defect instead of removing it, and a fresh session holding the artifacts and the verdicts judges the repair from the standard rather than from the choices that produced the subject. Field names in the SPX CLI's verification payloads — `producer`, `expectedProducer`, `recordedByRunDriver`, the run driver — are schema vocabulary for run provenance, and pattern words such as orchestrator or applier describe a shape of dispatch; neither is a role name.
+The five roles name what a session does for a Change independently of which harness, agent, or adapter runs it, so one agent session can hold different roles in different Changes and a role can move between sessions without renaming either. The Refiner is the operator's conversation because refinement is an interview; a subagent cannot interview the operator. The Fixer is named because an Author receiving a rejected verdict tends to relocate the defect instead of removing it, and a fresh session holding the artifacts and the verdicts judges the repair from the standard rather than from the choices that produced the subject. Field names in the SPX CLI's verification payloads — `producer`, `expectedProducer`, `recordedByRunDriver`, the run driver — are schema vocabulary for run provenance, and pattern words such as orchestrator or applier describe a shape of dispatch; neither is a role name.
 
 ## Product properties
 
@@ -38,7 +38,7 @@ The five roles name what a session does for a Change independently of which harn
 2. Agent configuration, invocation, observation, and resume behavior preserve the distinction between those four roles.
 3. Product domains that configure, launch, resume, isolate, equip, or observe coding agents identify the specific role they govern.
 4. Agent-facing decisions, specs, skills, and instructions name who refines, executes, produces, repairs, or verifies a Change with the capitalized role names Refiner, Executor, Author, Fixer, and Verifier, with Auditor and Reviewer as the two Verifier kinds.
-5. The Refiner role is held by the operator's conversation, and the Fixer role is never held by the round's own Author.
+5. The Refiner role is held by the operator's conversation, and the Fixer, the Author role of a later round, is never held by the round's own Author.
 
 ## Verification
 
@@ -49,5 +49,5 @@ The five roles name what a session does for a Change independently of which harn
 - NEVER: use unqualified agent for adapter implementation, session identity, plugin package, marketplace package, or the repository-managed agent harness when that specific role is meant ([audit])
 - ALWAYS: decisions, specs, skills, and instructions that describe who refines, executes, produces, repairs, or verifies a Change name the role — Refiner, Executor, Author, Fixer, or Verifier, with Auditor and Reviewer as the Verifier kinds — capitalized ([audit])
 - ALWAYS: the Refiner role is held by the agent session in conversation with the operator, realized by loading into that conversation the refinement skills the Change's Maturity routes to, never by dispatching a subagent or loading an agent definition ([audit])
-- NEVER: the agent session holding the Author role revises its own subject in a later round — the Fixer role is held by an agent session independent of the round's Author ([audit])
+- NEVER: the agent session holding the Author role revises its own subject in a later round — the Fixer, the Author role of that later round, is held by an agent session independent of the round's Author ([audit])
 - NEVER: an SPX payload field name — `producer`, `expectedProducer`, `recordedByRunDriver`, the run driver — or a dispatch-pattern word such as orchestrator or applier stands in for a role name ([audit])
