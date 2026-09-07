@@ -16,6 +16,7 @@ from outcomeeng.validation._model import ProcessSpawner, Recipe, Step
 from outcomeeng.validation._steps import (
     ACTIONLINT_ARGV,
     CHECK_RECIPES,
+    EVAL_LINKS_ARGV,
     EVAL_PROMPTS_ARGV,
     EVAL_TRIGGER_WORKFLOW,
     EVAL_TRIGGERS_ARGV,
@@ -65,6 +66,7 @@ WORKFLOW_REASON: Final = "workflow or shell surface changed"
 SKILL_REASON: Final = "plugin skill, shared fragment, or generated runtime changed"
 INSTRUCTION_BLOCK_REASON: Final = "managed instruction-block source changed"
 EVAL_REASON: Final = "eval definition, producer, or trigger surface changed"
+EVIDENCE_LINK_REASON: Final = "spec-tree evidence link surface changed"
 TEST_REASON: Final = "changed python assertion tests"
 REACHED_TESTS_REASON: Final = "tests reaching changed test infrastructure"
 SHARED_TEST_INFRASTRUCTURE_REASON: Final = "shared test infrastructure changed"
@@ -160,6 +162,9 @@ EVAL_PROMPT_PATTERNS: Final = (
     "spx/**/evals/**",
     "src/plugins/**",
 )
+# A `[test]` or `[eval]` link lives only in spec markdown, and its target is a
+# file under the same node, so any changed spec-tree path can dangle one.
+EVIDENCE_LINK_PATTERNS: Final = ("spx/**",)
 INSTRUCTION_BLOCK_PATTERNS: Final = (
     "AGENTS.md",
     "CLAUDE.md",
@@ -433,6 +438,9 @@ def build_selected_gate_plan(
     if _matches_any(normalized, EVAL_PROMPT_PATTERNS):
         selected_argvs.add(EVAL_PROMPTS_ARGV)
         reasons[EVAL_PROMPTS_ARGV] = EVAL_REASON
+    if _matches_any(normalized, EVIDENCE_LINK_PATTERNS):
+        selected_argvs.add(EVAL_LINKS_ARGV)
+        reasons[EVAL_LINKS_ARGV] = EVIDENCE_LINK_REASON
 
     selected_steps = [
         SelectedGateStep(step=step, reason=reasons[step.argv])

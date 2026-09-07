@@ -10,8 +10,8 @@ real evidence reference. The fenced-block pattern matches backtick fences
 only — tilde fences (CommonMark also allows ``~~~``) are a deliberate
 simplification because no spec markdown in the marketplace uses them.
 
-The ``outcomeeng/scripts/validate_eval_links.py`` script wires the
-validators into ``just check``.
+The ``outcomeeng.validation.eval_links`` module wires the validators into
+the validation recipe as its ``eval-links`` step.
 """
 
 from __future__ import annotations

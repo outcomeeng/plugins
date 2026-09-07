@@ -64,6 +64,7 @@ from outcomeeng.validation._summary_schema import (
 from outcomeeng.validation._steps import (
     ACTIONLINT_ARGV,
     CHECK_RECIPES,
+    EVAL_LINKS_ARGV,
     EVAL_PROMPTS_ARGV,
     EVAL_TRIGGER_WORKFLOW,
     EVAL_TRIGGERS_ARGV,
@@ -106,6 +107,7 @@ __all__ = [
     "AD_HOC_SUMMARY_SCHEMA",
     "CHECK_RECIPES",
     "CHECK_SUMMARY_SCHEMA",
+    "EVAL_LINKS_ARGV",
     "EVAL_PROMPTS_ARGV",
     "EVAL_TRIGGERS_ARGV",
     "EVAL_TRIGGER_WORKFLOW",

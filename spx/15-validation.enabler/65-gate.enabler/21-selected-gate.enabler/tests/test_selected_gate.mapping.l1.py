@@ -7,6 +7,7 @@ import pytest
 from outcomeeng.distribution.contracts import INSTRUCTION_BLOCK_ARGV
 from outcomeeng.validation import (
     ACTIONLINT_ARGV,
+    EVAL_LINKS_ARGV,
     EVAL_PROMPTS_ARGV,
     EVAL_TRIGGERS_ARGV,
     FMT_CHECK_ARGV,
@@ -24,6 +25,7 @@ from outcomeeng.validation.infrastructure_index import InfrastructureReach
 from outcomeeng.validation.selected_gate import (
     ChangedPath,
     EVAL_REASON,
+    EVIDENCE_LINK_REASON,
     FULL_GATE_REASON,
     INSTRUCTION_BLOCK_REASON,
     MARKDOWN_REASON,
@@ -123,12 +125,14 @@ def test_an_eval_definition_selects_both_currency_checks() -> None:
         EVAL_TRIGGERS_ARGV,
         EVAL_PROMPTS_ARGV,
         SPX_MARKDOWN_ARGV,
+        EVAL_LINKS_ARGV,
     )
     assert _reasons(plan) == (
         MARKDOWN_REASON,
         EVAL_REASON,
         EVAL_REASON,
         MARKDOWN_REASON,
+        EVIDENCE_LINK_REASON,
     )
 
 
@@ -151,6 +155,7 @@ def test_combined_paths_merge_lanes_in_validation_step_order() -> None:
         MYPY_ARGV,
         PYRIGHT_ARGV,
         SPX_MARKDOWN_ARGV,
+        EVAL_LINKS_ARGV,
     )
     assert _reasons(plan) == (
         MARKDOWN_REASON,
@@ -161,6 +166,7 @@ def test_combined_paths_merge_lanes_in_validation_step_order() -> None:
         PYTHON_REASON,
         PYTHON_REASON,
         MARKDOWN_REASON,
+        EVIDENCE_LINK_REASON,
     )
 
 
@@ -212,6 +218,40 @@ def test_markdown_only_paths_select_the_markdown_lane(path: str) -> None:
     assert plan.full_gate is False
     assert _argvs(plan) == (FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV)
     assert set(_reasons(plan)) == {MARKDOWN_REASON}
+
+
+@pytest.mark.parametrize(
+    "path",
+    (
+        SELECTED_GATE_MARKDOWN_PATH,
+        SELECTED_GATE_EVAL_DEFINITION_PATH,
+        SELECTED_GATE_PYTHON_TEST_PATH,
+    ),
+)
+def test_spec_tree_paths_select_the_evidence_link_step(path: str) -> None:
+    plan = build_selected_gate_plan((path,))
+
+    assert plan.full_gate is False
+    reason_by_argv = {item.step.argv: item.reason for item in plan.selected_steps}
+    assert reason_by_argv[EVAL_LINKS_ARGV] == EVIDENCE_LINK_REASON
+
+
+@pytest.mark.parametrize(
+    "path",
+    (
+        SELECTED_GATE_README_PATH,
+        SELECTED_GATE_SPX_CONFIG_PATH,
+        SELECTED_GATE_SKILL_PATH,
+        SELECTED_GATE_WORKFLOW_PATH,
+        SELECTED_GATE_PYTHON_SOURCE_PATH,
+    ),
+)
+def test_paths_outside_the_spec_tree_never_select_the_evidence_link_step(
+    path: str,
+) -> None:
+    plan = build_selected_gate_plan((path,))
+
+    assert EVAL_LINKS_ARGV not in _argvs(plan)
 
 
 def test_a_skill_path_selects_skill_steps_with_the_prompt_check() -> None:
