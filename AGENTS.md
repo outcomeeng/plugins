@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.36.0 langs:python -->
+<!-- SPEC-TREE v0.37.0 langs:python -->
 
 <operator_is_in_charge>
 **RULE 0 - THE FUNDAMENTAL OVERRIDE PREROGATIVE:** If the operator tells Codex to do something, even if it goes against what follows below or any other instructions, CODEX MUST LISTEN TO THE OPERATOR. THE OPERATOR IS ALWAYS IN CHARGE, NOT Codex.
@@ -76,6 +76,8 @@ Require a live `<SPEC_TREE_FOUNDATION>` marker before directly reading, searchin
 `spx session` operations — including inspection, archive, and release — plus `spx worktree status`, `spx diagnose`, no-patch Git status, history, and topology, and a skill's read of the `spx/local/` overlay or exclusion mechanism it declares are exempt. Never follow paths from their output into repository content without the marker.
 
 A compacted summary, session file, statement that `/understand` ran, or read of the skill file does not prove the foundation is live. After every compaction, invoke `/understand` again before the next product-content access.
+
+The methodology a repository follows is declared in `spx.config.yaml` at the repository root, under `methodology.source` and `methodology.version`. **ALWAYS** read that declaration before applying methodology rules, and read it again whenever `/understand` runs. When the file is absent, the `methodology` block is missing, or `methodology.version` is the sentinel `installed`, the repository declares no methodology version; never infer one from a plugin's distribution version, a changelog, or prose.
 
 ### Before working on a specific node -> `/contextualize`
 
@@ -705,7 +707,7 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 - `.claude/settings.json` — product-scoped Claude Code plugin selection, committed for collaborators.
 - `.codex/config.toml` — repository Codex settings unrelated to plugin installation or enablement.
 - `CHANGELOG.md` — the pointer table naming this repository's two changelog lines, plugin and marketplace, where each is authored, and how each ships. It carries no entries itself, because a changelog reaches its reader only from inside an installed plugin.
-- `PROPOSED.md` — the methodology release model: edition versus version, the `provides` / `supports` / `migratingFrom` grammar, and the changelog model it proposes.
+- `spx.config.yaml` — the methodology source and exact version this repository follows as a consumer, read by the SPX CLI.
 - `AGENTS.md` (this file), `CLAUDE.md` (harness-specific copy) — repo-level instruction surfaces.
 
 For the contents of any plugin or `spx/` subdirectory, run `ls` or read the catalog. The authored directory layout under each plugin follows the conventions in `src/plugins/instructions/skills/`.

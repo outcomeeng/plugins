@@ -53,6 +53,7 @@ Output contract (ordered, top-down — the read order `/contextualize` follows):
 {
   "version": 1,
   "target": "spx/{path}",
+  "methodology": {"source": "{source}", "version": "{exact-version}"},
   "read_order": [
     {"path": "spx/{product}.product.md", "role": "product-spec"},
     {"path": "spx/{adr-or-pdr}", "role": "decision", "level": "product"},
@@ -109,6 +110,9 @@ Contract specifics:
   consume them. The skill rewrite preserves the current product-guide and
   `merging.md` reads rather than dropping them, and does not start reading the
   other overlays.
+- **Methodology declaration**: `methodology.source` and `methodology.version` are the
+  declaration the CLI resolves from the repository's configuration; the manifest states
+  them from this output. The published 0.6.16+ contract already emits this block.
 - **Bootstrap**: a not-yet-existing target under an authoring operation returns
   `read_order` of the product spec only and `bootstrap: true`.
 - **Missing required spec** (an ancestor directory with no `{slug}.md`) is a
