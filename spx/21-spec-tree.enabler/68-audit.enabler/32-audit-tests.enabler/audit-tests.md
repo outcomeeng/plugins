@@ -41,15 +41,15 @@ The `/audit-tests` skill loads the same test-evidence standards as `/test`, then
 
 ## Falsifiability Model
 
-For each codebase import, the auditor names a concrete mutation to the imported module that would cause the test to fail. If no such mutation exists, the test is unfalsifiable — it provides no evidence regardless of coupling.
+For each codebase import, the Auditor names a concrete mutation to the imported module that would cause the test to fail. If no such mutation exists, the test is unfalsifiable — it provides no evidence regardless of coupling.
 
 Mocking severs coupling. A test that imports a module then replaces it with a mock is equivalent to importing nothing.
 
 ## Coverage Verification
 
-The auditor establishes coverage by reading, never by running coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-audit.adr.md`. Re-running the project's coverage command inside the audit re-pays a cost already paid and is the duplication that rule prohibits.
+The Auditor establishes coverage by reading, never by running coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-audit.adr.md`. Re-running the project's coverage command inside the audit re-pays a cost already paid and is the duplication that rule prohibits.
 
-The auditor traces, by reading, whether the test drives execution into the assertion-relevant code path:
+The Auditor traces, by reading, whether the test drives execution into the assertion-relevant code path:
 
 1. Read the production code the assertion governs and identify the assertion-relevant functions, branches, and lines.
 2. Read the test and follow what it calls into that production code.
@@ -112,7 +112,7 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - ALWAYS: resolve a literal that the assertion type assigns to the test — a spec-declared scenario case, an external conformance expectation, or the violating input a compliance rule names — through the assertion-type litmus before the literal rule, so the audit never demands that such a case be moved into a production module ([audit])
 - ALWAYS: judge a source symbol the test cites by declared-contract ownership, inspecting the declared surfaces the checkout carries — packaging entry points and export declarations, plugin and protocol implementations, registry and reflective lookups, generated use, and declared schemas — before reporting it as laundered, so an absent in-repository caller opens the ownership question rather than settling it while the bare possibility of a consumer outside the checkout never withholds a supported finding ([audit])
 - ALWAYS: classify every test-file binding by what it chooses; permit observation and handle aliases that introduce no data or policy, reject bindings that choose data, expectations, configuration, setup policy, or verdict rules, and name the proper semantic owner ([audit])
-- ALWAYS: apply assertion-type litmus questions to scenario, mapping, property, conformance, and compliance cases, including whether the case source and oracle are independent of the implementation author and production path under test ([audit])
+- ALWAYS: apply assertion-type litmus questions to scenario, mapping, property, conformance, and compliance cases, including whether the case source and oracle are independent of the implementation Author and production path under test ([audit])
 - ALWAYS: report the positive pattern as the remediation when bare literals are rejected — name a library origin, a production-owned constant, or a generator that the test should import from ([audit])
 - NEVER: use grep patterns for mechanical detection (mocking patterns, skip patterns, type annotations) — these are static analysis concerns delegated to tooling ([audit])
 - NEVER: approve a test with zero codebase coupling regardless of code quality — a well-typed, well-structured tautology is still a tautology ([audit])
