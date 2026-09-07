@@ -42,7 +42,7 @@ These instructions explain WHEN to invoke spec-tree skills for this product. The
 
 The product's operational command for each spec-tree phase lives in this file's own content below the router. Read the whole file to find each one:
 
-- **author** — after creating, updating, or deleting a spec, test, or implementation file, to rebuild or regenerate artifacts.
+- **Author** — after creating, updating, or deleting a spec, test, or implementation file, to rebuild or regenerate artifacts.
 - **verify** — for `/apply` and pre-merge checks, over the node and the changeset.
 - **gate** — for the full deterministic bundle.
 - **merge** — for the transport step of `/merge`.
@@ -217,7 +217,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "Diagnose the spx environment"                          | `/diagnose`            | —                       |
 | "File a follow-up in a dependency queue"                | `/issue`               | —                       |
 
-Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type Auditors compose for the language in scope. There is no per-language Auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
 
 | User Says...            | Skill (composed)             | Composing agent          |
 | ----------------------- | ---------------------------- | ------------------------ |

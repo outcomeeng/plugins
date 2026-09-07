@@ -67,7 +67,7 @@ When a named role is unavailable, invoke the owning plugin's `/<plugin>-plugin i
 
 The product's operational command for each spec-tree phase lives in this file's own content below the router. Read the whole file to find each one:
 
-- **author** — after creating, updating, or deleting a spec, test, or implementation file, to rebuild or regenerate artifacts.
+- **Author** — after creating, updating, or deleting a spec, test, or implementation file, to rebuild or regenerate artifacts.
 - **verify** — for `/apply` and pre-merge checks, over the node and the changeset.
 - **gate** — for the full deterministic bundle.
 - **merge** — for the transport step of `/merge`.
@@ -239,7 +239,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 If a named agent or lifecycle tool is absent from the initial list, inspect the runtime's complete deferred-tool registry. Use top-level `functions.exec`; inside it, inspect `ALL_TOOLS`. Treat `exec_command` as the nested shell tool. Check typed `multi_agent_v1.spawn_agent` and its `Available roles`; an exact match proves availability. Report unavailable only when discovery finds no typed spawn capability or omits the exact role, and include that result. Visible catalogs, initial tools, generated rosters, and local `agents/*.md` files are not availability evidence.
 
-**Use the exposed multi-agent tool schema exactly.** The examples below use the `multi_agent_v1` identifiers emitted by this Codex harness. When the runtime exposes different identifiers, discover the equivalent typed spawn, wait, send-input, and close capabilities and preserve the same fields and result contracts. The initial turn goes in `message`; use `items` only when the turn must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named Verifier roles already carry their own model settings. Store every returned agent id verbatim. The role task is the spawn's initial `message`, so one spawn and one wait complete a role. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with the exposed wait capability and close the child immediately. Completed agents remain open until closed and can interfere with future spawns.
+**Use the exposed multi-agent tool schema exactly.** The examples below use the `multi_agent_v1` identifiers emitted by this Codex harness. When the runtime exposes different identifiers, discover the equivalent typed spawn, wait, send-input, and close capabilities and preserve the same fields and result contracts. The initial turn goes in `message`; use `items` only when the turn must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed Verifier and Reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named Verifier roles already carry their own model settings. Store every returned agent id verbatim. The role task is the spawn's initial `message`, so one spawn and one wait complete a role. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with the exposed wait capability and close the child immediately. Completed agents remain open until closed and can interfere with future spawns.
 
 ### Subagent lifecycle — preserve every handle and close every thread
 
@@ -538,7 +538,7 @@ Use this shape for one subagent audit. When several custom-agent configurations 
 
 <!-- langs:present -->
 
-Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type Auditors compose for the language in scope. There is no per-language Auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
 
 <!-- /langs:present -->
 <!-- lang:python -->
@@ -601,7 +601,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 
 <!-- langs:present -->
 
-Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `spec-tree_implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type Auditors compose for the language in scope. There is no per-language Auditor agent. Dispatch `spec-tree_implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
 
 <!-- /langs:present -->
 <!-- lang:python -->
