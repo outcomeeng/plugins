@@ -46,10 +46,10 @@ Revisit condition:
   copied policy simulation.
 - Run the canonical eval commands and commit each `history.jsonl`.
 
-## 4. Review-thread resolver extraction awaits a published SPX CLI capability
+## 4. Review-thread resolver extraction awaits evidence of actual use
 
-`src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py` runs far beyond fifty lines to resolve one GitHub pull-request review thread. Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; the resolver has proven its value in use, so extraction is what it owes.
+`src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py` exceeds fifty lines, but the operator confirms that nobody has used it. Its tests and audits establish checked behavior without establishing value in actual use. Under `spx/12-shipped-scripting.adr.md`, it remains plugin-local while use and revision establish whether its capability warrants extraction.
 
-The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, and the plugins product may depend on the resulting capability only once it is published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts the fix outside any changeset confined to this repository.
+**Revisit condition**: assess actual use and useful behavior against the maturity rule of thumb in `spx/12-shipped-scripting.adr.md`. Record evidence before treating extraction as due. If use establishes that the capability is unwanted or no longer needed, remove it.
 
-**Resolution shape**: port thread resolution into the SPX CLI, publish it, advance the floor, and reduce the shipped skill to its instruction with no script. Thread resolution mutates pull-request state, so the ported surface keeps that mutation behind the same explicit-instruction boundary the product-level compliance rule requires and the `inspect-github-actions` mutation gate enforces today, tracked in `spx/21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/32-workflow-observability.enabler/ISSUES.md`. Revisit when the capability publishes.
+**Extraction sequence when warranted**: port thread resolution into `@outcomeeng/spx`, publish the capability to npm, advance `REQUIRED_SPX_VERSION`, and reduce the shipped skill to its instruction with no script. Thread resolution mutates pull-request state, so the ported surface preserves the explicit-instruction boundary required by the product-level compliance rule. The related mutation handling is tracked in `spx/21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/32-workflow-observability.enabler/ISSUES.md`.
