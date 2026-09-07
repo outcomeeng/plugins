@@ -8,17 +8,17 @@ The `spx/21-spec-tree.enabler/79-diagnostics.enabler` re-declaration is deferred
 The decision governs user-scope state ownership. Pending work remains only in that dependent
 slice.
 
-## Align the role vocabulary across skills, the router, and the remaining specs
+## Align the role vocabulary across the remaining skill surfaces
 
 Governing decision: `spx/15-agent-terminology.pdr.md` (the Refiner, Executor, Author, Fixer, and Verifier roles, capitalized).
 
-The decision names the roles and `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` and `spx/43-prose.enabler/prose.md` carry them. Surfaces still describing who produces or verifies work in the old words, in dependency order:
+The router template, its pinned policies, the `/understand` foundation, `/open-pr`, the merging-standards policy reference, `contribution-standards`, the three audit specs, `spx/15-merging.pdr.md`, `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, and `spx/21-spec-tree.enabler/68-reviewing.enabler/reviewing.md` carry the role names. Surfaces still describing who produces or verifies work in the old words:
 
-1. Router template and its pins: `src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md` (two "authoring agent session" sites), the `*_POLICY_REQUIREMENTS` tuples and `verifier`-bearing contradiction patterns in `outcomeeng/distribution/instruction_block.py`, and `spx/21-spec-tree.enabler/43-instruction-block.enabler/tests/test_instruction_block.compliance.l1.py`; regenerate with `just build-instructions`.
-2. Shipped skills: `src/plugins/spec-tree/skills/understand/SKILL.md` (the commit-before-read sentence), `src/plugins/spec-tree/skills/open-pr/SKILL.md`, `src/plugins/spec-tree/skills/merging-standards/references/merge-policy.md`, `src/plugins/contribute/skills/contribution-standards/SKILL.md`, and every skill naming "the author context", "the authoring conversation", or a lowercase verifier role; each plugin takes the `skill-auditor` gate and a bump.
-3. Specs and decisions: the "author context" clause in `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/audit-specs.md`, `.../32-audit-tests.enabler/audit-tests.md`, and `.../32-changeset-coherence.enabler/changeset-coherence.md`; the lowercase "reviewer" and "author" in `spx/15-merging.pdr.md` and `spx/15-audit-result-delivery.pdr.md`.
+1. Two router headings the compliance evidence harness pins verbatim — "Spawn each verifier or reviewer with its role task as the initial turn." and "Use the `Agent` tool for every configured verifier or reviewer." — stay until the evidence migration recorded in `spx/21-spec-tree.enabler/43-instruction-block.enabler/ISSUES.md` moves those predicates into the linked tests, since editing `outcomeeng_testing/harnesses/instruction_block_compliance_evidence.py` is that migration's revisit trigger.
+2. Skills outside the merge-lifecycle pair — `/manage-pr`, `/manage-github-pr`, `/merge`, `/apply`, the audit and review skills — where "the author", "the reviewer", and "the verifier" name the roles; plural and audience uses such as "human reviewers", "CI reviewers", and "reviewer-bot approval" describe people and services, not roles, and stay lowercase.
+3. `spx/15-audit-result-delivery.pdr.md`, whose "a reviewer watches on a pull request" names a human reader, stays lowercase.
 
-Why separate: items 1 and 2 are plugin-distribution changes carrying the skill-auditor gate, a bump, and a router pin migration, and item 3 spans nodes whose contexts the terminology changeset does not load.
+Why separate: each plugin's skill edit carries the `skill-auditor` gate and a bump, and the harness-pinned headings wait on the evidence migration.
 
 ## Refine the methodology 4.0 migration as a Change
 
