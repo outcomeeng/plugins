@@ -23,3 +23,16 @@ Why separate: items 1 and 2 are plugin-distribution changes carrying the skill-a
 ## Refine the methodology 4.0 migration as a Change
 
 `spx.config.yaml` declares methodology 4.0.0. The shipped foundation, router, and specs still state the 3.x grammar: five verification types without Probe, `{slug}.md` spec files, enabler and outcome as the only node kinds, no front matter, no malleability, no outcome records or alternatives. Each move amends its governing decision first (`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` for the type set), and the whole is refined with the operator as a Change before any slice executes.
+
+## Relocate installation governance and split the repository-installation node
+
+`spx/12-marketplace-state.adr.md` sits at the product root while its opening paragraph, invariants, and testing rules govern installation mechanics only; its agent-definition co-location and ownership content is the cross-cutting part. `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler` conflates the maintainers' persistent command — `just install-marketplace`, run with the designated main checkout in the release phase — with isolated verification — `just verify-marketplace-installation`, installing every catalog plugin for every agent into disposable homes — in one spec of more than twenty assertions. The product-level `spx/ISSUES.md` entry on agent-specific behavior inside product-level decisions names the same decision.
+
+Steps; `/decompose` and `/refactor` own placement and index assignment:
+
+1. Move the installation content of `spx/12-marketplace-state.adr.md` into a new decision under `spx/32-distribution.enabler/21-installation.enabler/`; place the co-location and ownership content through `/decompose` — candidate owner `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler` — preserving every sentence; retire the root file.
+2. Split the repository-installation node into a persistent-installation child (refresh exactly the installed set, empty-inventory bootstrap, pending publication, agent-home placement and reconciliation, the settings-unchanged invariant) and an isolated-verification child (disposable homes, checkout as marketplace, full catalog and generated subsets, terminal absence, idempotent repeat, the role-discovery probe); distribute the six evidence files and the node's `ISSUES.md` entries.
+3. Lift `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md` to the installation node.
+4. Citation sweep: `spx/outcomeeng.product.md`, this file, `spx/ISSUES.md`, `spx/local/merging.md`, the `justfile` recipe test path, the recipe-asserting scenario test, the diagnostics node references, and the prose in `CLAUDE.md`, `AGENTS.md`, and `README.md`.
+
+Ordering: after the settings-unchanged changeset recorded in `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/PLAN.md`.
