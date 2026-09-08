@@ -279,7 +279,7 @@ The record is ready only when `runOwnership` names one dispatch owner for the Ve
 
 After a rejection, append a `priorRejections` entry naming the Verifier, exact head, finding identifiers, defect classes, failed repair invariant, root cause, widened repair rule, and same-class scan. Do not redispatch until the new head's record proves every rejection resolved. If a later rejection belongs to a recorded defect class, invalidate the prior repair invariant: stop localized patching, analyze why the class survived, widen the repair and scan, and amend the governing workflow, standard, or source contract before another dispatch. A new line number, file, or example does not create a new class.
 
-Missing fields, a dirty or changed subject, a nonzero deterministic result, a reused run identity, a conflicting writer, an objective/path mismatch, an unresolved item, or a repeated class with no amended invariant produces `VERIFICATION_DISPATCH_BLOCKED`; do not dispatch.
+Missing fields, a dirty or changed subject, a nonzero deterministic result, a reused run identity where one is held, a conflicting writer, an objective/path mismatch, an unresolved item, or a repeated class with no amended invariant produces `VERIFICATION_DISPATCH_BLOCKED`; do not dispatch.
 
 </verification_dispatch_readiness>
 
