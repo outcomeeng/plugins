@@ -320,7 +320,7 @@ How to avoid: Count assertions before and after. Assertions that span children r
 
 Claude wrote `32-parser.enabler` or `15-build.adr.md` in a decomposition plan. Another directory used the same numeric prefix, so the reference could not be resolved. Full paths from `spx/` are mandatory for every existing node, ADR, and PDR.
 
-How to avoid: When recording an ordering-evidence matrix, assertion move, issue, or PLAN.md note, write `spx/.../32-parser.capability` and `spx/.../15-build.adr.md`. Before a new child has a final index, write the full parent path and candidate slug.
+How to avoid: When recording an ordering-evidence matrix, assertion move, issue, or PLAN.md note, write `spx/.../32-parser.enabler` and `spx/.../15-build.adr.md`. Before a new child has a final index, write the full parent path and candidate slug.
 
 **Failure 7: Took the next sparse slot after an existing sibling**
 
