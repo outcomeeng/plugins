@@ -213,7 +213,7 @@ Language test standards are expression only. A language test standard cites its 
 
 <success_criteria>
 
-- Every authored or repaired test has a complete `<assertion_design_record>` naming an independent case source, oracle owner, rejected production mutation, and resulting failure observation.
+- Every authored or repaired test has a complete `<assertion_design_record>` carrying all six of its fields — the assertion and its quantifier, the production subject and seam, an independent case source, the oracle owner, the rejected production mutation, and the resulting failure observation.
 - Every behavioral predicate and assertion API call is lexically visible in the linked executed test function or callback.
 - Test-file bindings introduce no independently chosen data, expectations, setup policy, runner configuration, or verdict rules, with unlisted concerns decided by the two probes in `<artifact_ownership>`.
 - Every case and expected result has assertion-type-appropriate provenance independent of the implementation path under test.
