@@ -22,7 +22,7 @@ Why separate: each plugin's skill edit carries the `skill-auditor` gate and a bu
 
 ## Refine the methodology 4.0 migration as a Change
 
-`spx.config.yaml` declares methodology 4.0.0. The shipped foundation, router, and specs still state the 3.x grammar: five verification types without Probe, `{slug}.md` spec files, enabler and outcome as the only node kinds, no front matter, no malleability, no outcome records or alternatives. Each move amends its governing decision first (`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` for the type set), and the whole is refined with the operator as a Change before any slice executes.
+`spx.config.yaml` declares methodology 4.0. The shipped foundation, router, and specs still state the 3.x grammar: five verification types without Probe, `{slug}.md` spec files, enabler and outcome as the only node kinds, no front matter, no malleability, no outcome records or alternatives. Each move amends its governing decision first (`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` for the type set), and the whole is refined with the operator as a Change before any slice executes.
 
 ## Relocate installation governance and split the repository-installation node
 
