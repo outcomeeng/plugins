@@ -2,7 +2,7 @@
 
 PROVIDES Outcome Engineering verification governance for verdict modes, verification types, assertion evidence, and verifier responsibilities
 SO THAT methodology specs, plugin implementations, runtime tools, and language standards
-CAN share one verification model across deterministic tests, deterministic evals, agentic audits, agentic reviews, and validation gates
+CAN share one verification model across deterministic tests, deterministic evals, attested probes, agentic audits, agentic reviews, and validation gates
 
 ## Assertions
 

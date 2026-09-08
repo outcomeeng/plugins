@@ -31,3 +31,11 @@ Two further readings show the same gap from the CLI side. `spx diagnose` reports
 **Resolution shape**: land the consumption slice in `PLAN.md` (floor and pin advanced to a release whose bundle satisfies the contract, `/contextualize` reading the bundle), emit the `methodology` block in the manifest, retag the assertion's evidence against the CLI output, and delete the interim instruction-block line in the same change.
 
 **Evidence**: `spx spec context show --json spx/21-spec-tree.enabler/18-context-loading.enabler` on 0.6.26; `spx diagnose --format json` `methodology-context` record; `outcomeeng/validation/spx_version.py` line 87 and `.github/workflows/check.yml` line 31.
+
+## The context walk reads fewer sibling contracts than the foundation declares
+
+**Evidence:** The `/understand` foundation declares the methodology 4.0 walk, which reads every sibling's published contract at each level and treats only a named lower-index provider as a constraint. `/contextualize` reads lower-index sibling specs only and lists same-index and higher-index siblings without reading them; `context-loading.md` asserts that behavior, and `13-context-enumeration.adr.md` fixes it as an invariant of the read order.
+
+**Impact:** A consumer's awareness of its peers and consumers is missing from the loaded context, and a provider scopes its mandate without the consumer contracts the walk is meant to supply.
+
+**Settlement condition:** `13-context-enumeration.adr.md` states the 4.0 read order, `context-loading.md` asserts it, and `/contextualize` reads every sibling contract at each level with prerequisite and awareness distinguished in the manifest.
