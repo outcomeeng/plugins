@@ -64,11 +64,15 @@ Before any audit gate or whole-changeset review runs, self-converge the diff: re
 
 When a gate returns `REJECTED`, `UNKNOWN`, or `BLOCKED`, or when a review surfaces a valid finding, treat it as evidence of a defect class. Read the touched node(s) — the files they govern — find same-class instances, and fix the class before re-running the gate. Same-class means the same rule, source contract, evidence pattern, lifecycle step, generated-source relationship, or architectural boundary. A patch to the cited line alone is sufficient only when the sweep proves the defect isolated.
 
-Do not re-run a gate after every micro-edit. Batch the class fix, re-read the affected diff, then run the gate once on the stabilized tree. If repeated findings keep reopening the same design area, stop patching and refactor Claude's approach before the next gate.
+Do not re-run a gate after every micro-edit. Batch the class fix, re-read the affected diff, then run the gate once on the stabilized tree.
+
+A rejection whose defect class a prior repair already claimed to close invalidates that repair invariant. Stop localized patching, analyze why the class survived, widen the repair and the same-class scan, and amend the governing workflow, standard, or source contract before the next dispatch. The work queue stops at the node that raised the repeat until that amendment lands; a new line number, file, or example does not make it a new class.
 
 </stabilized_diff_rule>
 
 <verification_checkpoint>
+
+Invoke `/merging-standards` and read its `merge-policy.md` reference before the first dispatch of the flow; `<verification_dispatch_readiness>` and `<verification_result_projection>` are its sections, and invoking the compact loader alone does not load them.
 
 Before dispatching any persisted audit or review gate, bind its subject to an exact local commit:
 
@@ -76,12 +80,21 @@ Before dispatching any persisted audit or review gate, bind its subject to an ex
 2. When the relevant tracked or untracked files differ from `HEAD`, invoke `/commit-changes` before dispatch to commit the exact current version regardless of whether the latest verification state is `passing`, `failing`, or `not-run`; preserve that state in the checkpoint result. After any further change, commit the new version before another audit or review.
 3. Confirm the worktree is clean and record the checkpoint's full `HEAD` commit ID.
 4. Dispatch the gate only when the required deterministic verification is `passing`, against the committed `<base>..<head>` scope. A `failing` or `not-run` checkpoint remains valid local history for recovery and collaboration while withholding gate dispatch. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
+5. Emit the complete `VERIFICATION_DISPATCH_READY` record `/merging-standards` `<verification_dispatch_readiness>` defines, bound to that exact clean head, and dispatch only once it is complete. `VERIFICATION_DISPATCH_BLOCKED` withholds the dispatch until the named field, subject, result, writer, or defect class is resolved.
 
 An audit or review over modified or untracked files is advisory. It may provide early feedback, but it never satisfies a Step 4, Step 6, Step 8, evidence-auditor, Step 9, or merge-readiness predicate. Commit the exact version before dispatching any persisted gate or asking another agent session or human to read a reusable verification subject.
 
-After a rejected audit or valid review finding, repair the defect class, rerun deterministic verification, and create a new checkpoint commit before redispatch. Preserve the earlier checkpoint identity while its run remains prior context; do not amend the audited commit in place.
+After a rejected audit or valid review finding, repair the defect class, rerun deterministic verification, and create a new checkpoint commit before redispatch. Append the rejection to the record's `priorRejections` — Verifier, exact head, finding identifiers, defect classes, failed repair invariant, root cause, widened repair rule, and same-class scan — and redispatch only once the new head's record proves every rejection resolved. Preserve the earlier checkpoint identity while its run remains prior context; do not amend the audited commit in place.
 
 </verification_checkpoint>
+
+<result_carryover>
+
+Each Verifier result is preserved once where that Verifier's own skill records it — the review journal for `changes-reviewer`, the `spx verification run` record for `implementation-auditor`, the returned structured verdict for every Auditor that returns one. What the flow carries forward from there is the bounded projection `/merging-standards` `<verification_result_projection>` defines: the result reference or raw run token, exact head, verdict, finding identifiers, defect classes, and next required action.
+
+Reopen the complete result by reference when a finding needs exact detail. Never re-paste a complete Verifier payload into a later step, a queue transition to the next node, or the closeout.
+
+</result_carryover>
 
 <evidence_auditor_gate>
 
@@ -93,7 +106,7 @@ Dispatch `test-evidence-auditor` during Step 8a when the diff creates or modifie
 
 Dispatch `eval-evidence-auditor` during Step 8a when the diff creates or modifies any `[eval]` assertion, `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, or producer artifact for an eval-backed assertion. Include the governing node, assertion text or spec path plus assertion headings, the eval artifacts, and the producer artifacts in the dispatch prompt. If the auditor returns `FAIL`, `UNKNOWN`, a failing row, an unknown row, or a reject finding, fix the evidence defect class, re-run the required eval evidence, and re-dispatch Step 8a.
 
-Before dispatching an applicable evidence auditor, apply `<verification_checkpoint>`. When both evidence classes changed, dispatch both auditors against the same checkpoint. Step 8a completes only after every applicable evidence-auditor verdict is clean on the exact committed diff it reviews.
+Before dispatching an applicable evidence auditor, apply `<verification_checkpoint>`; carry each verdict forward under `<result_carryover>`. When both evidence classes changed, dispatch both auditors against the same checkpoint. Step 8a completes only after every applicable evidence-auditor verdict is clean on the exact committed diff it reviews.
 
 </evidence_auditor_gate>
 
@@ -166,7 +179,7 @@ Dispatch `adr-auditor` with the ADR path, governing node path, exact committed a
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — an architecture regression the change introduced in a file the node does not own is invisible to a per-node audit.
 
-Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
+Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its verdict forward under `<result_carryover>`.
 
 **REJECTED -> fix the defect class -> re-dispatch this step.** Loop until APPROVED.
 
@@ -190,7 +203,7 @@ Dispatch the auditor matching every path-bearing evidence artifact Step 5 create
 
 When the scope is cross-node (see `<scope_detection>`), enumerate every governed node whose current linked test or eval evidence the change creates, modifies, or invalidates. Dispatch one router-owned singular-node prompt per governed node and evidence type, in parallel when independent. Step 6 passes only when every applicable dispatched audit approves. Never pass a whole changeset as one singular `Governing node` prompt; Step 8a covers the final changed evidence set and Step 9 reviews the whole changeset.
 
-Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
+Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its verdict forward under `<result_carryover>`.
 
 **REJECTED -> fix the defect class -> re-dispatch this step.** Loop until APPROVED.
 
@@ -210,7 +223,7 @@ Dispatch the `implementation-auditor` agent with the canonical request fields: r
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — Step 4 audits the committed scope while Step 6 fans out across every affected governed evidence node and type. Those audit lenses remain necessary but insufficient, so the distinct whole-diff review in Step 9 stays required for cross-cutting effects no single audit lens catches.
 
-Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
+Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its verdict forward under `<result_carryover>`.
 
 The implementation-auditor composes the installed `audit-{lang}-{code|tests|architecture}` concern skills and records the run through `spx verification run`. Do not invoke those concern skills directly from this workflow. Read the returned rendered projection: its `terminalStatus` is the Step 8 verdict — `approved` passes, `rejected` requires repair, and a missing projection or `BLOCKED` result blocks the gate. A command-failure `BLOCKED` result is complete only when it carries the run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. A pre-run skill-load `BLOCKED` result is complete only when it carries run token `not-started`, required skill `spec-tree:audit-implementation`, and the exact load or availability failure.
 
@@ -234,7 +247,7 @@ Before invoking the review, confirm every applicable Step 8a evidence-auditor ve
 
 Dispatch `changes-reviewer` over the full committed changeset, passing only the raw scope token the runtime contract accepts — never a prose prompt, severity filter, or emphasis instruction. Collect the agent's final message through the typed wait capability and require it to be the raw review run token. A timeout, tool error, missing final status, or non-token final message blocks Step 9.
 
-Invoke `/project-run-journal`, then inspect the returned token through its `render_review_run.py` helper exactly as that skill directs. Treat the helper output as the inspection projection of the sealed journal prefix; the sealed prefix remains the only review result. Read the rendered terminal status, full head/base identity, scope coverage, blocking/debt counts, and findings before deciding whether Step 9 converged.
+Invoke `/project-run-journal`, then inspect the returned token through its `render_review_run.py` helper exactly as that skill directs. Treat the helper output as the inspection projection of the sealed journal prefix; the sealed prefix remains the only review result. Read the rendered terminal status, full head/base identity, scope coverage, blocking/debt counts, and findings before deciding whether Step 9 converged. Carry the review forward as the bounded projection `<result_carryover>` defines.
 
 The per-node gates in Steps 4, 6, and 8 inspect through distinct audit lenses; they do not see every cross-node effect — a stale reference a rename left in a sibling, dead code a move orphaned, or a spec a consolidation made false. The whole-diff review catches those effects.
 

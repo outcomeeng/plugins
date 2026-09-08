@@ -34,6 +34,8 @@ The index is complete when every preserved behavioral claim is merged, explicitl
 
 ## Readiness record in the apply flow
 
-Governing decision: `spx/15-merging.pdr.md` product property 3 and its readiness, repeated-class, and bounded-projection audit rules.
+Governing decision: `spx/15-merging.pdr.md` product property 3 and its readiness, repeated-class, finish-before-wait, and bounded-projection audit rules.
 
-Remaining lower-layer work, tracked as a later slice of Change 8 in the `outcomeeng/changes` store: `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` declares that each per-node and whole-changeset Verifier dispatch in the apply flow is preceded by the readiness record, that a repeated rejected defect class stops the queue for a widened repair and contract amendment, and that the flow carries only the bounded projection of each Verifier result; the `/apply` skill then cites `<verification_dispatch_readiness>` and `<verification_result_projection>` at its evidence-audit, implementation-audit, and whole-changeset-review dispatch steps, gated by `instructions:skill-auditor`. The decision's rules are scoped to the merge lifecycle until that slice lands.
+`spx/21-spec-tree.enabler/65-apply.enabler/apply.md` declares all four of the decision's rules for the apply flow: each per-node and whole-changeset Verifier dispatch is preceded by the readiness record, a repeated rejected defect class stops the queue for a widened repair and contract amendment, the flow carries only the bounded projection of each Verifier result, and every independent Author-side action finishes before a blocking check or Verifier wait. The `/apply` skill reaches the readiness record through `<verification_checkpoint>`, which every dispatch step already applies, and the bounded projection through `<result_carryover>`, cited at each of the five dispatch steps.
+
+The decision's rules now bind every workflow on a changeset's path to the default branch, so no scoping gap remains between the decision and this node.
