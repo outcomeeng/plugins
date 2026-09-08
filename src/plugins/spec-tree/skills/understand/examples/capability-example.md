@@ -6,7 +6,7 @@ malleability: verification
 # Quick Add
 
 PROVIDES capture of a task from one line of natural text, including a due date when the text names one
-SO THAT the task domain's consumers and the web and mobile surfaces
+SO THAT every interface and surface that captures tasks
 CAN record a task without leaving what they were doing
 
 ## Assertions

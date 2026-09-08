@@ -131,7 +131,7 @@ Before drafting, gather what's needed for the artifact type:
 
 **Output node (gate — fix the kind before drafting):**
 
-- Which kind does the ordered decision procedure in `references/kind-decision.md` fix — product, variant, substrate, surface, interface, domain, capability — and which test decided it?
+- Which kind does the ordered decision procedure in `/understand` `references/kind-decision.md` fix — product, variant, substrate, surface, interface, domain, capability — and which test decided it?
 - What is the kind's contract in its opening form, naming providers in product language and never a consumer node?
 - What assertions specify the output, at the layer that owns the behavior?
 - Which malleability does the node declare — `spec` for a prototype, `verification` for an experimental node, `implementation` (the absent default) for production?
@@ -292,7 +292,7 @@ How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verifie
 
 Claude created an enabler node using the outcome template. The spec had a three-part hypothesis (output → outcome → impact) but the node existed only to provide shared infrastructure for two siblings. The hypothesis was forced — "We believe that providing a database schema will cause developers to write queries faster" — because the node wasn't delivering user-facing value.
 
-How to avoid: Fix the kind through the ordered decision procedure in `references/kind-decision.md` before selecting a template; a condition only real use settles belongs in the node's outcome record, never in its opening.
+How to avoid: Fix the kind through the ordered decision procedure in `/understand` `references/kind-decision.md` before selecting a template; a condition only real use settles belongs in the node's outcome record, never in its opening.
 
 **Failure 4: Index collision with existing sibling**
 

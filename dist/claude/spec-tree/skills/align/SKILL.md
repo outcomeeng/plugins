@@ -70,7 +70,7 @@ Classify each `.md` file in scope by its filename extension or parent directory 
 
 - `CLAUDE.md` and `AGENTS.md` files (agent guides, not specs)
 - Files inside `tests/` directories (test code, not specs)
-- `PLAN.md` and `ISSUES.md` files (stale-prone coordination notes, not spec artifacts)
+- `ISSUES.md` files, and any `PLAN.md` a repository in a declared transition still carries (stale-prone coordination notes, not spec artifacts)
 - Files inside `spx/local/` directory (skill overlays, not spec artifacts)
 - Files inside an `evals/` directory sitting directly under a node directory (the co-located `[eval]` evidence lane the canonical node shape in live `/understand` `<files_in_a_node>` declares, not spec artifacts); an `evals/` directory anywhere else stays in scope
 - Files inside a `knowledge/` directory sitting directly under a node directory or the product root (knowledge bundles the canonical node shape in live `/understand` `<files_in_a_node>` declares, not spec artifacts); a `knowledge/` directory anywhere else stays in scope
@@ -108,7 +108,7 @@ For each classified output-kind spec, including the transition forms, invoke `/c
 
 **Do NOT report:**
 
-- A decision cited only by `PLAN.md`, `ISSUES.md`, or another coordination note
+- A decision cited only by `ISSUES.md` or another coordination note
 - A lower-layer test or implementation mismatch as a decision contradiction
 
 </ancestor_decision_conformance>
@@ -163,9 +163,9 @@ Use the live `/understand` `<decision_to_spec_alignment>` section. For changeset
 For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 
 - the first affected lower spec or specs that receive the new truth, nor
-- a `PLAN.md` in the first affected node grounding the remaining downstream implementation.
+- a Change, referenced from the changeset or its commit message, carrying the remaining downstream evidence or implementation work.
 
-Report only the factual gap: the changed higher-level declaration, the constraining scope, and the absent lower-spec or `PLAN.md` grounding. Do not choose the downstream structure in `/align`; structural ownership questions route to `/decompose`.
+Report only the factual gap: the changed higher-level declaration, the constraining scope, and the absent lower-spec or Change grounding. Do not choose the downstream structure in `/align`; structural ownership questions route to `/decompose`.
 
 </downstream_alignment_conformance>
 
@@ -187,7 +187,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 6. **Check each file**:
    - If classified: run structural, language, and placement checks; for an output-kind spec, also run ancestor-decision conformance through `/contextualize`
    - If unrecognized: report classification failure, then run language check only (language rules apply to all text)
-7. **Check downstream alignment for changesets**: For changed product specs, ADRs, PDRs, and ancestor specs, report missing first affected lower specs or first-affected-node `PLAN.md` grounding.
+7. **Check downstream alignment for changesets**: For changed product specs, ADRs, PDRs, and ancestor specs, report missing first affected lower specs or Change grounding.
 8. **Report**: Emit findings grouped by file path per `<report_format>`.
 9. **Summary**: End with counts.
 
@@ -237,7 +237,7 @@ Downstream alignment:
 - [ ] Every classified node spec is checked against all applicable governing ADRs/PDRs, and every contradiction finding names the full decision path
 - [ ] Every temporal-language finding includes the source line, temporal text, governing atemporal-voice rule, and a concrete atemporal rewrite
 - [ ] Placement findings preserve valid evidence-mechanism specialization and report only content misplaced under live `/understand` `<common_misplacements>`
-- [ ] A changeset report identifies every changed higher-level declaration lacking both first-affected lower-spec alignment and first-affected-node `PLAN.md` grounding
+- [ ] A changeset report identifies every changed higher-level declaration lacking both first-affected lower-spec alignment and Change grounding
 - [ ] Finding and file counts in the summary equal the report body
 - [ ] The report contains no severity, prioritization, or repair guidance beyond required atemporal rewrites
 

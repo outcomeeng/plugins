@@ -21,7 +21,7 @@ The operator expects quick add to feel instantaneous on the web surface. The ass
 
 - Date: 2026-09-01
 - Observations: the task appeared with the parsed date in every run; the longest focus-to-task interval in the screen recording is 1.4 seconds.
-- Artifacts: [screen recording](capture-basic.webm), [run transcript](run.transcript.txt)
+- Artifacts: [screen recording](capture-basic.webm), [run transcript](run.transcript.txt) — illustrative filenames; a real run links the files it retained in this directory
 
 ## Verdict
 
