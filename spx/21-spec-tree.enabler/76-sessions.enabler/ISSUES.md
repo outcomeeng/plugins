@@ -12,7 +12,7 @@ The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, 
 
 `spx/21-spec-tree.enabler/76-sessions.enabler/15-session-store.enabler/session-store.md` asserts that an operator's explicit `spx session` request runs as operational-state management without a live `SPEC_TREE_FOUNDATION` marker. `spx/21-spec-tree.enabler/18-context-loading.enabler/context-loading.md` asserts the same exemption over a wider command set — `spx session`, `spx worktree status`, `spx diagnose`, and no-patch Git status, history, and topology — with the same `[audit]` evidence mechanism.
 
-Same content, same evidence mechanism, two nodes: duplication under `/understand` `<common_misplacements>`, which reserves specialization for a child rule that concretizes an ancestor rule against a narrower source surface. This one narrows nothing the wider rule does not already cover.
+Same content, same evidence mechanism, two nodes: duplication under `/understand` `references/artifact-placement.md` `<common_misplacements>`, which reserves specialization for a child rule that concretizes an ancestor rule against a narrower source surface. This one narrows nothing the wider rule does not already cover.
 
 **Why this is not resolved in the changeset that surfaced it**: that changeset is a decomposition, and `spx/21-spec-tree.enabler/54-refactoring.enabler/refactoring.md` forbids changing assertion semantics during tree surgery. Deleting the assertion was attempted there and correctly rejected by the changeset review as an assertion dropped mid-refactor. Removing a declaration is a content change owing its own spec-audit justification, not a side effect of moving files.
 
