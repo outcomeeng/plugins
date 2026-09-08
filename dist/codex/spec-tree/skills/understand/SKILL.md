@@ -73,7 +73,7 @@ Remaining evidence or implementation work is downstream work recorded in a Chang
 | “Currently, the system…”           | “The system…”            |
 | “After investigating, we decided…” | “The decision governs…”  |
 
-Read every spec sentence aloud. If it would sound wrong after the work ships, rewrite it. Dated history belongs in a knowledge root, where temporal is the format.
+Read each sentence aloud; if it would sound wrong after the work ships, rewrite it. Dated history belongs in a knowledge root.
 
 </atemporal_voice>
 
@@ -81,7 +81,7 @@ Read every spec sentence aloud. If it would sound wrong after the work ships, re
 
 - ALWAYS: keep one home per fact — structure carries relationships, and a checkable link carries what structure cannot.
 
-Two in-tree link shapes exist: a **node-local** relative path whose target lives inside the node and prunes with it (assertion links), and a **tree-absolute** path written literally from `spx/` (cross-subtree decision citations). A leading slash or a `../` climb fails validation. Tooling derives every graph; authored indexes never provide link indirection.
+Two in-tree link shapes exist: a **node-local** relative path whose target lives inside the node and prunes with it (assertion links), and a **tree-absolute** path written literally from `spx/` (cross-subtree decision citations). A leading slash or a `../` climb fails validation; tooling derives every graph.
 
 </single_location>
 
@@ -101,7 +101,7 @@ Writing a spec makes a declaration; linked evidence makes it verifiable. Pruning
 
 - ALWAYS: give every node one `id`, one kind from its suffix, and one `{slug}.spec.md`; the root declares `kind: product` in front matter because no directory carries its suffix.
 
-A node's `id` is a UUIDv7 in its spec's front matter, unique across the tree, surviving re-indexing and re-placement. Below the root the directory suffix names the kind and role. A product never redefines kinds, suffixes, or containment.
+A node's `id` is a UUIDv7 in its spec's front matter, unique across the tree, surviving re-indexing and re-placement. Below the root the directory suffix names the kind and role.
 
 | Suffix        | Role                     | Opening                                  |
 | ------------- | ------------------------ | ---------------------------------------- |
@@ -125,7 +125,7 @@ Classify by the ordered procedure — product, variant, substrate, surface, inte
 
 - NEVER: give a `.product` an assertion, malleability, state, status claim, outcome record, or child enumeration.
 
-The operator judges a scope a product with three questions: does it need a surface or interface the tree lacks; does it run, ship, and transfer as a whole on its own; does it have its own backlog, checkout, and owner. Independent version numbers support no product. A valid product spec is its front matter and title; a paragraph, product-local semantics, boundaries, and a Change-retention policy appear only where they change what a descendant does or how it is judged. A rule every descendant obeys is a decision record at the product.
+The operator judges a scope a product with three questions: does it need a surface or interface the tree lacks; does it run, ship, and transfer as a whole on its own; does it have its own backlog, checkout, and owner. Independent version numbers support no product. A valid product spec is its front matter and title; a paragraph, product-local semantics, boundaries, and a Change-retention policy appear only where they change what a descendant does or how it is judged.
 
 </product_scope>
 
@@ -213,7 +213,7 @@ Assertions declare observable product output at the layer that owns the behavior
 | probe    | `[probe](path)`       | Attested      | A claim about the running node that only an executed observation settles. |
 | audit    | `[audit:{rule-slug}]` | Agentic       | A semantic constraint with no structural verdict to score.                |
 
-Validate and Review back no assertion. A spec-malleable assertion may omit its tag; every harder assertion carries exactly one. A dangling `[test]`, `[eval]`, or `[probe]` link derives Declared and is not a structural defect. The audit rule slug is unique within its spec and keys the result in the status claim.
+Validate and Review back no assertion. A spec-malleable assertion may omit its tag; every harder assertion carries exactly one. A toolchain that has not adopted the slug form parses the pathless `[audit]` tag, and a repository in a declared transition keeps that form until its toolchain admits the slug. A dangling `[test]`, `[eval]`, or `[probe]` link derives Declared and is not a structural defect. The audit rule slug is unique within its spec and keys the result in the status claim.
 
 </verification_types>
 
@@ -316,7 +316,7 @@ A type's verdict mode is fixed, so whoever runs it reaches the same verdict, and
 | `verification`   | experimental | verification, implementation       | Validate and a tagged result for every assertion                           |
 | `implementation` | production   | implementation                     | Validate and a result for every assertion, with evidence that passes audit |
 
-**State** is the node's own claim against that declaration: **Declared** — the spec exists and required artifacts are missing; **Specified** — required artifacts exist without a current passing result; **Passing** — Validate passes and every required result is current and passes; **Failing** — a required result becomes invalid or stops passing after Passing under unchanged declarations. An initial failure leaves Specified. A changed decision or spec invalidates every affected pin and derives the state anew. **Effective** malleability and state derive over the node's dependency closure and are never committed.
+A reachability test is a `[test]` file that executes the node's entry points and pins its API shape while asserting the minimum, so coverage attribution stays uniform while iteration stays free. **State** is the node's own claim against that declaration: **Declared** — the spec exists and required artifacts are missing; **Specified** — required artifacts exist without a current passing result; **Passing** — Validate passes and every required result is current and passes; **Failing** — a required result becomes invalid or stops passing after Passing under unchanged declarations. An initial failure leaves Specified. A changed decision or spec invalidates every affected pin and derives the state anew. **Effective** malleability and state derive over the node's dependency closure and are never committed.
 
 </malleability_and_state>
 
@@ -388,7 +388,7 @@ A change invalidates another file when it removes a symbol that file references,
 
 - NEVER: raise a cost, quota, worker, retry, timeout, or external-capacity ceiling without operator approval in the same turn.
 
-Command defaults are authority for cost-bearing and quota-bearing runs. When a default ceiling blocks a run, report the exact command, ceiling, proposed increase, expected rerun scope, and pause/inspect option.
+Command defaults are authority for cost-bearing and quota-bearing runs. When a default ceiling blocks a run, report the command, the ceiling, and the proposed increase.
 
 </expense_ceiling>
 
@@ -396,7 +396,7 @@ Command defaults are authority for cost-bearing and quota-bearing runs. When a d
 
 - ALWAYS: continue actionable in-scope work and invoke `/handoff` only when no continuation remains or continuation is impossible.
 
-Apply the closing test: can the operator reasonably ask “What now?” A passing check, merge, clean worktree, or persisted note is a milestone, never permission to stop while do-able work remains. Run `/handoff` only when the goal is met or continuation is impossible — the operator halted work, context is exhausted, or an external blocker prevents the next action. Never write a note or a session file to postpone work Claude can perform now. When operator judgment is required, close with the structured-question tool rather than a prose offer.
+Apply the closing test: can the operator reasonably ask “What now?” A passing check, merge, clean worktree, or persisted note is a milestone, never permission to stop while do-able work remains. Run `/handoff` only when the goal is met or continuation is impossible — the operator halted work, context is exhausted, or an external blocker prevents the next action. When operator judgment is required, close with the structured-question tool rather than a prose offer.
 
 </closing_protocol>
 
@@ -421,7 +421,7 @@ Continue through `/merge` unless the operator explicitly limited the request to 
 <workflow>
 
 1. Load this complete inline foundation on every invocation. A marker in a compaction summary, session file, handoff note, or prior-run statement does not count. After compaction, treat the marker as absent until this workflow emits it again.
-2. Check internal consistency across `<truth_hierarchy>`, `<node_model>`, `<artifact_placement>`, `<assertion_model>`, `<ordering_model>`, `<verification_model>`, `<coordination_model>`, and `<imperfection_protocol>`. Surface any contradiction immediately. No mandatory foundation reference read follows this step.
+2. Check internal consistency across every foundation section and surface any contradiction immediately. No mandatory foundation reference read follows this step.
 3. Locate these operational references and list their paths without reading them until another skill needs them: `${SKILL_DIR}/references/kind-decision.md`, `${SKILL_DIR}/references/grammar.md`, `${SKILL_DIR}/references/artifact-placement.md`, `${SKILL_DIR}/references/status-claims.md`, `${SKILL_DIR}/references/product-domain-shapes.md`, and `spx/local/*.md`. Note discovery belongs to `/contextualize`, never to `/understand`.
 4. Read `spx/local/merging.md` when present. Changes destined for the default branch route through `/merge`; absence of the overlay applies the default lifecycle.
 5. Locate the authoring templates under `${SKILL_DIR}/templates/` — `product/product-name.spec.md`, `decisions/decision-name.adr.md`, `decisions/decision-name.pdr.md`, `nodes/{substrate,capability,domain,interface,surface,variant}-name.spec.md`, `records/node-name.outcome.md`, `probes/probe.md` — and `${SKILL_DIR}/examples/*.md`; read them only when authoring.

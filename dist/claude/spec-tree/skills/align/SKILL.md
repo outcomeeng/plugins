@@ -30,7 +30,7 @@ Invoke `spec-tree:understand` and use its live inline foundation. Read the condi
 
 - Live `/understand` `<atemporal_voice>` and `<decision_to_spec_alignment>`
 - Live `/understand` `<assertion_types>` — the five assertion types and their canonical headings
-- Live `/understand` `<common_misplacements>`
+- `${CLAUDE_SKILL_DIR}/../understand/references/artifact-placement.md` `<common_misplacements>` — a conditional reference, read in full
 - Live `/understand` `<files_in_a_node>` — the canonical node shape, including the skip targets it declares
 - Live `/understand` `<identity_and_kinds>` and `<product_scope>` — the seven kinds, their openings, and containment
 - `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md`
