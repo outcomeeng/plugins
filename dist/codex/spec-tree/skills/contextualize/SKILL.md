@@ -173,7 +173,7 @@ The target node has an index (e.g., `43` in `43-feature.capability`). Existing l
 Glob: "{parent-path}/*-*.*/"       # any kind suffix, including the prior forms
 
 # For each sibling with a lower index than the target:
-Read: {parent-path}/{sibling-dir}/{sibling-slug}.md
+Read: {parent-path}/{sibling-dir}/{sibling-slug}.spec.md   # or the prior {parent-path}/{sibling-dir}/{sibling-slug}.md
 ```
 
 Lower-index siblings' ADRs/PDRs are NOT read — only the sibling's spec itself. Existing numeric order makes the sibling's spec part of the target context, while the sibling's internal decisions are its own concern.
