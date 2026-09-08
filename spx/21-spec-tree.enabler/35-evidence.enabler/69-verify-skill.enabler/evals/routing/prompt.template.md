@@ -8,8 +8,8 @@ The request's `available_specialists` array is the authoritative projection of t
 
 Return exactly one JSON object with these fields:
 
-- `verification_type`: `test`, `evaluate`, `audit`, or `null`
-- `specialist`: `/test`, `/eval`, `isolated-verifier`, or `null`
+- `verification_type`: `test`, `evaluate`, `probe`, `audit`, or `null`
+- `specialist`: `/test`, `/eval`, `/probe`, `isolated-verifier`, or `null`
 - `status`: `routed`, `capability-required`, or `blocked`
 - `evidence_shape`: `path-bearing`, `pathless`, or `null`
 - `reason`: a concise string

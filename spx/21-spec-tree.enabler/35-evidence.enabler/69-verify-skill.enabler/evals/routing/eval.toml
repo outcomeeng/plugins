@@ -13,6 +13,7 @@ smoke_cases = [
   "routes-structured-producer-to-evaluate",
   "routes-semantic-constraint-to-audit",
   "routes-observation-claim-to-probe",
+  "routes-observation-claim-to-probe-specialist",
   "rejects-unsupported-tag",
 ]
 threshold = 1.0
