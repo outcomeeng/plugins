@@ -131,7 +131,7 @@ Construction-derived expectations are valid only when the construction law is in
 
 <assertion_design_record>
 
-Before writing or repairing test evidence, record the complete assertion design:
+Before writing or repairing test evidence, record the complete assertion design. The provenance and oracle fields apply `<case_provenance_and_oracles>`; the mutation and failure fields apply `<mutation_litmus>`:
 
 | Field               | Required value                                                                                                                                |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -142,7 +142,7 @@ Before writing or repairing test evidence, record the complete assertion design:
 | Rejected mutation   | One concrete mutation or disablement of assertion-relevant production behavior                                                                |
 | Failure observation | The exact linked-test observation or predicate that the mutation makes fail                                                                   |
 
-Do not author evidence while any field is missing, while the oracle reuses the production path, or while the named production mutation would leave the evidence passing. The record is a design prerequisite, not a post-hoc explanation for a test already written.
+NEVER author evidence while any field is missing, while the oracle reuses the production path, or while the named production mutation would leave the evidence passing. The record is a design prerequisite, not a post-hoc explanation for a test already written.
 
 Moving a case or expected value never changes its provenance. Relocating a value from a test into production, a harness, a generator, a fixture, or an oracle module preserves the source that originally selected it. Accept the relocated value only when the destination already owns that kind of truth and the record names an independent provenance source. Reject relocation used to turn an author-invented value or implementation-derived expectation into an apparently source-owned contract.
 

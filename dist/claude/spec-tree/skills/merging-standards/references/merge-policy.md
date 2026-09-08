@@ -383,7 +383,7 @@ Immediately before the merge mutation, apply the merge-cleanup reference loaded 
 
 <pr_check_wait>
 
-Before starting the blocking wait, finish every Author-side action that does not depend on new external state: inspect the current diff, resolve known findings, complete their same-class scans, run the applicable deterministic checks, update the readiness record, and commit the exact subject when a Verifier or Reviewer must read it. Start the wait only when external check or review state is the sole remaining input.
+Before starting the blocking wait, finish every Author-side action that does not depend on new external state: inspect the current diff, resolve known findings, complete their same-class scans, run the applicable deterministic checks, update the `<verification_dispatch_readiness>` record, and commit the exact subject when a Verifier or Reviewer must read it. Start the wait only when external check or review state is the sole remaining input.
 
 Waiting for PR checks or the current-head CI review uses exactly one foreground command:
 
