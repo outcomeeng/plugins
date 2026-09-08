@@ -125,7 +125,7 @@ A product body carries no status file or verification directory because a scope 
 <links>
 
 - **Node-local**: a relative path whose target lives inside the node and prunes with it — every assertion link.
-- **Tree-absolute**: the full path from the tree root, written literally beginning `spx/` — every cross-subtree decision citation, for example `[decision](spx/12-platform.substrate/15-storage.adr.md)`.
+- **Tree-absolute**: the full path from the tree root, written literally beginning `spx/` — every cross-subtree decision citation, for example `[decision](spx/55-example.substrate/15-storage.adr.md)`.
 
 A leading-slash anchor or a `../` climb fails validation as ambiguous. Metric-source and selection-source links are external and verified by delivery; links inside a knowledge root follow the bundle's format. Implementation never links into the tree.
 

@@ -17,7 +17,7 @@ The projector is the claim's only writer; operators and agents author specs, ver
       "tests/parsing.scenario.l1.test.ts": {
         "verdict": "passed",
         "commit": "8f7a3b1c2d4e5f60718293a4b5c6d7e8f9012345",
-        "read": ["spx/45-pool.domain/pool.spec.md", "spx/45-pool.domain/tests/parsing.scenario.l1.test.ts", "src/pool/parser.ts"]
+        "read": ["spx/55-example.domain/example.spec.md", "spx/55-example.domain/tests/parsing.scenario.l1.test.ts", "src/pool/parser.ts"]
       }
     },
     "audit": {
@@ -26,7 +26,7 @@ The projector is the claim's only writer; operators and agents author specs, ver
         "actor": { "kind": "agent", "id": "audit-agent" },
         "run": "01890a5d-ac96-774b-bcce-b302099a8057",
         "commit": "8f7a3b1c2d4e5f60718293a4b5c6d7e8f9012345",
-        "read": ["spx/45-pool.domain/pool.spec.md", "spx/45-pool.domain/15-ownership.adr.md", "src/pool/claim.ts"]
+        "read": ["spx/55-example.domain/example.spec.md", "spx/55-example.domain/15-ownership.adr.md", "src/pool/claim.ts"]
       }
     }
   }
