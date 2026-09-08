@@ -5,7 +5,7 @@ description: >-
   Verification run-journal projection methodology loaded by audit and review
   skills when building spx journal events, computing rollups, or rendering verdict
   surfaces.
-allowed-tools: Bash, Read
+allowed-tools: Read, Bash(spx journal:*), Bash(python3 "${SKILL_DIR}/scripts/render_review_run.py":*)
 ---
 
 <objective>
