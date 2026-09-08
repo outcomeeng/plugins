@@ -45,6 +45,9 @@ def assert_link_integrity_contract() -> None:
         _assert_find_eval_links_finds_resolvable_link(root / "eval-resolvable")
         _assert_find_eval_links_ignores_non_eval_markdown_links(root / "eval-nonlink")
         _assert_find_eval_links_ignores_inline_code_spans(root / "eval-inline")
+        _assert_find_eval_links_ignores_multi_backtick_inline_code_spans(
+            root / "eval-multi-inline"
+        )
         _assert_find_eval_links_ignores_fenced_code_blocks(root / "eval-fenced")
         _assert_find_eval_links_returns_all_links_across_files(root / "eval-all")
         _assert_validate_eval_links_returns_empty_when_all_resolve(root / "eval-valid")
@@ -58,7 +61,11 @@ def assert_link_integrity_contract() -> None:
         )
         _assert_find_test_links_finds_resolvable_link(root / "test-resolvable")
         _assert_find_test_links_ignores_inline_code_spans(root / "test-inline")
+        _assert_find_test_links_ignores_multi_backtick_inline_code_spans(
+            root / "test-multi-inline"
+        )
         _assert_find_test_links_ignores_fenced_code_blocks(root / "test-fenced")
+        _assert_find_test_links_ignores_tilde_fenced_code_blocks(root / "test-tilde")
         _assert_validate_test_links_returns_empty_when_all_resolve(root / "test-valid")
         _assert_validate_test_links_reports_missing_target(root / "test-missing")
         _assert_validate_test_links_rejects_non_test_filename(root / "test-nonname")
@@ -112,6 +119,21 @@ def _assert_find_eval_links_ignores_inline_code_spans(root: Path) -> None:
     spec.write_text(
         "Sample link form: `[eval](evals/{rule-slug}/eval.toml)`. "
         "The runner consumes it.\n",
+        encoding="utf-8",
+    )
+
+    assert find_eval_links(root) == []
+
+
+def _assert_find_eval_links_ignores_multi_backtick_inline_code_spans(
+    root: Path,
+) -> None:
+    node_dir = root / "spx" / "node"
+    node_dir.mkdir(parents=True)
+    spec = node_dir / "spec.md"
+    spec.write_text(
+        "A fence (`` ``` ``) wraps examples; the inline form "
+        "`[eval](evals/{rule-slug}/eval.toml)` is prose.\n",
         encoding="utf-8",
     )
 
@@ -245,6 +267,33 @@ def _assert_find_test_links_ignores_inline_code_spans(root: Path) -> None:
     root.mkdir(parents=True)
     (root / "doc.md").write_text(
         "The link form `[test](path/to/test.py)` is required.\n",
+        encoding="utf-8",
+    )
+
+    assert find_test_links(root) == []
+
+
+def _assert_find_test_links_ignores_multi_backtick_inline_code_spans(
+    root: Path,
+) -> None:
+    root.mkdir(parents=True)
+    (root / "doc.md").write_text(
+        "A fence (`` ``` ``) wraps examples; the inline form "
+        "`[test](tests/inline.py)` is prose.\n"
+        "\n"
+        "```markdown\n"
+        "Assertion ([test](tests/fenced.py))\n"
+        "```\n",
+        encoding="utf-8",
+    )
+
+    assert find_test_links(root) == []
+
+
+def _assert_find_test_links_ignores_tilde_fenced_code_blocks(root: Path) -> None:
+    root.mkdir(parents=True)
+    (root / "doc.md").write_text(
+        "~~~\nAssertion ([test](tests/test_x.py))\n~~~\n",
         encoding="utf-8",
     )
 

@@ -6,9 +6,12 @@ references a pytest collectable; ``[eval](path)`` references an
 
 Links inside fenced code blocks and inline code spans are skipped: prose
 that documents the link syntax (e.g. ``the [eval](path) form``) is not a
-real evidence reference. The fenced-block pattern matches backtick fences
-only — tilde fences (CommonMark also allows ``~~~``) are a deliberate
-simplification because no spec markdown in the marketplace uses them.
+real evidence reference. Both skips follow CommonMark: a fence is a run of
+three or more backticks or tildes at the start of a line, closed by a
+matching run at the start of a later line (or by the end of the file), and
+an inline span opens with a backtick run of any length and closes with a
+run of exactly that length — so a double-backtick span can quote a literal
+triple backtick without opening a fence.
 
 The ``outcomeeng.validation.eval_links`` module wires the validators into
 the validation recipe as its ``eval-links`` step.
@@ -33,8 +36,16 @@ EVALS_DIRNAME = "evals"
 
 _EVAL_LINK_PATTERN = re.compile(r"\[eval\]\(([^)]+)\)")
 _TEST_LINK_PATTERN = re.compile(r"\[test\]\(([^)]+)\)")
-_FENCED_BLOCK_PATTERN = re.compile(r"```.*?```", re.DOTALL)
-_INLINE_CODE_PATTERN = re.compile(r"`[^`\n]*`")
+# A fence opens with three or more backticks or tildes at the start of a
+# line and closes with a run of the same character at the start of a later
+# line; an unterminated fence runs to the end of the file.
+_FENCED_BLOCK_PATTERN = re.compile(
+    r"^[ \t]{0,3}(`{3,}|~{3,})[^\n]*\n.*?(?:^[ \t]{0,3}\1[ \t]*$|\Z)",
+    re.DOTALL | re.MULTILINE,
+)
+# An inline span opens with a backtick run of any length and closes with a
+# run of exactly that length, neither run adjacent to a further backtick.
+_INLINE_CODE_PATTERN = re.compile(r"(?<!`)(`+)(?!`)([^\n]*?)(?<!`)\1(?!`)")
 
 
 @dataclass(frozen=True)
