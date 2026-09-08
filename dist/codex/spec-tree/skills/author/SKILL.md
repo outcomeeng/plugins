@@ -367,7 +367,7 @@ How to avoid: treat "which ADR/PDR?" as structural when the owning node, node na
 
 **Multiplying decision records before the tree justifies it.** Authoring a separate ADR for every architectural micro-choice (packaging, edition, panic handling, logging) in a pre-commit tree produces six decision records for a product with five nodes. Closely-related choices belong in one ADR with named subsections; product-level guarantees belong in the product spec's compliance section, not as independent PDRs — unless the guarantee already lives inside an existing record sharing its subject and rationale, which is placement, not multiplication. Keep indices packed (under 55 in small trees) until real node growth demands spreading. The tree reflects scope that exists, not scope that might.
 
-**Preselecting a verification subsection or tag.** Write new rules directly under `## Verification` without a subsection or tag. `/apply` invokes `/verify` to choose test, evaluate, or audit from the real subject; authoring never makes that choice.
+**Preselecting a verification subsection or tag.** Write new rules directly under `## Verification` without a subsection or tag. `/apply` invokes `/verify` to choose test, evaluate, probe, or audit from the real subject; authoring never makes that choice.
 
 **Pre-shaping decomposition.** When a request needs multiple sibling nodes, authoring captures intent in the governing Change and delegates to `/decompose <node-address>`. Proposed child names, proposed indices, and proposed dependency chains do not belong in the handoff.
 
