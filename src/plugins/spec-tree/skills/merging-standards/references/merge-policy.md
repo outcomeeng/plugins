@@ -266,7 +266,7 @@ Before every local Auditor or Reviewer dispatch — a Verifier, in this vocabula
   "governingNodes": ["complete canonical spx/... node set"],
   "deterministicResults": [{ "command": "exact command", "exitCode": 0 }],
   "sameClassScans": [{ "defectClass": "class or preflight concern", "scope": "files inspected", "method": "query or structural inspection", "matches": ["paths"], "dispositions": ["fixed or isolated"] }],
-  "assertionDesignRecords": [{ "assertion": "changed test assertion", "caseProvenance": "owner", "oracleOwner": "owner", "rejectedMutation": "production mutation", "failureObservation": "linked predicate" }],
+  "assertionDesignRecords": [{ "assertion": "changed test assertion and its quantifier", "productionSubject": "behavior under test and the observable seam", "caseProvenance": "owner", "oracleOwner": "owner", "rejectedMutation": "production mutation", "failureObservation": "linked predicate" }],
   "runOwnership": { "verificationType": "audit or review", "runIdentity": "fresh identity", "writer": "one dispatch owner", "state": "reserved" },
   "priorRejections": [],
   "unresolved": []
