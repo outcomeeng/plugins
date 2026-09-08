@@ -1,6 +1,6 @@
 # Change Coordination
 
-Loaded by `/pickup` and `/handoff` when present. It names where this repository's Changes and Handoffs live, per methodology `versions/next/11-coordination.md` and the GitHub realization it cites. Values only; the workflow is the skill's.
+Loaded by `/pickup` and `/handoff` when present. It names where this repository's Changes and Handoffs live, per methodology `versions/4.0/methodology/coordination/changes.md` and the GitHub realization it cites. Values only; the workflow is the skill's.
 
 ## Change store
 

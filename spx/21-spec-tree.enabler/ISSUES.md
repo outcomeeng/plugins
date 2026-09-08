@@ -129,7 +129,7 @@ Suggested `spx/AGENTS.md` additions:
 
 ## 23. Shipped node shape omits the knowledge-root profile rules the methodology declares
 
-The methodology this repository adopts declares that a node may carry one knowledge root — a `knowledge/` directory holding an Open Knowledge Format v0.1 bundle, with the product root carrying `spx/knowledge/` the same way — in the `versions/next/13-knowledge.md` chapter of the `outcomeeng/methodology` repository. The profile requires `index.md` and `log.md` in every bundle, requires typed frontmatter on every non-reserved markdown file, and delivers a node's knowledge root to context loading as its `index.md` listing alone.
+The methodology this repository adopts declares that a node may carry one knowledge root — a `knowledge/` directory holding an Open Knowledge Format v0.2 bundle, with the product root carrying `spx/knowledge/` the same way — in the `versions/4.0/methodology/knowledge.md` chapter of the `outcomeeng/methodology` repository. The profile requires `index.md` and `log.md` in every bundle, requires typed frontmatter on every non-reserved markdown file, and delivers a node's knowledge root to context loading as its `index.md` listing alone.
 
 The canonical node shape in the inline `/understand` `<files_in_a_node>` (authored in `src/plugins/spec-tree/skills/understand/SKILL.md`) declares the `knowledge/` root, and `<artifact_placement>` admits it in the closed taxonomy. The shipped grammar still omits the profile rules above, and `/contextualize` delivers no knowledge index for a node that carries one.
 
