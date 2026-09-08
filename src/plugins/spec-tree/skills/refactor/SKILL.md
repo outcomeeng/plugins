@@ -268,7 +268,7 @@ How to avoid: Before re-pointing, classify each citing assertion. Universal — 
 
 **Moving without checking ADR/PDR scope.** A node governed by an ADR at index 15 in directory A is no longer governed by that ADR if moved to directory B. The constraint silently disappears.
 
-**Using bare node or decision names.** A refactor report or PLAN.md entry that names `32-parser.enabler` or `15-build.adr.md` cannot be resolved reliably. Use full paths from `spx/`.
+**Using bare node or decision names.** A refactor report or PLAN.md entry that names `32-parser.capability` or `15-build.adr.md` cannot be resolved reliably. Use full paths from `spx/`.
 
 **Consolidating similar but distinct nodes.** Two nodes about "parsing" may parse different things for different reasons. If they have different hypotheses, they're different outcomes — similarity in implementation doesn't mean similarity in purpose.
 

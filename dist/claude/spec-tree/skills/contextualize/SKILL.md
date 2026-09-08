@@ -25,7 +25,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 - A context-grounded answer requires the matching `<SPEC_TREE_CONTEXT target="...">` marker. Loading this skill and completing `/sync-base` are prerequisites, not context.
 - Test files are not read by `/contextualize`. The node target spec or product-root product spec already exposes inline `[test](tests/...)` links; list those links and the applicable `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
 - **Always use canonical full paths** from `spx/` for targets and references. The product-root target is exactly `spx/`; a node target begins with `spx/` and contains only node-directory segments. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
-  - Wrong: `/contextualize 32-parser.outcome`
+  - Wrong: `/contextualize 32-parser.capability`
   - Right: `/contextualize spx/{path-to-node}`
 
 **BOOTSTRAP MODE**: Bootstrap is derived from the documented target and tree state, never from an undeclared operation. When `$target` is exactly `spx/`, one product spec exists, and no node directories exist, emit the product-root manifest with `bootstrap=true`. A missing node target always aborts; authoring a new node contextualizes its existing parent (`spx/` for a top-level node or the canonical full parent node path for a nested node).
@@ -165,7 +165,7 @@ Glob: "{path-to-dir}/ISSUES.md"
 
 **2d. Read all lower-index siblings' specs**
 
-The target node has an index (e.g., `43` in `43-feature.outcome`). Existing lower-index sibling specs constrain the target's context and must be read.
+The target node has an index (e.g., `43` in `43-feature.capability`). Existing lower-index sibling specs constrain the target's context and must be read.
 
 ```bash
 # List all sibling directories (same parent, different from target)
@@ -326,7 +326,7 @@ Claude read test file imports during `/contextualize` and reported implementatio
 
 **Failure 5: Reported a bare node or decision name**
 
-Claude wrote "see 15-build.adr.md" or "continue in 32-parser.enabler" without the full path. Those references are ambiguous because numeric prefixes are sibling-local. Always report the complete path from `spx/`, using the shape `spx/{parent-node}/{target-node}/{decision-file}` or `spx/{parent-node}/{target-node}`, so the file can be found.
+Claude wrote "see 15-build.adr.md" or "continue in 32-parser.capability" without the full path. Those references are ambiguous because numeric prefixes are sibling-local. Always report the complete path from `spx/`, using the shape `spx/{parent-node}/{target-node}/{decision-file}` or `spx/{parent-node}/{target-node}`, so the file can be found.
 
 **Failure 6: Omitted lifecycle continuation from the context marker**
 

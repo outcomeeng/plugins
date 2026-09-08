@@ -6,7 +6,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Skill, AskUserQuestion, Bash(spx v
 
 <objective>
 
-A Spec Tree artifact — a product spec, decision record (ADR/PDR), enabler, or outcome node — placed, indexed, and authored from the `understand` foundation templates.
+A Spec Tree artifact — a product spec, decision record (ADR/PDR), output-kind or variant node spec, outcome record, or probe protocol — placed, indexed, and authored from the `understand` foundation templates.
 
 </objective>
 
@@ -25,9 +25,9 @@ Use the canonical templates and examples provided by `/understand`:
 - product spec template
 - ADR template
 - PDR template
-- enabler template
-- outcome template
-- filled ADR, PDR, enabler, and outcome examples
+- one spec template per output kind — substrate, capability, domain, interface, surface — and the variant template
+- the outcome record and probe protocol templates
+- filled ADR, PDR, capability, domain, outcome record, and probe examples
 
 Read the appropriate template before drafting.
 
@@ -41,18 +41,18 @@ Read the appropriate template before drafting.
 
 Ask or infer from context:
 
-| Artifact         | When to create                        | Template                                    |
-| ---------------- | ------------------------------------- | ------------------------------------------- |
-| **Product spec** | Bootstrapping a new tree              | `templates/product/product-name.product.md` |
-| **ADR**          | Architecture decision needs recording | `templates/decisions/decision-name.adr.md`  |
-| **PDR**          | Product decision needs recording      | `templates/decisions/decision-name.pdr.md`  |
-| **Enabler node** | Shared infrastructure for 2+ siblings | `templates/nodes/enabler-name.md`           |
-| **Outcome node** | User-facing behavior with hypothesis  | `templates/nodes/outcome-name.md`           |
+| Artifact           | When to create                                    | Template                                                                       |
+| ------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Product spec**   | Bootstrapping a new tree                          | `templates/product/product-name.spec.md`                                       |
+| **ADR**            | Architecture decision needs recording             | `templates/decisions/decision-name.adr.md`                                     |
+| **PDR**            | Product decision needs recording                  | `templates/decisions/decision-name.pdr.md`                                     |
+| **Output node**    | One of the five output kinds                      | `templates/nodes/{substrate,capability,domain,interface,surface}-name.spec.md` |
+| **Variant node**   | One implementation of its parent's whole contract | `templates/nodes/variant-name.spec.md`                                         |
+| **Outcome record** | A condition only real use settles                 | `templates/records/node-name.outcome.md`                                       |
+| **Probe protocol** | A claim only observing the running node settles   | `templates/probes/probe.md`                                                    |
 
-If unclear which type, apply the decision table from live `/understand` `<node_model>`:
+If unclear which type, apply the ordered kind decision procedure from live `/understand` `<identity_and_kinds>` and `references/kind-decision.md` — product, variant, substrate, surface, interface, domain, capability — and:
 
-- Delivers user-facing value? → Outcome
-- Exists only to serve other nodes? → Enabler
 - Governs how the product is built (architecture, invisible to its users)? → ADR
 - Governs what the product does (behavior its users observe)? → PDR
 
