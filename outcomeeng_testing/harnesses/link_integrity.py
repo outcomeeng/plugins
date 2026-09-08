@@ -16,6 +16,10 @@ from tempfile import TemporaryDirectory
 
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 
+# The markdown sources each layout writes: a node spec and a loose document.
+SPEC_FILENAME = "spec.md"
+DOC_FILENAME = "doc.md"
+
 
 @dataclass(frozen=True)
 class LinkLayout:
@@ -72,7 +76,7 @@ def resolvable_eval_layout(root: Path) -> LinkLayout:
     node_dir = _node(root)
     toml_path = write_eval_dir(node_dir, "rule-one")
     spec = _write(
-        node_dir / "spec.md",
+        node_dir / SPEC_FILENAME,
         "- NEVER: bad thing ([eval](evals/rule-one/eval.toml))\n",
     )
     return LinkLayout(source=spec, target=toml_path)
@@ -80,7 +84,7 @@ def resolvable_eval_layout(root: Path) -> LinkLayout:
 
 def non_eval_markdown_link_layout(root: Path) -> Path:
     return _write(
-        _node(root) / "spec.md",
+        _node(root) / SPEC_FILENAME,
         "- ALWAYS: do thing ([test](tests/test_thing.conformance.l1.py))\n"
         "- See [related doc](other.md)\n",
     )
@@ -88,7 +92,7 @@ def non_eval_markdown_link_layout(root: Path) -> Path:
 
 def inline_code_span_eval_layout(root: Path) -> Path:
     return _write(
-        _node(root) / "spec.md",
+        _node(root) / SPEC_FILENAME,
         "Sample link form: `[eval](evals/{rule-slug}/eval.toml)`. "
         "The runner consumes it.\n",
     )
@@ -96,7 +100,7 @@ def inline_code_span_eval_layout(root: Path) -> Path:
 
 def multi_backtick_inline_eval_layout(root: Path) -> Path:
     return _write(
-        _node(root) / "spec.md",
+        _node(root) / SPEC_FILENAME,
         "A fence (`` ``` ``) wraps examples; the inline form "
         "`[eval](evals/{rule-slug}/eval.toml)` is prose.\n",
     )
@@ -104,7 +108,7 @@ def multi_backtick_inline_eval_layout(root: Path) -> Path:
 
 def fenced_block_eval_layout(root: Path) -> Path:
     return _write(
-        _node(root) / "spec.md",
+        _node(root) / SPEC_FILENAME,
         "Example assertion:\n\n"
         "```markdown\n"
         "- ALWAYS: foo ([eval](evals/example/eval.toml))\n"
@@ -118,14 +122,16 @@ def two_node_eval_layout(root: Path) -> tuple[LinkLayout, LinkLayout]:
         node_dir = root / "spx" / name
         node_dir.mkdir(parents=True)
         toml_path = write_eval_dir(node_dir, f"rule-{name}")
-        spec = _write(node_dir / "spec.md", f"([eval](evals/rule-{name}/eval.toml))\n")
+        spec = _write(
+            node_dir / SPEC_FILENAME, f"([eval](evals/rule-{name}/eval.toml))\n"
+        )
         layouts.append(LinkLayout(source=spec, target=toml_path))
     return layouts[0], layouts[1]
 
 
 def missing_eval_toml_layout(root: Path) -> LinkLayout:
     node_dir = _node(root)
-    spec = _write(node_dir / "spec.md", "([eval](evals/missing-rule/eval.toml))\n")
+    spec = _write(node_dir / SPEC_FILENAME, "([eval](evals/missing-rule/eval.toml))\n")
     return LinkLayout(
         source=spec, target=node_dir / "evals" / "missing-rule" / EVAL_TOML_FILENAME
     )
@@ -135,14 +141,14 @@ def directory_eval_target_layout(root: Path) -> LinkLayout:
     node_dir = _node(root)
     toml_dir = node_dir / "evals" / "rule" / EVAL_TOML_FILENAME
     toml_dir.mkdir(parents=True)
-    spec = _write(node_dir / "spec.md", "([eval](evals/rule/eval.toml))\n")
+    spec = _write(node_dir / SPEC_FILENAME, "([eval](evals/rule/eval.toml))\n")
     return LinkLayout(source=spec, target=toml_dir)
 
 
 def non_toml_eval_target_layout(root: Path) -> LinkLayout:
     node_dir = _node(root)
     cases = _write(node_dir / "evals" / "rule" / "cases.jsonl", "")
-    spec = _write(node_dir / "spec.md", "([eval](evals/rule/cases.jsonl))\n")
+    spec = _write(node_dir / SPEC_FILENAME, "([eval](evals/rule/cases.jsonl))\n")
     return LinkLayout(source=spec, target=cases)
 
 
@@ -150,7 +156,7 @@ def deep_eval_layout(root: Path) -> LinkLayout:
     deep_node = root / "spx" / "a" / "b" / "c"
     deep_node.mkdir(parents=True)
     toml_path = write_eval_dir(deep_node, "deep-rule")
-    spec = _write(deep_node / "spec.md", "([eval](evals/deep-rule/eval.toml))\n")
+    spec = _write(deep_node / SPEC_FILENAME, "([eval](evals/deep-rule/eval.toml))\n")
     return LinkLayout(source=spec, target=toml_path)
 
 
@@ -160,7 +166,7 @@ def loose_eval_toml_layout(root: Path) -> LinkLayout:
         node_dir / "evals" / EVAL_TOML_FILENAME,
         'title = "x"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n',
     )
-    spec = _write(node_dir / "spec.md", "([eval](evals/eval.toml))\n")
+    spec = _write(node_dir / SPEC_FILENAME, "([eval](evals/eval.toml))\n")
     return LinkLayout(source=spec, target=toml_path)
 
 
@@ -170,7 +176,7 @@ def loose_eval_toml_layout(root: Path) -> LinkLayout:
 def resolvable_test_layout(root: Path) -> LinkLayout:
     test_path = write_test_file(root, "test_thing.conformance.l1.py")
     spec = _write(
-        root / "spec.md",
+        root / SPEC_FILENAME,
         "Assertion ([test](tests/test_thing.conformance.l1.py))\n",
     )
     return LinkLayout(source=spec, target=test_path)
@@ -178,14 +184,14 @@ def resolvable_test_layout(root: Path) -> LinkLayout:
 
 def inline_code_span_test_layout(root: Path) -> Path:
     return _write(
-        root / "doc.md",
+        root / DOC_FILENAME,
         "The link form `[test](path/to/test.py)` is required.\n",
     )
 
 
 def multi_backtick_inline_test_layout(root: Path) -> Path:
     return _write(
-        root / "doc.md",
+        root / DOC_FILENAME,
         "A fence (`` ``` ``) wraps examples; the inline form "
         "`[test](tests/inline.py)` is prose.\n"
         "\n"
@@ -196,13 +202,15 @@ def multi_backtick_inline_test_layout(root: Path) -> Path:
 
 
 def fenced_block_test_layout(root: Path) -> Path:
-    return _write(root / "doc.md", "```\nAssertion ([test](tests/test_x.py))\n```\n")
+    return _write(
+        root / DOC_FILENAME, "```\nAssertion ([test](tests/test_x.py))\n```\n"
+    )
 
 
 def longer_closing_fence_test_layout(root: Path) -> LinkLayout:
     test_path = write_test_file(root, "test_after.conformance.l1.py")
     spec = _write(
-        root / "doc.md",
+        root / DOC_FILENAME,
         "```\n"
         "Assertion ([test](tests/fenced.py))\n"
         "````\n"
@@ -212,30 +220,34 @@ def longer_closing_fence_test_layout(root: Path) -> LinkLayout:
 
 
 def tilde_fenced_test_layout(root: Path) -> Path:
-    return _write(root / "doc.md", "~~~\nAssertion ([test](tests/test_x.py))\n~~~\n")
+    return _write(
+        root / DOC_FILENAME, "~~~\nAssertion ([test](tests/test_x.py))\n~~~\n"
+    )
 
 
 def missing_test_target_layout(root: Path) -> LinkLayout:
-    spec = _write(root / "spec.md", "([test](tests/missing.py))\n")
+    spec = _write(root / SPEC_FILENAME, "([test](tests/missing.py))\n")
     return LinkLayout(source=spec, target=root / "tests" / "missing.py")
 
 
 def directory_test_target_layout(root: Path) -> LinkLayout:
     test_dir = root / "tests" / "test_thing.conformance.l1.py"
     test_dir.mkdir(parents=True)
-    spec = _write(root / "spec.md", "([test](tests/test_thing.conformance.l1.py))\n")
+    spec = _write(
+        root / SPEC_FILENAME, "([test](tests/test_thing.conformance.l1.py))\n"
+    )
     return LinkLayout(source=spec, target=test_dir)
 
 
 def non_test_filename_layout(root: Path) -> LinkLayout:
     helper = _write(root / "tests" / "helper.py", "# helper\n")
-    spec = _write(root / "spec.md", "([test](tests/helper.py))\n")
+    spec = _write(root / SPEC_FILENAME, "([test](tests/helper.py))\n")
     return LinkLayout(source=spec, target=helper)
 
 
 def non_python_test_target_layout(root: Path) -> LinkLayout:
     txt_file = _write(root / "tests" / "test_thing.txt", "not python\n")
-    spec = _write(root / "spec.md", "([test](tests/test_thing.txt))\n")
+    spec = _write(root / SPEC_FILENAME, "([test](tests/test_thing.txt))\n")
     return LinkLayout(source=spec, target=txt_file)
 
 
@@ -244,7 +256,7 @@ def deep_test_layout(root: Path) -> LinkLayout:
     deep_node.mkdir(parents=True)
     test_path = write_test_file(deep_node, "test_deep.conformance.l1.py")
     spec = _write(
-        deep_node / "spec.md",
+        deep_node / SPEC_FILENAME,
         "([test](tests/test_deep.conformance.l1.py))\n",
     )
     return LinkLayout(source=spec, target=test_path)
@@ -256,5 +268,5 @@ def loose_test_layout(root: Path) -> LinkLayout:
         node_dir / "test_loose.conformance.l1.py",
         "def test_placeholder() -> None: pass\n",
     )
-    spec = _write(node_dir / "spec.md", "([test](test_loose.conformance.l1.py))\n")
+    spec = _write(node_dir / SPEC_FILENAME, "([test](test_loose.conformance.l1.py))\n")
     return LinkLayout(source=spec, target=loose_test)
