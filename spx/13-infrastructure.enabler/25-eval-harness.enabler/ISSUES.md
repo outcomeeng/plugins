@@ -64,9 +64,13 @@ secret is visible to `outcomeeng/plugins`, and the token account can bypass
 
 `_assistant_text` (in `outcomeeng_evals/runner.py`) probes the parsed `claude --output-format json` envelope for `result`, then `response`, then `content`. If a future CLI release renames the key or adds one that collides with an unrelated field, the probe could succeed and return the wrong text rather than failing loudly. If `claude --output-format json` emits a version field (`cli_version`, `schema_version`, or similar), use it to select the extraction path instead of probing by key order. Deferred until the envelope shape actually shifts.
 
-## Tilde-fenced code blocks in the link walker
+## The link-integrity harness owns the predicates its linked test should own
 
-`_strip_code_regions` (in `outcomeeng/validation/link_integrity.py`) blanks backtick fences (`` ``` ``) but not tilde fences (`~~~`), which CommonMark also allows. A `~~~`-fenced block containing a `[test](...)` or `[eval](...)` example would be treated as a real evidence reference and flagged broken. No marketplace spec markdown uses tilde fences today; if one does, add tilde-fence matching to `_strip_code_regions`.
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` requires the executed test to own every behavioral predicate and assertion API call. `outcomeeng_testing/harnesses/link_integrity.py` exports one verdict-shaped entry point, `assert_link_integrity_contract`, holding every `assert` for the two link-integrity conformance assertions in `eval-harness.md`, and the linked `tests/test_link_integrity.conformance.l1.py` is a bare delegating call. The same inversion is recorded for the gate signal harness in `spx/15-validation.enabler/65-gate.enabler/ISSUES.md`.
+
+**Resolution shape**: turn each `_assert_*` case into a fixture writer returning the root it prepared, move every `assert` into the linked test as one parametrized or enumerated case set, and keep only temporary-directory lifecycle and file writing in the harness. Re-run `test-evidence-auditor` over the node.
+
+**Why separate**: the changeset that surfaced it added two regression cases to the harness in its existing shape to repair a real gate failure; restructuring twenty existing cases is its own reviewed diff.
 
 ## Partial-trial evidence in parallel-path errors
 
