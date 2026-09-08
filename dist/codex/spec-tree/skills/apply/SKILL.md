@@ -80,7 +80,7 @@ Before dispatching any persisted audit or review gate, bind its subject to an ex
 2. When the relevant tracked or untracked files differ from `HEAD`, invoke `/commit-changes` before dispatch to commit the exact current version regardless of whether the latest verification state is `passing`, `failing`, or `not-run`; preserve that state in the checkpoint result. After any further change, commit the new version before another audit or review.
 3. Confirm the worktree is clean and record the checkpoint's full `HEAD` commit ID.
 4. Dispatch the gate only when the required deterministic verification is `passing`, against the committed `<base>..<head>` scope. A `failing` or `not-run` checkpoint remains valid local history for recovery and collaboration while withholding gate dispatch. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
-5. Emit the complete `VERIFICATION_DISPATCH_READY` record `/merging-standards` `<verification_dispatch_readiness>` defines, bound to that exact clean head, and dispatch only once it is complete. `VERIFICATION_DISPATCH_BLOCKED` withholds the dispatch until the named field, subject, result, writer, or defect class is resolved, per `spx/15-merging.pdr.md`.
+5. Emit the complete `VERIFICATION_DISPATCH_READY` record `/merging-standards` `<verification_dispatch_readiness>` defines, bound to that exact clean head, and dispatch only once it is complete. `VERIFICATION_DISPATCH_BLOCKED` withholds the dispatch until the named field, subject, result, writer, or defect class is resolved.
 
 An audit or review over modified or untracked files is advisory. It may provide early feedback, but it never satisfies a Step 4, Step 6, Step 8, evidence-auditor, Step 9, or merge-readiness predicate. Commit the exact version before dispatching any persisted gate or asking another agent session or human to read a reusable verification subject.
 
@@ -92,7 +92,7 @@ After a rejected audit or valid review finding, repair the defect class, rerun d
 
 Each Verifier result is preserved once where that Verifier's own skill records it — the review journal for `changes-reviewer`, the `spx verification run` record for `implementation-auditor`, the returned structured verdict for every Auditor that returns one. What the flow carries forward from there is the bounded projection `/merging-standards` `<verification_result_projection>` defines: the result reference or raw run token, exact head, verdict, finding identifiers, defect classes, and next required action.
 
-Reopen the complete result by reference when a finding needs exact detail. Never re-paste a complete Verifier payload into a later step, a queue transition to the next node, or the closeout, per `spx/15-merging.pdr.md`.
+Reopen the complete result by reference when a finding needs exact detail. Never re-paste a complete Verifier payload into a later step, a queue transition to the next node, or the closeout.
 
 </verifier_result_projection>
 
