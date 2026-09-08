@@ -12,6 +12,7 @@ smoke_cases = [
   "routes-deterministic-behavior-to-test",
   "routes-structured-producer-to-evaluate",
   "routes-semantic-constraint-to-audit",
+  "routes-observation-claim-to-probe",
   "rejects-unsupported-tag",
 ]
 threshold = 1.0

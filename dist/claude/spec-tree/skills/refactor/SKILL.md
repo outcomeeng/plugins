@@ -86,7 +86,7 @@ Before applying changes, determine what will be affected:
 
 - Which assertions move from which node to which?
 - Do the assertions' test links need updating (different `tests/` directory)?
-- After redistribution, does any node end up with zero assertions? (If so, it should be removed or consolidated.)
+- After redistribution, does any node end up with zero assertions? (If so, it MUST be removed or consolidated.)
 - Do the remaining assertions in each node still form a coherent concern?
 
 **For Extract provider:**
