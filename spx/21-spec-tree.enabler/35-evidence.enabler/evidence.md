@@ -2,9 +2,9 @@
 
 PROVIDES the assertion-evidence lifecycle that selects a verification type, delegates evidence construction to the matching specialist, and subjects authored evidence to the same standards its auditor enforces
 SO THAT all spec-tree projects
-CAN establish `[test]`, `[eval]`, and `[audit]` evidence without conflating type selection, language expression, producer specialization, or verification judgment
+CAN establish `[test]`, `[eval]`, `[probe]`, and `[audit:{rule-slug}]` evidence without conflating type selection, language expression, producer specialization, or verification judgment
 
-Verification type selection precedes specialist evidence work. Testing and evaluation own independent construction workflows; audit carries a pathless requirement fulfilled by the applicable isolated verifier. Shared standards are independently loadable sources consumed by both authoring and auditing surfaces.
+Verification type selection precedes specialist evidence work. Testing and evaluation own independent construction workflows; a probe carries a protocol link the Author attests through an executed run; audit carries a rule-keyed requirement fulfilled by the applicable isolated verifier. Shared standards are independently loadable sources consumed by both authoring and auditing surfaces.
 
 ## Assertions
 

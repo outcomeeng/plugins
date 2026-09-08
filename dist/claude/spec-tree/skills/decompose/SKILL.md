@@ -26,12 +26,11 @@ If `$ARGUMENTS` is empty, stop before reading or writing product files. State th
 
 Read the conditional operational sources below before composing. Use the live inline foundation for node and ordering rules:
 
-- Live `/understand` `<node_model>` — enabler/outcome structure and nesting rules
+- Live `/understand` `<identity_and_kinds>` — the seven kinds, their order, and containment — and `${CLAUDE_SKILL_DIR}/../understand/references/kind-decision.md` for the ordered kind tests and the structural scorecards
 - Live `/understand` `<ordering_model>` — the context-loading meaning of an index and the inverse assignment rule
 - Live `/understand` `<artifact_placement>` — artifact taxonomy, test-infrastructure governance, and placement rules
 - `/understand` product-domain-shapes classifier and examples
-- `/understand` canonical enabler template
-- `/understand` canonical outcome template
+- `/understand` output-kind and variant spec templates under `templates/nodes/`
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
 
 </quick_start>
@@ -48,7 +47,7 @@ If the target is `spx/`:
 2. Read `CLAUDE.md` if present.
 3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
 4. Enumerate existing top-level children.
-5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per live `/understand` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
+5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `/understand` `references/artifact-placement.md` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
 
 If the target is a node address:
 
@@ -192,7 +191,7 @@ Use different sibling indices only when the matrix contains concrete ordering ev
 
 Roadmap priority, chronology, theme grouping, and explanation order do not create ordering evidence by themselves.
 
-**What an index encodes.** Index assignment is the inverse of live `/understand` `<context_loading_rule>`: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
+**What an index encodes.** Index assignment follows live `/understand` `<index_semantics>`: a child placed above a sibling claims that sibling's contract as a prerequisite it consumes or falls within, an unrelated earlier contract supplies awareness and creates no dependency, and same-index siblings are independent peers. A different-index assignment is therefore a standing claim that the successor depends on the predecessor's contract — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor.
 
 **Existing siblings are not precedents.** When decomposing under a node that already holds children, an existing lower-index child is not a precedent that a new child sits above it, and the next sparse integer after the highest existing index is not the default slot. A new child takes the same index as an existing sibling — an independent peer — unless the matrix proves one constrains the other.
 

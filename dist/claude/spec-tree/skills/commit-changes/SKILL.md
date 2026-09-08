@@ -63,7 +63,7 @@ This skill creates either a local checkpoint before a verification gate or a pub
 3. **Scope to work item** — Stage only files from the work item:
    - Implementation files
    - Co-located tests (in `spx/.../tests/`)
-4. **Include work item reference** — Add a `Refs:` footer using the node path format from the verification context (e.g. `Refs: spx/55-example.enabler/21-bar.outcome`)
+4. **Include work item reference** — Add a `Refs:` footer using the node path format from the verification context (e.g. `Refs: spx/55-example.domain/21-bar.capability`)
 5. **Record verification state** — Read the latest focused deterministic result from workflow state as `passing`, `failing`, or `not-run`. A failing or not-run checkpoint is available for base sync, recovery, and collaboration while remaining ineligible for verification-readiness gates.
 
 Resolve the specific file list, work item context, and checkpoint purpose from the invocation inputs and repository state.

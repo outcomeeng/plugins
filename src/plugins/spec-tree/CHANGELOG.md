@@ -10,6 +10,19 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.93.0
+
+### Changed
+
+- **The `/understand` foundation states methodology 4.0.** The inline foundation declares the seven node kinds — `.product`, `.substrate`, `.capability`, `.domain`, `.interface`, `.surface`, `.variant` — with their openings, order, and containment; the `{slug}.spec.md` spec file with front matter carrying `id`, `kind` at the root, and `malleability`; the outcome record, the machine-written status claim, and `ISSUES.md` as the only node-local note; decision records placed in the node whose subtree they govern; six verification types over the Deterministic, Agentic, and Attested modes with the `[test]`, `[eval]`, `[probe]`, and `[audit:{rule-slug}]` tags; malleability, state, and the merge composition by the least malleable node; index semantics where prerequisites precede consumers and independent siblings may differ; the context walk over every sibling contract; and the Change with its Maturity, Lifecycle, and capitalized roles. Work ordering lives in a Change, never in a `PLAN.md`. The passing-scope list is operational configuration a toolchain that has not adopted the status claim still reads.
+- **Templates and examples follow the 4.0 kinds.** The product template is front matter and a title; one spec template per output kind plus the variant, an outcome-record template, and a probe protocol template replace the enabler and outcome templates; capability, domain, outcome-record, and probe examples replace the enabler and outcome examples.
+- **References carry the conditional detail.** `kind-decision.md` holds the ordered kind tests and the structural-quality scorecards, `grammar.md` the EBNF and link forms, `artifact-placement.md` the test-infrastructure boundary and the ruled-out placements, and `status-claims.md` the claim's shape and state derivation; `excluded-nodes.md` is removed.
+
+### Requires
+
+- A consumer declaring methodology 4.0 authors under these rules; the SPX CLI's admission of the 4.0 suffixes, front matter, probes, and status claims ships in its own release, and a tree keeps its current directory suffixes until then.
+- No `/probe` skill ships yet: `/verify` routes a probe assertion to `/probe` when the runtime skill catalog carries it and otherwise reports the capability gap, so a probe protocol is authored by hand from the `/understand` template until that skill ships.
+
 ## 0.92.9
 
 ### Changed

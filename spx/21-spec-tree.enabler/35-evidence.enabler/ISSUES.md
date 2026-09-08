@@ -23,3 +23,11 @@ The `<predicate_and_oracle_litmus>` section in `src/plugins/python/skills/python
 **Status against the standard.** Consistency gap, not a contradiction — the bullets render the correct content; only the intro's enumeration of governing sections is incomplete. The Python and TypeScript wording is identical (Python is the origin), so it is a shared-pattern gap the Rust rendering already closes.
 
 **Resolution shape.** Name `<assertion_type_litmus>` alongside `<common_litmus_questions>` and `<mutation_litmus>` in the intro sentence of `python-test-standards` (this repo) and `typescript-test-standards` (its own worktree), matching the `rust-test-standards` wording. Surfaced by `instructions:skill-auditor` on `rust-test-standards` (finding f-004) and by the PR #473 CI review; the Rust instance was fixed in that PR, the other two tracked here.
+
+## The probe route has no specialist
+
+**Evidence:** `/verify` routes an assertion whose claim only an executed observation settles to `/probe` when the runtime skill catalog carries it, and the routing eval proves both branches. No plugin in either marketplace catalog ships a `/probe` skill, so every probe route in a consumer reports `capability-required`, while the probe protocol template and example under `/understand` describe the artifact that skill authors.
+
+**Impact:** A spec-malleable node cannot reach Passing through its characteristic evidence until a specialist authors the protocol, records the attested run, and writes the pin; an Author can still write `probes/{probe-slug}/probe.md` by hand from the template.
+
+**Settlement condition:** A `/probe` skill ships in the spec-tree plugin, the routing eval's routed probe case runs against it as an installed specialist, and this node's spec names it beside `/test` and `/eval`.
