@@ -24,7 +24,7 @@ One piece of conformance is deferred:
 
 ## Consumers of the shared test-evidence standard hand-copy its category list
 
-`src/plugins/spec-tree/skills/test/SKILL.md` `<shared_standards>` and `src/plugins/spec-tree/skills/audit-tests/SKILL.md` Step 0 each carry the same verbatim enumeration of the categories `/test-evidence-standards` owns — predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, assertion-design-record, and mutation litmus. The language test-standards intros above carry the same shape for their own subset. Every new section in the shared standard therefore requires an edit in every consumer, and a consumer that misses one drifts silently.
+`src/plugins/spec-tree/skills/test/SKILL.md` `<shared_standards>` and `src/plugins/spec-tree/skills/audit-tests/SKILL.md` Step 0 each carry the same verbatim enumeration of the categories `/test-evidence-standards` owns — predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, assertion-design-record, and mutation litmus. The `<predicate_and_oracle_litmus>` intro in each of `go-test-standards`, `python-test-standards`, `rust-test-standards`, and `typescript-test-standards` carries the same shape for its own subset. Every new section in the shared standard therefore requires an edit in every consumer, and a consumer that misses one drifts silently.
 
 **Status against the standard.** The enabler's second assertion requires authoring and auditing to consume one independently loadable standard; both consumers do, so the evidence they judge from is the same. The duplication is in the descriptive sentence naming what that standard owns.
 
