@@ -31,3 +31,9 @@ For every merge cycle:
 6. Recompute the preserved aggregate against the new `origin/main`, then advance this index only after the prior node plan's revisit condition is satisfied.
 
 The index is complete when every preserved behavioral claim is merged, explicitly superseded by current product truth, or retained in its owning node's coordination note with a concrete revisit condition.
+
+## Readiness record in the apply flow
+
+Governing decision: `spx/15-merging.pdr.md` product property 3 and its readiness, repeated-class, and bounded-projection audit rules.
+
+Remaining lower-layer work, tracked as a later slice of Change 8 in the `outcomeeng/changes` store: `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` declares that each per-node and whole-changeset Verifier dispatch in the apply flow is preceded by the readiness record, that a repeated rejected defect class stops the queue for a widened repair and contract amendment, and that the flow carries only the bounded projection of each Verifier result; the `/apply` skill then cites `<verification_dispatch_readiness>` at its dispatch steps.
