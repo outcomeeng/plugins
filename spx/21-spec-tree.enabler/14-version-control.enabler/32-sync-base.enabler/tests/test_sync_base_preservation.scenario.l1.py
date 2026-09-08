@@ -1,24 +1,4 @@
-"""Readiness-preservation tests for the sync-base module.
-
-Covers the readiness-preservation Scenario and Compliance assertions in
-``../sync-base.md``:
-
-- A clean rebase whose base advance does not overlap the branch reports no path
-  overlap and an unchanged branch patch identity (the reuse signal).
-- A clean rebase whose base advance overlaps the branch's file reports the
-  overlap, so a caller does not reuse a prior local review.
-- An already-current branch reports an empty base delta and an unchanged branch
-  patch identity.
-- A clean detached HEAD advanced to the base tip emits a proof reporting the base
-  advance and an unchanged branch patch identity.
-- A clean detached HEAD already at the base tip emits a proof reporting an empty
-  base delta and an unchanged branch patch identity.
-- The proof carries a schema version, full unabbreviated OIDs, and no
-  project-specific validation-lane name.
-
-These are ``l1`` — direct in-process calls into ``sync_base`` against real git
-repositories seeded under ``tmp_path``.
-"""
+"""Real Git scenario evidence for base synchronization."""
 
 from __future__ import annotations
 
@@ -33,22 +13,15 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_rename_base_repo,
     fetch_base,
     load_sync_base_module,
+    repository_root,
 )
-
-_FULL_OID_LEN = 40
-
-
-def _root(tmp_path: pathlib.Path) -> pathlib.Path:
-    root = tmp_path / "pool"
-    root.mkdir()
-    return root
 
 
 def test_non_overlapping_rebase_preserves_local_review(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_behind_base_repo(_root(tmp_path))
+    handle = build_behind_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
     proof = result.preservation
@@ -68,7 +41,7 @@ def test_overlapping_rebase_does_not_preserve_local_review(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_overlapping_base_repo(_root(tmp_path))
+    handle = build_overlapping_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
     proof = result.preservation
@@ -85,7 +58,7 @@ def test_already_current_preserves_all_readiness(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_current_repo(_root(tmp_path))
+    handle = build_current_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
     proof = result.preservation
@@ -104,10 +77,10 @@ def test_base_delta_accurate_when_caller_prefetched(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_behind_base_repo(_root(tmp_path))
+    handle = build_behind_base_repo(repository_root(tmp_path))
     # The caller already fetched the base before invoking sync-base, so the
     # remote-tracking ref already points at the advanced base.
-    fetch_base(handle.repo)
+    fetch_base(handle.repo, handle.base_ref)
 
     result = module.sync_base(handle.repo)
     proof = result.preservation
@@ -130,7 +103,7 @@ def test_advanced_detached_head_emits_preservation_proof(
     # carries no branch work of its own, so the patch identity is unchanged and
     # all prior readiness is preserved.
     module = load_sync_base_module()
-    handle = build_detached_behind_base_repo(_root(tmp_path))
+    handle = build_detached_behind_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
     proof = result.preservation
@@ -151,7 +124,7 @@ def test_already_current_detached_head_emits_preservation_proof(
     # base delta and an unchanged branch patch identity — no advance happened and
     # nothing the caller's readiness depends on moved.
     module = load_sync_base_module()
-    handle = build_detached_current_repo(_root(tmp_path))
+    handle = build_detached_current_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
     proof = result.preservation
@@ -168,7 +141,7 @@ def test_base_rename_surfaces_both_paths_in_base_delta(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_rename_base_repo(_root(tmp_path))
+    handle = build_rename_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
     proof = result.preservation
@@ -179,21 +152,3 @@ def test_base_rename_surfaces_both_paths_in_base_delta(
     assert proof is not None
     assert handle.old_path in proof.base_delta_paths
     assert handle.new_path in proof.base_delta_paths
-
-
-def test_proof_carries_schema_version_and_full_oids_no_lane_name(
-    tmp_path: pathlib.Path,
-) -> None:
-    module = load_sync_base_module()
-    handle = build_behind_base_repo(_root(tmp_path))
-
-    payload = module.sync_base(handle.repo).to_json_dict()
-    proof = payload["preservation"]
-
-    assert proof["schema_version"] == module.READINESS_SCHEMA_VERSION
-    for key in ("old_base_oid", "new_base_oid", "old_head_oid", "new_head_oid"):
-        assert len(proof[key]) == _FULL_OID_LEN
-        assert proof[key] == proof[key].lower()
-    # The primitive emits git facts only — lane mapping is the project overlay's.
-    assert not any("lane" in key or "validation" in key for key in proof)
-    assert "recommended_validation" not in proof

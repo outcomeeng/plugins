@@ -1,32 +1,4 @@
-"""Scenario tests for the sync-base base-synchronization module.
-
-Covers the Scenario assertions in ``../sync-base.md``:
-
-- A branch behind its fetched base has its own commits replayed onto
-  ``origin/<base>`` with the base's changes present.
-- A branch already current with its fetched base performs no rebase.
-- A rebase conflict stops with an active rebase state and structured conflict
-  details, leaving stages inspectable for reconciliation.
-- A dirty working tree behind its base reports the distinct ``dirty_tree``
-  outcome without rebasing, leaving the uncommitted edit untouched.
-- A behind-base tree carrying only an untracked file rebases normally — an
-  untracked file does not block a rebase and is not a dirty tree.
-- A base ref that does not resolve reports a hard git failure.
-- A clean detached HEAD that is an ancestor of the fetched base and behind it is
-  advanced to the base tip and reported ``rebased``.
-- A clean detached HEAD already at the base tip is reported ``already_current``.
-- A detached HEAD behind the base with an uncommitted tracked edit reports
-  ``dirty_tree`` without advancing.
-- A diverged detached HEAD — carrying commits the base lacks — reports a hard git
-  failure rather than advancing and orphaning those commits.
-- A detached HEAD with no resolvable remote base reports a hard git failure.
-- A clean detached HEAD behind the base whose only change is an untracked file is
-  advanced rather than reported ``dirty_tree``.
-
-These are ``l1`` — direct in-process calls into ``sync_base`` against real git
-repositories (a bare origin and working clones) seeded under ``tmp_path``; git
-and temp dirs are expected on a working machine.
-"""
+"""Real Git scenario evidence for base synchronization."""
 
 from __future__ import annotations
 
@@ -34,6 +6,7 @@ import pathlib
 
 import pytest
 
+from outcomeeng_testing.generators.sync_base import TrackedEdit, tracked_edits
 from outcomeeng_testing.harnesses.sync_base import (
     build_alternate_base_repo,
     build_behind_base_repo,
@@ -49,21 +22,16 @@ from outcomeeng_testing.harnesses.sync_base import (
     detach_head,
     head_oid,
     load_sync_base_module,
+    repository_root,
     resolve_ref,
 )
-
-
-def _root(tmp_path: pathlib.Path) -> pathlib.Path:
-    root = tmp_path / "pool"
-    root.mkdir()
-    return root
 
 
 def test_behind_base_branch_is_rebased_onto_remote_tracking_base(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_behind_base_repo(_root(tmp_path))
+    handle = build_behind_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
@@ -80,7 +48,7 @@ def test_branch_already_current_performs_no_rebase(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_current_repo(_root(tmp_path))
+    handle = build_current_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
@@ -93,7 +61,7 @@ def test_rebase_conflict_stops_with_active_conflict_details(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_conflicting_repo(_root(tmp_path))
+    handle = build_conflicting_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
@@ -118,14 +86,14 @@ def test_rebase_conflict_stops_with_active_conflict_details(
     assert "action_token" not in payload
 
 
-@pytest.mark.parametrize("stage", [False, True], ids=["unstaged", "staged"])
+@pytest.mark.parametrize("edit", tracked_edits())
 def test_dirty_tree_behind_base_reports_dirty_tree_without_rebasing(
-    tmp_path: pathlib.Path, stage: bool
+    tmp_path: pathlib.Path, edit: TrackedEdit
 ) -> None:
     # Both an unstaged and a staged-but-uncommitted tracked change block the
     # rebase and must report dirty_tree — git refuses to replay over either.
     module = load_sync_base_module()
-    handle = build_dirty_behind_base_repo(_root(tmp_path), stage=stage)
+    handle = build_dirty_behind_base_repo(repository_root(tmp_path), edit=edit)
 
     result = module.sync_base(handle.repo)
 
@@ -149,7 +117,7 @@ def test_untracked_only_behind_base_rebases_not_dirty_tree(
     # proves the dirty check's --untracked-files=no scope is necessary — without
     # it the untracked file would read as dirty and force dirty_tree.
     module = load_sync_base_module()
-    handle = build_untracked_only_behind_base_repo(_root(tmp_path))
+    handle = build_untracked_only_behind_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
@@ -168,7 +136,7 @@ def test_diverged_detached_head_reports_hard_git_failure(
     # and a detached HEAD has no branch to rebase it onto, so the outcome is a
     # hard git failure — the feature commit is preserved, not discarded.
     module = load_sync_base_module()
-    handle = build_behind_base_repo(_root(tmp_path))
+    handle = build_behind_base_repo(repository_root(tmp_path))
     feature_oid_before = head_oid(handle.repo)
     detach_head(handle.repo)
 
@@ -190,7 +158,7 @@ def test_clean_behind_detached_head_is_advanced_to_base_tip(
     # through: synchronization advances the worktree to origin/<base> and reports
     # rebased, with the base advance now present.
     module = load_sync_base_module()
-    handle = build_detached_behind_base_repo(_root(tmp_path))
+    handle = build_detached_behind_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
@@ -210,7 +178,7 @@ def test_clean_detached_head_at_base_tip_is_already_current(
     # A detached worktree already at the base tip (no base advance) performs no
     # advance and reports already_current.
     module = load_sync_base_module()
-    handle = build_detached_current_repo(_root(tmp_path))
+    handle = build_detached_current_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
@@ -220,14 +188,15 @@ def test_clean_detached_head_at_base_tip_is_already_current(
     assert head_oid(handle.repo) == handle.detached_oid
 
 
+@pytest.mark.parametrize("edit", tracked_edits())
 def test_dirty_behind_detached_head_reports_dirty_tree_without_advancing(
-    tmp_path: pathlib.Path,
+    tmp_path: pathlib.Path, edit: TrackedEdit
 ) -> None:
     # A behind-base detached worktree carrying an uncommitted tracked edit reports
     # the distinct dirty_tree outcome with the edit and the parked commit left
     # untouched for the caller to commit.
     module = load_sync_base_module()
-    handle = build_detached_dirty_behind_base_repo(_root(tmp_path))
+    handle = build_detached_dirty_behind_base_repo(repository_root(tmp_path), edit=edit)
 
     result = module.sync_base(handle.repo)
 
@@ -254,7 +223,7 @@ def test_detached_untracked_only_behind_base_is_advanced(
     # advance's --untracked-files=no scope — without it the file would read as
     # dirty and force dirty_tree.
     module = load_sync_base_module()
-    handle = build_detached_untracked_only_behind_base_repo(_root(tmp_path))
+    handle = build_detached_untracked_only_behind_base_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
@@ -273,7 +242,7 @@ def test_detached_head_with_no_remote_reports_hard_git_failure(
     # the detached case stays a hard git failure — the only genuinely
     # non-advanceable detached outcome alongside divergence.
     module = load_sync_base_module()
-    handle = build_detached_no_remote_repo(_root(tmp_path))
+    handle = build_detached_no_remote_repo(repository_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
@@ -286,23 +255,23 @@ def test_explicit_base_ref_overrides_origin_head(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_current_repo(_root(tmp_path))
+    handle = build_current_repo(repository_root(tmp_path))
 
     # An explicit base name is used instead of the origin/HEAD default: the run
     # targets origin/<given> and fails to resolve a base that does not exist,
     # rather than syncing against the detected default.
-    result = module.sync_base(handle.repo, base_ref="not-a-branch", fetch=False)
+    result = module.sync_base(handle.repo, base_ref=handle.missing_branch, fetch=False)
 
     assert result.status is module.SyncStatus.GIT_FAILURE
-    assert result.base_ref == "not-a-branch"
-    assert result.remote_ref == module.remote_tracking_ref("not-a-branch")
+    assert result.base_ref == handle.missing_branch
+    assert result.remote_ref == module.remote_tracking_ref(handle.missing_branch)
 
 
 def test_explicit_valid_base_rebases_onto_that_base_not_origin_head(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
-    handle = build_alternate_base_repo(_root(tmp_path))
+    handle = build_alternate_base_repo(repository_root(tmp_path))
 
     # The feature is current with the origin/HEAD default, so syncing onto the
     # default does nothing...

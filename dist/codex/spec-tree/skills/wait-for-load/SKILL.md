@@ -83,7 +83,7 @@ Release verification covers these controlled boundaries without wall-clock delay
 
 <success_criteria>
 
-- only one waiter process is active at a time during a readiness attempt; if the original waiter exits and its handle or terminal result is irrecoverably lost, no more than one replacement waiter starts
+- only one waiter process is active at a time during a readiness attempt; an irrecoverably lost handle or terminal result blocks for the operator without starting a replacement waiter
 - no stdout or stderr output appears before the terminal JSON document
 - the resource-intensive command starts only after exit zero with `status: "ready"` and `ready: true`
 - a `not_ready` result starts at most one further waiter, and only while the invocation count and the summed `waited_seconds` remain inside the ten-invocation and one-hour bounds

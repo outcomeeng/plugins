@@ -6,12 +6,12 @@ allowed-tools: Read, Edit, Skill, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_
 ---
 
 <objective>
-The current checkout brought current with its fetched base, with authorized dirty work checkpointed on its owning branch and detached-head safety preserved.
+The current checkout brought current with its fetched base, with authorized dirty work that blocks base movement checkpointed on its owning branch and detached-head safety preserved.
 </objective>
 
 <workflow>
 
-Run the synchronizer against the repository working tree (default: the current directory):
+Record the absolute checkout root and selected base, then run the synchronization primitive against that working tree (default: the current directory). Retain the same checkout and base through checkpoint recovery and retry:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py" [repo] [--base <branch>]
@@ -27,7 +27,9 @@ It resolves the base ref and `origin/<base>` through the shared changeset-scope 
 | `dirty_tree`      | 4    | the branch is behind, but uncommitted changes to tracked files block the rebase; no rebase is attempted and the tree is left untouched               | classify ownership per `<dirty_tree_resolution>`; commit authorized changes to the right branch, leave operator-owned work untouched, and re-run           |
 | `git_failure`     | 1    | a diverged detached HEAD carrying its own commits, an unresolved base, or a failed fetch — a clean behind-base detached HEAD is advanced, not failed | report `detail`; do not rebase                                                                                                                             |
 
-A `dirty_tree` from changes Claude owns is resolved end to end by this workflow: `<dirty_tree_resolution>` checkpoints the work through `/commit-changes`, then reruns the deterministic synchronizer. Operator-owned work remains untouched unless the active instruction already authorizes committing it. The bundled synchronizer never commits or stashes; the surrounding skill composes checkpoint policy through `/commit-changes`.
+These statuses and exit codes belong to the primitive. Complete this workflow only after `already_current` or `rebased` establishes currency for the recorded checkout and base. A checkpoint alone establishes no currency, and a successful synchronization establishes neither working-tree cleanliness nor verification readiness. In particular, an already-current checkout may carry pending edits; those edits alone require no recovery checkpoint.
+
+Resolve authorized `dirty_tree` state end to end through `<dirty_tree_resolution>`. The bundled synchronizer never commits or stashes; `/commit-changes` owns checkpoint policy, hooks, and proof of success. Preserve the primitive result alongside any unresolved authority, checkpoint, Git, or conflict condition; a stopped recovery is no successful synchronization result.
 
 Pass `--no-fetch` only when the remote-tracking ref is already current and a fetch would be redundant.
 
@@ -35,13 +37,14 @@ Pass `--no-fetch` only when the remote-tracking ref is already current and a fet
 
 <dirty_tree_resolution>
 
-A `dirty_tree` outcome means uncommitted tracked changes block the rebase, not that a content conflict exists. Stash remains forbidden. Inspect the exact tracked paths and establish who owns the changes before mutating them:
+A `dirty_tree` outcome means uncommitted tracked changes block base movement. Inspect the exact tracked paths, establish ownership, and apply existing authorization to those paths before mutation. Existing authorization remains effective within its stated scope until the operator changes it. An analysis or interview label neither grants nor revokes that authority and never waives an unfinished prerequisite. Stash remains forbidden.
 
-1. **Session-owned changes.** Classify changes Claude made during the active objective, then clear the precondition within the same invocation:
+1. **Authorized session-owned changes.** Classify changes Claude made during the active objective, respect explicit operator limits, and clear the precondition within the same invocation:
    - **Related to the objective** → when the worktree is detached or sitting on the default branch, create a neutral `work/<objective-slug>` branch from the current commit; invoke `/commit-changes` immediately on that branch, regardless of whether verification is passing, failing, or not run.
    - **An unrelated coordination note** — a `PLAN.md` / `ISSUES.md` recording future work that is not part of the objective → commit it onto its own local branch, and record in the imperfection ledger that the branch is pending `/merge`. At session end `/merge` routes a coordination-note-only changeset to the default branch on origin through its direct-push transport, exactly as the merge guidance prescribes for such a changeset.
-2. **Operator-owned work-in-progress.** Leave every file and the index untouched. When the current instruction already authorizes committing those paths, invoke `/commit-changes` on their owning branch and continue. Otherwise use the structured-question surface with two choices: commit the files through `/commit-changes` on their owning branch (recommended), or pause base sync for inspection. Never describe this authority boundary as a rebase conflict.
-3. **Re-run the synchronizer.** After every successful checkpoint, run `sync_base.py` again in the same invocation. Continue until it returns `already_current`, `rebased`, `conflict`, or `git_failure`; never return an intermediate session-owned `dirty_tree` to a composing workflow.
+2. **Operator-owned or unknown work.** When existing authorization covers committing the exact paths, invoke `/commit-changes` on their owning branch and continue. Otherwise preserve those files and their index state, report the blocked commit and exact paths, and request authority with a recommended commit option and a pause-and-inspect option. Apply the same boundary when an explicit operator limit withholds authority over session-owned paths. Never classify absent authority as a rebase conflict.
+3. **Confirm the checkpoint.** Require `/commit-changes` to report a zero commit exit, changed full HEAD identity, committed and remaining paths, and verification state (`passing`, `failing`, or `not-run`). All three verification states permit preservation; later gates decide eligibility. A rejected hook, failed commit, unchanged HEAD, or incomplete result leaves recovery blocked. Preserve its exact diagnostics and repair through the owning workflow before retrying; never bypass hooks or infer success from a commit attempt.
+4. **Re-run the primitive.** After a successful checkpoint, run `sync_base.py` again for the recorded checkout and base within the same invocation. Resolve any remaining authorized tracked changes through this recovery protocol. Finish only with `already_current` or `rebased`, or report the specific unresolved condition. Never report an intermediate authorized `dirty_tree` as completed synchronization.
 
 The branch routing above is the merge lifecycle's routing applied early — the same destinations `/merge` selects at session end.
 
@@ -118,10 +121,10 @@ The proof scopes pre-push local work only. It never satisfies a merge gate: curr
 <invariants>
 
 - Rebase, never reset — a behind-base branch is brought current only by replaying its own commits onto `origin/<base>`.
-- No operator decision for a clean rebase — the only operator touch-point is a product-intent conflict that deterministic evidence cannot resolve, or a hard git failure.
-- A dirty tree is a precondition, never a conflict — uncommitted tracked changes yield `dirty_tree`, cleared by committing, never by stashing and never surfaced as a conflict.
-- A dirty tree from Claude's own session changes is Claude's to clear per `<dirty_tree_resolution>` — committed to the right branch and re-synced, never stashed and never escalated to the operator.
-- The bundled synchronizer fetches and advances the current checkout through exactly one topology-appropriate operation: rebase for an attached branch, or `git switch --detach` for an ancestor detached HEAD. It never commits or stashes the working tree; the skill may create an owning branch and invoke `/commit-changes` before rerunning it.
+- A routine rebase needs no new operator decision. Missing mutation authority, failed checkpoint creation, hard Git failure, and unresolved product intent retain their distinct blocked actions and evidence.
+- A `dirty_tree` result is a precondition, never a conflict — tracked changes blocking base movement are resolved through `<dirty_tree_resolution>`, never by stashing and never surfaced as a conflict.
+- Authorized session-owned tracked changes that block base movement are checkpointed on the owning branch and re-synced through `<dirty_tree_resolution>`; verification state alone never blocks the checkpoint.
+- The bundled synchronizer fetches the base and, when movement is required, advances the current checkout through exactly one topology-appropriate operation: rebase for an attached branch, or `git switch --detach` for an ancestor detached HEAD. It never commits or stashes the working tree; the skill may create an owning branch and invoke `/commit-changes` to resolve a `dirty_tree` result before rerunning it.
 - A conflicted rebase remains active at operator handoff — Claude offers `git rebase --abort` as an option and does not run it automatically.
 - One base derivation — the base ref and `origin/<base>` come from the changeset-scope primitives, never re-derived here.
 
@@ -129,19 +132,19 @@ The proof scopes pre-push local work only. It never satisfies a merge gate: curr
 
 <invalid_operator_escalations>
 
-A base-sync stop reaches the operator for a product-intent conflict the rebase cannot resolve autonomously or a hard git failure that leaves no autonomous path (a diverged detached HEAD carrying its own commits, an unresolved base, a failed fetch). Resolve operator-owned work-in-progress through the authority branch in `<dirty_tree_resolution>` and never surface it as a base-sync conflict. None of the following is a valid reason to ask the operator:
+Apply the authority and checkpoint checks in `<dirty_tree_resolution>` before dirty-tree recovery. Report any remaining stop with its exact blocked action, paths, and evidence: absent authority identifies the missing permission; checkpoint failure carries the commit or hook diagnostic; hard Git failure carries `detail`; unresolved product intent carries the active conflict facts. Finish every independent authorized action before asking. Once authority is established and no checkpoint failure remains, none of the following alone warrants an operator question:
 
-- A dirty tree from a file Claude created this session — commit it per `<dirty_tree_resolution>` and re-run.
-- A coordination note (`PLAN.md` / `ISSUES.md`) Claude wrote that now makes the tree dirty — commit it to its own branch, record the pending `/merge` in the imperfection ledger, and re-run.
+- A tracked edit Claude made this session that blocks base movement — commit it per `<dirty_tree_resolution>` and re-run.
+- An unrelated tracked coordination note (`PLAN.md` / `ISSUES.md`) Claude edited that blocks base movement — commit it to its own branch, record the pending `/merge` in the imperfection ledger, and re-run.
 - A conflict in a coordination note where one side is stale or superseded — reconcile the note to still-true facts and continue the rebase.
 - A conflict in a generated artifact whose source of truth can be resolved — resolve the source, return the exact project-declared regeneration command, and continue after re-entry with regenerated output.
 - A version bump conflict with an objectively monotonic/latest valid value — choose it, return the exact validation command, and run validation after the rebase completes.
 - "Stash is forbidden, so the tree cannot be cleared" — committing clears it; the forbidden tool is not a blocker.
-- A detached worktree with no branch to commit onto — create a local branch from the current commit and commit there.
+- A detached worktree with authorized tracked changes blocking base movement and no branch to commit onto — create a local branch from the current commit and commit there.
 - Uncertainty about which branch a change belongs on — objective work goes on the change branch, an unrelated coordination note on its own branch routed by `/merge`.
 - A clean behind-base detached HEAD — sync-base advances it to the base tip; it returns `rebased` / `already_current`, not a stop.
 
-A product-intent conflict is the only thing on the other side. Name it precisely; resolve everything else.
+Preserve each failure's classification through recovery. A decision about mutation authority cannot resolve a hook failure, and a successful commit cannot substitute for the primitive's currency result.
 
 </invalid_operator_escalations>
 
@@ -149,15 +152,15 @@ A product-intent conflict is the only thing on the other side. Name it precisely
 
 The bundled synchronizer is covered before release by this real-git test matrix:
 
-| Input                                                | Expected result                                                                     |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| attached branch at the fetched base tip              | exit 0; `status=already_current`; non-null `preservation`                           |
-| attached branch behind the fetched base              | exit 0; `status=rebased`; branch commit preserved; non-null `preservation`          |
-| attached branch with a tracked edit                  | exit 4; `status=dirty_tree`; HEAD and working tree unchanged; no `conflict`         |
-| attached branch with conflicting commits             | exit 3; `status=conflict`; active rebase state and structured `conflict`            |
-| clean detached HEAD behind the fetched base          | exit 0; `status=rebased`; HEAD advanced to `origin/<base>`; non-null `preservation` |
-| detached HEAD carrying a commit absent from the base | exit 1; `status=git_failure`; HEAD unchanged                                        |
-| missing `origin` during fetch                        | exit 1; `status=git_failure`; actionable `detail`                                   |
+| Input                                                       | Expected result                                                                     |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| attached branch at the fetched base tip                     | exit 0; `status=already_current`; non-null `preservation`                           |
+| attached branch behind the fetched base                     | exit 0; `status=rebased`; branch commit preserved; non-null `preservation`          |
+| attached branch behind the fetched base with a tracked edit | exit 4; `status=dirty_tree`; HEAD and working tree unchanged; no `conflict`         |
+| attached branch with conflicting commits                    | exit 3; `status=conflict`; active rebase state and structured `conflict`            |
+| clean detached HEAD behind the fetched base                 | exit 0; `status=rebased`; HEAD advanced to `origin/<base>`; non-null `preservation` |
+| detached HEAD carrying a commit absent from the base        | exit 1; `status=git_failure`; HEAD unchanged                                        |
+| missing `origin` during fetch                               | exit 1; `status=git_failure`; actionable `detail`                                   |
 
 Every fixture uses an invocation-unique temporary directory owned and removed by pytest's `tmp_path` fixture.
 
@@ -189,9 +192,17 @@ Why it failed: The public sync capability exposed an internal precondition inste
 
 How to avoid: Keep `dirty_tree` as the bundled script's deterministic result, resolve authorized work through `/commit-changes` inside this workflow, and return only after rerunning the synchronizer.
 
+**Failure 4: An interview label suspended an authorized prerequisite.**
+
+What happened: Claude said base synchronization was paused during an interview even though existing authorization covered the checkpoint needed to continue.
+
+Why it failed: A conversation label was treated as a change in authority, leaving the prerequisite unresolved.
+
+How to avoid: Apply the operator's actual path-scoped authority and explicit limits, complete authorized recovery, and report any remaining blocked action with its evidence.
+
 </failure_modes>
 
-<success_criteria>
+<primitive_contract>
 
 - Exit 0 carries `status=already_current` or `status=rebased`, `conflict=null`, and a non-null `preservation` object.
 - After an attached-branch `rebased` outcome, `git merge-base --is-ancestor origin/<base> HEAD` succeeds and the branch's commits remain reachable from HEAD.
@@ -201,6 +212,15 @@ How to avoid: Keep `dirty_tree` as the bundled script's deterministic result, re
 - Exit 1 carries `status=git_failure` and a non-empty `detail`; a diverged detached HEAD remains at its original full OID.
 - Every clean outcome's `preservation` object carries `schema_version`, full old/new base and head OIDs, base and branch path sets, overlap, and patch-identity booleans; it carries no project lane name.
 - Git state and command output show no synchronization through `git reset`, no commit or stash created by the bundled synchronizer, and no automatic `git rebase --abort` at conflict handoff.
-- Session-owned `dirty_tree` state produces an owning branch when needed, an atomic checkpoint with verification state recorded, and a same-invocation synchronizer retry; the final result is never that intermediate `dirty_tree`.
+- Each result preserves the primitive's status and diagnostics; checkpoint recovery never invents additional primitive exit codes.
+
+</primitive_contract>
+
+<success_criteria>
+
+- The final primitive result is `already_current` or `rebased` for the recorded checkout and selected base, with the full identities and preservation facts required by `<primitive_contract>`.
+- Every recovery checkpoint carries `/commit-changes` proof of success and recorded verification state, and precedes a successful retry for that checkout and base.
+- Existing path-scoped authority and explicit operator limits govern mutations independently of interview labels and verification state.
+- An unresolved authority, checkpoint, Git, or product-intent condition reports the exact blocked action and evidence, with no claim of completed synchronization, clean working-tree state, or verification readiness.
 
 </success_criteria>
