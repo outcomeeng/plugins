@@ -1,0 +1,32 @@
+name: Dispatch spx methodology fetch
+
+# spx ships the understand skill of every coding agent's built spec-tree plugin
+# under its own methodology/{MAJOR.MINOR}/ layout. A push to main that changes
+# a built plugin tells spx to refresh those trees from this revision; spx's
+# methodology-fetch workflow clones this repository at the pushed commit and
+# opens a pull request there. SPX_DISPATCH_TOKEN carries repository-dispatch
+# rights on outcomeeng/spx.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "dist/claude/spec-tree/**"
+      - "dist/codex/spec-tree/**"
+      - ".github/workflows/dispatch-spx-methodology-fetch.yml"
+
+permissions: {}
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch the methodology fetch in outcomeeng/spx
+        env:
+          GH_TOKEN: ${{ secrets.SPX_DISPATCH_TOKEN }}
+          REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          printf '{"event_type":"plugins-published","client_payload":{"revision":"%s"}}' "$REVISION" \
+            | gh api --method POST repos/outcomeeng/spx/dispatches --input -
