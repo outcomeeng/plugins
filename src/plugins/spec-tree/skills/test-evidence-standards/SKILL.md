@@ -2,7 +2,7 @@
 name: test-evidence-standards
 user-invocable: false
 description: >-
-  Test-evidence seam, case-provenance, oracle-independence, execution-level, and per-assertion-type artifact-permission standards enforced across test authoring and auditing. Loaded by other skills, not invoked directly.
+  Test-evidence seam, case-provenance, oracle-independence, execution-level, per-assertion-type artifact-permission, and pre-authoring assertion-design-record standards enforced across test authoring and auditing. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 
@@ -186,6 +186,25 @@ A seam that fails mutation 1 launders the assertion into infrastructure. Evidenc
 
 </mutation_litmus>
 
+<assertion_design_record>
+
+Before writing or repairing test evidence, record the complete assertion design. The production-subject field applies `<predicate_seam>`; the provenance and oracle fields apply `<case_provenance_and_oracles>`; the mutation and failure fields apply `<mutation_litmus>`:
+
+| Field               | Required value                                                                                                                                |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Assertion           | Exact governing assertion and its quantifier                                                                                                  |
+| Production subject  | Behavior under test and the observable seam the test crosses                                                                                  |
+| Case provenance     | Spec sentence, source-owned domain, generator, governing rule, or whole-payload artifact that selects each case                               |
+| Oracle owner        | Independent standard, schema, contract, construction law, reference implementation, or real-system response that selects each expected result |
+| Rejected mutation   | One concrete mutation or disablement of assertion-relevant production behavior                                                                |
+| Failure observation | The exact linked-test observation or predicate that the mutation makes fail                                                                   |
+
+NEVER author evidence while any field is missing, while the oracle reuses the production path, or while the named production mutation would leave the evidence passing. The record is a design prerequisite, not a post-hoc explanation for a test already written.
+
+Moving a case or expected value never changes its provenance. Relocating a value from a test into production, a harness, a generator, a fixture, or an oracle module preserves the source that originally selected it. Accept the relocated value only when the destination already owns that kind of truth and the record names an independent provenance source. Reject relocation used to turn an author-invented value or implementation-derived expectation into an apparently source-owned contract.
+
+</assertion_design_record>
+
 <language_deltas>
 
 Language test standards are expression only. A language test standard cites its product's governing evidence decision by full path, and realizes every source and artifact category this reference permits in its language's terms — assertion API, binding forms, generator libraries, test-infrastructure home, runner specifics, and the filename instantiation of the canonical model — and it neither narrows nor widens the category set or any seam, provenance, oracle, level, or permission rule stated here. A category a language cannot realize is surfaced as an amendment to the product's governing evidence decision, which records the exception centrally, never as a silent per-language subtraction.
@@ -194,9 +213,11 @@ Language test standards are expression only. A language test standard cites its 
 
 <success_criteria>
 
+- Every authored or repaired test has a complete `<assertion_design_record>` carrying all six of its fields — the assertion and its quantifier, the production subject and seam, an independent case source, the oracle owner, the rejected production mutation, and the resulting failure observation.
 - Every behavioral predicate and assertion API call is lexically visible in the linked executed test function or callback.
 - Test-file bindings introduce no independently chosen data, expectations, setup policy, runner configuration, or verdict rules, with unlisted concerns decided by the two probes in `<artifact_ownership>`.
 - Every case and expected result has assertion-type-appropriate provenance independent of the implementation path under test.
+- Relocating a case or expected value preserves its provenance and never converts an author-invented or implementation-derived value into an independent oracle.
 - Every executed test file declares exactly one assertion type and one execution level through the canonical filename model, and its evidence satisfies that cell's permissions in `<type_level_permissions>` composed with `<execution_levels>`.
 - Execution level derives from dependency class alone, floored by the heaviest dependency among behavior, oracle, and enforcement mechanism.
 - Controlled implementations and recording collaborators preserve the real boundary and expose observations only.

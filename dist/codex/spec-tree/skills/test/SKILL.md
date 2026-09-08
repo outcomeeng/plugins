@@ -20,7 +20,7 @@ Invoke the `spec-tree:test-evidence-standards` skill before proceeding. If that 
 
 <shared_standards>
 
-`/test-evidence-standards` authoritatively owns the predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, and mutation litmus rules that test authoring and test auditing both apply. It owns the assertion-type litmus (the reject-condition checks), not assertion-type selection — this skill's routing retains that. Where the inlined methodology below and that shared standard both speak to binding ownership or oracle independence, the shared standard governs.
+`/test-evidence-standards` authoritatively owns the predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, mutation litmus, and assertion-design-record rules that test authoring and test auditing both apply. It owns the assertion-type litmus (the reject-condition checks), not assertion-type selection — this skill's routing retains that. Where the inlined methodology below and that shared standard both speak to binding ownership or oracle independence, the shared standard governs.
 
 </shared_standards>
 

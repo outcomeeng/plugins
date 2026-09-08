@@ -5,7 +5,7 @@ description: >-
   Verification run-journal projection methodology loaded by audit and review
   skills when building spx journal events, computing rollups, or rendering verdict
   surfaces.
-allowed-tools: Bash, Read
+allowed-tools: Read, Bash(spx journal:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/render_review_run.py":*)
 ---
 
 <objective>
@@ -16,13 +16,14 @@ The shared run-journal projection: per-event builders, event-prefix rollup and r
 
 The `spx` CLI owns the run journal. The verification kind is the opaque `--type <type>` segment (`audit` or `review`); the backend is edge-resolved (`SPX_VERIFY_BACKEND` override, `SPX_VERIFY_BRANCH` scope), so name no backend — a local run-journal file on a developer machine, the GitHub pull-request backend under CI.
 
-| Verb                                                      | Role                                                          |
-| --------------------------------------------------------- | ------------------------------------------------------------- |
-| `spx journal open --type <t>`                             | open a run; reports `{runToken, runFile}`                     |
-| `spx journal append --type <t> --run <tok>`               | append one event read from stdin and stream it back           |
-| `spx journal read --type <t> --run <tok> --from <cursor>` | return events at or after the sequence cursor                 |
-| `spx journal seal --type <t> --run <tok>`                 | make the sequence final; further appends are rejected         |
-| `spx journal render --type <t> --run <tok>`               | return the event-prefix as a JSON array (identity projection) |
+| Verb                                                                  | Role                                                                                                                                |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `spx journal open --type <t>`                                         | open a run; reports `{runToken, runFile}`                                                                                           |
+| `spx journal append --type <t> --run <tok>`                           | append one event read from stdin and stream it back                                                                                 |
+| `spx journal read --type <t> --run <tok> --from <cursor>`             | return events at or after the sequence cursor                                                                                       |
+| `spx journal seal --type <t> --run <tok>`                             | make the sequence final; further appends are rejected                                                                               |
+| `spx journal render --type <t> --run <tok>`                           | return the event-prefix as a JSON array (identity projection)                                                                       |
+| `spx journal list --type <t> --sealed <sealed\|unsealed> --limit <n>` | list persisted run metadata for the type, each record carrying `runToken`, `branchSlug`, `sealed`, `terminalState`, and `startedAt` |
 
 An append event is a JSON object with non-empty `id`, `source`, `type`, and `time` strings and an integer `attempt`, plus an optional `data` object; the channel assigns `specversion`, `streamid`, `seq` (1-based, contiguous), and `runid`. `read` and `render` return the event-prefix JSON unchanged — the channel renders no verification-kind-specific surface, so the rollup and the human-readable verdict are this skill's consumer-side projection over that prefix.
 

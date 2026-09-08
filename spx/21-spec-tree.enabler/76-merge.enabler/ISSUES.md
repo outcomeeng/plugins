@@ -140,3 +140,13 @@ genuinely changes a case outcome.
 **Resolution shape**: add one worked trace — sample JSON fragment, matched rule number, emitted `guard_verdict` — gated by `instructions:skill-auditor`.
 
 **Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/spec-tree/skills/manage-pr/SKILL.md` on the post-compaction reload-timing change (finding `abstract_examples`).
+
+## The readiness record proves one run writer without inspecting the run store
+
+`<verification_dispatch_readiness>` establishes one dispatch owner from the owner's own outstanding dispatches and the passing `<occupancy_preflight>`, and it inspects no persisted run. A store-backed discovery step would additionally catch a writer no dispatch in the current pass accounts for: a run left unsealed by a session that died, or one opened by a Verifier the occupancy proof does not cover.
+
+Building that step needs a listing surface that spans both record kinds. Runs opened through the journal are listed by `spx journal list`; runs recorded through `spx verification run` carry their own locator, and no documented contract or test in this repository states that one listing surfaces the other, nor that either surface exposes writer liveness. Establishing it means confirming the behavior at the project's declared floor, recording the release that introduced it beside the other floor capabilities, and adding evidence that the listing returns a run the other command created.
+
+**Why it is separate.** The confirmation is a capability question about the `spx` CLI across two command families, answered by a floor-version probe and new evidence, not by wording inside a merge-policy paragraph. Four integration-review rounds and one Author-side trace rejected successive attempts to state the mechanism without that evidence.
+
+**Revisit condition.** When a run left unsealed by a dead session is observed to reach a dispatch the owner-state rule cleared, or when the `spx` CLI documents a cross-family listing at or below the pinned floor.
