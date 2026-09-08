@@ -133,14 +133,14 @@ Construction-derived expectations are valid only when the construction law is in
 
 Before writing or repairing test evidence, record the complete assertion design:
 
-| Field | Required value |
-| ----- | -------------- |
-| Assertion | Exact governing assertion and its quantifier |
-| Production subject | Behavior under test and the observable seam the test crosses |
-| Case provenance | Spec sentence, source-owned domain, generator, governing rule, or whole-payload artifact that selects each case |
-| Oracle owner | Independent standard, schema, contract, construction law, reference implementation, or real-system response that selects each expected result |
-| Rejected mutation | One concrete mutation or disablement of assertion-relevant production behavior |
-| Failure observation | The exact linked-test observation or predicate that the mutation makes fail |
+| Field               | Required value                                                                                                                                |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Assertion           | Exact governing assertion and its quantifier                                                                                                  |
+| Production subject  | Behavior under test and the observable seam the test crosses                                                                                  |
+| Case provenance     | Spec sentence, source-owned domain, generator, governing rule, or whole-payload artifact that selects each case                               |
+| Oracle owner        | Independent standard, schema, contract, construction law, reference implementation, or real-system response that selects each expected result |
+| Rejected mutation   | One concrete mutation or disablement of assertion-relevant production behavior                                                                |
+| Failure observation | The exact linked-test observation or predicate that the mutation makes fail                                                                   |
 
 Do not author evidence while any field is missing, while the oracle reuses the production path, or while the named production mutation would leave the evidence passing. The record is a design prerequisite, not a post-hoc explanation for a test already written.
 
