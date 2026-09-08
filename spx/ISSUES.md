@@ -146,3 +146,15 @@ rejected or upheld removal of the same literal; operator ruling recorded in the 
 **Resolution shape**: one sweep, or one changeset per top-level node: contextualize each owning node, move still-true pending work into a Change in the change store or, where it records an imperfection, into that node's `ISSUES.md`, drop what is realized or superseded, delete the file, and re-point every reference (the shipped `contextualize` and `handoff` skills still read `PLAN.md`, which is harmless once none exist). The shipped methodology's own `PLAN.md` references are the 4.0 migration's concern, tracked in `spx/PLAN.md` under "Refine the methodology 4.0 migration as a Change" until that file is itself converted.
 
 **Evidence.** Operator direction during the `spx/EXCLUDE` retirement interview (2026-09-07).
+
+## A merging decision governs the apply flow's Verifier dispatches
+
+`spx/15-merging.pdr.md` is titled "Agent Authority over Merging" and opens on the `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE` lifecycle, while its dispatch-readiness, repeated-class, finish-before-wait, and bounded-projection rules bind the apply flow's per-node and whole-changeset gates as well. The framing that carries them there — every workflow on a changeset's path to the default branch — is coherent, because a verdict the apply flow accepts on an unready subject is the verdict the merge lifecycle inherits. It still leaves four rules whose subject is agentic dispatch inside a decision whose subject is delivery.
+
+The rules' natural owner is `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`, which already decides who dispatches an agentic verification, the Author/Verifier isolation, the defect-class sweep, the commit-before-read boundary, and the deterministic-before-agentic ordering. Moving them there would leave `spx/15-merging.pdr.md` with the merge-lifecycle bindings alone.
+
+**Resolution shape**: relocate the readiness record, repeated-class invalidation, finish-before-wait, and bounded-projection rules into the Verification PDR, reduce `spx/15-merging.pdr.md` to the merge-lifecycle specialization that cites them, and re-point the realizing assertions in `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, `spx/21-spec-tree.enabler/65-apply.enabler/apply.md`, and the two PR-lifecycle node specs. `merging-standards` keeps the `<verification_dispatch_readiness>` and `<verification_result_projection>` section text, since the merge transports are still its readers.
+
+**Why separate**: the move re-opens a decision the PDR auditor approved in its current placement and re-points four node specs whose assertions the same changeset would rewrite, against no behavior change in any shipped skill. It is a decision-placement pass, not part of widening the rules' reach.
+
+**Revisit condition**: when a third workflow outside the delivery path needs the readiness record, or when `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` is next restructured.
