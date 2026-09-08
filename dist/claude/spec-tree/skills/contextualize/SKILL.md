@@ -65,13 +65,13 @@ While any synchronization condition remains unresolved, emit no context marker a
 
 If the invocation supplies no target path, ABORT: "A canonical target is required. Invoke `/contextualize spx/` for the product root or `/contextualize spx/{path-to-node}` for a node."
 
-Before the first filesystem lookup, accept `$target` only when it is the exact product-root target `spx/` or a repository-relative node target beginning with `spx/` whose non-empty segments after `spx/` each match `{index}-{slug}.{kind}` — one of the seven kinds, or `enabler` and `outcome` while the repository declares a transition from 3.x. Reject absolute paths, empty targets, repeated separators, `.` or `..` segments, trailing separators on node targets, and malformed node segments. Otherwise ABORT: "Invalid target path: $target. Supply `spx/` or one canonical full `spx/...` node path."
+Before the first filesystem lookup, accept `$target` only when it is the exact product-root target `spx/` or a repository-relative node target beginning with `spx/` whose non-empty segments after `spx/` each match `{index}-{slug}.{kind}` — one of the seven kinds, or the prior `enabler` and `outcome` forms a tree authored under a 3.x version still carries. Reject absolute paths, empty targets, repeated separators, `.` or `..` segments, trailing separators on node targets, and malformed node segments. Otherwise ABORT: "Invalid target path: $target. Supply `spx/` or one canonical full `spx/...` node path."
 
 Set `product_root_target=true` only for the exact target `spx/`. Every other accepted target is a node target.
 
 ```bash
 # Find the product file
-Glob: "spx/*.spec.md"      # the root spec carries kind: product; spx/*.product.md is the transition form while the repository declares a transition from 3.x
+Glob: "spx/*.spec.md"      # the root spec carries kind: product; spx/*.product.md is the prior form a 3.x-authored tree still carries
 
 # Verify a node target exists; product-root mode already addresses spx/
 Glob: "$target/*.md"  (node targets only)
@@ -93,7 +93,7 @@ For a node target, extract the path segments from product root to target. Each s
 
 ```bash
 # Read product spec
-Read: spx/{product-name}.spec.md   # or the transition form spx/{product-name}.product.md
+Read: spx/{product-name}.spec.md   # or the prior form spx/{product-name}.product.md
 
 # Read runtime product guide if present
 Read: CLAUDE.md  (if exists)
@@ -119,7 +119,7 @@ Read: spx/local/merging.md  (if exists)
 
 **Guide files**: Read `CLAUDE.md` when present and record it in the manifest. A freshly bootstrapped tree may lack the guide; absence is normal.
 
-**Coordination notes**: Read product-level `ISSUES.md` when present, and a `PLAN.md` only while the repository declares a transition from a 3.x version — the methodology admits `ISSUES.md` as the only note and routes work ordering to a Change. Reconcile them against product truth before use, and never scan their prose for cited governance decisions.
+**Coordination notes**: Read product-level `ISSUES.md` when present, and any `PLAN.md` a tree authored under a 3.x version still carries — the methodology admits `ISSUES.md` as the only note and routes work ordering to a Change. Reconcile them against product truth before use, and never scan their prose for cited governance decisions.
 
 **Local overlays**: Record the list of files returned by `spx/local/*.md` for the manifest. Read `spx/local/merging.md` when present because default-branch lifecycle routing governs whether local implementation, validation, and commits are terminal. Do not read the other local overlays here — they are consumed by the relevant language skill, not by the context loader.
 
@@ -161,7 +161,7 @@ Glob: "{path-to-dir}/PLAN.md"
 Glob: "{path-to-dir}/ISSUES.md"
 ```
 
-**If ISSUES.md, or a transition-form PLAN.md, exists, read it.** These are stale-prone coordination notes left by previous agents via `/handoff`. Deferred plans or known issues in an ancestor node may bear on the target, but they are fallible inputs, not authority — reconcile each against the specs, decisions, assertions, tests, implementation, and current user intent before letting it steer work.
+**If ISSUES.md, or a prior-form PLAN.md, exists, read it.** These are stale-prone coordination notes left by previous agents via `/handoff`. Deferred plans or known issues in an ancestor node may bear on the target, but they are fallible inputs, not authority — reconcile each against the specs, decisions, assertions, tests, implementation, and current user intent before letting it steer work.
 
 **2d. Read all lower-index siblings' specs**
 
@@ -169,7 +169,7 @@ The target node has an index (e.g., `43` in `43-feature.capability`). Existing l
 
 ```bash
 # List all sibling directories (same parent, different from target)
-Glob: "{parent-path}/*-*.*/"       # any kind suffix, including the transition forms
+Glob: "{parent-path}/*-*.*/"       # any kind suffix, including the prior forms
 
 # For each sibling with a lower index than the target:
 Read: {parent-path}/{sibling-dir}/{sibling-slug}.md
@@ -208,7 +208,7 @@ Glob: "$target/PLAN.md"
 Glob: "$target/ISSUES.md"
 ```
 
-**If ISSUES.md, or a transition-form PLAN.md, exists, read it.** These are stale-prone coordination notes left by previous sessions via `/handoff`. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
+**If ISSUES.md, or a prior-form PLAN.md, exists, read it.** These are stale-prone coordination notes left by previous sessions via `/handoff`. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
 
 **Do not read test file bodies.** Record the test links visible in the target spec and whether co-located test files exist. Context loading does not infer implementation state from test imports. When the next workflow needs test details, route to `/test`, `/audit-tests`, or `/apply`.
 

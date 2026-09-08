@@ -213,7 +213,7 @@ Assertions declare observable product output at the layer that owns the behavior
 | probe    | `[probe](path)`       | Attested      | A claim about the running node that only an executed observation settles. |
 | audit    | `[audit:{rule-slug}]` | Agentic       | A semantic constraint with no structural verdict to score.                |
 
-Validate and Review back no assertion. A spec-malleable assertion may omit its tag; every harder assertion carries exactly one. A toolchain that has not adopted the slug form parses the pathless `[audit]` tag, and a repository in a declared transition keeps that form until its toolchain admits the slug. A dangling `[test]`, `[eval]`, or `[probe]` link derives Declared and is not a structural defect. The audit rule slug is unique within its spec and keys the result in the status claim.
+Validate and Review back no assertion. A spec-malleable assertion may omit its tag; every harder assertion carries exactly one. A toolchain that has not adopted the slug form parses the pathless `[audit]` tag, and a tree keeps that form until its toolchain admits the slug. A dangling `[test]`, `[eval]`, or `[probe]` link derives Declared and is not a structural defect. The audit rule slug is unique within its spec and keys the result in the status claim.
 
 </verification_types>
 

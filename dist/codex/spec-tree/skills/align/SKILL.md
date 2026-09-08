@@ -17,7 +17,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 1. **FACTS AND REQUIRED REWRITES ONLY** — Report what violates which rule. Include the atemporal rewrite required for each temporal-language finding; suggest no other fix. Never rate severity. Never say "should", "consider", or "recommend."
 2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's inline foundation and templates. This skill owns zero rules. Read them at check time.
-3. **STRICT CLASSIFICATION** — Only the seven kinds — `.product`, `.substrate`, `.capability`, `.domain`, `.interface`, `.surface`, `.variant` — and, while the repository declares a transition from a 3.x methodology version, the prior `.enabler` and `.outcome` forms are recognized node kinds. Only `.adr.md`, `.pdr.md`, `{slug}.spec.md`, `{slug}.outcome.md`, and the transition forms `{slug}.md` and `*.product.md` are recognized files. Anything else is "unrecognized."
+3. **STRICT CLASSIFICATION** — Only the seven kinds — `.product`, `.substrate`, `.capability`, `.domain`, `.interface`, `.surface`, `.variant` — and the prior `.enabler` and `.outcome` forms a tree authored under a 3.x methodology version still carries are recognized node kinds. Only `.adr.md`, `.pdr.md`, `{slug}.spec.md`, `{slug}.outcome.md`, and the prior forms `{slug}.md` and `*.product.md` are recognized files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, invoke `spec-tree:understand` before continuing.
 6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — When checking downstream alignment for a branch changeset, consume the supplied changed-file set derived through `/scope-changeset`. Do not hand-roll base-ref or git-diff derivation in this skill.
@@ -45,24 +45,24 @@ Invoke `spec-tree:understand` and use its live inline foundation. Read the condi
 
 Classify each `.md` file in scope by its filename extension or parent directory suffix:
 
-| Pattern                                                   | Classification | Template                                                       |
-| --------------------------------------------------------- | -------------- | -------------------------------------------------------------- |
-| `*.adr.md`                                                | ADR            | `decision-name.adr.md`                                         |
-| `*.pdr.md`                                                | PDR            | `decision-name.pdr.md`                                         |
-| `*.spec.md` at the tree root or inside `*.product/`       | Product        | `product-name.spec.md`                                         |
-| Spec file inside `*.substrate/` directory                 | Substrate      | `substrate-name.spec.md`                                       |
-| Spec file inside `*.capability/` directory                | Capability     | `capability-name.spec.md`                                      |
-| Spec file inside `*.domain/` directory                    | Domain         | `domain-name.spec.md`                                          |
-| Spec file inside `*.interface/` directory                 | Interface      | `interface-name.spec.md`                                       |
-| Spec file inside `*.surface/` directory                   | Surface        | `surface-name.spec.md`                                         |
-| Spec file inside `*.variant/` directory                   | Variant        | `variant-name.spec.md`                                         |
-| `*.outcome.md` inside a node directory                    | Outcome record | `node-name.outcome.md`                                         |
-| `*.product.md` (transition form)                          | Product        | `product-name.spec.md`                                         |
-| Spec file inside `*.enabler/` directory (transition form) | Enabler        | `capability-name.spec.md` — the same opening                   |
-| Spec file inside `*.outcome/` directory (transition form) | Outcome        | none — report the hypothesis as belonging in an outcome record |
-| Any other `.md` file                                      | Unrecognized   | None                                                           |
+| Pattern                                              | Classification | Template                                                       |
+| ---------------------------------------------------- | -------------- | -------------------------------------------------------------- |
+| `*.adr.md`                                           | ADR            | `decision-name.adr.md`                                         |
+| `*.pdr.md`                                           | PDR            | `decision-name.pdr.md`                                         |
+| `*.spec.md` at the tree root or inside `*.product/`  | Product        | `product-name.spec.md`                                         |
+| Spec file inside `*.substrate/` directory            | Substrate      | `substrate-name.spec.md`                                       |
+| Spec file inside `*.capability/` directory           | Capability     | `capability-name.spec.md`                                      |
+| Spec file inside `*.domain/` directory               | Domain         | `domain-name.spec.md`                                          |
+| Spec file inside `*.interface/` directory            | Interface      | `interface-name.spec.md`                                       |
+| Spec file inside `*.surface/` directory              | Surface        | `surface-name.spec.md`                                         |
+| Spec file inside `*.variant/` directory              | Variant        | `variant-name.spec.md`                                         |
+| `*.outcome.md` inside a node directory               | Outcome record | `node-name.outcome.md`                                         |
+| `*.product.md` (prior form)                          | Product        | `product-name.spec.md`                                         |
+| Spec file inside `*.enabler/` directory (prior form) | Enabler        | `capability-name.spec.md` — the same opening                   |
+| Spec file inside `*.outcome/` directory (prior form) | Outcome        | none — report the hypothesis as belonging in an outcome record |
+| Any other `.md` file                                 | Unrecognized   | None                                                           |
 
-**Spec file** means the file whose name matches the directory slug: `auth.spec.md` inside `10-auth.capability/`, or `auth.md` inside `10-auth.enabler/` in the transition form. Other `.md` files in the directory (like `CLAUDE.md` and `AGENTS.md`) are not spec files — skip them.
+**Spec file** means the file whose name matches the directory slug: `auth.spec.md` inside `10-auth.capability/`, or `auth.md` inside `10-auth.enabler/` in the prior form. Other `.md` files in the directory (like `CLAUDE.md` and `AGENTS.md`) are not spec files — skip them.
 
 **Unrecognized** includes directories with suffixes like `.feature` or `.story`. These are not Spec Tree node kinds. Report the classification failure as a finding.
 
@@ -70,7 +70,7 @@ Classify each `.md` file in scope by its filename extension or parent directory 
 
 - `CLAUDE.md` and `AGENTS.md` files (agent guides, not specs)
 - Files inside `tests/` directories (test code, not specs)
-- `ISSUES.md` files, and any `PLAN.md` a repository in a declared transition still carries (stale-prone coordination notes, not spec artifacts)
+- `ISSUES.md` files, and any `PLAN.md` a tree authored under a 3.x version still carries (stale-prone coordination notes, not spec artifacts)
 - Files inside `spx/local/` directory (skill overlays, not spec artifacts)
 - Files inside an `evals/` directory sitting directly under a node directory (the co-located `[eval]` evidence lane the canonical node shape in live `/understand` `<files_in_a_node>` declares, not spec artifacts); an `evals/` directory anywhere else stays in scope
 - Files inside a `knowledge/` directory sitting directly under a node directory or the product root (knowledge bundles the canonical node shape in live `/understand` `<files_in_a_node>` declares, not spec artifacts); a `knowledge/` directory anywhere else stays in scope
@@ -98,7 +98,7 @@ Compare each classified file's `##` headings against its template's `##` heading
 
 <ancestor_decision_conformance>
 
-For each classified output-kind spec, including the transition forms, invoke `/contextualize` on the spec's canonical full node path and compare the spec against every applicable ADR and PDR in the resulting context. A governing decision wins over the spec.
+For each classified output-kind spec, including the prior forms, invoke `/contextualize` on the spec's canonical full node path and compare the spec against every applicable ADR and PDR in the resulting context. A governing decision wins over the spec.
 
 **Report as findings:**
 
