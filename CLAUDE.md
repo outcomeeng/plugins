@@ -297,7 +297,7 @@ Spec-tree methodology rules (node types, states, assertion types, ordering) live
   - `[test]` evidence: `just test <pytest-target>...`. Pass co-located spec test files, node test directories, or pytest node IDs, for example `just test spx/21-spec-tree.enabler/76-merge.enabler/tests/test_merge_gate_policy.mapping.l1.py`. When a source file under `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/`, or `src/plugins/` changes, pass the spec test file(s) or node test directory that exercise it; do not pass implementation paths as if they were tests. Never run bare `pytest`.
   - Verbose failing test rerun: `just test-v <same pytest-target>...`.
   - `[eval]` evidence: `just eval <eval-toml>`, `just eval-case <eval-toml> <case-id>`, or `just eval-node <node-path>`. These wrap `uv run outcomeeng-evals run`, read `plugin_dir` from `eval.toml` unless `PLUGIN_DIR` is set, and default to `MAX_BUDGET_USD=0.75`, `WORKERS=1`, and `TIMEOUT_SECONDS=180`. Do not run bare `outcomeeng-evals`; do not raise `MAX_BUDGET_USD`, `WORKERS`, or `TIMEOUT_SECONDS` without structured operator approval.
-  - Spec-only or Markdown-instruction-only changes: `spx validation markdown` and `spx spec status --format json`. These commands take no changed-file list; the scope is the markdown/spec lane.
+  - Spec-only or Markdown-instruction-only changes: `spx validation markdown`, `just eval-links`, and `spx spec status --format json`. These commands take no changed-file list; the scope is the markdown/spec lane, and `just eval-links` fails on any `[test]` or `[eval]` link whose evidence file is absent.
   - Markdown formatting: `just fmt <changed-markdown-file>...`. Pass every changed Markdown file that dprint formats, for example `just fmt AGENTS.md spx/local/open-pr.md`.
   - Python formatting: `just fmt-python <changed-python-file>...`. Pass every changed Python file that ruff formats.
   - Skill or plugin Markdown under `src/plugins/` or generated `dist/`: `just check-skills` and `just docs-check`. These commands take no changed-file list; they check the committed skill/catalog surfaces.
@@ -483,7 +483,7 @@ Claude Code state is project-scoped. A user-scoped `outcomeeng` registration blo
 ## Spec Tree Phase Commands
 
 - **author** — Regenerate the generated trees after `src/plugins/` edits: `just build-skills`. Regenerate the root instruction blocks after instruction-template edits: `just build-instructions`.
-- **verify** — Node and changeset tests: `just test <pytest-target>...`. Spec-only or Markdown-only changes: `spx validation markdown` and `spx spec status --format json`. Skill/plugin Markdown: `just check-skills` and `just docs-check`.
+- **verify** — Node and changeset tests: `just test <pytest-target>...`. Spec-only or Markdown-only changes: `spx validation markdown`, `just eval-links`, and `spx spec status --format json`. Skill/plugin Markdown: `just check-skills` and `just docs-check`.
 - **gate** — Full local deterministic gate: `just check-full`.
 - **merge** — Ship to the default branch through `/merge`; the GitHub-PR transport merges with `gh pr merge <pr-number> --merge --delete-branch=false`.
 
