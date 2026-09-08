@@ -210,7 +210,7 @@ Allowed controlled implementations and recording collaborators are explicit obje
 
 <predicate_and_oracle_litmus>
 
-Apply every question in `/test-evidence-standards` `<common_litmus_questions>` and every mutation in its `<mutation_litmus>`. That shared set is the complete list; the items below render the ones whose form is Python-specific and never replace or bound it.
+Apply every question in `/test-evidence-standards` `<common_litmus_questions>`, every per-assertion-type source-and-oracle rule in its `<assertion_type_litmus>`, every mutation in its `<mutation_litmus>`, and every field of its `<assertion_design_record>`. That shared set is the complete list; the items below render the ones whose form is Python-specific and never replace or bound it.
 
 - Invert the `assert` expression. Only the linked test changes; no harness or collaborator code changes.
 - Read the test function alone. Every pass/fail predicate is visible there.
