@@ -55,7 +55,7 @@ MYPY_ARGV: Final = ("uv", "run", "mypy", "--strict", *PYTHON_SOURCE_PATHS)
 PYRIGHT_ARGV: Final = ("uv", "run", "pyright", *PYTHON_SOURCE_PATHS)
 SPX_MARKDOWN_ARGV: Final = ("uv", "run", "spx", "validation", "markdown")
 # Every `[test]` and `[eval]` link in spec markdown resolves to its evidence
-# file; a dangling link is the gap the retired `spx/EXCLUDE` list once hid.
+# file; a dangling link is a coverage gap the gate refuses to carry.
 EVAL_LINKS_ARGV: Final = (
     "uv",
     "run",
