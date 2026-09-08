@@ -6,6 +6,7 @@ from outcomeeng.validation.link_integrity import (
     REASON_EVAL_NOT_TOML,
     REASON_EVAL_OUTSIDE_EVALS_DIR,
     REASON_TARGET_MISSING,
+    REASON_TARGET_NOT_FILE,
     REASON_TEST_NOT_COLLECTABLE,
     REASON_TEST_OUTSIDE_TESTS_DIR,
     BrokenEvalLink,
@@ -20,6 +21,8 @@ from outcomeeng.validation.link_integrity import (
 from outcomeeng_testing.harnesses.link_integrity import (
     deep_eval_layout,
     deep_test_layout,
+    directory_eval_target_layout,
+    directory_test_target_layout,
     fenced_block_eval_layout,
     fenced_block_test_layout,
     inline_code_span_eval_layout,
@@ -115,6 +118,17 @@ def test_validate_eval_links_reports_a_missing_eval_toml() -> None:
         assert isinstance(broken[0], BrokenEvalLink)
         assert broken[0].target == layout.target.resolve()
         assert broken[0].reason == REASON_TARGET_MISSING
+
+
+def test_validate_eval_links_rejects_a_target_that_is_a_directory() -> None:
+    with link_integrity_root() as root:
+        layout = directory_eval_target_layout(root)
+
+        broken = validate_eval_links(root)
+
+        assert len(broken) == 1
+        assert broken[0].target == layout.target.resolve()
+        assert broken[0].reason == REASON_TARGET_NOT_FILE
 
 
 def test_validate_eval_links_rejects_a_link_to_a_non_eval_toml_file() -> None:
@@ -215,6 +229,17 @@ def test_validate_test_links_reports_a_missing_target() -> None:
         assert isinstance(broken[0], BrokenTestLink)
         assert broken[0].target == layout.target.resolve()
         assert broken[0].reason == REASON_TARGET_MISSING
+
+
+def test_validate_test_links_rejects_a_target_that_is_a_directory() -> None:
+    with link_integrity_root() as root:
+        layout = directory_test_target_layout(root)
+
+        broken = validate_test_links(root)
+
+        assert len(broken) == 1
+        assert broken[0].target == layout.target.resolve()
+        assert broken[0].reason == REASON_TARGET_NOT_FILE
 
 
 def test_validate_test_links_rejects_a_non_test_filename() -> None:

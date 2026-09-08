@@ -131,6 +131,14 @@ def missing_eval_toml_layout(root: Path) -> LinkLayout:
     )
 
 
+def directory_eval_target_layout(root: Path) -> LinkLayout:
+    node_dir = _node(root)
+    toml_dir = node_dir / "evals" / "rule" / EVAL_TOML_FILENAME
+    toml_dir.mkdir(parents=True)
+    spec = _write(node_dir / "spec.md", "([eval](evals/rule/eval.toml))\n")
+    return LinkLayout(source=spec, target=toml_dir)
+
+
 def non_toml_eval_target_layout(root: Path) -> LinkLayout:
     node_dir = _node(root)
     cases = _write(node_dir / "evals" / "rule" / "cases.jsonl", "")
@@ -210,6 +218,13 @@ def tilde_fenced_test_layout(root: Path) -> Path:
 def missing_test_target_layout(root: Path) -> LinkLayout:
     spec = _write(root / "spec.md", "([test](tests/missing.py))\n")
     return LinkLayout(source=spec, target=root / "tests" / "missing.py")
+
+
+def directory_test_target_layout(root: Path) -> LinkLayout:
+    test_dir = root / "tests" / "test_thing.conformance.l1.py"
+    test_dir.mkdir(parents=True)
+    spec = _write(root / "spec.md", "([test](tests/test_thing.conformance.l1.py))\n")
+    return LinkLayout(source=spec, target=test_dir)
 
 
 def non_test_filename_layout(root: Path) -> LinkLayout:
