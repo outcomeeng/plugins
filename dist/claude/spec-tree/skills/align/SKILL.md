@@ -136,18 +136,18 @@ Use the live `/understand` `<atemporal_voice>` section. It provides two checking
 
 <placement_conformance>
 
-Read the live `/understand` `<common_misplacements>` table. For each row, check whether the file contains content that belongs elsewhere.
+Read the `<common_misplacements>` section of `/understand` `references/artifact-placement.md`. For each row, check whether the file contains content that belongs elsewhere.
 
 **Key signals:**
 
-| Signal in file                              | Wrong location | Correct location |
-| ------------------------------------------- | -------------- | ---------------- |
-| Architecture choice or technical approach   | Spec           | ADR              |
-| Product decision or user guarantee          | Spec           | PDR              |
-| Outcome hypothesis (WE BELIEVE THAT...)     | ADR or PDR     | Outcome spec     |
-| Implementation detail (code patterns, APIs) | Spec           | Code             |
-| "How to build it"                           | Spec           | ADR or code      |
-| Cross-cutting invariant                     | Child spec     | Ancestor spec    |
+| Signal in file                              | Wrong location    | Correct location                 |
+| ------------------------------------------- | ----------------- | -------------------------------- |
+| Architecture choice or technical approach   | Spec              | ADR                              |
+| Product decision or user guarantee          | Spec              | PDR                              |
+| A condition only real use settles           | Spec, ADR, or PDR | The output node's outcome record |
+| Implementation detail (code patterns, APIs) | Spec              | Code                             |
+| "How to build it"                           | Spec              | ADR or code                      |
+| Cross-cutting invariant                     | Child spec        | Ancestor spec                    |
 
 **Report as findings:**
 
@@ -236,7 +236,7 @@ Downstream alignment:
 - [ ] Every finding names the full file path, artifact classification or failure, violated authoritative rule, and applicable conformance dimension
 - [ ] Every classified node spec is checked against all applicable governing ADRs/PDRs, and every contradiction finding names the full decision path
 - [ ] Every temporal-language finding includes the source line, temporal text, governing atemporal-voice rule, and a concrete atemporal rewrite
-- [ ] Placement findings preserve valid evidence-mechanism specialization and report only content misplaced under live `/understand` `<common_misplacements>`
+- [ ] Placement findings preserve valid evidence-mechanism specialization and report only content misplaced under `/understand` `references/artifact-placement.md` `<common_misplacements>`
 - [ ] A changeset report identifies every changed higher-level declaration lacking both first-affected lower-spec alignment and Change grounding
 - [ ] Finding and file counts in the summary equal the report body
 - [ ] The report contains no severity, prioritization, or repair guidance beyond required atemporal rewrites
