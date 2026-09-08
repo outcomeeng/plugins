@@ -2,7 +2,7 @@
 name: test-evidence-standards
 user-invocable: false
 description: >-
-  Test-evidence seam, case-provenance, oracle-independence, execution-level, and per-assertion-type artifact-permission standards enforced across test authoring and auditing. Loaded by other skills, not invoked directly.
+  Test-evidence seam, case-provenance, oracle-independence, execution-level, per-assertion-type artifact-permission, and pre-authoring assertion-design-record standards enforced across test authoring and auditing. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 
@@ -131,7 +131,7 @@ Construction-derived expectations are valid only when the construction law is in
 
 <assertion_design_record>
 
-Before writing or repairing test evidence, record the complete assertion design. The provenance and oracle fields apply `<case_provenance_and_oracles>`; the mutation and failure fields apply `<mutation_litmus>`:
+Before writing or repairing test evidence, record the complete assertion design. The production-subject field applies `<predicate_seam>`; the provenance and oracle fields apply `<case_provenance_and_oracles>`; the mutation and failure fields apply `<mutation_litmus>`:
 
 | Field               | Required value                                                                                                                                |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |

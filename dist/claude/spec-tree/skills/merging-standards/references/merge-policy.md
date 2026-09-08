@@ -254,7 +254,7 @@ Integrate base movement only by rebase through `/sync-base`. The same prohibitio
 
 <verification_dispatch_readiness>
 
-Before every local Auditor or Reviewer dispatch, emit one structured `VERIFICATION_DISPATCH_READY` record for the exact subject:
+Before every local Auditor or Reviewer dispatch — a Verifier, in this vocabulary, is the Auditor or Reviewer a dispatch launches — emit one structured `VERIFICATION_DISPATCH_READY` record for the exact subject:
 
 ```json
 {
