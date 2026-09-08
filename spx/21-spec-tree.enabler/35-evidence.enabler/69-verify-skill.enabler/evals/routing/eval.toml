@@ -15,6 +15,7 @@ smoke_cases = [
   "routes-observation-claim-to-probe",
   "routes-observation-claim-to-probe-specialist",
   "rejects-unsupported-tag",
+  "accepts-slugged-audit-tag",
 ]
 threshold = 1.0
 trials = 1

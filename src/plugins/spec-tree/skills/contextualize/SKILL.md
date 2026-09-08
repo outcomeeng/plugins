@@ -16,7 +16,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 
 **COMPLETE CONTEXT OR ABORT. NO EXCEPTIONS.**
 
-- Every node along the path must have its spec file (`{slug}.md`)
+- Every node along the path must have its spec file (`{slug}.spec.md`, or the prior `{slug}.md` a 3.x-authored tree still carries)
 - Missing spec file = ABORT with remediation guidance
 - Read order: product root → ancestors → target (top-down)
 - All ADRs and PDRs at all levels must be read — no skipping based on title relevance
@@ -71,7 +71,8 @@ Set `product_root_target=true` only for the exact target `spx/`. Every other acc
 
 ```bash
 # Find the product file
-Glob: "spx/*.spec.md"      # the root spec carries kind: product; spx/*.product.md is the prior form a 3.x-authored tree still carries
+Glob: "spx/*.spec.md"      # the root spec carries kind: product
+Glob: "spx/*.product.md"   # the prior form a 3.x-authored tree still carries
 
 # Verify a node target exists; product-root mode already addresses spx/
 Glob: "$target/*.md"  (node targets only)
@@ -134,8 +135,8 @@ For each directory along the path from product root to a node target. In product
 **2a. Read the directory's spec file**
 
 ```bash
-# The spec file is {slug}.md (no type suffix, no numeric prefix)
-Read: {path-to-dir}/{slug}.md
+# The spec file is {slug}.spec.md; a 3.x-authored tree carries {slug}.md
+Read: {path-to-dir}/{slug}.spec.md   # or the prior {path-to-dir}/{slug}.md
 
 # Read harness guide in this directory if present
 Read: {path-to-dir}/{{! file('root_guide') !}}  (if exists)
@@ -191,7 +192,7 @@ For a node target, load the target context below.
 
 ```bash
 # Read target spec
-Read: $target/{slug}.md
+Read: $target/{slug}.spec.md   # or the prior $target/{slug}.md
 
 # Read target ADRs and PDRs
 Glob: "$target/*-*.adr.md"
@@ -296,11 +297,11 @@ When a required document is missing, ABORT immediately with:
 2. **Why it's needed** — what context it provides
 3. **How to fix** — specific remediation action
 
-| Missing       | Remediation                                                                           |
-| ------------- | ------------------------------------------------------------------------------------- |
-| Product file  | "Create with `/bootstrap` — every tree needs a product spec"                          |
-| Ancestor spec | "Node directory exists but spec file is missing. Create `{slug}.md`"                  |
-| Target spec   | "Target directory exists but spec file is missing. Create `{slug}.md` with `/author`" |
+| Missing       | Remediation                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| Product file  | "Create with `/bootstrap` — every tree needs a product spec"                               |
+| Ancestor spec | "Node directory exists but spec file is missing. Create `{slug}.spec.md`"                  |
+| Target spec   | "Target directory exists but spec file is missing. Create `{slug}.spec.md` with `/author`" |
 
 Do NOT proceed with partial context. The whole point of deterministic context is completeness.
 

@@ -22,6 +22,10 @@ Verification runs over the changeset. The verdict mode determines whether CI wid
 
 Deterministic types widen to the whole repository in CI because CI is the full-repository regression net. Agentic types do not widen — a review or audit inspects the change, not the repository — so local and CI inspect the same scope and the agent runs them locally first. Audit's defect-class sweep reads the touched node(s)' other governed files, which is the changeset's node(s) at node granularity. An attested probe is executed by the Author against the changeset; CI checks the pin each attested result carries and never re-executes a protocol, because an attested run costs observation time and its inspectable artifacts are committed with the result.
 
+## Malleability, state, and merge composition
+
+An output node declares its **malleability** — `spec`, `verification`, or `implementation`, the absent field meaning `implementation` — as the highest layer that stays cheap to change; hardening lowers it one layer at a time through a Change. Verification derives the node's **state** against that declaration and records it in the machine-written status claim `spx.status.json`: Declared while required artifacts are missing, Specified while they exist without a current passing result, Passing when Validate passes and every required result is current, Failing when a required result becomes invalid or stops passing after Passing under unchanged declarations. Merge gates a changeset by the least malleable node it touches: Validate always; Review for a verification-malleable node; the evidence audits before Review for an implementation-malleable node; product and outcome-record changes run Validate and Review regardless.
+
 ## Product properties
 
 1. Verification is the six marketplace types — validate, test, evaluate, probe, audit, review — across two axes, verdict mode and purpose. Four back the tag an assertion carries: `[test]` by test, `[eval]` by evaluate, `[probe]` by probe, `[audit:{rule-slug}]` by audit.
@@ -40,6 +44,8 @@ Deterministic types widen to the whole repository in CI because CI is the full-r
 ### Audit
 
 - ALWAYS: an activity declares its type and purpose ([audit])
+- ALWAYS: an output node's state derives from its verification results against the malleability it declares, and the projector is the only writer of the status claim ([audit])
+- ALWAYS: the agentic gates a changeset faces compose from the least malleable node it touches — Review from `verification`, the evidence audits before Review from `implementation` — while Validate runs on every changeset ([audit])
 - NEVER: a type's verdict mode differs from the one its definition binds — the binding is fixed, not chosen per run ([audit])
 - NEVER: a model judges the verdict of a deterministic type — it may run inside the process, but the verdict is the deterministic score ([audit])
 - ALWAYS: an attested verdict records the Author's verdict, the inspectable artifacts of the executed protocol, and actor provenance from the verification run — protocol prose never assigns the actor ([audit])

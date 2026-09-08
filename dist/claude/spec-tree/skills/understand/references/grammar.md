@@ -73,7 +73,8 @@ probe-path = "probes/" , slug , "/" , "probe.md" ;
 test-tag  = "[test](" , test-path , ")" ;
 eval-tag  = "[eval](" , eval-path , ")" ;
 probe-tag = "[probe](" , probe-path , ")" ;
-audit-tag = "[audit:" , slug , "]" ;          (* the rule slug keys the claim entry *)
+audit-tag = "[audit:" , slug , "]"            (* the rule slug keys the claim entry *)
+          | "[audit]" ;                       (* the pathless form a toolchain that has not adopted the slug parses *)
 ```
 
 Each linked path is node-relative and leads into the tag's own directory. A rule slug is unique within its spec. A dangling test, eval, or probe tag yields Declared.
@@ -90,7 +91,8 @@ test-file      = test-core , ".test." , ext         (* parsing.scenario.l1.test.
                | "test_" , test-core , "." , ext    (* test_parsing.scenario.l1.py *)
                | test-core , "_test." , ext ;       (* parsing.scenario.l1_test.go *)
 
-eval-rule  = slug , "/" , "eval.toml" , [ "cases.jsonl" ] , [ "prompt.md" ] , [ "history.jsonl" ] ;
+eval-rule  = slug , "/" , "eval.toml" , [ "cases.jsonl" ] , [ "prompt.md" ] , [ "prompt.template.md" ] ;
+             (* history.jsonl and runs/ are harness-generated; eval.toml never declares them *)
 probe-rule = slug , "/" , "probe.md" , { slug , "." , ext } ;
 ```
 

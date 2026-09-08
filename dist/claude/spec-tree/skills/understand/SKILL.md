@@ -66,12 +66,11 @@ Remaining evidence or implementation work is downstream work recorded in a Chang
 
 - ALWAYS: specs state atemporal product truth and contain no history or journey language.
 
-| Temporal                           | Atemporal                |
-| ---------------------------------- | ------------------------ |
-| “We discovered that X”             | “X ensures Y”            |
-| “We need to address X”             | “The product provides X” |
-| “Currently, the system…”           | “The system…”            |
-| “After investigating, we decided…” | “The decision governs…”  |
+| Temporal                 | Atemporal                |
+| ------------------------ | ------------------------ |
+| “We discovered that X”   | “X ensures Y”            |
+| “We need to address X”   | “The product provides X” |
+| “Currently, the system…” | “The system…”            |
 
 Read each sentence aloud; if it would sound wrong after the work ships, rewrite it. Dated history belongs in a knowledge root.
 
@@ -117,7 +116,7 @@ A substrate owns primitives with no product-domain semantics; a capability one r
 
 Classify by the ordered procedure — product, variant, substrate, surface, interface, domain, capability — where the first test that holds fixes the kind; `${CLAUDE_SKILL_DIR}/references/kind-decision.md` carries the tests, the settling boundaries, and the structural-quality scorecards.
 
-**Containment.** A node admits children of its own kind and any more-foundational output kind; every output kind additionally admits `.variant`; a `.variant` admits what its parent admits except another `.variant`; a `.product` admits any output kind, and only a `.product` admits a `.product`, so products form a spine from the root. Role-named wrapper directories do not exist: grouping is product name plus suffix, and a family surface owns its concrete surfaces as children.
+**Containment.** A node admits children of its own kind and any more-foundational output kind; every output kind additionally admits `.variant`; a `.variant` admits what its parent admits except another `.variant`; a `.product` admits any output kind, and only a `.product` admits a `.product`, so products form a spine from the root. Role-named wrapper directories do not exist: grouping is product name plus suffix, and a family surface owns its concrete surfaces as children. A tree authored under a 3.x version carries `.enabler` and `.outcome` directories with `{slug}.md` specs, a `*.product.md` root, and `PLAN.md` notes until its toolchain admits this grammar; a provider that supports that version parses both forms.
 
 </identity_and_kinds>
 
@@ -125,7 +124,7 @@ Classify by the ordered procedure — product, variant, substrate, surface, inte
 
 - NEVER: give a `.product` an assertion, malleability, state, status claim, outcome record, or child enumeration.
 
-The operator judges a scope a product with three questions: does it need a surface or interface the tree lacks; does it run, ship, and transfer as a whole on its own; does it have its own backlog, checkout, and owner. Independent version numbers support no product. A valid product spec is its front matter and title; a paragraph, product-local semantics, boundaries, and a Change-retention policy appear only where they change what a descendant does or how it is judged.
+The operator judges a scope a product with three questions: does it need a surface or interface the tree lacks; does it run, ship, and transfer as a whole on its own; does it have its own backlog, checkout, and owner. A valid product spec is its front matter and title; a paragraph, product-local semantics, boundaries, and a Change-retention policy appear only where they change what a descendant does or how it is judged.
 
 </product_scope>
 
@@ -155,7 +154,7 @@ NN-{slug}.{kind}/
 └── NN-{child-slug}.{kind}/
 ```
 
-- The spec is `{slug}.spec.md`, repeating the directory's slug; at the root it repeats the product's name. One glob finds every spec.
+- The spec is `{slug}.spec.md`, repeating the directory's slug; at the root it repeats the product's name.
 - `[test]` evidence is co-located under `tests/`; each filename encodes subject, assertion type, execution level, and an optional runner in the project's language convention.
 - `[eval]` evidence is co-located under `evals/{rule-slug}/`: `eval.toml` plus the case, prompt, and template artifacts it declares by eval-relative path — canonically `cases.jsonl`, `prompt.md`, and `prompt.template.md`. A declared case or prompt path may reach a sibling eval's shared artifact; a declared template stays inside the eval directory. A declared producer source is a repository path outside the eval directory, never a co-located artifact. The eval harness generates `history.jsonl` and the ignored `runs/` transcripts at fixed names it owns; `eval.toml` never declares them.
 - `[probe]` evidence is co-located under `probes/{probe-slug}/`: `probe.md` records intent, environment and preconditions, the protocol, the attested run's observations, the Author's verdict, and limitations, linking every retained artifact — at least one inspectable artifact beside the prose; working runs stay in an ignored `runs/`.
@@ -237,7 +236,7 @@ A universal is never a scenario. Choose mapping for a finite source-owned domain
 
 - MUST: select test, evaluate, probe, or audit evidence from the verdict the real subject can produce.
 
-Prefer `[test]` when behavior is deterministic; `[eval]` when the real LLM-driven producer emits a parseable contract a runner can score; `[probe]` when only observing the running node settles the claim — the prototype phase's characteristic evidence; `[audit]` when no deterministic, attested, or structural verdict exists. A structural lint constraint is `[test]` evidence run against violating fixtures.
+Prefer `[test]` when behavior is deterministic; `[eval]` when the real LLM-driven producer emits a parseable contract a runner can score; `[probe]` when only observing the running node settles the claim; `[audit]` when no deterministic, attested, or structural verdict exists. A structural lint constraint is `[test]` evidence run against violating fixtures.
 
 </verification_selection>
 
@@ -257,7 +256,7 @@ Each test file carries one assertion type; bare names such as `32-parser.capabil
 
 - ALWAYS: place prerequisites before consumers; numeric separation alone establishes no dependency.
 
-Nodes and decision records in one directory share one two-digit index space, extended by dot-separated fractional inserts (`20.54` between `20` and `21`). An earlier node's contract is available as a prerequisite and constrains work that consumes it or falls within its stated scope; an unrelated earlier contract supplies awareness and creates no dependency. Same-index peers cannot supply prerequisites to each other, and independent siblings may occupy different indices. A lower-index decision record governs higher-index siblings and their descendants. An index never encodes roadmap order, time, or priority.
+Nodes and decision records in one directory share one two-digit index space, extended by fractional inserts (`20.54`). An earlier node's contract is available as a prerequisite and constrains work that consumes it or falls within its stated scope; an unrelated earlier contract supplies awareness and creates no dependency. Same-index peers cannot supply prerequisites to each other, and independent siblings may occupy different indices. A lower-index decision record governs higher-index siblings and their descendants. An index never encodes roadmap order, time, or priority.
 
 </index_semantics>
 

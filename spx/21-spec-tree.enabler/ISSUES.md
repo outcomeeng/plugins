@@ -179,3 +179,11 @@ Preserved refs and observed heads:
 **Impact:** An audit result in this tree has no rule slug to key on, so the status claim the 4.0 projector writes cannot attribute an audit verdict to its assertion until the tree retags.
 
 **Settlement condition:** The SPX CLI release that admits `[audit:{rule-slug}]` is published and the repository floor advances to it, and every audit assertion in this tree carries a rule slug unique within its spec, in the tree migration this repository's consumer Change carries.
+
+## The tree carries the 3.x grammar while the foundation declares 4.0
+
+**Evidence:** Every node directory in this tree is `.enabler` or `.outcome`, every spec is `{slug}.md`, the root spec is `outcomeeng.product.md`, no spec carries front matter or a status claim, and thirty-odd `PLAN.md` files carry work ordering. The node's own `[test]` assertions on `{slug}.md` and the enabler directory describe the parser this repository ships and runs today. The `/understand` foundation, `spx.config.yaml`, and this node's Compliance assertions declare the 4.0 grammar: seven kinds, `{slug}.spec.md`, front matter, the status claim, `ISSUES.md` as the only note, and work ordering in a Change.
+
+**Impact:** `/contextualize`, `/align`, and `/refactor` parse both forms; a reader of this tree sees the prior form until the migration, and a `PLAN.md` here is a note the 4.0 grammar does not admit.
+
+**Settlement condition:** The SPX CLI admits the seven suffixes, `{slug}.spec.md`, front matter, and the status claim; this repository's consumer Change migrates every directory, spec, and `PLAN.md` — the latter into Changes — and these `[test]` assertions state the 4.0 grammar against the migrated parser.
