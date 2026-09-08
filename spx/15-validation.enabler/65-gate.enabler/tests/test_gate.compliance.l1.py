@@ -8,6 +8,7 @@ import signal
 
 from outcomeeng.validation import (
     CHECK_RECIPES,
+    EVAL_LINKS_ARGV,
     FMT_CHECK_ARGV,
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
@@ -65,6 +66,7 @@ def test_the_full_gate_carries_every_required_step() -> None:
     assert set(STATIC_ANALYSIS_ARGVS).issubset(step_argvs)
     assert "--strict" in MYPY_ARGV
     assert SPX_MARKDOWN_ARGV in step_argvs
+    assert EVAL_LINKS_ARGV in step_argvs
     assert HOOK_SAFETY_ARGV in step_argvs
     assert PYTEST_ARGV not in step_argvs
     assert TEST_STEPS == (Step(label="pytest", argv=PYTEST_ARGV),)

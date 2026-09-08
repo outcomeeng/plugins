@@ -64,9 +64,11 @@ secret is visible to `outcomeeng/plugins`, and the token account can bypass
 
 `_assistant_text` (in `outcomeeng_evals/runner.py`) probes the parsed `claude --output-format json` envelope for `result`, then `response`, then `content`. If a future CLI release renames the key or adds one that collides with an unrelated field, the probe could succeed and return the wrong text rather than failing loudly. If `claude --output-format json` emits a version field (`cli_version`, `schema_version`, or similar), use it to select the extraction path instead of probing by key order. Deferred until the envelope shape actually shifts.
 
-## Tilde-fenced code blocks in the link walker
+## The link walker opens a backtick fence whose info string contains a backtick
 
-`_strip_code_regions` (in `outcomeeng/validation/link_integrity.py`) blanks backtick fences (`` ``` ``) but not tilde fences (`~~~`), which CommonMark also allows. A `~~~`-fenced block containing a `[test](...)` or `[eval](...)` example would be treated as a real evidence reference and flagged broken. No marketplace spec markdown uses tilde fences today; if one does, add tilde-fence matching to `_strip_code_regions`.
+CommonMark does not treat a line opening with three or more backticks as a fence when its info string contains another backtick; `_strip_code_regions` in `outcomeeng/validation/link_integrity.py` opens the fence regardless, so such a line would blank the rest of its file and hide every evidence link after it from the `eval-links` step. No spec markdown in the tree has that shape (``grep -rnE '^[ \t]{0,3}```[^``\n]*`' spx --include='*.md'` finds nothing), so the gap has no live instance.
+
+**Resolution shape**: refuse the backtick-fence opener when the remainder of the line contains a backtick, and add a layout with such a line followed by a real evidence link to the link-integrity conformance evidence.
 
 ## Partial-trial evidence in parallel-path errors
 

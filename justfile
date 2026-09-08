@@ -125,6 +125,10 @@ fmt *args:
 fmt-check:
     dprint check
 
+# Check that every [test] and [eval] link in spec markdown resolves to its evidence file
+eval-links:
+    uv run python -m outcomeeng.validation.eval_links
+
 # Run selected local gate steps through the signal-safe recipe orchestrator
 check:
     python3 -m outcomeeng.validation check

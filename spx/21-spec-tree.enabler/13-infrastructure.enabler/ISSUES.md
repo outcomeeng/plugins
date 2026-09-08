@@ -144,4 +144,10 @@ Likely descendants, created only when assertions justify the extra depth:
 | `54-runtime-operations.enabler` | `21-failure-triage.enabler`, `32-explicit-run-control.enabler`                                                          |
 | `65-workflow-evolution.enabler` | `21-dependency-maintenance.enabler`, `32-runner-runtime-upgrades.enabler`, `43-workflow-rearchitecture.enabler`         |
 
-Coordinate with the sibling `22-github-actions.enabler` before creating these children. That directory may be another agent's active work on the same problem, and the final tree should have one coherent GitHub Actions branch rather than duplicate siblings.
+## The native-API property carries an interim `[audit]` tag
+
+The `### Properties` assertion in `infrastructure.md` — hosted-platform state is sourced from native APIs, never from filesystem timestamps, directory enumeration, or prose matching — linked `tests/test_infrastructure.property.l1.py`, which was never written. It now carries `[audit]` as an explicit interim so no evidence link dangles. `spx/15-spec-coverage.adr.md` assigns claims about executable code to `[test]`; the helpers this claim governs live under `spx/21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/32-workflow-observability.enabler`, whose `[test]` evidence already exercises `gh_access.py`, `workflow_inspect.py`, and `mutation_gate.py` for stdlib-only subprocess use with no streaming or polling. The interim tag was an operator decision (2026-09-07).
+
+**Resolution shape.** Either author `tests/test_infrastructure.property.l1.py` at this node as the cross-node property over every helper module — that each sources its state through `gh` and `git` subprocess calls and reads no filesystem timestamp or directory listing — and restore the `[test]` tag, or, if the child node's evidence is judged to cover the claim, remove the parent assertion and let the child's assertions carry it. Route through `/verify`.
+
+**Evidence.** Surfaced by the CI changeset review on PR #562 (head `812ed0ea12dc481f6abd54d4d7d21f20873068a9`), which found this node without a recorded rationale for the retag.

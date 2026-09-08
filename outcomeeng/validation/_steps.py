@@ -6,9 +6,9 @@ tuples guard against.
 
 The compliance test enforces that the workflow lint, shell lint,
 `("ruff", "format", "--check")`, `("ruff", "check")`, the strict mypy package
-command, the pyright package command, and `("spx", "validation", "markdown")`
-appear in the validation recipe. Pytest-backed `[test]` evidence belongs to
-the test recipe.
+command, the pyright package command, `("spx", "validation", "markdown")`, and
+the `outcomeeng.validation.eval_links` evidence-link step appear in the
+validation recipe. Pytest-backed `[test]` evidence belongs to the test recipe.
 """
 
 from __future__ import annotations
@@ -54,6 +54,15 @@ RUFF_CHECK_ARGV: Final = ("uv", "run", "ruff", "check", ".")
 MYPY_ARGV: Final = ("uv", "run", "mypy", "--strict", *PYTHON_SOURCE_PATHS)
 PYRIGHT_ARGV: Final = ("uv", "run", "pyright", *PYTHON_SOURCE_PATHS)
 SPX_MARKDOWN_ARGV: Final = ("uv", "run", "spx", "validation", "markdown")
+# Every `[test]` and `[eval]` link in spec markdown resolves to its evidence
+# file; a dangling link is a coverage gap the gate refuses to carry.
+EVAL_LINKS_ARGV: Final = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "outcomeeng.validation.eval_links",
+)
 DIST_DIFF_STEP_LABEL: Final = "dist-diff"
 SPX_VERSION_FLOOR_ARGV: Final = (
     "uv",
@@ -283,6 +292,7 @@ VALIDATION_STEPS: Final = (
     Step(label="eval-triggers", argv=EVAL_TRIGGERS_ARGV),
     Step(label="eval-prompts", argv=EVAL_PROMPTS_ARGV),
     Step(label="markdown", argv=SPX_MARKDOWN_ARGV),
+    Step(label="eval-links", argv=EVAL_LINKS_ARGV),
     Step(label="spx-version", argv=SPX_VERSION_FLOOR_ARGV),
 )
 
