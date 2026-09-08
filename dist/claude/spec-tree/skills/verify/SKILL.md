@@ -88,7 +88,7 @@ Report one row per subject:
 | Subject | Verification type | Specialist | Evidence path or requirement | Status |
 ```
 
-Use `routed`, `capability-required`, or `blocked` as status. Never report an assertion verified merely because classification completed; path-bearing evidence must exist and pass its deterministic command, and audit requires its isolated verifier.
+Use `routed`, `capability-required`, or `blocked` as status. A `capability-required` row keeps the selected route intact: the specialist is the absent path-bearing specialist (`/test`, `/eval`, or `/probe`) and the evidence shape is `path-bearing`; `isolated-verifier` and `pathless` belong to audit alone. Never report an assertion verified merely because classification completed; path-bearing evidence must exist and pass its deterministic command, and audit requires its isolated verifier.
 
 Example:
 
