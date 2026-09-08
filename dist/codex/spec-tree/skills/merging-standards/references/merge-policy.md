@@ -267,7 +267,7 @@ Before every local Auditor or Reviewer dispatch — a Verifier, in this vocabula
   "deterministicResults": [{ "command": "exact command", "exitCode": 0 }],
   "sameClassScans": [{ "defectClass": "class or preflight concern", "scope": "files inspected", "method": "query or structural inspection", "matches": ["paths"], "dispositions": ["fixed or isolated"] }],
   "assertionDesignRecords": [{ "assertion": "changed test assertion and its quantifier", "productionSubject": "behavior under test and the observable seam", "caseProvenance": "owner", "oracleOwner": "owner", "rejectedMutation": "production mutation", "failureObservation": "linked predicate" }],
-  "runOwnership": { "verificationType": "audit or review", "runIdentity": "fresh identity", "writer": "one dispatch owner", "state": "reserved" },
+  "runOwnership": { "verificationType": "audit or review", "runIdentity": "fresh identity when the Verifier records a run, otherwise none", "writer": "one dispatch owner", "state": "reserved" },
   "priorRejections": [],
   "unresolved": []
 }
@@ -275,7 +275,7 @@ Before every local Auditor or Reviewer dispatch — a Verifier, in this vocabula
 
 The record is complete only when all changed paths serve the active objective or have been split from the changeset, every applicable deterministic command passed on `subjectHead`, every known finding has a same-class scan and disposition — the same-class sweep `<authority_gates>` and `<review_classification>` require, recorded as `sameClassScans` — every added or repaired test carries the assertion-design record required by `/test-evidence-standards`, and `unresolved` is empty, with every relocated case or expected value judged by the relocation rule `/test-evidence-standards` owns.
 
-The record is ready only when `runOwnership` reserves a fresh run identity for one named dispatch owner and no conflicting writer exists. Reconcile any active, completed, abandoned, or colliding run before dispatch. Never send two verifiers to write the same run, reuse a run identity for a changed head, or treat a journal collision as permission to retry under another path.
+The record is ready only when `runOwnership` names one dispatch owner for the Verifier. A Verifier that records a run — `changes-reviewer` through the review journal, `implementation-auditor` through `spx verification run`, and any other Verifier whose skill records a run — additionally needs a fresh run identity reserved for that owner with no conflicting writer: reconcile any active, completed, abandoned, or colliding run before dispatch, and never send two verifiers to write the same run, reuse a run identity for a changed head, or treat a journal collision as permission to retry under another path. A Verifier that returns one structured verdict and records no run — the evidence, decision, spec, skill, and subagent Auditors — sets `runIdentity` to none and needs no reconciliation.
 
 After a rejection, append a `priorRejections` entry naming the Verifier, exact head, finding identifiers, defect classes, failed repair invariant, root cause, widened repair rule, and same-class scan. Do not redispatch until the new head's record proves every rejection resolved. If a later rejection belongs to a recorded defect class, invalidate the prior repair invariant: stop localized patching, analyze why the class survived, widen the repair and scan, and amend the governing workflow, standard, or source contract before another dispatch. A new line number, file, or example does not create a new class.
 
