@@ -31,3 +31,15 @@ The `<predicate_and_oracle_litmus>` section in `src/plugins/python/skills/python
 **Impact:** A spec-malleable node cannot reach Passing through its characteristic evidence until a specialist authors the protocol, records the attested run, and writes the pin; an Author can still write `probes/{probe-slug}/probe.md` by hand from the template.
 
 **Settlement condition:** A `/probe` skill ships in the spec-tree plugin, the routing eval's routed probe case runs against it as an installed specialist, and this node's spec names it beside `/test` and `/eval`.
+
+## Consumers of the shared test-evidence standard hand-copy its category list
+
+`src/plugins/spec-tree/skills/test/SKILL.md` `<shared_standards>` and `src/plugins/spec-tree/skills/audit-tests/SKILL.md` Step 0 each carry the same verbatim enumeration of the categories `/test-evidence-standards` owns — predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, assertion-design-record, and mutation litmus. The language test-standards intros above carry the same shape for their own subset. Every new section in the shared standard therefore requires an edit in every consumer, and a consumer that misses one drifts silently.
+
+**Status against the standard.** The enabler's second assertion requires authoring and auditing to consume one independently loadable standard; both consumers do, so the evidence they judge from is the same. The duplication is in the descriptive sentence naming what that standard owns.
+
+**Why it is large.** The fix is one shape for the whole consumer family — `/test`, `/audit-tests`, and the three language test-standards — either an enumeration-free reference to every section the standard declares or a build-injected list the standard owns, so the consumers stop restating it. A string-equality test over the two sentences is the prose-grep evidence `spx/21-spec-tree.enabler/76-merge.enabler/PLAN.md` rejects, and one consumer citing the other's sentence makes two consumers depend on each other instead of on the standard.
+
+**Resolution shape.** Choose the enumeration-free reference or the build-injected list, apply it across the five consumers in one changeset, and gate each plugin with `instructions:skill-auditor`.
+
+**Evidence.** Surfaced by `instructions:skill-auditor` on `src/plugins/spec-tree/skills/test/SKILL.md` (finding f-004, rule `duplicated_enumeration_maintenance_risk`) on the verification-readiness safeguards changeset, which added `assertion-design-record` to both consumer sentences in one commit.
