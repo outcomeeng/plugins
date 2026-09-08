@@ -21,6 +21,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Requires
 
 - A consumer declaring methodology 4.0 authors under these rules; the SPX CLI's admission of the 4.0 suffixes, front matter, probes, and status claims ships in its own release, and a tree keeps its current directory suffixes until then.
+- No `/probe` skill ships yet: `/verify` routes a probe assertion to `/probe` when the runtime skill catalog carries it and otherwise reports the capability gap, so a probe protocol is authored by hand from the `/understand` template until that skill ships.
 
 ## 0.92.9
 
