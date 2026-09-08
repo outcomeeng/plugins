@@ -26,12 +26,11 @@ If `$ARGUMENTS` is empty, stop before reading or writing product files. State th
 
 Read the conditional operational sources below before composing. Use the live inline foundation for node and ordering rules:
 
-- Live `/understand` `<node_model>` — enabler/outcome structure and nesting rules
+- Live `/understand` `<identity_and_kinds>` — the seven kinds, their order, and containment — and `${CLAUDE_SKILL_DIR}/../understand/references/kind-decision.md` for the ordered kind tests and the structural scorecards
 - Live `/understand` `<ordering_model>` — the context-loading meaning of an index and the inverse assignment rule
 - Live `/understand` `<artifact_placement>` — artifact taxonomy, test-infrastructure governance, and placement rules
 - `/understand` product-domain-shapes classifier and examples
-- `/understand` canonical enabler template
-- `/understand` canonical outcome template
+- `/understand` output-kind and variant spec templates under `templates/nodes/`
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
 
 </quick_start>
@@ -321,7 +320,7 @@ How to avoid: Count assertions before and after. Assertions that span children r
 
 Claude wrote `32-parser.enabler` or `15-build.adr.md` in a decomposition plan. Another directory used the same numeric prefix, so the reference could not be resolved. Full paths from `spx/` are mandatory for every existing node, ADR, and PDR.
 
-How to avoid: When recording an ordering-evidence matrix, assertion move, issue, or PLAN.md note, write `spx/.../32-parser.enabler` and `spx/.../15-build.adr.md`. Before a new child has a final index, write the full parent path and candidate slug.
+How to avoid: When recording an ordering-evidence matrix, assertion move, issue, or PLAN.md note, write `spx/.../32-parser.capability` and `spx/.../15-build.adr.md`. Before a new child has a final index, write the full parent path and candidate slug.
 
 **Failure 7: Took the next sparse slot after an existing sibling**
 

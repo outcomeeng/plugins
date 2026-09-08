@@ -1,6 +1,6 @@
 <overview>
 
-The ordered procedure that fixes a node's kind, the boundaries that settle disputes, and the structural-quality checks a projected structure passes before durable files are written. `/decompose`, `/author`, and `/align` read this reference when they classify or place a node.
+The ordered procedure that fixes a node's kind, the boundaries that settle disputes, and the structural-quality checks a projected structure passes before durable files are written. A skill that classifies or places a node reads this reference before it fixes a kind.
 
 </overview>
 
