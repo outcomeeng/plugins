@@ -49,6 +49,6 @@ The composing skill names the tagged section or operation it needs. Read the mat
 - Repository-specific behavior comes only from the optional local overlay.
 - Publication, merge, deployment, and release actions occur only under their matching authority gates.
 - Every valid in-scope finding is fixed, and every separate larger concern has an owning-node record.
-- Every Verifier dispatch is backed by one complete head-bound readiness record, one active run writer, and no unresolved work hidden from the Verifier.
+- Every Auditor or Reviewer dispatch is backed by one complete head-bound readiness record, one active run writer, and no unresolved work hidden from the Auditor or Reviewer.
 
 </success_criteria>

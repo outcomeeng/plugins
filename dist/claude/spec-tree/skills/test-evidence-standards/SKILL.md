@@ -129,25 +129,6 @@ Construction-derived expectations are valid only when the construction law is in
 
 </case_provenance_and_oracles>
 
-<assertion_design_record>
-
-Before writing or repairing test evidence, record the complete assertion design. The production-subject field applies `<predicate_seam>`; the provenance and oracle fields apply `<case_provenance_and_oracles>`; the mutation and failure fields apply `<mutation_litmus>`:
-
-| Field               | Required value                                                                                                                                |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Assertion           | Exact governing assertion and its quantifier                                                                                                  |
-| Production subject  | Behavior under test and the observable seam the test crosses                                                                                  |
-| Case provenance     | Spec sentence, source-owned domain, generator, governing rule, or whole-payload artifact that selects each case                               |
-| Oracle owner        | Independent standard, schema, contract, construction law, reference implementation, or real-system response that selects each expected result |
-| Rejected mutation   | One concrete mutation or disablement of assertion-relevant production behavior                                                                |
-| Failure observation | The exact linked-test observation or predicate that the mutation makes fail                                                                   |
-
-NEVER author evidence while any field is missing, while the oracle reuses the production path, or while the named production mutation would leave the evidence passing. The record is a design prerequisite, not a post-hoc explanation for a test already written.
-
-Moving a case or expected value never changes its provenance. Relocating a value from a test into production, a harness, a generator, a fixture, or an oracle module preserves the source that originally selected it. Accept the relocated value only when the destination already owns that kind of truth and the record names an independent provenance source. Reject relocation used to turn an author-invented value or implementation-derived expectation into an apparently source-owned contract.
-
-</assertion_design_record>
-
 <type_level_permissions>
 
 The artifact set each assertion type permits and requires, per level where the type changes the answer. Each section composes with `<execution_levels>` — the level adds harness obligations, floor, and availability identically for every type — and defers case-source and oracle authority to `<assertion_type_litmus>`.
@@ -204,6 +185,25 @@ Use three mental or executable mutations:
 A seam that fails mutation 1 launders the assertion into infrastructure. Evidence that survives mutation 2 lacks falsifiability or coverage. An oracle that fails mutation 3 is coupled to production or hidden behind a verdict helper.
 
 </mutation_litmus>
+
+<assertion_design_record>
+
+Before writing or repairing test evidence, record the complete assertion design. The production-subject field applies `<predicate_seam>`; the provenance and oracle fields apply `<case_provenance_and_oracles>`; the mutation and failure fields apply `<mutation_litmus>`:
+
+| Field               | Required value                                                                                                                                |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Assertion           | Exact governing assertion and its quantifier                                                                                                  |
+| Production subject  | Behavior under test and the observable seam the test crosses                                                                                  |
+| Case provenance     | Spec sentence, source-owned domain, generator, governing rule, or whole-payload artifact that selects each case                               |
+| Oracle owner        | Independent standard, schema, contract, construction law, reference implementation, or real-system response that selects each expected result |
+| Rejected mutation   | One concrete mutation or disablement of assertion-relevant production behavior                                                                |
+| Failure observation | The exact linked-test observation or predicate that the mutation makes fail                                                                   |
+
+NEVER author evidence while any field is missing, while the oracle reuses the production path, or while the named production mutation would leave the evidence passing. The record is a design prerequisite, not a post-hoc explanation for a test already written.
+
+Moving a case or expected value never changes its provenance. Relocating a value from a test into production, a harness, a generator, a fixture, or an oracle module preserves the source that originally selected it. Accept the relocated value only when the destination already owns that kind of truth and the record names an independent provenance source. Reject relocation used to turn an author-invented value or implementation-derived expectation into an apparently source-owned contract.
+
+</assertion_design_record>
 
 <language_deltas>
 

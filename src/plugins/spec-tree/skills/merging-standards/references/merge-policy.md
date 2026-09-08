@@ -273,7 +273,7 @@ Before every local Auditor or Reviewer dispatch — a Verifier, in this vocabula
 }
 ```
 
-The record is complete only when all changed paths serve the active objective or have been split from the changeset, every applicable deterministic command passed on `subjectHead`, every known finding has a same-class scan and disposition, every added or repaired test carries the assertion-design record required by `/test-evidence-standards`, and `unresolved` is empty. Relocating an expected value preserves its provenance; a new file or symbol never makes an implementation-derived expectation independent.
+The record is complete only when all changed paths serve the active objective or have been split from the changeset, every applicable deterministic command passed on `subjectHead`, every known finding has a same-class scan and disposition, every added or repaired test carries the assertion-design record required by `/test-evidence-standards`, and `unresolved` is empty, with every relocated case or expected value judged by the relocation rule `/test-evidence-standards` owns.
 
 The record is ready only when `runOwnership` reserves a fresh run identity for one named dispatch owner and no conflicting writer exists. Reconcile any active, completed, abandoned, or colliding run before dispatch. Never send two verifiers to write the same run, reuse a run identity for a changed head, or treat a journal collision as permission to retry under another path.
 
