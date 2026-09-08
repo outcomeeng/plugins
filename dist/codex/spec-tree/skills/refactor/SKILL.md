@@ -100,7 +100,7 @@ Before applying changes, determine what will be affected:
 **For Consolidate:**
 
 - Are the nodes truly the same concern, or just similar?
-- Which node's hypothesis/enables statement survives?
+- Which node's opening survives?
 - How do the combined assertions fit together?
 - Which node's directory survives based on durable scope identity and evidence links?
 - Does consolidation alter sibling ordering or child composition? If yes, invoke `/decompose` before applying.
@@ -160,7 +160,7 @@ Before applying changes, determine what will be affected:
    - Deduplicate identical assertions
    - Resolve conflicting assertions (ask user if unclear)
 3. Merge test files from the removed node's `tests/` into the surviving node's `tests/`.
-4. Update the surviving node's hypothesis or enables statement to cover the merged scope.
+4. Update the surviving node's opening to cover the merged scope.
 5. Update any cross-cutting assertion links in ancestor specs that pointed to the removed node.
 6. Remove the old node's directory.
 7. If the surviving node now exceeds ~7 assertions or mixes independent concerns, invoke `/decompose` for the surviving node.
@@ -238,9 +238,9 @@ Claude reported that the moved node still followed `15-build.adr.md`, but anothe
 
 How to avoid: Use full paths from `spx/` for every node, ADR, and PDR before and after the move. A correct report says `spx/.../15-build.adr.md`, never just `15-build.adr.md`.
 
-**Failure 4: Consolidated nodes with different hypotheses**
+**Failure 4: Consolidated nodes with different contracts**
 
-Claude merged two "parsing" outcomes because they sounded similar. One parsed user input for validation; the other parsed API responses for data extraction. Different hypotheses, different users, different failure modes. The merged node's hypothesis became a vague compromise that fit neither concern well.
+Claude merged two "parsing" outcomes because they sounded similar. One parsed user input for validation; the other parsed API responses for data extraction. Different contracts, different users, different failure modes. The merged node's opening became a vague compromise that fit neither concern well.
 
 How to avoid: Before consolidating, compare the openings — the contract each node states and the consumption context or audience it serves. If they own different contracts or serve different contexts, they are distinct nodes regardless of implementation similarity.
 
@@ -252,7 +252,7 @@ How to avoid: Always use `git mv` for files tracked by git. This preserves renam
 
 **Failure 6: Temporal language introduced during re-scope**
 
-Claude moved assertions between nodes and rewrote the source node's hypothesis to explain what happened: "After extracting the validation concerns into the sibling node, this outcome focuses on data transformation." This narrates a refactoring history — it's temporal. The atemporal version: "This outcome transforms raw input into normalized records."
+Claude moved assertions between nodes and rewrote the source node's opening to explain what happened: "After extracting the validation concerns into the sibling node, this outcome focuses on data transformation." This narrates a refactoring history — it's temporal. The atemporal version: "This outcome transforms raw input into normalized records."
 
 How to avoid: When rewriting specs after structural changes, treat the rewrite as if the spec was always this way. The spec tree is a durable map — it states product truth, not a changelog. Apply the read-aloud test: if the sentence would sound strange to someone who never saw the old structure, it's temporal.
 
@@ -270,7 +270,7 @@ How to avoid: Before re-pointing, classify each citing assertion. Universal — 
 
 **Using bare node or decision names.** A refactor report or Change entry that names `32-parser.capability` or `15-build.adr.md` cannot be resolved reliably. Use full paths from `spx/`.
 
-**Consolidating similar but distinct nodes.** Two nodes about "parsing" may parse different things for different reasons. If they have different hypotheses, they're different outcomes — similarity in implementation doesn't mean similarity in purpose.
+**Consolidating similar but distinct nodes.** Two nodes about "parsing" may parse different things for different reasons. If they own different contracts, they're different nodes — similarity in implementation doesn't mean similarity in purpose.
 
 **Extracting providers directly.** Refactoring applies tree surgery; `/decompose` owns shared-provider boundaries, ordering evidence, and indices.
 
