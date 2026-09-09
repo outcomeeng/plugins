@@ -148,7 +148,7 @@ Language deltas are expression only. A language test-standards node realizes eve
 
 ## Rationale
 
-Per-type and per-level permission decided once, language-neutrally, is what keeps three language plugins from re-deriving divergent answers — the same drift the superset node exists to remove — and the corpus cases make each boundary concrete enough to compare candidate renderings of the standard against one fixed subject. The rejected alternative, per-language permission tables, re-opens divergence-by-subtraction with no gate that compares siblings.
+Per-type and per-level permission decided once, language-neutrally, is what keeps three language plugins from re-deriving divergent answers — the same drift the superset node exists to remove — and the corpus cases make each boundary concrete enough to compare candidate renderings of the standard against one fixed subject. Per-language permission tables re-open divergence-by-subtraction with no gate that compares siblings.
 
 ## Product properties
 
