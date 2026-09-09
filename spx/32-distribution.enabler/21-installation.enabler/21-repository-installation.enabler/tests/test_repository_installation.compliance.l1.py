@@ -24,7 +24,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_agent_home_collision,
     observe_agent_home_reconciliation,
     observe_codex_config_independence,
-    observe_codex_role_discovery,
+    observe_codex_subagent_discovery,
     observe_failed_run_restore,
     observe_noncanonical_reconciliation,
     observe_scope_split,
@@ -384,7 +384,7 @@ def test_a_missing_probe_credential_fails_loudly_before_any_agent_process(
     monkeypatch.delenv(CODEX_API_KEY_ENVIRONMENT, raising=False)
 
     with pytest.raises(RuntimeError, match="required credential"):
-        observe_codex_role_discovery()
+        observe_codex_subagent_discovery()
 
 
 def test_a_timed_out_probe_command_scrubs_its_partial_capture(

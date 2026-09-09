@@ -110,26 +110,26 @@ NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
 PLUGIN_DISABLING_CODEX_CONFIG = b"[plugins]\nenabled = false\n"
 
 CODEX_LOGIN_COMMAND: tuple[str, ...] = (CODEX_EXECUTABLE, "login", "--with-api-key")
-ROLE_DISCOVERY_ROLES_FIELD = "roles"
+SUBAGENT_DISCOVERY_NAMES_FIELD = "subagents"
 RENAMED_CHECKOUT_AGENT_NAME = "local_helper.toml"
 RENAMED_CHECKOUT_SKILL_NAME = "renamed-skill"
-ROLE_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
+SUBAGENT_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "properties": {
-        ROLE_DISCOVERY_ROLES_FIELD: {"type": "array", "items": {"type": "string"}}
+        SUBAGENT_DISCOVERY_NAMES_FIELD: {"type": "array", "items": {"type": "string"}}
     },
-    "required": [ROLE_DISCOVERY_ROLES_FIELD],
+    "required": [SUBAGENT_DISCOVERY_NAMES_FIELD],
     "additionalProperties": False,
 }
-ROLE_DISCOVERY_PROMPT = (
-    "Report every agent role name you can spawn as a subagent in this session: "
+SUBAGENT_DISCOVERY_PROMPT = (
+    "Report every subagent name you can spawn in this session: "
     "the exact `agent_type` values your subagent-spawning tool declares, "
-    "including built-in roles. If that tool is not initially exposed, discover "
+    "including built-in subagents. If that tool is not initially exposed, discover "
     "it through your deferred-tool registry first. Do not read any file, run "
     "any command, or spawn any agent. Answer only with JSON matching the "
     "required output schema."
 )
-ROLE_DISCOVERY_TIMEOUT_SECONDS = 600
+SUBAGENT_DISCOVERY_TIMEOUT_SECONDS = 600
 
 
 def _settings_json(path: Path) -> dict[str, object]:
@@ -1835,12 +1835,12 @@ def observe_real_installation() -> RealInstallationObservation:
 
 
 @dataclass(frozen=True)
-class CodexRoleDiscoveryObservation:
-    """One fresh non-interactive Codex session's role discovery over a home.
+class CodexSubagentDiscoveryObservation:
+    """One fresh non-interactive Codex session's subagent discovery over a home.
 
     Observations only: the isolated installation result that populated the
-    disposable home, the login and session command results, the parsed roles
-    the session reported, and the canonical role names placed under that home.
+    disposable home, the login and session command results, the parsed subagent names
+    the session reported, and the canonical subagent names placed under that home.
     The linked test owns every predicate.
     """
 
@@ -1851,12 +1851,12 @@ class CodexRoleDiscoveryObservation:
     session_exit_code: int
     session_stderr: str
     session_last_message: str
-    discovered_roles: frozenset[str] | None
-    placed_roles: frozenset[str]
+    discovered_subagents: frozenset[str] | None
+    placed_subagents: frozenset[str]
     codex_home: Path
 
 
-def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
+def observe_codex_subagent_discovery() -> CodexSubagentDiscoveryObservation:
     """Populate a disposable Codex home by isolated installation and probe it.
 
     The credential named by ``CODEX_API_KEY_ENVIRONMENT`` reaches only the agent
@@ -1870,7 +1870,7 @@ def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
     if not credential:
         raise RuntimeError(
             f"required credential {CODEX_API_KEY_ENVIRONMENT} is unavailable for "
-            "the Codex role-discovery probe"
+            "the Codex subagent-discovery probe"
         )
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
@@ -1886,7 +1886,7 @@ def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
         environment = dict(plan.commands[0].environment)
         install = _run_recipe(checkout, mirror, state, environment)
         codex_home = state / "codex"
-        placed_roles = _placed_role_names(codex_home)
+        placed_subagents = _placed_subagent_names(codex_home)
         login = scrubbed_probe_run(
             CODEX_LOGIN_COMMAND,
             cwd=mirror,
@@ -1894,11 +1894,11 @@ def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
             credential=credential,
             input_text=credential,
         )
-        schema_path = temporary_root / "role-discovery-schema.json"
+        schema_path = temporary_root / "subagent-discovery-schema.json"
         schema_path.write_text(
-            json.dumps(ROLE_DISCOVERY_OUTPUT_SCHEMA), encoding="utf-8"
+            json.dumps(SUBAGENT_DISCOVERY_OUTPUT_SCHEMA), encoding="utf-8"
         )
-        last_message_path = temporary_root / "role-discovery-last-message.json"
+        last_message_path = temporary_root / "subagent-discovery-last-message.json"
         session = scrubbed_probe_run(
             (
                 CODEX_EXECUTABLE,
@@ -1911,7 +1911,7 @@ def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
                 str(schema_path),
                 "--output-last-message",
                 str(last_message_path),
-                ROLE_DISCOVERY_PROMPT,
+                SUBAGENT_DISCOVERY_PROMPT,
             ),
             cwd=mirror,
             env=environment,
@@ -1923,7 +1923,7 @@ def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
             else ""
         )
     scrubbed_last_message = scrub_credential(last_message, credential)
-    return CodexRoleDiscoveryObservation(
+    return CodexSubagentDiscoveryObservation(
         install_exit_code=install.returncode,
         install_stderr=scrub_credential(install.stderr, credential),
         login_exit_code=login.returncode,
@@ -1931,8 +1931,8 @@ def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
         session_exit_code=session.returncode,
         session_stderr=scrub_credential(session.stderr, credential),
         session_last_message=scrubbed_last_message,
-        discovered_roles=_discovered_roles(scrubbed_last_message),
-        placed_roles=placed_roles,
+        discovered_subagents=_discovered_subagents(scrubbed_last_message),
+        placed_subagents=placed_subagents,
         codex_home=codex_home,
     )
 
@@ -1944,7 +1944,7 @@ def scrubbed_probe_run(
     env: Mapping[str, str],
     credential: str,
     input_text: str | None = None,
-    timeout: float = ROLE_DISCOVERY_TIMEOUT_SECONDS,
+    timeout: float = SUBAGENT_DISCOVERY_TIMEOUT_SECONDS,
 ) -> subprocess.CompletedProcess[str]:
     """Run one probe command with every captured stream scrubbed on every path.
 
@@ -2012,8 +2012,8 @@ def scrub_credential(text: str, credential: str) -> str:
     return text.replace(credential, "[REDACTED-CREDENTIAL]")
 
 
-def _placed_role_names(codex_home: Path) -> frozenset[str]:
-    """Read the role name each placed definition declares under the home."""
+def _placed_subagent_names(codex_home: Path) -> frozenset[str]:
+    """Read the subagent name each placed definition declares under the home."""
     names: set[str] = set()
     for _, content in _agent_snapshot(codex_home):
         document = tomllib.loads(content.decode("utf-8"))
@@ -2023,7 +2023,7 @@ def _placed_role_names(codex_home: Path) -> frozenset[str]:
     return frozenset(names)
 
 
-def _discovered_roles(last_message: str) -> frozenset[str] | None:
+def _discovered_subagents(last_message: str) -> frozenset[str] | None:
     """Parse the session's structured answer; ``None`` when it is not the schema."""
     try:
         document = json.loads(last_message)
@@ -2031,10 +2031,12 @@ def _discovered_roles(last_message: str) -> frozenset[str] | None:
         return None
     if not isinstance(document, dict):
         return None
-    roles = document.get(ROLE_DISCOVERY_ROLES_FIELD)
-    if not isinstance(roles, list) or not all(isinstance(r, str) for r in roles):
+    subagents = document.get(SUBAGENT_DISCOVERY_NAMES_FIELD)
+    if not isinstance(subagents, list) or not all(
+        isinstance(name, str) for name in subagents
+    ):
         return None
-    return frozenset(roles)
+    return frozenset(subagents)
 
 
 def _listing_entries(agent: Agent, payload: str) -> list[object]:
@@ -2509,7 +2511,7 @@ __all__ = [
     "AgentHomeCollisionObservation",
     "InterruptedReconciliationObservation",
     "AgentHomeReconciliationObservation",
-    "CodexRoleDiscoveryObservation",
+    "CodexSubagentDiscoveryObservation",
     "CollisionObservation",
     "ConfigObservation",
     "FailureObservation",
@@ -2534,7 +2536,7 @@ __all__ = [
     "observe_agent_home_reconciliation",
     "observe_claude_user_collision",
     "observe_codex_config_independence",
-    "observe_codex_role_discovery",
+    "observe_codex_subagent_discovery",
     "observe_designated_failure",
     "observe_first_failure",
     "observe_failed_run_restore",
