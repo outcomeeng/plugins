@@ -2,36 +2,32 @@
 name: decompose
 description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring spec tree nodes. NEVER decompose specs without this skill.
 argument-hint: <node-address|spx/>
-allowed-tools: Read, Glob, Grep, Write, Edit
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(spx validation markdown:*), Bash(spx spec status --format json:*)
 ---
 
 <objective>
 
-Spec Tree structure composed from a target node address, durable spec content, and node-local coordination notes — concern boundaries identified, enabler/outcome types assigned, sparse indices and ordering evidence recorded, assertions redistributed, and structural quality validated.
+Spec Tree structure composed from settled product truth — each concept placed under the correct owner, classified by the ordered kind procedure, indexed from its prerequisites, and validated by the product's declared commands.
 
 </objective>
 
 <quick_start>
 
-**PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
-
-**Target:** `$ARGUMENTS`
+Require a live `<SPEC_TREE_FOUNDATION>` marker; invoke `/understand` when absent.
 
 Accept exactly one target from `$ARGUMENTS`:
 
-- `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
-- `{path-to-node}` — decompose or restructure children under an existing node.
+- `spx/` composes top-level children beneath the product root.
+- A canonical full `spx/...` node address composes children beneath that node.
 
-If `$ARGUMENTS` is empty, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
+Stop before product-content access when the argument is absent, malformed, or contains more than one target. State the two accepted forms.
 
-Read the conditional operational sources below before composing. Use the live inline foundation for node and ordering rules:
+Invoke `/contextualize` for the target node. For `spx/`, contextualize the product root. Read the conditional resources exposed by `/understand` when their decision is reached:
 
-- Live `/understand` `<identity_and_kinds>` — the seven kinds, their order, and containment — and `${SKILL_DIR}/../understand/references/kind-decision.md` for the ordered kind tests and the structural scorecards
-- Live `/understand` `<ordering_model>` — the context-loading meaning of an index and the inverse assignment rule
-- Live `/understand` `<artifact_placement>` — artifact taxonomy, test-infrastructure governance, and placement rules
-- `/understand` product-domain-shapes classifier and examples
-- `/understand` output-kind and variant spec templates under `templates/nodes/`
-- `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
+- `kind-decision` for ordered kind tests and structural scorecards
+- `product-domain-shapes` for aggregate, product, and implementation-layer distinctions
+- the selected output-kind or variant template before writing a spec
+- `grammar` before assigning a fractional index or validating a node address
 
 </quick_start>
 
@@ -39,246 +35,157 @@ Read the conditional operational sources below before composing. Use the live in
 
 <step name="load_context">
 
-**Step 1: Load tree context**
+**Step 1: Load authoritative context**
 
-If the target is `spx/`:
+From the live context manifest, read the product and ancestor contracts, target spec, governing decisions, sibling contracts, existing children, and node-local `ISSUES.md` files. A 3.x-authored tree may also carry `PLAN.md`; read it as a fallible note and never as structural authority.
 
-1. Read the product spec and product-level ADRs/PDRs.
-2. Read `AGENTS.md` if present.
-3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
-4. Enumerate existing top-level children.
-5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `/understand` `references/artifact-placement.md` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
+Treat proposed child names, kinds, indices, and dependency order as intent to test against product truth. Keep pending work in the governing Change. Never create or update `PLAN.md`.
 
-If the target is a node address:
-
-1. Accept only the target node address as structural input. The address must be the full path from `spx/`; never accept a bare node name or numeric prefix as sufficient.
-2. If the request includes proposed child names, indices, or dependency order, preserve those details as intent in the target node's `PLAN.md` or `ISSUES.md`; do not treat them as structure.
-3. Check for a matching `<SPEC_TREE_CONTEXT>` marker. If absent, invoke `/contextualize`.
-4. Read the context manifest, target spec, existing children, and target `PLAN.md` or `ISSUES.md`.
-
-For both target modes, note root product scope, ancestor constraints, current assertions, existing siblings/children, and any known issues before proposing structure.
+For `spx/`, derive top-level concepts from the product boundary and decisions. A product spec names scope and product-owned terms; it never enumerates children.
 
 </step>
 
-<step name="assess_need">
+<step name="assess_trigger">
 
-**Step 2: Assess whether composition is needed**
+**Step 2: Establish the countable trigger**
 
-For `spx/`, composition is needed when the product spec or root coordination notes name product scope that has no top-level children yet.
+Decompose when either condition holds:
 
-For a node target, decompose when at least one trigger applies:
+1. The target contains two or more distinct concepts, present or foreseen.
+2. The target carries too many assertions for one coherent node.
 
-| Trigger              | Threshold                                              |
-| -------------------- | ------------------------------------------------------ |
-| Assertion count      | More than ~7 across all types                          |
-| Context payload      | Exceeds a reliable working set                         |
-| Independent concerns | Contains assertions with no relationship to each other |
-| Separate validation  | Parts could be validated independently                 |
-| Explicit issue       | `PLAN.md` or `ISSUES.md` requests structure work       |
+Count concepts by semantic ownership and lifecycle, not by implementation layer, command count, evidence mechanism, or presentation order. Keep one coherent concept whole. When no trigger holds, report that the node remains one concept and make no structural change.
 
-Classify the target with the product-domain-shapes reference before deciding whether to split it:
-
-- **One coherent concern**: keep the target whole when one hypothesis or enables statement covers all assertions, assertions are tightly coupled, or proposed children would carry only 1-2 trivial assertions.
-- **Aggregate domain plus first concrete behavior**: create both parent and child from the first slice when the aggregate owns shared policy, vocabulary, scope, routing, coordination, or cross-child assertions and the concrete behavior owns an independently validated contract.
-- **Implementation layer**: translate code-shaped names back to product dimensions before proposing nodes.
-- **Unsettled boundary**: invoke `/interview` with the unresolved boundary as the current coverage area.
+When the context payload is unreliable because one dimension is overloaded, identify the distinct concepts within that dimension and apply the same trigger. When product truth and operator intent leave a boundary unresolved, invoke `/interview` with that exact boundary before continuing.
 
 </step>
 
-<step name="clarity_gate">
+<step name="resolve_decisions">
 
-**Step 3: Verify composition input completeness**
+**Step 3: Resolve decision ownership**
 
-Before proposing child nodes, verify that product/root context, target spec, existing children/siblings, `PLAN.md`, and `ISSUES.md` are complete enough to build the structure model.
+Before `/author` writes an ADR or PDR, resolve its owning directory whenever decomposition affects concept ownership, node identity, parent/child boundaries, or context reach.
 
-Use this coverage map:
+Place the record in the node whose subtree it governs. Use a PDR for observable product behavior and an ADR for architecture users cannot observe. A root decision governs every subtree; broad reach alone never makes a decision root-owned. If no existing node owns the concept, settle the structure first and author the record afterwards.
+
+</step>
+
+<step name="identify_concepts">
+
+**Step 4: Identify semantic owners**
+
+Group assertions and settled scope into concepts that share one subject and lifecycle. A child must own a meaningful contract; implementation-only partitions and one-line wrappers are not concepts.
+
+- Keep class-wide rules and assertions on the parent.
+- Move behavior-specific assertions to the child that owns their meaning.
+- Extract a provider when two or more semantic owners share behavior, or when the behavior has its own lifecycle and verification contract.
+- Keep single-consumer mechanics with the consumer unless those mechanics independently satisfy a kind test and lifecycle boundary.
+- When an aggregate owns shared vocabulary, rules, routing, or cross-child assertions and the first concrete behavior has its own contract, retain the aggregate parent and create the concrete child.
+
+When unresolved boundaries remain, invoke `/interview`. When the evidence settles them, continue without a confirmation pause.
+
+</step>
+
+<step name="classify_kinds">
+
+**Step 5: Classify every node**
+
+Apply the `kind-decision` tests in this exact order; the first test that holds fixes the kind:
 
 ```text
-Coverage: Scope Boundary | Decision Placement | Delivery Substrate | Evidence Strategy | Architecture | Enabler/Outcome Type | Ordering Evidence | Index Budget | Refactor/Issue Handling
+product -> variant -> substrate -> surface -> interface -> domain -> capability
 ```
 
-Each area is complete when:
+Then apply the live containment table:
 
-- **Scope Boundary** — included and excluded concerns are named, and the aggregate concern stays coherent.
-- **Decision Placement** — requested ADR/PDR locations are resolved to an owning directory when placement depends on concept ownership, stale node naming, node splitting, parent/child boundaries, or context-loading reach.
-- **Delivery Substrate** — infrastructure, runtime APIs, data sources, packaging, commands, validation surfaces, and safety boundaries needed to deliver the behavior are named or explicitly deferred.
-- **Evidence Strategy** — each concern has a verification type: automated test, review, validation command, workflow behavior, or a documented reason evidence stays deferred.
-- **Architecture** — architectural choices that govern the structure are captured by ADRs or an explicit open issue.
-- **Enabler/Outcome Type** — each candidate can be written as a stable enabler or has real outcome uncertainty.
-- **Ordering Evidence** — ordered candidates have a concrete reason one must precede another, or the candidates are unordered relative to each other.
-- **Index Budget** — full-vs-partial composition horizon is known.
-- **Refactor/Issue Handling** — sibling refactors, duplicate nodes, stale coordination notes, and known issues have a destination.
+- A product admits every output kind; only a product admits another product.
+- An output node admits its own kind, every more-foundational output kind, and variants.
+- A variant admits what its parent admits except another variant.
+- A provider is never more outward than its consumer under `substrate < capability < domain < interface < surface`; a variant takes its parent's place.
 
-If any area is incomplete or doubtful, invoke `/interview` before continuing. Use the coverage map above as the calling skill's domain-specific coverage areas. Ask one structured question at a time and continue until every area is resolved or recorded as an explicit issue.
+Use the selected kind's canonical opening. The `FOR` and `TO` slots name consumption context or external audience, never a consumer node. Openings carry no paths.
 
-</step>
-
-<step name="identify_concerns">
-
-**Step 4: Identify concerns**
-
-Group assertions, product scope items, and coordination-note intent into coherent concerns. A concern is a set of behavior, infrastructure, or policy that:
-
-- Shares a common subject
-- Would be validated together
-- Would be meaningful as a stable child node
-- Would not be clearer as a single assertion inside another child
-
-Use these seam-finding heuristics:
-
-- Different data domains, runtime surfaces, commands, or validation mechanisms can indicate separate concerns.
-- Setup, packaging, state, credentials, safety, or workflow substrate can indicate enabler concerns.
-- Behavior slices can be valid vertical slices when each slice has its own testable contract and later slices extend or depend on earlier contracts.
-- Apply the product-domain-shapes reference when the input mixes an aggregate domain with its first concrete behavior.
-- Implementation layers alone are not concerns unless the user-visible or spec-visible contract can be validated independently.
-- Assertions that span multiple children stay in the parent as cross-cutting assertions.
-
-When later sibling slices are named, implied by the product vocabulary, or recorded as reserved horizon, keep the aggregate as the parent boundary and place the concrete behavior in a child. Record deferred siblings or reserved horizon in `PLAN.md`; keep cross-slice assertions on the parent and child-specific assertions on the child.
-
-Present concern groupings to the user before writing files.
-
-</step>
-
-<step name="assign_types">
-
-**Step 5: Assign node types**
-
-Apply these rules to each concern:
-
-| Condition                                                                                    | Node type |
-| -------------------------------------------------------------------------------------------- | --------- |
-| Parent is an enabler and the child is a node                                                 | Enabler   |
-| Output is fully determined by specification and assertions grow by addition                  | Enabler   |
-| Concern exists to provide runtime, data, validation, workflow, packaging, state, or safety   | Enabler   |
-| Goal is a behavior-change bet and most assertions could change while the goal remains stable | Outcome   |
-| Child carries its own real uncertainty about which output achieves the desired behavior      | Outcome   |
-
-Use an outcome only when the forcing question fails: "Can this be written as PROVIDES X SO THAT Y CAN Z with stable assertions?" If yes, make it an enabler. When unclear after the clarity gate and interview, default to enabler.
-
-</step>
-
-<step name="extract_shared_enablers">
-
-**Step 6: Extract shared enablers**
-
-Before assigning indices, check whether two or more proposed children require the same substrate:
-
-- Runtime API, data source, generated artifact, persisted state, or packaging surface
-- Validation rule, command surface, safety boundary, credential model, or evidence harness
-- Shared policy or invariant needed by multiple children
-
-Extract the shared concern as an enabler when removing it would break multiple children. Keep single-consumer infrastructure inside the consuming child.
-
-</step>
-
-<step name="ordering_evidence">
-
-**Step 7: Build the ordering-evidence matrix**
-
-Before assigning indices, record every proposed ordering edge:
-
-| Field                     | Required content                                                                                                 |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Predecessor               | Candidate child or decision that must be earlier                                                                 |
-| Ordering basis            | Provider/consumer, logical prerequisite, vertical slice, shared substrate, feature extension, ADR/PDR constraint |
-| Constraining contribution | Concrete service, contract, invariant, state, artifact, validation surface, or delivered slice                   |
-| Successor                 | Candidate child constrained by the predecessor                                                                   |
-| Required by               | Successor assertion, workflow step, verification type, architecture invariant, or extension goal                 |
-| Consequence if absent     | What becomes impossible, invalid, unverifiable, or incoherent without the predecessor                            |
-| Disposition               | Ordered dependency, same-index/unordered, or open issue                                                          |
-
-Use different sibling indices only when the matrix contains concrete ordering evidence. Valid evidence includes provider/consumer service flow, logical prerequisites, vertical-slice construction dependencies, shared substrate, and feature-extension dependencies.
-
-Roadmap priority, chronology, theme grouping, and explanation order do not create ordering evidence by themselves.
-
-**What an index encodes.** Index assignment follows live `/understand` `<index_semantics>`: a child placed above a sibling claims that sibling's contract as a prerequisite it consumes or falls within, an unrelated earlier contract supplies awareness and creates no dependency, and same-index siblings are independent peers. A different-index assignment is therefore a standing claim that the successor depends on the predecessor's contract — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor.
-
-**Existing siblings are not precedents.** When decomposing under a node that already holds children, an existing lower-index child is not a precedent that a new child sits above it, and the next sparse integer after the highest existing index is not the default slot. A new child takes the same index as an existing sibling — an independent peer — unless the matrix proves one constrains the other.
-
-Use full paths from `spx/` for existing nodes, ADRs, and PDRs in the matrix. For new candidate children before the final index exists, include the full parent path plus candidate slug so the reference can be resolved after assignment.
-
-**Disposition checkpoint — mandatory before Step 8.** State every proposed sibling pair explicitly as one of: ordered (name the matrix row proving the edge), same-index (independent peers, no edge), or unordered. Assign no index until every different-index pair names its proving matrix row; a pair with no row is same-index, never a guessed slot.
+Record one classification result per candidate: first passing test, rejected earlier tests, containment check, opening, and provider/consumer kind-order check. Invoke `/interview` when the tests do not settle a candidate from loaded truth.
 
 </step>
 
 <step name="assign_indices">
 
-**Step 8: Assign sparse integer indices**
+**Step 6: Assign indices from prerequisites**
 
-Use sparse indices to encode the ordering-evidence matrix. The horizon math below composes a set of new children from scratch. When adding a child beside existing siblings, skip the distribution math and read the child's index from its disposition-checkpoint rows against each existing sibling: it shares the index of a sibling the checkpoint marked its independent peer, and takes a higher or lower index only from a pair the matrix proved ordered. Existing siblings at different indices are already ordered relative to each other, so a child cannot be the independent peer of two of them at once — a proven edge to an existing sibling places the child above that predecessor or below that successor, and that placement, never a guessed slot, sets its index.
+Nodes and decisions share one sibling index space. Check kind order before index assignment, then ask only what each candidate depends on.
 
-1. Choose the horizon:
-   - Full composition of all known child concerns → use the full [10, 99] range.
-   - First slice of a larger known area → use the first half or first quarter and record the reserved horizon in `PLAN.md`.
-2. Count child nodes in the chosen horizon.
-3. Distribute ordered groups with `i_k = 10 + floor(k * 89 / (N + 1))`, adjusted to the selected horizon.
-4. Assign a higher index only when the ordering-evidence matrix proves the predecessor constrains the successor — the higher index makes that predecessor constraining context for the successor in every later `/contextualize`.
-5. Assign the same index — an independent peer — when no ordering evidence exists, including a new child added beside an existing sibling with no proven edge.
+For every candidate:
 
-Files and directories share one numeric namespace within a parent. Numeric prefixes are sibling-unique only; always use full paths from `spx/` in references. Never refer to an ADR or PDR by bare filename because any directory can contain the same numeric prefix and slug.
+1. Name each prerequisite by its full `spx/...` path.
+2. State the provider contract, logical prerequisite, vertical-slice contract, shared substrate, feature extension, or decision constraint consumed.
+3. State what becomes impossible, invalid, or unverifiable without it.
+4. Place the candidate above every prerequisite it names.
+5. Check that every lower-index decision whose scope reaches the candidate is intended to govern it.
+
+Numeric separation alone establishes no dependency. Independent siblings may use the same or different indices. Reuse an existing peer index only when it satisfies the candidate's prerequisites and decision scope; the next free number is never a default. Same-index peers cannot supply prerequisites to each other. Use a fractional insert when the prerequisite interval has no suitable integer, following the `grammar` reference.
+
+Reject roadmap priority, chronology, theme grouping, explanation order, and reserved future space as index evidence.
 
 </step>
 
 <step name="redistribute_assertions">
 
-**Step 9: Redistribute assertions**
+**Step 7: Redistribute declarations**
 
-For node targets, move assertions from the parent spec into children:
+For a node target, record each assertion's destination before editing:
 
-- Each assertion goes to the child whose concern it specifies.
-- Cross-cutting assertions stay in the parent.
-- Assertions that fit two children are probably cross-cutting.
-- Test links move with their assertions and must point to the correct child `tests/` location.
+- the child that owns its meaning;
+- the parent when the assertion states the class contract; or
+- a blocking ambiguity resolved through `/interview`.
 
-Count assertions before and after redistribution. The child assertions plus remaining parent assertions must equal the original assertion count.
+Move each path-bearing evidence link with its assertion and resolve it relative to the new node. Keep cross-child rules on the parent without naming the children. Count assertions before and after; the remaining parent assertions plus all child assertions must equal the original count.
 
-For `spx/`, write top-level children from product scope and root coordination-note intent. Product-level assertions stay in the product spec unless they specify only one child concern.
+For `spx/`, create child contracts from product scope and decisions. Leave the product spec as product scope; never add assertions or child enumeration to it.
 
 </step>
 
-<step name="write_specs">
+<step name="write_structure">
 
-**Step 10: Write child specs**
+**Step 8: Write the 4.0 node form**
 
-For each child node:
+For each child:
 
-1. Create `{index}-{slug}.{enabler|outcome}/`.
-2. Create `{slug}.md`.
-3. Use the applicable canonical node template provided by `/understand`.
-4. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
+1. Create `{index}-{slug}.{kind}/` using the assigned two-digit or fractional index.
+2. Create `{slug}.spec.md` from the selected `/understand` template.
+3. Generate a unique UUIDv7 `id` in front matter.
+4. Declare `malleability` on every output node; omit it only when the intended floor is `implementation`.
+5. Write the canonical kind opening and the redistributed assertions in atemporal voice.
 
-Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/verify` or `/apply` writes the first test file.
-
-Revise the parent spec so it summarizes the child structure without narrating the refactor. Remove moved assertions and keep cross-cutting assertions.
+Never hand-write `spx.status.json`; the projector owns it. Never create an empty evidence directory. Never list children in the parent spec. A provider operating on a 3.x-authored tree may parse `.enabler`, `.outcome`, `{slug}.md`, and prior `PLAN.md` inputs; new structure follows the repository's declared methodology, and a toolchain unable to admit that grammar is a lower-layer blocker recorded in the governing Change.
 
 </step>
 
 <step name="validate">
 
-**Step 11: Validate composition quality**
+**Step 9: Run command-backed validation**
 
-Check each criterion:
+Read the product's exact `author` and `verify` commands from its complete root guide. After every mutation batch:
 
-- [ ] Composition need assessed and not forced
-- [ ] Clarity gate complete, or `/interview` used to resolve gaps
-- [ ] Delivery substrate and evidence strategy accounted for
-- [ ] Concern groupings presented before writing files
-- [ ] No child has only 1-2 trivial assertions
-- [ ] Any named aggregate boundary with an independently validated first concrete slice became parent plus child, with deferred siblings or reserved horizon recorded when known
-- [ ] No child exceeds ~7 assertions without a recursive-decomposition issue
-- [ ] Shared enablers have at least two dependent children
-- [ ] Ordering-evidence matrix recorded before index assignment
-- [ ] Disposition checkpoint stated every sibling pair as ordered, same-index, or unordered before any index was assigned
-- [ ] Every different-index sibling relationship has ordering evidence
-- [ ] No new child placed at a higher index than an existing sibling without a matrix row proving the edge
-- [ ] Roadmap, chronology, theme grouping, and explanation order are not encoded as dependencies by themselves
-- [ ] Index horizon selected; partial compositions reserve remaining space in `PLAN.md`
-- [ ] Full compositions collectively cover the parent or product scope; partial compositions cover the selected first-slice horizon and record the remaining horizon in `PLAN.md`
-- [ ] Assertions are not lost during redistribution
-- [ ] Spec files use atemporal voice
-- [ ] Directory names follow `{NN}-{slug}.{enabler|outcome}`
-- [ ] Spec files are `{slug}.md`
-- [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
+1. Invoke `/wait-for-load` and wait for `ready: true`.
+2. Run the product's declared author command unchanged to rebuild or regenerate derived artifacts.
+3. Invoke `/wait-for-load` again and run `spx validation markdown` unchanged.
+4. Invoke `/wait-for-load` again and run `spx spec status --format json` unchanged.
+5. Invoke `/wait-for-load` before each remaining product verify command and run it unchanged.
+
+Stop on the first nonzero result. Report the exact command and output; never claim a composed tree is valid from a checklist alone.
+
+After the commands pass, confirm:
+
+- every child has one semantic owner and a countable reason to exist;
+- every kind result follows the ordered procedure and containment table;
+- every provider/consumer pair respects kind order;
+- every named prerequisite precedes its consumer with a falsifiable reason;
+- every decision has the intended subtree reach;
+- assertion counts and evidence links are conserved;
+- every new node uses the 4.0 directory, spec, front-matter, and opening grammar;
+- every node, ADR, and PDR reference is a full path from `spx/`;
+- pending work is carried by the governing Change, never `PLAN.md`.
 
 </step>
 
@@ -286,96 +193,51 @@ Check each criterion:
 
 <failure_modes>
 
-**Failure 1: Over-decomposed a coherent node**
+**A coherent node was split into implementation layers.**
 
-Claude decomposed an outcome with tightly coupled assertions into children that could not be validated independently. The child specs looked tidy but each one required the others to mean anything.
+Claude created children that could not be specified or verified independently. Count concepts by semantic ownership and lifecycle; keep implementation partitions inside the concept they serve.
 
-How to avoid: Before decomposing, ask whether each child can be validated on its own contract. If every test requires all proposed children, keep the node whole.
+**A desired label bypassed the ordered kind procedure.**
 
-**Failure 2: Encoded roadmap order as dependency order**
+Claude selected a plausible kind from the candidate's name, then rationalized it. Apply the tests in order and record the first passing test plus the earlier rejections.
 
-Claude converted a roadmap list into sequential sparse indices. The order felt natural to explain, but no later child depended on an earlier contract, substrate, or slice.
+**Roadmap order became index order.**
 
-How to avoid: Record ordering evidence before assigning indices. If the only reason is priority, chronology, theme, or explanation order, keep the siblings same-index or unordered.
+Claude assigned increasing indices because one slice was planned earlier. Index only from the candidate's own prerequisites and name the consequence of removing each prerequisite.
 
-**Failure 3: Missed vertical-slice construction**
+**The next sparse slot became a default.**
 
-Claude flattened two slices into same-index siblings because there was no provider/consumer service. The second slice extended the first slice's command contract and test harness, so context loading later missed the prerequisite slice.
+Claude placed a new child after the highest existing index without checking prerequisites or decision scope. Reuse a peer index only when it fits; otherwise derive an integer or fractional position from the actual constraints.
 
-How to avoid: Treat vertical-slice construction and feature-extension prerequisites as ordering evidence when the successor depends on a predecessor's delivered contract.
+**Assertions disappeared during redistribution.**
 
-**Failure 4: Created enabler with one dependent**
+Claude moved child-specific assertions and dropped a class-wide assertion with no single child owner. Record every destination first and prove count conservation after the move.
 
-Claude extracted a helper as a shared enabler even though only one child consumed it. The new node added indirection without shared structure.
+**A note dictated structure.**
 
-How to avoid: Extract an enabler only when two or more children depend on it. Keep single-consumer infrastructure inside the consuming child.
+Claude treated proposed children in `PLAN.md` or `ISSUES.md` as an approved tree. Reconcile notes against product truth and settled intent; keep pending work in the Change.
 
-**Failure 5: Lost assertions during redistribution**
+**Decision placement was deferred to authoring.**
 
-Claude moved parent assertions into children and dropped one cross-cutting assertion because it fit no single child.
+Claude asked `/author` to place a decision while decomposition still left its semantic owner unsettled. Resolve the owner and subtree boundary first.
 
-How to avoid: Count assertions before and after. Assertions that span children remain in the parent.
+**A checklist replaced deterministic validation.**
 
-**Failure 6: Wrote bare node or decision references**
-
-Claude wrote `32-parser.enabler` or `15-build.adr.md` in a decomposition plan. Another directory used the same numeric prefix, so the reference could not be resolved. Full paths from `spx/` are mandatory for every existing node, ADR, and PDR.
-
-How to avoid: When recording an ordering-evidence matrix, assertion move, issue, or PLAN.md note, write `spx/.../32-parser.enabler` and `spx/.../15-build.adr.md`. Before a new child has a final index, write the full parent path and candidate slug.
-
-**Failure 7: Took the next sparse slot after an existing sibling**
-
-Claude decomposed under a node that already held `spx/.../21-journal.enabler`, proposed a new sibling, and assigned it `32` — the next sparse slot — with no ordering-evidence row. The higher index silently made journal constraining context for the new child in every later `/contextualize`, encoding a dependency no evidence proved. Claude treated the existing sibling's index as a precedent and the next sparse integer as the natural choice; the operator had to name the missing ordering reference before Claude saw that the index was context-loading semantics, not an index-budget slot.
-
-How to avoid: Run the disposition checkpoint before assigning any index. Treat a new child as an independent peer at the same index as an existing sibling unless the matrix proves one constrains the other — an existing lower-index sibling is never a precedent for the next slot.
-
-**Failure 8: Collapsed the first concrete slice into the aggregate**
-
-Claude created only a parent domain node when the request named an aggregate domain plus its first concrete behavior. The parent then carried behavior-specific assertions, so adding the next behavior would require splitting the parent later and moving assertions that were specific from the start.
-
-How to avoid: When the aggregate owns shared scope or cross-child policy and the concrete behavior has its own validation contract, create both parent and child immediately. Put shared assertions on the parent, behavior-specific assertions on the child, and record deferred sibling horizon in `PLAN.md` when the later slices are known.
-
-**Failure 9: Left decision placement to authoring while ownership was unsettled**
-
-Claude asked `/author` to place exactly one PDR even though the concept crossed plausible owners and raised node identity questions. Authoring proposed a path from reach, then the operator had to ask whether `/decompose` had been invoked.
-
-How to avoid: treat ADR/PDR placement as decomposition work when the location depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach. Return the owning directory and scope boundary first; `/author` writes the decision record only after that structure is settled.
+Claude reported success after inspecting the files while the product's author and verify commands had not run. Execute every declared command and stop on any nonzero result.
 
 </failure_modes>
 
-<anti_patterns>
-
-**Pre-shaped child lists.** User-provided child names or indices are intent, not structure. Build the model from the target spec and coordination notes.
-
-**Implementation-layer decomposition.** Children named only "frontend," "backend," or "database" are usually layers, not independently validated concerns.
-
-**Outcome inflation.** Use outcomes only for real uncertainty. Stable, specified outputs are enablers even when users see them.
-
-**Narrative ordering.** A list that is easy to explain in order is not automatically a dependency chain.
-
-**Skipping product-root composition.** Bootstrapping creates the product root; `/decompose spx/` composes top-level children.
-
-**Bare references.** A node name, ADR filename, PDR filename, or numeric prefix without the full `spx/` path is not a reference. It is an ambiguous label.
-
-</anti_patterns>
-
 <success_criteria>
 
-Decomposition is complete when:
-
-- [ ] Target is either `spx/` or a valid node address
-- [ ] Context loaded from product/root, target spec if any, existing tree, and coordination notes
-- [ ] Composition need assessed
-- [ ] Clarity gate completed or `/interview` used
-- [ ] Concern boundaries and node types assigned
-- [ ] Shared enablers extracted only for multi-child dependencies
-- [ ] Aggregate parent plus independently validated first concrete child preserved when the input named both levels
-- [ ] Ordering-evidence matrix recorded
-- [ ] Disposition checkpoint stated before index assignment; no index guessed from an existing sibling's slot
-- [ ] Sparse indices assigned from ordering evidence and selected horizon
-- [ ] Assertions redistributed without loss
-- [ ] Parent or product spec revised without temporal narration
-- [ ] Child specs written from templates
-- [ ] Full `spx/` paths used for every node, ADR, and PDR reference
-- [ ] Validation checklist passes
+- The target is `spx/` or one canonical full node address, with complete live context.
+- A countable trigger justifies every split.
+- Each concept has one semantic owner and one kind selected by the ordered procedure.
+- Containment, openings, and provider/consumer kind order conform to the live foundation.
+- Every decision owner is settled before `/author` writes the record.
+- Every index follows the candidate's prerequisites and decision scope; no slot is guessed.
+- Assertions and evidence links are conserved under the owning nodes.
+- New nodes use `{index}-{slug}.{kind}/{slug}.spec.md`, UUIDv7 identity, and declared output malleability.
+- Parent and product specs enumerate no children, and pending work appears in the governing Change rather than `PLAN.md`.
+- The product's author and verify commands, `spx validation markdown`, and `spx spec status --format json` all pass.
 
 </success_criteria>
