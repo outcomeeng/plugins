@@ -24,6 +24,16 @@ Use skill `spec-tree:test-evidence-standards`. If that skill is unavailable, rep
 
 </shared_standards>
 
+<eager_foundation_exception>
+
+This skill invokes the eager-foundation exception. Every test-evidence invocation needs the complete five-stage route, assertion-type selection, execution-level selection, controlled-implementation exceptions, naming rules, and failure guidance before language-specific expression begins; hiding any of them behind a conditional read permits a partial route. The shared standard remains independently loadable because authoring and auditing consume that same source rather than duplicate it. Measure the installed payload and require at most 40,000 Unicode code points:
+
+```bash
+python3 -c "from pathlib import Path; print(len(Path('${CLAUDE_SKILL_DIR}/SKILL.md').read_text(encoding='utf-8')))"
+```
+
+</eager_foundation_exception>
+
 <testing_methodology>
 
 <non_negotiable_rules>
@@ -35,6 +45,7 @@ Use skill `spec-tree:test-evidence-standards`. If that skill is unavailable, rep
 - Name tests by subject, assertion type, execution level, and optional runner.
 - Derive the assertion type from the assertion's quantifier and evidence shape, never from the section containing the rule.
 - Verification routing selects the verification type. This test specialist owns assertion-type selection, execution-level selection, and controlled-implementation exceptions after test evidence is selected.
+- For property evidence, generate product-owned variable behavior. Keep filesystem, Git, and full CLI work outside each generated case when it only supplies boundary wiring, and exercise that real boundary through a separately typed finite assertion.
 
 </non_negotiable_rules>
 
@@ -111,6 +122,8 @@ Keep evidence, execution pain, and tool choice independent:
 
 A temporary-directory test can be `L1` when the filesystem is available, setup is trivial, and runtime is cheap. A Playwright test can be `L2` or `L3` depending on whether it uses local infrastructure or remote systems and credentials. Runner never defines level, and level never defines runner.
 
+An execution level permits a dependency; it never selects the case domain. Classify each assertion from its own quantifier before composing its level with the dependency it exercises.
+
 </independent_axes>
 
 <assertion_types>
@@ -176,6 +189,8 @@ Within the universal branch:
 
 For boundary validation, classify by the invalid set: an open or infinite invalid set is `property`; a closed, finite, source-owned invalid set is `mapping`. A hand-picked bag of invalid values establishes neither an open property nor a complete mapping.
 
+For each property, name the product-owned behavior the generator varies and classify every filesystem, Git, or full CLI interaction. When an interaction only wires generated input into separately testable behavior, move it outside the generated case loop and add finite real-boundary evidence whose assertion type follows that boundary claim's quantifier. Keep the interaction inside the property only when the boundary itself is part of the product-owned variable behavior.
+
 </stage_one>
 
 <stage_two>
@@ -204,6 +219,8 @@ Choose the level from operational reality:
 
 Test product-owned algorithms, parsers, and rules thoroughly at `L1`. Trust mature library behavior and test product-owned wiring, mappings, invariants, failure handling, and boundaries. Add lower-level evidence when it materially narrows diagnosis. Place confidence where it is achievable: math at `L1`, SQL against a database at `L2`, and live user flows at `L3`.
 
+Filesystem, Git, and standard subprocess availability at `L1` permits finite real-boundary evidence there. It does not justify repeating that boundary for every generated property case when the generator varies only a product-owned rule behind it.
+
 When evidence lives at `L2` or `L3`, use real dependencies there and stop. Continue to Stage 3 only for `L1` evidence.
 
 </stage_two>
@@ -211,7 +228,7 @@ When evidence lives at `L2` or `L3`, use real dependencies there and stop. Conti
 <stage_three>
 
 - **Pure computation**: test directly at `L1` with no doubles.
-- **Extractable pure part**: extract and test the computation at `L1`; cover dependency interaction at the correct outer level.
+- **Extractable pure part**: extract and test the computation at `L1`; cover dependency interaction with separately typed finite evidence at the correct outer level.
 - **Glue or orchestration**: continue to Stage 4 because the behavior is the dependency interaction.
 
 </stage_three>
@@ -285,6 +302,7 @@ Small pure functions often need phases 1 and 2. Complex algorithms often need al
 - Treating browser coverage as inherently remote or credentialed
 - Treating runner choice as a proxy for cost or realism
 - Adding doubles when the real dependency is cheap, deterministic, and observable
+- Repeating filesystem setup, Git initialization, or full CLI execution for every generated property case when the boundary only wires input into a separately testable rule
 - Writing tests that cannot name the production failure they catch
 
 </anti_patterns>
@@ -517,6 +535,12 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 - **Why it failed:** Framework syntax added no domain variation, shrinking value, or systematic exploration.
 - **How to avoid:** Generate a meaningful variable domain with replayable seeds and shrinking, or reclassify the evidence to the finite assertion type it actually supports.
 
+**Boundary wiring multiplied across property cases**
+
+- **What happened:** A CLI property test created a temporary Git repository and ran the full command for every generated input even though the generator varied a product-owned rule behind that boundary.
+- **Why it failed:** The execution level permitted each dependency, while the property quantifier applied only to the product-owned input domain. Repeating boundary wiring multiplied setup cost without strengthening the invariant.
+- **How to avoid:** Exercise the invariant over generated product-owned inputs at the narrow seam, then cover the real filesystem, Git, or CLI wiring with separately typed finite evidence. Keep the boundary inside the property only when the boundary itself is the variable behavior under assertion.
+
 </failure_modes>
 
 <success_criteria>
@@ -528,6 +552,7 @@ Testing output is sound when:
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
+- Every property test generates product-owned variable behavior and separates finite real-boundary wiring unless the boundary itself is part of that variable behavior.
 - Every test double maps to one of the seven exception cases and preserves the behavior boundary the assertion claims.
 - Every spec assertion that receives test evidence links to the evidence file that verifies it.
 
