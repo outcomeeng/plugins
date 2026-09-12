@@ -30,9 +30,10 @@ def test_each_canonical_agent_registry_requirement_is_enforced() -> None:
 
 def test_codex_agent_registry_policy_is_codex_only() -> None:
     documents = evidence.rendered_instruction_blocks()
+    router_end = source.load_instruction_block_module().ROUTER_BLOCK_END
     leaked_claude_document = documents[source.CLAUDE_HARNESS].replace(
-        "# Spec Tree Instructions",
-        f"# Spec Tree Instructions\n\n{source.CODEX_AGENT_REGISTRY_POLICY_HEADING}",
+        router_end,
+        f"{source.CODEX_AGENT_REGISTRY_POLICY_HEADING}\n\n{router_end}",
         1,
     )
 
