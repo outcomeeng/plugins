@@ -110,5 +110,6 @@ jobs:
         # into; without it that probe fails loudly by design.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUBAGENT_DISCOVERY_AUTH_MODE: api
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: just check-full

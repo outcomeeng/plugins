@@ -1,0 +1,11 @@
+{
+  "auth_mode": "chatgpt",
+  "OPENAI_API_KEY": null,
+  "tokens": {
+    "access_token": "fixture-rotated-access",
+    "refresh_token": "fixture-rotated-refresh",
+    "id_token": "fixture-rotated-id",
+    "account_id": "fixture-account"
+  },
+  "last_refresh": "2020-01-02T00:00:00Z"
+}
