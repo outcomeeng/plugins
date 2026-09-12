@@ -21,7 +21,7 @@ Agent definitions are placed beside their skills because an agent whose plugin m
 - A nonempty persistent selection contains `spec-tree` or the run stops before its first state-changing command.
 - Persistent Claude Code installation resolves only at project scope after proving no user-scope `outcomeeng` registration exists.
 - Persistent Codex installation resolves only inside the selected `CODEX_HOME`.
-- Isolated verification resolves every agent state path beneath caller-selected disposable homes.
+- Isolated verification resolves installation and session state beneath caller-selected disposable homes. Subscription discovery alone may read and natively refresh the selected saved-login file, as governed by `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md`.
 - Persistent installation leaves the checkout's committed plugin selection unchanged.
 - Persistent installation reports a selected plugin the canonical marketplace has not published as pending publication and installs every other selected plugin; isolated verification treats that same absence as terminal.
 - A plugin's agent definitions live in the same scope as the skill content they invoke, and every marketplace-shipped operation that delivers or refreshes either carries both in the same run; installation-delivered skills in the selected agent home carry their agent definitions into that home's agent directory.
@@ -45,7 +45,7 @@ Agent definitions are placed beside their skills because an agent whose plugin m
 - ALWAYS: persistent installation restores the checkout's committed plugin activation selection once installing completes, so refreshing an installed disabled plugin leaves that selection intact ([compliance])
 - NEVER: a persistent installation run leaves the checkout's committed plugin selection changed ([compliance])
 - NEVER: persistent installation mutates Claude Code user scope; a user-scoped `outcomeeng` marketplace registration stops the run before its first state-changing command ([compliance])
-- ALWAYS: isolated verification confines `HOME`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and `CODEX_SQLITE_HOME` beneath caller-selected disposable state and leaves persistent homes unchanged ([compliance])
+- ALWAYS: isolated verification confines `HOME`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and `CODEX_SQLITE_HOME` beneath caller-selected disposable state; subscription discovery may read and natively refresh only the selected saved-login file, leaving persistent installation state unchanged ([compliance])
 - ALWAYS: installation derives marketplace membership from committed per-agent catalogs — Codex in `.agents/plugins/marketplace.json` and Claude Code in `.claude-plugin/marketplace.json` ([mapping])
 - NEVER: installation reads or writes repository `.codex/config.toml` to install or enable Codex plugins — effective Codex plugin state belongs to the selected `CODEX_HOME` ([compliance])
 - ALWAYS: marketplace-install diagnosis derives expected plugin state from the checkout's committed per-agent marketplace catalogs rather than from a plugin catalog embedded in shipped diagnostic output ([compliance])

@@ -25,6 +25,9 @@ CAN run the deterministic gate steps that prove the current slice without spendi
 
 ### Compliance
 
+- ALWAYS: local selection includes live discovery for installation, subagent-definition generation and placement, discovery, and their governing contracts and verification infrastructure; explicit full verification and CI include it, as governed by `spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/15-live-discovery.pdr.md`. ([test](tests/test_selected_gate.compliance.l1.py))
+- NEVER: an unrelated local change acquires a live-discovery requirement through automatic full-suite escalation; the complete selected deterministic scope remains intact. ([test](tests/test_selected_gate.compliance.l1.py))
+- ALWAYS: the plan explains live-discovery inclusion or exclusion before execution, independently of credential availability. ([test](tests/test_selected_gate.compliance.l1.py))
 - ALWAYS: the selected gate prints the selected steps and reasons before running them through the existing signal-safe recipe orchestrator, preserving bounded output and structured summaries ([test](tests/test_selected_gate.compliance.l1.py))
 - ALWAYS: when the canonical changeset-scope helper cannot resolve the remote default branch, the selected gate returns its structured git-discovery failure instead of propagating the helper exception ([test](tests/test_selected_gate.compliance.l1.py))
 - NEVER: building the static import index imports, executes, or reloads a test-infrastructure or test module — a module whose import has an observable side effect leaves no trace after the index is built ([test](tests/test_infrastructure_index.compliance.l1.py))

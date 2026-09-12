@@ -30,9 +30,9 @@ A standard begins by loading the matching `/understand` template when one exists
 
 Identified during the lean-template migration of the product-level decision records.
 
-## Align tree-wide agent/runtime terminology with the SPX agent-harness PDR
+## Align tree-wide agent terminology with the product terminology PDR
 
-The SPX product's `spx/12-agent-harness.pdr.md` (in the `@outcomeeng/spx` repo) fixes the vocabulary for agent concepts: **agent harness** (the SPX-managed repository behavior around agents), **agent** (a selectable coding agent — Codex, Claude Code), **agent adapter**, and **agent session**, and forbids collapsing those roles into one term. "Runtime" is not in that vocabulary. `spx/12-marketplace-state.adr.md` and the diagnostics node (`spx/21-spec-tree.enabler/79-diagnostics.enabler/13-diagnose-engine.adr.md`, `15-version-floor.adr.md`, `diagnostics.md`, and `PLAN.md`) are aligned; the rest of this product's tree still uses "runtime" / "per-runtime" / "coding-agent runtime" / "runtime-divergent" for agent concepts.
+This product's `spx/15-agent-terminology.pdr.md` defines agent harness, agent, agent adapter, agent session, subagent, and subagent definition. Its prohibited-terminology table governs authored explanations and implementation vocabulary. Methodology Role names and execution-time uses of runtime retain their defined meanings. The router template, generated dispatch guidance, registry enforcement, and installed-name discovery use that local decision.
 
 Remaining drift (agent-concept "runtime" usage, distinct from generic "at runtime"):
 
@@ -41,7 +41,7 @@ Remaining drift (agent-concept "runtime" usage, distinct from generic "at runtim
 - `spx/21-spec-tree.enabler/13-agent-environment.enabler/**` — "per-runtime session directory" (means per-agent).
 - Node names encode the term: `spx/15-validation.enabler/32-runtime-token.enabler`, `spx/18-plugin-build.enabler/21-source-and-templating.enabler/21-runtime-parameterization.enabler`.
 
-**Resolution shape**: a whole-tree sweep aligning agent-concept "runtime" usage to "agent" / "agent harness" per `spx/12-agent-harness.pdr.md`, distinguishing it from generic execution-time "runtime". Because node names carry the term, the sweep includes `/refactor` node renames and is therefore a structural change, not a text-only pass — deferred from the scoped marketplace-state/diagnose terminology fix that surfaced it, by operator decision.
+**Resolution shape**: a whole-tree sweep aligning agent-concept "runtime" usage to "agent" / "agent harness" per `spx/15-agent-terminology.pdr.md`, distinguishing it from generic execution-time "runtime". Because node names carry the term, the sweep includes `/refactor` node renames and is therefore a structural change, not a text-only pass — deferred from the scoped marketplace-state/diagnose terminology fix that surfaced it, by operator decision.
 
 ## 22 bundled reference files over 100 lines carry no table of contents
 

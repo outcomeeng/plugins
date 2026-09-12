@@ -14,7 +14,7 @@
 
 **Prohibited terminology.**
 
-Authored terminology names the specific concept. The following words and phrases are prohibited for the meanings listed; the replacement follows the subject being described.
+Authored terminology, including implementation identifiers, docstrings, and operator-visible strings, names the specific concept. The following words and phrases are prohibited for the meanings listed; the replacement follows the subject being described.
 
 **Role** retains its methodology-defined meaning: what an agent session does for a Change. The prohibition concerns using role as a synonym for a subagent, its definition, or its invocation name. It does not prohibit assigning a Role to an agent session.
 
@@ -41,7 +41,7 @@ Exact external API fields, command names, filesystem paths, and attributed quota
 
 **Role.** What an agent session does for a Change; a session holds a role for that Change and may hold another in a different one. A role name is capitalized, so it stands apart from the everyday word. One round is one Author or Fixer pass together with every Verifier pass it triggers.
 
-A Role does not identify a subagent definition. When Author and Fixer are called through a subagent definition, the same definition serves both Roles.
+A Role does not identify a subagent definition. A configured Verifier names a subagent definition serving the Verifier Role; its task is the assigned verification work. When Author and Fixer are called through a subagent definition, the same definition serves both Roles.
 
 **Refiner.** The role of the Change's holder during refinement. The agent session in conversation with the operator holds it, realized by loading into that conversation the refinement skills the Change's Maturity routes to; the role is never dispatched as a subagent and never loaded from an agent definition.
 

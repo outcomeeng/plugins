@@ -13,7 +13,7 @@ A value the spec tree declares and a source complies with admits no test of thei
 ## Invariants
 
 - A plugin-local agent adapter performs a bounded operation and exits; it owns no daemon, background watcher, or open-ended polling loop.
-- A agent adapter reads only the coding agent's public interface and produces a versioned, machine-readable result.
+- An agent adapter reads only the coding agent's public interface and produces a versioned, machine-readable result.
 
 ## Verification
 
