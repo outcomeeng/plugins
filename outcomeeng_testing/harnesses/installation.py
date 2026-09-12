@@ -100,7 +100,15 @@ from outcomeeng_testing.generators.installation import (
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
 )
-from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT
+from outcomeeng_testing.harnesses.discovery_auth import (
+    DiscoveryAuthentication,
+    DiscoveryAuthenticationError,
+    FILE_STORE_ARGS,
+    ProbeRunner,
+    credential_free_environment,
+    run_probe_process,
+    select_authentication,
+)
 
 UNOWNED_AGENT_FILENAME = "developer-owned.toml"
 UNOWNED_AGENT_CONTENT = 'name = "developer-owned"\n'
@@ -109,27 +117,25 @@ _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
 PLUGIN_DISABLING_CODEX_CONFIG = b"[plugins]\nenabled = false\n"
 
-CODEX_LOGIN_COMMAND: tuple[str, ...] = (CODEX_EXECUTABLE, "login", "--with-api-key")
-ROLE_DISCOVERY_ROLES_FIELD = "roles"
+SUBAGENT_DISCOVERY_NAMES_FIELD = "subagent_names"
 RENAMED_CHECKOUT_AGENT_NAME = "local_helper.toml"
 RENAMED_CHECKOUT_SKILL_NAME = "renamed-skill"
-ROLE_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
+SUBAGENT_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "properties": {
-        ROLE_DISCOVERY_ROLES_FIELD: {"type": "array", "items": {"type": "string"}}
+        SUBAGENT_DISCOVERY_NAMES_FIELD: {"type": "array", "items": {"type": "string"}}
     },
-    "required": [ROLE_DISCOVERY_ROLES_FIELD],
+    "required": [SUBAGENT_DISCOVERY_NAMES_FIELD],
     "additionalProperties": False,
 }
-ROLE_DISCOVERY_PROMPT = (
-    "Report every agent role name you can spawn as a subagent in this session: "
+SUBAGENT_DISCOVERY_PROMPT = (
+    "Report every subagent name you can spawn in this session: "
     "the exact `agent_type` values your subagent-spawning tool declares, "
-    "including built-in roles. If that tool is not initially exposed, discover "
+    "from its `Available roles` list, including built-in ones. If absent, discover "
     "it through your deferred-tool registry first. Do not read any file, run "
     "any command, or spawn any agent. Answer only with JSON matching the "
     "required output schema."
 )
-ROLE_DISCOVERY_TIMEOUT_SECONDS = 600
 
 
 def _settings_json(path: Path) -> dict[str, object]:
@@ -1835,12 +1841,12 @@ def observe_real_installation() -> RealInstallationObservation:
 
 
 @dataclass(frozen=True)
-class CodexRoleDiscoveryObservation:
-    """One fresh non-interactive Codex session's role discovery over a home.
+class CodexSubagentDiscoveryObservation:
+    """One fresh non-interactive Codex session's subagent discovery over a home.
 
     Observations only: the isolated installation result that populated the
-    disposable home, the login and session command results, the parsed roles
-    the session reported, and the canonical role names placed under that home.
+    disposable home, the login and session command results, the parsed subagent names
+    the session reported, and the canonical subagent names placed under that home.
     The linked test owns every predicate.
     """
 
@@ -1851,133 +1857,93 @@ class CodexRoleDiscoveryObservation:
     session_exit_code: int
     session_stderr: str
     session_last_message: str
-    discovered_roles: frozenset[str] | None
-    placed_roles: frozenset[str]
+    discovered_subagent_names: frozenset[str] | None
+    placed_subagent_names: frozenset[str]
     codex_home: Path
 
 
-def observe_codex_role_discovery() -> CodexRoleDiscoveryObservation:
-    """Populate a disposable Codex home by isolated installation and probe it.
-
-    The credential named by ``CODEX_API_KEY_ENVIRONMENT`` reaches only the agent
-    CLI's login command over standard input; the session environment carries no
-    credential variable, so authentication demonstrably comes from the disposable
-    home. A missing credential is a dependency error, never a silent pass.
-    """
+def observe_codex_subagent_discovery(
+    *,
+    environment: Mapping[str, str] | None = None,
+    runner: ProbeRunner = run_probe_process,
+) -> CodexSubagentDiscoveryObservation:
+    """Install disposable state, authenticate explicitly, and read the registry."""
+    original_environment = os.environ if environment is None else environment
+    auth = DiscoveryAuthentication(select_authentication(original_environment), runner)
     checkout = repository_root()
     _require_binaries(REQUIRED_BINARIES)
-    credential = os.environ.get(CODEX_API_KEY_ENVIRONMENT)
-    if not credential:
-        raise RuntimeError(
-            f"required credential {CODEX_API_KEY_ENVIRONMENT} is unavailable for "
-            "the Codex role-discovery probe"
-        )
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         state = temporary_root / "state"
         _mirror_installation_inputs(checkout, mirror)
-        base_environment = {
-            name: value
-            for name, value in os.environ.items()
-            if name != CODEX_API_KEY_ENVIRONMENT
-        }
-        plan = build_isolated_installation_plan(mirror, state, base_environment)
-        environment = dict(plan.commands[0].environment)
-        install = _run_recipe(checkout, mirror, state, environment)
-        codex_home = state / "codex"
-        placed_roles = _placed_role_names(codex_home)
-        login = scrubbed_probe_run(
-            CODEX_LOGIN_COMMAND,
-            cwd=mirror,
-            env=environment,
-            credential=credential,
-            input_text=credential,
+        plan = build_isolated_installation_plan(
+            mirror, state, credential_free_environment(original_environment)
         )
-        schema_path = temporary_root / "role-discovery-schema.json"
-        schema_path.write_text(
-            json.dumps(ROLE_DISCOVERY_OUTPUT_SCHEMA), encoding="utf-8"
-        )
-        last_message_path = temporary_root / "role-discovery-last-message.json"
-        session = scrubbed_probe_run(
+        child_environment = dict(plan.commands[0].environment)
+        install = auth.run(
             (
-                CODEX_EXECUTABLE,
-                "exec",
-                "--ephemeral",
-                "--skip-git-repo-check",
-                "-C",
+                "just",
+                "install-marketplace",
+                "--checkout",
                 str(mirror),
-                "--output-schema",
-                str(schema_path),
-                "--output-last-message",
-                str(last_message_path),
-                ROLE_DISCOVERY_PROMPT,
+                "--state-root",
+                str(state),
+                "--json",
             ),
-            cwd=mirror,
-            env=environment,
-            credential=credential,
+            cwd=checkout,
+            env=child_environment,
         )
-        last_message = (
-            last_message_path.read_text(encoding="utf-8")
-            if last_message_path.exists()
-            else ""
+        if install.returncode != 0:
+            raise DiscoveryAuthenticationError(
+                f"Discovery installation failed ({install.returncode}): {install.stderr}"
+            )
+        codex_home = state / "codex"
+        placed_subagent_names = _placed_subagent_names(codex_home)
+        schema_path = temporary_root / "subagent-discovery-schema.json"
+        schema_path.write_text(
+            json.dumps(SUBAGENT_DISCOVERY_OUTPUT_SCHEMA), encoding="utf-8"
         )
-    scrubbed_last_message = scrub_credential(last_message, credential)
-    return CodexRoleDiscoveryObservation(
-        install_exit_code=install.returncode,
-        install_stderr=scrub_credential(install.stderr, credential),
-        login_exit_code=login.returncode,
-        login_stderr=scrub_credential(login.stderr, credential),
-        session_exit_code=session.returncode,
-        session_stderr=scrub_credential(session.stderr, credential),
-        session_last_message=scrubbed_last_message,
-        discovered_roles=_discovered_roles(scrubbed_last_message),
-        placed_roles=placed_roles,
-        codex_home=codex_home,
-    )
-
-
-def scrubbed_probe_run(
-    argv: Sequence[str],
-    *,
-    cwd: Path,
-    env: Mapping[str, str],
-    credential: str,
-    input_text: str | None = None,
-    timeout: float = ROLE_DISCOVERY_TIMEOUT_SECONDS,
-) -> subprocess.CompletedProcess[str]:
-    """Run one probe command with every captured stream scrubbed on every path.
-
-    ``subprocess.TimeoutExpired`` carries the partial capture collected before
-    the kill; scrubbing it before the exception leaves this helper keeps the
-    credential out of tracebacks and CI logs on the timeout path as well.
-    """
-    try:
-        return subprocess.run(
-            argv,
-            cwd=cwd,
-            env=env,
-            input=input_text,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=timeout,
+        last_message_path = temporary_root / "subagent-discovery-last-message.json"
+        with auth.authenticated_home(
+            codex_home, cwd=mirror, env=child_environment
+        ) as login:
+            session = auth.run(
+                (
+                    CODEX_EXECUTABLE,
+                    *FILE_STORE_ARGS,
+                    "exec",
+                    "--ephemeral",
+                    "--skip-git-repo-check",
+                    "-C",
+                    str(mirror),
+                    "--output-schema",
+                    str(schema_path),
+                    "--output-last-message",
+                    str(last_message_path),
+                    SUBAGENT_DISCOVERY_PROMPT,
+                ),
+                cwd=mirror,
+                env=child_environment,
+            )
+            last_message = (
+                last_message_path.read_text(encoding="utf-8")
+                if last_message_path.exists()
+                else ""
+            )
+        scrubbed_last_message = auth.redactor.clean(last_message)
+        return CodexSubagentDiscoveryObservation(
+            install_exit_code=install.returncode,
+            install_stderr=auth.redactor.clean(install.stderr),
+            login_exit_code=login.returncode,
+            login_stderr=auth.redactor.clean(login.stderr),
+            session_exit_code=session.returncode,
+            session_stderr=auth.redactor.clean(session.stderr),
+            session_last_message=scrubbed_last_message,
+            discovered_subagent_names=_discovered_subagent_names(scrubbed_last_message),
+            placed_subagent_names=placed_subagent_names,
+            codex_home=codex_home,
         )
-    except subprocess.TimeoutExpired as error:
-        error.output = _scrub_captured_bytes(error.output, credential)
-        error.stderr = _scrub_captured_bytes(error.stderr, credential)
-        raise
-
-
-def _scrub_captured_bytes(captured: bytes | None, credential: str) -> bytes | None:
-    """Scrub one captured stream in the raw representation the runtime kept.
-
-    ``subprocess.TimeoutExpired`` stores the partial capture as raw bytes even
-    under ``text=True``, so the credential is replaced byte-for-byte.
-    """
-    if captured is None:
-        return None
-    return captured.replace(credential.encode("utf-8"), b"[REDACTED-CREDENTIAL]")
 
 
 def racing_digest_reader(
@@ -2002,18 +1968,8 @@ def racing_digest_reader(
     return reader
 
 
-def scrub_credential(text: str, credential: str) -> str:
-    """Replace the credential's bytes so no captured stream can carry them.
-
-    Assertion messages surface these streams verbatim in a failure report, and
-    exact-literal CI secret masking does not cover a transformed echo, so the
-    substitution happens at capture time before any storage.
-    """
-    return text.replace(credential, "[REDACTED-CREDENTIAL]")
-
-
-def _placed_role_names(codex_home: Path) -> frozenset[str]:
-    """Read the role name each placed definition declares under the home."""
+def _placed_subagent_names(codex_home: Path) -> frozenset[str]:
+    """Read the subagent name each placed definition declares under the home."""
     names: set[str] = set()
     for _, content in _agent_snapshot(codex_home):
         document = tomllib.loads(content.decode("utf-8"))
@@ -2023,7 +1979,7 @@ def _placed_role_names(codex_home: Path) -> frozenset[str]:
     return frozenset(names)
 
 
-def _discovered_roles(last_message: str) -> frozenset[str] | None:
+def _discovered_subagent_names(last_message: str) -> frozenset[str] | None:
     """Parse the session's structured answer; ``None`` when it is not the schema."""
     try:
         document = json.loads(last_message)
@@ -2031,10 +1987,12 @@ def _discovered_roles(last_message: str) -> frozenset[str] | None:
         return None
     if not isinstance(document, dict):
         return None
-    roles = document.get(ROLE_DISCOVERY_ROLES_FIELD)
-    if not isinstance(roles, list) or not all(isinstance(r, str) for r in roles):
+    subagents = document.get(SUBAGENT_DISCOVERY_NAMES_FIELD)
+    if not isinstance(subagents, list) or not all(
+        isinstance(name, str) for name in subagents
+    ):
         return None
-    return frozenset(roles)
+    return frozenset(subagents)
 
 
 def _listing_entries(agent: Agent, payload: str) -> list[object]:
@@ -2509,7 +2467,7 @@ __all__ = [
     "AgentHomeCollisionObservation",
     "InterruptedReconciliationObservation",
     "AgentHomeReconciliationObservation",
-    "CodexRoleDiscoveryObservation",
+    "CodexSubagentDiscoveryObservation",
     "CollisionObservation",
     "ConfigObservation",
     "FailureObservation",
@@ -2534,7 +2492,7 @@ __all__ = [
     "observe_agent_home_reconciliation",
     "observe_claude_user_collision",
     "observe_codex_config_independence",
-    "observe_codex_role_discovery",
+    "observe_codex_subagent_discovery",
     "observe_designated_failure",
     "observe_first_failure",
     "observe_failed_run_restore",
@@ -2553,8 +2511,6 @@ __all__ = [
     "observe_repository_plan",
     "observe_scope_split",
     "racing_digest_reader",
-    "scrub_credential",
-    "scrubbed_probe_run",
     "skill_enabling_definition",
     "RENAMED_CHECKOUT_AGENT_NAME",
     "RENAMED_CHECKOUT_SKILL_NAME",

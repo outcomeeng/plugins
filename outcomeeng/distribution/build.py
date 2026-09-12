@@ -1075,23 +1075,23 @@ def _make_kind_global(
 
 
 @pass_context
-def _render_agent_role(
+def _render_subagent_name(
     context: Context,
     plugin: str,
     agent: str,
-    runtime: str | None = None,
+    target_name: str | None = None,
 ) -> str:
-    """Render an agent's canonical role name for the selected target."""
-    resolved = runtime if runtime is not None else context.get("target")
+    """Render a canonical subagent name for the selected target."""
+    resolved = target_name if target_name is not None else context.get("target")
     if resolved is None:
         raise RuntimeTokenError(
-            f"agent role {plugin!r}/{agent!r} rendered with no target in context"
+            f"subagent name {plugin!r}/{agent!r} rendered with no target in context"
         )
     try:
         target = _Target(resolved)
     except ValueError as exc:
         raise RuntimeTokenError(
-            f"agent role {plugin!r}/{agent!r} rendered for unknown target {resolved!r}"
+            f"subagent name {plugin!r}/{agent!r} rendered for unknown target {resolved!r}"
         ) from exc
     return agent_slug(plugin, agent, capability=agent_capability(target))
 
@@ -1119,7 +1119,7 @@ def make_jinja_environment(
     # term(), file(). A new kind in the registry is exposed automatically.
     for kind in runtime_token_registry:
         environment.globals[kind] = _make_kind_global(kind, runtime_token_registry)
-    environment.globals["agent_role"] = _render_agent_role
+    environment.globals["subagent_name"] = _render_subagent_name
     return environment
 
 

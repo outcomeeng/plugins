@@ -5,12 +5,16 @@ from __future__ import annotations
 import pytest
 
 from outcomeeng.validation import (
+    CHECK_RECIPES,
     PYTEST_ARGV,
     RECIPE_CHECK,
     RECIPE_TEST,
     RECIPE_VALIDATION,
 )
-from outcomeeng.validation.infrastructure_index import InfrastructureReach
+from outcomeeng.validation.infrastructure_index import (
+    InfrastructureReach,
+    index_test_infrastructure,
+)
 from outcomeeng.validation.selected_gate import (
     FULL_GATE_REASON,
     GIT_DISCOVERY_ERROR_PREFIX,
@@ -19,6 +23,12 @@ from outcomeeng.validation.selected_gate import (
     GIT_DISCOVERY_STDOUT_LABEL,
     GitDiscoveryError,
     InfrastructureIndexRequired,
+    INSTRUCTION_BLOCK_SOURCE_PATH,
+    LIVE_DISCOVERY_EXCLUSION,
+    LIVE_DISCOVERY_EXCLUDED_REASON,
+    LIVE_DISCOVERY_INCLUDED_REASON,
+    LIVE_DISCOVERY_PATTERNS,
+    LIVE_DISCOVERY_TEST,
     PYTHON_REASON,
     TEST_REASON,
     build_selected_gate_plan,
@@ -27,6 +37,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_FULL_GATE_PATH,
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
+    path_from_pattern,
 )
 from outcomeeng_testing.harnesses.gate import (
     GIT_DISCOVERY_FAILURE_STDERR,
@@ -39,6 +50,7 @@ from outcomeeng_testing.harnesses.gate import (
     run_check_observation,
     selected_check_plan_block,
     selected_gate_branch_discovery_argv,
+    unrelated_validation_source_path,
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
     reach_layout,
@@ -146,3 +158,85 @@ def test_infrastructure_path_without_an_index_is_rejected_by_name() -> None:
 
     assert caught.value.paths == (layout.changed_path,)
     assert layout.changed_path in str(caught.value)
+
+
+def test_definition_guidance_changes_require_the_live_check() -> None:
+    plan = build_selected_gate_plan((INSTRUCTION_BLOCK_SOURCE_PATH,))
+
+    assert plan.live_discovery
+    assert any(LIVE_DISCOVERY_TEST in step.argv for step in plan.steps)
+    assert plan.live_discovery_reason == LIVE_DISCOVERY_INCLUDED_REASON
+
+
+@pytest.mark.parametrize("pattern", LIVE_DISCOVERY_PATTERNS)
+def test_each_declared_discovery_surface_requires_the_live_check(pattern: str) -> None:
+    with synthetic_repository() as repo:
+        plan = build_selected_gate_plan(
+            (path_from_pattern(pattern),),
+            test_infrastructure=index_test_infrastructure(repo.root),
+        )
+
+    assert plan.live_discovery
+    assert plan.live_discovery_reason == LIVE_DISCOVERY_INCLUDED_REASON
+    assert any(
+        step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+        and (plan.full_gate or LIVE_DISCOVERY_TEST in step.argv)
+        and step.argv[-len(LIVE_DISCOVERY_EXCLUSION) :] != LIVE_DISCOVERY_EXCLUSION
+        for step in plan.steps
+    )
+
+
+def test_discovery_inclusion_is_printed_before_execution() -> None:
+    run = run_check_observation(branch_path=INSTRUCTION_BLOCK_SOURCE_PATH)
+
+    assert run.exit_code == 0
+    assert run.output.index(LIVE_DISCOVERY_INCLUDED_REASON) < run.output.index(
+        f"Recipe {RECIPE_CHECK}"
+    )
+
+
+def test_unrelated_automatic_full_gate_excludes_only_the_live_check() -> None:
+    with synthetic_repository() as repo:
+        layout = reach_layout(InfrastructureReach.SHARED, repo)
+        plan = build_selected_gate_plan(
+            (layout.changed_path,),
+            test_infrastructure=index_test_infrastructure(repo.root),
+        )
+
+    assert plan.full_gate
+    assert not plan.live_discovery
+    assert tuple(
+        step.argv[: -len(LIVE_DISCOVERY_EXCLUSION)]
+        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+        else step.argv
+        for step in plan.steps
+    ) == tuple(step.argv for recipe in CHECK_RECIPES for step in recipe.steps)
+    assert all(
+        step.argv[-len(LIVE_DISCOVERY_EXCLUSION) :] == LIVE_DISCOVERY_EXCLUSION
+        for step in plan.steps
+        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+    )
+
+
+def test_unrelated_full_gate_execution_honors_its_exclusion() -> None:
+    run = run_check_observation(branch_path=unrelated_validation_source_path())
+
+    assert run.exit_code == 0
+    assert any(
+        call[: len(PYTEST_ARGV)] == PYTEST_ARGV
+        and call[-len(LIVE_DISCOVERY_EXCLUSION) :] == LIVE_DISCOVERY_EXCLUSION
+        for call in run.spawn_calls
+    )
+    assert run.output.index(LIVE_DISCOVERY_EXCLUDED_REASON) < run.output.index(
+        f"Recipe {RECIPE_VALIDATION}"
+    )
+
+
+def test_relevant_full_gate_keeps_live_discovery_enabled() -> None:
+    plan = build_selected_gate_plan((SELECTED_GATE_FULL_GATE_PATH,))
+
+    assert plan.full_gate
+    assert plan.live_discovery
+    assert plan.steps == tuple(
+        step for recipe in CHECK_RECIPES for step in recipe.steps
+    )

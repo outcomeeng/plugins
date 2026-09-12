@@ -6,7 +6,7 @@ import fnmatch
 import importlib.util
 import sys
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Final, Protocol, TextIO, cast
 
@@ -69,6 +69,23 @@ EVAL_REASON: Final = "eval definition, producer, or trigger surface changed"
 EVIDENCE_LINK_REASON: Final = "spec-tree evidence link surface changed"
 TEST_REASON: Final = "changed python assertion tests"
 REACHED_TESTS_REASON: Final = "tests reaching changed test infrastructure"
+LIVE_DISCOVERY_MARKER: Final = "live_subagent_discovery"
+LIVE_DISCOVERY_TEST_PATH: Final = (
+    "spx/32-distribution.enabler/21-installation.enabler/"
+    "21-repository-installation.enabler/tests/"
+    "test_repository_installation.scenario.l3.py"
+)
+LIVE_DISCOVERY_TEST: Final = (
+    f"{LIVE_DISCOVERY_TEST_PATH}::"
+    "test_fresh_codex_session_discovers_every_placed_canonical_subagent"
+)
+LIVE_DISCOVERY_INCLUDED_REASON: Final = (
+    "live discovery included: installation or discovery contract changed"
+)
+LIVE_DISCOVERY_EXCLUDED_REASON: Final = (
+    "live discovery excluded: unrelated local change"
+)
+LIVE_DISCOVERY_EXCLUSION: Final = ("-m", f"not {LIVE_DISCOVERY_MARKER}")
 SHARED_TEST_INFRASTRUCTURE_REASON: Final = "shared test infrastructure changed"
 UNTRACEABLE_TEST_INFRASTRUCTURE_REASON: Final = (
     "test-infrastructure artifact reached by path changed"
@@ -174,6 +191,40 @@ INSTRUCTION_BLOCK_PATTERNS: Final = (
     "dist/codex/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
     "outcomeeng/distribution/instruction_block.py",
 )
+LIVE_DISCOVERY_PATTERNS: Final = (
+    *INSTRUCTION_BLOCK_PATTERNS,
+    CHECK_WORKFLOW_PATH,
+    PYPROJECT_PATH,
+    "uv.lock",
+    "justfile",
+    "Justfile",
+    "outcomeeng/catalog/**",
+    "outcomeeng/distribution/**",
+    "outcomeeng/validation/selected_gate.py",
+    "outcomeeng/validation/_engine.py",
+    "outcomeeng/validation/_steps.py",
+    "outcomeeng/validation/__main__.py",
+    "outcomeeng_testing/harnesses/installation.py",
+    "outcomeeng_testing/harnesses/discovery_auth*.py",
+    "outcomeeng_testing/fixtures/discovery_auth/**",
+    "src/plugins/*/agents/**",
+    "src/plugins/*/skills/*-plugin/**",
+    "src/templates/plugin/**",
+    "src/_shared/agentic-execution/**",
+    "dist/codex/*/skills/*/agents/**",
+    "dist/codex/*/skills/*-plugin/**",
+    ".agents/plugins/**",
+    ".claude-plugin/**",
+    "src/plugins/*/.codex-plugin/**",
+    "src/plugins/*/.claude-plugin/**",
+    "spx/12-marketplace-state.adr.md",
+    "spx/15-agent-terminology.pdr.md",
+    "spx/32-distribution.enabler/21-installation.enabler/**",
+    "spx/18-plugin-build.enabler/**",
+    "spx/21-spec-tree.enabler/43-instruction-block.enabler/**",
+    "spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/15-live-discovery.pdr.md",
+    "spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/selected-gate.md",
+)
 
 GIT_DIFF_BRANCH_ARGV_PREFIX: Final = (
     "git",
@@ -215,6 +266,15 @@ class SelectedGatePlan:
     changed_paths: tuple[str, ...]
     selected_steps: tuple[SelectedGateStep, ...]
     full_gate: bool
+    live_discovery: bool = False
+
+    @property
+    def live_discovery_reason(self) -> str:
+        return (
+            LIVE_DISCOVERY_INCLUDED_REASON
+            if self.live_discovery
+            else LIVE_DISCOVERY_EXCLUDED_REASON
+        )
 
     @property
     def steps(self) -> tuple[Step, ...]:
@@ -372,8 +432,17 @@ def build_selected_gate_plan(
     if not normalized:
         return SelectedGatePlan(changed_paths=(), selected_steps=(), full_gate=False)
 
+    live_from_infrastructure = test_infrastructure is not None and any(
+        LIVE_DISCOVERY_TEST_PATH in test_infrastructure.reach(path).tests
+        for path in normalized
+        if _is_test_infrastructure_path(path)
+    )
     if _matches_any(normalized, FULL_GATE_PATTERNS):
-        return _full_surface_plan(normalized, reason=FULL_GATE_REASON)
+        return _full_surface_plan(
+            normalized,
+            reason=FULL_GATE_REASON,
+            live_from_infrastructure=live_from_infrastructure,
+        )
 
     infrastructure_paths = tuple(
         path for path in normalized if _is_test_infrastructure_path(path)
@@ -385,11 +454,15 @@ def build_selected_gate_plan(
         for report in (test_infrastructure.reach(p) for p in infrastructure_paths):
             if report.kind is InfrastructureReach.SHARED:
                 return _full_surface_plan(
-                    normalized, reason=SHARED_TEST_INFRASTRUCTURE_REASON
+                    normalized,
+                    reason=SHARED_TEST_INFRASTRUCTURE_REASON,
+                    live_from_infrastructure=live_from_infrastructure,
                 )
             if report.kind is InfrastructureReach.UNTRACEABLE:
                 return _full_surface_plan(
-                    normalized, reason=UNTRACEABLE_TEST_INFRASTRUCTURE_REASON
+                    normalized,
+                    reason=UNTRACEABLE_TEST_INFRASTRUCTURE_REASON,
+                    live_from_infrastructure=live_from_infrastructure,
                 )
             reached_tests.update(report.tests)
 
@@ -454,11 +527,18 @@ def build_selected_gate_plan(
         if _is_python_assertion_test(path) and path not in deleted_path_set
     )
     reached_only = reached_tests - set(changed_test_paths) - deleted_path_set
-    test_paths = tuple(sorted(set(changed_test_paths) | reached_only))
+    test_path_set = set(changed_test_paths) | reached_only
+    live_discovery = _matches_any(normalized, LIVE_DISCOVERY_PATTERNS) or (
+        LIVE_DISCOVERY_TEST_PATH in test_path_set
+    )
+    if live_discovery and LIVE_DISCOVERY_TEST_PATH not in test_path_set:
+        test_path_set.add(LIVE_DISCOVERY_TEST)
+    test_paths = tuple(sorted(test_path_set))
     if test_paths:
         test_reasons = (
             *((TEST_REASON,) if changed_test_paths else ()),
             *((REACHED_TESTS_REASON,) if reached_only else ()),
+            *((LIVE_DISCOVERY_INCLUDED_REASON,) if live_discovery else ()),
         )
         selected_steps.append(
             SelectedGateStep(
@@ -472,21 +552,37 @@ def build_selected_gate_plan(
         changed_paths=normalized,
         selected_steps=tuple(selected_steps),
         full_gate=False,
+        live_discovery=live_discovery,
     )
 
 
 def _full_surface_plan(
-    changed_paths: tuple[str, ...], *, reason: str
+    changed_paths: tuple[str, ...],
+    *,
+    reason: str,
+    live_from_infrastructure: bool = False,
 ) -> SelectedGatePlan:
+    live_discovery = live_from_infrastructure or _matches_any(
+        changed_paths, LIVE_DISCOVERY_PATTERNS
+    )
     return SelectedGatePlan(
         changed_paths=changed_paths,
         selected_steps=tuple(
-            SelectedGateStep(step=step, reason=reason)
+            SelectedGateStep(
+                step=_selected_test_step(step, live_discovery), reason=reason
+            )
             for recipe in CHECK_RECIPES
             for step in recipe.steps
         ),
         full_gate=True,
+        live_discovery=live_discovery,
     )
+
+
+def _selected_test_step(step: Step, live_discovery: bool) -> Step:
+    if live_discovery or step.argv[: len(PYTEST_ARGV)] != PYTEST_ARGV:
+        return step
+    return replace(step, argv=(*step.argv, *LIVE_DISCOVERY_EXCLUSION))
 
 
 def run_selected_check(
@@ -529,7 +625,17 @@ def run_selected_check(
     )
     _write_plan(sink, plan)
     if plan.full_gate:
-        return run_check(spawner=spawner, sink=sink, recipes=CHECK_RECIPES)
+        recipes = tuple(
+            replace(
+                recipe,
+                steps=tuple(
+                    _selected_test_step(step, plan.live_discovery)
+                    for step in recipe.steps
+                ),
+            )
+            for recipe in CHECK_RECIPES
+        )
+        return run_check(spawner=spawner, sink=sink, recipes=recipes)
     return run_recipe(
         spawner=spawner,
         sink=sink,
@@ -577,6 +683,7 @@ def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
         return
     for item in plan.selected_steps:
         sink.write(f"  {item.step.label}: {item.reason}\n")
+    sink.write(f"  {plan.live_discovery_reason}\n")
     sink.flush()
 
 

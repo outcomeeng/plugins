@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from outcomeeng.distribution.installation import (
     Agent,
     FIRST_INSTALL_WARNING,
@@ -9,7 +11,7 @@ from outcomeeng.distribution.installation import (
     SPEC_TREE_PLUGIN,
 )
 from outcomeeng_testing.harnesses.installation import (
-    observe_codex_role_discovery,
+    observe_codex_subagent_discovery,
     observe_real_first_install,
     observe_real_installation,
 )
@@ -58,12 +60,15 @@ def test_real_agent_clis_place_home_agents_and_repeat_full_installation() -> Non
     assert observation.unowned_second == observation.unowned_initial
 
 
-def test_fresh_codex_session_discovers_every_placed_canonical_role() -> None:
-    observation = observe_codex_role_discovery()
+@pytest.mark.live_subagent_discovery
+def test_fresh_codex_session_discovers_every_placed_canonical_subagent() -> None:
+    observation = observe_codex_subagent_discovery()
 
     assert observation.install_exit_code == 0, observation.install_stderr
     assert observation.login_exit_code == 0, observation.login_stderr
     assert observation.session_exit_code == 0, observation.session_stderr
-    assert observation.placed_roles
-    assert observation.discovered_roles is not None, observation.session_last_message
-    assert observation.placed_roles <= observation.discovered_roles
+    assert observation.placed_subagent_names
+    assert observation.discovered_subagent_names is not None, (
+        observation.session_last_message
+    )
+    assert observation.placed_subagent_names <= observation.discovered_subagent_names

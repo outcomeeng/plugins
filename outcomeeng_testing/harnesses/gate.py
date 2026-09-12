@@ -711,6 +711,15 @@ def run_check_observation(
     )
 
 
+def unrelated_validation_source_path() -> str:
+    """Return the real git adapter's repository path for selection input."""
+    from outcomeeng.validation import _git
+
+    return (
+        Path(_git.__file__).relative_to(Path(__file__).resolve().parents[2]).as_posix()
+    )
+
+
 def missing_origin_observation() -> RunObservation:
     """Run the production selected check in a repository with no origin."""
 

@@ -39,6 +39,8 @@ The PR #525 repair exposes `OPERATIVE_POLICY_VALIDATIONS` as the source-owned fi
 
 **Tracked-deferral disposition**: after receiving the rejection, the operator directed that the complete finding be recorded here and that PR #525 continue. This entry carries that explicit disposition. The broader migration spans 28 established predicates across the compliance evidence module, the linked Compliance test, and separately governed child-node harness predicates. It proceeds as a dedicated evidence-migration changeset rather than being folded into the literal-branch-deletion policy repair.
 
+Change #25's evidence audit at `90db53772c6acd489d644b901177f44c21a2b62f` reached the same aggregate runs through the authority-hierarchy and already-dispatched-Verifier assertions. Findings `f-002` and `f-003` concern `tests/test_instruction_block.compliance.l1.py` and `outcomeeng_testing/harnesses/instruction_block_compliance_evidence.py`, neither changed by that changeset. They remain part of the operator-deferred migration above, under `spx/15-merging.pdr.md`'s disposition for auditor subject artifacts outside the diff. The canonical-registry evidence in `tests/test_agent_registry.compliance.l1.py` calls enforcement directly and owns its violating-input predicates; its separate source-ownership finding is repaired within Change #25.
+
 **Implementation sequence**:
 
 1. Contextualize this node and `spx/21-spec-tree.enabler/43-instruction-block.enabler/54-instruction-block-harness.enabler`; load `spec-tree:test`, `spec-tree:test-evidence-standards`, and the Python test workflow before editing evidence.

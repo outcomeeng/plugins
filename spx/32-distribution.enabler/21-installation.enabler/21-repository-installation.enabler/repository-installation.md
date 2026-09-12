@@ -2,7 +2,7 @@
 
 PROVIDES `just install-marketplace` for persistent installation and `just verify-marketplace-installation` for isolated end-to-end proof
 SO THAT marketplace maintainers and the merge lifecycle
-CAN refresh exactly the installed plugins in selected agent state and verify full, valid-subset, and invalid-subset behavior without changing persistent homes
+CAN refresh exactly the installed plugins in selected agent state and verify full, valid-subset, and invalid-subset behavior with disposable installation state and native saved-login refresh for subscription discovery
 
 ## Assertions
 
@@ -18,7 +18,7 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
 - Given unchanged committed catalogs and checkout content, when isolated installation runs twice against the same disposable homes, then the first run places every shipped Codex agent definition in the disposable home's agent directory beside the skills it invokes, and the second run succeeds with the same installed and home-placed state. ([test](tests/test_repository_installation.scenario.l3.py))
 - Given a persistent marketplace inspection that fails, when persistent installation runs, then it reports a failure naming that operation and attempts no plan operation. ([test](tests/test_repository_installation.scenario.l1.py))
 - Given a checkout declaring the canonical marketplace source and an agent home whose live marketplace listing lacks the marketplace, when persistent installation plans, then the plan adds the marketplace for that agent instead of refreshing it. ([test](tests/test_repository_installation.scenario.l1.py))
-- Given a disposable `CODEX_HOME` that isolated installation populated and the agent CLI's login authenticated from the CI credential variable, when a fresh non-interactive Codex session in that home is asked for its available agent roles as structured output, then the returned role set contains every canonical role name the installation placed under that home's `agents/` directory. ([test](tests/test_repository_installation.scenario.l3.py))
+- Given a disposable `CODEX_HOME` that isolated installation populated and authentication from the explicitly selected mode, when a fresh non-interactive Codex session in that home is asked for its available subagent names as structured output, then the returned subagent name set contains every canonical subagent name whose definition the installation placed under that home's `agents/` directory. ([test](tests/test_repository_installation.scenario.l3.py))
 
 ### Mappings
 
@@ -30,12 +30,16 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
 
 ### Compliance
 
+- ALWAYS: discovery selects subscription by default locally, requires an explicit authentication mode in CI, and requires the selected mode's credential without falling back to another mode. ([test](tests/test_repository_installation.compliance.l1.py))
+- ALWAYS: subscription discovery checks native file-store write-through compatibility before linking only the selected saved-login file into disposable state, then serializes participating uses and reports detected file, link, or account replacement without restoring an older copy. ([test](tests/test_repository_installation.compliance.l1.py))
+- NEVER: subscription discovery implements OAuth refresh, migrates a credential store, or invokes login or logout against a home linked to the saved login; native refresh persists through the file link and cleanup leaves its target intact. ([test](tests/test_repository_installation.compliance.l1.py))
+- NEVER: discovery exposes initial or refreshed credentials in arguments, child credential variables, returned captures, or exceptions; API and workspace-token login receive their respective credential only through stdin in disposable state. ([test](tests/test_repository_installation.compliance.l1.py))
 - ALWAYS: persistent installation places every plugin's generated Codex agent definitions in the selected `CODEX_HOME/agents/` directory beside the skill content they invoke, leaving definitions outside the marketplace's recorded ownership unchanged ([test](tests/test_repository_installation.compliance.l1.py))
 - ALWAYS: marketplace reconciliation leaves exactly one current marketplace-owned definition for every authored Codex agent in the selected agent home and removes marketplace-owned definitions for agents or plugins absent from the current committed catalog ([test](tests/test_repository_installation.compliance.l1.py))
 - ALWAYS: a scope split — plugin-owned agent definitions in a checkout whose invoked skill content lives in the selected agent home — stops installation before mutation, reports every mismatched definition, and directs removal of byte-identical plugin copies while identifying changed or unrecognized copies as collisions for inspection ([test](tests/test_repository_installation.compliance.l1.py))
 - NEVER: repository installation reads or writes repository `.codex/config.toml` as Codex plugin installation or enablement state. ([test](tests/test_repository_installation.compliance.l1.py))
 - NEVER: a persistent installation run leaves the checkout's committed plugin selection changed, including a run that fails after installing has already altered it. ([test](tests/test_repository_installation.compliance.l1.py))
 - NEVER: preserving the committed plugin selection reverts the marketplace source the same run reconciled — a checkout declaring a noncanonical source ends with the canonical source and its own selection. ([test](tests/test_repository_installation.compliance.l1.py))
-- NEVER: isolated verification reads or mutates a developer's persistent agent home, marketplace registration, plugin cache, or agent directory. ([test](tests/test_repository_installation.compliance.l3.py))
+- NEVER: isolated installation reads or mutates persistent marketplace registration, plugin caches, or agent definitions; subscription discovery may read and natively refresh only the selected saved-login file. ([test](tests/test_repository_installation.compliance.l3.py))
 - ALWAYS: reconciliation adopts a present destination whose bytes equal the plugin's current shipped definition but which no ownership entry records, so a run interrupted before its ownership-record write completes cleanly when re-run. ([test](tests/test_repository_installation.compliance.l1.py))
-- NEVER: the fresh-session role-discovery probe continues without its credential or stores a captured stream carrying the credential substring — absence raises a loud error before any agent process runs, and capture-time scrubbing replaces every occurrence in stored streams and messages. ([test](tests/test_repository_installation.compliance.l1.py))
+- NEVER: the fresh-session subagent-discovery probe continues without its credential or stores a captured stream carrying the credential substring — absence raises a loud error before any agent process runs, and capture-time scrubbing replaces every occurrence in stored streams and messages. ([test](tests/test_repository_installation.compliance.l1.py))
