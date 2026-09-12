@@ -62,7 +62,7 @@ CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted dev
 | ----------------------- | -------------------------------------------- |
 | Lock file tooling       | Outside plugin marketplace scope             |
 | Cloud collaboration     | Individual developer tool, not team platform |
-| IDE-specific extensions | Codex and Claude Code are runtime surfaces   |
+| IDE-specific extensions | Codex and Claude Code are coding agents      |
 
 ## Product-level assertions
 
