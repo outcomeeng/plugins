@@ -28,6 +28,9 @@ from outcomeeng.validation.selected_gate import (
     EVIDENCE_LINK_REASON,
     FULL_GATE_REASON,
     INSTRUCTION_BLOCK_REASON,
+    LIVE_DISCOVERY_EXCLUSION,
+    LIVE_DISCOVERY_INCLUDED_REASON,
+    LIVE_DISCOVERY_TEST,
     MARKDOWN_REASON,
     PYTHON_REASON,
     REACHED_TESTS_REASON,
@@ -156,6 +159,7 @@ def test_combined_paths_merge_lanes_in_validation_step_order() -> None:
         PYRIGHT_ARGV,
         SPX_MARKDOWN_ARGV,
         EVAL_LINKS_ARGV,
+        (*PYTEST_ARGV, LIVE_DISCOVERY_TEST),
     )
     assert _reasons(plan) == (
         MARKDOWN_REASON,
@@ -167,6 +171,7 @@ def test_combined_paths_merge_lanes_in_validation_step_order() -> None:
         PYTHON_REASON,
         MARKDOWN_REASON,
         EVIDENCE_LINK_REASON,
+        LIVE_DISCOVERY_INCLUDED_REASON,
     )
 
 
@@ -452,11 +457,17 @@ def test_test_infrastructure_reach_maps_to_gate_steps(
         assert [item.reason for item in pytest_steps] == [REACHED_TESTS_REASON]
     elif kind is InfrastructureReach.SHARED:
         assert plan.full_gate is True
-        assert plan.steps == (*VALIDATION_STEPS, *TEST_STEPS)
+        assert tuple(step.argv for step in plan.steps) == (
+            *(step.argv for step in VALIDATION_STEPS),
+            *((*step.argv, *LIVE_DISCOVERY_EXCLUSION) for step in TEST_STEPS),
+        )
         assert set(_reasons(plan)) == {SHARED_TEST_INFRASTRUCTURE_REASON}
     elif kind is InfrastructureReach.UNTRACEABLE:
         assert plan.full_gate is True
-        assert plan.steps == (*VALIDATION_STEPS, *TEST_STEPS)
+        assert tuple(step.argv for step in plan.steps) == (
+            *(step.argv for step in VALIDATION_STEPS),
+            *((*step.argv, *LIVE_DISCOVERY_EXCLUSION) for step in TEST_STEPS),
+        )
         assert set(_reasons(plan)) == {UNTRACEABLE_TEST_INFRASTRUCTURE_REASON}
     else:
         assert kind is InfrastructureReach.UNREACHED
@@ -531,8 +542,9 @@ def test_template_script_maps_to_skill_and_lint_steps() -> None:
         or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
     )
     assert plan.full_gate is False
-    assert plan.steps == expected
-    assert _reasons(plan) == tuple(
+    assert plan.steps[:-1] == expected
+    assert plan.steps[-1].argv == (*PYTEST_ARGV, LIVE_DISCOVERY_TEST)
+    assert _reasons(plan)[:-1] == tuple(
         PYTHON_REASON
         if step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
         else SKILL_REASON

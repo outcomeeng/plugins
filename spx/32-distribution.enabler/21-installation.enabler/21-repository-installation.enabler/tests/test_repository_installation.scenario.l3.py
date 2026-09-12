@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from outcomeeng.distribution.installation import (
     Agent,
     FIRST_INSTALL_WARNING,
@@ -58,6 +60,7 @@ def test_real_agent_clis_place_home_agents_and_repeat_full_installation() -> Non
     assert observation.unowned_second == observation.unowned_initial
 
 
+@pytest.mark.live_subagent_discovery
 def test_fresh_codex_session_discovers_every_placed_canonical_subagent() -> None:
     observation = observe_codex_subagent_discovery()
 

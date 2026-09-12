@@ -36,6 +36,7 @@ python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short --import-mode=importlib"
 pythonpath = ["."]
+markers = ["live_subagent_discovery: fresh authenticated model session reads installed subagent names"]
 
 [tool.ruff]
 # ruff owns Python formatting (`ruff format`) and linting (`ruff check`) for this
