@@ -459,6 +459,7 @@ def test_replacing_the_link_fails_without_overwriting_the_saved_file() -> None:
                 case.home, cwd=case.home, env=case.environment
             ):
                 case.auth.run(SESSION_COMMAND, cwd=case.home, env=case.environment)
+        assert (case.home / AUTH_FILENAME).read_text() == case.refreshed
         assert case.saved.read_text() == case.initial
 
 

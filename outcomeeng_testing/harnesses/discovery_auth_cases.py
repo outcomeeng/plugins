@@ -32,6 +32,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 )
 
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "discovery_auth"
+API_FIXTURE_PATH = FIXTURE_ROOT / "api.json"
 SESSION_COMMAND = ("codex", "exec")
 NATIVE_FAILURE_EXIT_CODE = 17
 
@@ -136,9 +137,7 @@ def authentication_case(
 ) -> Iterator[AuthenticationCase]:
     initial = (FIXTURE_ROOT / "chatgpt.json").read_text(encoding="utf-8")
     refreshed = (FIXTURE_ROOT / "refreshed.json").read_text(encoding="utf-8")
-    api = json.loads((FIXTURE_ROOT / "api.json").read_text(encoding="utf-8"))[
-        "OPENAI_API_KEY"
-    ]
+    api = json.loads(API_FIXTURE_PATH.read_text(encoding="utf-8"))["OPENAI_API_KEY"]
     with TemporaryDirectory() as directory:
         root = Path(directory).resolve()
         selected_home = root / "saved"
@@ -173,7 +172,7 @@ def authentication_case(
 
 def missing_credential_environment(mode: AuthenticationMode) -> dict[str, str]:
     """Select a mode while supplying only the other mode's credential."""
-    document = json.loads((FIXTURE_ROOT / "api.json").read_text(encoding="utf-8"))
+    document = json.loads(API_FIXTURE_PATH.read_text(encoding="utf-8"))
     other = (
         WORKSPACE_TOKEN_ENV
         if mode is AuthenticationMode.API
@@ -228,7 +227,7 @@ def invalid_saved_login(fault: SavedLoginFault) -> Iterator[AuthenticationCase]:
                 case.initial[: len(case.initial) // 2], encoding="utf-8"
             )
         else:
-            shutil.copyfile(FIXTURE_ROOT / "api.json", case.saved)
+            shutil.copyfile(API_FIXTURE_PATH, case.saved)
         yield case
 
 

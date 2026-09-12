@@ -105,7 +105,7 @@ class CredentialRedactor:
             raw = path.read_text(encoding="utf-8")
             self.add(raw)
             document: object = json.loads(raw)
-        except (OSError, UnicodeError, ValueError):
+        except (OSError, ValueError):
             raise DiscoveryAuthenticationError(
                 "Saved login is missing or malformed; use the CLI to log in with the file credential store."
             ) from None
