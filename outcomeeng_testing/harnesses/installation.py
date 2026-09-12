@@ -110,7 +110,7 @@ NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
 PLUGIN_DISABLING_CODEX_CONFIG = b"[plugins]\nenabled = false\n"
 
 CODEX_LOGIN_COMMAND: tuple[str, ...] = (CODEX_EXECUTABLE, "login", "--with-api-key")
-SUBAGENT_DISCOVERY_NAMES_FIELD = "subagents"
+SUBAGENT_DISCOVERY_NAMES_FIELD = "subagent_names"
 RENAMED_CHECKOUT_AGENT_NAME = "local_helper.toml"
 RENAMED_CHECKOUT_SKILL_NAME = "renamed-skill"
 SUBAGENT_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
@@ -124,7 +124,7 @@ SUBAGENT_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
 SUBAGENT_DISCOVERY_PROMPT = (
     "Report every subagent name you can spawn in this session: "
     "the exact `agent_type` values your subagent-spawning tool declares, "
-    "including built-in subagents. If that tool is not initially exposed, discover "
+    "from its `Available roles` list, including built-in ones. If absent, discover "
     "it through your deferred-tool registry first. Do not read any file, run "
     "any command, or spawn any agent. Answer only with JSON matching the "
     "required output schema."
@@ -1851,8 +1851,8 @@ class CodexSubagentDiscoveryObservation:
     session_exit_code: int
     session_stderr: str
     session_last_message: str
-    discovered_subagents: frozenset[str] | None
-    placed_subagents: frozenset[str]
+    discovered_subagent_names: frozenset[str] | None
+    placed_subagent_names: frozenset[str]
     codex_home: Path
 
 
@@ -1886,7 +1886,7 @@ def observe_codex_subagent_discovery() -> CodexSubagentDiscoveryObservation:
         environment = dict(plan.commands[0].environment)
         install = _run_recipe(checkout, mirror, state, environment)
         codex_home = state / "codex"
-        placed_subagents = _placed_subagent_names(codex_home)
+        placed_subagent_names = _placed_subagent_names(codex_home)
         login = scrubbed_probe_run(
             CODEX_LOGIN_COMMAND,
             cwd=mirror,
@@ -1931,8 +1931,8 @@ def observe_codex_subagent_discovery() -> CodexSubagentDiscoveryObservation:
         session_exit_code=session.returncode,
         session_stderr=scrub_credential(session.stderr, credential),
         session_last_message=scrubbed_last_message,
-        discovered_subagents=_discovered_subagents(scrubbed_last_message),
-        placed_subagents=placed_subagents,
+        discovered_subagent_names=_discovered_subagent_names(scrubbed_last_message),
+        placed_subagent_names=placed_subagent_names,
         codex_home=codex_home,
     )
 
@@ -2023,7 +2023,7 @@ def _placed_subagent_names(codex_home: Path) -> frozenset[str]:
     return frozenset(names)
 
 
-def _discovered_subagents(last_message: str) -> frozenset[str] | None:
+def _discovered_subagent_names(last_message: str) -> frozenset[str] | None:
     """Parse the session's structured answer; ``None`` when it is not the schema."""
     try:
         document = json.loads(last_message)

@@ -29,11 +29,11 @@ These instructions explain WHEN to invoke spec-tree skills for this product. The
 
 ## Canonical Agent Registry
 
-The selected `$CODEX_HOME/agents/` directory is the canonical registry for marketplace-delivered custom agents. It contains exactly one current canonical role per authored marketplace agent, with the owning plugin identity appearing exactly once in each role name.
+The selected `$CODEX_HOME/agents/` directory is the canonical registry for marketplace-delivered custom agents. It contains exactly one current canonical subagent definition per authored marketplace agent, with the owning plugin identity appearing exactly once in each subagent name.
 
-Canonical examples are `spec-tree_adr-auditor`, `instructions_skill-auditor`, `prose-auditor`, `rust-simplifier`, and `typescript-simplifier`. A bare legacy role beside its canonical role, or a role whose plugin identity is repeated, is stale duplicate state rather than another agent to dispatch. The per-role dispatch contracts and the quick-reference tables below are the per-role source of truth for these names.
+Canonical examples are `spec-tree_adr-auditor`, `instructions_skill-auditor`, `prose-auditor`, `rust-simplifier`, and `typescript-simplifier`. A bare legacy subagent definition beside its canonical subagent definition, or a subagent name whose plugin identity is repeated, is stale duplicate state rather than another agent to dispatch. The per-subagent dispatch contracts and the quick-reference tables below are the per-subagent source of truth for these names.
 
-When a named role is unavailable, invoke the owning plugin's `/<plugin>-plugin init` to refresh its definitions in the selected `$CODEX_HOME/agents/`, then reload the harness plugin index or start a new session. `/<plugin>-plugin check` proves whether the selected home carries that plugin's current shipped definitions, writing nothing. A running session retains its already-loaded registry; repeated discovery in that session cannot prove the refresh failed.
+When a named subagent is unavailable, invoke the owning plugin's `/<plugin>-plugin init` to refresh its definitions in the selected `$CODEX_HOME/agents/`, then reload the harness plugin index or start a new session. `/<plugin>-plugin check` proves whether the selected home carries that plugin's current shipped definitions, writing nothing. A running session retains its already-loaded registry; repeated discovery in that session cannot prove the refresh failed.
 
 **NEVER** create or commit marketplace-delivered agent definitions into a checkout; no generated instruction requires it. A plugin-owned checkout definition whose invoked skills live in the selected agent home is a scope split: remove only a byte-identical generated copy, and inspect every changed or unrecognized copy as a shadowing collision before any removal.
 
@@ -182,16 +182,16 @@ Default-branch git and version-control mutation — branching, committing, pushi
 
 ### Sub-agent dispatch
 
-The configured Verifier roles this router names are pre-authorized. A harness rule may require the operator to request sub-agent use before one is dispatched; treat this section as that standing request. Authorization follows the named role, never a role resemblance.
+The configured Verifier subagents this router names are pre-authorized. A harness rule may require the operator to request sub-agent use before one is dispatched; treat this section as that standing request. Authorization follows the named subagent, never a similarity between definitions.
 
 - **NEVER** ask the operator to confirm dispatching one — not at a gate, not per node, not once per session, and never as a structured-question option set. A harness permission prompt is the operator's to answer, never a question to raise.
 - **NEVER** dispatch a sub-agent this router does not name merely because it is discovered, available, or plausibly useful.
 - **NEVER** run a verification skill — audit or review — in the main conversation; the separate Verifier's agent session keeps the verdict free of the Author's agent session's bias.
-- **ALWAYS** treat the gate as blocked when a named role cannot be dispatched or does not return: finish the deterministic verification, then report the exact dispatch attempted and how it failed.
+- **ALWAYS** treat the gate as blocked when a named subagent cannot be dispatched or does not return: finish the deterministic verification, then report the exact dispatch attempted and how it failed.
 
 ### Agent identity in generated artifacts
 
-**NEVER** name the agent or its runtime in an operational artifact — a branch name, commit message, pull-request title or body, review comment, or authorship marker written into a product file. Describe the work, never who performed it. Exact filesystem paths, package and tool names, quoted command output, and operator-supplied text keep their required spelling.
+**NEVER** name the agent identity in an operational artifact — a branch name, commit message, pull-request title or body, review comment, or authorship marker written into a product file. Describe the work, never who performed it. Exact filesystem paths, package and tool names, quoted command output, and operator-supplied text keep their required spelling.
 
 **ALWAYS** confine that ban to operational artifacts. Authored guidance that documents Claude's behavior uses imperative voice or names Claude as its subject by design; stripping Claude from that guidance to satisfy this rule misapplies it rather than complying with it.
 
@@ -231,21 +231,21 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 **Read each file fully in its designated context.** A file the user names is read in the main conversation. A file this conversation authored is verified by a configured Verifier in an independent context. Subagents may locate files; a file the main conversation needs is then read in the main conversation in full.
 
-**Dispatch each named role through the runtime's exposed typed-subagent spawn capability** (`{{! tool('spawn_agent', 'codex') !}}` when that identifier is available), spawning the matching subagents in parallel when several roles apply. `### Sub-agent dispatch` above governs when to dispatch, forbids asking the operator to confirm, and blocks the gate when a named role cannot be dispatched; this section governs only the Codex mechanics. Act only on the result the subagent returns.
+**Dispatch each named subagent through the harness's exposed typed-subagent spawn capability** (`{{! tool('spawn_agent', 'codex') !}}` when that identifier is available), spawning the matching subagents in parallel when several Verifiers apply. `### Sub-agent dispatch` above governs when to dispatch, forbids asking the operator to confirm, and blocks the gate when a named subagent cannot be dispatched; this section governs only the Codex mechanics. Act only on the result the subagent returns.
 
 **Already-dispatched Verifier boundary.** Apply the typed-spawn rules above only in the Author's main conversation. Once running as a named Verifier, treat the current context as the required isolation and execute the configured audit or review skill directly. NEVER search for or spawn another Verifier, use `tool_search` to discover multi-agent tools, or invoke `codex exec`, `claude`, `pi`, or another agent CLI. Missing nested-Verifier tools is expected inside the dispatched Verifier and does not block direct execution.
 
 **STOP TRIGGER — in the Author's main conversation, discover deferred agent tools before reporting an agent unavailable.**
 
-If a named agent or lifecycle tool is absent from the initial list, inspect the runtime's complete deferred-tool registry. Use top-level `functions.exec`; inside it, inspect `ALL_TOOLS`. Treat `exec_command` as the nested shell tool. Check typed `{{! tool('spawn_agent', 'codex') !}}` and its `Available roles`; an exact match proves availability. Report unavailable only when discovery finds no typed spawn capability or omits the exact role, and include that result. Visible catalogs, initial tools, generated rosters, and local `agents/*.md` files are not availability evidence.
+If a named agent or lifecycle tool is absent from the initial list, inspect the harness's complete deferred-tool registry. Use top-level `functions.exec`; inside it, inspect `ALL_TOOLS`. Treat `exec_command` as the nested shell tool. Check typed `{{! tool('spawn_agent', 'codex') !}}` and its `Available roles`; an exact match proves availability. Report unavailable only when discovery finds no typed spawn capability or omits the exact subagent name, and include that result. Visible catalogs, initial tools, generated rosters, and local `agents/*.md` files are not availability evidence.
 
-**Use the exposed multi-agent tool schema exactly.** The examples below use the `multi_agent_v1` identifiers emitted by this Codex harness. When the runtime exposes different identifiers, discover the equivalent typed spawn, wait, send-input, and close capabilities and preserve the same fields and result contracts. The initial turn goes in `message`; use `items` only when the turn must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed Verifier and Reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named Verifier roles already carry their own model settings. Store every returned agent id verbatim. The role task is the spawn's initial `message`, so one spawn and one wait complete a role. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with the exposed wait capability and close the child immediately. Completed agents remain open until closed and can interfere with future spawns.
+**Use the exposed multi-agent tool schema exactly.** The examples below use the `multi_agent_v1` identifiers emitted by this Codex harness. When the harness exposes different identifiers, discover the equivalent typed spawn, wait, send-input, and close capabilities and preserve the same fields and result contracts. The initial turn goes in `message`; use `items` only when the turn must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed Verifier and Reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named Verifier subagents already carry their own model settings. Store every returned agent id verbatim. The verification task is the spawn's initial `message`, so one spawn and one wait complete the verification task. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with the exposed wait capability and close the child immediately. Completed agents remain open until closed and can interfere with future spawns.
 
 ### Subagent lifecycle — preserve every handle and close every thread
 
-Treat every spawned subagent as an owned resource. Maintain a registry in the main conversation containing its exact `agent_id`, role or task, and lifecycle state. Record a successful spawn's returned id before issuing another spawn or making any unrelated tool call. Preserve every unresolved registry entry across interruption and compaction.
+Treat every spawned subagent as an owned resource. Maintain a registry in the main conversation containing its exact `agent_id`, subagent name or task, and lifecycle state. Record a successful spawn's returned id before issuing another spawn or making any unrelated tool call. Preserve every unresolved registry entry across interruption and compaction.
 
-**Acquire handles sequentially while agents execute concurrently.** Call `{{! tool('spawn_agent', 'codex') !}}` once per tool call. Several sequential spawn calls may occur within one main-agent tool-call sequence before control returns to the operator, and every agent already spawned may run concurrently while later calls are issued. NEVER place multiple spawn calls in `Promise.all`, another fail-fast combinator, or one parallel tool-call batch: one rejected call can suppress successful sibling results and lose their ids even though those agents remain open. Respect the runtime's configured `agents.max_threads` limit; NEVER hard-code a maximum such as eight and NEVER fill capacity with agents that are not required.
+**Acquire handles sequentially while agents execute concurrently.** Call `{{! tool('spawn_agent', 'codex') !}}` once per tool call. Several sequential spawn calls may occur within one main-agent tool-call sequence before control returns to the operator, and every agent already spawned may run concurrently while later calls are issued. NEVER place multiple spawn calls in `Promise.all`, another fail-fast combinator, or one parallel tool-call batch: one rejected call can suppress successful sibling results and lose their ids even though those agents remain open. Respect the harness's configured `agents.max_threads` limit; NEVER hard-code a maximum such as eight and NEVER fill capacity with agents that are not required.
 
 Before each spawn sequence, reconcile the registry: preserve any final results already returned, close their agents, and close work that has been abandoned or superseded. If a spawn fails, stop issuing new spawns, retain every id already acquired, and collect or close those known agents before retrying. A failed individual spawn yields no id for that call and does not erase ids returned by earlier calls.
 
@@ -263,21 +263,21 @@ Reconcile every registry entry at these checkpoints:
 
 At a checkpoint, wait again for every still-required result and close every abandoned or superseded agent. Before merge, publication, or response end, every known id must be closed and every required result must already be preserved. Do not leave completed agents open; completed agents continue consuming thread capacity until closed.
 
-NEVER invent, shorten, or substitute an agent id, including an all-zero placeholder. NEVER assume `multi_agent_v1.list_agents` exists; if the runtime exposes a listing tool, use it only to reconcile the registry. The interactive `/agent` picker is operator-side recovery when registry reconstruction is impossible, never a substitute for preserving ids. If `{{! tool('close_agent', 'codex') !}}` returns `not_found`, record that exact result and do not call `multi_agent_v1.resume_agent` merely to close the id. Resume only when intentionally continuing a known closed agent's work.
+NEVER invent, shorten, or substitute an agent id, including an all-zero placeholder. NEVER assume `multi_agent_v1.list_agents` exists; if the harness exposes a listing tool, use it only to reconcile the registry. The interactive `/agent` picker is operator-side recovery when registry reconstruction is impossible, never a substitute for preserving ids. If `{{! tool('close_agent', 'codex') !}}` returns `not_found`, record that exact result and do not call `multi_agent_v1.resume_agent` merely to close the id. Resume only when intentionally continuing a known closed agent's work.
 
-**Spawn each verifier or reviewer with its role task as the initial turn.** The `agent_type` binds the child to its configured agent definition, so the role task goes directly in the spawn's `message` and no separate turn precedes it:
+**Spawn each verifier or reviewer with its role task as the initial turn.** The task is the work assigned to the Verifier Role. The `agent_type` binds the child to its configured subagent definition, so the verification task goes directly in the spawn's `message` and no separate turn precedes it:
 
 ```json
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "<exact-agent-type>",
-    "message": "<role-task>"
+    "message": "<verification-task>"
   }
 }
 ```
 
-Record the returned agent id verbatim, then collect the role-task result with `{{! tool('wait_agent', 'codex') !}}`. The role task passes only through its own output contract below; an error, timeout, missing final message, or output outside that contract blocks the gate. Record the full agent id and observed result, and close the child.
+Record the returned agent id verbatim, then collect the verification-task result with `{{! tool('wait_agent', 'codex') !}}`. The verification task passes only through its own output contract below; an error, timeout, missing final message, or output outside that contract blocks the gate. Record the full agent id and observed result, and close the child.
 
 Wait once for one or more spawned agents. Use the 10-minute individual-file timeout for subagents such as `spec-tree_implementation-auditor` or `spec-tree_spec-auditor`:
 
@@ -291,7 +291,7 @@ Wait once for one or more spawned agents. Use the 10-minute individual-file time
 }
 ```
 
-Use the 30-minute changeset timeout only for `spec-tree_changes-reviewer` role work:
+Use the 30-minute changeset timeout only for `spec-tree_changes-reviewer` review work:
 
 ```json
 {
@@ -314,9 +314,9 @@ Close a completed or no-longer-needed agent:
 }
 ```
 
-In the Author's main conversation, if `{{! tool('spawn_agent', 'codex') !}}`, `{{! tool('wait_agent', 'codex') !}}`, or `{{! tool('close_agent', 'codex') !}}` is not initially exposed, discover it through the runtime's complete deferred-tool registry before concluding the capability or role is unavailable. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user', 'codex') !}}` or any other tools as a substitute for result collection.
+In the Author's main conversation, if `{{! tool('spawn_agent', 'codex') !}}`, `{{! tool('wait_agent', 'codex') !}}`, or `{{! tool('close_agent', 'codex') !}}` is not initially exposed, discover it through the harness's complete deferred-tool registry before concluding the capability or subagent definition is unavailable. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user', 'codex') !}}` or any other tools as a substitute for result collection.
 
-**Result collection for Verifier agents.** The exposed typed wait capability (`{{! tool('wait_agent', 'codex') !}}` in the examples below) is the planned result-collection mechanism for the role task. Read its returned JSON, keyed by the spawned subagent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the turn result; when that final status carries a final message, that message is the turn output. Do not infer success from a subagent notification, a pending handle, or an open subagent id.
+**Result collection for Verifier agents.** The exposed typed wait capability (`{{! tool('wait_agent', 'codex') !}}` in the examples below) is the planned result-collection mechanism for the verification task. Read its returned JSON, keyed by the spawned subagent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the turn result; when that final status carries a final message, that message is the turn output. Do not infer success from a subagent notification, a pending handle, or an open subagent id.
 
 Successful `spec-tree_changes-reviewer` result shape:
 
@@ -345,10 +345,10 @@ Blocked or incomplete result shape:
 
 **Codex blocked-result rule.** If `wait_agent` returns an error, `not_found`, timeout with no final status, usage-limit failure, model-capacity failure, or any final message that is not a raw review journal token, the review gate is blocked. Record the exact agent id, tool result, and blocking reason. Do not publish, merge, or mark the gate passed. When repairing a finding or blocked subject, rerun deterministic verification, create a new local checkpoint commit, and review that new head; an operator-approved process exception is the only other path past the gate.
 
-**Use raw scope only for the `spec-tree_changes-reviewer` role task.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token as the spawn `message`: `HEAD` for the current committed branch scope, `origin/<base>...HEAD` for a specific committed range, a branch name, or a PR reference. Confirm the worktree is clean before dispatch; commit the exact current version before the Reviewer's agent session reads it.
+**Use raw scope only for the `spec-tree_changes-reviewer` verification task.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token as the spawn `message`: `HEAD` for the current committed branch scope, `origin/<base>...HEAD` for a specific committed range, a branch name, or a PR reference. Confirm the worktree is clean before dispatch; commit the exact current version before the Reviewer's agent session reads it.
 
 - ALWAYS prepare the worktree first: isolate the intended changes, sync to the base using the `spec-tree:sync-base` skill when the governing workflow requires it, pass deterministic verification, create a local checkpoint commit, and leave the worktree clean so the Reviewer judges an exact committed head. Never dispatch the Reviewer over a working diff.
-- NEVER invoke the `spec-tree:review-changes` skill in the Author's main conversation; the `spec-tree_changes-reviewer` invokes it inside its isolated role workflow.
+- NEVER invoke the `spec-tree:review-changes` skill in the Author's main conversation; the `spec-tree_changes-reviewer` invokes it inside its isolated verification workflow.
 - NEVER pass a prose prompt, restate review instructions, add severity filters, or tell the Reviewer to focus only on new changes, or what to emphasize.
 
 ```json
@@ -371,7 +371,7 @@ Blocked or incomplete result shape:
 }
 ```
 
-**Use explicit prompts for audit-agent role tasks.** The `message` field comes from the `{{! tool('spawn_agent', 'codex') !}}` schema. This instruction block owns the prompt content below for required Verifier roles. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
+**Use explicit prompts for audit-agent verification tasks.** The `message` field comes from the `{{! tool('spawn_agent', 'codex') !}}` schema. This instruction block owns the prompt content below for required Verifier subagents. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
 
 Use this shape for an implementation audit:
 
@@ -461,7 +461,7 @@ Use this shape for skill audits:
 }
 ```
 
-Use this shape for one subagent audit. When several custom-agent configurations changed, dispatch one `instructions_subagent-auditor` per file: acquire each handle sequentially, then let the role tasks run concurrently.
+Use this shape for one subagent audit. When several custom-agent configurations changed, dispatch one `instructions_subagent-auditor` per file: acquire each handle sequentially, then let the verification tasks run concurrently.
 
 ```json
 {
@@ -477,7 +477,7 @@ Use this shape for one subagent audit. When several custom-agent configurations 
 
 <!-- harness:claude -->
 
-**Use the `Agent` tool for every configured verifier or reviewer.** Launch in the foreground with `subagent_type` set to the exact configured agent type and `prompt` set to the role-task body from the shared contracts below. The completed `Agent` tool result is that configured agent's final message; apply the matching output contract to that message. An error, missing final message, or output outside the matching contract blocks the gate.
+**Use the `Agent` tool for every configured verifier or reviewer.** Launch in the foreground with `subagent_type` set to the exact configured agent type and `prompt` set to the verification-task body from the shared contracts below. The completed `Agent` tool result is that configured agent's final message; apply the matching output contract to that message. An error, missing final message, or output outside the matching contract blocks the gate.
 
 <!-- /harness:claude -->
 
@@ -485,126 +485,126 @@ Use this shape for one subagent audit. When several custom-agent configurations 
 
 <!-- harness:claude -->
 
-| User Says...                                            | Skill                  | Agent                                                                |
-| ------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------- |
-| "Implement this outcome" or "Start the TDD flow"        | `/apply`               | —                                                                    |
-| "Create an outcome" or "Add an ADR"                     | `/author`              | —                                                                    |
-| "Add a new node" or "This node is too big"              | `/decompose`           | —                                                                    |
-| "Move this under that"                                  | `/refactor`            | —                                                                    |
-| "Check these specs"                                     | `/align`               | —                                                                    |
-| "Establish evidence for this" or "Write tests for this" | `/verify`              | —                                                                    |
-| "Audit this PDR"                                        | `/audit-pdr`           | `{{! agent_role('spec-tree', 'pdr-auditor', 'claude') !}}`           |
-| "Audit this ADR"                                        | `/audit-adr`           | `{{! agent_role('spec-tree', 'adr-auditor', 'claude') !}}`           |
-| "Audit test evidence"                                   | `/audit-tests`         | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'claude') !}}` |
-| "Audit eval evidence"                                   | `/audit-eval-evidence` | `{{! agent_role('spec-tree', 'eval-evidence-auditor', 'claude') !}}` |
-| "Audit this spec node"                                  | `/audit-specs`         | `{{! agent_role('spec-tree', 'spec-auditor', 'claude') !}}`          |
-| "Diagnose the spx environment"                          | `/diagnose`            | —                                                                    |
-| "File a follow-up in a dependency queue"                | `/issue`               | —                                                                    |
+| User Says...                                            | Skill                  | Agent                                                                   |
+| ------------------------------------------------------- | ---------------------- | ----------------------------------------------------------------------- |
+| "Implement this outcome" or "Start the TDD flow"        | `/apply`               | —                                                                       |
+| "Create an outcome" or "Add an ADR"                     | `/author`              | —                                                                       |
+| "Add a new node" or "This node is too big"              | `/decompose`           | —                                                                       |
+| "Move this under that"                                  | `/refactor`            | —                                                                       |
+| "Check these specs"                                     | `/align`               | —                                                                       |
+| "Establish evidence for this" or "Write tests for this" | `/verify`              | —                                                                       |
+| "Audit this PDR"                                        | `/audit-pdr`           | `{{! subagent_name('spec-tree', 'pdr-auditor', 'claude') !}}`           |
+| "Audit this ADR"                                        | `/audit-adr`           | `{{! subagent_name('spec-tree', 'adr-auditor', 'claude') !}}`           |
+| "Audit test evidence"                                   | `/audit-tests`         | `{{! subagent_name('spec-tree', 'test-evidence-auditor', 'claude') !}}` |
+| "Audit eval evidence"                                   | `/audit-eval-evidence` | `{{! subagent_name('spec-tree', 'eval-evidence-auditor', 'claude') !}}` |
+| "Audit this spec node"                                  | `/audit-specs`         | `{{! subagent_name('spec-tree', 'spec-auditor', 'claude') !}}`          |
+| "Diagnose the spx environment"                          | `/diagnose`            | —                                                                       |
+| "File a follow-up in a dependency queue"                | `/issue`               | —                                                                       |
 
 <!-- langs:present -->
 
-Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type Auditors compose for the language in scope. There is no per-language Auditor agent. Dispatch `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type Auditors compose for the language in scope. There is no per-language Auditor agent. Dispatch `{{! subagent_name('spec-tree', 'implementation-auditor', 'claude') !}}` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
 
 <!-- /langs:present -->
 <!-- lang:python -->
 
-| User Says...            | Skill (composed)             | Composing agent                                                       |
-| ----------------------- | ---------------------------- | --------------------------------------------------------------------- |
-| "Audit this code"       | `/audit-python-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` |
-| "Audit ADRs for Python" | `/audit-python-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'claude') !}}`            |
-| "Audit these tests"     | `/audit-python-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'claude') !}}`  |
+| User Says...            | Skill (composed)             | Composing agent                                                          |
+| ----------------------- | ---------------------------- | ------------------------------------------------------------------------ |
+| "Audit this code"       | `/audit-python-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'claude') !}}` |
+| "Audit ADRs for Python" | `/audit-python-architecture` | `{{! subagent_name('spec-tree', 'adr-auditor', 'claude') !}}`            |
+| "Audit these tests"     | `/audit-python-tests`        | `{{! subagent_name('spec-tree', 'test-evidence-auditor', 'claude') !}}`  |
 
 <!-- /lang:python -->
 <!-- lang:typescript -->
 
-| User Says...                | Skill (composed)                 | Composing agent                                                       |
-| --------------------------- | -------------------------------- | --------------------------------------------------------------------- |
-| "Audit this code"           | `/audit-typescript-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` |
-| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'claude') !}}`            |
-| "Audit these tests"         | `/audit-typescript-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'claude') !}}`  |
+| User Says...                | Skill (composed)                 | Composing agent                                                          |
+| --------------------------- | -------------------------------- | ------------------------------------------------------------------------ |
+| "Audit this code"           | `/audit-typescript-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'claude') !}}` |
+| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `{{! subagent_name('spec-tree', 'adr-auditor', 'claude') !}}`            |
+| "Audit these tests"         | `/audit-typescript-tests`        | `{{! subagent_name('spec-tree', 'test-evidence-auditor', 'claude') !}}`  |
 
 <!-- /lang:typescript -->
 <!-- lang:rust -->
 
-| User Says...          | Skill (composed)           | Composing agent                                                       |
-| --------------------- | -------------------------- | --------------------------------------------------------------------- |
-| "Audit this code"     | `/audit-rust-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` |
-| "Audit unsafe Rust"   | `/audit-rust-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` |
-| "Audit ADRs for Rust" | `/audit-rust-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'claude') !}}`            |
-| "Audit these tests"   | `/audit-rust-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'claude') !}}`  |
+| User Says...          | Skill (composed)           | Composing agent                                                          |
+| --------------------- | -------------------------- | ------------------------------------------------------------------------ |
+| "Audit this code"     | `/audit-rust-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'claude') !}}` |
+| "Audit unsafe Rust"   | `/audit-rust-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'claude') !}}` |
+| "Audit ADRs for Rust" | `/audit-rust-architecture` | `{{! subagent_name('spec-tree', 'adr-auditor', 'claude') !}}`            |
+| "Audit these tests"   | `/audit-rust-tests`        | `{{! subagent_name('spec-tree', 'test-evidence-auditor', 'claude') !}}`  |
 
 <!-- /lang:rust -->
 <!-- lang:go -->
 
-| User Says...              | Skill (composed)         | Composing agent                                                       |
-| ------------------------- | ------------------------ | --------------------------------------------------------------------- |
-| "Audit this code"         | `/audit-go-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` |
-| "Audit concurrency in Go" | `/audit-go-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'claude') !}}` |
-| "Audit ADRs for Go"       | `/audit-go-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'claude') !}}`            |
-| "Audit these tests"       | `/audit-go-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'claude') !}}`  |
+| User Says...              | Skill (composed)         | Composing agent                                                          |
+| ------------------------- | ------------------------ | ------------------------------------------------------------------------ |
+| "Audit this code"         | `/audit-go-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'claude') !}}` |
+| "Audit concurrency in Go" | `/audit-go-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'claude') !}}` |
+| "Audit ADRs for Go"       | `/audit-go-architecture` | `{{! subagent_name('spec-tree', 'adr-auditor', 'claude') !}}`            |
+| "Audit these tests"       | `/audit-go-tests`        | `{{! subagent_name('spec-tree', 'test-evidence-auditor', 'claude') !}}`  |
 
 <!-- /lang:go -->
 
 <!-- /harness:claude -->
 <!-- harness:codex -->
 
-| User Says...                                            | Skill                  | Agent                                                               |
-| ------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------- |
-| "Implement this outcome" or "Start the TDD flow"        | `/apply`               | —                                                                   |
-| "Create an outcome" or "Add an ADR"                     | `/author`              | —                                                                   |
-| "Add a new node" or "This node is too big"              | `/decompose`           | —                                                                   |
-| "Move this under that"                                  | `/refactor`            | —                                                                   |
-| "Check these specs"                                     | `/align`               | —                                                                   |
-| "Establish evidence for this" or "Write tests for this" | `/verify`              | —                                                                   |
-| "Audit this PDR"                                        | `/audit-pdr`           | `{{! agent_role('spec-tree', 'pdr-auditor', 'codex') !}}`           |
-| "Audit this ADR"                                        | `/audit-adr`           | `{{! agent_role('spec-tree', 'adr-auditor', 'codex') !}}`           |
-| "Audit test evidence"                                   | `/audit-tests`         | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'codex') !}}` |
-| "Audit eval evidence"                                   | `/audit-eval-evidence` | `{{! agent_role('spec-tree', 'eval-evidence-auditor', 'codex') !}}` |
-| "Audit this spec node"                                  | `/audit-specs`         | `{{! agent_role('spec-tree', 'spec-auditor', 'codex') !}}`          |
-| "Diagnose the spx environment"                          | `/diagnose`            | —                                                                   |
-| "File a follow-up in a dependency queue"                | `/issue`               | —                                                                   |
+| User Says...                                            | Skill                  | Agent                                                                  |
+| ------------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------- |
+| "Implement this outcome" or "Start the TDD flow"        | `/apply`               | —                                                                      |
+| "Create an outcome" or "Add an ADR"                     | `/author`              | —                                                                      |
+| "Add a new node" or "This node is too big"              | `/decompose`           | —                                                                      |
+| "Move this under that"                                  | `/refactor`            | —                                                                      |
+| "Check these specs"                                     | `/align`               | —                                                                      |
+| "Establish evidence for this" or "Write tests for this" | `/verify`              | —                                                                      |
+| "Audit this PDR"                                        | `/audit-pdr`           | `{{! subagent_name('spec-tree', 'pdr-auditor', 'codex') !}}`           |
+| "Audit this ADR"                                        | `/audit-adr`           | `{{! subagent_name('spec-tree', 'adr-auditor', 'codex') !}}`           |
+| "Audit test evidence"                                   | `/audit-tests`         | `{{! subagent_name('spec-tree', 'test-evidence-auditor', 'codex') !}}` |
+| "Audit eval evidence"                                   | `/audit-eval-evidence` | `{{! subagent_name('spec-tree', 'eval-evidence-auditor', 'codex') !}}` |
+| "Audit this spec node"                                  | `/audit-specs`         | `{{! subagent_name('spec-tree', 'spec-auditor', 'codex') !}}`          |
+| "Diagnose the spx environment"                          | `/diagnose`            | —                                                                      |
+| "File a follow-up in a dependency queue"                | `/issue`               | —                                                                      |
 
 <!-- langs:present -->
 
-Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type Auditors compose for the language in scope. There is no per-language Auditor agent. Dispatch `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type Auditors compose for the language in scope. There is no per-language Auditor agent. Dispatch `{{! subagent_name('spec-tree', 'implementation-auditor', 'codex') !}}` for implementation audits; it invokes the matching language concern skills automatically. Any per-language audit-skill table this instruction block carries covers only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker.
 
 <!-- /langs:present -->
 <!-- lang:python -->
 
-| User Says...            | Skill (composed)             | Composing agent                                                      |
-| ----------------------- | ---------------------------- | -------------------------------------------------------------------- |
-| "Audit this code"       | `/audit-python-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` |
-| "Audit ADRs for Python" | `/audit-python-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'codex') !}}`            |
-| "Audit these tests"     | `/audit-python-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'codex') !}}`  |
+| User Says...            | Skill (composed)             | Composing agent                                                         |
+| ----------------------- | ---------------------------- | ----------------------------------------------------------------------- |
+| "Audit this code"       | `/audit-python-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'codex') !}}` |
+| "Audit ADRs for Python" | `/audit-python-architecture` | `{{! subagent_name('spec-tree', 'adr-auditor', 'codex') !}}`            |
+| "Audit these tests"     | `/audit-python-tests`        | `{{! subagent_name('spec-tree', 'test-evidence-auditor', 'codex') !}}`  |
 
 <!-- /lang:python -->
 <!-- lang:typescript -->
 
-| User Says...                | Skill (composed)                 | Composing agent                                                      |
-| --------------------------- | -------------------------------- | -------------------------------------------------------------------- |
-| "Audit this code"           | `/audit-typescript-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` |
-| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'codex') !}}`            |
-| "Audit these tests"         | `/audit-typescript-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'codex') !}}`  |
+| User Says...                | Skill (composed)                 | Composing agent                                                         |
+| --------------------------- | -------------------------------- | ----------------------------------------------------------------------- |
+| "Audit this code"           | `/audit-typescript-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'codex') !}}` |
+| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `{{! subagent_name('spec-tree', 'adr-auditor', 'codex') !}}`            |
+| "Audit these tests"         | `/audit-typescript-tests`        | `{{! subagent_name('spec-tree', 'test-evidence-auditor', 'codex') !}}`  |
 
 <!-- /lang:typescript -->
 <!-- lang:rust -->
 
-| User Says...          | Skill (composed)           | Composing agent                                                      |
-| --------------------- | -------------------------- | -------------------------------------------------------------------- |
-| "Audit this code"     | `/audit-rust-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` |
-| "Audit unsafe Rust"   | `/audit-rust-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` |
-| "Audit ADRs for Rust" | `/audit-rust-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'codex') !}}`            |
-| "Audit these tests"   | `/audit-rust-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'codex') !}}`  |
+| User Says...          | Skill (composed)           | Composing agent                                                         |
+| --------------------- | -------------------------- | ----------------------------------------------------------------------- |
+| "Audit this code"     | `/audit-rust-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'codex') !}}` |
+| "Audit unsafe Rust"   | `/audit-rust-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'codex') !}}` |
+| "Audit ADRs for Rust" | `/audit-rust-architecture` | `{{! subagent_name('spec-tree', 'adr-auditor', 'codex') !}}`            |
+| "Audit these tests"   | `/audit-rust-tests`        | `{{! subagent_name('spec-tree', 'test-evidence-auditor', 'codex') !}}`  |
 
 <!-- /lang:rust -->
 <!-- lang:go -->
 
-| User Says...              | Skill (composed)         | Composing agent                                                      |
-| ------------------------- | ------------------------ | -------------------------------------------------------------------- |
-| "Audit this code"         | `/audit-go-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` |
-| "Audit concurrency in Go" | `/audit-go-code`         | `{{! agent_role('spec-tree', 'implementation-auditor', 'codex') !}}` |
-| "Audit ADRs for Go"       | `/audit-go-architecture` | `{{! agent_role('spec-tree', 'adr-auditor', 'codex') !}}`            |
-| "Audit these tests"       | `/audit-go-tests`        | `{{! agent_role('spec-tree', 'test-evidence-auditor', 'codex') !}}`  |
+| User Says...              | Skill (composed)         | Composing agent                                                         |
+| ------------------------- | ------------------------ | ----------------------------------------------------------------------- |
+| "Audit this code"         | `/audit-go-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'codex') !}}` |
+| "Audit concurrency in Go" | `/audit-go-code`         | `{{! subagent_name('spec-tree', 'implementation-auditor', 'codex') !}}` |
+| "Audit ADRs for Go"       | `/audit-go-architecture` | `{{! subagent_name('spec-tree', 'adr-auditor', 'codex') !}}`            |
+| "Audit these tests"       | `/audit-go-tests`        | `{{! subagent_name('spec-tree', 'test-evidence-auditor', 'codex') !}}`  |
 
 <!-- /lang:go -->
 

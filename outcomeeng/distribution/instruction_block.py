@@ -226,18 +226,18 @@ CODEX_AGENT_REGISTRY_POLICY_REQUIREMENTS: Final = (
         "The selected `$CODEX_HOME/agents/` directory is the canonical registry",
     ),
     (
-        "one canonical role per authored agent",
-        "exactly one current canonical role per authored marketplace agent",
+        "one canonical subagent definition per authored agent",
+        "exactly one current canonical subagent definition per authored marketplace agent",
     ),
     (
         "plugin identity appears once",
         "owning plugin identity appearing exactly once",
     ),
-    ("spec-tree role example", "`spec-tree_adr-auditor`"),
-    ("instructions role example", "`instructions_skill-auditor`"),
-    ("prose role example", "`prose-auditor`"),
-    ("Rust role example", "`rust-simplifier`"),
-    ("TypeScript role example", "`typescript-simplifier`"),
+    ("spec-tree subagent example", "`spec-tree_adr-auditor`"),
+    ("instructions subagent example", "`instructions_skill-auditor`"),
+    ("prose subagent example", "`prose-auditor`"),
+    ("Rust subagent example", "`rust-simplifier`"),
+    ("TypeScript subagent example", "`typescript-simplifier`"),
     ("plugin lifecycle repair", "`/<plugin>-plugin init`"),
     (
         "session registry reload",
@@ -365,9 +365,9 @@ ROUTER_POLICY_NAMES: Final = (
 )
 SUBAGENT_DISPATCH_POLICY_HEADING: Final = "### Sub-agent dispatch"
 SUBAGENT_DISPATCH_POLICY_REQUIREMENTS: Final = (
-    ("named-role pre-authorization", "roles this router names are pre-authorized"),
+    ("named-subagent pre-authorization", "subagents this router names are pre-authorized"),
     ("standing request", "treat this section as that standing request"),
-    ("role-resemblance boundary", "never a role resemblance"),
+    ("definition-similarity boundary", "never a similarity between definitions"),
     ("no confirmation prompt", "**NEVER** ask the operator to confirm dispatching one"),
     ("confirmation evasions", "not once per session"),
     (
@@ -379,7 +379,7 @@ SUBAGENT_DISPATCH_POLICY_REQUIREMENTS: Final = (
         "harness permission prompt is the operator's to answer",
     ),
     (
-        "unnamed-role prohibition",
+        "unnamed-subagent prohibition",
         "**NEVER** dispatch a sub-agent this router does not name",
     ),
     (
@@ -485,10 +485,10 @@ DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS: Final = (
         f"typed `{RUNTIME_TOKEN_SPAWN_AGENT_NAMES[Target.CODEX.value]}`",
     ),
     ("available roles", "`Available roles`"),
-    ("exact role authority", "exact match proves availability"),
+    ("exact subagent name authority", "exact match proves availability"),
     (
         "unavailability boundary",
-        "Report unavailable only when discovery finds no typed spawn capability or omits the exact role",
+        "Report unavailable only when discovery finds no typed spawn capability or omits the exact subagent name",
     ),
     ("discovery result", "include that result"),
     (
@@ -502,7 +502,7 @@ DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS: Final = (
         f"if `{RUNTIME_TOKEN_SPAWN_AGENT_NAMES[Target.CODEX.value]}`, "
         f"`{RUNTIME_TOKEN_WAIT_AGENT_NAMES[Target.CODEX.value]}`, or "
         f"`{RUNTIME_TOKEN_CLOSE_AGENT_NAMES[Target.CODEX.value]}` is not initially "
-        "exposed, discover it through the runtime's complete deferred-tool registry",
+        "exposed, discover it through the harness's complete deferred-tool registry",
     ),
 )
 
@@ -546,7 +546,7 @@ DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS: Final = (
         ),
     ),
     DeferredAgentDiscoveryContradiction(
-        name="local agent file as runtime authority",
+        name="local agent file as session availability evidence",
         pattern=re.compile(
             r"^(?!.*\b(?:never|do not|don't|must not|may not|should not|cannot|can't)\b)"
             r".*\blocal\b.*\bagents?/\*\.md\b.{0,120}"
@@ -555,8 +555,8 @@ DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS: Final = (
             re.IGNORECASE | re.MULTILINE,
         ),
         violating_directive=(
-            "A local `agents/*.md` file proves that the role is active in the current "
-            "runtime."
+            "A local `agents/*.md` file proves that the subagent is available in the current "
+            "agent session."
         ),
     ),
 )
