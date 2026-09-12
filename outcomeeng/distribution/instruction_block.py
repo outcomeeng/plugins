@@ -365,7 +365,10 @@ ROUTER_POLICY_NAMES: Final = (
 )
 SUBAGENT_DISPATCH_POLICY_HEADING: Final = "### Sub-agent dispatch"
 SUBAGENT_DISPATCH_POLICY_REQUIREMENTS: Final = (
-    ("named-subagent pre-authorization", "subagents this router names are pre-authorized"),
+    (
+        "named-subagent pre-authorization",
+        "subagents this router names are pre-authorized",
+    ),
     ("standing request", "treat this section as that standing request"),
     ("definition-similarity boundary", "never a similarity between definitions"),
     ("no confirmation prompt", "**NEVER** ask the operator to confirm dispatching one"),
