@@ -27,6 +27,7 @@ from outcomeeng.validation.selected_gate import (
     LIVE_DISCOVERY_EXCLUSION,
     LIVE_DISCOVERY_EXCLUDED_REASON,
     LIVE_DISCOVERY_INCLUDED_REASON,
+    LIVE_DISCOVERY_PATTERNS,
     LIVE_DISCOVERY_TEST,
     PYTHON_REASON,
     TEST_REASON,
@@ -36,6 +37,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_FULL_GATE_PATH,
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
+    path_from_pattern,
 )
 from outcomeeng_testing.harnesses.gate import (
     GIT_DISCOVERY_FAILURE_STDERR,
@@ -164,6 +166,33 @@ def test_definition_guidance_changes_require_the_live_check() -> None:
     assert plan.live_discovery
     assert any(LIVE_DISCOVERY_TEST in step.argv for step in plan.steps)
     assert plan.live_discovery_reason == LIVE_DISCOVERY_INCLUDED_REASON
+
+
+@pytest.mark.parametrize("pattern", LIVE_DISCOVERY_PATTERNS)
+def test_each_declared_discovery_surface_requires_the_live_check(pattern: str) -> None:
+    with synthetic_repository() as repo:
+        plan = build_selected_gate_plan(
+            (path_from_pattern(pattern),),
+            test_infrastructure=index_test_infrastructure(repo.root),
+        )
+
+    assert plan.live_discovery
+    assert plan.live_discovery_reason == LIVE_DISCOVERY_INCLUDED_REASON
+    assert any(
+        step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+        and (plan.full_gate or LIVE_DISCOVERY_TEST in step.argv)
+        and step.argv[-len(LIVE_DISCOVERY_EXCLUSION) :] != LIVE_DISCOVERY_EXCLUSION
+        for step in plan.steps
+    )
+
+
+def test_discovery_inclusion_is_printed_before_execution() -> None:
+    run = run_check_observation(branch_path=INSTRUCTION_BLOCK_SOURCE_PATH)
+
+    assert run.exit_code == 0
+    assert run.output.index(LIVE_DISCOVERY_INCLUDED_REASON) < run.output.index(
+        f"Recipe {RECIPE_CHECK}"
+    )
 
 
 def test_unrelated_automatic_full_gate_excludes_only_the_live_check() -> None:

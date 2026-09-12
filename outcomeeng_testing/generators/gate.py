@@ -89,3 +89,12 @@ def selected_gate_changed_paths() -> SearchStrategy[list[str]]:
         st.sampled_from(SELECTED_GATE_CHANGED_PATH_EXAMPLES),
         min_size=1,
     )
+
+
+def path_from_pattern(pattern: str) -> str:
+    """Construct a path in one source-declared glob category.
+
+    Wildcard contents are incidental; the caller enumerates the complete
+    source-owned category set instead of choosing representative categories.
+    """
+    return pattern.replace("**", "generated/nested").replace("*", "generated")
