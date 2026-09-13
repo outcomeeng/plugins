@@ -286,53 +286,47 @@ def test_wait_for_load_stop_trigger_policy() -> None:
         documents = evidence.rendered_instruction_blocks(enabled_languages)
         dist.validate_wait_for_load_policy(documents)
         for _, requirement in dist.WAIT_FOR_LOAD_POLICY_REQUIREMENTS:
+            removed = {
+                agent_harness: document.replace(requirement, "", 1)
+                for agent_harness, document in documents.items()
+            }
             with pytest.raises(dist.WaitForLoadPolicyError):
-                dist.validate_wait_for_load_policy(
-                    {
-                        agent_harness: document.replace(requirement, "", 1)
-                        for agent_harness, document in documents.items()
-                    }
+                dist.validate_wait_for_load_policy(removed)
+            relocated = {
+                agent_harness: document.replace(
+                    dist.managed_router_block(document),
+                    dist.managed_router_block(document)
+                    .replace(requirement, "", 1)
+                    .replace("\n", f"\n{requirement}\n", 1),
+                    1,
                 )
+                for agent_harness, document in documents.items()
+            }
             with pytest.raises(dist.WaitForLoadPolicyError):
-                dist.validate_wait_for_load_policy(
-                    {
-                        agent_harness: document.replace(
-                            dist.managed_router_block(document),
-                            dist.managed_router_block(document)
-                            .replace(requirement, "", 1)
-                            .replace("\n", f"\n{requirement}\n", 1),
-                            1,
-                        )
-                        for agent_harness, document in documents.items()
-                    }
-                )
+                dist.validate_wait_for_load_policy(relocated)
         codex_document = documents[harness.HARNESS_CODEX]
         claude_router = dist.managed_router_block(documents[harness.HARNESS_CLAUDE])
         for _, requirement in dist.WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS:
             assert requirement not in claude_router
+            removed = {
+                **documents,
+                harness.HARNESS_CODEX: codex_document.replace(requirement, "", 1),
+            }
             with pytest.raises(dist.WaitForLoadPolicyError):
-                dist.validate_wait_for_load_policy(
-                    {
-                        **documents,
-                        harness.HARNESS_CODEX: codex_document.replace(
-                            requirement, "", 1
-                        ),
-                    }
-                )
+                dist.validate_wait_for_load_policy(removed)
         for contradiction in dist.WAIT_FOR_LOAD_POLICY_CONTRADICTIONS:
-            with pytest.raises(dist.WaitForLoadPolicyError):
-                dist.validate_wait_for_load_policy(
-                    {
-                        agent_harness: document.replace(
-                            dist.managed_router_block(document),
-                            dist.managed_router_block(document).replace(
-                                "\n", f"\n{contradiction.violating_directive}\n", 1
-                            ),
-                            1,
-                        )
-                        for agent_harness, document in documents.items()
-                    }
+            contradicted = {
+                agent_harness: document.replace(
+                    dist.managed_router_block(document),
+                    dist.managed_router_block(document).replace(
+                        "\n", f"\n{contradiction.violating_directive}\n", 1
+                    ),
+                    1,
                 )
+                for agent_harness, document in documents.items()
+            }
+            with pytest.raises(dist.WaitForLoadPolicyError):
+                dist.validate_wait_for_load_policy(contradicted)
 
 
 def test_authority_hierarchy_policy_is_complete() -> None:
