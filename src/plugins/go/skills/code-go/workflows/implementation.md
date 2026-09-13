@@ -14,7 +14,7 @@ Execute these phases in order.
 Before writing code:
 
 1. Read the user request, spec, ADR, or review feedback completely.
-2. Identify the behavior that must change.
+2. Identify the behavior to implement or preserve.
 3. Identify interfaces, data types, and failure modes.
 4. Identify the test, eval, or pathless audit evidence selected by `/verify`.
 
@@ -27,7 +27,7 @@ Follow `<codebase_discovery>` in `SKILL.md` for what to read, what to search for
 </phase>
 
 <phase name="establish_selected_evidence">
-For behavior changes, handle every type selected by `/verify`:
+For behavior-preserving work, locate the existing evidence for every affected behavior and require its tests to pass before editing. Preserve those tests; insufficient coverage blocks the edit with the specific gap. For behavior changes, handle every type selected by `/verify`:
 
 1. Test: locate the co-located test home, write or extend the test, and run the focused target to confirm the new case fails for the expected reason.
 2. Evaluate: read the eval definition, cases, materialized prompt, real producer contract, selected product command, and declared threshold; run it to record the preimplementation score.
@@ -81,7 +81,7 @@ When the validation passes, summarize:
 <success_criteria>
 
 - the changed behavior, boundaries, and failure modes were identified before code edits
-- selected tests were written or extended first, selected evals meet their thresholds, and the `Audit requirements` report matches `/verify`'s audit routing rows
+- behavior-changing work has selected tests written or extended first; behavior-preserving work has sufficient unchanged tests passing before and after edits; selected evals meet their thresholds, and the `Audit requirements` report matches `/verify`'s audit routing rows
 - `/audit-go-code`'s design-coherence, import-structure, concurrency-soundness, and unsafe-soundness rows leave no unresolved finding against the implementation
 - the repository validation sequence passed
 - the final summary names changed behavior, evidence, and remaining trade-offs

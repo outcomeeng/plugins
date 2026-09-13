@@ -5,14 +5,13 @@ description: >-
   changeset forms one coherent review unit, covering semantic clustering,
   generated-source attribution, evidence completeness, and dependency-ordered
   review-unit sequencing.
-model: sonnet
 argument-hint: "<branch-or-base...head>"
-allowed-tools: Read, Grep, Glob, Bash(python3:*resolve_scope.py*), Bash(git diff:*), Bash(git show:*)
+allowed-tools: Read, Grep, Glob, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git diff:*), Bash(git show:*)
 ---
 
 <objective>
 
-A verdict on whether one exact committed changeset forms one coherent review unit — `APPROVED`, `REJECTED`, or `UNKNOWN`, with each finding naming the violated rule, its location, and the evidence.
+A verdict on whether one exact committed changeset forms one coherent review unit — `APPROVED`, `REJECTED`, or `UNKNOWN`, with each finding naming the violated rule, its location, and the evidence — or a `BLOCKED` diagnostic naming the unresolved scope input.
 
 </objective>
 

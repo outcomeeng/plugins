@@ -39,7 +39,7 @@ Coupling is the first gate. An eval that does not reach the real producer is a s
 
 `prompt_source.kind = "producer-section"` in `eval.toml` is a supported Prompt-loaded coupling mode. Verify that the producer file, named section, and prompt template exist, and that the committed `prompt.md` is current with the source-derived materialization. The selected producer section is the artifact under audit for the suite: mutating that section changes the materialized prompt. Do not require the eval runner to invoke the whole skill, agent, classifier, or script when the assertion is about the selected section's behavior; the loaded section is the producer artifact for that suite. A hand-authored prompt that copies the same rules without `prompt_source` is Simulation.
 
-For claims about skill, agent, classifier, or script behavior, the mutation test is decisive: replacing the producer with unrelated text must change the eval result. For `producer-section` suites, evaluate that mutation through the materialization path: mutate the selected section, materialize the prompt, and then the suite's result must change when the mutation removes behavior the cases exercise. If it does not, the eval is not coupled.
+For claims about skill, agent, classifier, or script behavior, replacing the producer with unrelated text must change the eval result. Assess this counterfactual by reading the producer, materialization logic, cases, and grading rules. For `producer-section` suites, identify a mutation that removes behavior the cases exercise and trace how it would change the materialized prompt and the suite's result; do not edit the section, materialize a prompt, or execute the suite. If the eval would still pass after that producer mutation, it is not coupled.
 
 </producer_coupling>
 
@@ -122,6 +122,12 @@ when every changed path is the audited suite's own `history.jsonl` append and no
 threshold-affecting code changed. This history-only exception is required
 because committing an append-only history row necessarily advances HEAD after
 the run records `git rev-parse HEAD`.
+
+Use `git merge-base --is-ancestor <recorded-git-sha> HEAD` to establish ancestry
+and `git diff --no-ext-diff --no-textconv <recorded-git-sha> HEAD --` to inspect
+the complete change, including whether the history modification is append-only.
+Treat an unavailable commit or failed inspection as unavailable provenance,
+never as proof that the exception applies.
 
 Budget-exhausted and other operational failures are neither passes nor behavioral rejections. They only show the suite did not produce complete evidence.
 

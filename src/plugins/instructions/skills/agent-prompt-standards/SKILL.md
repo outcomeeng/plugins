@@ -36,7 +36,7 @@ Two-tier hierarchy:
 | "the model" | Too generic, distances Claude from its own identity                                                              |
 | "you"       | Ambiguous — could address Claude or the user                                                                     |
 
-**YAML frontmatter exception:** The `name` and `description` fields cannot contain the word "claude" per validation rules. Omit any subject in descriptions — use the directive pattern directly ("ALWAYS invoke this skill when...").
+**YAML frontmatter exception:** The `name` and `description` fields cannot contain the word "claude" per validation rules. Omit any subject in descriptions and apply the invocation-specific style in `<description_style>`.
 
 **Evidence:** Anthropic-authored skills use "Claude" as the named subject ~70 times. "The agent" appears zero times. Imperative mood is the most common voice for direct instructions.
 
@@ -63,6 +63,8 @@ This mirrors the methodology's output / outcome / impact distinction — asserti
 </objective_shape>
 
 <description_style>
+
+**Match the description to the invocation path.** Apply `/skill-standards` `<descriptions>` to select directive or passive wording. The directive-writing guidance below applies to description-match entry points. An audit or protocol invoked by exact name keeps a passive description of its subject and criteria; its user visibility does not change that selection.
 
 **Directive descriptions for reliable activation.**
 
@@ -233,7 +235,7 @@ A prompt that follows these conventions:
 
 - Uses imperative mood for instructions, "Claude" for failure modes and tendencies
 - Never uses "the agent", "the model", or "you"
-- Has a directive description (ALWAYS + optional NEVER) unless it is a reference skill
+- Uses the description style its invocation path requires under `/skill-standards` `<descriptions>`
 - Uses strong modal verbs (MUST/NEVER/ALWAYS) in constraint blocks
 - Contains no banned phrases or structural anti-patterns
 - Includes only information Claude doesn't already have

@@ -22,6 +22,11 @@ class RuntimeNameCase:
     name: str
 
 
+def raw_token_source(case: RuntimeNameCase) -> str:
+    """Place one source-owned token after a heading and blank line."""
+    return f"# {case.capability}\n\n{case.name}\n"
+
+
 @dataclass(frozen=True)
 class RuntimeConditionalCase:
     """Generated valid and invalid conditional sources for one raw name."""
@@ -82,11 +87,21 @@ def runtime_conditional_cases() -> tuple[RuntimeConditionalCase, ...]:
                     format_target_conditional(target, name),
                 )
                 for target in native_targets
+            )
+            + tuple(
+                format_target_branches(((target, ""),), fallback=name)
+                for target in all_targets
+                if frozenset(all_targets) - {target} <= frozenset(native_targets)
             ),
             mismatching_sources=tuple(
                 format_target_conditional(target, name)
                 for target in all_targets
                 if target not in native_targets
+            )
+            + tuple(
+                format_target_branches(((target, ""),), fallback=name)
+                for target in all_targets
+                if not frozenset(all_targets) - {target} <= frozenset(native_targets)
             ),
         )
         for name, target_set in sorted(targets_by_name.items())

@@ -1,7 +1,7 @@
 ---
 name: changes-reviewer
 description: Review changes.
-model: sonnet
+profile: standard
 skills:
   - spec-tree:review-changes
   - spec-tree:project-run-journal

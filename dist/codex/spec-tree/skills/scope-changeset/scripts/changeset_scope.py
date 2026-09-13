@@ -25,12 +25,15 @@ propagation before this script is bundled.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
+import json
 import pathlib
 import runpy
 import subprocess
 from collections.abc import Sequence
-from typing import Protocol, cast
+from enum import StrEnum
+from typing import Literal, Protocol, cast
 
 _CONTRACT = runpy.run_path(
     str(pathlib.Path(__file__).with_name("changeset_scope_contract.py"))
@@ -51,6 +54,15 @@ BRANCH_SCOPE_RANGE_TEMPLATE = cast(str, _CONTRACT["BRANCH_SCOPE_RANGE_TEMPLATE"]
 FRONTMATTER_DELIMITER = cast(str, _CONTRACT["FRONTMATTER_DELIMITER"])
 COMMIT_PEEL_SUFFIX = cast(str, _CONTRACT["COMMIT_PEEL_SUFFIX"])
 BRANCH_SLUG_SUFFIX_SEPARATOR = cast(str, _CONTRACT["BRANCH_SLUG_SUFFIX_SEPARATOR"])
+RANGE_SEPARATOR = "..."
+
+
+class ScopeField(StrEnum):
+    """Public fields in a resolved committed changeset."""
+
+    BASE = "base"
+    HEAD = "head"
+    CHANGED_PATHS = "changed_paths"
 
 
 class Runner(Protocol):
@@ -59,10 +71,11 @@ class Runner(Protocol):
     def __call__(
         self,
         argv: Sequence[str],
+        /,
         *,
         cwd: pathlib.Path,
         capture_output: bool,
-        text: bool,
+        text: Literal[True],
         check: bool,
     ) -> subprocess.CompletedProcess[str]: ...
 
@@ -82,6 +95,52 @@ class DetachedHeadError(RuntimeError):
     State-file naming requires a stable branch label; the orchestrator
     refuses to create state under the placeholder ``HEAD`` reference.
     """
+
+
+class ScopeResolutionError(RuntimeError):
+    """A selector cannot resolve to an exact committed changeset."""
+
+
+def resolve_committed_scope(
+    selector: str,
+    *,
+    repo: pathlib.Path,
+    runner: Runner = subprocess.run,
+) -> dict[str, object]:
+    """Resolve HEAD, a branch, or an explicit three-dot range without mutation.
+
+    Preserve explicit endpoints. A single ref uses the configured remote base;
+    the changed paths always follow Git's merge-base diff semantics. The base
+    identity is the selected endpoint, not the merge-base commit.
+    """
+    try:
+        if RANGE_SEPARATOR in selector:
+            base_ref, _, head_ref = selector.partition(RANGE_SEPARATOR)
+            if not base_ref or not head_ref:
+                raise ScopeResolutionError(
+                    f"malformed commit range: {selector!r} — expected "
+                    "'<base>...<head>', for example 'origin/main...HEAD'"
+                )
+        else:
+            base_ref = remote_tracking_ref(detect_base_ref(repo, runner=runner))
+            head_ref = selector
+        return {
+            ScopeField.BASE: commit_oid(base_ref, repo=repo, runner=runner),
+            ScopeField.HEAD: commit_oid(head_ref, repo=repo, runner=runner),
+            ScopeField.CHANGED_PATHS: expand_diff_range(
+                f"{base_ref}{RANGE_SEPARATOR}{head_ref}", repo=repo, runner=runner
+            ),
+        }
+    except subprocess.CalledProcessError as exc:
+        raise ScopeResolutionError(
+            f"git could not resolve {selector}: {(exc.stderr or '').strip()}"
+        ) from exc
+    except BaseRefNotConfiguredError as exc:
+        raise ScopeResolutionError(str(exc)) from exc
+    except OSError as exc:
+        raise ScopeResolutionError(
+            f"cannot execute git for {selector!r} at {repo}: {exc}"
+        ) from exc
 
 
 def expand_diff_range(
@@ -342,3 +401,23 @@ def branch_slug(branch_name: str, state_dir: pathlib.Path | None = None) -> str:
                     )
                 return collided
     return base_slug
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Resolve a committed selector through the provider's command boundary."""
+    parser = argparse.ArgumentParser(description="Resolve a committed changeset")
+    parser.add_argument("selector", help="HEAD, a branch, or a three-dot range")
+    parser.add_argument("--repo", type=pathlib.Path, default=pathlib.Path.cwd())
+    args = parser.parse_args(argv)
+    try:
+        resolved = resolve_committed_scope(
+            args.selector, repo=args.repo, runner=subprocess.run
+        )
+    except ScopeResolutionError as exc:
+        parser.error(str(exc))
+    print(json.dumps(resolved, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

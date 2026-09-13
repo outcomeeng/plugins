@@ -6,6 +6,10 @@ CAN build high-quality plugins that follow established patterns and best practic
 
 ## Assertions
 
+- ALWAYS: subagent authoring guidance follows the plugin-list standing authorization, explicit skill
+  trigger, target-only input, native-schema, and model-profile policy in
+  `spx/15-subagent-execution.pdr.md` for both supported agents ([audit]).
+
 ### Compliance
 
 - ALWAYS: separate builder skills from auditor skills — builders produce, auditors evaluate ([audit])

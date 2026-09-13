@@ -6,6 +6,17 @@ CAN maintain skills and thin agents as one canonical source while delivering nat
 
 ## Assertions
 
+- ALWAYS: published skills and agent definitions use the same distribution-owned
+  naming relation: flat roles are `<plugin>_<unchanged-authored-role>` and native
+  namespaced dispatch is `<plugin>:<authored-role>`, including authored roles that
+  already begin with the plugin name, per `spx/15-subagent-execution.pdr.md` ([audit]).
+- ALWAYS: generated instruction surfaces address only their own agent ([audit]).
+- ALWAYS: agent definitions, configuration examples, and descriptions derive
+  their complete native configuration from the central Standard, Strong, or Fast
+  profile selected under `spx/15-subagent-execution.pdr.md`; each harness keeps
+  its own reasoning controls, and authored sources select profiles rather than
+  independently selecting model and effort fields ([audit]).
+
 ### Compliance
 
 - ALWAYS: every committed file under `dist/` traces to a `src/` ancestor through the build — every committed generated artifact is a build product ([test](tests/test_plugin_build.compliance.l1.py))

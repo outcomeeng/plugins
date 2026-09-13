@@ -27,6 +27,15 @@ SKILLS_DIR_NAME: Final = "skills"
 AGENTS_DIR_NAME: Final = "agents"
 SKILL_FILENAME: Final = "SKILL.md"
 IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
+IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT: Final = "scripts/resolve_scope.py"
+IMPLEMENTATION_AUDIT_FAILURE_REFERENCE: Final = "references/operational-failures.md"
+IMPLEMENTATION_AUDIT_ARTIFACTS: Final = frozenset(
+    {
+        SKILL_FILENAME,
+        IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
+        IMPLEMENTATION_AUDIT_FAILURE_REFERENCE,
+    }
+)
 AUDIT_SKILL_PREFIX: Final = "audit-"
 IMPLEMENTATION_AUDITOR_STEM: Final = "implementation-auditor"
 IMPLEMENTATION_AUDITOR_FILENAME: Final = f"{IMPLEMENTATION_AUDITOR_STEM}.md"
@@ -150,9 +159,17 @@ def check_runtime_surface(surface: Path) -> list[str]:
     entries = {
         entry.relative_to(runtime_dir).as_posix() for entry in runtime_dir.rglob("*")
     }
-    if entries == {SKILL_FILENAME}:
+    expected = IMPLEMENTATION_AUDIT_ARTIFACTS | {
+        Path(artifact).parent.as_posix()
+        for artifact in IMPLEMENTATION_AUDIT_ARTIFACTS
+        if Path(artifact).parent != Path(".")
+    }
+    if entries == expected and all(
+        (runtime_dir / artifact).is_file()
+        for artifact in IMPLEMENTATION_AUDIT_ARTIFACTS
+    ):
         return []
-    return [f"{runtime_dir}: expected only {SKILL_FILENAME}, found {sorted(entries)}"]
+    return [f"{runtime_dir}: expected {sorted(expected)}, found {sorted(entries)}"]
 
 
 def agent_owner(surface: Path, path: Path) -> tuple[str, str]:

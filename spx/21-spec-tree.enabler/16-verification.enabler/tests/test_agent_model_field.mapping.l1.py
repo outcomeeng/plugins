@@ -3,7 +3,6 @@
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     AGENT_SKILL_ENABLED_FIELD,
-    INHERIT_MODEL_VALUE,
     SKILL_ENABLEMENT_LIMITATION,
     convert_agent,
 )
@@ -19,10 +18,6 @@ def test_spec_tree_wrapper_agents_use_explicit_models() -> None:
 
     assert wrappers
     for agent in wrappers:
-        assert agent.model is not None, f"{agent.source_path}: model is required"
-        assert agent.model != INHERIT_MODEL_VALUE, (
-            f"{agent.source_path}: model must not inherit"
-        )
         assert agent.skills, f"{agent.source_path}: skills are required"
         converted = convert_agent(agent)
         assert "model" in converted.values

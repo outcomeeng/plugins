@@ -6,7 +6,6 @@ from outcomeeng_testing.harnesses.changeset_scope import (
     CHANGESET_SCOPE_CONTRACT,
     MERGE_CLASSIFIER,
     canonical_merge_changeset,
-    contains_python_traceback,
     modified_spaced_note_repo,
     repo_without_origin,
     run_merge_classifier,
@@ -32,6 +31,6 @@ def test_unconfigured_remote_base_is_reported_without_traceback() -> None:
     with repo_without_origin() as repo:
         completed = run_merge_classifier(repo)
         assert completed.returncode
-        assert MERGE_CLASSIFIER.BASE_REF_ERROR_PREFIX in completed.stderr
+        assert completed.stderr.startswith(MERGE_CLASSIFIER.BASE_REF_ERROR_PREFIX)
+        assert "Traceback (most recent call last):" not in completed.stderr
         assert CHANGESET_SCOPE_CONTRACT.ORIGIN_HEAD_REF in completed.stderr
-        assert not contains_python_traceback(completed.stderr)

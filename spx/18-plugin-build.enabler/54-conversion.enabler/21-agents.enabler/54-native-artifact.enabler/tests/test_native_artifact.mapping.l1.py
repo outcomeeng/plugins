@@ -5,18 +5,13 @@ from __future__ import annotations
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     AGENT_SKILL_ENABLED_FIELD,
-    EFFORT_MAPPINGS,
-    INHERIT_MODEL_VALUE,
-    MODEL_MAPPINGS,
-    MODEL_PREFIX_EXAMPLE_SUFFIX,
     SKILL_ENABLEMENT_LIMITATION,
     convert_agent,
-    map_effort,
-    map_model,
 )
+from dataclasses import asdict
+from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.profiles import AGENT_PROFILES, AgentProfile
 from outcomeeng_testing.harnesses.agent_conversion import (
-    EXPECTED_EFFORT_CORRESPONDENCE,
-    EXPECTED_MODEL_CORRESPONDENCE,
     converted_instruction_value,
     converted_skill_config,
     source_agent,
@@ -24,16 +19,13 @@ from outcomeeng_testing.harnesses.agent_conversion import (
 )
 
 
-def test_source_model_maps_to_codex_model() -> None:
-    assert {source for source, _ in EXPECTED_MODEL_CORRESPONDENCE} == {
-        source for source, _ in MODEL_MAPPINGS
-    }
-    for source, expected in EXPECTED_MODEL_CORRESPONDENCE:
-        assert map_model(source) == expected
-        if source.startswith("claude-"):
-            assert map_model(f"{source}{MODEL_PREFIX_EXAMPLE_SUFFIX}") == expected
-
-    assert map_model(INHERIT_MODEL_VALUE) is None
+def test_complete_native_profile_reaches_converted_agent() -> None:
+    for profile in (*AgentProfile, None):
+        converted = convert_agent(source_agent(profile=profile))
+        expected = asdict(
+            AGENT_PROFILES[Target.CODEX][profile or AgentProfile.STANDARD]
+        )
+        assert {key: converted.values[key] for key in expected} == expected
 
 
 def test_skills_are_preserved_as_codex_config_and_guidance() -> None:
@@ -50,17 +42,3 @@ def test_skills_are_preserved_as_codex_config_and_guidance() -> None:
         )
         assert all(skill in instructions for skill in source.skills)
         assert SKILL_ENABLEMENT_LIMITATION in instructions
-
-
-def test_source_effort_maps_to_codex_reasoning_effort() -> None:
-    assert {source for source, _ in EXPECTED_EFFORT_CORRESPONDENCE} == set(
-        EFFORT_MAPPINGS
-    )
-    for source, expected in EXPECTED_EFFORT_CORRESPONDENCE:
-        assert map_effort(source) == expected
-
-
-def test_source_effort_reaches_converted_codex_reasoning_effort() -> None:
-    for source, expected in EXPECTED_EFFORT_CORRESPONDENCE:
-        converted = convert_agent(source_agent(effort=source))
-        assert converted.values["model_reasoning_effort"] == expected

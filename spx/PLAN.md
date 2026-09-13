@@ -14,11 +14,10 @@ Governing decision: `spx/15-agent-terminology.pdr.md` (the Refiner, Executor, Au
 
 The router template, its pinned policies, the `/understand` foundation, `/open-pr`, the merging-standards policy reference, `contribution-standards`, the three audit specs, `spx/15-merging.pdr.md`, `spx/21-spec-tree.enabler/76-merge.enabler/merge.md`, and `spx/21-spec-tree.enabler/68-reviewing.enabler/reviewing.md` carry the role names. Surfaces still describing who produces or verifies work in the old words:
 
-1. Two router headings the compliance evidence harness pins verbatim — "Spawn each verifier or reviewer with its role task as the initial turn." and "Use the `Agent` tool for every configured verifier or reviewer." — stay until the evidence migration recorded in `spx/21-spec-tree.enabler/43-instruction-block.enabler/ISSUES.md` moves those predicates into the linked tests, since editing `outcomeeng_testing/harnesses/instruction_block_compliance_evidence.py` is that migration's revisit trigger.
-2. Skills outside the merge-lifecycle pair — `/manage-pr`, `/manage-github-pr`, `/merge`, `/apply`, the audit and review skills — where "the author", "the reviewer", and "the verifier" name the roles; plural and audience uses such as "human reviewers", "CI reviewers", and "reviewer-bot approval" describe people and services, not roles, and stay lowercase.
-3. `spx/15-audit-result-delivery.pdr.md`, whose "a reviewer watches on a pull request" names a human reader, stays lowercase.
+1. Skills outside the merge-lifecycle pair — `/manage-pr`, `/manage-github-pr`, `/merge`, `/apply`, the audit and review skills — where "the author", "the reviewer", and "the verifier" name the roles; plural and audience uses such as "human reviewers", "CI reviewers", and "reviewer-bot approval" describe people and services, not roles, and stay lowercase.
+2. `spx/15-audit-result-delivery.pdr.md`, whose "a reviewer watches on a pull request" names a human reader, stays lowercase.
 
-Why separate: each plugin's skill edit carries the `skill-auditor` gate and a bump, and the harness-pinned headings wait on the evidence migration.
+Why separate: each plugin's skill edit carries the `skill-auditor` gate and a bump.
 
 ## Refine the methodology 4.0 migration as a Change
 

@@ -1,6 +1,7 @@
 name = "instructions_subagent-auditor"
 description = "ALWAYS invoke when auditing, reviewing, or evaluating custom agent configuration files for best practices compliance, or when the user asks to audit a custom agent."
-model = "gpt-5.4"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 web_search = "disabled"
 developer_instructions = """<role>
@@ -45,7 +46,7 @@ Return only the JSON verdict produced by `instructions:audit-subagent`. Do not a
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `instructions:audit-subagent`.
 
-Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Grep`, `Glob`, `Bash`, `Skill`.
+Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Grep`, `Glob`, `Skill`.
 </manual_review_guidance>
 """
 

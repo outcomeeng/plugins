@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke when deciding whether an exact committed changeset is one
   coherent review unit or requires a dependency-ordered split.
 tools: Bash, Read, Glob, Grep, Skill
-model: sonnet
+profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only
 {!% endif %!}
@@ -32,10 +32,8 @@ Run the preloaded `spec-tree:audit-changeset-coherence` methodology in this isol
 
 <workflow>
 
-1. Read the caller's scope.
-2. Load `spec-tree:audit-changeset-coherence` when the runtime requires explicit loading.
-3. Invoke the skill with the caller's scope unchanged.
-4. Relay its JSON object verbatim.
+1. {!% if target == 'codex' %!}Load `spec-tree:audit-changeset-coherence` and follow its methodology for the supplied scope.{!% else %!}Follow the preloaded `spec-tree:audit-changeset-coherence` methodology for the supplied scope.{!% endif %!}
+2. Relay its JSON object verbatim.
 
 </workflow>
 

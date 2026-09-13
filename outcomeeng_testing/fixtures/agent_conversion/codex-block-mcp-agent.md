@@ -1,7 +1,7 @@
 ---
 name: changes-reviewer
 description: Review changes.
-model: gpt-5.4
+profile: standard
 mcp_servers:
   docs:
     command: npx

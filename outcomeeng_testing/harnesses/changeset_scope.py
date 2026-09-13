@@ -549,12 +549,19 @@ def run_merge_classifier(repo: pathlib.Path) -> subprocess.CompletedProcess[str]
     )
 
 
-def run_coherence_scope(
-    repo: pathlib.Path, scope: str
+def _run_scope_cli(
+    script: pathlib.Path,
+    repo: pathlib.Path,
+    scope: str,
+    *,
+    repo_override: pathlib.Path | None,
 ) -> subprocess.CompletedProcess[str]:
-    """Run the shipped coherence scope resolver and return its process result."""
+    """Capture one shipped scope command without interpreting its result."""
+    argv = [sys.executable, str(script), scope]
+    if repo_override is not None:
+        argv.extend(("--repo", str(repo_override)))
     return subprocess.run(
-        (sys.executable, str(COHERENCE_SCOPE_MODULE_PATH), scope),
+        argv,
         cwd=repo,
         text=True,
         capture_output=True,
@@ -562,9 +569,22 @@ def run_coherence_scope(
     )
 
 
-def contains_python_traceback(stderr: str) -> bool:
-    """Report whether Python emitted its standard uncaught-exception header."""
-    return "Traceback (most recent call last):" in stderr
+def run_coherence_scope(
+    repo: pathlib.Path, scope: str, *, repo_override: pathlib.Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    """Run the shipped coherence scope resolver and return its process result."""
+    return _run_scope_cli(
+        COHERENCE_SCOPE_MODULE_PATH, repo, scope, repo_override=repo_override
+    )
+
+
+def run_changeset_scope(
+    repo: pathlib.Path, scope: str, *, repo_override: pathlib.Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    """Run the shared provider's CLI and return its process result."""
+    return _run_scope_cli(
+        CHANGESET_SCOPE_MODULE_PATH, repo, scope, repo_override=repo_override
+    )
 
 
 def detach_head(repo: pathlib.Path) -> None:

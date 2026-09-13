@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when opening a pull request against a repository the operator does not control — a fork's upstream, or any base whose permission is READ, TRIAGE, or NONE.
   NEVER open a pull request against such a repository without this skill.
 argument-hint: "[what the change does, or empty to describe it from the branch]"
-allowed-tools: Read, Glob, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, request_user_input, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh api users/*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git rev-parse:*), Bash(git switch:*), Bash(git cherry-pick:*), Bash(git diff:*), Bash(git status --porcelain), Bash(git add:*), Bash(git commit:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
+allowed-tools: Read, Glob, Skill, collaboration.spawn_agent, collaboration.wait_agent, request_user_input, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh api users/*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git rev-parse:*), Bash(git switch:*), Bash(git cherry-pick:*), Bash(git diff:*), Bash(git status --porcelain), Bash(git add:*), Bash(git commit:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
 ---
 
 <objective>
@@ -79,7 +79,7 @@ A conflict stops the replay mid-pick and leaves the checkout in that state. Run 
 
 Capture verbose output in a directory from `mktemp -d`, inspect the exit status and failing sections, and remove the directory on every exit path. Fix failures and re-run until green. A check that cannot run locally is recorded for Step 9's body with the reason it could not run; never report it as passed and never drop it silently.
 
-**Step 7 — GATE: Review the outward text.** Draft the title and body per `<title_and_body>`, then review them per `/contribution-standards` `<invariants>` "Outward-facing text is permanent". Where the prose plugin is installed, dispatch its `prose-auditor` thin agent through the runtime's agent-dispatch surface and apply its findings. Where it is not, review against `/contribution-standards` `<outward_text>` and state in the report that the review ran unassisted.
+**Step 7 — GATE: Review the outward text.** Draft the title and body per `<title_and_body>`, then review them per `/contribution-standards` `<invariants>` "Outward-facing text is permanent". Where the prose plugin is installed, dispatch its `prose_prose-auditor` thin agent through the runtime's agent-dispatch surface and apply its findings. Where it is not, review against `/contribution-standards` `<outward_text>` and state in the report that the review ran unassisted.
 
 **Step 8 — GATE: Commit what the push will carry.** A push transfers commits. Everything above — the branch cut, the conventions, the base repository's own checks, the outward-text review — can run against edits sitting in the working tree, and none of them reach the pull request. Read the tree before pushing:
 

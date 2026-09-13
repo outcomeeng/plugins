@@ -8,10 +8,28 @@ The assertions below govern the lifecycle as a whole — how the work queue is f
 
 ## Assertions
 
+- ALWAYS: the apply instructions select the detected language's configured Go,
+  Rust, or TypeScript simplifier after implementation and before the final
+  implementation and evidence audits. The launch receives only the committed
+  scope selector. The main conversation integrates the result, verifies every
+  resulting change, and checkpoints it before Verifier dispatch; a language
+  without a declared simplifier skips this stage ([audit])
+
+- ALWAYS: each audit or review step explicitly selects its exact configured subagent and
+  supplies only the target path or scope. The skill owns these invocation
+  instructions and does not obtain a role-specific prompt from the root guide,
+  per `spx/15-subagent-execution.pdr.md`. Accepted requirements are persisted in
+  decisions and specs before dispatch. Each Verifier starts without authoring
+  history and independently reads the target and configured instructions;
+  the calling skill never appends an author-written context packet ([audit]).
+- ALWAYS: invocation guidance requires exactly one native launch and analysis and
+  reporting of a failed launch or unusable result without retry or substitution.
+  Completed audit verdicts follow the existing gate and repair workflows ([audit]).
+
 ### Compliance
 
 - ALWAYS: with a canonical full `spx/...` node-path argument the work queue is that single node, and with no argument it is derived from the conversation, falling back to the paths stored relative to `spx/` in `spx/EXCLUDE` after converting each one to its canonical full `spx/...` address ([audit])
-- NEVER: the apply lifecycle delegates its per-node authoring and implementation work to a separate agent — the main conversation runs the per-node flow itself and dispatches only the auditor and reviewer agents its gates require ([audit])
+- ALWAYS: the main conversation runs per-node authoring and implementation, delegates the declared behavior-preserving simplification stage, and dispatches the auditors and reviewers its gates require ([audit])
 - ALWAYS: a multi-node work queue runs in ascending numeric-index order, removing each node from `spx/EXCLUDE` before its flow and preserving each stabilized gate subject in a local checkpoint commit whose recorded verification state is `passing`, `failing`, or `not-run`; agentic gate dispatch still requires deterministic passing, and a node whose flow cannot converge stops the queue with the remaining nodes left in `spx/EXCLUDE` ([audit])
 - ALWAYS: every persisted audit or review gate binds to an exact committed head after deterministic verification passes; a rejected finding is repaired in a new local checkpoint before the gate reruns, while an audit over modified or untracked files is advisory and never satisfies a gate ([audit])
 - ALWAYS: when the repository requires the full deterministic gate, run `just check-full` only after every applicable evidence audit, implementation audit, and whole-changeset review has converged, and run no agentic verification after it; any change after the full gate invalidates it and requires the agentic gates to converge again before a new full-gate run ([audit])

@@ -1,6 +1,7 @@
 name = "spec-tree_instruction-block-updater"
 description = "ALWAYS invoke when applying spec-tree template drift to a product's root CLAUDE.md and AGENTS.md managed instruction block in the background \u2014 it regenerates a stale or absent instruction block from the installed template without user interaction. NEVER use this agent to reconcile a known `shared`-region ambiguity; that needs the interactive `/update-instruction-block` Step 3 reconcile."
-model = "gpt-5.4"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
 web_search = "disabled"
 developer_instructions = """<role>
 

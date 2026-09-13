@@ -14,6 +14,8 @@ from typing import Final, cast
 
 from outcomeeng.validation.audit_artifacts import (
     AGENTS_DIR_NAME,
+    IMPLEMENTATION_AUDIT_ARTIFACTS,
+    IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
     IMPLEMENTATION_AUDITOR_FILENAME,
     LANGUAGE_AUDIT_CONCERNS,
     LANGUAGE_AUDIT_SKILL_TEMPLATE,
@@ -121,9 +123,13 @@ def language_concern_skill_trios_exist() -> bool:
     return not check_audit_artifact_contract(REPO_ROOT)
 
 
-def implementation_audit_runtime_contains_only_skill() -> bool:
-    """Return whether every live audit runtime satisfies artifact rules."""
-    return _all_live_surfaces_pass(check_audit_runtime_surface)
+def implementation_audit_runtime_errors() -> list[str]:
+    """Observe artifact violations across the live plugin surfaces."""
+    return [
+        error
+        for relative in PLUGIN_SURFACE_PATHS
+        for error in check_audit_runtime_surface(REPO_ROOT / relative)
+    ]
 
 
 def audit_runtime_trees_exclude_retired_artifacts() -> bool:
@@ -470,33 +476,49 @@ def audit_contract_rejects_missing_single_surface_language() -> bool:
         return bool(check_audit_artifact_contract(root))
 
 
-def audit_contract_rejects_extra_runtime_artifact() -> bool:
-    """Return whether validation rejects an extra runtime artifact."""
+def runtime_errors_with_extra_artifact() -> list[str]:
+    """Observe validation with an extra runtime artifact."""
     with _valid_surface() as surface:
         runtime_dir = implementation_audit_runtime_directory(surface)
         _touch(runtime_dir / f"{SKILL_FILENAME}.extra")
-        return bool(check_runtime_surface(surface))
+        return check_runtime_surface(surface)
 
 
-def audit_contract_rejects_missing_runtime_skill() -> bool:
-    """Return whether validation rejects a missing runtime skill."""
+def runtime_errors_without_skill() -> list[str]:
+    """Observe validation with the runtime skill removed."""
     with _valid_surface() as surface:
         runtime_dir = implementation_audit_runtime_directory(surface)
         (runtime_dir / SKILL_FILENAME).unlink()
-        return bool(check_runtime_surface(surface))
+        return check_runtime_surface(surface)
 
 
-def audit_contract_rejects_retired_artifact_in_other_runtime() -> bool:
-    """Return whether validation rejects retired files in another audit skill."""
+def runtime_errors_without_scope_entrypoint() -> list[str]:
+    """Observe validation with the scope entrypoint removed."""
+    with _valid_surface() as surface:
+        runtime_dir = implementation_audit_runtime_directory(surface)
+        (runtime_dir / IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT).unlink()
+        return check_runtime_surface(surface)
+
+
+def runtime_errors_with_extra_directory() -> list[str]:
+    """Observe validation with an unrelated empty directory."""
+    with _valid_surface() as surface:
+        runtime_dir = implementation_audit_runtime_directory(surface)
+        (runtime_dir / "unrelated").mkdir()
+        return check_runtime_surface(surface)
+
+
+def runtime_errors_with_retired_artifact_in_other_skill() -> list[str]:
+    """Observe validation with a retired file in another audit skill."""
     with _valid_surface() as surface:
         runtime_dir = surface / SPEC_TREE_PLUGIN_NAME / SKILLS_DIR_NAME / "audit-tests"
         _touch(runtime_dir / SKILL_FILENAME)
         _touch(runtime_dir / "scripts" / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
-        return bool(check_audit_runtime_surface(surface))
+        return check_audit_runtime_surface(surface)
 
 
-def audit_contract_rejects_retired_artifact_in_language_runtime() -> bool:
-    """Reject a retired runtime file in a language concern skill."""
+def runtime_errors_with_retired_artifact_in_language_skill() -> list[str]:
+    """Observe validation with a retired file in a language concern skill."""
     with _valid_surface() as surface:
         language = _source_language()
         runtime_dir = _language_concern_path(
@@ -505,7 +527,7 @@ def audit_contract_rejects_retired_artifact_in_language_runtime() -> bool:
             LANGUAGE_AUDIT_CONCERNS[0],
         ).parent
         _touch(runtime_dir / "scripts" / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
-        return bool(check_audit_runtime_surface(surface))
+        return check_audit_runtime_surface(surface)
 
 
 def _all_live_surfaces_pass(check: Callable[[Path], list[str]]) -> bool:
@@ -546,7 +568,8 @@ def _populate_valid_surface(surface: Path, language: str) -> None:
         / AGENTS_DIR_NAME
         / IMPLEMENTATION_AUDITOR_FILENAME
     )
-    _touch(implementation_audit_runtime_directory(surface) / SKILL_FILENAME)
+    for artifact in IMPLEMENTATION_AUDIT_ARTIFACTS:
+        _touch(implementation_audit_runtime_directory(surface) / artifact)
 
 
 def _language_concern_path(surface: Path, language: str, concern: str) -> Path:

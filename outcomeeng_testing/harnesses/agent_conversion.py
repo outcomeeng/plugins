@@ -20,13 +20,16 @@ from outcomeeng.distribution.agents import (
     convert_agents,
     parse_agent_markdown,
     render_agent_toml,
+    iter_agent_files,
 )
+from outcomeeng.distribution.build import build
 from outcomeeng.distribution.contracts import (
     DIST_CODEX_PLUGINS_DIR,
     PLUGINS_DIR_NAME,
     SOURCE_ROOT_NAME,
 )
 from outcomeeng_testing.harnesses.src_tree import write_agent_source, write_agent_tree
+from outcomeeng_testing.harnesses.distribution import REPOSITORY_ROOT
 
 PLUGIN_NAME: Final = "sample"
 CHANGES_REVIEWER_NAME: Final = "changes-reviewer"
@@ -46,6 +49,9 @@ CODEX_AGENTS_DIRNAME: Final = "codex-agents"
 AGENT_CONVERSION_FIXTURES_DIR: Final = (
     Path(__file__).resolve().parents[1] / "fixtures" / "agent_conversion"
 )
+LIFECYCLE_COLLISION_SOURCE: Final = (
+    AGENT_CONVERSION_FIXTURES_DIR / "lifecycle-collision" / SOURCE_ROOT_NAME
+)
 SPEC_TREE_AGENT_SOURCE_DIR: Final = (
     Path(__file__).resolve().parents[2]
     / SOURCE_ROOT_NAME
@@ -63,26 +69,6 @@ EMPTY_TOOLS_AGENT_FIXTURE: Final = "empty-tools-agent.md"
 FOLDED_DESCRIPTION_AGENT_FIXTURE: Final = "folded-description-agent.md"
 GUARDED_WRITER_AGENT_FIXTURE: Final = "guarded-writer-agent.md"
 READ_ONLY_REVIEWER_AGENT_FIXTURE: Final = "read-only-reviewer-agent.md"
-# Every correspondence below is written out here rather than derived from the
-# production tables the converter reads. Deriving them would make the expected
-# value and the case domain the same object, so repointing a mapping target
-# would move both and no test could fail for a wrong value. These literals are
-# the oracle; the linked mapping tests separately compare their key sets to the
-# production tables, so a new production entry cannot slip through untested.
-EXPECTED_MODEL_CORRESPONDENCE: Final = (
-    ("claude-opus", "gpt-5.5"),
-    ("opus", "gpt-5.5"),
-    ("claude-sonnet", "gpt-5.4"),
-    ("sonnet", "gpt-5.4"),
-    ("claude-haiku", "gpt-5.4-mini"),
-    ("haiku", "gpt-5.4-mini"),
-)
-EXPECTED_EFFORT_CORRESPONDENCE: Final = (
-    ("low", "low"),
-    ("medium", "medium"),
-    ("high", "high"),
-    ("max", "xhigh"),
-)
 EXPECTED_PERMISSION_MODE_CORRESPONDENCE: Final = (
     ("default", None),
     ("acceptEdits", "workspace-write"),
@@ -114,6 +100,23 @@ class AgentDocumentOracle:
 
     frontmatter: Mapping[str, object]
     body: str
+
+
+@dataclass(frozen=True)
+class RepositoryAgentBuild:
+    """Repository agent sources beside one generated distribution tree."""
+
+    sources: tuple[Path, ...]
+    dist_root: Path
+
+
+def build_repository_agents(root: Path) -> RepositoryAgentBuild:
+    """Build every repository agent into one disposable distribution tree."""
+    source_root = REPOSITORY_ROOT / SOURCE_ROOT_NAME
+    sources = iter_agent_files(source_root / PLUGINS_DIR_NAME)
+    dist_root = root / "dist"
+    build(source_root, dist_root)
+    return RepositoryAgentBuild(sources=sources, dist_root=dist_root)
 
 
 def agent_document_oracle(path: Path) -> AgentDocumentOracle:
@@ -177,8 +180,7 @@ def source_agent(
     name: str = "reviewer",
     description: str = REVIEWER_DESCRIPTION,
     body: str = REVIEWER_BODY,
-    model: str | None = None,
-    effort: str | None = None,
+    profile: str | None = None,
     permission_mode: str | None = None,
     skills: tuple[str, ...] = (),
     tools: tuple[str, ...] = (),
@@ -190,8 +192,7 @@ def source_agent(
         name=name,
         description=description,
         body=body,
-        model=model,
-        effort=effort,
+        profile=profile,
         permission_mode=permission_mode,
         skills=skills,
         tools=tools,

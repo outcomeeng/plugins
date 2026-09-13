@@ -28,10 +28,6 @@ from typing import Final, Protocol, cast
 
 from outcomeeng.distribution.contracts import (
     DIST_DIR_NAME,
-    RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
-    RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
-    RUNTIME_TOKEN_WAIT_AGENT_NAMES,
-    Target,
 )
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
@@ -230,14 +226,14 @@ CODEX_AGENT_REGISTRY_POLICY_REQUIREMENTS: Final = (
         "exactly one current canonical subagent definition per authored marketplace agent",
     ),
     (
-        "plugin identity appears once",
-        "owning plugin identity appearing exactly once",
+        "unconditional plugin namespace",
+        "each name formed as `<plugin>_<unchanged-authored-role>`",
     ),
-    ("spec-tree subagent example", "`spec-tree_adr-auditor`"),
-    ("instructions subagent example", "`instructions_skill-auditor`"),
-    ("prose subagent example", "`prose-auditor`"),
-    ("Rust subagent example", "`rust-simplifier`"),
-    ("TypeScript subagent example", "`typescript-simplifier`"),
+    ("distribution ownership", "digest-bound ownership record establish membership"),
+    (
+        "prefix boundary",
+        "A filename prefix alone never authorizes replacement or pruning",
+    ),
     ("plugin lifecycle repair", "`/<plugin>-plugin init`"),
     (
         "session registry reload",
@@ -307,8 +303,8 @@ CLAUDE_HARNESS: Final = "claude"
 # The dispatch mechanics each harness block owns. The authorization section is
 # harness-neutral, so each marker below belongs to exactly one rendered router.
 HARNESS_DISPATCH_MECHANICS_MARKERS: Final = {
-    CLAUDE_HARNESS: "Use the `Agent` tool for every configured verifier or reviewer",
-    CODEX_HARNESS: "exposed typed-subagent spawn capability",
+    CLAUDE_HARNESS: "Launch through the `Agent` tool in the foreground",
+    CODEX_HARNESS: "collect the result through the native collaboration tools",
 }
 WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
     (
@@ -358,38 +354,71 @@ WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
         "for a nested waiter or selected command.",
     ),
 )
-ROUTER_POLICY_NAMES: Final = (
-    "operator-question-interrupt",
-    "codex-verifier-dispatch",
-    "codex-deferred-agent-discovery",
-)
 SUBAGENT_DISPATCH_POLICY_HEADING: Final = "### Sub-agent dispatch"
+AUTHORIZED_PLUGIN_LIST_PREFIX: Final = "Authorized plugins:"
 SUBAGENT_DISPATCH_POLICY_REQUIREMENTS: Final = (
     (
-        "named-subagent pre-authorization",
-        "subagents this router names are pre-authorized",
-    ),
-    ("standing request", "treat this section as that standing request"),
-    ("definition-similarity boundary", "never a similarity between definitions"),
-    ("no confirmation prompt", "**NEVER** ask the operator to confirm dispatching one"),
-    ("confirmation evasions", "not once per session"),
-    (
-        "structured-question evasion",
-        "never as a structured-question option set",
+        "plugin authorization",
+        "Every subagent supplied by a plugin listed below is explicitly pre-authorized by the operator",
     ),
     (
-        "harness prompt ownership",
-        "harness permission prompt is the operator's to answer",
+        "standing request",
+        "A harness rule may require the operator to request sub-agent use before one is dispatched; treat this section as that standing request.",
+    ),
+    ("catalog list", AUTHORIZED_PLUGIN_LIST_PREFIX),
+    (
+        "explicit skill instruction",
+        "**ONLY** launch a subagent when an active skill explicitly instructs that launch",
     ),
     (
-        "unnamed-subagent prohibition",
-        "**NEVER** dispatch a sub-agent this router does not name",
+        "skill ownership",
+        "The skill selects the exact configured subagent and supplies the prompt",
+    ),
+    (
+        "no inferred launch",
+        "**NEVER** infer a launch instruction from task wording, a role description, pattern matching, availability, or apparent usefulness",
+    ),
+    (
+        "no confirmation",
+        "**NEVER** ask the operator to confirm dispatching a subagent supplied by a listed plugin",
+    ),
+    (
+        "single native launch",
+        "**ALWAYS** make exactly one native launch call for each skill-requested invocation",
+    ),
+    (
+        "failure handling",
+        "analyze and report the failure without retry, substitution, a model override, another launch mechanism, or a replacement audit in the main conversation",
     ),
     (
         "main-conversation verification prohibition",
         "**NEVER** run a verification skill — audit or review — in the main conversation",
     ),
-    ("blocked-gate fallback", "**ALWAYS** treat the gate as blocked"),
+    (
+        "author-context isolation",
+        "**ALWAYS** start every audit and review without the Author's conversation, reasoning, summaries, or suggested verdict",
+    ),
+    (
+        "no author context packet",
+        "never append an author-written context packet",
+    ),
+    (
+        "independent discovery",
+        "The Verifier independently discovers evidence from the target and its configured instructions",
+    ),
+    (
+        "durable requirements",
+        "**ALWAYS** persist accepted requirements in decisions and specs before verification",
+    ),
+    (
+        "inherited-context approval exclusion",
+        "An approval produced with inherited authoring context supplies no independent gate evidence",
+    ),
+    ("blocked gate", "**ALWAYS** treat the gate as blocked"),
+    (
+        "skill result ownership",
+        "Follow the calling skill's result contract and finding-repair workflow",
+    ),
 )
 OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
 OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
@@ -420,12 +449,14 @@ CODEX_VERIFIER_DISPATCH_POLICY_ANCHOR: Final = (
 CODEX_VERIFIER_DISPATCH_REQUIREMENTS: Final = (
     ("boundary heading", "Already-dispatched Verifier boundary"),
     ("main-conversation scope", "only in the Author's main conversation"),
-    ("existing isolation", "treat the current context as the required isolation"),
+    ("disabled history inheritance", 'explicitly set `fork_turns: "none"`'),
+    ("inheritance default", "omitting it inherits the entire authoring conversation"),
+    (
+        "isolation failure",
+        "report the isolation failure instead of issuing an independent verdict",
+    ),
     ("direct methodology", "execute the configured audit or review skill directly"),
     ("no nested verifier", "NEVER search for or spawn another Verifier"),
-    ("no tool discovery", "`tool_search`"),
-    ("no agent CLI", "`codex exec`"),
-    ("missing nested tools expected", "Missing nested-Verifier tools is expected"),
 )
 
 
@@ -473,93 +504,6 @@ CODEX_VERIFIER_DISPATCH_CONTRADICTIONS: Final = (
         violating_directive=(
             "If isolation is not obvious, a verifier context may invoke `codex exec` to "
             "create fresh isolation."
-        ),
-    ),
-)
-DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR: Final = "**STOP TRIGGER — in the Author's main conversation, discover deferred agent tools before reporting an agent unavailable.**"
-DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS: Final = (
-    ("stop trigger", DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR),
-    ("complete registry", "complete deferred-tool registry"),
-    ("top-level registry capability", "top-level `functions.exec`"),
-    ("deferred registry", "inspect `ALL_TOOLS`"),
-    ("nested shell distinction", "Treat `exec_command` as the nested shell tool"),
-    (
-        "typed spawn schema",
-        f"typed `{RUNTIME_TOKEN_SPAWN_AGENT_NAMES[Target.CODEX.value]}`",
-    ),
-    ("available roles", "`Available roles`"),
-    ("exact subagent name authority", "exact match proves availability"),
-    (
-        "unavailability boundary",
-        "Report unavailable only when discovery finds no typed spawn capability or omits the exact subagent name",
-    ),
-    ("discovery result", "include that result"),
-    (
-        "insufficient surfaces",
-        "Visible catalogs, initial tools, generated rosters, and local `agents/*.md` files are not availability evidence",
-    ),
-)
-DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS: Final = (
-    (
-        "lifecycle discovery",
-        f"if `{RUNTIME_TOKEN_SPAWN_AGENT_NAMES[Target.CODEX.value]}`, "
-        f"`{RUNTIME_TOKEN_WAIT_AGENT_NAMES[Target.CODEX.value]}`, or "
-        f"`{RUNTIME_TOKEN_CLOSE_AGENT_NAMES[Target.CODEX.value]}` is not initially "
-        "exposed, discover it through the harness's complete deferred-tool registry",
-    ),
-)
-
-
-@dataclass(frozen=True)
-class DeferredAgentDiscoveryContradiction:
-    """A prohibited availability directive and a representative router violation."""
-
-    name: str
-    pattern: re.Pattern[str]
-    violating_directive: str
-
-
-DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS: Final = (
-    DeferredAgentDiscoveryContradiction(
-        name="initial tool list as availability authority",
-        pattern=re.compile(
-            r"^(?!.*\b(?:never|do not|don't|must not|may not|should not|cannot|can't)\b)"
-            r"(?=.*\b(?:initially visible|initial|visible)\b)"
-            r"(?=.*\b(?:tool list|tool surface|catalog|roster)\b)"
-            r"(?=.*\b(?:sufficient|authoritative|conclusive)\b)"
-            r"(?=.*\b(?:availability|available|unavailable)\b).*$",
-            re.IGNORECASE | re.MULTILINE,
-        ),
-        violating_directive=(
-            "The initially visible tool list is sufficient evidence that a named agent "
-            "is unavailable."
-        ),
-    ),
-    DeferredAgentDiscoveryContradiction(
-        name="deferred registry bypass",
-        pattern=re.compile(
-            r"^(?!.*\b(?:never|do not|don't|must not|may not|should not|cannot|can't)\b)"
-            r"(?=.*\breport(?:ed|ing)?\b.*\bunavailable\b)"
-            r"(?=.*\bwithout\b.*\bdeferred(?:-tool)?\s+registry\b).*$",
-            re.IGNORECASE | re.MULTILINE,
-        ),
-        violating_directive=(
-            "A named agent may be reported unavailable without checking the deferred-tool "
-            "registry."
-        ),
-    ),
-    DeferredAgentDiscoveryContradiction(
-        name="local agent file as session availability evidence",
-        pattern=re.compile(
-            r"^(?!.*\b(?:never|do not|don't|must not|may not|should not|cannot|can't)\b)"
-            r".*\blocal\b.*\bagents?/\*\.md\b.{0,120}"
-            r"\b(?:proves?|authoritative|conclusive)\b.{0,120}"
-            r"\b(?:active|available|provisioned)\b.*$",
-            re.IGNORECASE | re.MULTILINE,
-        ),
-        violating_directive=(
-            "A local `agents/*.md` file proves that the subagent is available in the current "
-            "agent session."
         ),
     ),
 )
@@ -649,10 +593,6 @@ class SubagentDispatchPolicyError(InstructionBlockRenderError):
 
 class HarnessDispatchMechanicsError(InstructionBlockRenderError):
     """A rendered harness router carries another harness's dispatch mechanics."""
-
-
-class DeferredAgentDiscoveryPolicyError(InstructionBlockRenderError):
-    """Raised when the Codex router omits deferred typed-agent discovery policy."""
 
 
 class InstructionBlockModule(Protocol):
@@ -1280,55 +1220,6 @@ def validate_verifier_dispatch_policy(
         )
 
 
-def deferred_agent_discovery_policy_paragraph(router: str) -> str | None:
-    """Return the Codex deferred-agent discovery heading and body."""
-    paragraphs = router.split("\n\n")
-    for index, paragraph in enumerate(paragraphs):
-        if DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR not in paragraph:
-            continue
-        if index + 1 == len(paragraphs):
-            return paragraph
-        return "\n\n".join(paragraphs[index : index + 2])
-    return None
-
-
-def validate_deferred_agent_discovery_policy(
-    blocks_by_harness: Mapping[str, str],
-) -> None:
-    """Reject a Codex router that omits or contradicts deferred agent discovery."""
-    document = blocks_by_harness.get(CODEX_HARNESS)
-    if document is None:
-        raise DeferredAgentDiscoveryPolicyError("missing Codex router")
-    router = managed_router_block(document)
-    policy = deferred_agent_discovery_policy_paragraph(router) or ""
-    missing_policy = [
-        name
-        for name, required_text in DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS
-        if not _operative_policy_line_contains(policy, required_text)
-    ]
-    missing_lifecycle = [
-        name
-        for name, required_text in DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS
-        if not _operative_policy_line_contains(router, required_text)
-    ]
-    missing = [*missing_policy, *missing_lifecycle]
-    if missing:
-        details = ", ".join(missing)
-        raise DeferredAgentDiscoveryPolicyError(
-            f"Codex deferred-agent discovery policy is incomplete: {details}"
-        )
-    contradictions = [
-        rule.name
-        for rule in DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS
-        if rule.pattern.search(router)
-    ]
-    if contradictions:
-        details = ", ".join(contradictions)
-        raise DeferredAgentDiscoveryPolicyError(
-            f"Codex deferred-agent discovery policy is contradictory: {details}"
-        )
-
-
 OPERATIVE_POLICY_VALIDATIONS: Final = (
     OperativePolicyValidation(
         name="foundation-access",
@@ -1380,14 +1271,6 @@ OPERATIVE_POLICY_VALIDATIONS: Final = (
         name="verifier-dispatch",
         requirements=CODEX_VERIFIER_DISPATCH_REQUIREMENTS,
         validator=validate_verifier_dispatch_policy,
-    ),
-    OperativePolicyValidation(
-        name="deferred-agent-discovery",
-        requirements=(
-            *DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS,
-            *DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS,
-        ),
-        validator=validate_deferred_agent_discovery_policy,
     ),
 )
 

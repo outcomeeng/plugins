@@ -4,13 +4,13 @@ description: >-
   PDR audit methodology — judges one PDR against the PDR evidence model,
   covering content classification, property quality, per-rule tag validity,
   atemporal voice, and consistency with ancestor decisions.
-model: sonnet
+argument-hint: "<pdr-file-path>"
 allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
 ---
 
 <objective>
 
-A verdict on one PDR against the PDR evidence model — APPROVED, or REJECTED with each finding naming the section, the violated rule, and the evidence. Findings fall in five categories: content classification (observable product behavior, never architecture), property quality (observable and falsifiable), per-rule tag validity and assertion-type fit, atemporal voice, and consistency with the product spec and ancestor PDRs.
+A verdict on one PDR against the PDR evidence model — APPROVED, or REJECTED with each finding naming the section, the violated rule, and the evidence. Findings fall in five categories: content classification (observable product behavior, never architecture), property quality (observable, falsifiable, and stable), per-rule tag validity and assertion-type fit, atemporal voice, and consistency with the product spec and ancestor PDRs.
 
 </objective>
 
@@ -53,7 +53,11 @@ PDRs state atemporal product truth without historical context. No references to 
 
 **Step 1: Load context**
 
+Read the required PDR path from `$ARGUMENTS`, preserving spaces within the path. If the input is empty or whitespace-only, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all five property rows marked `FAIL`. Each row carries a `missing-target` finding with severity `REJECT`, location `input`, evidence naming the empty input, and a message naming the required PDR path. Stop before context loading or artifact inspection.
+
 Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the directory containing the PDR. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
+
+The product document used below is the product spec loaded by `/contextualize` in its product-level context step. Use that spec's declared audience and interaction surfaces for content classification.
 
 Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers for the PDR directory.
 
@@ -65,7 +69,7 @@ Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` m
 
 Read the PDR under audit. Identify its sections: the opening decision statement, Rationale, Product properties, and Verification.
 
-Note any missing sections — a PDR without a Verification section is unenforceable.
+Record an absent `## Verification` section as a `REJECT` finding with rule `missing-section` in the `tag-validity` row, marking that row `FAIL`. Name the expected section and identify its absence as evidence. Continue the remaining checks so the verdict covers every evaluable property; an unenforceable PDR cannot receive `APPROVED`.
 
 </step>
 
@@ -104,8 +108,10 @@ For each product property:
 2. Is it falsifiable — is there a scenario where it's violated?
    - "Good user experience" → unfalsifiable ✗
    - "Search returns results in under 500ms" → falsifiable ✓
+3. Is it stable — does its guarantee hold across all applicable contexts, including failure and boundary conditions, as the evidence model requires?
+   - "Theme selection persists across sessions" → assess persistence across session boundaries and failure conditions, without silently limiting the guarantee to successful sessions.
 
-**Non-observable or unfalsifiable property → REJECT — finding rule "non-observable-property."**
+**Non-observable or unfalsifiable property → REJECT — finding rule "non-observable-property." An unstable property → REJECT — finding rule "unstable-property."** Record either violation in `property-quality` and mark that row `FAIL`. Name the property and the context that breaks the guarantee; a stability finding requires evidence, and an unevaluable criterion follows `<verdict_format>`'s missing-evidence rule.
 
 </step>
 
@@ -113,7 +119,7 @@ For each product property:
 
 **Step 5: Per-rule verification tag validity**
 
-Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification type. For each rule:
+Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification type. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section exists but contains no verification rules, mark `tag-validity` as `FAIL` with a `REJECT` finding under `missing-verification-rules`, quoting the empty section as evidence. For each rule present:
 
 1. The rule carries exactly one tag, and the tag is valid for its subsection:
    - under `### Testing` → a `/test`-routed assertion type: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
@@ -123,7 +129,7 @@ Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and 
    An unsupported bare mechanism tag, a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid.
 2. Under `### Testing`, the assertion type fits the claim's shape per the `/test` router. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`, which fits only a single existential interaction. Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
 
-A rule earns a sound tag only when it is verifiable (a test, eval, or audit skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict); an unverifiable or vague rule cannot carry a meaningful evidence tag.
+A rule earns a sound tag only when it is verifiable (a test, eval, or audit skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict). An unverifiable or vague rule produces a `REJECT` finding under `invalid-tag` in `tag-validity`, marking the row `FAIL` even when the tag's syntax is valid; quote the rule and identify the missing observable condition or ambiguous criterion.
 
 **A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an assertion type, or more than one tag → REJECT — "invalid-tag." An assertion type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) → REJECT — "assertion-type-mismatch."**
 
@@ -242,9 +248,10 @@ How to avoid: Step 3 reads the product document's declared audience first and ju
 
 The verdict is sound when:
 
-- Every PDR rule was judged with none skipped — content classification, property quality, per-rule tag validity and assertion-type fit, atemporal voice, and consistency (coverage-complete).
+- Every PDR rule was judged with none skipped — content classification, property quality (observability, falsifiability, and stability), per-rule tag validity and assertion-type fit, atemporal voice, and consistency (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no rule left unevaluated.
-- Each REJECT finding is falsifiable: it names the section, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable or unfalsifiable property, the mismatched tag, the temporal phrase, or the contradicted product spec or ancestor PDR.
+- Each REJECT finding is falsifiable: it names the section, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable property, absent verification section or rules, the unverifiable rule or mismatched tag, the temporal phrase, or the contradicted product spec or ancestor PDR.
+- An absent or empty Verification section fails `tag-validity`; an unmet property-quality criterion fails `property-quality`. Neither condition can disappear through an empty iteration or receive an overall `APPROVED` verdict.
 - The same PDR yields the same verdict.
 
 </success_criteria>

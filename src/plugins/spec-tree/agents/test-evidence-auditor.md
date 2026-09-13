@@ -3,7 +3,7 @@ name: test-evidence-auditor
 description: >-
   ALWAYS invoke when auditing test evidence quality against spec assertions after writing tests for a spec node or before closing an outcome.
 tools: Bash, Read, Grep, Glob, Skill
-model: sonnet
+profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only
 {!% endif %!}
@@ -24,7 +24,7 @@ Run the `spec-tree:audit-tests` methodology in this already-dispatched, isolated
 - Read-only — produce verdicts, not code changes
 - The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent, verifier, or nested audit, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - Load `spec-tree:audit-tests` before relying on its methodology; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
-- MUST preserve the caller's test-evidence scope and governing node unchanged.
+- MUST preserve the supplied spec node path unchanged; the invoked skill discovers its evidence scope.
 - MUST let `spec-tree:audit-tests` own the evidence-property checks, language composition, finding shape, and verdict calculation.
 - NEVER add wrapper-owned verification or I/O policy; follow the loaded methodology exactly.
 
@@ -32,9 +32,8 @@ Run the `spec-tree:audit-tests` methodology in this already-dispatched, isolated
 
 <workflow>
 
-1. Read the caller's test-evidence scope and governing node.
-2. {!% if target == 'codex' %!}Load `spec-tree:audit-tests` and follow its methodology with those values.{!% else %!}Follow the preloaded `spec-tree:audit-tests` methodology with those values.{!% endif %!}
-3. Relay the returned JSON verdict verbatim.
+1. {!% if target == 'codex' %!}Load `spec-tree:audit-tests` and follow its methodology for the supplied spec node path.{!% else %!}Follow the preloaded `spec-tree:audit-tests` methodology for the supplied spec node path.{!% endif %!}
+2. Relay the returned JSON verdict verbatim.
 
 </workflow>
 

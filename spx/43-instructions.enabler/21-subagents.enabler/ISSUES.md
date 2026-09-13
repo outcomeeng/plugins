@@ -2,6 +2,26 @@
 
 Known defects in the subagent cluster. Coordination note; not spec truth.
 
+## Auditor model policy does not account for the prose strong-model assignment
+
+`src/plugins/prose/agents/prose-auditor.md` selects the central Strong profile.
+The shared policy selects Standard by default and permits an explicitly governed
+Strong selection; it supplies no role-specific justification. The prose node owns the
+unresolved justification for that exception:
+`spx/43-prose.enabler/ISSUES.md`, under "Strong model selection for prose auditing
+has no recorded justification".
+
+**Required handling.** During the model-selection rules' migration into
+`/subagent-standards`, reconcile the general auditor rule with the prose node's
+decision. Preserve Standard by default and explicitly governed Strong selection,
+then align authoring guidance,
+audit enforcement, and both agent-harness outputs. Do not infer a justified
+exception from an existing generated model selection.
+
+**Disposition and revisit condition.** Tracked at the operator's request. Resolve
+alongside the prose node's model-tier decision and before treating the shared
+auditor model policy as settled.
+
 ## Consolidate the create-subagent bundle
 
 A complete-bundle skill audit identified two maintenance recommendations after
@@ -153,10 +173,11 @@ context, because a verdict a later invocation cannot reproduce is not evidence. 
 `spx/15-validation.enabler/32-hook-safety.enabler` uses — a source-owned validator
 exercised against violating cases, never a scan asserting this repository's own files
 comply, which would be the second declaration `spx/12-shipped-scripting.adr.md` forbids.
-The validator needs two contracts `outcomeeng/distribution/agents.py` does not yet
-expose: a predicate deciding which agents produce a verification verdict, and the
-violation check itself; `INHERIT_MODEL_VALUE` and `iter_agent_files` exist. Build the
-source contract before the test, per `/test-python`'s split mode.
+`outcomeeng/distribution/profiles.py` owns complete native configurations for all
+roles, with Standard as the default. `outcomeeng/distribution/agents.py` rejects
+independent native fields, and the source guard checks authored assignments
+throughout `src/`. The remaining work is to make `/subagent-standards` own this
+authoring rule and obtain independent evidence and standards audits.
 
 ## The `invocation-scope` eval suite is unbuilt; its assertion carries an interim `[audit]` tag
 

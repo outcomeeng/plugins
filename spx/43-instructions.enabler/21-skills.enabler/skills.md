@@ -14,6 +14,10 @@ The skills-about-skills cluster is three peers with distinct roles:
 
 ### Compliance
 
+- ALWAYS: skill-authoring and audit guidance forbids model and reasoning
+  overrides in skill frontmatter; a skill retains its invoking agent session's
+  configuration in every supported product, including when invoked by a
+  configured subagent, per `spx/15-subagent-execution.pdr.md` ([audit])
 - ALWAYS: `/skill-standards` owns every rule `/audit-skill` enforces — standards and enforcement stay in one place so drift cannot open between them ([audit])
 - ALWAYS: `/create-skill` and `/audit-skill` load `/skill-standards` before doing any authoring or evaluation work — prevents memory-based assessment ([audit])
 - ALWAYS: a skill governs its own behavior and remains independent of the agent, skill, or context that invokes it ([audit])

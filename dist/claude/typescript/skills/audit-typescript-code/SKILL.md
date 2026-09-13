@@ -3,7 +3,6 @@ name: audit-typescript-code
 description: >-
   TypeScript implementation-code audit methodology — judges the TypeScript code
   files in scope for design flaws and architecture-decision compliance.
-model: sonnet
 allowed-tools: Read, Grep, Glob, Skill
 ---
 

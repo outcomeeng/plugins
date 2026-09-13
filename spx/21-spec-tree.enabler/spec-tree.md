@@ -6,6 +6,15 @@ CAN operate within a structured, spec-first framework with deterministic context
 
 ## Assertions
 
+- ALWAYS: root guides retain explicit standing authorization for every subagent
+  supplied by a plugin in their complete authorized plugin list, requiring an
+  active skill's explicit request before launch, per
+  `spx/15-subagent-execution.pdr.md` ([audit]).
+- ALWAYS: calling skills own role selection and target-only prompts; invoked skills
+  discover the target's context. The invocation policy preserves audit result
+  contracts and repair workflows, and root guides may carry necessary
+  agent-specific mechanical examples ([audit]).
+
 ### Scenarios
 
 - Given a spec-tree enabler directory, when its contents are listed, then a spec file named `{slug}.md` exists ([test](tests/test_spec_tree.scenario.l1.py))

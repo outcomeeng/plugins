@@ -4,9 +4,11 @@ PROVIDES the complete Go development workflow — architecture, testing, impleme
 SO THAT Go projects using spec-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality and soundness
 
-The go plugin contains 9 skills following the foundational + language-specific pattern: `/go-standards` (reference), `/go-architecture-standards` (reference), `/go-test-standards` (reference), `/test-go`, `/code-go`, `/audit-go-code`, `/audit-go-tests`, `/architect-go`, `/audit-go-architecture`. The `go-simplifier` agent preloads its skill; the `audit-go-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors, per `spx/21-spec-tree.enabler/17-audit.adr.md`. Go concurrency soundness and `unsafe`/cgo boundary soundness are part of the Go code audit (`audit-go-code`). The Go test conventions the skills teach are decided in `spx/43-go.enabler/15-go-testing.adr.md`.
+The Go plugin composes foundational methodology with language-specific standards and workflows. Its `go-simplifier` definition invokes `/simplify-go` and relays its result. The `audit-go-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors, per `spx/21-spec-tree.enabler/17-audit.adr.md`. Go concurrency soundness and `unsafe`/cgo boundary soundness are part of the Go code audit (`audit-go-code`). The Go test conventions the skills teach are decided in `spx/43-go.enabler/15-go-testing.adr.md`.
 
 ## Assertions
+
+- ALWAYS: `/simplify-go` owns the simplification contract for changed Go implementation: independently discover scope and governing evidence, preserve behavior and concurrency ownership, invoke `/code-go` for edits, and report changed paths and verification results. Its instructions preserve tests and evidence, block changes lacking behavioral coverage, and limit recovery to its own edits ([audit])
 
 ### Compliance
 

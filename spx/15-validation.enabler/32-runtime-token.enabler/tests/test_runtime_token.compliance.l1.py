@@ -1,26 +1,30 @@
+from outcomeeng.validation.runtime_tokens import forbidden_names
+from outcomeeng_testing.generators.runtime_tokens import (
+    lint_enforced_runtime_names,
+    raw_token_source,
+    review_only_runtime_names,
+)
 from outcomeeng_testing.harnesses.runtime_tokens import (
     authored_tree_enforcement,
-    every_enforced_registry_name_is_rejected,
-    forbidden_names_derive_from_enforced_registry_kinds,
-    review_only_names_are_excluded,
-    shared_fragment_raw_token_is_reported,
+    observe_source,
 )
 
 
-def test_every_enforced_registry_name_is_rejected() -> None:
-    assert every_enforced_registry_name_is_rejected()
+def test_non_ignored_raw_tokens_fail_validation() -> None:
+    for case in lint_enforced_runtime_names():
+        observed = observe_source(raw_token_source(case))
 
-
-def test_forbidden_names_derive_from_enforced_registry_kinds() -> None:
-    assert forbidden_names_derive_from_enforced_registry_kinds()
+        assert observed.violations
+        assert observed.exit_code != 0
 
 
 def test_review_only_names_are_excluded() -> None:
-    assert review_only_names_are_excluded()
+    cases = review_only_runtime_names()
 
-
-def test_shared_fragment_raw_token_is_reported() -> None:
-    assert shared_fragment_raw_token_is_reported()
+    assert cases
+    enforced = frozenset(forbidden_names())
+    for case in cases:
+        assert case.name not in enforced
 
 
 def test_authored_tree_default_enforcement_matches_contract() -> None:

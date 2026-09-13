@@ -1,6 +1,7 @@
 name = "instructions_skill-auditor"
 description = "ALWAYS invoke when auditing, reviewing, or evaluating SKILL.md files for best practices compliance, or when the user asks to audit a skill."
-model = "gpt-5.4"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 web_search = "disabled"
 developer_instructions = """<role>
