@@ -267,7 +267,6 @@ def _read_native_record(
                 except (
                     OSError,
                     ValueError,
-                    TimeoutError,
                     subprocess.TimeoutExpired,
                 ) as error:
                     condition = str(error)
@@ -321,52 +320,9 @@ def _read_child(exchange: _Exchange, parent_id: str) -> Mapping[str, object]:
     pages: list[Mapping[str, object]] = []
     child_ids: list[str] = []
     for archived in (False, True):
-        cursor: str | None = None
-        seen: set[str] = set()
-        while True:
-            response = exchange.request(
-                len(pages) + 1,
-                "thread/list",
-                {
-                    "parentThreadId": parent_id,
-                    "sourceKinds": [NATIVE_CHILD_SOURCE],
-                    "archived": archived,
-                    "cursor": cursor,
-                },
-            )
-            pages.append(response)
-            page = response.get("result")
-            if (
-                not isinstance(page, dict)
-                or not isinstance(page.get("data"), list)
-                or "nextCursor" not in page
-            ):
-                return {
-                    "pages": pages,
-                    "childIds": child_ids,
-                    "error": "native child listing failed",
-                }
-            for child in page["data"]:
-                if (
-                    not isinstance(child, dict)
-                    or child.get("parentThreadId") != parent_id
-                    or not isinstance(child.get("id"), str)
-                    or not child["id"]
-                ):
-                    return {
-                        "pages": pages,
-                        "error": "native child listing identity is invalid",
-                    }
-                child_ids.append(child["id"])
-            cursor = page.get("nextCursor")
-            if cursor is None:
-                break
-            if not isinstance(cursor, str) or not cursor or cursor in seen:
-                return {
-                    "pages": pages,
-                    "error": "native child listing cursor is invalid",
-                }
-            seen.add(cursor)
+        failure = _list_children(exchange, parent_id, archived, pages, child_ids)
+        if failure is not None:
+            return failure
     document: dict[str, object] = {"pages": pages, "childIds": child_ids}
     if len(child_ids) == 1:
         response = exchange.request(
@@ -379,6 +335,69 @@ def _read_child(exchange: _Exchange, parent_id: str) -> Mapping[str, object]:
         if isinstance(result, dict):
             document["thread"] = result.get("thread")
     return document
+
+
+def _list_children(
+    exchange: _Exchange,
+    parent_id: str,
+    archived: bool,
+    pages: list[Mapping[str, object]],
+    child_ids: list[str],
+) -> Mapping[str, object] | None:
+    cursor: str | None = None
+    seen: set[str] = set()
+    while True:
+        response = exchange.request(
+            len(pages) + 1,
+            "thread/list",
+            {
+                "parentThreadId": parent_id,
+                "sourceKinds": [NATIVE_CHILD_SOURCE],
+                "archived": archived,
+                "cursor": cursor,
+            },
+        )
+        pages.append(response)
+        page = response.get("result")
+        if (
+            not isinstance(page, dict)
+            or not isinstance(page.get("data"), list)
+            or "nextCursor" not in page
+        ):
+            return {
+                "pages": pages,
+                "childIds": child_ids,
+                "error": "native child listing failed",
+            }
+        if not _append_child_ids(page["data"], parent_id, child_ids):
+            return {
+                "pages": pages,
+                "error": "native child listing identity is invalid",
+            }
+        cursor = page.get("nextCursor")
+        if cursor is None:
+            return None
+        if not isinstance(cursor, str) or not cursor or cursor in seen:
+            return {
+                "pages": pages,
+                "error": "native child listing cursor is invalid",
+            }
+        seen.add(cursor)
+
+
+def _append_child_ids(
+    children: list[object], parent_id: str, child_ids: list[str]
+) -> bool:
+    for child in children:
+        if (
+            not isinstance(child, dict)
+            or child.get("parentThreadId") != parent_id
+            or not isinstance(child.get("id"), str)
+            or not child["id"]
+        ):
+            return False
+        child_ids.append(child["id"])
+    return True
 
 
 @dataclass
@@ -399,15 +418,9 @@ class _Exchange:
         with selectors.DefaultSelector() as selector:
             selector.register(self.stdout, selectors.EVENT_READ)
             while time.monotonic() < self.deadline:
-                while b"\n" in self.pending:
-                    line, self.pending = self.pending.split(b"\n", 1)
-                    document = json.loads(line)
-                    if isinstance(document, dict) and document.get("id") == identifier:
-                        if "result" not in document and "error" not in document:
-                            raise ValueError(
-                                "native app-server response has no result or error"
-                            )
-                        return document
+                document = self._pending_response(identifier)
+                if document is not None:
+                    return document
                 if not selector.select(max(0.0, self.deadline - time.monotonic())):
                     break
                 chunk = os.read(self.stdout.fileno(), _READ_CHUNK_BYTES)
@@ -415,3 +428,15 @@ class _Exchange:
                     raise OSError("native app-server closed before responding")
                 self.pending += chunk
         raise TimeoutError("native app-server read deadline exceeded")
+
+    def _pending_response(self, identifier: int) -> Mapping[str, object] | None:
+        while b"\n" in self.pending:
+            line, self.pending = self.pending.split(b"\n", 1)
+            document = json.loads(line)
+            if isinstance(document, dict) and document.get("id") == identifier:
+                if "result" not in document and "error" not in document:
+                    raise ValueError(
+                        "native app-server response has no result or error"
+                    )
+                return document
+        return None

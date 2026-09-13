@@ -207,11 +207,12 @@ def render_profile_configuration(
     values = native_configuration_values(
         resolve_profile(target, profile, profiles=profiles)
     )
-    selected_syntax = (
-        (ProfileSyntax.TOML if target is Target.CODEX else ProfileSyntax.YAML)
-        if syntax is None
-        else ProfileSyntax(syntax)
-    )
+    if syntax is None:
+        selected_syntax = (
+            ProfileSyntax.TOML if target is Target.CODEX else ProfileSyntax.YAML
+        )
+    else:
+        selected_syntax = ProfileSyntax(syntax)
     if selected_syntax is ProfileSyntax.JSON:
         return json.dumps(values, ensure_ascii=False)
     separator = " = " if selected_syntax is ProfileSyntax.TOML else ": "
