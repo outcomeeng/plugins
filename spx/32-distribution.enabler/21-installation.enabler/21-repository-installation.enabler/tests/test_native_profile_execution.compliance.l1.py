@@ -1,5 +1,6 @@
 """Compliance evidence for deterministic native-profile probe planning."""
 
+import json
 from dataclasses import replace
 
 from outcomeeng_testing.harnesses.discovery_auth_cases import NativeFault
@@ -16,6 +17,7 @@ from outcomeeng_testing.harnesses.native_thread_evidence import (
     RecordingThreadReader,
     exercise_native_evidence,
     read_absent_native_thread,
+    read_absent_native_child,
 )
 
 
@@ -50,7 +52,7 @@ def test_native_child_read_retains_correlated_configuration_and_completion() -> 
         assert result.terminal_condition is None
         assert result.thread == case.thread
         assert len(reader.calls) == 1
-        assert reader.calls[0][0] == case.thread["id"]
+        assert reader.calls[0][0] == case.thread["parentThreadId"]
         assert reader.calls[0][1] == context.cwd
         assert reader.calls[0][2] == context.environment
 
@@ -88,11 +90,11 @@ def test_failed_native_read_is_terminal_without_retry() -> None:
     exercise_native_evidence(assert_case)
 
 
-def test_extra_spawn_cannot_supply_single_child_evidence() -> None:
+def test_multiple_parents_cannot_supply_single_child_evidence() -> None:
     def assert_case(case: NativeEvidenceCase, context: NativeEvidenceContext) -> None:
         reader = RecordingThreadReader.from_thread(case.thread)
         result = context.collect(
-            replace(case, events=case.events + case.events[1:]), reader
+            replace(case, events=case.events + case.events), reader
         )
         assert result.terminal_condition is not None
         assert not reader.calls
@@ -140,3 +142,28 @@ def test_absent_completion_message_is_unusable() -> None:
         assert context.collect(case, reader).terminal_condition is not None
 
     exercise_native_evidence(assert_case)
+
+
+def test_multiple_listed_children_cannot_supply_single_child_evidence() -> None:
+    def assert_case(case: NativeEvidenceCase, context: NativeEvidenceContext) -> None:
+        reader = RecordingThreadReader.with_extra_child(case.thread)
+        assert context.collect(case, reader).terminal_condition is not None
+        assert len(reader.calls) == 1
+
+    exercise_native_evidence(assert_case)
+
+
+def test_unlisted_thread_cannot_supply_child_evidence() -> None:
+    def assert_case(case: NativeEvidenceCase, context: NativeEvidenceContext) -> None:
+        reader = RecordingThreadReader.without_listed_child(case.thread)
+        assert context.collect(case, reader).terminal_condition is not None
+        assert len(reader.calls) == 1
+
+    exercise_native_evidence(assert_case)
+
+
+def test_real_native_child_listing_retains_empty_pages_without_launching() -> None:
+    result = read_absent_native_child()
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["childIds"] == []
+    assert all("result" in page for page in json.loads(result.stdout)["pages"])

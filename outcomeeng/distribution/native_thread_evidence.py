@@ -69,42 +69,27 @@ class NativeChildThread(TypedDict):
     turns: list[NativeTurn]
 
 
-class NativeThreadPayload(TypedDict):
-    """Native thread/read result envelope."""
+class NativeChildLookupPayload(TypedDict):
+    """Native parent-filtered listing and child read observations."""
 
+    childIds: list[str]
     thread: NativeChildThread
 
 
-class NativeSpawnItem(TypedDict):
-    """Exec JSONL collaboration fields used to correlate the receiver."""
-
-    id: str
-    type: str
-    tool: str
-    status: str
-    sender_thread_id: str
-    receiver_thread_ids: list[str]
-
-
-class NativeParentEvent(TypedDict, total=False):
-    """Exec JSONL fields consumed by the child-evidence collector."""
+class NativeParentEvent(TypedDict):
+    """Parent identity supplied by the exec JSONL stream."""
 
     type: str
     thread_id: str
-    item: NativeSpawnItem
 
 
 NATIVE_MESSAGE_TYPE: Final = "agentMessage"
-NATIVE_COLLAB_TYPE: Final = "collab_tool_call"
-NATIVE_SPAWN_TOOL: Final = "spawn_agent"
 NATIVE_THREAD_STARTED: Final = "thread.started"
-NATIVE_ITEM_STARTED: Final = "item.started"
-NATIVE_ITEM_COMPLETED: Final = "item.completed"
-NATIVE_SPAWN_COMPLETED: Final = "completed"
+NATIVE_CHILD_SOURCE: Final = "subAgentThreadSpawn"
 
 
 class NativeThreadReader(Protocol):
-    """Read one persisted thread in the selected disposable environment."""
+    """List and read the sole child of a parent in disposable state."""
 
     def __call__(
         self, thread_id: str, cwd: Path, environment: Mapping[str, str]
@@ -115,7 +100,7 @@ class NativeThreadReader(Protocol):
 class NativeChildEvidence:
     """Native records and the first unavailable or inconsistent observation."""
 
-    spawn: Mapping[str, object] | None
+    parent_id: str | None
     thread_read: CommandResult | None
     thread: Mapping[str, object] | None
     terminal_condition: str | None
@@ -130,30 +115,39 @@ def collect_native_child_evidence(
     cwd: Path,
     environment: Mapping[str, str],
 ) -> NativeChildEvidence:
-    """Correlate one spawn and one native read, without retry or inference."""
+    """Correlate a parent-filtered listing and native read without inference."""
     try:
-        parent_id, spawn = _single_spawn(stream)
+        parent_id = _single_parent(stream)
     except ValueError as error:
         return NativeChildEvidence(None, None, None, str(error))
-    receivers = spawn["receiver_thread_ids"]
-    # _single_spawn validates this external field before it reaches the reader.
-    if not isinstance(receivers, list) or len(receivers) != 1:
-        return NativeChildEvidence(spawn, None, None, "spawn has no single receiver")
-    receiver_id = receivers[0]
-    result = reader(receiver_id, cwd, environment)
+    result = reader(parent_id, cwd, environment)
     if result.exit_code != 0:
         return NativeChildEvidence(
-            spawn, result, None, "native child thread read failed"
+            parent_id, result, None, "native child thread read failed"
         )
     try:
         document = json.loads(result.stdout)
     except json.JSONDecodeError:
         return NativeChildEvidence(
-            spawn, result, None, "native child thread read is not JSON"
+            parent_id, result, None, "native child thread read is not JSON"
         )
     thread = document.get("thread") if isinstance(document, dict) else None
     if not isinstance(thread, dict):
-        return NativeChildEvidence(spawn, result, None, "native child thread is absent")
+        return NativeChildEvidence(
+            parent_id, result, None, "native child thread is absent"
+        )
+    child_ids = document.get("childIds")
+    if (
+        not isinstance(child_ids, list)
+        or len(child_ids) != 1
+        or not isinstance(child_ids[0], str)
+        or not child_ids[0]
+        or child_ids[0] == parent_id
+    ):
+        return NativeChildEvidence(
+            parent_id, result, thread, "native listing has no single child identity"
+        )
+    receiver_id = child_ids[0]
     expected = {
         ChildIdentityField.ID: receiver_id,
         ChildIdentityField.PARENT: parent_id,
@@ -164,16 +158,17 @@ def collect_native_child_evidence(
     for field, value in expected.items():
         if thread.get(field) != value:
             return NativeChildEvidence(
-                spawn, result, thread, f"native child {field} is missing or mismatched"
+                parent_id,
+                result,
+                thread,
+                f"native child {field} is missing or mismatched",
             )
     condition = _completion_condition(thread)
-    return NativeChildEvidence(spawn, result, thread, condition)
+    return NativeChildEvidence(parent_id, result, thread, condition)
 
 
-def _single_spawn(stream: str) -> tuple[str, dict[str, object]]:
+def _single_parent(stream: str) -> str:
     parents: list[str] = []
-    starts: list[str] = []
-    completions: list[dict[str, object]] = []
     for line in stream.splitlines():
         event = json.loads(line)
         if not isinstance(event, dict):
@@ -183,37 +178,9 @@ def _single_spawn(stream: str) -> tuple[str, dict[str, object]]:
             if not isinstance(parent_id, str) or not parent_id:
                 raise ValueError("native parent thread identity is absent")
             parents.append(parent_id)
-        item = event.get("item")
-        if not isinstance(item, dict) or item.get("type") != NATIVE_COLLAB_TYPE:
-            continue
-        if item.get("tool") != NATIVE_SPAWN_TOOL:
-            continue
-        if event.get("type") == NATIVE_ITEM_STARTED:
-            item_id = item.get("id")
-            if not isinstance(item_id, str) or not item_id:
-                raise ValueError("native spawn call identity is absent")
-            starts.append(item_id)
-        elif event.get("type") == NATIVE_ITEM_COMPLETED:
-            completions.append(item)
-    if len(parents) != 1 or not isinstance(parents[0], str) or not parents[0]:
+    if len(parents) != 1:
         raise ValueError("native parent stream has no single thread identity")
-    if len(starts) != 1 or len(completions) != 1:
-        raise ValueError("native parent stream has no single spawn lifecycle")
-    spawn = completions[0]
-    if not isinstance(starts[0], str) or not starts[0] or spawn.get("id") != starts[0]:
-        raise ValueError("native spawn lifecycle identities do not match")
-    receivers = spawn.get("receiver_thread_ids")
-    if (
-        spawn.get("status") != NATIVE_SPAWN_COMPLETED
-        or spawn.get("sender_thread_id") != parents[0]
-        or not isinstance(receivers, list)
-        or len(receivers) != 1
-        or not isinstance(receivers[0], str)
-        or not receivers[0]
-        or receivers[0] == parents[0]
-    ):
-        raise ValueError("native spawn does not identify one successful child")
-    return parents[0], spawn
+    return parents[0]
 
 
 def _completion_condition(thread: Mapping[str, object]) -> str | None:
@@ -239,11 +206,12 @@ def _completion_condition(thread: Mapping[str, object]) -> str | None:
     return "native child completion message is absent"
 
 
-def read_native_thread(
+def _read_native_record(
     thread_id: str,
     cwd: Path,
     environment: Mapping[str, str],
     *,
+    children: bool,
     timeout: float = THREAD_READ_TIMEOUT_SECONDS,
     command: Sequence[str] = THREAD_READ_COMMAND,
 ) -> CommandResult:
@@ -282,16 +250,16 @@ def read_native_thread(
                         condition = "native app-server initialization failed"
                     else:
                         exchange.send({"method": "initialized"})
-                        response = exchange.request(
-                            1,
-                            "thread/read",
-                            {
-                                "threadId": thread_id,
-                                "includeTurns": True,
-                            },
-                        )
-                        if "error" in response:
-                            condition = THREAD_READ_FAILED
+                        if children:
+                            response = {"result": _read_child(exchange, thread_id)}
+                        else:
+                            response = exchange.request(
+                                1,
+                                "thread/read",
+                                {"threadId": thread_id, "includeTurns": True},
+                            )
+                            if "error" in response:
+                                condition = THREAD_READ_FAILED
                     process.stdin.close()
                     process.wait(timeout=max(0.0, deadline - time.monotonic()))
                     if process.returncode != 0:
@@ -319,6 +287,98 @@ def read_native_thread(
         json.dumps(response.get("result", response)),
         diagnostic + (f"\n{condition}" if condition is not None else ""),
     )
+
+
+def read_native_thread(
+    thread_id: str,
+    cwd: Path,
+    environment: Mapping[str, str],
+    *,
+    timeout: float = THREAD_READ_TIMEOUT_SECONDS,
+    command: Sequence[str] = THREAD_READ_COMMAND,
+) -> CommandResult:
+    """Read a specific native thread without launching a model turn."""
+    return _read_native_record(
+        thread_id, cwd, environment, children=False, timeout=timeout, command=command
+    )
+
+
+def read_native_child(
+    parent_id: str,
+    cwd: Path,
+    environment: Mapping[str, str],
+    *,
+    timeout: float = THREAD_READ_TIMEOUT_SECONDS,
+    command: Sequence[str] = THREAD_READ_COMMAND,
+) -> CommandResult:
+    """List active and archived children, then read the sole child's turns."""
+    return _read_native_record(
+        parent_id, cwd, environment, children=True, timeout=timeout, command=command
+    )
+
+
+def _read_child(exchange: _Exchange, parent_id: str) -> Mapping[str, object]:
+    pages: list[Mapping[str, object]] = []
+    child_ids: list[str] = []
+    for archived in (False, True):
+        cursor: str | None = None
+        seen: set[str] = set()
+        while True:
+            response = exchange.request(
+                len(pages) + 1,
+                "thread/list",
+                {
+                    "parentThreadId": parent_id,
+                    "sourceKinds": [NATIVE_CHILD_SOURCE],
+                    "archived": archived,
+                    "cursor": cursor,
+                },
+            )
+            pages.append(response)
+            page = response.get("result")
+            if (
+                not isinstance(page, dict)
+                or not isinstance(page.get("data"), list)
+                or "nextCursor" not in page
+            ):
+                return {
+                    "pages": pages,
+                    "childIds": child_ids,
+                    "error": "native child listing failed",
+                }
+            for child in page["data"]:
+                if (
+                    not isinstance(child, dict)
+                    or child.get("parentThreadId") != parent_id
+                    or not isinstance(child.get("id"), str)
+                    or not child["id"]
+                ):
+                    return {
+                        "pages": pages,
+                        "error": "native child listing identity is invalid",
+                    }
+                child_ids.append(child["id"])
+            cursor = page.get("nextCursor")
+            if cursor is None:
+                break
+            if not isinstance(cursor, str) or not cursor or cursor in seen:
+                return {
+                    "pages": pages,
+                    "error": "native child listing cursor is invalid",
+                }
+            seen.add(cursor)
+    document: dict[str, object] = {"pages": pages, "childIds": child_ids}
+    if len(child_ids) == 1:
+        response = exchange.request(
+            len(pages) + 1,
+            "thread/read",
+            {"threadId": child_ids[0], "includeTurns": True},
+        )
+        document["read"] = response
+        result = response.get("result")
+        if isinstance(result, dict):
+            document["thread"] = result.get("thread")
+    return document
 
 
 @dataclass

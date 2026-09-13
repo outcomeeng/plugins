@@ -34,7 +34,7 @@ from outcomeeng.distribution.native_profile_execution import (
 from outcomeeng.distribution.native_thread_evidence import (
     THREAD_READ_COMMAND,
     THREAD_READ_TIMEOUT_SECONDS,
-    read_native_thread,
+    read_native_child,
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
     DISCOVERY_TIMEOUT_SECONDS,
@@ -141,7 +141,7 @@ class NativeProfileInterval:
     def thread(
         self, thread_id: str, cwd: Path, environment: Mapping[str, str]
     ) -> CommandResult:
-        result = read_native_thread(
+        result = read_native_child(
             thread_id,
             cwd,
             environment,
@@ -219,6 +219,7 @@ def run_native_profile_execution(
     checkout: Path,
     environment: Mapping[str, str],
     runner: ProbeRunner = run_profile_process,
+    target: Target | None = None,
 ) -> tuple[NativeProfileExecutionObservation, ...]:
     """Retain every row's observations while removing its disposable state."""
     artifact_root.mkdir(parents=True, exist_ok=False)
@@ -229,6 +230,8 @@ def run_native_profile_execution(
         for index in range(len(native_profile_rows())):
             with TemporaryDirectory() as temporary_state:
                 row = native_profile_rows(artifact_root, Path(temporary_state))[index]
+                if target is not None and row.target is not target:
+                    continue
                 interval = NativeProfileInterval(runner)
                 try:
                     materialize_native_profile(row)
@@ -257,11 +260,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run the native evidence harness through its public recipe."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("artifact_directory", type=Path)
+    parser.add_argument("--target", type=Target, choices=tuple(Target))
     arguments = parser.parse_args(argv)
     observations = run_native_profile_execution(
         arguments.artifact_directory.resolve(),
         checkout=Path.cwd(),
         environment=os.environ,
+        target=arguments.target,
     )
     print(
         json.dumps(

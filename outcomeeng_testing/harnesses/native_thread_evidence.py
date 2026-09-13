@@ -19,10 +19,11 @@ from outcomeeng.distribution.native_thread_evidence import (
     ChildIdentityField,
     NativeChildEvidence,
     NativeChildThread,
-    NativeThreadPayload,
+    NativeChildLookupPayload,
     NativeTurnStatus,
     collect_native_child_evidence,
     read_native_thread,
+    read_native_child,
 )
 from outcomeeng_testing.generators.native_thread_evidence import (
     NativeEvidenceCase,
@@ -56,7 +57,9 @@ class RecordingThreadReader:
             CommandResult(
                 THREAD_READ_COMMAND,
                 0,
-                json.dumps(NativeThreadPayload(thread=thread)),
+                json.dumps(
+                    NativeChildLookupPayload(childIds=[thread["id"]], thread=thread)
+                ),
                 "",
             )
         )
@@ -68,7 +71,12 @@ class RecordingThreadReader:
         document: dict[str, object] = dict(thread)
         del document[identity]
         return cls(
-            CommandResult(THREAD_READ_COMMAND, 0, json.dumps({"thread": document}), "")
+            CommandResult(
+                THREAD_READ_COMMAND,
+                0,
+                json.dumps({"childIds": [thread["id"]], "thread": document}),
+                "",
+            )
         )
 
     @classmethod
@@ -78,7 +86,12 @@ class RecordingThreadReader:
         document: dict[str, object] = dict(thread)
         document[identity] = str(document[identity]) + str(uuid4())
         return cls(
-            CommandResult(THREAD_READ_COMMAND, 0, json.dumps({"thread": document}), "")
+            CommandResult(
+                THREAD_READ_COMMAND,
+                0,
+                json.dumps({"childIds": [thread["id"]], "thread": document}),
+                "",
+            )
         )
 
     @classmethod
@@ -89,13 +102,17 @@ class RecordingThreadReader:
     def with_turn_status(
         cls, thread: NativeChildThread, status: NativeTurnStatus
     ) -> RecordingThreadReader:
-        document = json.loads(json.dumps(NativeThreadPayload(thread=thread)))
+        document = json.loads(
+            json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
+        )
         document["thread"]["turns"][0]["status"] = status
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
     @classmethod
     def without_turns(cls, thread: NativeChildThread) -> RecordingThreadReader:
-        document = json.loads(json.dumps(NativeThreadPayload(thread=thread)))
+        document = json.loads(
+            json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
+        )
         document["thread"]["turns"] = []
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
@@ -103,8 +120,22 @@ class RecordingThreadReader:
     def without_completion_message(
         cls, thread: NativeChildThread
     ) -> RecordingThreadReader:
-        document = json.loads(json.dumps(NativeThreadPayload(thread=thread)))
+        document = json.loads(
+            json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
+        )
         document["thread"]["turns"][0]["items"] = []
+        return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
+
+    @classmethod
+    def with_extra_child(cls, thread: NativeChildThread) -> RecordingThreadReader:
+        document = NativeChildLookupPayload(
+            childIds=[thread["id"], str(uuid4())], thread=thread
+        )
+        return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
+
+    @classmethod
+    def without_listed_child(cls, thread: NativeChildThread) -> RecordingThreadReader:
+        document = NativeChildLookupPayload(childIds=[], thread=thread)
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
     @classmethod
@@ -148,7 +179,7 @@ def exercise_native_evidence(
         )
 
 
-def read_absent_native_thread() -> CommandResult:
+def _read_empty_native_state(*, children: bool) -> CommandResult:
     """Exercise the real app-server read in empty state without a model turn."""
     with TemporaryDirectory(prefix="native-thread-read-") as temporary:
         root = Path(temporary)
@@ -160,4 +191,15 @@ def read_absent_native_thread() -> CommandResult:
             "CODEX_HOME": str(root / "codex"),
             "CODEX_SQLITE_HOME": str(root / "sqlite"),
         }
-        return read_native_thread(str(uuid4()), root, environment)
+        reader = read_native_child if children else read_native_thread
+        return reader(str(uuid4()), root, environment)
+
+
+def read_absent_native_thread() -> CommandResult:
+    """Read an unknown thread through the real app-server without a model turn."""
+    return _read_empty_native_state(children=False)
+
+
+def read_absent_native_child() -> CommandResult:
+    """Exercise real parent-filtered active and archived child listing."""
+    return _read_empty_native_state(children=True)

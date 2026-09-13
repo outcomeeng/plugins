@@ -154,8 +154,8 @@ verify-marketplace-installation:
     just test spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/tests
 
 # Capture one native child-execution record for every centrally configured profile
-verify-native-profile-execution artifact_directory:
-    @uv run python -m outcomeeng_testing.harnesses.native_profile_execution "{{artifact_directory}}"
+verify-native-profile-execution artifact_directory *args:
+    @uv run python -m outcomeeng_testing.harnesses.native_profile_execution "{{artifact_directory}}" {{args}}
 
 # Bump the manifest version of every plugin with changes under src/plugins/<name>/** since base_ref
 # Segment defaults to per-plugin auto-detection; pass an explicit segment to override every changed plugin.
