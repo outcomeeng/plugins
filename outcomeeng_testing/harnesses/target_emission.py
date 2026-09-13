@@ -362,47 +362,34 @@ def codex_output_rewrites_skill_dir_token() -> bool:
     return True
 
 
-def skill_dir_escape_preserves_authoring_guidance() -> bool:
+@dataclass(frozen=True)
+class SkillDirectoryEmission:
+    target: Target
+    path: Path
+    source: str
+    output: str
+
+
+def skill_directory_emissions() -> tuple[SkillDirectoryEmission, ...]:
+    """Expose source text and emitted text for canonical and constructed builds."""
     snapshot = _canonical_emission_snapshot()
-    claude_sources = _canonical_rendered_emissions(snapshot.projection, Target.CLAUDE)
-    codex_sources = _canonical_rendered_emissions(snapshot.projection, Target.CODEX)
-    claude_expected = {
-        path: _escaped_skill_dir_references(text)
-        for path, text in claude_sources.items()
-    }
-    codex_expected = {
-        path: _escaped_skill_dir_references(text)
-        for path, text in codex_sources.items()
-    }
-    relevant_paths = {
-        path
-        for expected in (claude_expected, codex_expected)
-        for path, references in expected.items()
-        if references
-    }
-    claude_outputs = dict(snapshot.claude)
-    codex_outputs = dict(snapshot.codex)
-    return (
-        bool(relevant_paths)
-        and all(
-            claude_expected[path]
-            <= _skill_dir_reference_counter(
-                _decode_text(claude_outputs[path]),
-                CLAUDE_SKILL_DIR_TOKEN,
-            )
-            and codex_expected[path]
-            == _skill_dir_reference_counter(
-                _decode_text(codex_outputs[path]),
-                CLAUDE_SKILL_DIR_TOKEN,
-            )
-            and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
-            not in _decode_text(claude_outputs[path])
-            and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
-            not in _decode_text(codex_outputs[path])
-            for path in relevant_paths
-        )
-        and _synthetic_skill_dir_translation_holds()
+    canonical = tuple(
+        SkillDirectoryEmission(target, path, text, _decode_text(outputs[path]))
+        for target in Target
+        for outputs in (dict(snapshot.target(target)),)
+        for path, text in _canonical_rendered_emissions(
+            snapshot.projection, target
+        ).items()
     )
+    synthetic = _synthetic_emission_snapshot()
+    constructed = tuple(
+        SkillDirectoryEmission(target, path, text, _decode_text(outputs[path]))
+        for target in Target
+        for outputs in (_outputs_by_source_path(synthetic, target),)
+        for path, text in _text_files(synthetic.source).items()
+        if path in outputs
+    )
+    return canonical + constructed
 
 
 def codex_skill_frontmatter_strips_claude_fields() -> bool:
@@ -629,6 +616,7 @@ def _synthetic_emission_snapshot() -> TargetEmissionSnapshot:
             _frontmatter_source(case),
             _claude_reference(case),
             f"{_claude_reference(case)} {SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE}",
+            f"{CLAUDE_SKILL_DIR_TOKEN} {SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE}",
             format_directive(
                 IncludeDirective(
                     f"{case.scope}/{case.inner_topic}/{SHARED_FRAGMENT_FILENAME}"

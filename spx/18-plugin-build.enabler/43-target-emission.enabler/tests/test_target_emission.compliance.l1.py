@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+from collections import Counter
+
 from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
+    CLAUDE_SKILL_DIR_TOKEN,
+    SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     EmissionAction,
     agent_capability,
     agent_slug,
     plugin_names,
     template_source_files,
+    skill_dir_path_references,
 )
 from outcomeeng.distribution.contracts import SKILLS_SUBDIR_NAME, Target
 from outcomeeng_testing.harnesses.target_emission import (
@@ -22,7 +27,7 @@ from outcomeeng_testing.harnesses.target_emission import (
     projected_versus_emitted,
     projected_sources,
     repeated_include_emits_shared_source_once,
-    skill_dir_escape_preserves_authoring_guidance,
+    skill_directory_emissions,
     source_emission_counts,
     agent_artifact_paths,
     agent_artifacts_carrying_foreign_skill_dir_token,
@@ -118,7 +123,38 @@ def test_codex_output_rewrites_skill_dir_token_to_codex_token() -> None:
 
 
 def test_skill_dir_rewrite_escape_preserves_authoring_guidance() -> None:
-    assert skill_dir_escape_preserves_authoring_guidance()
+    emissions = skill_directory_emissions()
+    assert any(SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE in row.source for row in emissions)
+    for row in emissions:
+        escaped_lines = tuple(
+            line
+            for line in row.source.splitlines()
+            if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE in line
+        )
+        if not escaped_lines:
+            continue
+        escaped_references = Counter(
+            reference
+            for line in escaped_lines
+            for reference in skill_dir_path_references(line, CLAUDE_SKILL_DIR_TOKEN)
+        )
+        output_references = Counter(
+            skill_dir_path_references(row.output, CLAUDE_SKILL_DIR_TOKEN)
+        )
+        assert SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in row.output, (
+            row.target,
+            row.path,
+        )
+        if row.target is Target.CLAUDE:
+            assert row.output.count(CLAUDE_SKILL_DIR_TOKEN) == row.source.count(
+                CLAUDE_SKILL_DIR_TOKEN
+            ), (row.target, row.path)
+            assert escaped_references <= output_references, (row.target, row.path)
+        else:
+            assert row.output.count(CLAUDE_SKILL_DIR_TOKEN) == sum(
+                line.count(CLAUDE_SKILL_DIR_TOKEN) for line in escaped_lines
+            ), (row.target, row.path)
+            assert escaped_references == output_references, (row.target, row.path)
 
 
 def test_codex_skill_frontmatter_strips_claude_only_fields() -> None:
