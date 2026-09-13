@@ -51,9 +51,10 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
   state, and makes one native subagent invocation. The retained artifacts
   distinguish definition loading, parent-session configuration, and the child
   invocation result. For Codex, the retained result includes one native
-  app-server read of the spawned receiver thread from the disposable state,
-  carrying the child role, model, effort, and completion evidence that exec
-  JSONL omits. An independent Auditor judges the actual artifacts and result.
+  parent-filtered app-server listing of active and archived spawned children,
+  complete pagination, and one read of the sole child from disposable state.
+  The read carries the configured role, recorded model and effort, and
+  completion; recorded configuration is not per-turn execution telemetry. An independent Auditor judges the actual artifacts and result.
   A missing credential, failed load, or unusable launch is reported
   without retry, credential fallback, profile substitution, or another launch
   mechanism ([audit]).
