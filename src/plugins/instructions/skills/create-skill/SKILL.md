@@ -2,7 +2,7 @@
 name: create-skill
 description: >-
   ALWAYS invoke this skill when creating, editing, or improving SKILL.md files or bundled workflows, references, templates, and scripts; explaining skill patterns; or verifying that skill content is current.
-allowed-tools: Read, Glob, Grep, Edit, Write, Bash, Skill,{!% if target == 'claude' %!} Agent,{!% endif %!} WebFetch, WebSearch
+allowed-tools: Read, Glob, Grep, Edit, Write, Bash, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} WebFetch, WebSearch
 ---
 
 {!% require_skill 'instructions:skill-standards' %!}
@@ -18,7 +18,7 @@ A skill-authoring request routed to its matching typed workflow.
 - Before any material skill change, apply `/skill-standards` and the repository overlay's required plugin-wide naming review.
 - Classify every skill name independently. A shared word, suffix, or grammatical number never establishes a batch rename.
 - Keep audit-only work read-only. Apply changes only when the operator requested creation or improvement.
-- Dispatch every skill audit through the typed `skill-auditor` role. If the role is unavailable or returns no complete structured verdict, report `BLOCKED`; never invoke `/audit-skill` in the authoring context.
+- Dispatch every skill audit through the typed `{{! subagent_name('instructions', 'skill-auditor') !}}` role. If the role is unavailable or returns no complete structured verdict, report `BLOCKED`; never invoke `/audit-skill` in the authoring context.
 
 </essential_principles>
 
@@ -131,7 +131,7 @@ All in `${CLAUDE_SKILL_DIR}/templates/`:
 - For every route, one canonical trigger and its nearest adjacent trigger select exactly the intended workflow, and every routing target exists in `<workflows_index>`.
 - Each selected workflow loads only the standards and conditional references its route requires.
 - Each selected workflow produces the output declared by its own success criteria.
-- A produced or improved skill passes the target repository's deterministic skill checks and receives an `APPROVED` verdict from the typed `skill-auditor` over the complete bundle.
+- A produced or improved skill passes the target repository's deterministic skill checks and receives an `APPROVED` verdict from the typed `{{! subagent_name('instructions', 'skill-auditor') !}}` over the complete bundle.
 
 </success_criteria>
 

@@ -41,7 +41,7 @@ Rewrite the bundle from `${CLAUDE_SKILL_DIR}/templates/router-skill.md` by apply
 
 <step name="validate_equivalence">
 
-Map every preserved behavior from the pre-upgrade inventory to its new location. Confirm no route, constraint, reference, or asset disappeared; remove only content proven duplicated or obsolete. Exercise every route plus one ambiguous input, run repository checks, and obtain a fresh typed `skill-auditor` approval.
+Map every preserved behavior from the pre-upgrade inventory to its new location. Confirm no route, constraint, reference, or asset disappeared; remove only content proven duplicated or obsolete. Exercise every route plus one ambiguous input, run repository checks, and obtain a fresh typed `instructions:skill-auditor` approval.
 
 </step>
 
@@ -52,6 +52,6 @@ Map every preserved behavior from the pre-upgrade inventory to its new location.
 - The router conversion is justified by distinct intents or conditional detail.
 - Every preserved behavior has one destination, with no duplication or orphaned bundled file.
 - Every route resolves through an exact bundled path and produces its declared output.
-- Repository checks pass and a typed `skill-auditor` verdict approves the complete bundle.
+- Repository checks pass and a typed `instructions:skill-auditor` verdict approves the complete bundle.
 
 </success_criteria>

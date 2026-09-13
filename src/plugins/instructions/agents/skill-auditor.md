@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke when auditing, reviewing, or evaluating SKILL.md files for best
   practices compliance, or when the user asks to audit a skill.
 tools: Read, Grep, Glob, Bash, Skill
-model: "{{! term('configured_agent_auditor_model') !}}"
+profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only
 {!% endif %!}

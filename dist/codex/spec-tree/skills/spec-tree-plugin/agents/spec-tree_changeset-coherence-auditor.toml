@@ -1,6 +1,7 @@
 name = "spec-tree_changeset-coherence-auditor"
 description = "ALWAYS invoke when deciding whether an exact committed changeset is one coherent review unit or requires a dependency-ordered split."
-model = "gpt-5.4"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 web_search = "disabled"
 developer_instructions = """<role>
@@ -21,10 +22,8 @@ Run `spec-tree:audit-changeset-coherence` in this isolated read-only context aft
 
 <workflow>
 
-1. Read the caller's scope.
-2. Load `spec-tree:audit-changeset-coherence` when the runtime requires explicit loading.
-3. Invoke the skill with the caller's scope unchanged.
-4. Relay its JSON object verbatim.
+1. Load `spec-tree:audit-changeset-coherence` and follow its methodology for the supplied scope.
+2. Relay its JSON object verbatim.
 
 </workflow>
 

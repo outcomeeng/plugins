@@ -21,7 +21,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Final
+from typing import Final, Protocol
 
 from jinja2 import (
     Environment,
@@ -33,10 +33,18 @@ from jinja2 import (
 from jinja2.runtime import Context
 
 from outcomeeng.distribution.agents import (
-    CODEX_FAST_MODEL,
     convert_agent_markdown,
-    CODEX_STANDARD_MODEL,
-    CODEX_STRONG_MODEL,
+    parse_agent_text,
+)
+from outcomeeng.distribution.profiles import (
+    AGENT_PROFILES,
+    PROFILE_FIELD,
+    ProfileRegistry,
+    ProfileSyntax,
+    describe_profile,
+    reject_configuration_overrides,
+    render_profile_configuration,
+    resolve_profile,
 )
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
@@ -55,16 +63,8 @@ from outcomeeng.distribution.contracts import (
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_ASK_USER_NAMES,
-    RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY,
-    RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
-    RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY,
     RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY,
-    RUNTIME_TOKEN_CONFIGURED_AGENT_CRAFT_MODEL_CAPABILITY,
-    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY,
-    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY,
     RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY,
-    RUNTIME_TOKEN_CONFIGURED_AGENT_STANDARD_MODEL_CAPABILITY,
-    RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY,
     RUNTIME_TOKEN_FIELD_KIND,
     RUNTIME_TOKEN_FILE_KIND,
     RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT,
@@ -87,6 +87,11 @@ from outcomeeng.distribution.contracts import (
 )
 from outcomeeng.distribution.diagnose_manifest import (
     diagnose_manifest_render_variables,
+)
+from outcomeeng.distribution.installation import (
+    CLAUDE_CATALOG_PATH,
+    CODEX_CATALOG_PATH,
+    catalog_plugin_names,
 )
 from outcomeeng.validation.spx_version import REQUIRED_SPX_VERSION
 
@@ -168,8 +173,20 @@ FORMATTER_FILE_GLOB: Final = "**/*.{md,json,toml,py,yaml,yml,js,html}"
 FORMATTER_CONFIG_PATH: Final = Path(__file__).resolve().parents[2] / "dprint.jsonc"
 IGNORED_SOURCE_DIRECTORY_NAMES: Final = frozenset({"__pycache__"})
 IGNORED_SOURCE_FILE_SUFFIXES: Final = (".pyc",)
-FormatterProbe = Callable[[str], str | None]
-FormatterRunner = Callable[[tuple[str, ...], Path], subprocess.CompletedProcess[str]]
+
+
+class FormatterProbe(Protocol):
+    """Resolve an executable at the formatter discovery boundary."""
+
+    def __call__(self, command: str, /) -> str | None: ...
+
+
+class FormatterRunner(Protocol):
+    """Run one formatter command in its output directory."""
+
+    def __call__(
+        self, command: tuple[str, ...], cwd: Path, /
+    ) -> subprocess.CompletedProcess[str]: ...
 
 
 class EmissionAction(StrEnum):
@@ -269,30 +286,6 @@ CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
         "claude": "system prompts",
         "codex": "developer instructions",
     },
-    RUNTIME_TOKEN_CONFIGURED_AGENT_STANDARD_MODEL_CAPABILITY: {
-        "claude": "sonnet",
-        "codex": CODEX_STANDARD_MODEL,
-    },
-    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY: {
-        "claude": "haiku",
-        "codex": CODEX_FAST_MODEL,
-    },
-    RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY: {
-        "claude": "sonnet",
-        "codex": CODEX_STANDARD_MODEL,
-    },
-    RUNTIME_TOKEN_CONFIGURED_AGENT_CRAFT_MODEL_CAPABILITY: {
-        "claude": "opus",
-        "codex": CODEX_STRONG_MODEL,
-    },
-    RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY: {
-        "claude": "Sonnet",
-        "codex": f"{CODEX_STRONG_MODEL} or {CODEX_STANDARD_MODEL}",
-    },
-    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY: {
-        "claude": "Haiku or Sonnet",
-        "codex": f"{CODEX_FAST_MODEL} or {CODEX_STANDARD_MODEL}",
-    },
 }
 
 
@@ -316,7 +309,6 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
             RUNTIME_TOKEN_ASK_USER_CAPABILITY: RUNTIME_TOKEN_ASK_USER_NAMES,
             RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
             RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: RUNTIME_TOKEN_WAIT_AGENT_NAMES,
-            RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY: RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
             RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: (
                 RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES
             ),
@@ -968,6 +960,21 @@ def build(
     Raises SourceFormatError if src_root's tree shape is invalid.
     """
     projection = project_emissions(src_root)
+    for target in _Target:
+        resolve_profile(target)
+    for emission in projection.emissions:
+        if not _is_rendered_text(emission.source):
+            continue
+        rendered = render_projected_emission_text(emission, src_root=src_root)
+        if emission.source.parent.name == AGENTS_SUBDIR_NAME:
+            agent = parse_agent_text(
+                rendered, source_path=emission.source, name=emission.relative_path.stem
+            )
+            resolve_profile(emission.target, agent.profile)
+        elif emission.source.name == SKILL_FILENAME:
+            reject_configuration_overrides(
+                dict.fromkeys(frontmatter_field_names(rendered))
+            )
     runner = _run_formatter if formatter_runner is None else formatter_runner
     formatter = _require_formatter(
         formatter_probe=formatter_probe,
@@ -1093,13 +1100,14 @@ def _render_subagent_name(
         raise RuntimeTokenError(
             f"subagent name {plugin!r}/{agent!r} rendered for unknown target {resolved!r}"
         ) from exc
-    return agent_slug(plugin, agent, capability=agent_capability(target))
+    return agent_dispatch_name(plugin, agent, capability=agent_capability(target))
 
 
 def make_jinja_environment(
     shared_root: Path | None = None,
     *,
     runtime_token_registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
+    profiles: ProfileRegistry = AGENT_PROFILES,
 ) -> Environment:
     """Return the build's configured Jinja2 environment."""
     loader = FileSystemLoader(str(shared_root)) if shared_root is not None else None
@@ -1120,6 +1128,38 @@ def make_jinja_environment(
     for kind in runtime_token_registry:
         environment.globals[kind] = _make_kind_global(kind, runtime_token_registry)
     environment.globals["subagent_name"] = _render_subagent_name
+
+    @pass_context
+    def profile_config(
+        context: Context, profile: str | None = None, *, syntax: str | None = None
+    ) -> str:
+        return render_profile_configuration(
+            _Target(context[BUILD_TARGET_VARIABLE]),
+            profile,
+            syntax=None if syntax is None else ProfileSyntax(syntax),
+            profiles=profiles,
+        )
+
+    @pass_context
+    def profile_description(context: Context, profile: str | None = None) -> str:
+        return describe_profile(
+            _Target(context[BUILD_TARGET_VARIABLE]), profile, profiles=profiles
+        )
+
+    environment.globals["profile_config"] = profile_config
+    environment.globals["profile_description"] = profile_description
+
+    def authorized_plugins(runtime: str) -> tuple[str, ...]:
+        """Read the owning catalog only when a template requests authorization."""
+        if shared_root is None:
+            raise TemplateRenderError("plugin authorization requires a source root")
+        catalog_path = {
+            _Target.CLAUDE: CLAUDE_CATALOG_PATH,
+            _Target.CODEX: CODEX_CATALOG_PATH,
+        }[_Target(runtime)]
+        return catalog_plugin_names(shared_root.parent.parent / catalog_path)
+
+    environment.globals["authorized_plugins"] = authorized_plugins
     return environment
 
 
@@ -1251,8 +1291,26 @@ def _emit_rendered_file(
     destination = dist_root / emission.target.value / emission.relative_path
     rendered = render_projected_emission_text(emission, src_root=src_root)
     translated = _translate_rendered_text(rendered, target=emission.target)
+    if emission.source.parent.name == AGENTS_SUBDIR_NAME:
+        translated = render_native_agent_markdown(
+            translated, source_path=emission.source, target=emission.target
+        )
     _write_text(destination, translated)
     shutil.copymode(emission.source, destination)
+
+
+def render_native_agent_markdown(
+    text: str, *, source_path: Path, target: _Target
+) -> str:
+    """Preserve authored guidance while inserting the complete native profile."""
+    agent = parse_agent_text(text, source_path=source_path, name=source_path.stem)
+    configuration = render_profile_configuration(
+        target, agent.profile, syntax=ProfileSyntax.YAML
+    )
+    remaining = strip_frontmatter_fields(text, fields=(PROFILE_FIELD,))
+    if remaining.startswith("---\n"):
+        return "---\n" + configuration + "\n" + remaining.removeprefix("---\n")
+    return "---\n" + configuration + "\n---\n" + remaining
 
 
 def _emit_converted_agent(
@@ -1452,11 +1510,9 @@ class AgentCapability:
     suffix: str
 
 
-# Source-owned per-target agent capabilities. Adding a target adds an entry here
-# rather than editing emission logic, per
-# `spx/18-plugin-build.enabler/15-build-architecture.adr.md`. This registry is a
-# sibling of RUNTIME_TOKEN_REGISTRY, not an entry in it: these values parameterize
-# emission, while a runtime token renders a divergent name into authored text.
+# Source-owned per-target agent capabilities parameterize emission. Adding a
+# target adds an entry here. RUNTIME_TOKEN_REGISTRY separately renders divergent
+# names into authored text.
 AGENT_CAPABILITY_REGISTRY: Final[dict[str, AgentCapability]] = {
     "claude": AgentCapability(
         manifest_declares_agents=True,
@@ -1560,11 +1616,8 @@ def project_emissions(src_root: Path) -> EmissionProjection:
     return projection
 
 
-# An authored agent stem that already opens with its plugin name joins the two
-# with this separator; a flat-namespace slug that has to add the plugin joins
-# with FLAT_AGENT_PLUGIN_SEPARATOR, so either shape carries the plugin once.
-AUTHORED_AGENT_PLUGIN_SEPARATOR: Final = "-"
 FLAT_AGENT_PLUGIN_SEPARATOR: Final = "_"
+NATIVE_AGENT_PLUGIN_SEPARATOR: Final = ":"
 
 
 def agent_slug(plugin: str, stem: str, *, capability: AgentCapability) -> str:
@@ -1574,11 +1627,16 @@ def agent_slug(plugin: str, stem: str, *, capability: AgentCapability) -> str:
     namespace takes the plugin slug as a prefix, rendering the namespaced
     ``<plugin>:<agent>`` identity as ``<plugin>_<agent>``.
     """
-    if capability.namespaced or stem.startswith(
-        f"{plugin}{AUTHORED_AGENT_PLUGIN_SEPARATOR}"
-    ):
+    if capability.namespaced:
         return stem
     return f"{plugin}{FLAT_AGENT_PLUGIN_SEPARATOR}{stem}"
+
+
+def agent_dispatch_name(plugin: str, stem: str, *, capability: AgentCapability) -> str:
+    """Return the configured invocation name for a plugin's authored role."""
+    if capability.namespaced:
+        return f"{plugin}{NATIVE_AGENT_PLUGIN_SEPARATOR}{stem}"
+    return agent_slug(plugin, stem, capability=capability)
 
 
 def _agent_aware_destination(

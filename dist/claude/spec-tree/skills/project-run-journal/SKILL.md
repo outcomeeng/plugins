@@ -60,7 +60,7 @@ To record a verification run, the consuming skill **streams** it — driving the
 
 The consuming skill elaborates the generic core (scope-entered, scope-advanced, finding-reported, run-completed) with its own units — audit names per-partition units; review names changed files — but never re-implements event construction, the rollup, or the render, and never builds a finished run's events as one batch.
 
-After a `changes-reviewer` wrapper returns a raw review run token, inspect that token locally with:
+After a `spec-tree:changes-reviewer` wrapper returns a raw review run token, inspect that token locally with:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/render_review_run.py" <run-token>

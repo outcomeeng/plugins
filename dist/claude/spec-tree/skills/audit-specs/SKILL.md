@@ -4,7 +4,7 @@ description: >-
   Spec-node audit methodology — judges one enabler or outcome spec against the
   node-spec form, covering section structure, atemporal voice, and per-assertion
   tag fitness.
-model: sonnet
+argument-hint: "<node-spec-file-path>"
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -57,6 +57,8 @@ Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test
 <step name="load_context">
 
 **Step 1: Load context**
+
+Read the required node-spec path from `$ARGUMENTS`, preserving spaces within the path. If the input is empty or whitespace-only, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all three property rows marked `FAIL`. Each row carries a `missing-target` finding with severity `REJECT`, location `input`, evidence naming the empty input, and a message naming the required node-spec path. Stop before context loading or artifact inspection.
 
 Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the directory containing the node spec. Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers for that directory.
 

@@ -1,7 +1,7 @@
 ---
 name: guarded-writer
 description: Guarded writer.
-model: opus
+profile: strong
 permissionMode: bypassPermissions
 tools:
   - Read

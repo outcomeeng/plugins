@@ -1,12 +1,12 @@
 ---
+model: "opus"
+effort: "medium"
 name: subagent-auditor
 description: >-
   ALWAYS invoke when auditing, reviewing, or evaluating subagent
   configuration files for best practices compliance, or when the user asks to audit a
   subagent.
-tools: Read, Grep, Glob, Bash, Skill
-model: "sonnet"
-
+tools: Read, Grep, Glob, Skill
 skills:
   - instructions:audit-subagent
 ---

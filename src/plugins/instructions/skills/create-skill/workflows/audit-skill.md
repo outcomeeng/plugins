@@ -16,7 +16,9 @@ Resolve the target to its `SKILL.md` plus every file recursively present under `
 
 <step name="dispatch_audit">
 
-Dispatch the typed `skill-auditor` role with the repository path, every target skill-content path, governing node paths when known, and deterministic verification already run. If the role is unavailable or returns no complete structured JSON verdict, return `BLOCKED`; never substitute an in-context `/audit-skill` invocation. Preserve a completed structured verdict unchanged.
+Dispatch `{{! subagent_name('instructions', 'skill-auditor') !}}` with only the target skill-directory path. The invoked audit discovers the complete bundle and its governing context. If the launch fails or returns no complete structured JSON verdict, analyze and report `BLOCKED` without retry or substitution. Preserve a completed structured verdict unchanged.
+
+Persist accepted requirements in decisions and specs before dispatch. Follow the root guide's isolation mechanics so the Verifier starts without authoring history. Never append an author-written context packet, reasoning, summary, or suggested verdict; the invoked skill reads its governing sources independently.
 
 The audit is read-only: never edit files, assign a numeric score, ask the auditor to produce fixes, or append an unsolicited fix offer. For an audit-only request, return the verdict and stop. For an explicit improvement request, preserve the verdict as repair input and continue.
 
@@ -46,21 +48,21 @@ For an explicit improvement request, confirm every accepted finding and same-cla
 
 <audit_anti_patterns>
 
-| Anti-pattern          | Rejected behavior                                                                                          |
-| --------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Ad hoc audit          | Evaluating the skill without the typed `skill-auditor` or invoking `/audit-skill` in the authoring context |
-| Runtime-specific path | Assuming a home-directory skill location instead of using the supplied or repository path                  |
-| Scored report         | Replacing the structured verdict with a numeric score                                                      |
-| Automatic fix offer   | Soliciting mutations after an audit-only request                                                           |
-| Lexical batch rename  | Renaming unlike skill types because their names share a token, suffix, or grammatical form                 |
-| Restated standards    | Copying `/skill-standards` rules into this workflow                                                        |
+| Anti-pattern          | Rejected behavior                                                                                                                                   |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ad hoc audit          | Evaluating the skill without the typed `{{! subagent_name('instructions', 'skill-auditor') !}}` or invoking `/audit-skill` in the authoring context |
+| Runtime-specific path | Assuming a home-directory skill location instead of using the supplied or repository path                                                           |
+| Scored report         | Replacing the structured verdict with a numeric score                                                                                               |
+| Automatic fix offer   | Soliciting mutations after an audit-only request                                                                                                    |
+| Lexical batch rename  | Renaming unlike skill types because their names share a token, suffix, or grammatical form                                                          |
+| Restated standards    | Copying `/skill-standards` rules into this workflow                                                                                                 |
 
 </audit_anti_patterns>
 
 <success_criteria>
 
 - An audit-only request returns the unchanged structured verdict over the complete target bundle and performs no mutation.
-- An explicit improvement request produces content that passes deterministic checks and a fresh `APPROVED` verdict from the typed `skill-auditor`.
+- An explicit improvement request produces content that passes deterministic checks and a fresh `APPROVED` verdict from the typed `{{! subagent_name('instructions', 'skill-auditor') !}}`.
 - Every proposed rename has a complete classification row grounded in the declared naming form, vocabulary source, and relevant history.
 - Target resolution remains runtime-neutral, and `/skill-standards` remains the single rule source.
 

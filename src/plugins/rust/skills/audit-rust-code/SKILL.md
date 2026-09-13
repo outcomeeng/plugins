@@ -4,7 +4,6 @@ description: >-
   Rust implementation-code audit methodology — judges the Rust code files in
   scope for design flaws, architecture-decision compliance, and unsafe/FFI
   soundness.
-model: sonnet
 allowed-tools: Read, Grep, Glob, Bash(grep:*), Skill
 ---
 

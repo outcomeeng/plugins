@@ -40,7 +40,7 @@ For language-specific skill prose that references a foundation, use the unqualif
 4. A composition step invokes only capabilities required by the workflow; it never discovers or invokes adjacent skills speculatively.
 5. Reference-only prose may name foundational concepts without invocation, while reference skills are loaded through the runtime's skill-invocation capability when their full standards govern the work.
 
-**Caller independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on the agent, skill, or context that invokes it. The dependency runs one way: a caller may know the skill it invokes; the skill never knows its callers.
+**Caller independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on its caller or invocation context. The dependency runs one way: a caller may know the skill it invokes; the skill never knows its callers.
 
 Context placement, agent selection, and dispatch policy belong to the caller. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or caller check to the invoked skill.
 
@@ -244,7 +244,7 @@ Six skill types. Each has a distinct purpose and primary output.
 | **Automation** | Execute multi-step processes | Processed files, transformed data | Tested scripts in `scripts/`, error handling, dependencies, I/O contracts                                                                                |
 | **Analyzer**   | Extract insights             | Reports, summaries, reviews       | Analysis scope, evaluation criteria, output format, synthesis                                                                                            |
 | **Validator**  | Enforce quality              | Pass/fail verdicts, scores        | Criteria with thresholds, scoring rubric, remediation guidance; `user-invocable: false` when invoked only by agents or explicit runtime skill invocation |
-| **Reference**  | Share domain knowledge       | Standards loaded by other skills  | `user-invocable: false`, passive description, `allowed-tools: Read`                                                                                      |
+| **Reference**  | Share domain knowledge       | Standards loaded by other skills  | `user-invocable: false`, passive description, read-only capabilities                                                                                     |
 
 **Type-selection rule of thumb:**
 
@@ -277,7 +277,7 @@ allowed-tools: Read
 
 - `user-invocable: false` — prevents false activations from user prompts.
 - Passive description (no `ALWAYS`/`NEVER`) — directive descriptions trigger false activations for a reference.
-- `allowed-tools: Read` — reference skills only read.
+- `allowed-tools: Read` — reference skills only read. Add `Skill` only when explicitly composing another read-only reference skill.
 
 **How consuming skills reference it.** Name the reference skill in running text for traceability, then explicitly invoke it through the runtime's documented skill-composition surface before applying its rules. A bare `See /skill-name` instruction is insufficient.
 

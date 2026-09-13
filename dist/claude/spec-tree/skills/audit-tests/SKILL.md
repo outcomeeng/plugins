@@ -4,13 +4,13 @@ description: >-
   Test-evidence audit methodology — judges whether a spec node's tests provide
   behavior-coupled evidence its assertions are fulfilled, covering predicate
   ownership, source ownership, coupling, falsifiability, and full-chain coverage.
-model: sonnet
+argument-hint: "<spec-node-path-or-evidence-scope>"
 allowed-tools: Read, Grep, Glob, Skill
 ---
 
 <objective>
 
-A verdict on whether a spec node's tests provide behavior-coupled evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed evidence property or cross-assertion architectural duplication, and the evidentiary gap.
+A verdict on whether a spec node's tests provide behavior-coupled evidence its assertions are fulfilled — APPROVED, REJECTED with each finding naming the assertion, the failed evidence property or cross-assertion architectural duplication, and the evidentiary gap, or NOT_APPLICABLE with the retired subjects and their lack of current evidence ownership explained.
 
 </objective>
 
@@ -54,13 +54,13 @@ Before coupling, inspect every executed test and imported infrastructure artifac
 
 Classify bindings by what they choose. Observation aliases, actual-result bindings, imported source-contract aliases, generated parameters, callback inputs, and resource handles are valid when they introduce no data or policy. A framework-provided temporary-directory handle, a local binding that receives a harness observation, and an assertion-local projection over observations are therefore valid. NEVER reject a binding merely because it is a parameter, assignment, alias, or local expression; moving those values into a harness would hide assertion flow and can move the predicate across the seam. Reject bindings that choose cases, expectations, runner settings, property configuration, setup policy, reusable data, generator domains, fixture payloads, or verdict rules. The remediation target is part of the finding: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, independent oracle, or curated eval case data when generation is wasteful and not tractable.
 
-**BINARY VERDICT.**
-
-APPROVED or REJECTED. No middle ground. If any property is missing for any assertion, REJECTED.
-
 </essential_principles>
 
 <audit_workflow>
+
+Use `$ARGUMENTS` as the spec-node path or evidence scope, preserving any supplied language partitions and completed composition results. Resolve evidence paths to their governing node or lowest common ancestor before context loading; never infer a target from adjacent conversation.
+
+If the supplied target is empty or whitespace-only, return `REJECTED` with only `gate-1-assertion` as `FAIL`: one finding with `id: "f-001"`, this skill's file as `file`, `line: null`, `assertion: "missing target"`, `property: "evidence-chain-completeness"`, `rule: "missing-target"`, `severity: "REJECT"`, a message naming the required node or evidence scope, and `remediation_target: "language-partition"`. Set `target` to the supplied string and both evidence inventory arrays to empty; set `metadata.branch` to JSON `null`. Gate 2 has no established language applicability and is omitted.
 
 <step name="load_standards">
 
@@ -114,13 +114,13 @@ Starting from the test links mapped in Step 2, follow each repository import rec
 
 Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every applicable discovery or module-resolution artifact supplied in the evidence package: examples include `conftest.py` or pytest configuration, Vitest configuration, `Cargo.toml`, and `go.mod`. A discovery artifact remains in `metadata.evidence_chain` when it produces no finding. The final inventory MUST contain exactly one entry for every artifact used to resolve imports, ownership, collection, or discovery.
 
-If an import cannot be resolved from the audit evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain` and `remediation_target: "test-infrastructure"`. Do not attribute the finding to the thin test file. Stop evidence-property judgment for that assertion because the chain is incomplete.
+If an import cannot be resolved from the audit evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain` and `remediation_target: "test-infrastructure"`. Do not attribute the finding to the thin test file. Continue every check supported by the available artifacts; report a property whose required evidence is unavailable as failed missing evidence rather than inferring a judgment from unread content.
 
 **Step 3: Testability precondition**
 
 For each assertion, read the governed production source and identify the observable boundary, seam, or injection point through which a test can exercise the assertion-relevant behavior. Judge the source shape before judging the linked test.
 
-If the source exposes no way to observe or drive that behavior, add a `gate-1-assertion` REJECT finding against the source file with rule `untestable-source` and `remediation_target: "source-file"`. State the missing seam and required production refactor. Skip declarations, coupling, falsifiability, alignment, and coverage for that assertion because test evidence cannot remediate untestable source.
+If the source exposes no way to observe or drive that behavior, add a `gate-1-assertion` REJECT finding against the source file with rule `untestable-source` and `remediation_target: "source-file"`. State the missing seam and its evidentiary consequence. Continue ownership and every other inspectable property check; preserve the testability failure regardless of those results.
 
 **Step 3a: Ownership across the evidence chain**
 
@@ -298,9 +298,9 @@ The four evidence properties above are language-neutral. Language-specific test-
 
 Read detected language or language partitions from the audit inputs. When absent, derive partitions from the linked-test filenames and the installed language plugins. Take the installed `audit-<lang>-tests` skills from the skill listing already in context; no directory scan is needed. For each, load that language's `<lang>-test-standards` skill and read its filename instantiation of `<subject>.<evidence>.<level>[.<runner>]` — the concrete pattern the standard states, such as `test_<subject>.<evidence>.<level>[.<runner>].py`. The text after the last closing bracket is the declared suffix: a compound suffix such as `.test.ts` as readily as a bare `.py` or `_test.go`. Map every linked test whose filename ends in an installed plugin's declared suffix to that language. Reject a suffix no installed plugin declares, or an ambiguous partition, with property `unsupported-language` and remediation target `language-partition` instead of guessing; never map an extension from a list this skill carries.
 
-When the audit inputs include a completed `language_composition` result, validate its `status` and `findings` fields and consume it without dispatching the same concern again. A `PASS` result with no `REJECT` finding satisfies composition; merge any non-blocking findings into matching rows. A `FAIL` result or malformed composition evidence appends a `gate-1-assertion` `REJECT` finding with property `language-composition` and returns REJECTED.
+For each language, consume an explicitly supplied completed verdict or invoke the installed `audit-<lang>-tests` skill through the runtime's supported skill mechanism. A completed verdict uses the same `<verdict_format>` contract as a fresh result; never invoke that concern again. Validate its output shape, required fields, applicable rows, and agreement between findings, row statuses, and overall status. Malformed or incomplete evidence adds a `gate-1-assertion` `REJECT` finding with property `language-composition`; continue the remaining languages.
 
-When completed composition evidence is absent and an `audit-<lang>-tests` skill exists for each language in scope, load and apply each skill through the runtime's supported skill mechanism. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs and no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When a required `audit-<lang>-tests` skill is absent or unavailable, append a `FAIL` row with a `REJECT` finding naming the missing skill, property `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
+Merge each valid result's findings into the matching rows by `name` — append, never replace — and derive their statuses under `<verdict_format>`. Merge its evidence-chain entries and coverage traces with the shared inspection, preserving every inspected artifact and assertion without duplicate entries. A composed rejection remains a rejection in the merged result. When a required `audit-<lang>-tests` skill is absent or unavailable, mark `gate-1-assertion` as `FAIL` and append a `REJECT` finding there naming the missing skill, property `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
 
 A language audit returns a third shape when its own scope step finds that every subject it was given is a retired path with no current `[test]` assertion and no current evidence-chain owner: `{"status": "NOT_APPLICABLE", "subjects": [...], "explanation": "..."}`, carrying no rows and no findings. Treat it as neither a pass nor a failure of that language's concerns. Record the reported subjects and explanation in verdict metadata, compose the remaining languages normally, and decide the overall verdict from the rows that do exist. When every language in scope returns `NOT_APPLICABLE` and no language-neutral finding was raised, emit that same shape rather than an approval, because no evidence was judged.
 
@@ -333,11 +333,13 @@ Before row rollup, inspect every finding as a complete record. Require all nine 
 
 <verdict_format>
 
+The `NOT_APPLICABLE` result defined in Step 3f is the alternate output when no evidence is applicable; it contains only `status`, `subjects`, and `explanation`, and the gate-verdict schema below does not apply. Every gate verdict includes `metadata.branch`: the branch string from the successful `/sync-base` result retained by `/contextualize`, an empty string for a detached HEAD, or JSON `null` when unavailable.
+
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never emit a prose or markdown verdict.
 
 The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
 
-The `metadata.evidence_chain` array MUST project the complete Step 2b inventory. Preserve every applicable discovery artifact in the array even when it carries no finding; omitting an inspected artifact makes the verdict incomplete. The `metadata.coverage_traces` array MUST carry one entry per audited assertion, naming the assertion-relevant source path, the test path followed into it, and the coverage judgment. Use `saturated` only for a trivially total path reached by the test.
+The `metadata.evidence_chain` array MUST project the complete inspected inventory. Preserve every applicable discovery artifact even when it carries no finding. The `metadata.coverage_traces` array projects Step 3e: a language-specific concern includes traces for the coverage it judges and leaves the array empty only when coverage is outside its declared scope; this audit's merged verdict MUST carry one entry per audited assertion, naming the assertion-relevant source path, the test path followed into it, and the coverage judgment. Use `saturated` only for a trivially total path reached by the test.
 
 ```json
 {
@@ -382,7 +384,7 @@ The `metadata.evidence_chain` array MUST project the complete Step 2b inventory.
     }
   ],
   "metadata": {
-    "branch": "<branch>",
+    "branch": null,
     "evidence_chain": [
       {
         "path": "<repository-relative-path>",

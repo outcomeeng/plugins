@@ -16,12 +16,12 @@ runtime's tool uses the runtime-explicit token (``tool('ask_user', 'claude')``),
 which also renders rather than embeds the literal.
 
 Every authored-source file the build renders or inlines — plugin content under
-``src/plugins/`` and the shared fragments under ``src/_shared/`` that plugin files
-include — is enforced by default.  ``RUNTIME_TOKEN_IGNORE`` is the exemption surface:
+``src/plugins/``, shared fragments under ``src/_shared/``, and per-plugin templates
+under ``src/templates/`` — is enforced by default. ``RUNTIME_TOKEN_IGNORE`` is the exemption surface:
 it holds only the instruction-block node's authored files, which name the two
 instruction filenames as their subject and so cannot consume a build token; every other authored
-file is converted and enforced, and the hatch remains for any future not-yet-converted
-file.  A newly added plugin or shared fragment is enforced without being opted in.
+file is converted and enforced, and the hatch supports each explicit tracked conversion
+exemption. A newly added plugin or shared fragment is enforced without being opted in.
 
 Usage::
 
@@ -54,6 +54,7 @@ from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     Target,
 )
+from outcomeeng.validation.profile_configuration import find_profile_literals
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 
@@ -123,6 +124,10 @@ _JINJA_NEUTRAL_BLOCK_STARTS: Final = {
 _RUNTIME_TOKEN_REMEDIATION: Final = (
     "must be a registry token or appear only in its matching per-runtime conditional"
 )
+PROFILE_CONFIGURATION_REMEDIATION: Final = (
+    "must select a complete central profile; configuration literals remain forbidden "
+    "inside per-runtime conditionals"
+)
 
 # Files under src/plugins/ exempt from enforcement. Repo-relative POSIX paths.
 # An entry exempts that one file without opting the rest of the tree out, and is
@@ -163,6 +168,7 @@ class Violation:
     path: Path
     line: int
     token: str
+    remediation: str
 
 
 @dataclass(frozen=True)
@@ -461,11 +467,28 @@ def scan_file(
     registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
 ) -> list[Violation]:
     """Return one violation per raw runtime token in ``path``, unless ignored."""
-    if is_ignored(path, ignore=ignore, repo_root=repo_root):
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
         return []
-    text = path.read_text(encoding="utf-8")
-    return [
-        Violation(path=path, line=lineno, token=token)
+    violations = [
+        Violation(
+            path=path,
+            line=lineno,
+            token=token,
+            remediation=PROFILE_CONFIGURATION_REMEDIATION,
+        )
+        for lineno, token in find_profile_literals(text)
+    ]
+    if is_ignored(path, ignore=ignore, repo_root=repo_root):
+        return violations
+    return violations + [
+        Violation(
+            path=path,
+            line=lineno,
+            token=token,
+            remediation=_RUNTIME_TOKEN_REMEDIATION,
+        )
         for lineno, token in find_raw_tokens(text, registry=registry)
     ]
 
@@ -517,7 +540,7 @@ def main(
         print(
             f"{violation.path}:{violation.line}: "
             f"raw runtime token {violation.token!r} "
-            f"{_RUNTIME_TOKEN_REMEDIATION}",
+            f"{violation.remediation}",
         )
     return 1 if violations else 0
 

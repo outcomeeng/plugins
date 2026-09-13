@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when filing an issue in a repository the operator does not control — a fork's upstream, or any base whose permission is READ, TRIAGE, or NONE.
   NEVER open an issue against such a repository without this skill.
 argument-hint: "[what was observed]"
-allowed-tools: Read, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, request_user_input, Bash(gh issue create:*), Bash(gh search issues:*), Bash(printf:*)
+allowed-tools: Read, Skill, collaboration.spawn_agent, collaboration.wait_agent, request_user_input, Bash(gh issue create:*), Bash(gh search issues:*), Bash(printf:*)
 ---
 
 <objective>
@@ -40,7 +40,7 @@ A claim without a negative control cannot distinguish a defect from a broken mea
 
 **Step 5 — GATE: Obtain authorization.** Present, through the runtime's structured-question tool, the resolved `base`, the issue title, the observation in one sentence, and the choice to file it against that base or to stop and inspect. Create nothing until the operator authorizes it in this turn.
 
-**Step 6 — GATE: Review the outward text.** Draft the title and body per `<report_shape>`, then review them — the prose plugin's `prose-auditor` thin agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such in the report.
+**Step 6 — GATE: Review the outward text.** Draft the title and body per `<report_shape>`, then review them — the prose plugin's `prose_prose-auditor` thin agent where installed, `/contribution-standards` `<outward_text>` unassisted where not, stated as such in the report.
 
 **Step 7 — File it.** Interactive sessions pipe the body through a quoted heredoc:
 

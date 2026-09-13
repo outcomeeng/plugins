@@ -3,7 +3,6 @@ name: audit-python-code
 description: >-
   Python implementation-code audit methodology — judges the Python code files in
   scope for design flaws and architecture-decision compliance.
-model: sonnet
 allowed-tools: Read, Grep, Glob, Skill
 ---
 

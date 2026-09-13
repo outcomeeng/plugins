@@ -5,13 +5,14 @@ from __future__ import annotations
 import json
 
 from outcomeeng_testing.harnesses.changeset_scope import (
+    CHANGESET_SCOPE,
     COHERENCE_SCOPE,
     checkout_branch,
-    contains_python_traceback,
     git_commit_oid,
     repo_without_origin,
     run_coherence_scope,
     stale_local_base_repo,
+    temporary_changeset_scope,
 )
 
 
@@ -24,28 +25,47 @@ def test_branch_scope_excludes_commits_already_merged_to_the_base() -> None:
     base at the true branch point, so only the feature's own change resolves.
     """
     with stale_local_base_repo() as stale:
-        completed = run_coherence_scope(stale.repo, "HEAD")
+        completed = run_coherence_scope(stale.repo, CHANGESET_SCOPE.HEAD_REF)
 
         assert not completed.returncode
         resolved = json.loads(completed.stdout)
-        assert frozenset(resolved["changed_paths"]) == frozenset((stale.feature_file,))
-        assert stale.merged_file not in resolved["changed_paths"]
+        assert frozenset(
+            resolved[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS]
+        ) == frozenset((stale.feature_file,))
+        assert (
+            stale.merged_file not in resolved[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS]
+        )
 
 
 def test_resolved_identities_are_full_commit_object_ids() -> None:
     with stale_local_base_repo() as stale:
-        resolved = json.loads(run_coherence_scope(stale.repo, "HEAD").stdout)
+        resolved = json.loads(
+            run_coherence_scope(stale.repo, CHANGESET_SCOPE.HEAD_REF).stdout
+        )
 
-        assert len(resolved["base"]) == 40
-        assert len(resolved["head"]) == 40
-        assert resolved["base"] != resolved["head"]
+        assert resolved[CHANGESET_SCOPE.ScopeField.BASE] == git_commit_oid(
+            stale.repo, CHANGESET_SCOPE.remote_tracking_ref(stale.base_ref)
+        )
+        assert resolved[CHANGESET_SCOPE.ScopeField.HEAD] == git_commit_oid(
+            stale.repo, stale.feature_branch
+        )
+        assert (
+            resolved[CHANGESET_SCOPE.ScopeField.BASE]
+            != resolved[CHANGESET_SCOPE.ScopeField.HEAD]
+        )
 
 
 def test_explicit_commit_range_resolves_both_endpoints() -> None:
     with stale_local_base_repo() as stale:
-        branch_form = json.loads(run_coherence_scope(stale.repo, "HEAD").stdout)
+        branch_form = json.loads(
+            run_coherence_scope(stale.repo, CHANGESET_SCOPE.HEAD_REF).stdout
+        )
         range_form = json.loads(
-            run_coherence_scope(stale.repo, f"origin/{stale.base_ref}...HEAD").stdout
+            run_coherence_scope(
+                stale.repo,
+                f"{CHANGESET_SCOPE.remote_tracking_ref(stale.base_ref)}"
+                f"{CHANGESET_SCOPE.RANGE_SEPARATOR}{CHANGESET_SCOPE.HEAD_REF}",
+            ).stdout
         )
 
         assert range_form == branch_form
@@ -66,23 +86,46 @@ def test_branch_not_checked_out_resolves_its_own_paths() -> None:
             run_coherence_scope(stale.repo, stale.feature_branch).stdout
         )
 
-        assert frozenset(resolved["changed_paths"]) == frozenset((stale.feature_file,))
-        assert resolved["head"] == git_commit_oid(stale.repo, stale.feature_branch)
+        assert frozenset(
+            resolved[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS]
+        ) == frozenset((stale.feature_file,))
+        assert resolved[CHANGESET_SCOPE.ScopeField.HEAD] == git_commit_oid(
+            stale.repo, stale.feature_branch
+        )
 
 
 def test_unconfigured_remote_base_is_reported_without_traceback() -> None:
     with repo_without_origin() as repo:
-        completed = run_coherence_scope(repo, "HEAD")
+        completed = run_coherence_scope(repo, CHANGESET_SCOPE.HEAD_REF)
 
         assert completed.returncode
-        assert COHERENCE_SCOPE.ERROR_PREFIX in completed.stderr
-        assert not contains_python_traceback(completed.stderr)
+        assert completed.stderr.startswith(COHERENCE_SCOPE.ERROR_PREFIX)
+        assert "Traceback (most recent call last):" not in completed.stderr
 
 
 def test_malformed_commit_range_is_rejected_without_traceback() -> None:
     with stale_local_base_repo() as stale:
-        completed = run_coherence_scope(stale.repo, "origin/main...")
+        completed = run_coherence_scope(
+            stale.repo,
+            f"{CHANGESET_SCOPE.remote_tracking_ref(stale.base_ref)}"
+            f"{CHANGESET_SCOPE.RANGE_SEPARATOR}",
+        )
 
         assert completed.returncode
-        assert COHERENCE_SCOPE.ERROR_PREFIX in completed.stderr
-        assert not contains_python_traceback(completed.stderr)
+        assert completed.stderr.startswith(COHERENCE_SCOPE.ERROR_PREFIX)
+        assert "Traceback (most recent call last):" not in completed.stderr
+
+
+def test_nonexistent_repository_path_is_reported_without_traceback() -> None:
+    with temporary_changeset_scope() as paths:
+        completed = run_coherence_scope(
+            paths.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            repo_override=paths.empty_state_dir,
+        )
+
+        assert completed.returncode
+        assert completed.stderr.startswith(COHERENCE_SCOPE.ERROR_PREFIX)
+        assert "Traceback (most recent call last):" not in completed.stderr
+        assert str(paths.empty_state_dir) in completed.stderr
+        assert not completed.stdout

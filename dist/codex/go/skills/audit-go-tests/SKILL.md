@@ -3,7 +3,6 @@ name: audit-go-tests
 description: >-
   Go test-evidence audit methodology — judges the Go tests in scope against
   the spec-tree and Go-specific evidence properties.
-model: sonnet
 allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
 ---
 

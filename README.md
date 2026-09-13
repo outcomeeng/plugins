@@ -259,18 +259,19 @@ Frontend design: /design-frontend skill
 
 Go engineering: /test-go, /code-go, /audit-go-code, /audit-go-tests, /audit-go-architecture, /architect-go, go-simplifier agent
 
-| Type  | Name                         | Purpose                                                                                                                         |
-| ----- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/architect-go`              | Writing ADRs for Go. NEVER author a Go ADR without this skill                                                                   |
-| Skill | `/audit-go-architecture`     | Go-specific architecture audit                                                                                                  |
-| Skill | `/audit-go-code`             | Go implementation-code audit methodology                                                                                        |
-| Skill | `/audit-go-tests`            | Go test-evidence audit methodology                                                                                              |
-| Skill | `/code-go`                   | Writing or fixing implementation code for Go                                                                                    |
-| Skill | `/go-architecture-standards` | Go ADR conventions enforced across architect and auditor skills                                                                 |
-| Skill | `/go-standards`              | Go code standards enforced across all skills                                                                                    |
-| Skill | `/go-test-standards`         | Go test standards enforced across all skills                                                                                    |
-| Skill | `/test-go`                   | Writing or fixing tests for Go                                                                                                  |
-| Agent | `go-simplifier`              | Simplifying recently modified Go code while preserving behavior, concurrency ownership, testability, and verified test coverage |
+| Type  | Name                         | Purpose                                                                                      |
+| ----- | ---------------------------- | -------------------------------------------------------------------------------------------- |
+| Skill | `/architect-go`              | Writing ADRs for Go. NEVER author a Go ADR without this skill                                |
+| Skill | `/audit-go-architecture`     | Go-specific architecture audit                                                               |
+| Skill | `/audit-go-code`             | Go implementation-code audit methodology                                                     |
+| Skill | `/audit-go-tests`            | Go test-evidence audit methodology                                                           |
+| Skill | `/code-go`                   | Writing or fixing implementation code for Go                                                 |
+| Skill | `/go-architecture-standards` | Go ADR conventions enforced across architect and auditor skills                              |
+| Skill | `/go-standards`              | Go code standards enforced across all skills                                                 |
+| Skill | `/go-test-standards`         | Go test standards enforced across all skills                                                 |
+| Skill | `/simplify-go`               | Simplifying Go implementation while preserving behavior                                      |
+| Skill | `/test-go`                   | Writing or fixing tests for Go                                                               |
+| Agent | `go-simplifier`              | The governing skill requests behavior-preserving simplification of changed Go implementation |
 
 ### hdl
 
@@ -293,6 +294,7 @@ Instruction authoring: /create-skill, /create-subagent
 | Skill | `/create-skill`           | Creating, editing, or improving SKILL.md files or bundled workflows, references, templates, and scripts                                                                                                                                                                                                   |
 | Skill | `/create-subagent`        | Claude: Creating, editing, or configuring subagents; Codex: Creating, editing, or configuring custom agents                                                                                                                                                                                               |
 | Skill | `/skill-standards`        | Skill authoring standards enforced across all creating and auditing skills                                                                                                                                                                                                                                |
+| Skill | `/subagent-standards`     | Configuration, profile, authority, context-isolation, and output-contract standards for configured subagents                                                                                                                                                                                              |
 | Agent | `skill-auditor`           | Auditing, reviewing, or evaluating SKILL.md files for best practices compliance, or when the user asks to audit a skill                                                                                                                                                                                   |
 | Agent | `subagent-auditor`        | Claude: Auditing, reviewing, or evaluating subagent configuration files for best practices compliance, or when the user asks to audit a subagent; Codex: Auditing, reviewing, or evaluating custom agent configuration files for best practices compliance, or when the user asks to audit a custom agent |
 
@@ -329,18 +331,19 @@ Python engineering: /test-python, /code-python, /audit-python-code, /audit-pytho
 
 Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /audit-rust-architecture, /architect-rust, rust-simplifier agent
 
-| Type  | Name                           | Purpose                                                                                                                         |
-| ----- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/architect-rust`              | Writing ADRs for Rust                                                                                                           |
-| Skill | `/audit-rust-architecture`     | Rust-specific architecture audit                                                                                                |
-| Skill | `/audit-rust-code`             | Rust implementation-code audit methodology                                                                                      |
-| Skill | `/audit-rust-tests`            | Rust test-evidence audit methodology                                                                                            |
-| Skill | `/code-rust`                   | Writing or fixing implementation code for Rust                                                                                  |
-| Skill | `/rust-architecture-standards` | Rust ADR conventions enforced across architect and auditor skills                                                               |
-| Skill | `/rust-standards`              | Rust code standards enforced across all skills                                                                                  |
-| Skill | `/rust-test-standards`         | Rust test standards enforced across all skills                                                                                  |
-| Skill | `/test-rust`                   | Writing or fixing tests for Rust                                                                                                |
-| Agent | `rust-simplifier`              | Simplifying recently modified Rust code while preserving behavior, ownership semantics, testability, and verified test coverage |
+| Type  | Name                           | Purpose                                                                                        |
+| ----- | ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Skill | `/architect-rust`              | Writing ADRs for Rust                                                                          |
+| Skill | `/audit-rust-architecture`     | Rust-specific architecture audit                                                               |
+| Skill | `/audit-rust-code`             | Rust implementation-code audit methodology                                                     |
+| Skill | `/audit-rust-tests`            | Rust test-evidence audit methodology                                                           |
+| Skill | `/code-rust`                   | Writing or fixing implementation code for Rust                                                 |
+| Skill | `/rust-architecture-standards` | Rust ADR conventions enforced across architect and auditor skills                              |
+| Skill | `/rust-standards`              | Rust code standards enforced across all skills                                                 |
+| Skill | `/rust-test-standards`         | Rust test standards enforced across all skills                                                 |
+| Skill | `/simplify-rust`               | Simplifying Rust implementation while preserving behavior                                      |
+| Skill | `/test-rust`                   | Writing or fixing tests for Rust                                                               |
+| Agent | `rust-simplifier`              | The governing skill requests behavior-preserving simplification of changed Rust implementation |
 
 ### spec-tree
 
@@ -378,7 +381,7 @@ Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refact
 | Skill | `/refactor`                   | Moving nodes, re-scoping content, or extracting shared providers                                                                                                                                                                                                                                                                                                |
 | Skill | `/refocus`                    | Running ad hoc commands, writing debug scripts, or writing code without a spec                                                                                                                                                                                                                                                                                  |
 | Skill | `/review-changes`             | Reviewing working changes on a branch against a base ref                                                                                                                                                                                                                                                                                                        |
-| Skill | `/scope-changeset`            | Canonical git-derived changeset primitives loaded by verification and lifecycle skills instead of re-implementing branch, base-ref, commit-identity, slug, or diff-scope derivation                                                                                                                                                                             |
+| Skill | `/scope-changeset`            | Committed changeset endpoint identities and changed paths, resolved through the canonical Git scope capability                                                                                                                                                                                                                                                  |
 | Skill | `/slice`                      | Selecting the next executable slice to implement or deciding which spec-tree nodes /apply should build next from an implementation plan                                                                                                                                                                                                                         |
 | Skill | `/sync-base`                  | ALWAYS invoke this skill to bring a branch behind its base current — before reading product truth, before verifying, and before every merge push                                                                                                                                                                                                                |
 | Skill | `/task-tracking-standards`    | Runtime task-tracking standards for skills that schedule heartbeats or timers                                                                                                                                                                                                                                                                                   |
@@ -402,18 +405,19 @@ Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refact
 
 TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript-code, /audit-typescript-tests, /audit-typescript-architecture, /architect-typescript, typescript-simplifier agent
 
-| Type  | Name                                 | Purpose                                                                                                                       |
-| ----- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/architect-typescript`              | Writing ADRs for TypeScript                                                                                                   |
-| Skill | `/audit-typescript-architecture`     | TypeScript-specific architecture audit                                                                                        |
-| Skill | `/audit-typescript-code`             | TypeScript implementation-code audit methodology                                                                              |
-| Skill | `/audit-typescript-tests`            | TypeScript test-evidence audit methodology                                                                                    |
-| Skill | `/code-typescript`                   | Writing or fixing implementation code for TypeScript                                                                          |
-| Skill | `/test-typescript`                   | Writing or fixing tests for TypeScript                                                                                        |
-| Skill | `/typescript-architecture-standards` | TypeScript ADR conventions enforced across architect and auditor skills                                                       |
-| Skill | `/typescript-standards`              | TypeScript code standards enforced across all skills                                                                          |
-| Skill | `/typescript-test-standards`         | TypeScript test standards enforced across all skills                                                                          |
-| Agent | `typescript-simplifier`              | Simplifying recently modified TypeScript code while preserving behavior, type safety, testability, and verified test coverage |
+| Type  | Name                                 | Purpose                                                                                              |
+| ----- | ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Skill | `/architect-typescript`              | Writing ADRs for TypeScript                                                                          |
+| Skill | `/audit-typescript-architecture`     | TypeScript-specific architecture audit                                                               |
+| Skill | `/audit-typescript-code`             | TypeScript implementation-code audit methodology                                                     |
+| Skill | `/audit-typescript-tests`            | TypeScript test-evidence audit methodology                                                           |
+| Skill | `/code-typescript`                   | Writing or fixing implementation code for TypeScript                                                 |
+| Skill | `/simplify-typescript`               | Simplifying TypeScript implementation while preserving behavior                                      |
+| Skill | `/test-typescript`                   | Writing or fixing tests for TypeScript                                                               |
+| Skill | `/typescript-architecture-standards` | TypeScript ADR conventions enforced across architect and auditor skills                              |
+| Skill | `/typescript-standards`              | TypeScript code standards enforced across all skills                                                 |
+| Skill | `/typescript-test-standards`         | TypeScript test standards enforced across all skills                                                 |
+| Agent | `typescript-simplifier`              | The governing skill requests behavior-preserving simplification of changed TypeScript implementation |
 
 ### work
 

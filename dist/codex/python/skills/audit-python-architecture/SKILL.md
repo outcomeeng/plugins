@@ -4,7 +4,6 @@ description: >-
   Python-specific architecture audit — judges the Python architecture target in
   scope for dependency injection, mocking prohibition, execution-level accuracy,
   Python anti-patterns, and test-double exception cases.
-model: sonnet
 allowed-tools: Read, Grep, Glob, Skill
 ---
 

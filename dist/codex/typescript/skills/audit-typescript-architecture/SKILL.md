@@ -4,7 +4,6 @@ description: >-
   TypeScript-specific architecture audit — judges the TypeScript architecture
   target in scope for dependency injection, mocking prohibition, execution-level
   accuracy, TypeScript anti-patterns, and ancestor consistency.
-model: sonnet
 allowed-tools: Read, Grep, Glob, Skill
 ---
 

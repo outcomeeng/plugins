@@ -3,7 +3,7 @@ name: adr-auditor
 description: >-
   ALWAYS invoke when auditing ADR evidence quality after writing an ADR or before implementing from it.
 tools: Bash, Read, Glob, Grep, Skill
-model: sonnet
+profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only
 {!% endif %!}
@@ -24,7 +24,7 @@ Run the `spec-tree:audit-adr` methodology in this already-dispatched, isolated v
 - Read-only — produce verdicts, not code changes
 - The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent, verifier, or nested audit, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - Load `spec-tree:audit-adr` before relying on its methodology; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
-- MUST preserve the caller's ADR path, governing node, and language-neutral or implementation-language partition classification unchanged.
+- MUST preserve the supplied ADR path unchanged; the invoked skill discovers its governing context.
 - MUST let `spec-tree:audit-adr` own section rules, language composition, finding shape, and verdict calculation.
 - NEVER suggest rewrites or alternative ADR content
 
@@ -32,9 +32,8 @@ Run the `spec-tree:audit-adr` methodology in this already-dispatched, isolated v
 
 <workflow>
 
-1. Read the caller's ADR path, governing node, and scope classification.
-2. {!% if target == 'codex' %!}Load `spec-tree:audit-adr` and follow its methodology with those values.{!% else %!}Follow the preloaded `spec-tree:audit-adr` methodology with those values.{!% endif %!}
-3. Relay the returned JSON verdict verbatim, including composed language rows and findings.
+1. {!% if target == 'codex' %!}Load `spec-tree:audit-adr` and follow its methodology for the supplied ADR path.{!% else %!}Follow the preloaded `spec-tree:audit-adr` methodology for the supplied ADR path.{!% endif %!}
+2. Relay the returned JSON verdict verbatim, including composed language rows and findings.
 
 </workflow>
 

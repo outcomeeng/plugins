@@ -6,7 +6,6 @@ allowed-tools:
   - Read
   - Grep
   - Glob
-model: sonnet
 ---
 
 <objective>

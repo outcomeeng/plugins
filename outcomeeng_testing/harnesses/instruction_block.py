@@ -42,7 +42,6 @@ from hypothesis import given, seed, settings
 
 from outcomeeng.distribution import instruction_block as distribution
 from outcomeeng_testing.generators.instruction_block import (
-    BootstrapThresholdRelation,
     DelegationCandidateCase,
     InstructionBlockCases,
     build_macro as generate_build_macro,
@@ -103,14 +102,6 @@ class RootInstructionTopology:
 
     files: dict[str, str]
     symlinks: dict[str, str]
-
-
-@dataclass(frozen=True)
-class EvidenceRun:
-    """Declared and successfully executed checks for one typed evidence file."""
-
-    declared: tuple[str, ...]
-    executed: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -358,8 +349,10 @@ def materialize_declared_root_topology(
     return placed
 
 
-def symlinked_instruction_topology_materializes_as_regular_files() -> bool:
-    """Check symlink normalization and source-body preservation in one owned workspace."""
+def observe_symlinked_instruction_topology(
+    assertion: Callable[[tuple[pathlib.Path, ...], dict[str, str], str], None],
+) -> None:
+    """Expose the materializer result and live paths in one owned workspace."""
     cases = generated_cases()
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
@@ -368,20 +361,13 @@ def symlinked_instruction_topology_materializes_as_regular_files() -> bool:
         )
         claude_path = root / cases.instruction_claude
         agents_path = root / cases.instruction_agents
-        return (
-            claude_path.is_file()
-            and agents_path.is_file()
-            and not claude_path.is_symlink()
-            and not agents_path.is_symlink()
-            and claude_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
-            and agents_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
-            and materialized[cases.instruction_claude] == ROOT_SHARED_BODY
-            and materialized[cases.instruction_agents] == ROOT_SHARED_BODY
-        )
+        assertion((claude_path, agents_path), materialized, ROOT_SHARED_BODY)
 
 
-def root_instruction_topology_seed_mapping_is_valid() -> bool:
-    """Check every source-owned root topology against its expected harness seed bodies."""
+def observe_root_instruction_topology_seeds(
+    assertion: Callable[[dict[str, str], dict[str, str]], None],
+) -> None:
+    """Expose materialized seeds beside their independent fixture bodies."""
     generated = generated_cases()
     cases = (
         (
@@ -415,11 +401,11 @@ def root_instruction_topology_seed_mapping_is_valid() -> bool:
     )
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
-        return all(
-            materialize_root_instruction_topology(root / str(index), topology)
-            == expected
-            for index, (topology, expected) in enumerate(cases)
-        )
+        for index, (topology, expected) in enumerate(cases):
+            assertion(
+                materialize_root_instruction_topology(root / str(index), topology),
+                expected,
+            )
 
 
 def load_instruction_block_module() -> ModuleType:
@@ -496,61 +482,6 @@ BUILD_MACRO_HARNESS = _GENERATED_CASES.build_macro_harness
 HARNESS_CLAUDE = _GENERATED_CASES.harness_claude
 HARNESS_CODEX = _GENERATED_CASES.harness_codex
 TEMPLATE_HARNESSES = _GENERATED_CASES.template_harnesses
-
-
-def property_evidence_contract() -> tuple[str, ...]:
-    """Return the independent case manifest required by property evidence."""
-    return (
-        *(f"render-version[{agent_harness}]" for agent_harness in TEMPLATE_HARNESSES),
-        "trailing-newline",
-        "stale-order",
-        "reconcile-identity",
-        "reconcile-idempotence",
-        "bootstrap-general-domain",
-        *(
-            f"bootstrap-threshold[{relation.value}]"
-            for relation in BootstrapThresholdRelation
-        ),
-    )
-
-
-def compliance_evidence_contract() -> tuple[str, ...]:
-    """Return the independent case manifest required by compliance evidence."""
-    return (
-        "all_routers_enforce_operator_question_interrupt",
-        "authority_hierarchy_policy_is_complete",
-        "claude_router_uses_native_configured_agent_dispatch",
-        "codex_role_input_uses_runtime_capability",
-        "codex_router_bounds_dispatched_verifiers",
-        "codex_router_discovers_deferred_agent_tools",
-        "dist_template_copies_stay_equivalent",
-        "drift_gate_marks_untracked_root_file_intent_to_add",
-        "drift_gate_reports_a_missing_root_instruction_file",
-        "drift_gate_skips_missing_obsolete_spx_file",
-        "former_command_slot_fence_is_ordinary_content",
-        "foundation_policy_guard_rejects_forbidden_router_token",
-        "foundation_policy_guard_rejects_missing_requirement",
-        "generation_reads_dist_templates",
-        "generation_writes_both_root_files",
-        "justfile_binds_build_and_check_recipes",
-        "lefthook_regenerates_through_build_instructions",
-        "obsolete_spx_instruction_files_are_removed",
-        "reconcile_replaces_the_losing_region_whole",
-        "refresh_workflow_checks_out_main",
-        "refresh_workflow_installs_dprint",
-        "refresh_workflow_regenerates_and_opens_pr",
-        "refresh_workflow_regeneration_drives_pr_decision",
-        "refresh_workflow_verifies_just_download",
-        "regenerate_overwrites_router_drift",
-        "render_passes_brace_token_through_unchanged",
-        "rendered_router_omits_forbidden_session_tokens",
-        *(
-            f"router_is_first_and_carries_read_whole_file_instruction[{agent_harness}]"
-            for agent_harness in TEMPLATE_HARNESSES
-        ),
-        "unresolved_build_macro_is_rejected",
-        "wait_for_load_stop_trigger_policy",
-    )
 
 
 def harness_line(harness: str) -> str:
@@ -1159,7 +1090,7 @@ def workflow_env_value(name: str) -> str:
     for line in workflow.splitlines():
         if line.startswith(prefix):
             return line.removeprefix(prefix).split(" #", maxsplit=1)[0].strip('"')
-    raise AssertionError(f"workflow env value not found: {name}")
+    raise ValueError(f"workflow env value not found: {name}")
 
 
 def justfile_recipe_body(justfile: str, recipe: str) -> str:
@@ -1238,7 +1169,7 @@ def run_refresh_pr_step(
         text=True,
         env=env,
     )
-    assert result.returncode == 0, result.stderr
+    result.check_returncode()
     return result.stdout
 
 
@@ -1323,7 +1254,7 @@ def run_refresh_regeneration_step(repo_root: pathlib.Path) -> str:
         text=True,
         env=env,
     )
-    assert result.returncode == 0, result.stderr
+    result.check_returncode()
     return result.stdout
 
 
@@ -1333,13 +1264,15 @@ def advance_authored_template_version(repo_root: pathlib.Path) -> tuple[str, str
     path = repo_root / distribution.AUTHORED_TEMPLATE_RELATIVE_PATH
     source = path.read_text(encoding="utf-8")
     current = module.parse_template_version(source)
-    assert current is not None
+    if current is None:
+        raise ValueError(f"template has no version: {path}")
     parts = [int(part) for part in current.split(".")]
     parts[-1] += 1
     advanced = ".".join(str(part) for part in parts)
     current_field = f'{module.TEMPLATE_VERSION_KEY}: "{current}"'
     advanced_field = f'{module.TEMPLATE_VERSION_KEY}: "{advanced}"'
     updated = source.replace(current_field, advanced_field, 1)
-    assert updated != source
+    if updated == source:
+        raise ValueError(f"template version field could not be advanced: {path}")
     path.write_text(updated, encoding="utf-8")
     return current, advanced

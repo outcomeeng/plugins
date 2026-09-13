@@ -1,10 +1,10 @@
 ---
+model: "opus"
+effort: "medium"
 name: spec-auditor
 description: >-
   ALWAYS invoke when auditing a spec node's assertion quality after writing an enabler or outcome node spec or before closing it.
 tools: Read, Grep, Glob, Bash, Skill
-model: sonnet
-
 skills:
   - spec-tree:audit-specs
 ---
@@ -20,7 +20,7 @@ Run the `spec-tree:audit-specs` methodology in this already-dispatched, isolated
 - Read-only — produce verdicts, not code changes
 - The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent, verifier, or nested audit, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - Load `spec-tree:audit-specs` before relying on its methodology; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
-- MUST preserve the caller's node spec path and governing node unchanged.
+- MUST preserve the supplied node spec path unchanged; the invoked skill discovers its governing context.
 - MUST let `spec-tree:audit-specs` own the section-structure rules, atemporal-voice rules, per-assertion tag-fitness rules, finding shape, and verdict calculation.
 - NEVER suggest rewrites or alternative node content
 
@@ -28,9 +28,8 @@ Run the `spec-tree:audit-specs` methodology in this already-dispatched, isolated
 
 <workflow>
 
-1. Read the caller's node spec path and governing node.
-2. Follow the preloaded `spec-tree:audit-specs` methodology with those values.
-3. Relay the returned JSON verdict verbatim.
+1. Follow the preloaded `spec-tree:audit-specs` methodology for the supplied node spec path.
+2. Relay the returned JSON verdict verbatim.
 
 </workflow>
 

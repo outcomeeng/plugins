@@ -4,8 +4,8 @@ description: >-
   ALWAYS invoke when auditing, reviewing, or evaluating {{! term('configured_agent') !}}
   configuration files for best practices compliance, or when the user asks to audit a
   {{! term('configured_agent') !}}.
-tools: Read, Grep, Glob, Bash, Skill
-model: "{{! term('configured_agent_auditor_model') !}}"
+tools: Read, Grep, Glob, Skill
+profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only
 {!% endif %!}

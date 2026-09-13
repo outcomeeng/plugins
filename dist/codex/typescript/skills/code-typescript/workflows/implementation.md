@@ -19,15 +19,15 @@ Proceed only when the specification, source contracts, reusable test infrastruct
 
 </gate>
 
-4. Invoke `/verify` before adding or revising evidence, then handle every selected type:
+4. Classify whether behavior changes. For behavior-preserving work, locate the existing evidence for every affected behavior and require its tests to pass before editing; preserve those tests and skip new RED-case authoring. If coverage is insufficient, stop with the specific gap. For behavior changes, invoke `/verify` before adding or revising evidence, then handle every selected type:
    - test — write or update the co-located tests first using the assertion type chosen by `/test` and the TypeScript expression from `/typescript-test-standards`
    - evaluate — read the eval definition, cases, materialized prompt, real producer contract, selected product command, and declared completion threshold
    - audit — apply `<audit_requirement_handoff>` from `SKILL.md` without fabricating a deterministic artifact
-5. For selected tests, run the focused test command and confirm the new or changed test fails for the expected reason before implementation. For selected evals, run the selected product command and record the preimplementation score against its threshold.
+5. For behavior changes with selected tests, run the focused test command and confirm the new or changed test fails for the expected reason before implementation. For selected evals, run the selected product command and record the preimplementation score against its threshold.
 
 <gate name="red-evidence">
 
-For selected tests, proceed only when the focused test fails because the declared behavior is absent or incorrect. Stop and repair the test or source contract when it passes before implementation, fails during setup, or fails for an unrelated reason. For selected evals, require a valid baseline score; for audit-only work, require the pathless audit constraint and its real subject to be identified.
+For behavior changes with selected tests, proceed only when the focused test fails because the declared behavior is absent or incorrect. Stop and repair the test or source contract when it passes before implementation, fails during setup, or fails for an unrelated reason. Behavior-preserving work instead requires sufficient unchanged evidence and a passing baseline. For selected evals, require a valid baseline score; for audit-only work, require the pathless audit constraint and its real subject to be identified.
 
 </gate>
 
@@ -184,7 +184,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
 <success_criteria>
 
 - The implementation follows the loaded specification and preserves source-owned contracts.
-- Selected tests exist, fail before the implementation change for the expected reason, and pass after the change.
+- Behavior-changing work has selected tests that fail before the implementation change for the expected reason and pass afterward; behavior-preserving work has sufficient unchanged tests that pass before and after the change.
 - Selected evals have a valid baseline and meet their declared completion thresholds after the change; the `Audit requirements` report matches `/verify`'s audit routing rows.
 - Typecheck, lint, and every selected deterministic command pass through repository-selected wrappers or documented fallbacks.
 - No new dependency, command, import shape, or test-infrastructure placement contradicts `/typescript-standards`, `/typescript-test-standards`, or loaded repository authority.

@@ -1,11 +1,11 @@
 ---
+model: "opus"
+effort: "medium"
 name: skill-auditor
 description: >-
   ALWAYS invoke when auditing, reviewing, or evaluating SKILL.md files for best
   practices compliance, or when the user asks to audit a skill.
 tools: Read, Grep, Glob, Bash, Skill
-model: "sonnet"
-
 skills:
   - instructions:audit-skill
 ---

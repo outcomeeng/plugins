@@ -22,6 +22,8 @@ dirs are expected on a working machine.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from outcomeeng_testing.harnesses.changeset_scope import (
@@ -34,6 +36,7 @@ from outcomeeng_testing.harnesses.changeset_scope import (
     git_commit_oid,
     git_three_dot_scope,
     repo_without_origin,
+    run_changeset_scope,
     stale_local_base_repo,
 )
 
@@ -160,3 +163,40 @@ def test_branch_slug_disambiguates_on_state_dir_collision() -> None:
                 CHANGESET_SCOPE_CONTRACT.BRANCH_REF_PATH_SEPARATOR,
                 CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_PATH_SUBSTITUTE,
             )
+
+
+def test_committed_scope_command_resolves_head_and_explicit_range() -> None:
+    with stale_local_base_repo() as stale:
+        completed = run_changeset_scope(stale.repo, CHANGESET_SCOPE.HEAD_REF)
+        assert not completed.returncode
+        resolved = json.loads(completed.stdout)
+        assert resolved[CHANGESET_SCOPE.ScopeField.BASE] == git_commit_oid(
+            stale.repo, CHANGESET_SCOPE_CONTRACT.ORIGIN_REF_PREFIX + stale.base_ref
+        )
+        assert resolved[CHANGESET_SCOPE.ScopeField.HEAD] == git_commit_oid(
+            stale.repo, stale.feature_branch
+        )
+        assert resolved[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS] == [
+            stale.feature_file
+        ]
+        completed = run_changeset_scope(
+            stale.repo,
+            f"{resolved[CHANGESET_SCOPE.ScopeField.BASE]}"
+            f"{CHANGESET_SCOPE.RANGE_SEPARATOR}"
+            f"{resolved[CHANGESET_SCOPE.ScopeField.HEAD]}",
+        )
+        assert not completed.returncode
+        assert json.loads(completed.stdout) == resolved
+        completed = run_changeset_scope(
+            stale.repo.parent, CHANGESET_SCOPE.HEAD_REF, repo_override=stale.repo
+        )
+        assert not completed.returncode
+        assert json.loads(completed.stdout) == resolved
+
+
+def test_committed_scope_command_reports_missing_base() -> None:
+    with repo_without_origin() as repo:
+        completed = run_changeset_scope(repo, CHANGESET_SCOPE.HEAD_REF)
+        assert completed.returncode
+        assert not completed.stdout
+        assert CHANGESET_SCOPE_CONTRACT.ORIGIN_HEAD_REF in completed.stderr

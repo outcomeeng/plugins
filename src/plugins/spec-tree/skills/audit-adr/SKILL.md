@@ -3,7 +3,7 @@ name: audit-adr
 description: >-
   ADR audit methodology — judges one ADR against the ADR evidence model,
   covering section structure, atemporal voice, and per-rule tag validity.
-model: sonnet
+argument-hint: "<adr-file-path>"
 allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
 ---
 
@@ -52,7 +52,11 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 
 **Step 1: Load context**
 
+Read the required ADR path from `$ARGUMENTS`, preserving spaces within the path. If the input is empty or whitespace-only, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all three native rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, location `input`, `observed` naming the absent target, and `expected` and `message` naming the required ADR path. Stop before context loading or artifact inspection.
+
 Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent. Record the base directory exposed by that invocation and read its bundled canonical ADR template at `templates/decisions/decision-name.adr.md`; the template remains owned by `/understand` and is never copied into this skill. Then invoke `/contextualize` on the directory containing the ADR. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
+
+The input is the ADR path alone. Derive its governing node from the containing directory, using canonical `spx/` for a product-root ADR. Retain the successful `/sync-base` result established by `/contextualize`: its `preservation` supplies the committed base and head identities and `branch_paths_after` supplies the current changeset paths. Use that context with the ADR's governed declarations and linked implementation surfaces in Step 5b; no supplied language classification is required.
 
 Do not proceed without the canonical ADR template content and live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers.
 
@@ -118,7 +122,11 @@ An unsupported bare mechanism tag, a tag disagreeing with its subsection, a miss
 
 This skill owns section structure, atemporal voice, and tag validity from the canonical template. Language-specific architecture concerns — dependency injection, no-mocking, execution-level accuracy — are owned by the language audit skill, not by this one.
 
-Read the supplied scope classification first. When it classifies the ADR as language-neutral, skip composition. For every declared implementation-language partition, require the matching `audit-<lang>-architecture` skill and invoke it through the Skill tool. Append its distinct rows (`testability-in-verification`, `mocking-prohibition`, `level-accuracy`, …) to this verdict's `rows` array; the language skill judges only language-specific concerns and never re-judges section structure, voice, or tags. When a language-specific ADR has no reliable partition or the required skill cannot load, append a `FAIL` row named `language-routing-unavailable` or `language-skill-unavailable` with a blocking finding instead of guessing or approving incomplete coverage. One case is not a composition failure. When the changeset under audit itself ships the ADR's language plugin, unpublished and uninstalled in this session, no `audit-<lang>-architecture` skill can exist yet. The caller classifies that ADR language-neutral for composition and states the reason. Judge the decision directly against the skill files its rules name and the cross-language decisions, and record a row named `language-skill-unpublished` as `NOT_APPLICABLE` with that explanation, so the row name alone distinguishes this expected case from a genuine load failure.
+Classify the ADR from its governed implementation surface and the committed changeset established in Step 1. When the decision constrains no implementation language, classify it as language-neutral and skip composition. Otherwise preserve every implementation-language partition the decision constrains, including cross-language decisions; the repository's predominant language never narrows that set.
+
+For every discovered partition, require the matching `audit-<lang>-architecture` skill and invoke it through the Skill tool. Append its distinct rows (`testability-in-verification`, `mocking-prohibition`, `level-accuracy`, …) to this verdict's `rows` array; the language skill judges only language-specific concerns and never re-judges section structure, voice, or tags. When a language-specific ADR has no reliable partition or the required skill cannot load, append a `FAIL` row named `language-routing-unavailable` or `language-skill-unavailable` with a blocking finding instead of guessing or approving incomplete coverage.
+
+One case is not a composition failure. When the governed context establishes that the changeset itself ships the ADR's language plugin, unpublished and uninstalled in this session, no `audit-<lang>-architecture` skill can exist yet. Judge the decision directly against the skill files its rules name and the cross-language decisions, and record a row named `language-skill-unpublished` as `NOT_APPLICABLE` with the evidence establishing that case. An absent installed skill alone never establishes unpublished status.
 
 </step>
 

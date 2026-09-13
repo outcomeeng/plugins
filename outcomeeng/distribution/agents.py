@@ -14,15 +14,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.profiles import (
+    AGENT_PROFILES,
+    PROFILE_FIELD,
+    AgentProfile,
+    ProfileConfigurationError,
+    ProfileRegistry,
+    native_configuration_values,
+    reject_configuration_overrides,
+    resolve_profile,
+)
+
 AGENT_NAME_FIELD: Final = "name"
 AGENT_SKILL_ENABLED_FIELD: Final = "enabled"
 SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
     {
         AGENT_NAME_FIELD,
         "description",
-        "model",
-        "model_reasoning_effort",
-        "effort",
+        PROFILE_FIELD,
         "sandbox_mode",
         "nickname_candidates",
         "mcp_servers",
@@ -37,23 +47,8 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
 # no generated tree carries agent markdown once conversion moved into the build.
 DEFAULT_SOURCE_ROOT: Final = Path("src") / "plugins"
 AGENT_SOURCE_DIRECTORY_NAME: Final = "agents"
-CODEX_STRONG_MODEL: Final = "gpt-5.5"
-CODEX_STANDARD_MODEL: Final = "gpt-5.4"
-CODEX_FAST_MODEL: Final = "gpt-5.4-mini"
-MODEL_MAPPINGS: Final = (
-    ("claude-opus", CODEX_STRONG_MODEL),
-    ("opus", CODEX_STRONG_MODEL),
-    ("claude-sonnet", CODEX_STANDARD_MODEL),
-    ("sonnet", CODEX_STANDARD_MODEL),
-    ("claude-haiku", CODEX_FAST_MODEL),
-    ("haiku", CODEX_FAST_MODEL),
-)
-EFFORT_MAPPINGS: Final = {
-    "low": "low",
-    "medium": "medium",
-    "high": "high",
-    "max": "xhigh",
-}
+
+
 PERMISSION_MODE_MAPPINGS: Final[Mapping[str, str | None]] = {
     "default": None,
     "acceptEdits": "workspace-write",
@@ -62,8 +57,6 @@ PERMISSION_MODE_MAPPINGS: Final[Mapping[str, str | None]] = {
     "bypassPermissions": None,
     "plan": "read-only",
 }
-INHERIT_MODEL_VALUE: Final = "inherit"
-MODEL_PREFIX_EXAMPLE_SUFFIX: Final = "-example"
 ALL_TOOLS_SENTINEL: Final = "all"
 CODEX_AGENT_ENV_VAR: Final = "OUTCOMEENG_CODEX_AGENT_NAME"
 CODEX_AGENT_ENV_SEPARATOR: Final = "/"
@@ -121,9 +114,7 @@ class SourceAgent:
     name: str
     description: str
     body: str
-    model: str | None = None
-    model_reasoning_effort: str | None = None
-    effort: str | None = None
+    profile: str | None = None
     sandbox_mode: str | None = None
     nickname_candidates: tuple[str, ...] = ()
     mcp_servers: Mapping[str, object] | None = None
@@ -186,6 +177,17 @@ def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
     namespace — a flat namespace carries the plugin slug as a prefix.
     """
     frontmatter, body = _split_frontmatter(text)
+    reject_configuration_overrides(frontmatter)
+    profile = frontmatter.get(PROFILE_FIELD)
+    if PROFILE_FIELD in frontmatter:
+        if not isinstance(profile, str):
+            raise ProfileConfigurationError("agent profile must be a named profile")
+        try:
+            AgentProfile(profile)
+        except ValueError as exc:
+            raise ProfileConfigurationError(
+                f"unknown agent profile: {profile!r}"
+            ) from exc
     description = _optional_string(frontmatter, "description") or (
         f"Converted source agent from {source_path.name}."
     )
@@ -197,9 +199,7 @@ def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
         name=name,
         description=description,
         body=body,
-        model=_optional_string(frontmatter, "model"),
-        model_reasoning_effort=_optional_string(frontmatter, "model_reasoning_effort"),
-        effort=_optional_string(frontmatter, "effort"),
+        profile=profile if isinstance(profile, str) else None,
         sandbox_mode=_optional_string(frontmatter, "sandbox_mode"),
         nickname_candidates=_string_tuple(frontmatter, "nickname_candidates"),
         mcp_servers=_optional_mapping(frontmatter, "mcp_servers"),
@@ -212,25 +212,35 @@ def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
     )
 
 
-def convert_agent_markdown(text: str, *, source_path: Path, name: str) -> str:
+def convert_agent_markdown(
+    text: str,
+    *,
+    source_path: Path,
+    name: str,
+    profiles: ProfileRegistry = AGENT_PROFILES,
+) -> str:
     """Return the target-native agent artifact for rendered agent markdown."""
     return render_agent_toml(
-        convert_agent(parse_agent_text(text, source_path=source_path, name=name))
+        convert_agent(
+            parse_agent_text(text, source_path=source_path, name=name),
+            profiles=profiles,
+        )
     )
 
 
-def convert_agent(agent: SourceAgent) -> CodexAgent:
+def convert_agent(
+    agent: SourceAgent, *, profiles: ProfileRegistry = AGENT_PROFILES
+) -> CodexAgent:
     """Convert one rendered plugin agent into a Codex custom-agent representation."""
     values: dict[str, object] = {
         AGENT_NAME_FIELD: agent.name,
         "description": agent.description,
     }
-    model = map_model(agent.model)
-    if model is not None:
-        values["model"] = model
-    effort = agent.model_reasoning_effort or map_effort(agent.effort)
-    if effort is not None:
-        values["model_reasoning_effort"] = effort
+    values.update(
+        native_configuration_values(
+            resolve_profile(Target.CODEX, agent.profile, profiles=profiles)
+        )
+    )
     sandbox_mode = agent.sandbox_mode or map_permission_mode(agent.permission_mode)
     if sandbox_mode is None:
         sandbox_mode = infer_sandbox_mode(
@@ -267,16 +277,6 @@ def convert_agent(agent: SourceAgent) -> CodexAgent:
     return CodexAgent(filename=f"{generated_agent_type(agent)}.toml", values=values)
 
 
-def map_model(model: str | None) -> str | None:
-    """Map source model names to Codex model slugs."""
-    if model is None or model == INHERIT_MODEL_VALUE:
-        return None
-    for source_prefix, target_model in MODEL_MAPPINGS:
-        if model == source_prefix or model.startswith(source_prefix):
-            return target_model
-    return model
-
-
 def agent_environment_marker(agent: SourceAgent) -> str:
     """Return the stable Codex policy marker for a converted agent."""
     plugin_name = _source_plugin_name(agent.source_path)
@@ -291,13 +291,6 @@ def agent_environment_marker(agent: SourceAgent) -> str:
 def generated_agent_type(agent: SourceAgent) -> str:
     """Return the generated Codex agent type for a source agent."""
     return _slugify(agent.name)
-
-
-def map_effort(effort: str | None) -> str | None:
-    """Map source effort values to Codex reasoning effort values."""
-    if effort is None:
-        return None
-    return EFFORT_MAPPINGS.get(effort, effort)
 
 
 def map_permission_mode(permission_mode: str | None) -> str | None:
@@ -924,10 +917,6 @@ __all__ = [
     "CODEX_AGENT_ENV_VAR",
     "CODEX_AGENT_ENV_SEPARATOR",
     "DEFAULT_SOURCE_ROOT",
-    "EFFORT_MAPPINGS",
-    "INHERIT_MODEL_VALUE",
-    "MODEL_MAPPINGS",
-    "MODEL_PREFIX_EXAMPLE_SUFFIX",
     "PERMISSION_MODE_MAPPINGS",
     "READ_ONLY_SANDBOX_MODE",
     "READ_ONLY_TOOLS",
@@ -945,8 +934,6 @@ __all__ = [
     "generated_agent_type",
     "infer_sandbox_mode",
     "iter_agent_files",
-    "map_effort",
-    "map_model",
     "map_permission_mode",
     "map_web_search",
     "parse_agent_markdown",

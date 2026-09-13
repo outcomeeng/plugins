@@ -686,11 +686,13 @@ def observe_repository_plan() -> PlanObservation:
     codex_catalog = (checkout / CODEX_CATALOG_PATH).read_bytes()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
         ambient_environment = _persistent_environment(
             temporary_root / "developer-state"
         )
         plan = build_isolated_installation_plan(
-            checkout,
+            mirror,
             temporary_root / "isolated-state",
             ambient_environment,
         )
@@ -717,7 +719,7 @@ def observe_persistent_plan(
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, claude_repository)
         environment = _persistent_environment(temporary_root)
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
@@ -759,7 +761,7 @@ def observe_persistent_execution(
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
@@ -784,7 +786,7 @@ def observe_persistent_catalog_subset_plans() -> tuple[
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         preflight = build_persistent_preflight(mirror, environment)
@@ -855,7 +857,7 @@ def observe_first_persistent_cli() -> PersistentCliObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         runner = RecordingRunner(installed={agent: frozenset() for agent in Agent})
@@ -881,7 +883,7 @@ def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         agents_root = Path(environment[CODEX_HOME_ENV]) / CODEX_HOME_AGENTS_PATH
@@ -952,7 +954,7 @@ def observe_interrupted_reconciliation() -> InterruptedReconciliationObservation
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         agents_root = Path(environment[CODEX_HOME_ENV]) / CODEX_HOME_AGENTS_PATH
@@ -994,7 +996,7 @@ def observe_agent_home_collision() -> AgentHomeCollisionObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         preflight = build_persistent_preflight(mirror, environment)
@@ -1033,7 +1035,7 @@ def observe_scope_split() -> ScopeSplitObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         preflight = build_persistent_preflight(mirror, environment)
@@ -1071,7 +1073,7 @@ def observe_claude_user_collision() -> CollisionObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         settings_path = temporary_root / "claude" / "settings.json"
@@ -1099,7 +1101,7 @@ def observe_invalid_persistent_selection() -> SelectionRejectionObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         installed = generated_agent_subsets(mirror, include_spec_tree=False)
@@ -1123,7 +1125,7 @@ def observe_invalid_persistent_selections() -> tuple[
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         catalogs = _catalogs_from_documents(mirror)
@@ -1155,10 +1157,13 @@ def observe_invalid_isolated_selection() -> SelectionRejectionObservation:
     invalid = generated_agent_subsets(checkout, include_spec_tree=False)
     rejection: str | None = None
     with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
         try:
             build_isolated_installation_plan(
-                checkout,
-                Path(temporary_directory) / "state",
+                mirror,
+                temporary_root / "state",
                 os.environ,
                 claude_plugins=tuple(invalid[Agent.CLAUDE]),
                 codex_plugins=tuple(invalid[Agent.CODEX]),
@@ -1185,9 +1190,12 @@ def observe_isolated_subset_plan() -> IsolatedSubsetPlanObservation:
     claude_catalog = (checkout / CLAUDE_CATALOG_PATH).read_bytes()
     codex_catalog = (checkout / CODEX_CATALOG_PATH).read_bytes()
     with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
         plan = build_isolated_installation_plan(
-            checkout,
-            Path(temporary_directory) / "state",
+            mirror,
+            temporary_root / "state",
             os.environ,
             claude_plugins=tuple(subsets[Agent.CLAUDE]),
             codex_plugins=tuple(subsets[Agent.CODEX]),
@@ -1206,7 +1214,7 @@ def observe_missing_codex_home() -> str | None:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         del environment[CODEX_HOME_ENV]
@@ -1225,8 +1233,10 @@ def _installation_plans(temporary_root: Path) -> tuple[InstallationPlan, ...]:
     variants are needed to cover the marketplace operation vocabulary.
     """
     checkout = repository_root()
+    isolated_checkout = temporary_root / "isolated-checkout"
+    mirror_installation_inputs(checkout, isolated_checkout)
     isolated = build_isolated_installation_plan(
-        checkout,
+        isolated_checkout,
         temporary_root / "isolated",
         os.environ,
     )
@@ -1235,7 +1245,7 @@ def _installation_plans(temporary_root: Path) -> tuple[InstallationPlan, ...]:
         (NONCANONICAL_MARKETPLACE_SOURCE, CANONICAL_MARKETPLACE_SOURCE)
     ):
         mirror = temporary_root / f"checkout-{index}"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, source)
         environment = _persistent_environment(temporary_root / f"state-{index}")
         preflight = build_persistent_preflight(mirror, environment)
@@ -1340,7 +1350,7 @@ def observe_noncanonical_reconciliation() -> ReconciliationObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         _copy_committed_project_settings(checkout, settings)
         document = _settings_json(settings)
@@ -1375,7 +1385,7 @@ def observe_failed_run_restore(operation: Operation) -> RestoreObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         _copy_committed_project_settings(checkout, settings)
         environment = _persistent_environment(temporary_root)
@@ -1401,7 +1411,7 @@ def observe_inspection_failure() -> FailureObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         preflight = build_persistent_preflight(mirror, environment)
@@ -1480,7 +1490,7 @@ def observe_codex_config_independence() -> ConfigObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         state = temporary_root / "state"
         before = build_isolated_installation_plan(mirror, state, os.environ)
@@ -1570,7 +1580,7 @@ def observe_real_first_install() -> RealFirstInstallObservation:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         selected_root = temporary_root / "selected-agent-state"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         _copy_committed_project_settings(
             checkout, mirror / CLAUDE_PROJECT_SETTINGS_PATH
         )
@@ -1620,7 +1630,7 @@ def observe_real_installation() -> RealInstallationObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         persistent_mirror = temporary_root / "persistent-checkout"
-        _mirror_installation_inputs(checkout, persistent_mirror)
+        mirror_installation_inputs(checkout, persistent_mirror)
         selected_environment = _persistent_environment(
             temporary_root / "selected-agent-state"
         )
@@ -1699,7 +1709,7 @@ def observe_real_installation() -> RealInstallationObservation:
         )
         mirror = temporary_root / "checkout"
         state = temporary_root / "state"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
         codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
         shipped_agents = _shipped_agent_snapshot(mirror)
@@ -1735,7 +1745,7 @@ def observe_real_installation() -> RealInstallationObservation:
         persistent_second = _tree_snapshot(persistent_root)
         subset_mirror = temporary_root / "subset-checkout"
         subset_state = temporary_root / "subset-state"
-        _mirror_installation_inputs(checkout, subset_mirror)
+        mirror_installation_inputs(checkout, subset_mirror)
         subset_selections = generated_agent_subsets(
             subset_mirror,
             include_spec_tree=True,
@@ -1876,7 +1886,7 @@ def observe_codex_subagent_discovery(
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         state = temporary_root / "state"
-        _mirror_installation_inputs(checkout, mirror)
+        mirror_installation_inputs(checkout, mirror)
         plan = build_isolated_installation_plan(
             mirror, state, credential_free_environment(original_environment)
         )
@@ -2046,7 +2056,7 @@ def _listed_plugins(agent: Agent, payload: str) -> PluginListing:
     )
 
 
-def _mirror_installation_inputs(source: Path, destination: Path) -> None:
+def mirror_installation_inputs(source: Path, destination: Path) -> None:
     destination.mkdir(parents=True)
     for relative_path in (CODEX_CATALOG_PATH, CLAUDE_CATALOG_PATH):
         target = destination / relative_path
@@ -2604,7 +2614,7 @@ def _build_run_plan(
 ) -> InstallationPlan:
     """One installation plan of the selected mode and configured source."""
     mirror = temporary_root / "checkout"
-    _mirror_installation_inputs(repository_root(), mirror)
+    mirror_installation_inputs(repository_root(), mirror)
     if isolated:
         return build_isolated_installation_plan(
             mirror, temporary_root / "state", os.environ

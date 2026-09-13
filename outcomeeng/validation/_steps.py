@@ -173,9 +173,9 @@ def _authored_text_files() -> tuple[str, ...]:
     )
 
 
-def runtime_token_files() -> tuple[str, ...]:
+def runtime_token_files(root: Path = Path("src")) -> tuple[str, ...]:
     # A raw runtime token in authored content ships into a generated target.
-    return _authored_text_files()
+    return tuple(str(path) for path in sorted(root.rglob("*")) if path.is_file())
 
 
 def scratch_path_files() -> tuple[str, ...]:

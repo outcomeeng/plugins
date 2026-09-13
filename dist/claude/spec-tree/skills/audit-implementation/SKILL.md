@@ -4,14 +4,13 @@ description: >-
   Implementation-audit orchestration methodology — discovers implementation
   languages, composes code, test, and architecture concern audits, and records
   one audit verification run.
-argument-hint: "<implementation audit request>"
-model: sonnet
-allowed-tools: Read, Bash(spx verification run:*), Bash(printf:*), Glob, Grep, Skill
+argument-hint: "<scope>"
+allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Bash(printf:*), Glob, Grep, Skill
 ---
 
 <objective>
 
-A rendered SPX verification-run verdict for the requested implementation scope, accompanied by its raw run token, with `terminalStatus` set to `approved` or `rejected` and each finding naming the stable producer identity, unit, violated rule, severity, location, message, and observed-versus-expected evidence.
+An authoritative SPX projection and raw run token for the requested implementation scope against its governing decisions, specifications, and language standards, with `terminalStatus` (`approved` or `rejected`) and findings naming the artifact, violated rule, and observed-versus-expected evidence, or a `BLOCKED` diagnostic identifying the request or command failure that prevented completion.
 
 </objective>
 
@@ -22,7 +21,7 @@ A rendered SPX verification-run verdict for the requested implementation scope, 
 - NEVER run deterministic verification — this orchestration composes agentic concern audits only.
 - NEVER include language-specific file extensions, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
 - ALWAYS treat the `spx verification run` command exit code as payload validity; NEVER hand-validate emitted payload JSON after SPX accepts it.
-- ALWAYS start the verification run immediately after validating the request, before reading changed project files or loading any language concern skill or its standards — every project inspection and concern result belongs to the open run.
+- ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading language concern standards — every substantive project inspection and concern result belongs to the open run.
 
 </constraints>
 
@@ -30,29 +29,60 @@ A rendered SPX verification-run verdict for the requested implementation scope, 
 
 <request_contract>
 
-The invocation request `$ARGUMENTS` carries:
+Capture `$ARGUMENTS` as the target scope selector before discovery. The target
+is one scope selector: `HEAD`, a branch, or an explicit three-dot
+range. `worktree:` before a selector explicitly requests an advisory audit of
+that committed scope plus the complete modified and untracked file set. Preserve
+the selector verbatim. Never infer advisory intent from a dirty checkout.
 
-- Repository path.
-- Changeset scope as `<base>..<head>` for `--scope`.
-- Optional live file list: omitted or `none` for reusable gate evidence, or the full modified and untracked repository-relative path list for an explicit advisory audit.
-- Governing node paths.
-- Deterministic verification already run, or the concrete reason the audit is intentionally blocked before verification.
-- Run-driver identity using the six published producer fields: producer kind, agent name, agent-owning plugin name, skill name, skill-owning plugin name, and invocation role.
+Run-driver identity uses the six published producer fields in the invocation
+context, separate from `$ARGUMENTS`. Accept that identity generically in direct and composed invocations;
+never infer it from a role name, installed plugin, or descriptive text.
 
-`$ARGUMENTS` carries those fields with these exact labels:
+Before reading project file bodies:
 
-```text
-Repository: <absolute-repository-path>
-Scope: <base>..<head> committed changeset scope
-Live file list: <none for reusable gate evidence | full modified and untracked paths for explicit advisory audit>
-Governing node(s): <full spx/... paths>
-Deterministic verification already run: <commands and results, or blocking reason>
-Run driver identity: <one JSON object with the six published producer fields>
-```
+1. Resolve the repository root with `git rev-parse --show-toplevel`.
+2. For an advisory target, remove only its `worktree:` prefix. Resolve the
+   remaining selector through the bundled consumer of `/scope-changeset`:
 
-If `$ARGUMENTS` is empty or lacks repository path, changeset scope, governing nodes, deterministic verification state, or run-driver identity, return BLOCKED before starting a verification run. Name the missing request fields and the exact `$ARGUMENTS` shape required to retry.
+   ```bash
+   python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}'
+   ```
 
-Use the supplied committed changeset scope and any supplied live file list exactly. Do not derive a different base, widen to the whole repository, collapse the scope to only one file, or reconstruct the live file list. A request that omits `Live file list` or supplies `Live file list: none` addresses the exact committed subject and may produce reusable gate evidence after applicable deterministic verification passes. A request carrying the full modified and untracked path list is an explicit advisory audit over the committed scope plus those live paths; inspect those paths, treat the result as advisory, and supply no reusable gate evidence.
+   Preserve its `base`, `head`, and `changed_paths`. Its three-dot changed paths
+   define the subject; the full endpoint IDs form the SPX scope identity
+   `{base}..{head}`. Never reinterpret that identity as a two-dot changed-file
+   query or substitute a local base branch.
+   Quote each substituted argument independently, applying the apostrophe
+   splice documented below when its value contains a literal apostrophe.
+3. Read `git status --porcelain=v1 -z --untracked-files=all` at the repository
+   root. An advisory audit includes every reported modified or untracked path,
+   consuming NUL-delimited paths and both paths of a rename or copy. A committed
+   audit includes none of those live changes. Read committed subject bodies with
+   `git show '{head}:{path}'` whenever the working file differs or the selected
+   head is not the checkout's `HEAD`; never silently audit a different version.
+   For a deleted path, inspect its base-side body and the committed deletion.
+4. Validate the generic run-driver identity and retain already-established
+   deterministic verification facts for this exact committed subject from the
+   available context. When evidence is unavailable, record it as unestablished;
+   never infer passing checks from a clean checkout or run them inside the audit.
+
+A missing selector or identity, failed repository discovery, or failed scope
+resolution returns `BLOCKED` with `runToken: not-started` and the exact missing
+input or command failure. Make no replacement scope selection or retry.
+
+Start the run after this metadata preparation. Then discover governing nodes
+from the resolved paths through the spec-tree evidence links and declared audit
+ownership, load their context read-only, and pass that discovered context to the
+concern skills. Never synchronize, rebase, or otherwise mutate the audited
+checkout. Preserve missing governance as coverage evidence under the existing
+coverage model. A committed audit is reusable only when the applicable
+deterministic verification is established as passing for that subject; an
+advisory audit never supplies reusable gate evidence.
+
+The bundled entrypoint is covered before shipping by real-Git stale-base
+resolution and nonexistent-repository scenarios. These exercise the shared
+provider through the entrypoint's actual process boundary.
 
 </request_contract>
 
@@ -71,7 +101,13 @@ spx verification run start \
   --input stdin
 ```
 
-The `--input` payload carries the request, the live file list or `none` when omitted, deterministic verification state, governing nodes, and whether the result is advisory. The command returns a JSON locator; extract its `runToken` field exactly and use that token for every later command. Never pass the whole JSON locator as `--run`.
+The `--input` payload carries the original selector, resolved repository and
+committed scope, discovered live file list or `none`, available deterministic
+verification facts, generic run-driver identity, and advisory status. Governing
+nodes are discovered after start and accompany the concern inputs and coverage
+evidence. The command returns a JSON locator; extract its `runToken` field exactly
+and use that token for every later command. Never pass the whole JSON locator
+as `--run`.
 
 Execute every state-changing `spx verification run` command serially. A tool
 response or tool-call batch contains at most one `start`, `scope add`, `finding
@@ -205,7 +241,7 @@ or top-level `expected`; SPX rejects or discards those shapes at the
 verification-type boundary.
 
 Choose the stdin form by harness for every `--input stdin` and
-`--payload stdin` command. Interactive Claude Code and Codex sessions use a
+`--payload stdin` command. Interactive sessions use a
 quoted heredoc after replacing the placeholder with one rendered JSON object
 from the contracts above:
 
@@ -221,7 +257,7 @@ spx verification run scope add \
 JSON
 ```
 
-Programmatic Claude Code and Codex runners, including hosted runners that
+Programmatic runners, including hosted runners that
 require one physical command line, use `printf` with the rendered JSON as one
 single-quoted argument. Keep the pipeline on one physical line even when it
 wraps visually; encode a literal apostrophe with the same single-quote splice:
@@ -275,7 +311,16 @@ Build an expected coverage inventory before invoking any language concern skill.
 
 Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; do not manufacture a language name, missing concern skill, unsupported unit, or coverage gap for a path outside implementation-audit ownership.
 
-Give every complete trio the supplied scope and any supplied live file list exactly. Each read-only concern skill owns language-specific applicability and identifies the subject paths it audited or returns `NOT_APPLICABLE`; the orchestration never substitutes its own file-pattern table. Build the pre-invocation inventory by discovered language and concern, then expand each concern's result into subject-path units when its final coverage status is known. A discovered language with an incomplete trio records the missing required concerns and rejects the run.
+Give every complete trio the resolved endpoint identities, exact three-dot
+changed paths, discovered governing context, and advisory live file list when
+requested. Require inspection of the selected committed bodies for committed
+audits. Each read-only concern skill owns language-specific applicability and
+identifies the subject paths it audited or returns `NOT_APPLICABLE`; the
+orchestration never substitutes its own file-pattern table. Build the
+pre-invocation inventory by discovered language and concern, then expand each
+concern's result into subject-path units when its final coverage status is known.
+A discovered language with an incomplete trio records the missing required
+concerns and rejects the run.
 
 Each expected unit records:
 
@@ -344,7 +389,13 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 
 When the run completes, return the exact run token and rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
 
-Return BLOCKED only when the invocation request is malformed before `spx verification run start` or SPX rejects a command. For malformed requests, name the absent labeled fields from `<request_contract>`. For command failures, include the exact command, stderr, and the coverage unit or payload key that failed. After a run starts, record a missing required concern skill as `missing-skill`, finish the run with terminal status `rejected`, render it, and return the run token plus projection.
+Return BLOCKED when target preparation fails before `spx verification run start`
+or SPX rejects a command. For missing input, name the selector or identity field
+that is absent. For command failures, include the complete diagnostic below;
+preparation failures use `runToken: not-started`, `payloadSource: none`, and
+`payloadKey: none`. After a run starts, record a missing required concern skill
+as `missing-skill`, finish with terminal status `rejected`, render, and return
+the run token plus projection.
 
 Use this complete blocked diagnostic after any SPX command failure; preserve
 each value verbatim from the invocation and command result:
@@ -380,99 +431,10 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 <failure_modes>
 
-**The request was empty or malformed.**
-
-What happened: Claude received no `$ARGUMENTS`, or `$ARGUMENTS` omitted repository path, changeset scope, governing nodes, deterministic verification state, or run-driver identity.
-
-Why it failed: Starting a verification run without the required selector fields creates durable audit state that cannot be tied to the intended scope.
-
-How to avoid: Return BLOCKED before `spx verification run start`, name the missing request fields, and request the exact `$ARGUMENTS` shape from `<request_contract>`.
-
-**A missing concern skill appeared after one concern already ran.**
-
-What happened: Claude invoked one concern skill before validating that the complete `audit-{lang}-{code|tests|architecture}` trio existed for every language partition.
-
-Why it failed: The coverage inventory belongs before concern dispatch, so a late missing-skill discovery can leave other concern results without a complete expected-unit classification.
-
-How to avoid: Validate and record the complete concern-skill trio for every language partition before invoking any concern skill. Record an absent required skill as `missing-skill`, then finish and render the rejected run.
-
-**Every changed file extension became a required language partition.**
-
-What happened: Claude treated documentation and manifest suffixes as programming languages, required concern skills that do not exist, rejected the run before dispatch, and skipped an installed implementation-language concern trio.
-
-Why it failed: Implementation-audit ownership comes from installed `code-{lang}` skill surfaces and their scope guidance, not from the set of suffixes present in a changeset. Artifact-specific auditors and whole-changeset review own files outside those programming-language surfaces.
-
-How to avoid: Discover languages from installed `code-{lang}` skills, validate the required concern trio for every discovered language before dispatch, then let each complete concern trio claim applicable paths or return `NOT_APPLICABLE`; omit non-implementation artifacts from the coverage inventory.
-
-**A finding was reported only in prose.**
-
-What happened: Claude named a concern finding in text without recording it through `spx verification run finding add`.
-
-Why it failed: Prose findings are not durable evidence and cannot appear in the rendered SPX projection.
-
-How to avoid: Record every finding through `spx verification run finding add`; use the rendered projection as the inspection surface.
-
-**Coverage labels replaced concern execution.**
-
-What happened: Claude inspected changed files before opening the verification run, then emitted three scope rows labeled `audited` with generic partition subjects and no observable concern-skill results.
-
-Why it failed: An `audited` label asserted completion without naming the inspected paths or preserving the concern invocation that produced the judgment. The sealed projection could not distinguish a completed concern audit from orchestration self-certification.
-
-How to avoid: Start the run before project inspection and invoke each concern skill while the run is open. After a concern returns, record one accepted scope row per inspected path using the exact path in `subject` and `priorContext.changedFilePartition`, then record every finding with the accepted path-scoped `unitId`. Assign `coverageStatus: audited` only to those completed path-scoped rows; never emit custom concern-result fields.
-
-**Scope events were persisted concurrently.**
-
-What happened: Claude launched multiple `spx verification run scope add` commands at the same time. The sealed render carried duplicate sequence numbers and skipped the intervening sequence even though the terminal status was approved.
-
-Why it failed: Concurrent mutations raced the journal's sequence assignment, so the rendered event prefix violated the strictly increasing, contiguous sequence contract.
-
-How to avoid: Execute every state-changing `spx verification run` command serially and wait for its exit before issuing the next mutation for that run.
-
-**An implementation code scope used semantic aliases instead of SPX fields.**
-
-What happened: Claude submitted `id`, `subjectPaths`,
-`expectedProducerIdentity`, and `executionProducerIdentity` for a code unit.
-`spx verification run scope add` exited `1` with
-`spx verification run scope add payload failed verification-type validation`,
-then Claude returned only the command and dropped the run token, exit code, and
-stderr.
-
-Why it failed: The published scope contract requires `unitId`, one string
-`subject`, nested `priorContext`, `expectedProducer`, and
-`recordedByRunDriver`. A command-only fallback also discarded the
-evidence needed to reproduce the rejected payload boundary.
-
-How to avoid: Construct scope and finding payloads from the exact JSON contracts
-in `<verification_run_contract>` and relay the complete blocked diagnostic from
-`<verdict_format>` without reformatting or omission.
-
-**An unquoted idempotency key split the command.**
-
-What happened: Claude passed
-`--idempotency-key implementation:<lang>:tests:reports/audit report` without
-quotes. The shell split the key at the space, so `spx` received a truncated key
-and a stray argument.
-
-Why it failed: An unquoted argument reaches the shell before `spx` sees it, so
-any shell metacharacter the key carries — including one inside the subject path
-of an otherwise correctly formatted key — becomes syntax rather than key text.
-A subject path carrying `|` yields a different symptom: the shell runs the
-fragment after it as a command, reporting `command not found` when the fragment
-carries no slash and the `PATH` lookup fails, `No such file or directory` when a
-slash-bearing fragment names nothing, and `Permission denied` when it names an
-existing non-executable file. Each symptom names a path fragment, which reads as
-a file problem rather than the quoting defect it is.
-
-How to avoid: Pass every key as one single-quoted argument,
-`--idempotency-key '<stable-scope-key>'`, per `<verification_run_contract>`.
-
-**Deterministic verification ran inside the audit.**
-
-What happened: Claude ran validation, tests, or evals during implementation-audit orchestration.
-
-Why it failed: This orchestration composes agentic concern audits only; running deterministic verification changes the audit boundary.
-
-How to avoid: Stop and return the boundary failure with the deterministic command that was attempted.
+For a failed preparation, concern invocation, payload submission, or projection,
+read [operational failure records](${CLAUDE_SKILL_DIR}/references/operational-failures.md)
+to diagnose the observed boundary. Preserve the exact diagnostic and apply the
+existing no-retry rule; these records authorize no replacement invocation.
 
 </failure_modes>
 
@@ -484,7 +446,7 @@ How to avoid: Stop and return the boundary failure with the deterministic comman
 - Every missing-skill, unsupported-path, or coverage-gap unit within a recognized implementation-language partition appears in the rendered projection rather than being hidden in prose; artifacts outside implementation-audit ownership produce no fabricated coverage unit.
 - Every audited concern preserves its complete non-empty inspected-path set as path-scoped units whose `subject` fields are the exact paths; every expected unit is audited only after the concern completes, and its finding count derives from accepted finding rows rather than a custom field.
 - The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
-- Every gate-eligible run addresses an exact committed head with the live file list omitted or set to `none`; an explicit advisory run may inspect the full supplied modified and untracked path list and supplies no reusable gate evidence.
+- Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>

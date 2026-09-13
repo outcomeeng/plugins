@@ -10,10 +10,12 @@ from outcomeeng.distribution.agents import (
     AGENT_SKILL_ENABLED_FIELD,
     CODEX_AGENT_ENV_SEPARATOR,
     CODEX_AGENT_ENV_VAR,
-    MODEL_MAPPINGS,
     READ_ONLY_SANDBOX_MODE,
     WEB_SEARCH_DISABLED,
 )
+from dataclasses import asdict
+from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.profiles import AGENT_PROFILES, AgentProfile
 from outcomeeng_testing.harnesses.agent_conversion import (
     CODEX_BLOCK_MCP_AGENT_FIXTURE,
     CODEX_FLOW_MCP_AGENT_FIXTURE,
@@ -25,7 +27,6 @@ from outcomeeng_testing.harnesses.agent_conversion import (
     converted_folded_description_toml,
     converted_source_agent_toml,
     oracle_mapping,
-    oracle_optional_string,
     oracle_string,
     oracle_strings,
     parsed_toml_skill_config,
@@ -40,12 +41,11 @@ def test_agent_frontmatter_and_body_convert_to_codex_toml(tmp_path: Path) -> Non
     expected_name = oracle_string(expected, "name")
     expected_skills = oracle_strings(expected, "skills")
     expected_tools = oracle_strings(expected, "tools")
-    source_model = oracle_optional_string(expected, "model")
-
-    assert source_model is not None
+    profile = AgentProfile(oracle_string(expected, "profile"))
     assert parsed["name"] == expected_name
     assert parsed["description"] == oracle_string(expected, "description")
-    assert parsed["model"] == dict(MODEL_MAPPINGS)[source_model]
+    configuration = asdict(AGENT_PROFILES[Target.CODEX][profile])
+    assert {key: parsed[key] for key in configuration} == configuration
     assert parsed["web_search"] == WEB_SEARCH_DISABLED
     assert "sandbox_mode" not in parsed
     assert toml_table(toml_table(parsed, "shell_environment_policy"), "set") == {
@@ -73,10 +73,9 @@ def test_rendered_codex_agent_tree_converts_to_codex_toml(tmp_path: Path) -> Non
 
     assert parsed["name"] == oracle_string(expected, "name")
     assert parsed["description"] == oracle_string(expected, "description")
-    assert parsed["model"] == oracle_string(expected, "model")
-    assert parsed["model_reasoning_effort"] == oracle_string(
-        expected, "model_reasoning_effort"
-    )
+    profile = AgentProfile(oracle_string(expected, "profile"))
+    configuration = asdict(AGENT_PROFILES[Target.CODEX][profile])
+    assert {key: parsed[key] for key in configuration} == configuration
     assert parsed["sandbox_mode"] == oracle_string(expected, "sandbox_mode")
     assert parsed["nickname_candidates"] == list(
         oracle_strings(expected, "nickname_candidates")

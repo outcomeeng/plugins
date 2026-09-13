@@ -4,7 +4,6 @@ description: >-
   Go-specific architecture audit — judges the Go architecture target in
   scope for dependency injection, mocking prohibition, execution-level accuracy,
   Go anti-patterns, and ancestor consistency.
-model: sonnet
 allowed-tools: Read, Grep, Glob, Skill
 ---
 
