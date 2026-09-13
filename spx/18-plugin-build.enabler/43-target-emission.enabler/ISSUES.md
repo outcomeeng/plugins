@@ -8,7 +8,6 @@
 | ------------------------------------------------------------------------------------------------ | ---------------------------- |
 | `claude_output_preserves_skill_dir_token`                                                        | `target-emission.md` line 15 |
 | `codex_output_rewrites_skill_dir_token`                                                          | lines 16 and 21              |
-| `skill_dir_escape_preserves_authoring_guidance`                                                  | line 17                      |
 | `codex_skill_frontmatter_strips_claude_fields`                                                   | line 18                      |
 | `target_scoped_includes_emit_only_to_matching_tree`, `repeated_include_emits_shared_source_once` | line 19                      |
 | `outputs_exclude_execution_time_injection`                                                       | line 20                      |
