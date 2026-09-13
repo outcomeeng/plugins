@@ -4,9 +4,11 @@ PROVIDES the complete Rust development workflow — architecture, testing, imple
 SO THAT Rust projects using spec-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality and soundness
 
-The rust plugin contains 9 skills following the foundational + language-specific pattern: `/rust-standards` (reference), `/rust-architecture-standards` (reference), `/rust-test-standards` (reference), `/test-rust`, `/code-rust`, `/audit-rust-code`, `/audit-rust-tests`, `/architect-rust`, `/audit-rust-architecture`. The `rust-simplifier` agent preloads its skill; the `audit-rust-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors, per `spx/21-spec-tree.enabler/17-audit.adr.md`. Rust `unsafe`/FFI soundness is part of the Rust code audit (`audit-rust-code`).
+The Rust plugin composes foundational methodology with language-specific standards and workflows. Its `rust-simplifier` definition invokes `/simplify-rust` and relays its result. The `audit-rust-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors, per `spx/21-spec-tree.enabler/17-audit.adr.md`. Rust `unsafe`/FFI soundness is part of the Rust code audit (`audit-rust-code`).
 
 ## Assertions
+
+- ALWAYS: `/simplify-rust` owns the simplification contract for changed Rust implementation: independently discover scope and governing evidence, preserve behavior and ownership semantics, invoke `/code-rust` for edits, and report changed paths and verification results. Its instructions preserve tests and evidence, block changes lacking behavioral coverage, and limit recovery to its own edits ([audit])
 
 ### Compliance
 

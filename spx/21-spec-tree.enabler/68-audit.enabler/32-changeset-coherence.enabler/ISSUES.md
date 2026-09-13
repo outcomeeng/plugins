@@ -3,9 +3,11 @@
 ## Scope-resolver extraction awaits a published SPX CLI capability
 
 `src/plugins/spec-tree/skills/audit-changeset-coherence/scripts/resolve_scope.py`
-runs to 150 lines — base and head commit identity plus the changed-file set the
-coherence audit classifies, emitted as one JSON object so the audit resolves its
-own scope rather than requiring a caller-prepared packet. Past fifty lines
+is the CLI entrypoint for the shared `resolve_committed_scope` provider in
+`src/plugins/spec-tree/skills/scope-changeset/scripts/changeset_scope.py`.
+It emits base and head commit identity plus the changed-file set as one JSON
+object so the audit resolves its own scope. The entrypoint and provider each
+exceed fifty lines. Past fifty lines
 `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves
 into the SPX CLI once the script proves its value; the resolver has proven its
 value in use, so extraction is what it owes.

@@ -1,5 +1,33 @@
 # Issues: Prose Plugin
 
+## Strong model selection for prose auditing has no recorded justification
+
+`src/plugins/prose/agents/prose-auditor.md` selects the central Strong profile.
+`src/plugins/prose/skills/audit-prose/SKILL.md` retains its invoking session's
+configuration, as every skill does. `spx/43-prose.enabler/prose.md` declares the audit's behavior and
+output contract but gives no requirement or rationale for a strong model, and
+this node carries no comparative evidence establishing that the standard profile
+cannot meet its quality requirements.
+
+The shared profile policy permits an explicit Strong selection, but that
+permission supplies no justification for this role's selection. The authoring
+policy reconciliation is tracked in
+`spx/43-instructions.enabler/21-subagents.enabler/ISSUES.md`.
+
+**Required handling.** Establish whether prose auditing needs the strong profile
+by comparing standard and strong profiles against the same audit cases and
+quality criteria, with effort and cost recorded. Either document the requirement
+and its evidence in the governing decision and spec, or select the standard
+profile in the agent. A role's name or its existing assignment is
+insufficient justification. Keep standard and strong as distinct model profiles
+regardless of which profile this role selects.
+
+**Disposition and revisit condition.** The operator requested tracking this
+decision separately while the remaining model-policy interview proceeds. This
+entry changes no model assignment. Revisit when the comparative audit evidence
+is available, or when the operator explicitly decides the quality-versus-cost
+trade-off; reconcile the general auditor policy in the same change.
+
 ## Eval evidence for the prose surface stays deferred
 
 The style-adherence and structure-conformance evals for the prose surface remain unwritten by operator decision: the eval harness is under repair in a separate concurrent effort, and no spec node names that effort yet, so this entry is the owning record rather than a pointer. Revisit when the eval surface is operational.

@@ -86,11 +86,11 @@ Required handling:
 
 ## 8. Auditor agent model declaration convention
 
-The auditor agents declare their model two ways. `src/plugins/instructions/agents/skill-auditor.md`, `src/plugins/instructions/agents/subagent-auditor.md`, and `src/plugins/spec-tree/agents/implementation-auditor.md` use the build-time term `model: "{{! term('configured_agent_auditor_model') !}}"`, which renders `sonnet` for Claude and the Codex standard model for Codex. The five remaining spec-tree auditor agents hardcode `model: sonnet`, which reaches Codex as the literal `sonnet` and is translated to the Codex standard model at install time by `MODEL_MAPPINGS` in `outcomeeng/distribution/agents.py`. Both forms select the same model on both runtimes, so neither is broken; the divergence is which layer owns the per-runtime mapping — the build or the install-time converter.
-
-The divergence is invisible in the authored files: an author copying a hardcoded auditor as a template gets the literal form, and an author copying a term-form auditor gets the term form, with nothing naming either as canonical.
-
-Required handling: decide which layer owns per-runtime model selection for agent frontmatter, record it in the agent-authoring standards, then sweep the eight auditor agents onto the chosen form. Deciding one agent at a time reproduces the divergence, so this is not a per-file edit. Gate changed agents with `instructions:subagent-auditor`.
+All authored agents select one central profile, and the generator resolves its
+complete native configuration directly for each harness. Independent model and
+effort mappings are removed. The remaining authoring work is to record the
+profile-only contract in `/subagent-standards`, make creator and auditor guidance
+consume it, and gate changed agents with `instructions:subagent-auditor`.
 
 ## 9. Audit-skill target-argument declaration convention
 

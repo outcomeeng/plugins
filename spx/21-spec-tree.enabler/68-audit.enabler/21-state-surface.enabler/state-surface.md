@@ -8,7 +8,8 @@ CAN record current-run coverage, findings, terminal state, and run-set selector 
 
 ### Compliance
 
-- ALWAYS: each authored and generated implementation-audit runtime directory contains exactly `SKILL.md`, with no plugin-side script, state file, lock file, or other runtime artifact ([test](tests/test_implementation_audit_runtime.compliance.l1.py))
+- ALWAYS: each authored and generated implementation-audit directory contains only its skill instructions, operational failure reference, and stateless scope-resolution entrypoint; audit state, lock files, verdict scripts, and unrelated artifacts are absent ([test](tests/test_implementation_audit_runtime.compliance.l1.py))
+- ALWAYS: the scope-resolution entrypoint consumes the canonical shared changeset provider and neither decides an audit verdict nor reads or writes audit state ([audit])
 - ALWAYS: implementation-audit orchestration directs persistence and projection through `spx verification run`; the plugin runtime records no audit state of its own ([audit])
 - NEVER: implementation-audit orchestration directs a verifier to write state to `.spx/audits/`, a lock file, a path inside `spx/`, or another tracked product directory ([audit])
 - ALWAYS: implementation-audit orchestration directs each verifier to preserve audit class, audit kind, stable producer identity, subject path, changed-file partition, language partition, concern partition, and producer provenance in SPX scope and finding payloads so run-set projection selects prior audit context without parsing rendered output ([audit])

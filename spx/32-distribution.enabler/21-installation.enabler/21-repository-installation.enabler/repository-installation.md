@@ -22,6 +22,10 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
 
 ### Mappings
 
+- Every target/profile pair in `outcomeeng.distribution.profiles.AGENT_PROFILES`
+  maps to one native-profile probe row whose immutable identifier, complete native
+  configuration, disposable state root, and artifact paths derive from that
+  registry entry. ([test](tests/test_native_profile_execution.mapping.l1.py))
 - For each supported agent, a generated valid installed subset containing `spec-tree` and drawn from the plugins the canonical marketplace publishes maps through `just install-marketplace` to exactly those catalog plugins for that agent, with no published plugin reported as pending and the project's activation selection preserved. ([test](tests/test_repository_installation.mapping.l3.py))
 - Each isolated verification selection — the complete committed catalogs and a generated valid subset containing `spec-tree` — maps to registration of the invocation checkout and exactly that selection reported as installed and enabled by the corresponding real agent CLI. ([test](tests/test_repository_installation.mapping.l3.py))
 - For each supported agent, an explicitly selected valid isolated subset maps to a plan containing exactly its members in catalog order. ([test](tests/test_repository_installation.mapping.l1.py))
@@ -34,6 +38,25 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
 - ALWAYS: subscription discovery checks native file-store write-through compatibility before linking only the selected saved-login file into disposable state, then serializes participating uses and reports detected file, link, or account replacement without restoring an older copy. ([test](tests/test_repository_installation.compliance.l1.py))
 - NEVER: subscription discovery implements OAuth refresh, migrates a credential store, or invokes login or logout against a home linked to the saved login; native refresh persists through the file link and cleanup leaves its target intact. ([test](tests/test_repository_installation.compliance.l1.py))
 - NEVER: discovery exposes initial or refreshed credentials in arguments, child credential variables, returned captures, or exceptions; API and workspace-token login receive their respective credential only through stdin in disposable state. ([test](tests/test_repository_installation.compliance.l1.py))
+- ALWAYS: for every native-profile probe row, the producer materializes the
+  native definition, retains configuration/loading/result artifacts, removes
+  ambient model and effort overrides, passes only the selected harness
+  credential, and invokes its native-child command exactly once; a failed row
+  records its terminal condition without a retry, credential fallback, profile
+  substitution, or alternate launch. ([test](tests/test_native_profile_execution.compliance.l1.py))
+- ALWAYS: release evidence retains configuration, native loading, and one
+  minimal isolated execution result for every supported harness/profile
+  combination declared in `spx/15-subagent-execution.pdr.md`; each row derives
+  its complete configuration from the central profile owner, uses disposable
+  state, and makes one native subagent invocation. The retained artifacts
+  distinguish definition loading, parent-session configuration, and the child
+  invocation result. For Codex, the retained result includes one native
+  app-server read of the spawned receiver thread from the disposable state,
+  carrying the child role, model, effort, and completion evidence that exec
+  JSONL omits. An independent Auditor judges the actual artifacts and result.
+  A missing credential, failed load, or unusable launch is reported
+  without retry, credential fallback, profile substitution, or another launch
+  mechanism ([audit]).
 - ALWAYS: persistent installation places every plugin's generated Codex agent definitions in the selected `CODEX_HOME/agents/` directory beside the skill content they invoke, leaving definitions outside the marketplace's recorded ownership unchanged ([test](tests/test_repository_installation.compliance.l1.py))
 - ALWAYS: marketplace reconciliation leaves exactly one current marketplace-owned definition for every authored Codex agent in the selected agent home and removes marketplace-owned definitions for agents or plugins absent from the current committed catalog ([test](tests/test_repository_installation.compliance.l1.py))
 - ALWAYS: a scope split — plugin-owned agent definitions in a checkout whose invoked skill content lives in the selected agent home — stops installation before mutation, reports every mismatched definition, and directs removal of byte-identical plugin copies while identifying changed or unrecognized copies as collisions for inspection ([test](tests/test_repository_installation.compliance.l1.py))

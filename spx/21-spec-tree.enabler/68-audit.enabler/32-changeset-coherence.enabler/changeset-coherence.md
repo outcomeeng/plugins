@@ -9,6 +9,9 @@ CAN reject accumulated programs of work before expensive implementation audits a
 ### Scenarios
 
 - Given a feature branch whose local base ref lags `origin/<base>` by an already-merged commit, when the audit resolves its own committed scope, then the resolved scope carries the branch's own change and excludes the already-merged file ([test](tests/test_resolve_scope.scenario.l1.py))
+- Given a named branch, when its scope is resolved while another branch is checked out, then the result carries the named branch's full commit identity and changed paths; resolving the same endpoints as an explicit three-dot range produces the same scope ([test](tests/test_resolve_scope.scenario.l1.py))
+- Given a repository without a configured remote base or an explicit range missing its head endpoint, when the resolver is invoked, then it exits unsuccessfully with a scope-resolution diagnostic ([test](tests/test_resolve_scope.scenario.l1.py))
+- Given a nonexistent repository path, when the resolver receives it through `--repo`, then it exits unsuccessfully with a scope-resolution diagnostic naming that path and emits no scope JSON or Python traceback ([test](tests/test_resolve_scope.scenario.l1.py))
 
 ### Compliance
 
