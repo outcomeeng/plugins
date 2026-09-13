@@ -39,9 +39,10 @@ def prepare_profile_build(
     root: Path, field: str, value: str, *, skill: bool = False
 ) -> tuple[Path, Path]:
     """Materialize one invalid authoring input beside existing generated state."""
+    encoded_value = json.dumps(value).replace("{", "\\u007b")
     content = (
         "---\nname: reviewer\ndescription: Review.\n"
-        + f"{field}: {json.dumps(value)}\n---\nReview.\n"
+        + f"{field}: {encoded_value}\n---\nReview.\n"
     )
     builder = SrcTreeBuilder(root)
     builder.add_plugin(
