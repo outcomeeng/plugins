@@ -941,6 +941,25 @@ def emit_skill(
     shutil.copymode(emission.source, destination)
 
 
+def _validate_emission_profiles(projection: EmissionProjection, src_root: Path) -> None:
+    """Reject incompatible configuration before the build mutates its outputs."""
+    for target in _Target:
+        resolve_profile(target)
+    for emission in projection.emissions:
+        if not _is_rendered_text(emission.source):
+            continue
+        rendered = render_projected_emission_text(emission, src_root=src_root)
+        if emission.source.parent.name == AGENTS_SUBDIR_NAME:
+            agent = parse_agent_text(
+                rendered, source_path=emission.source, name=emission.relative_path.stem
+            )
+            resolve_profile(emission.target, agent.profile)
+        elif emission.source.name == SKILL_FILENAME:
+            reject_configuration_overrides(
+                dict.fromkeys(frontmatter_field_names(rendered))
+            )
+
+
 def build(
     src_root: Path,
     dist_root: Path,
@@ -960,21 +979,7 @@ def build(
     Raises SourceFormatError if src_root's tree shape is invalid.
     """
     projection = project_emissions(src_root)
-    for target in _Target:
-        resolve_profile(target)
-    for emission in projection.emissions:
-        if not _is_rendered_text(emission.source):
-            continue
-        rendered = render_projected_emission_text(emission, src_root=src_root)
-        if emission.source.parent.name == AGENTS_SUBDIR_NAME:
-            agent = parse_agent_text(
-                rendered, source_path=emission.source, name=emission.relative_path.stem
-            )
-            resolve_profile(emission.target, agent.profile)
-        elif emission.source.name == SKILL_FILENAME:
-            reject_configuration_overrides(
-                dict.fromkeys(frontmatter_field_names(rendered))
-            )
+    _validate_emission_profiles(projection, src_root)
     runner = _run_formatter if formatter_runner is None else formatter_runner
     formatter = _require_formatter(
         formatter_probe=formatter_probe,
@@ -1020,7 +1025,6 @@ def build(
         _copy_unrendered_file(
             emission,
             dist_root=dist_root,
-            src_root=src_root,
         )
 
     _run_dist_formatter(
@@ -1337,9 +1341,7 @@ def _emit_converted_agent(
     _write_text(destination, converted)
 
 
-def _copy_unrendered_file(
-    emission: ProjectedEmission, *, dist_root: Path, src_root: Path
-) -> None:
+def _copy_unrendered_file(emission: ProjectedEmission, *, dist_root: Path) -> None:
     destination = dist_root / emission.target.value / emission.relative_path
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(emission.source, destination)
@@ -1826,6 +1828,14 @@ def _validate_source_tree(src_root: Path) -> None:
     if not plugins_root.is_dir():
         raise SourceFormatError(f"missing source plugins directory: {plugins_root}")
 
+    _validate_shared_topics(src_root)
+    _validate_templates(src_root)
+    for plugin_root in sorted(path for path in plugins_root.iterdir() if path.is_dir()):
+        _validate_plugin_tree(plugin_root, src_root)
+
+
+def _validate_shared_topics(src_root: Path) -> None:
+
     shared_root = src_root / SHARED_DIR_NAME
     if shared_root.exists():
         for topic_root in sorted(
@@ -1837,6 +1847,8 @@ def _validate_source_tree(src_root: Path) -> None:
                     f"shared topic missing fragment.md: {topic_root}"
                 )
 
+
+def _validate_templates(src_root: Path) -> None:
     templates_root = src_root / TEMPLATES_DIR_NAME
     if templates_root.exists():
         for template_root in sorted(
@@ -1848,22 +1860,23 @@ def _validate_source_tree(src_root: Path) -> None:
                     f"{template_root.relative_to(src_root)}"
                 )
 
-    for plugin_root in sorted(path for path in plugins_root.iterdir() if path.is_dir()):
-        for child in sorted(path for path in plugin_root.iterdir() if path.is_dir()):
-            if child.name not in PLUGIN_SUBDIRS:
+
+def _validate_plugin_tree(plugin_root: Path, src_root: Path) -> None:
+    for child in sorted(path for path in plugin_root.iterdir() if path.is_dir()):
+        if child.name not in PLUGIN_SUBDIRS:
+            raise SourceFormatError(
+                f"unexpected plugin subdirectory {child.relative_to(src_root)}"
+            )
+    skills_root = plugin_root / SKILLS_SUBDIR_NAME
+    if skills_root.exists():
+        for skill_root in sorted(
+            path for path in skills_root.iterdir() if path.is_dir()
+        ):
+            if not (skill_root / SKILL_FILENAME).is_file():
                 raise SourceFormatError(
-                    f"unexpected plugin subdirectory {child.relative_to(src_root)}"
+                    f"skill directory missing {SKILL_FILENAME}: "
+                    f"{skill_root.relative_to(src_root)}"
                 )
-        skills_root = plugin_root / SKILLS_SUBDIR_NAME
-        if skills_root.exists():
-            for skill_root in sorted(
-                path for path in skills_root.iterdir() if path.is_dir()
-            ):
-                if not (skill_root / SKILL_FILENAME).is_file():
-                    raise SourceFormatError(
-                        f"skill directory missing {SKILL_FILENAME}: "
-                        f"{skill_root.relative_to(src_root)}"
-                    )
 
 
 if __name__ == "__main__":

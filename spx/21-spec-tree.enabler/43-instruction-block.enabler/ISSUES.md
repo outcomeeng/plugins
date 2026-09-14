@@ -1,5 +1,28 @@
 # Issues: Instruction Block
 
+## Topology mapping evidence owns its cases in the linked test
+
+`tests/test_instruction_block.mapping.l1.py:13` declares `_TopologyCase`, and
+`_topology_cases()` selects the finite topology cases and expected region bodies
+inside the linked test. The Python test standards require case data to come from
+its semantic owner and expected results to follow an independent construction law.
+The case table leaves the evidence dependent on the test author's selected examples.
+
+**Evidence**: the isolated test-evidence audit of this node at
+`4d1bd7bba4f66612ae57221295b624b215c65f5e` returned `REJECTED`, finding `f-001`,
+for test-owned data. Its trace reaches the instruction-block mapping harness,
+generator, distribution module, and shipped instruction-block script.
+
+**Settlement condition**: the mapping evidence covers the complete finite topology
+domain through a source-owned enumeration or meaningful generator and derives
+expected region bodies independently, with every comparison in the linked test.
+Moving the same hand-picked table into a generator alone does not settle the issue.
+
+**Disposition**: Change #41 modifies the separate compliance test's exception
+boundaries. The mapping test is outside that changeset's diff. The auditor-verdict
+rule in `spx/15-merging.pdr.md` requires this finding to be recorded here and keeps
+it from blocking that corrective merge; its rejected verdict remains recorded.
+
 ## `/update-instruction-block` Step 5 reads as one paragraph over six topologies
 
 Step 5 of `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md` verifies six distinct first-encounter topologies — an established surface with a valid region, the bootstrap span mapping, one file missing, both files missing, a delegating body adopted, and tracked-versus-untracked recoverability — in one unbroken paragraph. An operator scanning it after a run parses the whole block to find the branch matching their topology. Step 3's ambiguity reports already use the per-branch bullet shape this section wants.
