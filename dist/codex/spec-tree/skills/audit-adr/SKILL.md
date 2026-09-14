@@ -13,7 +13,7 @@ A verdict on one ADR against the ADR evidence model — APPROVED or REJECTED, wi
 
 </objective>
 
-<essential_principles>
+<constraints>
 
 **ARCHITECTURE BY DEFINITION.**
 
@@ -34,10 +34,6 @@ ADRs state architecture truth. "The build emits one wheel per plugin" — not "W
 **LANGUAGE COMPOSITION BOUNDARY.**
 
 Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-<lang>-architecture` in Step 5b. The language skill judges only those concerns; this skill owns section structure, atemporal voice, and tag validity from the canonical template.
-
-</essential_principles>
-
-<constraints>
 
 - NEVER modify the ADR under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - ALWAYS derive the valid section set from the canonical ADR template before judging structure — never from memory.
@@ -124,7 +120,11 @@ This skill owns section structure, atemporal voice, and tag validity from the ca
 
 Classify the ADR from its governed implementation surface and the committed changeset established in Step 1. When the decision constrains no implementation language, classify it as language-neutral and skip composition. Otherwise preserve every implementation-language partition the decision constrains, including cross-language decisions; the repository's predominant language never narrows that set.
 
-For every discovered partition, require the matching `audit-<lang>-architecture` skill and invoke it through the Skill tool. Append its distinct rows (`testability-in-verification`, `mocking-prohibition`, `level-accuracy`, …) to this verdict's `rows` array; the language skill judges only language-specific concerns and never re-judges section structure, voice, or tags. When a language-specific ADR has no reliable partition or the required skill cannot load, append a `FAIL` row named `language-routing-unavailable` or `language-skill-unavailable` with a blocking finding instead of guessing or approving incomplete coverage.
+For every discovered partition, require the matching `audit-<lang>-architecture` skill and invoke it through the Skill tool with the ADR path. The language skill judges only language-specific concerns and never re-judges section structure, voice, or tags. When a language-specific ADR has no reliable partition or the required skill cannot load, append a `FAIL` row named `language-routing-unavailable` or `language-skill-unavailable` with a blocking finding.
+
+Before consuming a composed result, validate it against the invoked skill's declared verdict contract: the schema and skill identity, matching target, every required concern row exactly once, allowed statuses, required finding fields, explanations for `NOT_APPLICABLE`, and agreement between the rows and overall result. An absent, malformed, incomplete, mismatched, or inconsistent result produces a `FAIL` row and blocking finding named `language-result-invalid`, identifying the failed contract check; accept no partial rows from that result. This boundary validates returned structure without repeating the language audit's judgment.
+
+Append only validated rows. Qualify each composed row name with its language to preserve distinct concerns across partitions. Map its findings to this verdict's fields: retain the rule, message, observed, and expected evidence, use the child location or file as `location`, and mark findings that reject the ADR as `blocking`. A composed `FAIL` always rejects the ADR; no omitted row or empty result counts as passing coverage.
 
 One case is not a composition failure. When the governed context establishes that the changeset itself ships the ADR's language plugin, unpublished and uninstalled in this session, no `audit-<lang>-architecture` skill can exist yet. Judge the decision directly against the skill files its rules name and the cross-language decisions, and record a row named `language-skill-unpublished` as `NOT_APPLICABLE` with the evidence establishing that case. An absent installed skill alone never establishes unpublished status.
 
@@ -161,7 +161,7 @@ The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_
 }
 ```
 
-Each finding carries `rule`, `severity: "blocking"`, `location`, `message`, `observed`, and `expected`. The `rule` field carries the violation pattern (`missing-target`, `missing-section`, `temporal-voice`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `language-routing-unavailable`, or `language-skill-unavailable`).
+Each finding carries `rule`, `severity: "blocking"`, `location`, `message`, `observed`, and `expected`. Native findings use `missing-target`, `missing-section`, `temporal-voice`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `language-routing-unavailable`, `language-skill-unavailable`, or `language-result-invalid`; validated composed findings retain the invoked skill's rule identifier.
 
 </verdict_format>
 

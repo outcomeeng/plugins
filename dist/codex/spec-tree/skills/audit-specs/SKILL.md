@@ -14,7 +14,7 @@ A verdict on one output or variant spec, including prior enabler/outcome forms �
 
 </objective>
 
-<essential_principles>
+<constraints>
 
 **VERIFICATION TYPE MUST FIT THE CLAIM.**
 
@@ -40,10 +40,6 @@ A node states product truth. "The status rollup reports failing when any child f
 **ARTIFACT BOUNDARY.**
 
 Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test-evidence quality is audited by `/audit-tests`. This audit checks the node spec's own form, not its tests or its decisions.
-
-</essential_principles>
-
-<constraints>
 
 - NEVER modify the node spec under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - ALWAYS judge each assertion's verification type against `/verify` and each test assertion type against `/test` — never accept a present tag as valid by its mere presence.
@@ -109,7 +105,7 @@ Check EVERY section for temporal language:
 For each assertion under `## Assertions`:
 
 1. An untagged assertion directly under `## Assertions` is an authoring declaration; check its specificity and falsifiability without selecting evidence. For routed assertions, apply the foundation's malleability rule and canonical tag forms: test, eval, and probe carry paths; audit carries its rule slug, or the admitted pathless form for a toolchain without slug support. Missing required tags, duplicate or unsupported tags, and path-bearing mechanisms without a path are `invalid-tag`.
-2. Under `[test]`, the assertion type fits the claim's quantifier — apply the quantifier rule from `<essential_principles>` (a universal is never `scenario`). Reject a type the `/test` router would not produce; do not relitigate a choice the router leaves open between equally valid types.
+2. Under `[test]`, the assertion type fits the claim's quantifier — apply the quantifier rule from `<constraints>` (a universal is never `scenario`). Reject a type the `/test` router would not produce; do not relitigate a choice the router leaves open between equally valid types.
 3. The tag is reachable for the claim's subject. When the claim's subject is the content of an authored prose or documentation artifact rather than executable behavior, `[test]` is unreachable — its only evidence reads the authored text and asserts on it (directly or through a fixture or harness that exposes or reads the artifact), proving the prose was authored rather than that code behaves. The tag belongs in `[eval]` (a graded judgment over the producer's structured verdict) or `[audit]` (a semantic constraint).
 
 **A required tag missing from a routed assertion, a duplicate tag, or an unsupported bare mechanism tag → REJECT — "invalid-tag." A `[test]` assertion type that contradicts the claim's quantifier → REJECT — "evidence-type-mismatch." `[test]` on an authored-prose claim → REJECT — "prose-coupling." An unfalsifiable draft → REJECT — "unfalsifiable-assertion."**

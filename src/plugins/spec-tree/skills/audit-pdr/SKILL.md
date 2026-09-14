@@ -14,13 +14,9 @@ A verdict on one PDR — APPROVED or REJECTED, with findings naming the section,
 
 </objective>
 
-<prerequisites>
+<constraints>
 
 Read the PDR evidence model's boundary guidance for content classification, property quality, and tag validity before auditing: `${CLAUDE_SKILL_DIR}/references/pdr-evidence-model.md`
-
-</prerequisites>
-
-<essential_principles>
 
 **PRODUCT BEHAVIOR, NOT ARCHITECTURE.**
 
@@ -35,10 +31,6 @@ PDRs state atemporal product truth without historical context. No references to 
 **BINARY VERDICT.**
 
 `APPROVED` or `REJECTED`. No middle ground.
-
-</essential_principles>
-
-<constraints>
 
 - NEVER modify the PDR under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - ALWAYS read the PDR evidence model before judging — derive the rule set from it, never from memory.
