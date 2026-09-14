@@ -10,6 +10,17 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.94.2
+
+### Fixed
+
+- **An implementation audit can no longer seal a narrowed inspection as a complete one.** `audit-implementation`'s pre-finish reconciliation compared the run's recorded units against the run's own planned inventory, so a plan narrowed before enumeration reconciled with itself and sealed `approved`. Stage 7 now reconciles against a fresh resolution of the same selector: every resolved path a discovered concern claimed carries a recorded unit, every remaining resolved path is named with the ownership reason it carries none, and a recorded subject set accounting for fewer paths than the resolver returned cannot seal. An observed run recorded 4 units for a 48-path changeset and sealed approved with zero findings.
+- **The resolved changed-path inventory reaches the run through a pipe instead of being retyped.** `resolve_scope.py` accepts `--audit-input`, a JSON object of the short values the invocation supplies, and merges it *beneath* the git-resolved scope; the skill pipes the result into `spx verification run start --input stdin`. A supplied `base`, `head`, or `changed_paths` key is discarded rather than honored. Previously the skill read the resolver's changed paths out and re-emitted them into a hand-composed payload; an observed run transcribed 47 of 48 paths, dropping two and substituting a third same-named file from another directory, with nothing downstream able to notice.
+
+### Changed
+
+- **`audit-implementation` hands every language trio the complete resolved changed-path set.** The run driver no longer pre-filters that set by extension, directory, or its own guess at applicability — each concern skill owns its language's applicability and answers for the paths it claims — and it records one scope unit per path a concern returned, never fewer and never a representative row standing for several. Leaving a path to another artifact-type auditor still records no coverage unit for it, but stage 7 now names that path and its ownership reason, so a reader can tell a path considered and left to its owner from a path never reached.
+
 ## 0.94.1
 
 ### Fixed

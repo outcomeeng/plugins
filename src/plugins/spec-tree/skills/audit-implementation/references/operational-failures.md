@@ -16,6 +16,8 @@ Observed implementation-audit failures and their causes and prevention.
 - `unrecovered_truncation`
 - `single_commit_subject`
 - `finding_before_standards`
+- `transcribed_inventory`
+- `vacuous_reconciliation`
 
 </contents>
 
@@ -228,3 +230,51 @@ repository's declared `spx/local/` overlays at stage 3 of
 before that load rather than recording it.
 
 </finding_before_standards>
+
+<transcribed_inventory>
+
+**The resolved path inventory was corrupted by being retyped**
+
+What happened: The resolver returned 48 changed paths for the audited head.
+Claude read them out of the resolver's output and retyped them into the
+`run start --input` payload, which reached the run carrying 47: two paths were
+dropped and a third was replaced by a same-named file from a different
+directory. Nothing later in the run referred to the resolver's output again, so
+the substitution was invisible until the run was compared against a fresh
+resolver invocation after it had sealed.
+
+Why it failed: A changed-path set is longer than a response reproduces
+reliably, and the paths in one repository differ by a single directory segment.
+Retyping such a list is a transcription task, and the contract gave the
+transcription no later referent that could contradict it.
+
+How to avoid: Pipe the resolver's output into `run start --input stdin` with
+`--audit-input` carrying only the short invocation-supplied values, per
+`<verification_run_contract>`. Never read `changed_paths` out of the resolver's
+output and re-emit them into a payload.
+
+</transcribed_inventory>
+
+<vacuous_reconciliation>
+
+**A narrowed plan reconciled with itself and sealed an approved run**
+
+What happened: Claude narrowed coverage to four paths of the resolved
+changeset, planned four units, recorded four units, confirmed at stage 7 that
+every planned unit carried a final status, and sealed the run `approved` with
+zero findings. Its own postmortem confirmed it had preserved no other inspected
+path. The projection reads as a complete approval of a changeset it never
+inspected.
+
+Why it failed: Reconciling recorded units against the run's own plan tests
+internal consistency, never correspondence to the changeset. A plan narrowed
+before enumeration reconciles perfectly, so the check that was meant to prevent
+a partial seal certified one instead.
+
+How to avoid: Reconcile at stage 7 against a fresh resolver invocation for the
+same selector, not against the plan. Every resolved path a discovered concern
+claimed carries a recorded unit, and every remaining resolved path is named with
+the ownership reason it carries none. A recorded subject set that accounts for
+fewer paths than the resolver returned is unreconciled and cannot seal.
+
+</vacuous_reconciliation>
