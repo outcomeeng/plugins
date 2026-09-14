@@ -64,7 +64,7 @@ Agent definitions are placed beside their skills because an agent whose plugin m
 - NEVER: persistent installation mutates Claude Code user scope; a user-scoped `outcomeeng` marketplace registration stops the run before its first state-changing command ([compliance])
 - ALWAYS: isolated verification confines `HOME`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and `CODEX_SQLITE_HOME` beneath caller-selected disposable state; subscription discovery may read and natively refresh only the selected saved-login file, leaving persistent installation state unchanged ([compliance])
 - ALWAYS: installation derives marketplace membership from committed per-agent catalogs — Codex in `.agents/plugins/marketplace.json` and Claude Code in `.claude-plugin/marketplace.json` ([mapping])
-- ALWAYS: marketplace-install diagnosis derives expected plugin state from the checkout's committed per-agent marketplace catalogs rather than from a plugin catalog embedded in shipped diagnostic output ([compliance])
+- ALWAYS: marketplace-install diagnosis bounds expected plugin membership by the checkout's committed per-agent marketplace catalogs; shipped diagnostic output embeds no expected plugin set ([compliance])
 - ALWAYS: isolated installation verifies every catalog plugin, a generated valid subset containing `spec-tree`, and a generated invalid subset omitting `spec-tree` in disposable homes without mutating persistent state ([compliance])
 
 ### Audit
