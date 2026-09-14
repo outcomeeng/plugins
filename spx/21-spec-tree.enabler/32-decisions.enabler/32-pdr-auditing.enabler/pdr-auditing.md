@@ -12,7 +12,7 @@ Evidence requires five properties checked in order:
 
 1. **Content classification** — every statement is about observable product behavior for the product's declared audience, not architecture or implementation
 2. **Property quality** — product properties are user-observable and falsifiable
-3. **Tag validity** — each verification rule carries a tag valid for its subsection, and a `### Testing` rule's assertion type fits the claim's quantifier
+3. **Declaration form and tag validity** — specific untagged rules directly under `## Verification` are valid authoring declarations; each rule in a routed subsection carries a valid tag, and a `### Testing` rule's assertion type fits the claim's quantifier
 4. **Atemporal voice** — the PDR states product truth, not history
 5. **Consistency** — the PDR does not contradict the product spec or ancestor PDRs
 
@@ -36,6 +36,9 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 "Observable" is grounded in the product document the audit loads, not a fixed end-user-application assumption. The product document declares the product's audience and the interaction surfaces through which that audience operates the product; content classification reads that declaration and judges each statement against it. When the audience operates the product through a command-line interface, a filesystem layout, a version-control topology, or another infrastructure surface, the CLI, filesystem, and version-control state that audience directly observes or operates is observable product behavior and belongs in the PDR. The architecture line falls at what the audience never operates: the internal algorithm by which a tool reaches an observable result, the data structures it holds in memory, the schema it persists, and the libraries or frameworks it depends on. A repository-layout decision a developer inspects on disk is product behavior; the in-memory cache the layout detector keys by path is architecture — even though both belong to the same tooling product.
 
 ## Assertions
+
+- Given a PDR with specific untagged rules directly under `## Verification`, alone or alongside valid routed subsections, when its declaration is audited, then absent draft tags and subsections cause no finding and all other declaration-quality checks remain applicable.
+- NEVER: approval of a PDR declaration establishes that its untagged rules have evidence or that the product exhibits the declared behavior.
 
 ### Scenarios
 

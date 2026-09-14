@@ -6,6 +6,9 @@ CAN operate within a structured, spec-first framework with deterministic context
 
 ## Assertions
 
+- ALWAYS: the foundation exposes the resolved absolute template directory in its live marker so authoring and auditing can read the same canonical templates independently.
+- ALWAYS: the foundation distinguishes valid untagged authoring declarations from the evidence required for Passing at each malleability, preserving verification selection as a separate step.
+
 - ALWAYS: root guides retain explicit standing authorization for every subagent
   supplied by a plugin in their complete authorized plugin list, requiring an
   active skill's explicit request before launch, per
