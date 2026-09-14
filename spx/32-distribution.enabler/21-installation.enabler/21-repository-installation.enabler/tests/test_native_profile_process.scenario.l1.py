@@ -11,20 +11,14 @@ from outcomeeng_testing.harnesses.native_profile_process import (
 )
 
 
-def test_parent_exit_returns_result_and_terminates_descendant() -> None:
-    with lingering_native_profile_process() as observation:
+def test_parent_exit_decodes_output_and_terminates_descendant() -> None:
+    with lingering_native_profile_process(output=b"done\xff") as observation:
         assert isinstance(observation.result, subprocess.CompletedProcess)
         assert observation.result.returncode == 0
-        assert observation.result.stdout
+        assert observation.result.stdout == "done\ufffd"
         assert observation.child.pid_path.is_file()
         assert observation.elapsed_seconds < PROMPT_RETURN_CEILING_SECONDS
         assert not observation.child.descendant_alive()
-
-
-def test_completed_result_replaces_malformed_output_bytes() -> None:
-    with lingering_native_profile_process(output=b"done\xff") as observation:
-        assert isinstance(observation.result, subprocess.CompletedProcess)
-        assert observation.result.stdout == "done\ufffd"
 
 
 def test_timeout_terminates_descendant_before_returning() -> None:
