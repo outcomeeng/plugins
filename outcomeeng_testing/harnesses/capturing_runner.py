@@ -63,9 +63,14 @@ class ControlledChild:
         return bool(state) and not state.startswith("Z")
 
 
-def _fork_script(pid_path: Path, *, parent_exits: bool) -> str:
+def _fork_script(
+    pid_path: Path,
+    *,
+    parent_exits: bool,
+    output: bytes = b"done",
+) -> str:
     parent_tail = (
-        "    sys.stdout.write('done')\n    sys.stdout.flush()\n    os._exit(0)\n"
+        f"    os.write(1, {output!r})\n    os._exit(0)\n"
         if parent_exits
         else f"    time.sleep({DESCENDANT_SLEEP_SECONDS})\n"
     )
@@ -82,13 +87,13 @@ def _fork_script(pid_path: Path, *, parent_exits: bool) -> str:
 
 
 @contextmanager
-def _controlled_child() -> Iterator[ControlledChild]:
+def _controlled_child(*, output: bytes = b"done") -> Iterator[ControlledChild]:
     with TemporaryDirectory() as tmp:
         pid_path = Path(tmp) / "descendant.pid"
         command = (
             sys.executable,
             "-c",
-            _fork_script(pid_path, parent_exits=True),
+            _fork_script(pid_path, parent_exits=True, output=output),
         )
         try:
             yield ControlledChild(command=command, pid_path=pid_path)
@@ -125,9 +130,11 @@ def never_returning_executable(
 
 
 @contextmanager
-def child_exiting_with_lingering_descendant() -> Iterator[ControlledChild]:
+def child_exiting_with_lingering_descendant(
+    *, output: bytes = b"done"
+) -> Iterator[ControlledChild]:
     """Yield a child that exits immediately while a descendant keeps the output stream open."""
-    with _controlled_child() as child:
+    with _controlled_child(output=output) as child:
         yield child
 
 

@@ -61,8 +61,8 @@ def run_profile_process(
 ) -> subprocess.CompletedProcess[str]:
     """Collect one bounded command and reap its owned process group on exit."""
     with (
-        TemporaryFile(mode="w+") as stdout_capture,
-        TemporaryFile(mode="w+") as stderr_capture,
+        TemporaryFile() as stdout_capture,
+        TemporaryFile() as stderr_capture,
         subprocess.Popen(
             argv,
             cwd=cwd,
@@ -87,11 +87,13 @@ def run_profile_process(
             process.wait()
         stdout_capture.seek(0)
         stderr_capture.seek(0)
-        stdout, stderr = stdout_capture.read(), stderr_capture.read()
+        stdout_bytes, stderr_bytes = stdout_capture.read(), stderr_capture.read()
         if timed_out is not None:
-            timed_out.output = stdout.encode()
-            timed_out.stderr = stderr.encode()
+            timed_out.output = stdout_bytes
+            timed_out.stderr = stderr_bytes
             raise timed_out
+        stdout = stdout_bytes.decode("utf-8", errors="replace")
+        stderr = stderr_bytes.decode("utf-8", errors="replace")
         return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
 
 

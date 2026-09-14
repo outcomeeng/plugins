@@ -29,9 +29,11 @@ class NativeProfileProcessObservation:
 
 
 @contextmanager
-def lingering_native_profile_process() -> Iterator[NativeProfileProcessObservation]:
+def lingering_native_profile_process(
+    *, output: bytes = b"done"
+) -> Iterator[NativeProfileProcessObservation]:
     """Run a real child and keep its process-state handle live for assertions."""
-    with child_exiting_with_lingering_descendant() as child:
+    with child_exiting_with_lingering_descendant(output=output) as child:
         yield _observe(child)
 
 
