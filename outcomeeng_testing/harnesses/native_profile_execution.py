@@ -11,7 +11,7 @@ import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, TemporaryFile
 
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
@@ -60,25 +60,41 @@ def run_profile_process(
     timeout: float,
 ) -> subprocess.CompletedProcess[str]:
     """Collect one bounded command and reap its owned process group on exit."""
-    with subprocess.Popen(
-        argv,
-        cwd=cwd,
-        env=env,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        start_new_session=True,
-    ) as process:
+    with (
+        TemporaryFile() as stdout_capture,
+        TemporaryFile() as stderr_capture,
+        subprocess.Popen(
+            argv,
+            cwd=cwd,
+            env=env,
+            stdin=subprocess.PIPE,
+            stdout=stdout_capture,
+            stderr=stderr_capture,
+            text=True,
+            start_new_session=True,
+        ) as process,
+    ):
+        timed_out: subprocess.TimeoutExpired | None = None
         try:
-            stdout, stderr = process.communicate(input_text, timeout=timeout)
-            return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
+            process.communicate(input_text, timeout=timeout)
+        except subprocess.TimeoutExpired as error:
+            timed_out = error
         finally:
             try:
                 os.killpg(process.pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
-            process.communicate()
+            process.wait()
+        stdout_capture.seek(0)
+        stderr_capture.seek(0)
+        stdout_bytes, stderr_bytes = stdout_capture.read(), stderr_capture.read()
+        if timed_out is not None:
+            timed_out.output = stdout_bytes
+            timed_out.stderr = stderr_bytes
+            raise timed_out
+        stdout = stdout_bytes.decode("utf-8", errors="replace")
+        stderr = stderr_bytes.decode("utf-8", errors="replace")
+        return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
 
 
 @dataclass
