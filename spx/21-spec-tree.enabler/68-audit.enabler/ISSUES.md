@@ -163,3 +163,29 @@ the one that added the `[audit]` assertions.
 
 **Evidence.** `/verify` classification during the interview that scoped those
 five assertions; the operator accepted `[audit]`-only with the gap recorded here.
+
+## The audit-skill file inventory is enforced but undocumented
+
+`outcomeeng/validation/audit_artifacts.py` enforces an exact file inventory for
+each `audit-*` skill directory. For `audit-implementation` the permitted set is
+`SKILL.md`, `references/`, `references/operational-failures.md`, `scripts/`, and
+`scripts/resolve_scope.py`. Adding any further bundled file — a `templates/`
+directory carrying the scope-unit and finding payload shapes, for instance —
+fails the pre-commit hook with an `expected ... found ...` diff naming the new
+paths.
+
+The constraint is real and serves the assertions that keep plugin-side audit
+machinery out of the skill. No spec assertion, decision, or skill-authoring
+overlay states it, so an author reaches it only by having a commit rejected, and
+`/skill-standards` `<progressive_disclosure>` actively suggests the bundled-file
+shapes the validator forbids here.
+
+**Resolution shape**: declare the inventory constraint where an author reads it
+before authoring — a compliance assertion on this node naming the validator as
+its enforcement, and a line in `spx/local/skills.md` for the authoring surface —
+or widen the validator to a category rule that admits inert data files while
+still rejecting executable audit machinery.
+
+**Evidence.** The pre-commit hook rejected a `templates/` directory carrying the
+two payload shapes during the completion-contract repair; the extraction was
+withdrawn and the payloads stay inline in `SKILL.md`.
