@@ -140,8 +140,14 @@ each installed plugin's generated Codex agent definitions in the disposable
 home's `agents/` directory and leaves persistent plugin state unchanged.
 
 After merged distribution changes, `just install-marketplace` refreshes the
-project-scoped Claude Code marketplace and the selected `$CODEX_HOME`. It
-reinstalls only the plugins already installed for each agent. Empty state receives
+project-scoped Claude Code marketplace and the selected `$CODEX_HOME`.
+The declared refresh selection uses Claude Code's project-installed inventory
+and Codex's raw selected-home plugin declarations, including disabled and uncached plugins.
+Committed catalogs bound membership; trusted product configuration controls activation separately.
+Implementation of this selection and activation-preserving recovery is tracked in
+[Change #48](https://github.com/outcomeeng/changes/issues/48).
+
+Empty state receives
 only `spec-tree` and a warning. The command rejects nonempty state without `spec-tree`.
 The command reconciles the selected plugins' generated Codex agent definitions
 into the selected `$CODEX_HOME/agents/` registry under a digest-bound marketplace
