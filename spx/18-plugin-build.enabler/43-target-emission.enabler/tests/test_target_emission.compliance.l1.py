@@ -8,6 +8,12 @@ from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
     CLAUDE_SKILL_DIR_TOKEN,
+    CODEX_SKILL_DIR_TOKEN,
+    CLAUDE_ONLY_FRONTMATTER_FIELDS,
+    DISABLE_MODEL_INVOCATION_FIELD,
+    EXECUTION_TIME_INJECTION_START,
+    EXECUTION_TIME_INJECTION_END,
+    FLAT_AGENT_PLUGIN_SEPARATOR,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     EmissionAction,
     agent_capability,
@@ -15,25 +21,30 @@ from outcomeeng.distribution.build import (
     plugin_names,
     template_source_files,
     skill_dir_path_references,
+    frontmatter_field_names,
+    rewrite_paths_for_target,
+    strip_frontmatter_fields,
+    contains_execution_time_skill_content_injection,
 )
 from outcomeeng.distribution.contracts import SKILLS_SUBDIR_NAME, Target
+from outcomeeng.validation.skill_frontmatter import (
+    ALLOWED_TOOLS_FIELD,
+    ARGUMENT_HINT_FIELD,
+)
+from outcomeeng_testing.generators.source_and_templating import source_scenarios
+from outcomeeng_testing.generators.target_emission import execution_time_commands
 from outcomeeng_testing.harnesses.target_emission import (
-    claude_output_preserves_skill_dir_token,
-    codex_output_rewrites_skill_dir_token,
-    codex_skill_frontmatter_strips_claude_fields,
-    frontmatter_strip_is_idempotent,
-    outputs_exclude_execution_time_injection,
-    path_rewrite_is_idempotent,
     projected_versus_emitted,
     projected_sources,
-    repeated_include_emits_shared_source_once,
-    skill_directory_emissions,
+    text_emissions,
+    emitted_texts,
+    repeated_include_observations,
+    scoped_include_observations,
     source_emission_counts,
     agent_artifact_paths,
-    agent_artifacts_carrying_foreign_skill_dir_token,
+    agent_artifact_texts,
     structure_deviations,
     synthetic_inventory,
-    target_scoped_includes_emit_only_to_matching_tree,
 )
 
 
@@ -111,19 +122,64 @@ def test_target_trees_mirror_source_structure() -> None:
 
 
 def test_repeated_include_emits_shared_source_once_per_target() -> None:
-    assert repeated_include_emits_shared_source_once()
+    observations = repeated_include_observations()
+    assert observations
+    for observation in observations:
+        for target, count in observation.counts.items():
+            assert count == 1, (observation.case.skill_ref, target, count)
 
 
 def test_claude_output_preserves_skill_dir_token() -> None:
-    assert claude_output_preserves_skill_dir_token()
+    emissions = tuple(row for row in text_emissions() if row.target is Target.CLAUDE)
+    assert any(CLAUDE_SKILL_DIR_TOKEN in row.source for row in emissions)
+    for row in emissions:
+        assert Counter(
+            skill_dir_path_references(row.output, CLAUDE_SKILL_DIR_TOKEN)
+        ) == Counter(skill_dir_path_references(row.source, CLAUDE_SKILL_DIR_TOKEN)), (
+            row.path
+        )
+        assert row.output.count(CLAUDE_SKILL_DIR_TOKEN) == row.source.count(
+            CLAUDE_SKILL_DIR_TOKEN
+        ), row.path
 
 
 def test_codex_output_rewrites_skill_dir_token_to_codex_token() -> None:
-    assert codex_output_rewrites_skill_dir_token()
+    emissions = tuple(row for row in text_emissions() if row.target is Target.CODEX)
+    assert any(CLAUDE_SKILL_DIR_TOKEN in row.source for row in emissions)
+    for row in emissions:
+        escaped = tuple(
+            line
+            for line in row.source.splitlines()
+            if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE in line
+        )
+        unescaped = tuple(
+            line
+            for line in row.source.splitlines()
+            if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in line
+        )
+        assert Counter(
+            skill_dir_path_references(row.output, CLAUDE_SKILL_DIR_TOKEN)
+        ) == Counter(
+            reference
+            for line in escaped
+            for reference in skill_dir_path_references(line, CLAUDE_SKILL_DIR_TOKEN)
+        ), row.path
+        assert Counter(
+            skill_dir_path_references(row.output, CODEX_SKILL_DIR_TOKEN)
+        ) == Counter(
+            reference.replace(CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN, 1)
+            for line in unescaped
+            for reference in skill_dir_path_references(line, CLAUDE_SKILL_DIR_TOKEN)
+        ) + Counter(skill_dir_path_references(row.source, CODEX_SKILL_DIR_TOKEN)), (
+            row.path
+        )
+        assert row.output.count(CLAUDE_SKILL_DIR_TOKEN) == sum(
+            line.count(CLAUDE_SKILL_DIR_TOKEN) for line in escaped
+        ), row.path
 
 
 def test_skill_dir_rewrite_escape_preserves_authoring_guidance() -> None:
-    emissions = skill_directory_emissions()
+    emissions = text_emissions()
     assert any(SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE in row.source for row in emissions)
     for row in emissions:
         escaped_lines = tuple(
@@ -158,23 +214,86 @@ def test_skill_dir_rewrite_escape_preserves_authoring_guidance() -> None:
 
 
 def test_codex_skill_frontmatter_strips_claude_only_fields() -> None:
-    assert codex_skill_frontmatter_strips_claude_fields()
+    emissions = text_emissions()
+    for field in (
+        ALLOWED_TOOLS_FIELD,
+        ARGUMENT_HINT_FIELD,
+        DISABLE_MODEL_INVOCATION_FIELD,
+    ):
+        assert any(field in frontmatter_field_names(row.source) for row in emissions), (
+            field
+        )
+    for row in emissions:
+        source_fields = frontmatter_field_names(row.source)
+        output_fields = frontmatter_field_names(row.output)
+        for field in (ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD):
+            assert (field in output_fields) == (field in source_fields), (
+                row.target,
+                row.path,
+                field,
+            )
+        for field in CLAUDE_ONLY_FRONTMATTER_FIELDS:
+            assert (field in output_fields) == (
+                row.target is Target.CLAUDE and field in source_fields
+            ), (row.target, row.path, field)
+    for row in emitted_texts():
+        if row.target is Target.CODEX:
+            assert not frozenset(
+                CLAUDE_ONLY_FRONTMATTER_FIELDS
+            ) & frontmatter_field_names(row.text), row.path
 
 
 def test_target_scoped_includes_emit_only_to_matching_tree() -> None:
-    assert target_scoped_includes_emit_only_to_matching_tree()
+    observations = scoped_include_observations()
+    assert observations
+    for observation in observations:
+        assert not observation.inactive_text, observation.case
+        for target, paths in observation.paths.items():
+            assert (observation.case.expected_relative_path in paths) == (
+                target is observation.case.target
+            ), (observation.case, target)
 
 
-def test_path_rewrite_is_idempotent() -> None:
-    assert path_rewrite_is_idempotent()
+def test_unescaped_path_rewrite_is_idempotent() -> None:
+    for row in text_emissions():
+        unescaped = "\n".join(
+            line
+            for line in row.source.splitlines()
+            if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in line
+        )
+        once = rewrite_paths_for_target(unescaped, target=row.target)
+        assert rewrite_paths_for_target(once, target=row.target) == once, (
+            row.target,
+            row.path,
+        )
 
 
 def test_frontmatter_strip_is_idempotent() -> None:
-    assert frontmatter_strip_is_idempotent()
+    for row in text_emissions():
+        once = strip_frontmatter_fields(
+            row.source, fields=CLAUDE_ONLY_FRONTMATTER_FIELDS
+        )
+        assert (
+            strip_frontmatter_fields(once, fields=CLAUDE_ONLY_FRONTMATTER_FIELDS)
+            == once
+        ), row.path
 
 
 def test_outputs_do_not_contain_execution_time_skill_content_injection() -> None:
-    assert outputs_exclude_execution_time_injection()
+    commands = execution_time_commands()
+    assert commands
+    for command in commands:
+        assert contains_execution_time_skill_content_injection(
+            f"{EXECUTION_TIME_INJECTION_START}{command}{EXECUTION_TIME_INJECTION_END}"
+        ), command
+        assert not contains_execution_time_skill_content_injection(command), command
+    outputs = emitted_texts()
+    assert outputs
+    for row in outputs:
+        assert not contains_execution_time_skill_content_injection(row.text), (
+            row.target,
+            row.path,
+        )
 
 
 def test_agent_capabilities_resolve_from_the_source_owned_registry() -> None:
@@ -186,10 +305,13 @@ def test_agent_capabilities_resolve_from_the_source_owned_registry() -> None:
         # Filename shape comes from the registry's namespace flag, not from
         # emission logic: a namespaced target keeps the bare stem, a flat one
         # takes the plugin slug as a prefix.
-        slug = agent_slug("someplugin", "someagent", capability=capability)
-        assert slug == (
-            "someagent" if capability.namespaced else "someplugin_someagent"
-        ), f"{target.value} derives an unexpected agent slug {slug!r}"
+        for case in source_scenarios():
+            slug = agent_slug(case.plugin, case.skill, capability=capability)
+            assert slug == (
+                case.skill
+                if capability.namespaced
+                else f"{case.plugin}{FLAT_AGENT_PLUGIN_SEPARATOR}{case.skill}"
+            ), (target, case, slug)
 
 
 def test_no_target_tree_carries_an_agent_artifact_it_cannot_read() -> None:
@@ -229,8 +351,8 @@ def test_no_agent_artifact_carries_another_targets_skill_dir_token() -> None:
             f"{target.value} carries no agent artifacts, so this check would "
             "pass vacuously"
         )
-        leaked = agent_artifacts_carrying_foreign_skill_dir_token(target)
-        assert not leaked, (
-            f"{target.value} agent artifacts carry another target's skill-dir "
-            f"token, so conversion skipped the rewrite: {leaked}"
+        foreign_token = (
+            CODEX_SKILL_DIR_TOKEN if target is Target.CLAUDE else CLAUDE_SKILL_DIR_TOKEN
         )
+        for path, text in agent_artifact_texts(target).items():
+            assert foreign_token not in text, (target, path)
