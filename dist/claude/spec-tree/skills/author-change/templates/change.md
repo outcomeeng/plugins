@@ -5,7 +5,7 @@ maturity: Proposed
 lifecycle: Available
 ---
 
-<!-- Local authoring guidance: apply /change-standards. For revision, add change_ref with the canonical reference and use confirmed Lifecycle and holder metadata from the store. Maturity names the level being authored and audited. Replace placeholders and remove these comments before audit. Publication maps metadata to native store fields and sends only the body below. Omit sections whose maturity requirements do not yet apply; expose unresolved questions instead of inventing answers. -->
+<!-- Local authoring guidance: apply /change-standards after triaging the request. This template records the result; its headings are not interview questions. For revision, add change_ref with the canonical reference and use confirmed Lifecycle and holder metadata from the store. Maturity names the level being authored and audited. Replace placeholders and remove these comments before audit. Publication maps metadata to native store fields and sends only the body below. Omit sections whose maturity requirements do not yet apply; expose unresolved questions instead of inventing answers. -->
 
 # Output
 
@@ -17,9 +17,11 @@ lifecycle: Available
 
 # Value
 
+[The established reason to produce this Output. For routine maintenance, a concise concrete purpose is sufficient; omit Outcome and Impact unless those claims are established.]
+
 ## Outcome
 
-[The intended change for the users, or the governing truth restored or prototype question answered.]
+[The established intended change for users. Omit this subsection when Value already states the maintenance purpose, governing truth restored, or prototype question answered.]
 
 ## Impact
 

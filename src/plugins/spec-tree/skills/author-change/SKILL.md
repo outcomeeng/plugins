@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when creating, interviewing, or revising an Outcome
   Engineering Change record. NEVER use it to author a spec or review a code changeset.
 argument-hint: "<local Change path and intent | existing Change reference and revision>"
-allowed-tools: Read, Write, Edit, Grep, Glob, Skill, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(gh api:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
+allowed-tools: Read, Write, Edit, Grep, Glob, Skill, collaboration.spawn_agent, collaboration.wait_agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
 ---
 
 <objective>
@@ -27,15 +27,31 @@ Handle missing store configuration or ambiguous target identity before any exter
 
 Read `$ARGUMENTS` as the complete request. When empty, use an unambiguous active request from the conversation; otherwise ask one plain-text question for the Change or intended Output and wait.
 
-For a request already identifying creation or revision, route directly. For ambiguity, ask which Change or Output the operator means. Never treat an unanswered question as agreement. Route requests to author Decisions or specs to `/author`, code implementation to `/apply`, and Handoff-only work to `/handoff`.
+For a request already identifying creation or revision, route directly and apply `<triage>` before asking refinement questions. A problem without a chosen Output enters creation. For ambiguous Change identity, ask which Change the operator means. Never treat an unanswered question as agreement. Route requests to author Decisions or specs to `/author`, code implementation to `/apply`, and Handoff-only work to `/handoff`.
 
 </intake>
+
+<triage>
+
+First identify what the request changes, the intended Output, and any consequential choices it leaves open. Inspect the relevant governing Decisions, specs, and affected references before asking the operator to resolve a choice. Reuse explicit answers from the request and existing Change; never ask for a generic problem statement, beneficiaries, or business value merely to fill the template.
+
+| Request state                                  | Refinement                                                                                                                                                                                                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Output clear; consequential choices resolved   | Draft or revise directly without an interview. A precise internal file rename needs its affected references and constraints checked, not a beneficiary interview.                                            |
+| Output clear; consequential choices unresolved | Invoke `/interview` only for choices that repository truth and supplied intent cannot settle. A public CLI rename can require a compatibility decision despite its small edit size.                          |
+| Problem described; Output unchosen             | Invoke `/interview` to help formulate a proposed Output. Pause for the operator when proceeding requires prioritizing competing outcomes or deciding whether to pursue the work. Discovery owns that choice. |
+
+Select questions by the unresolved choice: scope, compatibility, failure behavior, dependencies, or required evidence. Ask in plain text, one at a time, explain the consequences, and wait for the answer. Do not reopen a resolved choice or treat silence as a decision. The template is an output format, never a questionnaire.
+
+Triage controls refinement depth only. Preserve maturity requirements, operator attestation, independent verification, and publication authority on every route. A clear execution request does not by itself attest an unwritten Frame. Revisit triage when investigation exposes a consequential choice. Keep resulting specifications in the Change and its governing artifacts; reusable investigation and rejected alternatives belong in knowledge, without requiring a knowledge-bundle read or write on this workflow.
+
+</triage>
 
 <routing>
 
 | Request                                         | Workflow                                         |
 | ----------------------------------------------- | ------------------------------------------------ |
-| Create a Change from an intended Output         | `${CLAUDE_SKILL_DIR}/workflows/create-change.md` |
+| Create a Change from an Output or problem       | `${CLAUDE_SKILL_DIR}/workflows/create-change.md` |
 | Interview, refine, or revise an existing Change | `${CLAUDE_SKILL_DIR}/workflows/revise-change.md` |
 
 Read the selected workflow completely. Both workflows use `${CLAUDE_SKILL_DIR}/templates/change.md` and return here for the shared audit gate.
@@ -45,10 +61,10 @@ Read the selected workflow completely. Both workflows use `${CLAUDE_SKILL_DIR}/t
 <audit_gate>
 
 1. Stabilize the complete local candidate against the shared standards. Resolve contradictions across metadata and body, remove template guidance, and read the file back before requesting audit. Its metadata identifies the maturity being judged. Keep the remote record unchanged throughout local iteration.
-2. Dispatch the configured `change-auditor` with the Product repository, exact repository-relative local file path, candidate maturity, and the request fields its audit contract requires. Preserve the returned handle. SPX records the local file as the audit subject. If the role or its supported SPX recording contract is unavailable, report the exact failure and stop publication; never substitute another artifact classification, an in-conversation verdict, or a GitHub audit comment.
+2. Dispatch the configured `change-auditor` through the native subagent capability with only the target its audit contract declares. Start without authoring history; the verifier independently reads the candidate's metadata, body, and governing references. Preserve the returned handle. SPX records the local file as the audit subject. If the role or its supported SPX recording contract is unavailable, report the exact failure and stop publication; never substitute another artifact classification, an in-conversation verdict, or a GitHub audit comment.
 3. While verification runs, inspect still-unchecked relationships and continuation hazards in the current work. Preserve the candidate under audit unchanged. Collect the required final result and close the verifier session.
 4. Inspect the returned SPX run token, retained input, and rendered projection. Only a complete `terminalStatus: approved` result over this file's unchanged metadata and body at the requested maturity passes. Any local edit invalidates that approval. After approval, proceed directly to publication; do not ask for a second confirmation of publication already authorized by this workflow.
-5. For rejection, inspect the cited rule and sweep the entire candidate for the same defect class. Batch repairs in the local file, re-read affected sections together, and obtain a new independent audit. Ask the operator in plain text when a repair reopens judgment; preserve the question until answered. For a blocked run, repair the reported capability or request failure before redispatch. Preserve the local candidate when the gate remains blocked.
+5. For a completed rejection, inspect the cited rule and sweep the entire candidate for the same defect class. Batch repairs in the local file, re-read affected sections together, and obtain a new independent audit. Ask the operator in plain text when a repair reopens judgment; preserve the question until answered. A failed launch or unusable result stops the invocation with its exact diagnostic; never retry, substitute another verifier, or issue a replacement verdict. Preserve the local candidate when the gate remains blocked.
 6. Stop after three consecutive rejected, unknown, or blocked results at this gate. Report the latest failure, the defect-class sweep, and why the repairs did not resolve it. Ask one plain-text question for the needed decision. NEVER advance maturity or claim the audit passed to end the loop.
 
 Keep audit results in SPX and the current conversation. Update Change content only with the resulting refinement. Do not persist audit bookkeeping in its body or comments.
@@ -81,10 +97,17 @@ Return the canonical Change reference, current Maturity and Lifecycle, a concise
 
 </workflows_index>
 
+<failure_modes>
+
+**A Change omitted specifications settled in conversation.** Claude treated a record and a Handoff as sufficient while a fresh holder still needed the earlier discussion to identify the work. Check the complete Change against the shared continuation rule before audit; put durable intent in the Change and keep transient execution facts in the Handoff.
+
+</failure_modes>
+
 <success_criteria>
 
 - The selected workflow produces exactly one coherent Change in the configured store.
 - Its current content meets the shared standards at its declared maturity and retains operator-approved constraints.
+- Triage selects direct drafting when consequential choices are resolved; interviews address only unresolved operator-owned choices and never manufacture value claims for routine maintenance.
 - Drafting and every repair stay in one local working file. An independent SPX audit approves that unchanged file before publication; missing or unsuccessful verification blocks every candidate publication.
 - Publication is confirmed by reading back the body and native metadata, with no duplicate record or verification bookkeeping added to the Change.
 - Continuation depends only on the Change, repository references, and applicable Handoff.

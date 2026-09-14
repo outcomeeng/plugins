@@ -14,6 +14,8 @@ Place observable details under `## Behavior`. Add `### Surface: CLI`, `### Surfa
 
 ALWAYS retain why the Output is worth producing under `# Value`. Use `## Outcome` for the intended change for its users and `## Impact` for the broader benefit when those claims are established. A reconciliation can name the governing truth it restores; a prototype can name the question it answers. NEVER invent measurements, business benefits, or settled answers to fill the format.
 
+Keep the explanation proportional to the change. A routine maintenance Change can state its concrete purpose directly under Value; Outcome and Impact are conditional subsections. A short record is sufficient when it preserves the applicable maturity requirements. File count or edit size alone does not establish that consequences are trivial. Omit the interview questionnaire, research narrative, and rejected alternatives from the refined record; knowledge retains reusable reasoning.
+
 </rule>
 
 <rule id="identity-and-input">
