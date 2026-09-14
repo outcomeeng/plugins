@@ -1,5 +1,21 @@
 # ISSUES — plugin-build / post-restructure follow-ups
 
+## Property predicates are hidden in boolean-returning harnesses
+
+Implementation audit `2026-09-14_11-26-09-644-eb39d2a3b433` rejected
+`tests/test_plugin_build.property.l1.py:21`: the formatter-version-drift test
+asserts a boolean returned by `canonical_build_rejects_formatter_version_drift`.
+The other two tests in that file use the same assertion-delegation pattern.
+The test-infrastructure PDR requires predicates in linked tests and observations
+from harnesses. Hidden predicates prevent the test file from exposing its oracle.
+
+The audited test file is unchanged by the formatter-version update at
+`349e3c3be3f88f496f228666036d6790b5be2a3c`. This records the rejected subject
+under the merge policy for audit findings outside the changed files; it supplies
+no evidence-audit approval. Settlement requires observation-returning harnesses
+and test-owned predicates across this file, followed by a passing evidence audit.
+Revisit before relying on this node's evidence-audit approval or changing these tests.
+
 Known issues left by the `src/plugins/` → `dist/` build restructure. Coordination note; not spec truth.
 
 ## 1. `spx/` spec references still cite the pre-restructure `plugins/` path
