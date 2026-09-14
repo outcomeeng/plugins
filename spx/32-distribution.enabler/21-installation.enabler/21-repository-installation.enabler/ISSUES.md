@@ -17,7 +17,10 @@ harness-owned resource setup while retaining predicates in linked tests.
 `f1358c4324eaef89ade99d8d41b42940ed881121`. The complete cited test file has no
 diff against `origin/main` at
 `455234ef0aa1b6669536b2341cb4a29a600dc361`. The audit stopped at this finding;
-it supplies no approval of the node's remaining evidence.
+it supplies no approval of the node's remaining evidence. The final audit for
+PR #571 reproduced the same `f-001` source-ownership finding against
+`e58f52f1bcb25d2a7e9fabb79f70f33f4dfc46b0`; the cited test file remains
+outside that changeset's diff.
 
 **Disposition.** Recorded under the merge policy's rule for an audit subject
 outside the changeset. Repair requires a case-provenance and resource-ownership
