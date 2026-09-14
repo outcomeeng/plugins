@@ -20,7 +20,7 @@ allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
 
 <objective>
 
-A verdict on one PDR against the PDR evidence model — APPROVED, or REJECTED with each finding naming the section, the violated rule, and the evidence. Findings fall in five categories: content classification (observable product behavior, never architecture), property quality (observable, falsifiable, and stable), per-rule tag validity and assertion-type fit, atemporal voice, and consistency with the product spec and ancestor PDRs.
+A verdict on one PDR — APPROVED or REJECTED, with findings naming the section, rule, and evidence for content classification, property quality, declaration form and tag fitness, atemporal voice, or consistency with the product spec and ancestor PDRs.
 
 </objective>
 
@@ -65,7 +65,7 @@ PDRs state atemporal product truth without historical context. No references to 
 
 Read the required PDR path from `$ARGUMENTS`, preserving spaces within the path. If the input is empty or whitespace-only, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all five property rows marked `FAIL`. Each row carries a `missing-target` finding with severity `REJECT`, location `input`, evidence naming the empty input, and a message naming the required PDR path. Stop before context loading or artifact inspection.
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the directory containing the PDR. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
+Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, then invoke `/contextualize` on the directory containing the PDR. Derive declaration form and required tags from that canonical template. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 
 The product document used below is the product spec loaded by `/contextualize` in its product-level context step. Use that spec's declared audience and interaction surfaces for content classification.
 
@@ -129,7 +129,7 @@ For each product property:
 
 **Step 5: Per-rule verification tag validity**
 
-Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification type. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section exists but contains no verification rules, mark `tag-validity` as `FAIL` with a `REJECT` finding under `missing-verification-rules`, quoting the empty section as evidence. For each rule present:
+Rules live under `## Verification`. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section contains no rules, mark `tag-validity` as `FAIL` with `missing-verification-rules`. A specific untagged rule directly under the section conforms to the canonical authoring form and may coexist with routed subsections. Judge it for clarity and falsifiability without selecting evidence or raising a missing-tag finding. A tagged rule requires its matching routed subsection. For each routed rule:
 
 1. The rule carries exactly one tag, and the tag is valid for its subsection:
    - under `### Testing` → a `/test`-routed assertion type: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
@@ -141,7 +141,9 @@ Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and 
 
 A rule earns a sound tag only when it is verifiable (a test, eval, or audit skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict). An unverifiable or vague rule produces a `REJECT` finding under `invalid-tag` in `tag-validity`, marking the row `FAIL` even when the tag's syntax is valid; quote the rule and identify the missing observable condition or ambiguous criterion.
 
-**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an assertion type, or more than one tag → REJECT — "invalid-tag." An assertion type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) → REJECT — "assertion-type-mismatch."**
+**A routed rule with a missing, unsupported, duplicate, or subsection-mismatched tag → REJECT — "invalid-tag." An assertion type that contradicts the claim's shape → REJECT — "assertion-type-mismatch."**
+
+Apply content classification, property quality, voice, and consistency to draft and routed declarations alike. Approval establishes declaration quality only; it supplies no evidence result, implementation claim, or Passing state for an untagged rule.
 
 </step>
 
@@ -380,7 +382,7 @@ Product properties are guarantees users can rely on. They must be:
 
 <tag_validity>
 
-Verification rules are the enforceable part of a PDR, grouped under `## Verification` into `### Testing`, `### Eval`, and `### Audit` by verification type. Each rule carries a tag valid for its subsection, and a `### Testing` rule's assertion type fits the claim:
+Derive authoring and routed forms from the canonical PDR template. Specific untagged rules directly under `## Verification` await selection and receive the same clarity and falsifiability checks. The following tag checks apply to rules in routed subsections; authoring approval supplies no evidence result:
 
 1. **Tag matching its subsection** — under `### Testing`, a `/test`-routed assertion type (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Eval`, `([eval])`; under `### Audit`, `([audit])`. An unsupported bare mechanism tag, a missing tag, more than one tag, or a tag that disagrees with its subsection is `invalid-tag`.
 2. **Assertion-type fit** — a `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router; a universal `ALWAYS`/`NEVER` claim tagged `scenario` is `assertion-type-mismatch`, since a single case cannot establish a universal.
