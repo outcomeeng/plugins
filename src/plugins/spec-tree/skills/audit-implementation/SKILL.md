@@ -168,7 +168,7 @@ required.
   "auditKind": "<code|tests|architecture|coverage-gap>",
   "subject": "<single-subject-path-or-explicit-gap-marker>",
   "coverageRequirement": "<required|optional>",
-  "coverageStatus": "<audited|not-applicable|unsupported|missing-skill|skipped|incomplete>",
+  "coverageStatus": "<audited|not-applicable|missing-skill|unsupported>",
   "priorContext": {
     "changedFilePartition": "<single-subject-path-or-explicit-gap-marker>",
     "languagePartition": "<language-when-known>",
@@ -197,6 +197,9 @@ required.
   }
 }
 ```
+
+The `coverageStatus` values above are the required-unit set. An optional unit
+may additionally carry `skipped`; no unit carries `incomplete`.
 
 `languagePartition` is the only optional prior-context field. Omit it when the
 language is unknown; never replace `priorContext` with top-level partition
@@ -341,7 +344,7 @@ Each expected unit records:
 - coverage status: `audited`, `not-applicable`, `missing-skill`, or `unsupported` for a required unit; an optional unit may additionally carry `skipped`
 - concern result: completion is represented by every expected path unit carrying `coverageStatus: audited`, and the finding count is the count of accepted finding rows for those path-scoped units
 
-Plan the complete inventory before invoking any concern skill, but NEVER mark a planned unit `audited`. Queue each unit only when its final coverage status is known: immediately for a classified gap, or after the corresponding concern finishes for an executed producer. A concern skill returns its result to the run driver and never writes SPX state itself. After a concern returns, queue one path-scoped row per inspected path with a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`; queue each returned finding after those scope rows and associate it with the matching path-scoped unit. Persist queued units with one `spx verification run scope add` command at a time, ordered by language discovery order and then concern order `code`, `tests`, `architecture`; preserve each command result before issuing the next mutation. Derive the concern's finding count from the accepted finding rows; do not emit a custom count SPX discards. Never append a preliminary required `incomplete` unit that later becomes audited; every accepted required uncovered event rejects the terminal rollup permanently. A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite; when it names neither, drive the concern to a final result rather than recording a non-audited status. NEVER manufacture a completed result from the orchestration's own inspection.
+Plan the complete inventory before invoking any concern skill, but NEVER mark a planned unit `audited`. Queue each unit only when its final coverage status is known: immediately for a classified gap, or after the corresponding concern finishes for an executed producer. A concern skill returns its result to the run driver and never writes SPX state itself. After a concern returns, queue one path-scoped row per inspected path with a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`; queue each returned finding after those scope rows and associate it with the matching path-scoped unit. Persist queued units with one `spx verification run scope add` command at a time, ordered by language discovery order and then concern order `code`, `tests`, `architecture`; preserve each command result before issuing the next mutation. Derive the concern's finding count from the accepted finding rows; do not emit a custom count SPX discards. Never append a preliminary required unit before its final coverage status is known; every accepted required uncovered event rejects the terminal rollup permanently. A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite; when it names neither, drive the concern to a final result rather than recording a non-audited status. NEVER manufacture a completed result from the orchestration's own inspection.
 
 A missing required concern skill or an unsupported path already claimed by a recognized implementation-language partition rejects the run through accepted coverage status and the evidence-derived terminal rollup. A required unit that receives no concern result reaches no admissible status, so the run returns BLOCKED under `<verdict_format>` naming the failed operation or absent prerequisite rather than sealing. Do not continue concern dispatch after detecting an absent required skill for a recognized language partition; queue the complete final gap inventory, persist it serially, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
@@ -394,11 +397,20 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 
 When the run completes, return the exact run token and rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
 
-Return BLOCKED when target preparation fails before `spx verification run start`
-or SPX rejects a command. For missing input, name the selector or identity field
-that is absent. For command failures, include the complete diagnostic below;
-preparation failures use `runToken: not-started`, `payloadSource: none`, and
-`payloadKey: none`. After a run starts, record a missing required concern skill
+Return BLOCKED for three causes: target preparation fails before `spx
+verification run start`, SPX rejects a command, or a required unit cannot reach
+a final status after the run started. For missing input, name the selector or
+identity field that is absent. For command failures, include the complete
+diagnostic below; preparation failures use `runToken: not-started`,
+`payloadSource: none`, and `payloadKey: none`.
+
+A required unit that cannot reach a final status is not a command rejection, so
+its diagnostic carries the started `runToken`, the absent prerequisite or failed
+operation in `command` — the exact operation attempted, such as the unreadable
+subject path or the governing node that could not be discovered — and
+`payloadSource: none`, `payloadKey: none`, `exitCode: none`, `stderr: none`.
+Name the unit by its `unitId` in the `command` line so the blocked unit is
+identifiable. After a run starts, record a missing required concern skill
 as `missing-skill`, finish with terminal status `rejected`, render, and return
 the run token plus projection.
 
