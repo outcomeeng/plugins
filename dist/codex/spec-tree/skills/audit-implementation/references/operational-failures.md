@@ -12,6 +12,10 @@ Observed implementation-audit failures and their causes and prevention.
 - `payload_fields`
 - `shell_quoting`
 - `deterministic_boundary`
+- `unblocked_stop`
+- `unrecovered_truncation`
+- `single_commit_subject`
+- `finding_before_standards`
 
 </contents>
 
@@ -146,3 +150,81 @@ Why it failed: This orchestration composes agentic concern audits only; running 
 How to avoid: Stop and return the boundary failure with the deterministic command that was attempted.
 
 </deterministic_boundary>
+
+<unblocked_stop>
+
+**A run sealed with required coverage uncovered and no blocker**
+
+What happened: Claude ended two audit attempts over one 48-path changeset with
+the inspection unfinished. The second attempt recorded required `incomplete`
+coverage for code, tests, and architecture, sealed `rejected` with zero
+findings, and reported "No external or tool condition blocks completion" before
+finishing.
+
+Why it failed: `incomplete` was a finishable state for a required unit, so
+`finish` was reachable from Claude deciding to stop. A sealed `rejected` run
+with no findings is indistinguishable at the projection from a completed audit
+that found a coverage gap, so the gate consumed a giving-up as a verdict.
+
+How to avoid: A required unit reaches only `audited`, `not-applicable`,
+`missing-skill`, or `unsupported`. When none is reachable, return the
+`<verdict_format>` blocked diagnostic naming the concrete failed operation or
+absent prerequisite. Remaining work, elapsed time, context pressure, and
+unfinished reading are never that cause.
+
+</unblocked_stop>
+
+<unrecovered_truncation>
+
+**A truncated bulk read became missing coverage**
+
+What happened: Claude read many source files in one call, the output truncated,
+and no later read recovered the omitted content. The units covering those paths
+never reached a final status.
+
+Why it failed: A read boundary was converted into a coverage conclusion. The
+files were present and readable; only the single oversized call failed.
+
+How to avoid: Read subject bodies one at a time, and re-issue a truncated or
+partial read in bounded ranges until the body is complete. An unrecovered read
+is never coverage evidence.
+
+</unrecovered_truncation>
+
+<single_commit_subject>
+
+**One commit's patch stood in for the changeset**
+
+What happened: Claude inspected the latest commit's patch instead of the
+resolved `base..head` range, so the subject was a fraction of the changeset the
+run had already scoped.
+
+Why it failed: The run's scope identity and the inspected content disagreed. The
+projection reported coverage over a scope Claude never read.
+
+How to avoid: Derive every subject body from the resolved `base` and `head`
+retained at stage 1 of `<execution_sequence>`. Read a committed body with
+`git show '{head}:{path}'`, never from a single commit's patch.
+
+</single_commit_subject>
+
+<finding_before_standards>
+
+**A finding was raised before its governing standards were read**
+
+What happened: Claude rejected a generated-value binding as invalid test
+evidence before reading the applicable test standards and the audited
+repository's `spx/local/` overlay. Both permit the pattern, and the overlay
+documents the exact form observed. Claude withdrew the finding after reading
+them.
+
+Why it failed: The judgment ran against remembered rules rather than the
+repository's declared ones. A finding raised that way costs the audited work a
+repair round for a defect that does not exist.
+
+How to avoid: Load each concern's governing standards and the audited
+repository's declared `spx/local/` overlays at stage 3 of
+`<execution_sequence>`, before any concern judgment. Withdraw a finding raised
+before that load rather than recording it.
+
+</finding_before_standards>

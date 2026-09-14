@@ -1,16 +1,17 @@
 ---
 name: audit-implementation
 description: >-
-  Implementation-audit orchestration methodology — discovers implementation
-  languages, composes code, test, and architecture concern audits, and records
-  one audit verification run.
+  Implementation audit methodology — judges a changeset's implementation
+  against its governing decisions, specs, and language standards, covering
+  per-language code, test, and architecture concerns, finding falsifiability,
+  and completeness of the inspection.
 argument-hint: "<scope>"
 allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Bash(printf:*), Glob, Grep, Skill
 ---
 
 <objective>
 
-An authoritative SPX projection and raw run token for the requested implementation scope against its governing decisions, specifications, and language standards, with `terminalStatus` (`approved` or `rejected`) and findings naming the artifact, violated rule, and observed-versus-expected evidence, or a `BLOCKED` diagnostic identifying the request or command failure that prevented completion.
+An authoritative SPX projection and raw run token for the requested implementation scope, carrying `terminalStatus` (`approved` or `rejected`) and findings that name the artifact, the violated rule, and observed-versus-expected evidence. A run that cannot reach that projection yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
 
 </objective>
 
@@ -21,11 +22,49 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER run deterministic verification — this orchestration composes agentic concern audits only.
 - NEVER include language-specific file extensions, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
 - ALWAYS treat the `spx verification run` command exit code as payload validity; NEVER hand-validate emitted payload JSON after SPX accepts it.
+- NEVER end a run because work remains, time has passed, context is tight, or reading is unfinished — a stop names the failed command with its exit code and stderr, or the absent prerequisite.
+- NEVER assign `incomplete` or `skipped` to a required coverage unit; neither describes an admissible terminal state for required coverage.
+- NEVER derive a subject body from a single commit's patch, or leave a truncated read unrecovered — a partial read is re-issued, never converted into coverage evidence.
 - ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading language concern standards — every substantive project inspection and concern result belongs to the open run.
 
 </constraints>
 
 <audit_workflow>
+
+<execution_sequence>
+
+Run these stages in order. Each names what holds before the next begins, and
+`finish` is reachable only from stage 7.
+
+1. **Anchor.** Resolve the repository, the scope selector, and the run-driver
+   identity per `<request_contract>`. Retain the resolved `base` and `head`
+   identities unchanged for the rest of the run.
+2. **Open the run.** Start the run per `<verification_run_contract>` before any
+   project inspection or standards load, so every later stage belongs to it.
+3. **Load.** Read each discovered governing node's context, each concern's
+   governing standards, and the audited repository's declared `spx/local/`
+   overlays.
+4. **Enumerate.** Build the complete expected coverage inventory per
+   `<coverage_model>` before invoking any concern. A unit enters the inventory
+   planned and carries no status.
+5. **Inspect.** Read each subject body completely from the resolved
+   `base..head` scope. MUST re-issue a truncated or partial read in bounded
+   ranges until the body is complete. NEVER derive a subject body from a single
+   commit's patch, and NEVER treat an unrecovered read as coverage evidence.
+6. **Resolve.** Hold each unit planned until its concern returns a final result.
+   A required unit reaches only `audited`, `not-applicable`, `missing-skill`, or
+   `unsupported`. NEVER accept a finding raised before stage 3 loaded that
+   concern's standards and overlays — withdraw it rather than record it.
+7. **Reconcile, then finish.** Confirm every planned unit carries a final status
+   and every recorded finding references an accepted unit. A failed
+   reconciliation returns the run to stage 5 or 6; it never authorizes `finish`.
+
+A run that cannot bring a required unit to a stage 6 status returns the
+`<verdict_format>` blocked diagnostic naming the concrete failed operation or
+absent prerequisite. Remaining work, elapsed time, context pressure, and
+unfinished reading are never such a cause.
+
+</execution_sequence>
 
 <request_contract>
 
@@ -80,10 +119,6 @@ coverage model. A committed audit is reusable only when the applicable
 deterministic verification is established as passing for that subject; an
 advisory audit never supplies reusable gate evidence.
 
-The bundled entrypoint is covered before shipping by real-Git stale-base
-resolution and nonexistent-repository scenarios. These exercise the shared
-provider through the entrypoint's actual process boundary.
-
 </request_contract>
 
 <verification_run_contract>
@@ -134,7 +169,7 @@ required.
   "auditKind": "<code|tests|architecture|coverage-gap>",
   "subject": "<single-subject-path-or-explicit-gap-marker>",
   "coverageRequirement": "<required|optional>",
-  "coverageStatus": "<audited|not-applicable|unsupported|missing-skill|skipped|incomplete>",
+  "coverageStatus": "<audited|not-applicable|missing-skill|unsupported>",
   "priorContext": {
     "changedFilePartition": "<single-subject-path-or-explicit-gap-marker>",
     "languagePartition": "<language-when-known>",
@@ -163,6 +198,9 @@ required.
   }
 }
 ```
+
+The `coverageStatus` values above are the required-unit set. An optional unit
+may additionally carry `skipped`; no unit carries `incomplete`.
 
 `languagePartition` is the only optional prior-context field. Omit it when the
 language is unknown; never replace `priorContext` with top-level partition
@@ -202,37 +240,24 @@ expected text lives under `evidence`.
 ```
 
 The idempotency key is a command argument, never a payload field. A scope
-unit's key is the same value its payload carries in `unitId`: the audit class,
-language partition, concern partition, and subject path joined with `:` —
+unit's key is the value its payload carries in `unitId`: audit class, language
+partition, concern partition, and subject path joined with `:` —
 `implementation:<lang>:<concern>:<subject-path>`. A finding's key extends its
-unit's key with the violated rule — `<stable-scope-key>:<rule>` — so recording
-the same finding twice stays idempotent. Join key segments only with `:`, which
-keeps the key parseable at its last-segment boundary. Shell safety comes from
-the quoting rule below rather than from the join character: a subject path can
-carry `|`, `&`, `;`, `(`, `)`, `<`, `>`, `*`, `?`, or whitespace however the
-segments are joined, and unquoted it splits the command so the shell runs a
-fragment as a program.
+unit's key with the violated rule — `<stable-scope-key>:<rule>`.
 
-The key is an opaque token SPX never parses back into segments, so a `:` inside
-a subject path is not a separator. Keep the rule segment colon-free and stable —
-a rule identifier rather than free-form prose. The rule is the final segment, so
-a colon-free rule makes the last `:` in the key an unambiguous boundary: the
-rule is exactly the text after it and the subject path is everything before it,
-however many colons that path carries. Two findings on different subjects
-therefore cannot compose one finding key. A colon inside the rule segment
-destroys that boundary and lets two distinct findings collide on one key, which
-records the second as a duplicate of the first.
+Keep the rule segment colon-free. SPX never parses the key back into segments,
+so a `:` inside a subject path is not a separator; a colon-free rule makes the
+last `:` the boundary between subject path and rule, and a colon inside the rule
+collides two distinct findings on one key.
 
-The key always carries a language segment; only the nested
-`priorContext.languagePartition` field is ever omitted. When the language is
-unknown, render that segment as the literal `unknown`, so two runs over the same
-unknown-language subject compose the same key. Supply that literal explicitly —
-the key carries whatever language segment it is given and substitutes no default
-for one left out.
+The key always carries a language segment, even though
+`priorContext.languagePartition` may be omitted. Render an unknown language as
+the literal `unknown`; the key substitutes no default for a segment left out.
 
 Pass every key as one single-quoted argument, `--idempotency-key
-'<stable-scope-key>'`, because a subject path can itself carry a character the
-shell interprets. Encode a literal apostrophe inside it with the single-quote
+'<stable-scope-key>'` — a subject path can carry `|`, `&`, `;`, `(`, `)`, `<`,
+`>`, `*`, `?`, or whitespace, and unquoted it splits the command so the shell
+runs a fragment as a program. Encode a literal apostrophe with the single-quote
 splice `'"'"'`.
 
 Never emit the retired aliases `id`, `subjectPaths`, `expectedProducerIdentity`,
@@ -271,22 +296,6 @@ Apply the same two forms to `run start --input stdin` and `finding add
 helper file, command substitution, or post-hoc text substitution.
 
 ```bash
-spx verification run scope add \
-  --verification-type audit \
-  --scope-type changeset \
-  --scope <base>..<head> \
-  --run <token> \
-  --payload stdin \
-  --idempotency-key '<stable-scope-key>'
-
-spx verification run finding add \
-  --verification-type audit \
-  --scope-type changeset \
-  --scope <base>..<head> \
-  --run <token> \
-  --payload stdin \
-  --idempotency-key '<stable-finding-key>'
-
 spx verification run finish \
   --verification-type audit \
   --scope-type changeset \
@@ -333,12 +342,21 @@ Each expected unit records:
 - optional `producerProvenance` using both owning-plugin versions and optional SPX tool version when a concern skill executed
 - `recordedByRunDriver` identity for the SPX command driver, present for every unit so missing-skill and unsupported classifications still identify the recorder
 - coverage requirement: `required` or `optional`
-- coverage status: `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`
+- coverage status: `audited`, `not-applicable`, `missing-skill`, or `unsupported` for a required unit; an optional unit may additionally carry `skipped`
 - concern result: completion is represented by every expected path unit carrying `coverageStatus: audited`, and the finding count is the count of accepted finding rows for those path-scoped units
 
-Plan the complete inventory before invoking any concern skill, but NEVER mark a planned unit `audited`. Queue each unit only when its final coverage status is known: immediately for a classified gap, or after the corresponding concern finishes for an executed producer. A concern skill returns its result to the run driver and never writes SPX state itself. After a concern returns, queue one path-scoped row per inspected path with a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`; queue each returned finding after those scope rows and associate it with the matching path-scoped unit. Persist queued units with one `spx verification run scope add` command at a time, ordered by language discovery order and then concern order `code`, `tests`, `architecture`; preserve each command result before issuing the next mutation. Derive the concern's finding count from the accepted finding rows; do not emit a custom count SPX discards. Never append a preliminary required `incomplete` unit that later becomes audited; every accepted required uncovered event rejects the terminal rollup permanently. When a concern cannot return a complete result, queue `incomplete` or the applicable non-audited status; never manufacture a completed result from the orchestration's own inspection.
+- Plan the complete inventory before invoking any concern skill. NEVER mark a planned unit `audited`.
+- Queue each unit only once its final coverage status is known: immediately for a classified gap, or after its concern finishes for an executed producer.
+- NEVER append a preliminary required unit before its final coverage status is known — every accepted required uncovered event rejects the terminal rollup permanently.
+- A concern skill returns its result to the run driver and never writes SPX state itself.
+- After a concern returns, queue one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`.
+- Queue each returned finding after those scope rows, associated with its matching path-scoped unit.
+- Persist queued units one `spx verification run scope add` command at a time, ordered by language discovery order then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation.
+- Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
+- A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite. When it names neither, drive the concern to a final result rather than recording a non-audited status.
+- NEVER manufacture a completed result from the orchestration's own inspection.
 
-A missing required concern skill, unsupported path already claimed by a recognized implementation-language partition, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a recognized language partition; queue the complete final gap inventory, persist it serially, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
+A missing required concern skill or an unsupported path already claimed by a recognized implementation-language partition rejects the run through accepted coverage status and the evidence-derived terminal rollup. A required unit that receives no concern result reaches no admissible status, so the run returns BLOCKED under `<verdict_format>` naming the failed operation or absent prerequisite rather than sealing. Do not continue concern dispatch after detecting an absent required skill for a recognized language partition; queue the complete final gap inventory, persist it serially, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
 </coverage_model>
 
@@ -375,7 +393,7 @@ Finding identity for convergence is content and stable producer identity, not pl
 
 <terminal_model>
 
-Finish the run only after every required coverage unit is `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`, and after every finding has been recorded. Record missing required skills, unsupported paths claimed by recognized implementation-language partitions, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
+Finish the run only after stage 7 of `<execution_sequence>` reconciles: every required coverage unit is `audited`, `not-applicable`, `missing-skill`, or `unsupported`, every finding is recorded, and every recorded finding references an accepted unit. Record missing required skills, unsupported paths claimed by recognized implementation-language partitions, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
 
 Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding exists; `rejected` when a required unit is uncovered or any finding exists. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
 
@@ -389,11 +407,20 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 
 When the run completes, return the exact run token and rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
 
-Return BLOCKED when target preparation fails before `spx verification run start`
-or SPX rejects a command. For missing input, name the selector or identity field
-that is absent. For command failures, include the complete diagnostic below;
-preparation failures use `runToken: not-started`, `payloadSource: none`, and
-`payloadKey: none`. After a run starts, record a missing required concern skill
+Return BLOCKED for three causes: target preparation fails before `spx
+verification run start`, SPX rejects a command, or a required unit cannot reach
+a final status after the run started. For missing input, name the selector or
+identity field that is absent. For command failures, include the complete
+diagnostic below; preparation failures use `runToken: not-started`,
+`payloadSource: none`, and `payloadKey: none`.
+
+A required unit that cannot reach a final status is not a command rejection, so
+its diagnostic carries the started `runToken`, the absent prerequisite or failed
+operation in `command` — the exact operation attempted, such as the unreadable
+subject path or the governing node that could not be discovered — and
+`payloadSource: none`, `payloadKey: none`, `exitCode: none`, `stderr: none`.
+Name the unit by its `unitId` in the `command` line so the blocked unit is
+identifiable. After a run starts, record a missing required concern skill
 as `missing-skill`, finish with terminal status `rejected`, render, and return
 the run token plus projection.
 
@@ -447,6 +474,7 @@ existing no-retry rule; these records authorize no replacement invocation.
 - Every audited concern preserves its complete non-empty inspected-path set as path-scoped units whose `subject` fields are the exact paths; every expected unit is audited only after the concern completes, and its finding count derives from accepted finding rows rather than a custom field.
 - The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
+- Every sealed run reconciles before finishing: every required unit carries `audited`, `not-applicable`, `missing-skill`, or `unsupported`, every finding references an accepted unit, and every subject body was read complete from the resolved `base..head` scope. A run that reaches none of those for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>

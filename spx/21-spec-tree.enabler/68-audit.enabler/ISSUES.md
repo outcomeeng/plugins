@@ -132,3 +132,87 @@ Open gaps:
 - Audit terminal rollup is planned, but the public `finish` contract still speaks as caller-supplied terminal status. SPX should decide whether audit `finish` derives status without a caller value or validates a supplied value against the derived rollup, and specify the rejected mismatch behavior.
 - Prior-run selection must distinguish gating runs over committed heads from advisory runs over live modified or untracked files. The run-set selector should expose run purpose directly rather than infer authority from scope payload prose.
 - Finding severity vocabulary is not reconciled across the artifact-type audit skills. `audit-adr` emits the audit-run severities `blocking`/`debt`; `audit-pdr`, `audit-tests`, `audit-specs`, and `audit-eval-evidence` emit `REJECT`/`WARNING`/`INFO`. The governing authority conflicts: `/merging-standards` `<review_classification>` mandates `BLOCKING`/`DEBT` and forbids severity-rank labels, while its `<auditor_verdicts>` references a `REJECT` finding. SPX should define the single canonical finding-severity enum for audit-run verdicts, after which the four non-`blocking`/`debt` skills reconcile to it in one pass — a sub-task of the verification-run migration in `PLAN.md`, not independent work, because that migration rewrites the same skills.
+
+## The completion contract's behavioral claim carries no eval evidence
+
+The node asserts the implementation-audit completion contract as five `[audit]`
+assertions whose subject is the shipped `spec-tree:audit-implementation` prompt.
+They state what the contract requires; they establish nothing about how a run
+behaves.
+
+`/verify` `<classify-subject>` routes the behavioral claim elsewhere: an
+implementation-audit run is an LLM-driven producer emitting a structured verdict,
+which resolves to `[eval]`, and reading authored text proves only that the text
+was authored. The behavioral assertion — a run finishes only when every required
+unit carries a final status, or returns the blocked diagnostic naming a concrete
+failed operation or absent prerequisite — is therefore `capability-required`,
+with its `[eval]` shape preserved and no evidence path written, because
+`just eval-links` fails the gate on a dangling link.
+
+**Why this is a separate larger concern.** The two entries above record the eval
+surface as unstable: mixed-changeset partitioning yields different coverage
+projections across runs of the same branch, and a terminal projection can report
+`sealed: true` beside an event projection reporting `sealed: false`. A case set
+captured against that surface would pin one arbitrary run's shape as the
+contract.
+
+**Resolution shape**: author the `[eval]` assertion and its cases once the
+partitioning and seal-agreement entries above settle, scoping the cases to the
+terminal contract rather than to partitioning. Tracked as a Change deriving from
+the one that added the `[audit]` assertions.
+
+**Evidence.** `/verify` classification during the interview that scoped those
+five assertions; the operator accepted `[audit]`-only with the gap recorded here.
+
+## The audit-skill file inventory is enforced but undocumented
+
+`outcomeeng/validation/audit_artifacts.py` enforces an exact file inventory for
+each `audit-*` skill directory. For `audit-implementation` the permitted set is
+`SKILL.md`, `references/`, `references/operational-failures.md`, `scripts/`, and
+`scripts/resolve_scope.py`. Adding any further bundled file — a `templates/`
+directory carrying the scope-unit and finding payload shapes, for instance —
+fails the pre-commit hook with an `expected ... found ...` diff naming the new
+paths.
+
+The constraint is real and serves the assertions that keep plugin-side audit
+machinery out of the skill. No spec assertion, decision, or skill-authoring
+overlay states it, so an author reaches it only by having a commit rejected, and
+`/skill-standards` `<progressive_disclosure>` actively suggests the bundled-file
+shapes the validator forbids here.
+
+**Resolution shape**: declare the inventory constraint where an author reads it
+before authoring — a compliance assertion on this node naming the validator as
+its enforcement, and a line in `spx/local/skills.md` for the authoring surface —
+or widen the validator to a category rule that admits inert data files while
+still rejecting executable audit machinery.
+
+**Evidence.** The pre-commit hook rejected a `templates/` directory carrying the
+two payload shapes during the completion-contract repair; the extraction was
+withdrawn and the payloads stay inline in `SKILL.md`.
+
+## The run driver reports inconsistent provenance for its own plugin version
+
+Two sealed implementation-audit runs recorded minutes apart, from the same agent
+on the same machine against the same installed plugin set, carry different
+`producerProvenance.agentOwningPluginVersion` values: `0.92.8` in run
+`2026-09-14_20-51-24-761-379222378048` and `0.85.0` in run
+`2026-09-14_20-56-49-016-d65f8206db75`. The co-recorded
+`skillOwningPluginVersion` and `toolVersion` agree across both runs.
+
+Both values cannot describe the same environment, so at least one sealed record
+carries false provenance. The skill supplies this value; SPX records what it is
+given.
+
+Neither verdict is affected, and finding convergence keys on content and stable
+producer identity rather than plugin version, so no downstream read breaks. The
+defect is that a durable, sealed audit record states a version the environment
+did not run.
+
+**Resolution shape**: establish where the run driver reads its own owning-plugin
+version, and derive it from one source that cannot disagree across runs — the
+installed plugin manifest the skill was loaded from. Until then, treat
+`agentOwningPluginVersion` in sealed audit records as unreliable for run
+comparison.
+
+**Evidence.** The two run tokens above, recorded during the completion-contract
+repair.
