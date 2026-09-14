@@ -132,3 +132,34 @@ Open gaps:
 - Audit terminal rollup is planned, but the public `finish` contract still speaks as caller-supplied terminal status. SPX should decide whether audit `finish` derives status without a caller value or validates a supplied value against the derived rollup, and specify the rejected mismatch behavior.
 - Prior-run selection must distinguish gating runs over committed heads from advisory runs over live modified or untracked files. The run-set selector should expose run purpose directly rather than infer authority from scope payload prose.
 - Finding severity vocabulary is not reconciled across the artifact-type audit skills. `audit-adr` emits the audit-run severities `blocking`/`debt`; `audit-pdr`, `audit-tests`, `audit-specs`, and `audit-eval-evidence` emit `REJECT`/`WARNING`/`INFO`. The governing authority conflicts: `/merging-standards` `<review_classification>` mandates `BLOCKING`/`DEBT` and forbids severity-rank labels, while its `<auditor_verdicts>` references a `REJECT` finding. SPX should define the single canonical finding-severity enum for audit-run verdicts, after which the four non-`blocking`/`debt` skills reconcile to it in one pass — a sub-task of the verification-run migration in `PLAN.md`, not independent work, because that migration rewrites the same skills.
+
+## The completion contract's behavioral claim carries no eval evidence
+
+The node asserts the implementation-audit completion contract as five `[audit]`
+assertions whose subject is the shipped `spec-tree:audit-implementation` prompt.
+They state what the contract requires; they establish nothing about how a run
+behaves.
+
+`/verify` `<classify-subject>` routes the behavioral claim elsewhere: an
+implementation-audit run is an LLM-driven producer emitting a structured verdict,
+which resolves to `[eval]`, and reading authored text proves only that the text
+was authored. The behavioral assertion — a run finishes only when every required
+unit carries a final status, or returns the blocked diagnostic naming a concrete
+failed operation or absent prerequisite — is therefore `capability-required`,
+with its `[eval]` shape preserved and no evidence path written, because
+`just eval-links` fails the gate on a dangling link.
+
+**Why this is a separate larger concern.** The two entries above record the eval
+surface as unstable: mixed-changeset partitioning yields different coverage
+projections across runs of the same branch, and a terminal projection can report
+`sealed: true` beside an event projection reporting `sealed: false`. A case set
+captured against that surface would pin one arbitrary run's shape as the
+contract.
+
+**Resolution shape**: author the `[eval]` assertion and its cases once the
+partitioning and seal-agreement entries above settle, scoping the cases to the
+terminal contract rather than to partitioning. Tracked as a Change deriving from
+the one that added the `[audit]` assertions.
+
+**Evidence.** `/verify` classification during the interview that scoped those
+five assertions; the operator accepted `[audit]`-only with the gap recorded here.
