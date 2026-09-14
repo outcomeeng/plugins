@@ -34,17 +34,20 @@ class AuditCoverageRequirement(StrEnum):
 
 
 class AuditCoverageStatus(StrEnum):
-    """Coverage status values a required implementation-audit unit may carry.
+    """Coverage status values an implementation-audit unit may carry.
 
-    An optional unit may additionally carry ``skipped``. No unit carries
-    ``incomplete``; a required unit that reaches none of these statuses stops the
-    run with a blocked diagnostic instead of sealing.
+    ``AUDITED``, ``NOT_APPLICABLE``, ``UNSUPPORTED``, and ``MISSING_SKILL`` are
+    the statuses a required unit may reach; ``SKIPPED`` is reserved for an
+    optional unit. No unit carries ``incomplete`` — a required unit that reaches
+    none of its four statuses stops the run with a blocked diagnostic instead of
+    sealing.
     """
 
     AUDITED = "audited"
     NOT_APPLICABLE = "not-applicable"
     UNSUPPORTED = "unsupported"
     MISSING_SKILL = "missing-skill"
+    SKIPPED = "skipped"
 
 
 class AuditFindingSeverity(StrEnum):
