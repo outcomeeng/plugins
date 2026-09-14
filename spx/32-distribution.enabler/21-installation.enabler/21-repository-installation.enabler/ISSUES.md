@@ -27,7 +27,8 @@ not resolve their provenance.
 
 **Revisit condition.** Before relying on this node's evidence-audit approval, or
 when changing its lifecycle test cases. Change #39 retains the failed verdict
-and the operator's authorization to merge with unavailable verification.
+and records that integration before the required gates passed was an execution
+error; the operator granted no waiver of merge prerequisites.
 
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
