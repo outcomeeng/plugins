@@ -66,6 +66,11 @@ load only when needed without duplicating the native tool schema.
    | Claude | Strong   | `model: opus`, `effort: high`                                |
    | Claude | Fast     | `model: haiku`; no effort field                              |
 
+   Release acceptance is established independently for each agent harness and
+   requires evidence for all three profiles of that harness. Evidence for one
+   harness establishes no execution claim for another; a combined acceptance
+   claim requires complete evidence for every harness it names.
+
 ## Verification
 
 ### Testing
@@ -135,8 +140,10 @@ load only when needed without duplicating the native tool schema.
 - ALWAYS: keep skill behavior usable within the supported products with the
   invoking agent session's configuration, including when a configured subagent
   invokes the skill; skill frontmatter declares no model or reasoning override ([audit])
-- ALWAYS: retain native loading and one minimal isolated execution for every
-  supported harness/profile combination as release evidence; an independent
+- ALWAYS: establish release acceptance separately for each supported harness,
+  retaining native loading and one minimal isolated execution for each of its
+  Standard, Strong, and Fast profiles; a combined acceptance claim requires
+  complete evidence for every harness it names. An independent
   Auditor judges the actual configuration and result, with no retry or
   substitution after a failed or unusable launch ([audit])
 - NEVER: substitute a model silently when the configured model is unavailable,
