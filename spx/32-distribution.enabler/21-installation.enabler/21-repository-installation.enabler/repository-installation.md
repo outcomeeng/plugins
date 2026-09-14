@@ -2,19 +2,28 @@
 
 PROVIDES `just install-marketplace` for persistent installation and `just verify-marketplace-installation` for isolated end-to-end proof
 SO THAT marketplace maintainers and the merge lifecycle
-CAN refresh exactly the installed plugins in selected agent state and verify full, valid-subset, and invalid-subset behavior with disposable installation state and native saved-login refresh for subscription discovery
+CAN refresh exactly the selected plugins while preserving activation and verify installation behavior with disposable state and native saved-login refresh for subscription discovery
 
 ## Assertions
+
+- ALWAYS: persistent selection is the catalog-bounded Claude Code project-installed inventory or the catalog-bounded plugin keys in the selected Codex home's raw configuration, including disabled plugins and plugins with missing caches; product overrides never change that home-wide set.
+- Given an empty selected Codex home, when persistent installation runs, then only `spec-tree` is registered and cached, its home activation is explicitly disabled, and the run warns that the operator can select additional plugins.
+- Given empty Claude Code project installation state, when bootstrap runs, then only `spec-tree` is installed, declared project activation is preserved, and absent activation defaults to disabled with a warning.
+- Given a trusted product enabling a home-disabled plugin, when that product loads, then the plugin's skills are active for that product; a product that supplies no override retains disabled activation, and a home-wide refresh preserves both products' configuration and the home's activation.
+- Given configured home plugins whose marketplace snapshot or plugin cache is absent, when refresh runs or resumes after interruption, then all selected published plugins become available with the same activation and no additional selection, including when the marketplace revision is unchanged.
+- Given an existing noncanonical marketplace source for either agent, when persistent preflight runs, then it reports the observed and canonical sources and the need for explicit repair, and no agent performs a state-changing operation.
+- For each supported agent, refreshing a valid selected subset preserves every pre-run activation entry, including disabled plugins and explicitly enabled home plugins, while updating every selected published plugin through native refresh operations.
+- Given an unexpected selection or activation write during persistent execution, when verification detects it, then the run reports failure and retains the changed state for diagnosis without restoring an earlier settings snapshot or issuing compensating activation commands.
+- ALWAYS: selected Codex plugins' subagent definitions remain globally registered under the selected home's digest-bound ownership record regardless of product skill activation; disabling a plugin in a product neither removes its home definitions nor generates a product registry.
+- ALWAYS: a pending-publication result names a selected plugin whose absence from the canonical source is established, preserves its prior owned definitions, and reports it separately from successfully refreshed plugins; other failures stop all later operations.
 
 ### Scenarios
 
 - Given a native probe command whose parent emits a byte sequence that is invalid UTF-8 and exits while a descendant keeps the captured output stream open, when the runner collects the result, then it returns the parent's completed result promptly, replaces undecodable bytes, and terminates the descendant before returning. ([test](tests/test_native_profile_process.scenario.l1.py))
 - Given a native probe command whose parent and descendant remain running, when the execution timeout expires, then the runner reports the timeout promptly and terminates the descendant before returning. ([test](tests/test_native_profile_process.scenario.l1.py))
 
-- Given an agent state with no installed `outcomeeng` plugin, when persistent installation runs, then it installs only `spec-tree` for that agent and warns that the operator probably wants additional plugins. ([test](tests/test_repository_installation.scenario.l3.py))
-- Given a nonempty installed subset that omits `spec-tree`, when persistent installation starts, then it reports the invalid selection and performs no state-changing operation. ([test](tests/test_repository_installation.scenario.l1.py))
-- Given a checkout whose committed catalog declares a plugin the marketplace has not published, when persistent installation runs, then that plugin is reported as pending publication and every other plugin still installs. ([test](tests/test_repository_installation.scenario.l1.py))
-- Given the same absent plugin, when isolated installation runs, then the absence is terminal at that plugin's install, because the marketplace an isolated run registers is the checkout itself. ([test](tests/test_repository_installation.scenario.l1.py))
+- Given a nonempty selected subset that omits `spec-tree`, when persistent installation starts, then it reports the invalid selection and performs no state-changing operation. ([test](tests/test_repository_installation.scenario.l1.py))
+- Given a selected plugin absent from the registered checkout marketplace, when isolated installation runs, then the absence is terminal at that plugin's install. ([test](tests/test_repository_installation.scenario.l1.py))
 - Given a user-scoped Claude Code `outcomeeng` marketplace registration, when persistent installation starts, then it reports the colliding settings path and performs no state-changing operation. ([test](tests/test_repository_installation.scenario.l1.py))
 - Given `just verify-marketplace-installation`, when the recipe runs, then it passes the repository-installation node's tests directory to the repository test command so pytest discovers every evidence file. ([test](tests/test_repository_installation.scenario.l1.py))
 - Given a generated subset omitting `spec-tree`, when isolated installation plans that selection, then it reports the invalid subset before an agent CLI mutates state. ([test](tests/test_repository_installation.scenario.l1.py))
@@ -29,11 +38,9 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
   maps to one native-profile probe row whose immutable identifier, complete native
   configuration, disposable state root, and artifact paths derive from that
   registry entry. ([test](tests/test_native_profile_execution.mapping.l1.py))
-- For each supported agent, a generated valid installed subset containing `spec-tree` and drawn from the plugins the canonical marketplace publishes maps through `just install-marketplace` to exactly those catalog plugins for that agent, with no published plugin reported as pending and the project's activation selection preserved. ([test](tests/test_repository_installation.mapping.l3.py))
 - Each isolated verification selection — the complete committed catalogs and a generated valid subset containing `spec-tree` — maps to registration of the invocation checkout and exactly that selection reported as installed and enabled by the corresponding real agent CLI. ([test](tests/test_repository_installation.mapping.l3.py))
 - For each supported agent, an explicitly selected valid isolated subset maps to a plan containing exactly its members in catalog order. ([test](tests/test_repository_installation.mapping.l1.py))
 - Each marketplace, plugin, and lifecycle operation a repository-installation plan performs maps to a failure report naming that operation and its agent, with the attempted commands ending at that operation and no later operation performed. ([test](tests/test_repository_installation.mapping.l1.py))
-- Each combination of installation mode and operation kind whose failure result contains the source-owned absent-marketplace marker maps to pending publication for a persistent plugin operation and to a terminal failure for every other combination. ([test](tests/test_repository_installation.mapping.l1.py))
 
 ### Compliance
 
@@ -64,12 +71,9 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
   A missing credential, failed load, or unusable launch is reported
   without retry, credential fallback, profile substitution, or another launch
   mechanism ([audit]).
-- ALWAYS: persistent installation places every plugin's generated Codex agent definitions in the selected `CODEX_HOME/agents/` directory beside the skill content they invoke, leaving definitions outside the marketplace's recorded ownership unchanged ([test](tests/test_repository_installation.compliance.l1.py))
-- ALWAYS: marketplace reconciliation leaves exactly one current marketplace-owned definition for every authored Codex agent in the selected agent home and removes marketplace-owned definitions for agents or plugins absent from the current committed catalog ([test](tests/test_repository_installation.compliance.l1.py))
+- ALWAYS: persistent installation places each refreshed selected plugin's generated Codex agent definitions in the selected `CODEX_HOME/agents/` directory beside the skill content they invoke, leaving definitions outside the marketplace's recorded ownership unchanged ([test](tests/test_repository_installation.compliance.l1.py))
+- ALWAYS: marketplace reconciliation leaves exactly one current marketplace-owned definition for each authored Codex agent of a refreshed selected plugin, preserves pending plugins' prior owned definitions, and removes unchanged owned definitions for agents removed from refreshed plugins or plugins outside the catalog-bounded home selection ([test](tests/test_repository_installation.compliance.l1.py))
 - ALWAYS: a scope split — plugin-owned agent definitions in a checkout whose invoked skill content lives in the selected agent home — stops installation before mutation, reports every mismatched definition, and directs removal of byte-identical plugin copies while identifying changed or unrecognized copies as collisions for inspection ([test](tests/test_repository_installation.compliance.l1.py))
-- NEVER: repository installation reads or writes repository `.codex/config.toml` as Codex plugin installation or enablement state. ([test](tests/test_repository_installation.compliance.l1.py))
-- NEVER: a persistent installation run leaves the checkout's committed plugin selection changed, including a run that fails after installing has already altered it. ([test](tests/test_repository_installation.compliance.l1.py))
-- NEVER: preserving the committed plugin selection reverts the marketplace source the same run reconciled — a checkout declaring a noncanonical source ends with the canonical source and its own selection. ([test](tests/test_repository_installation.compliance.l1.py))
 - NEVER: isolated installation reads or mutates persistent marketplace registration, plugin caches, or agent definitions; subscription discovery may read and natively refresh only the selected saved-login file. ([test](tests/test_repository_installation.compliance.l3.py))
 - ALWAYS: reconciliation adopts a present destination whose bytes equal the plugin's current shipped definition but which no ownership entry records, so a run interrupted before its ownership-record write completes cleanly when re-run. ([test](tests/test_repository_installation.compliance.l1.py))
 - NEVER: the fresh-session subagent-discovery probe continues without its credential or stores a captured stream carrying the credential substring — absence raises a loud error before any agent process runs, and capture-time scrubbing replaces every occurrence in stored streams and messages. ([test](tests/test_repository_installation.compliance.l1.py))

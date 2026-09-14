@@ -1,12 +1,9 @@
 # Plan
 
-Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownership).
+## Marketplace diagnostics
 
 The `spx/21-spec-tree.enabler/79-diagnostics.enabler` re-declaration is deferred behind a published
 `@outcomeeng/spx` dependency (see that node's `PLAN.md`).
-
-The decision governs user-scope state ownership. Pending work remains only in that dependent
-slice.
 
 ## Align the role vocabulary across the remaining skill surfaces
 
@@ -25,13 +22,4 @@ Why separate: each plugin's skill edit carries the `skill-auditor` gate and a bu
 
 ## Relocate installation governance and split the repository-installation node
 
-`spx/12-marketplace-state.adr.md` sits at the product root while its opening paragraph, invariants, and testing rules govern installation mechanics only; its agent-definition co-location and ownership content is the cross-cutting part. `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler` conflates the maintainers' persistent command — `just install-marketplace`, run with the designated main checkout in the release phase — with isolated verification — `just verify-marketplace-installation`, installing every catalog plugin for every agent into disposable homes — in one spec of more than twenty assertions. The product-level `spx/ISSUES.md` entry on agent-specific behavior inside product-level decisions names the same decision.
-
-Steps; `/decompose` and `/refactor` own placement and index assignment:
-
-1. Move the installation content of `spx/12-marketplace-state.adr.md` into a new decision under `spx/32-distribution.enabler/21-installation.enabler/`; place the co-location and ownership content through `/decompose` — candidate owner `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler` — preserving every sentence; retire the root file.
-2. Split the repository-installation node into a persistent-installation child (refresh exactly the installed set, empty-inventory bootstrap, pending publication, agent-home placement and reconciliation, the settings-unchanged invariant) and an isolated-verification child (disposable homes, checkout as marketplace, full catalog and generated subsets, terminal absence, idempotent repeat, the subagent-discovery probe); distribute the six evidence files and the node's `ISSUES.md` entries.
-3. Lift `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md` to the installation node.
-4. Citation sweep: `spx/outcomeeng.product.md`, this file, `spx/ISSUES.md`, `spx/local/merging.md`, the `justfile` recipe test path, the recipe-asserting scenario test, the diagnostics node references, and the prose in `CLAUDE.md`, `AGENTS.md`, and `README.md`.
-
-Ordering: after the settings-unchanged changeset recorded in `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/PLAN.md`.
+Installation work is coordinated in [Change #48](https://github.com/outcomeeng/changes/issues/48), with the structural proposal received through [Change #14](https://github.com/outcomeeng/changes/issues/14). The governing declarations are `spx/12-marketplace-state.adr.md` and `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md`.
