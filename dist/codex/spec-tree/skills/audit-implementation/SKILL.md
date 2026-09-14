@@ -118,10 +118,6 @@ coverage model. A committed audit is reusable only when the applicable
 deterministic verification is established as passing for that subject; an
 advisory audit never supplies reusable gate evidence.
 
-The bundled entrypoint is covered before shipping by real-Git stale-base
-resolution and nonexistent-repository scenarios. These exercise the shared
-provider through the entrypoint's actual process boundary.
-
 </request_contract>
 
 <verification_run_contract>
