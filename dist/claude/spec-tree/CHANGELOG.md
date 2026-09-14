@@ -10,6 +10,17 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.94.1
+
+### Fixed
+
+- **An implementation audit can no longer seal an unfinished inspection.** `incomplete` and `skipped` are no longer admissible final statuses for a required coverage unit in `audit-implementation`; a required unit reaches only `audited`, `not-applicable`, `missing-skill`, or `unsupported`. A run that reaches none of those returns the existing blocked diagnostic naming the concrete failed operation or absent prerequisite. Remaining work, elapsed time, context pressure, and unfinished reading are never such a cause. Previously `finish` was reachable directly from a self-declared stop, and the resulting sealed `rejected` run with zero findings was indistinguishable from a completed audit that found a coverage gap.
+
+### Changed
+
+- **`audit-implementation` runs an ordered execution sequence with a pre-finish reconciliation gate.** Seven stages — anchor, open the run, load, enumerate, inspect, resolve, reconcile — replace an ordering that was distributed across four sections. Stage 7 confirms every planned unit carries a final status and every recorded finding references an accepted unit before `finish`; a failed reconciliation returns the run to inspection rather than sealing. Stage 5 requires each subject body to be read complete from the resolved `base..head` scope, re-issuing a truncated read in bounded ranges and never deriving a subject from a single commit's patch. Stage 3 loads each concern's governing standards and the audited repository's declared `spx/local/` overlays before any concern judgment; a finding raised before that load is withdrawn rather than recorded.
+- **`audit-implementation` carries its SPX command forms once.** A duplicated block repeating the `scope add` and `finding add` command skeletons is removed, and the idempotency-key derivation is stated as its rules rather than its reasoning. The key composition, quoting rule, and payload field contracts are unchanged.
+
 ## 0.93.0
 
 ### Changed
