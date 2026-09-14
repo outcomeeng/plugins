@@ -189,3 +189,30 @@ still rejecting executable audit machinery.
 **Evidence.** The pre-commit hook rejected a `templates/` directory carrying the
 two payload shapes during the completion-contract repair; the extraction was
 withdrawn and the payloads stay inline in `SKILL.md`.
+
+## The run driver reports inconsistent provenance for its own plugin version
+
+Two sealed implementation-audit runs recorded minutes apart, from the same agent
+on the same machine against the same installed plugin set, carry different
+`producerProvenance.agentOwningPluginVersion` values: `0.92.8` in run
+`2026-09-14_20-51-24-761-379222378048` and `0.85.0` in run
+`2026-09-14_20-56-49-016-d65f8206db75`. The co-recorded
+`skillOwningPluginVersion` and `toolVersion` agree across both runs.
+
+Both values cannot describe the same environment, so at least one sealed record
+carries false provenance. The skill supplies this value; SPX records what it is
+given.
+
+Neither verdict is affected, and finding convergence keys on content and stable
+producer identity rather than plugin version, so no downstream read breaks. The
+defect is that a durable, sealed audit record states a version the environment
+did not run.
+
+**Resolution shape**: establish where the run driver reads its own owning-plugin
+version, and derive it from one source that cannot disagree across runs — the
+installed plugin manifest the skill was loaded from. Until then, treat
+`agentOwningPluginVersion` in sealed audit records as unreliable for run
+comparison.
+
+**Evidence.** The two run tokens above, recorded during the completion-contract
+repair.
