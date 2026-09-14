@@ -44,9 +44,12 @@ CAN refresh exactly the installed plugins in selected agent state and verify ful
   credential, and invokes its native-child command exactly once; a failed row
   records its terminal condition without a retry, credential fallback, profile
   substitution, or alternate launch. ([test](tests/test_native_profile_execution.compliance.l1.py))
-- ALWAYS: release evidence retains configuration, native loading, and one
-  minimal isolated execution result for every supported harness/profile
-  combination declared in `spx/15-subagent-execution.pdr.md`; each row derives
+- ALWAYS: release acceptance is established independently for each supported
+  harness and retains configuration, native loading, and one minimal isolated
+  execution result for all three of that harness's profiles declared in
+  `spx/15-subagent-execution.pdr.md`. Evidence for one harness establishes no
+  execution claim for another; a combined acceptance claim requires complete
+  evidence for every harness it names. Each row derives
   its complete configuration from the central profile owner, uses disposable
   state, and makes one native subagent invocation. The retained artifacts
   distinguish definition loading, parent-session configuration, and the child
