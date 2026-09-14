@@ -1,16 +1,17 @@
 ---
 name: audit-implementation
 description: >-
-  Implementation-audit orchestration methodology — discovers implementation
-  languages, composes code, test, and architecture concern audits, and records
-  one audit verification run.
+  Implementation audit methodology — judges a changeset's implementation
+  against its governing decisions, specs, and language standards, covering
+  per-language code, test, and architecture concerns, finding falsifiability,
+  and completeness of the inspection.
 argument-hint: "<scope>"
 allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Bash(printf:*), Glob, Grep, Skill
 ---
 
 <objective>
 
-An authoritative SPX projection and raw run token for the requested implementation scope against its governing decisions, specifications, and language standards, with `terminalStatus` (`approved` or `rejected`) and findings naming the artifact, violated rule, and observed-versus-expected evidence, or a `BLOCKED` diagnostic identifying the request or command failure that prevented completion.
+An authoritative SPX projection and raw run token for the requested implementation scope, carrying `terminalStatus` (`approved` or `rejected`) and findings that name the artifact, the violated rule, and observed-versus-expected evidence. A run that cannot reach that projection yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
 
 </objective>
 
@@ -344,7 +345,16 @@ Each expected unit records:
 - coverage status: `audited`, `not-applicable`, `missing-skill`, or `unsupported` for a required unit; an optional unit may additionally carry `skipped`
 - concern result: completion is represented by every expected path unit carrying `coverageStatus: audited`, and the finding count is the count of accepted finding rows for those path-scoped units
 
-Plan the complete inventory before invoking any concern skill, but NEVER mark a planned unit `audited`. Queue each unit only when its final coverage status is known: immediately for a classified gap, or after the corresponding concern finishes for an executed producer. A concern skill returns its result to the run driver and never writes SPX state itself. After a concern returns, queue one path-scoped row per inspected path with a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`; queue each returned finding after those scope rows and associate it with the matching path-scoped unit. Persist queued units with one `spx verification run scope add` command at a time, ordered by language discovery order and then concern order `code`, `tests`, `architecture`; preserve each command result before issuing the next mutation. Derive the concern's finding count from the accepted finding rows; do not emit a custom count SPX discards. Never append a preliminary required unit before its final coverage status is known; every accepted required uncovered event rejects the terminal rollup permanently. A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite; when it names neither, drive the concern to a final result rather than recording a non-audited status. NEVER manufacture a completed result from the orchestration's own inspection.
+- Plan the complete inventory before invoking any concern skill. NEVER mark a planned unit `audited`.
+- Queue each unit only once its final coverage status is known: immediately for a classified gap, or after its concern finishes for an executed producer.
+- NEVER append a preliminary required unit before its final coverage status is known — every accepted required uncovered event rejects the terminal rollup permanently.
+- A concern skill returns its result to the run driver and never writes SPX state itself.
+- After a concern returns, queue one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`.
+- Queue each returned finding after those scope rows, associated with its matching path-scoped unit.
+- Persist queued units one `spx verification run scope add` command at a time, ordered by language discovery order then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation.
+- Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
+- A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite. When it names neither, drive the concern to a final result rather than recording a non-audited status.
+- NEVER manufacture a completed result from the orchestration's own inspection.
 
 A missing required concern skill or an unsupported path already claimed by a recognized implementation-language partition rejects the run through accepted coverage status and the evidence-derived terminal rollup. A required unit that receives no concern result reaches no admissible status, so the run returns BLOCKED under `<verdict_format>` naming the failed operation or absent prerequisite rather than sealing. Do not continue concern dispatch after detecting an absent required skill for a recognized language partition; queue the complete final gap inventory, persist it serially, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
