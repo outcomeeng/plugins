@@ -89,8 +89,8 @@ def run_profile_process(
         stderr_capture.seek(0)
         stdout, stderr = stdout_capture.read(), stderr_capture.read()
         if timed_out is not None:
-            timed_out.output = stdout.encode(stdout_capture.encoding)
-            timed_out.stderr = stderr.encode(stderr_capture.encoding)
+            timed_out.output = stdout.encode()
+            timed_out.stderr = stderr.encode()
             raise timed_out
         return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
 
