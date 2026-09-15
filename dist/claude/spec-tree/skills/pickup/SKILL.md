@@ -107,12 +107,6 @@ spx session handoff
 
 # Move sessions to archive
 spx session archive <id...>
-
-# Remove old todo sessions, keeping the most recent N
-spx session prune [--keep <count>] [--dry-run]
-
-# Delete sessions permanently
-spx session delete <id...>
 ```
 
 Sessions are organized in `.spx/sessions/` in the **root worktree** (gitignored, sibling to `.git`):

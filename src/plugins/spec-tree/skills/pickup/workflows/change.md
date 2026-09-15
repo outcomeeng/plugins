@@ -63,7 +63,7 @@ The assignee alone cannot distinguish two sessions of one account; the Claim com
 Worked migration, with an overlay naming store `acme/changes`, project owner `acme` number `7`, Product `widgets`. The legacy file `2026-03-04_09-15-22` carries `goal: "Parser rejects unterminated strings with a located error"`. Inspection finds no credential-shaped content. The Change is created with the body on stdin — the provenance line, a blank line, then the whole file between a `text` fence-open line (three backticks followed by `text`) and a fence-close line (three backticks alone), inside a heredoc whose terminator `RECEIVED_INPUT` no body line equals:
 
 ```bash
-gh issue create --repo acme/changes --title 'Parser rejects unterminated strings with a located error' --body-file - --assignee @me <<'RECEIVED_INPUT'
+gh issue create --repo acme/changes --title 'Parser rejects unterminated strings with a located error' --body-file - <<'RECEIVED_INPUT'
 Received input: handoff document 2026-03-04_09-15-22 from the widgets queue (.spx/sessions), reproduced verbatim.
 
 <the text fence-open line>
