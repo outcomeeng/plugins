@@ -9,7 +9,7 @@ import subprocess
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from outcomeeng.validation.implementation_audit_contract import (
     ImplementationAuditConcern,
@@ -56,7 +56,8 @@ AUDIT_FIELD = cast(Any, _MODULE["AuditField"])
 RECONCILE_FIELD = cast(Any, _MODULE["ReconcileField"])
 reconcile = cast(
     Callable[
-        [Sequence[str], Sequence[str], Sequence[Mapping[str, Any]]], dict[str, Any]
+        [Sequence[str], Sequence[str], Sequence[Mapping[str, object]]],
+        dict[str, object],
     ],
     _MODULE["reconcile"],
 )
@@ -81,7 +82,7 @@ def run_implementation_scope_against_recorded_run(
     *,
     reconcile_run: str,
     scope_identity: str,
-    recorded_input: Mapping[str, Any],
+    recorded_input: Mapping[str, object],
     scope_units: object,
 ) -> InProcessRun:
     """Drive the reconciler with a runner that answers spx reads from given records.
@@ -99,9 +100,19 @@ def run_implementation_scope_against_recorded_run(
     subcommand_index = 1 + len(RUN_COMMAND_PREFIX)
     invocations: list[tuple[str, ...]] = []
 
-    def runner(args: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    def runner(
+        args: Sequence[str],
+        /,
+        *,
+        cwd: pathlib.Path,
+        capture_output: bool,
+        text: Literal[True],
+        check: bool,
+    ) -> subprocess.CompletedProcess[str]:
         if args[0] != SPX_COMMAND:
-            return subprocess.run(args, **kwargs)
+            return subprocess.run(
+                args, cwd=cwd, capture_output=capture_output, text=text, check=check
+            )
         invocations.append(tuple(args))
         return subprocess.CompletedProcess(
             list(args),
@@ -135,7 +146,15 @@ def run_implementation_scope_recording_every_command(
     """
     invocations: list[tuple[str, ...]] = []
 
-    def runner(args: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    def runner(
+        args: Sequence[str],
+        /,
+        *,
+        cwd: pathlib.Path,
+        capture_output: bool,
+        text: Literal[True],
+        check: bool,
+    ) -> subprocess.CompletedProcess[str]:
         invocations.append(tuple(args))
         return subprocess.CompletedProcess(list(args), 0, stdout="", stderr="")
 
@@ -158,7 +177,7 @@ def spx_scope_arguments(run: InProcessRun) -> tuple[str, ...]:
 
 def _run_in_process(
     argv: list[str],
-    runner: Callable[..., Any],
+    runner: Callable[..., subprocess.CompletedProcess[str]],
     invocations: Sequence[tuple[str, ...]] = (),
 ) -> InProcessRun:
     out, err = io.StringIO(), io.StringIO()
@@ -177,12 +196,22 @@ def run_implementation_scope_with_unlaunchable_spx(
     launch raises the ``OSError`` a missing or non-executable CLI produces.
     """
 
-    def runner(args: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    def runner(
+        args: Sequence[str],
+        /,
+        *,
+        cwd: pathlib.Path,
+        capture_output: bool,
+        text: Literal[True],
+        check: bool,
+    ) -> subprocess.CompletedProcess[str]:
         if args[0] == SPX_COMMAND:
             raise FileNotFoundError(
                 f"[Errno 2] No such file or directory: {SPX_COMMAND!r}"
             )
-        return subprocess.run(args, **kwargs)
+        return subprocess.run(
+            args, cwd=cwd, capture_output=capture_output, text=text, check=check
+        )
 
     return _run_in_process(
         [
