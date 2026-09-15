@@ -883,6 +883,7 @@ def build_persistent_installation_plan(
     claude_records, record_warnings = claude_refresh_records(
         reported_records,
         preflight.claude_plugins,
+        repaired_checkout=preflight.roots.checkout,
     )
     claude_recorded = frozenset(
         record.plugin
@@ -1104,13 +1105,18 @@ def claude_install_records(payload: str) -> tuple[ClaudeInstallRecord, ...]:
 def claude_refresh_records(
     records: Sequence[ClaudeInstallRecord],
     catalog: Sequence[str],
+    *,
+    repaired_checkout: Path | None = None,
 ) -> tuple[tuple[ClaudeInstallRecord, ...], tuple[InstallationWarning, ...]]:
     """Split Claude install records into native-update targets and warnings.
 
     A record refreshes when its plugin is in the committed catalog, its scope
     is one the project boundary admits, its project path exists to host the
     native command, and that project's own settings register no noncanonical
-    marketplace source the update would resolve against. Every other record is
+    marketplace source the update would resolve against. The invocation
+    checkout is exempt from the source exclusion when named as
+    `repaired_checkout`: the plan reconciles its registration before any
+    update runs, so its records refresh in the same run. Every other record is
     reported and left unchanged: a record outside the catalog, outside project
     or local scope, whose project path is gone, or whose project declares a
     noncanonical source. Targets follow catalog order, then project path, then
@@ -1135,7 +1141,11 @@ def claude_refresh_records(
                 scope=record.scope,
                 project_path=record.project_path,
             )
-        elif claude_project_source_action(record.project_path) is SourceAction.REPLACE:
+        elif (
+            record.project_path != repaired_checkout
+            and claude_project_source_action(record.project_path)
+            is SourceAction.REPLACE
+        ):
             message = NONCANONICAL_SOURCE_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
