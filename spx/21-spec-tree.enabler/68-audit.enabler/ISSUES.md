@@ -216,3 +216,26 @@ comparison.
 
 **Evidence.** The two run tokens above, recorded during the completion-contract
 repair.
+
+## The scope resolver crossed the shipped-script size threshold
+
+`src/plugins/spec-tree/skills/audit-implementation/scripts/resolve_scope.py` is
+61 lines. `spx/12-shipped-scripting.adr.md` holds that a generic shipped script
+beyond fifty lines is debt awaiting extraction into the SPX CLI once it proves
+its value.
+
+The lines that crossed the threshold implement `--audit-input`: the option that
+merges the invocation's short context values beneath the git-resolved scope so
+the resolved changed-path set reaches `spx verification run start` through a
+pipe instead of being retyped. The behavior is audit-specific rather than
+agent-specific, and SPX owns the audit verification-run contract, so the natural
+end state is `spx verification run start` resolving and embedding the scope from
+a selector itself — at which point the skill passes a selector and the script
+disappears.
+
+**Resolution shape**: fold scope resolution and run-input composition into the
+SPX `verification run start` contract, then reduce or remove the bundled script.
+Tracked against the SPX-side payload-schema Change.
+
+**Evidence.** The resolver grew from 48 to 61 lines while closing the
+transcribed-inventory hole recorded against `outcomeeng/changes#47`.

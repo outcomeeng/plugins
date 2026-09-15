@@ -7,10 +7,14 @@ CAN contribute code, test, and architecture audit intelligence without shipping 
 ## Assertions
 
 - ALWAYS: the `spec-tree:audit-implementation` prompt contract admits only `audited`, `not-applicable`, `missing-skill`, or `unsupported` as a required coverage unit's final status, and requires a run that reaches none of those to return the blocked diagnostic naming the concrete failed operation or absent prerequisite ([audit])
-- ALWAYS: the `spec-tree:audit-implementation` prompt contract requires reconciliation before the run finishes — every planned unit carries a final status and every recorded finding references an accepted unit — and continues the run when reconciliation fails ([audit])
+- ALWAYS: the `spec-tree:audit-implementation` prompt contract requires every planned unit to carry a final status and every recorded finding to reference an accepted unit before the run finishes, and continues the run when that reconciliation fails ([audit])
 - ALWAYS: the `spec-tree:audit-implementation` prompt contract requires each subject body to be inspected completely from the resolved base-to-head scope, re-issuing a truncated or partial read in bounded ranges until the body is complete ([audit])
 - ALWAYS: the `spec-tree:audit-implementation` prompt contract requires each concern's governing standards and the audited repository's declared `spx/local/` overlays to load before a finding is accepted ([audit])
 - NEVER: the `spec-tree:audit-implementation` prompt contract admits remaining work, elapsed time, context pressure, or unfinished reading as a cause for ending a run, or derives a subject body from a single commit's patch rather than the resolved base-to-head scope ([audit])
+- ALWAYS: the `spec-tree:audit-implementation` prompt contract carries the resolved changed-path inventory into the verification run through the scope resolver's piped output, never through a path list transcribed into a payload ([audit])
+- ALWAYS: the `spec-tree:audit-implementation` prompt contract gives every discovered language trio the complete resolved changed-path set and records one scope unit per path a concern returns, narrowing neither set ([audit])
+- ALWAYS: the `spec-tree:audit-implementation` prompt contract reconciles the run's recorded subjects against a fresh resolution of the same selector before finishing, and names the ownership reason for every resolved path carrying no unit ([audit])
+- NEVER: the `spec-tree:audit-implementation` prompt contract authorizes finishing from a reconciliation against the run's own planned inventory alone — a plan narrowed before enumeration reconciles with itself ([audit])
 
 ### Scenarios
 
@@ -21,6 +25,8 @@ CAN contribute code, test, and architecture audit intelligence without shipping 
 
 ### Compliance
 
+- NEVER: a key supplied to the implementation-audit scope resolver's run-input option displaces the git-resolved base, head, or changed-path values ([test](tests/test_implementation_scope.compliance.l1.py))
+- NEVER: the implementation-audit scope resolver accepts a run-input value that is not a JSON object — it exits nonzero naming the failure and emits no payload ([test](tests/test_implementation_scope.compliance.l1.py))
 - ALWAYS: every programming-language plugin ships its implementation-code audit skill as `audit-{lang}-code` beside its `audit-{lang}-tests` and `audit-{lang}-architecture` concern skills ([test](tests/test_implementation_audit_contract.compliance.l1.py))
 - ALWAYS: `implementation-auditor` is the only implementation-audit wrapper agent; no `auditor`, `audit-orchestrator`, or language-specific auditor agent exists ([test](tests/test_implementation_audit_contract.compliance.l1.py))
 - ALWAYS: every typed `implementation-auditor` run records implementation-audit input, scope, findings, terminal state, and a sealed rendered projection through the published `spx verification run` lifecycle ([audit])

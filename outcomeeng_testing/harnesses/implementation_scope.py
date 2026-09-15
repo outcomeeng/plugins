@@ -24,9 +24,14 @@ ERROR_PREFIX = cast(str, runpy.run_path(str(SCRIPT_PATH))["ERROR_PREFIX"])
 
 
 def run_implementation_scope(
-    repo: pathlib.Path, selector: str, *, repo_override: pathlib.Path | None = None
+    repo: pathlib.Path,
+    selector: str,
+    *,
+    repo_override: pathlib.Path | None = None,
+    audit_input: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Capture the real CLI result while keeping cwd separate from --repo."""
+    audit_input_argv = () if audit_input is None else ("--audit-input", audit_input)
     return subprocess.run(
         (
             sys.executable,
@@ -34,6 +39,7 @@ def run_implementation_scope(
             selector,
             "--repo",
             str(repo if repo_override is None else repo_override),
+            *audit_input_argv,
         ),
         cwd=repo,
         text=True,

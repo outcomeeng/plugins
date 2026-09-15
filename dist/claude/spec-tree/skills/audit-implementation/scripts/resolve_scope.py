@@ -27,6 +27,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("scope", help="HEAD, a branch, or a three-dot range")
     parser.add_argument("--repo", type=pathlib.Path, default=pathlib.Path.cwd())
+    parser.add_argument(
+        "--audit-input",
+        help="JSON object merged beneath the resolved scope to form a run-start input",
+    )
     args = parser.parse_args(argv)
     try:
         scope = _provider()
@@ -40,6 +44,15 @@ def main(argv: list[str] | None = None) -> int:
     except scope.ScopeResolutionError as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
         return 2
+    if args.audit_input is not None:
+        try:
+            resolved = {**json.loads(args.audit_input), **resolved}
+        except (json.JSONDecodeError, TypeError) as exc:
+            print(
+                f"{ERROR_PREFIX}: --audit-input must be a JSON object: {exc}",
+                file=sys.stderr,
+            )
+            return 2
     print(json.dumps(resolved, sort_keys=True))
     return 0
 
