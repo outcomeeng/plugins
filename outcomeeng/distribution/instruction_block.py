@@ -255,19 +255,26 @@ CODEX_AGENT_REGISTRY_POLICY_REQUIREMENTS: Final = (
     ),
 )
 WAIT_FOR_LOAD_STOP_TRIGGER: Final = (
-    "🛑 **STOP TRIGGER — Before any test, eval, build, or validation command, "
-    "ALWAYS invoke `/wait-for-load`.**"
+    "🛑 **STOP TRIGGER — Before any resource-intensive command, ALWAYS invoke "
+    "`/wait-for-load` and run its waiter chained ahead of that command on the "
+    "same shell line.**"
 )
 WAIT_FOR_LOAD_POLICY_HEADING: Final = (
-    "### Before tests, evals, builds, or validation -> `/wait-for-load`"
+    "### Before a resource-intensive command -> `/wait-for-load`"
 )
 WAIT_FOR_LOAD_READY_REQUIREMENT: Final = (
-    "**ALWAYS** wait for `ready: true`, then run the selected command unchanged."
+    "**ALWAYS** let the waiter's zero exit start the selected command unchanged; "
+    "a lost or truncated result re-runs the same line."
+)
+WAIT_FOR_LOAD_LIGHTWEIGHT_EXEMPTION: Final = (
+    "a lightweight command — formatting, a single-file lint, a markdown or link "
+    "validation, an instruction-block render, a status read — runs without the waiter"
 )
 WAIT_FOR_LOAD_SCOPE_REQUIREMENT: Final = "**NEVER** use host load to reduce scope, workers, limits, deadlines, or verification."
 WAIT_FOR_LOAD_POLICY_REQUIREMENTS: Final = (
     ("stop trigger", WAIT_FOR_LOAD_STOP_TRIGGER),
     ("ready command", WAIT_FOR_LOAD_READY_REQUIREMENT),
+    ("lightweight exemption", WAIT_FOR_LOAD_LIGHTWEIGHT_EXEMPTION),
     ("scope preservation", WAIT_FOR_LOAD_SCOPE_REQUIREMENT),
 )
 MARKDOWN_BLOCKQUOTE_MARKER: Final = ">"
@@ -308,28 +315,8 @@ HARNESS_DISPATCH_MECHANICS_MARKERS: Final = {
 }
 WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
     (
-        "standalone waiter call",
-        "Invoke `/wait-for-load` in its own top-level `functions.exec` call.",
-    ),
-    (
-        "visible ready result",
-        "top-level call visibly returns the terminal JSON with `ready: true`",
-    ),
-    (
-        "separate selected-command call",
-        "Start the selected command in a separate top-level `functions.exec` call.",
-    ),
-    (
-        "nested waiter yield containment",
-        "set a nested `exec_command` yield below the outer call's yield window",
-    ),
-    (
-        "nested waiter collection",
-        "preserve that exact id and collect the same waiter with `write_stdin`",
-    ),
-    (
-        "collector yield containment",
-        "outer yield window exceeds the nested `write_stdin` yield",
+        "single chained call",
+        "The chained line is one `functions.exec` call.",
     ),
     (
         "owned process lifecycle",
@@ -340,18 +327,16 @@ WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
         "reconcile every known handle before another process sequence, an operator question, merge or publication, or turn end",
     ),
     (
+        "visible ready result",
+        "collected output visibly carries the waiter's terminal JSON with `ready: true`",
+    ),
+    (
         "abandoned process termination",
         "interrupt that process and collect its terminal result",
     ),
     (
         "dangling process prohibition",
         "never permits leaving its background terminal dangling",
-    ),
-    (
-        "combined-script and nested-wait prohibition",
-        "**NEVER** place the waiter and selected command in the same "
-        "`functions.exec` script or use `functions.wait` as the planned collector "
-        "for a nested waiter or selected command.",
     ),
 )
 SUBAGENT_DISPATCH_POLICY_HEADING: Final = "### Sub-agent dispatch"
