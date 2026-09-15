@@ -722,16 +722,25 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
         claude_repository=NONCANONICAL_MARKETPLACE_SOURCE,
         codex_source=NONCANONICAL_MARKETPLACE_SOURCE,
     )
+    replacing_claude = [
+        command for command in replacing.plan.commands if command.agent is Agent.CLAUDE
+    ]
+    replacing_operations = [command.operation for command in replacing_claude]
     assert replacing.plan.claude_plugins
     assert not any(
-        command.agent is Agent.CLAUDE
-        and command.operation
-        in {
-            Operation.PLUGIN_INSTALL,
-            Operation.PLUGIN_ENABLE,
-            Operation.PLUGIN_UPDATE,
-        }
-        for command in replacing.plan.commands
+        operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        for operation in replacing_operations
+    )
+    assert (
+        tuple(
+            command.plugin
+            for command in replacing_claude
+            if command.operation is Operation.PLUGIN_UPDATE
+        )
+        == replacing.plan.claude_plugins
+    )
+    assert replacing_operations.index(Operation.MARKETPLACE_ADD) < (
+        replacing_operations.index(Operation.PLUGIN_UPDATE)
     )
     assert failure.report is None
     assert failure.failure is not None
