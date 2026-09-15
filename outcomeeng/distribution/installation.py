@@ -57,6 +57,8 @@ STATE_ENV_NAMES: tuple[str, ...] = (
 )
 CLAUDE_EXECUTABLE = "claude"
 CODEX_EXECUTABLE = "codex"
+CODEX_EXEC_SUBCOMMAND = "exec"
+"""The Codex subcommand that runs one non-interactive session."""
 CLAUDE_LIST_COMMAND = (CLAUDE_EXECUTABLE, "plugin", "list", "--json")
 CODEX_LIST_COMMAND = (
     CODEX_EXECUTABLE,
@@ -141,6 +143,8 @@ UNREADABLE_SETTINGS_WARNING = (
     "settings cannot be read; the record is left unchanged."
 )
 REGISTRY_SOURCE_DIAGNOSTIC = "Claude Code marketplace registry source mismatch"
+PROJECT_SOURCE_DIAGNOSTIC = "Claude Code project marketplace source mismatch"
+CODEX_SOURCE_DIAGNOSTIC = "Codex marketplace source mismatch"
 
 
 class Agent(StrEnum):
@@ -162,7 +166,6 @@ class Operation(StrEnum):
 
     MARKETPLACE_INSPECT = "marketplace-inspect"
     PLUGIN_INSPECT = "plugin-inspect"
-    MARKETPLACE_REMOVE = "marketplace-remove"
     MARKETPLACE_ADD = "marketplace-add"
     MARKETPLACE_REFRESH = "marketplace-refresh"
     PLUGIN_INSTALL = "plugin-install"
@@ -209,7 +212,6 @@ PLUGIN_OPERATIONS: frozenset[Operation] = frozenset(
 
 CLAUDE_SCOPE_BEARING_OPERATIONS: frozenset[Operation] = frozenset(
     {
-        Operation.MARKETPLACE_REMOVE,
         Operation.MARKETPLACE_ADD,
         Operation.PLUGIN_INSTALL,
         Operation.PLUGIN_ENABLE,
@@ -228,11 +230,16 @@ CLAUDE_SCOPE_FLAG = "--scope"
 
 
 class SourceAction(StrEnum):
-    """Reconciliation required for one configured marketplace source."""
+    """What one configured marketplace source requires of the run.
+
+    An absent registration is added and the canonical source is refreshed. A
+    mismatch — any other source — stops the run before its first
+    state-changing command, for explicit repair outside refresh.
+    """
 
     ADD = "add"
     REFRESH = "refresh"
-    REPLACE = "replace"
+    MISMATCH = "mismatch"
 
 
 class AgentHomeAction(StrEnum):
@@ -783,6 +790,14 @@ def build_persistent_preflight(
             "registration before project-scoped installation"
         )
     project_source_action = claude_project_source_action(roots.checkout)
+    if project_source_action is SourceAction.MISMATCH:
+        raise ValueError(
+            f"{PROJECT_SOURCE_DIAGNOSTIC}: {roots.checkout} declares "
+            f"`{MARKETPLACE_NAME}` from {claude_declared_source(roots.checkout)}; "
+            f"the canonical source is {CLAUDE_GITHUB_SOURCE_TYPE} "
+            f"{CANONICAL_MARKETPLACE_SOURCE}; repair the declaration explicitly "
+            "before persistent installation"
+        )
     environment = persistent_environment(roots, base_environment)
     codex_plugins = catalog_plugin_names(roots.checkout / CODEX_CATALOG_PATH)
     codex_agents = generated_codex_agent_definitions(
@@ -852,7 +867,7 @@ def build_persistent_installation_plan(
     marketplace is added regardless of the declaration.
     """
     registered = claude_registered_source_action(claude_marketplace_payload)
-    if registered is SourceAction.REPLACE:
+    if registered is SourceAction.MISMATCH:
         raise ValueError(
             f"{REGISTRY_SOURCE_DIAGNOSTIC}: Claude Code registers `{MARKETPLACE_NAME}` "
             f"from {claude_registered_source(claude_marketplace_payload)}; the "
@@ -866,14 +881,23 @@ def build_persistent_installation_plan(
         else SourceAction.ADD
     )
     codex_action = codex_source_action(codex_marketplace_payload)
+    if codex_action is SourceAction.MISMATCH:
+        raise ValueError(
+            f"{CODEX_SOURCE_DIAGNOSTIC}: the selected Codex home registers "
+            f"`{MARKETPLACE_NAME}` from "
+            f"{codex_registered_source(codex_marketplace_payload)}; the canonical "
+            f"source is {CANONICAL_CODEX_SOURCE}; repair the registration "
+            "explicitly before persistent installation"
+        )
+    claude_installed = installed_plugin_names(
+        Agent.CLAUDE,
+        claude_plugins_payload,
+        checkout=preflight.roots.checkout,
+    )
     claude_selection, claude_warning = _persistent_selection(
         Agent.CLAUDE,
         preflight.claude_plugins,
-        installed_plugin_names(
-            Agent.CLAUDE,
-            claude_plugins_payload,
-            checkout=preflight.roots.checkout,
-        ),
+        claude_installed,
     )
     codex_selection, codex_warning = _persistent_selection(
         Agent.CODEX,
@@ -884,16 +908,9 @@ def build_persistent_installation_plan(
             checkout=preflight.roots.checkout,
         ),
     )
-    reported_records = claude_install_records(claude_plugins_payload)
     claude_records, record_warnings = claude_refresh_records(
-        reported_records,
+        claude_install_records(claude_plugins_payload),
         preflight.claude_plugins,
-        repaired_checkout=preflight.roots.checkout,
-    )
-    claude_recorded = frozenset(
-        record.plugin
-        for record in reported_records
-        if record.project_path == preflight.roots.checkout
     )
     return _build_plan(
         InstallationMode.PERSISTENT,
@@ -912,7 +929,7 @@ def build_persistent_installation_plan(
             if warning is not None
         ),
         claude_records=claude_records,
-        claude_recorded=claude_recorded,
+        claude_recorded=claude_installed,
     )
 
 
@@ -1110,23 +1127,20 @@ def claude_install_records(payload: str) -> tuple[ClaudeInstallRecord, ...]:
 def claude_refresh_records(
     records: Sequence[ClaudeInstallRecord],
     catalog: Sequence[str],
-    *,
-    repaired_checkout: Path | None = None,
 ) -> tuple[tuple[ClaudeInstallRecord, ...], tuple[InstallationWarning, ...]]:
     """Split Claude install records into native-update targets and warnings.
 
     A record refreshes when its plugin is in the committed catalog, its scope
     is one the project boundary admits, its project path exists to host the
     native command, and that project's own settings register no noncanonical
-    marketplace source the update would resolve against. The invocation
-    checkout is exempt from the source exclusion when named as
-    `repaired_checkout`: the plan reconciles its registration before any
-    update runs, so its records refresh in the same run. Every other record is
-    reported and left unchanged: a record outside the catalog, outside project
-    or local scope, whose project path is gone, whose project declares a
-    noncanonical source, or whose project settings cannot be read. Targets
-    follow catalog order, then project path, then scope, so the plan is stable
-    across listings.
+    marketplace source the update would resolve against. Every other record
+    is reported and left unchanged: a record outside the catalog, outside
+    project or local scope, whose project path is gone, whose project
+    declares a noncanonical source, or whose project settings cannot be read.
+    The invocation checkout needs no special case: preflight has already
+    stopped the run on its own noncanonical or unreadable declaration.
+    Targets follow catalog order, then project path, then scope, so the plan
+    is stable across listings.
     """
     targets: list[ClaudeInstallRecord] = []
     warnings: list[InstallationWarning] = []
@@ -1147,10 +1161,9 @@ def claude_refresh_records(
                 scope=record.scope,
                 project_path=record.project_path,
             )
-        elif record.project_path != repaired_checkout and (
-            (source := _foreign_source_action(record.project_path)) is None
-            or source is SourceAction.REPLACE
-        ):
+        elif (
+            source := _foreign_source_action(record.project_path)
+        ) is None or source is SourceAction.MISMATCH:
             template = (
                 UNREADABLE_SETTINGS_WARNING
                 if source is None
@@ -1181,7 +1194,12 @@ def installed_plugin_names(
     *,
     checkout: Path,
 ) -> frozenset[str]:
-    """Parse one agent's installed outcomeeng inventory for its selected scope."""
+    """Parse one agent's installed outcomeeng inventory for its selected scope.
+
+    Claude Code's inventory is every record at project or local scope for the
+    invocation checkout, the two scopes persistent refresh updates natively;
+    Codex's is the selected home's marketplace entries.
+    """
     try:
         document = cast(object, json.loads(payload))
     except json.JSONDecodeError as error:
@@ -1218,7 +1236,7 @@ def installed_plugin_names(
                 raise ValueError(
                     f"Claude plugin listing entry {index} has no typed scope"
                 )
-            if scope != CLAUDE_PROJECT_SCOPE:
+            if scope not in CLAUDE_REFRESH_SCOPES:
                 continue
             project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
             if not isinstance(project_path, str):
@@ -1791,12 +1809,29 @@ def codex_source_action(payload: str) -> SourceAction:
             continue
         source = entry.get(CODEX_MARKETPLACE_SOURCE_FIELD)
         if not isinstance(source, dict):
-            return SourceAction.REPLACE
+            return SourceAction.MISMATCH
         source_value = source.get(CODEX_SOURCE_FIELD)
         if isinstance(source_value, str) and _canonical_codex_source(source_value):
             return SourceAction.REFRESH
-        return SourceAction.REPLACE
+        return SourceAction.MISMATCH
     return SourceAction.ADD
+
+
+def codex_registered_source(payload: str) -> str:
+    """Render the selected Codex home's marketplace source for a diagnostic."""
+    document = cast(object, json.loads(payload))
+    if isinstance(document, dict):
+        marketplaces = document.get(CODEX_MARKETPLACES_FIELD)
+        if isinstance(marketplaces, list):
+            for entry in marketplaces:
+                if (
+                    isinstance(entry, dict)
+                    and entry.get(CODEX_MARKETPLACE_NAME_FIELD) == MARKETPLACE_NAME
+                ):
+                    return json.dumps(
+                        entry.get(CODEX_MARKETPLACE_SOURCE_FIELD), sort_keys=True
+                    )
+    return "absent"
 
 
 def isolated_environment(
@@ -1963,25 +1998,7 @@ def _claude_source_commands(
     environment: tuple[tuple[str, str], ...],
 ) -> tuple[InstallationCommand, ...]:
     commands: list[InstallationCommand] = []
-    if action is SourceAction.REPLACE:
-        commands.append(
-            _command(
-                Agent.CLAUDE,
-                Operation.MARKETPLACE_REMOVE,
-                None,
-                _claude_argv(
-                    Operation.MARKETPLACE_REMOVE,
-                    "plugin",
-                    "marketplace",
-                    "remove",
-                    MARKETPLACE_NAME,
-                    scope=scope,
-                ),
-                roots,
-                environment,
-            )
-        )
-    if action in {SourceAction.ADD, SourceAction.REPLACE}:
+    if action is SourceAction.ADD:
         commands.append(
             _command(
                 Agent.CLAUDE,
@@ -2027,25 +2044,7 @@ def _codex_source_commands(
     environment: tuple[tuple[str, str], ...],
 ) -> tuple[InstallationCommand, ...]:
     commands: list[InstallationCommand] = []
-    if action is SourceAction.REPLACE:
-        commands.append(
-            _command(
-                Agent.CODEX,
-                Operation.MARKETPLACE_REMOVE,
-                None,
-                (
-                    CODEX_EXECUTABLE,
-                    "plugin",
-                    "marketplace",
-                    "remove",
-                    MARKETPLACE_NAME,
-                    "--json",
-                ),
-                roots,
-                environment,
-            )
-        )
-    if action in {SourceAction.ADD, SourceAction.REPLACE}:
+    if action is SourceAction.ADD:
         commands.append(
             _command(
                 Agent.CODEX,
@@ -2111,16 +2110,16 @@ def claude_source_action(document: Mapping[str, object]) -> SourceAction:
     if entry is None:
         return SourceAction.ADD
     if not isinstance(entry, dict):
-        return SourceAction.REPLACE
+        return SourceAction.MISMATCH
     source = entry.get(CLAUDE_SOURCE_FIELD)
     if not isinstance(source, dict):
-        return SourceAction.REPLACE
+        return SourceAction.MISMATCH
     if (
         source.get(CLAUDE_SOURCE_FIELD) == CLAUDE_GITHUB_SOURCE_TYPE
         and source.get(CLAUDE_REPOSITORY_FIELD) == CANONICAL_MARKETPLACE_SOURCE
     ):
         return SourceAction.REFRESH
-    return SourceAction.REPLACE
+    return SourceAction.MISMATCH
 
 
 def _foreign_source_action(project_path: Path) -> SourceAction | None:
@@ -2135,18 +2134,40 @@ def _foreign_source_action(project_path: Path) -> SourceAction | None:
         return None
 
 
+CLAUDE_SETTINGS_PRECEDENCE: tuple[Path, ...] = (
+    CLAUDE_LOCAL_SETTINGS_PATH,
+    CLAUDE_PROJECT_SETTINGS_PATH,
+)
+"""A checkout's Claude Code settings documents, highest precedence first.
+
+Claude Code lets the local document override the shared project document, so
+a marketplace the local document declares is the one a session in that
+checkout resolves against.
+"""
+
+
 def claude_project_source_action(project_path: Path) -> SourceAction:
     """Classify the marketplace source a checkout's own settings declare.
 
-    The project and local settings documents are read in that order; the
-    first that names the marketplace decides, and a checkout naming it in
-    neither leaves the machine registry's canonical entry in force.
+    The settings documents are read in Claude Code's own precedence order,
+    local before project; the first that names the marketplace decides, and a
+    checkout naming it in neither leaves the machine registry's canonical
+    entry in force.
     """
-    for relative in (CLAUDE_PROJECT_SETTINGS_PATH, CLAUDE_LOCAL_SETTINGS_PATH):
+    for relative in CLAUDE_SETTINGS_PRECEDENCE:
         action = claude_source_action(_settings_document(project_path / relative))
         if action is not SourceAction.ADD:
             return action
     return SourceAction.ADD
+
+
+def claude_declared_source(project_path: Path) -> str:
+    """Render the marketplace entry a checkout's settings declare, for a diagnostic."""
+    for relative in CLAUDE_SETTINGS_PRECEDENCE:
+        entry = _marketplace_entry(_settings_document(project_path / relative))
+        if entry is not None:
+            return f"{project_path / relative}: {json.dumps(entry, sort_keys=True)}"
+    return "absent"
 
 
 def claude_registered_source_action(payload: str) -> SourceAction:
@@ -2174,7 +2195,7 @@ def claude_registered_source_action(payload: str) -> SourceAction:
             and entry.get(CLAUDE_REPOSITORY_FIELD) == CANONICAL_MARKETPLACE_SOURCE
         ):
             return SourceAction.REFRESH
-        return SourceAction.REPLACE
+        return SourceAction.MISMATCH
     return SourceAction.ADD
 
 
@@ -2507,6 +2528,12 @@ __all__ = [
     "UNREADABLE_SETTINGS_WARNING",
     "CLAUDE_MANAGED_SCOPE",
     "REGISTRY_SOURCE_DIAGNOSTIC",
+    "PROJECT_SOURCE_DIAGNOSTIC",
+    "CODEX_SOURCE_DIAGNOSTIC",
+    "CODEX_EXEC_SUBCOMMAND",
+    "CLAUDE_SETTINGS_PRECEDENCE",
+    "claude_declared_source",
+    "codex_registered_source",
     "claude_marketplace_settings",
     "claude_source_action",
     "codex_marketplace_listing_payload",
