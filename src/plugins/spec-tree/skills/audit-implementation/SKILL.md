@@ -203,11 +203,11 @@ required.
   "unitId": "<stable-scope-key>",
   "auditClass": "implementation",
   "auditKind": "<code|tests|architecture|coverage-gap>",
-  "subject": "<single-subject-path-or-explicit-gap-marker>",
+  "subject": "<the exact resolved path>",
   "coverageRequirement": "<required|optional>",
   "coverageStatus": "<audited|not-applicable|missing-skill|unsupported>",
   "priorContext": {
-    "changedFilePartition": "<single-subject-path-or-explicit-gap-marker>",
+    "changedFilePartition": "<the exact resolved path>",
     "languagePartition": "<language-when-known>",
     "concernPartition": "<code|tests|architecture>"
   },
@@ -340,15 +340,16 @@ Build an expected coverage inventory before invoking any language concern skill.
 Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; never manufacture a language name, a missing concern skill, or an unsupported unit for a path outside implementation-audit ownership.
 
 Leaving a path to another auditor is not leaving it unaccounted for. Record
-every resolved path no concern claimed as an accounting record: `auditKind`
-`coverage-gap`, `coverageRequirement` `optional`, `coverageStatus` `skipped`,
-`priorContext` without `languagePartition`, and `producerProvenance` omitted.
-That record says the path was considered and left to another auditor; it claims
-no coverage, creates no language partition, and rejects no run. Completeness is
-then readable from the run itself — its recorded subject set equals its sealed
-inventory — rather than from the driver's account of it, and silence over a
-resolved path, which is the shape a narrowed inspection takes, stops being
-indistinguishable from thoroughness.
+every resolved path no concern claimed as an accounting record: `subject` and
+`priorContext.changedFilePartition` carrying the exact resolved path,
+`auditKind` `coverage-gap`, `coverageRequirement` `optional`, `coverageStatus`
+`skipped`, no `languagePartition`, `producerProvenance` omitted. Reconciliation
+matches inventory paths against recorded subjects, so a `subject` that is
+anything but the literal path leaves that path unaccounted forever. The record
+says the path was considered and left to another auditor; it claims no coverage,
+creates no language partition, and rejects no run. Completeness is then readable
+from the run itself — its recorded subject set equals its sealed inventory —
+rather than from the driver's account of it.
 
 Give every complete trio the **complete** resolved three-dot changed-path set,
 the resolved endpoint identities, discovered governing context, and the advisory
@@ -371,7 +372,7 @@ Each expected unit records:
 - audit kind: `code`, `tests`, or `architecture`
 - language partition
 - concern partition: `code`, `tests`, or `architecture`
-- one project path inspected by the concern, or an explicit unsupported-file marker; every inspected path becomes one SPX scope unit whose preserved `subject` field is that exact path
+- one resolved path — inspected by the concern, or accounted for as unclaimed; every resolved path becomes one SPX scope unit whose preserved `subject` field is that exact path
 - stable `expectedProducer` identity using the six published producer fields
 - optional `producerProvenance` using both owning-plugin versions and optional SPX tool version when a concern skill executed
 - `recordedByRunDriver` identity for the SPX command driver, present for every unit so missing-skill and unsupported classifications still identify the recorder
@@ -411,9 +412,7 @@ The dispatch contract is the skill name. The orchestration does not embed per-la
 
 <finding_model>
 
-Record each accepted concern finding through `spx verification run finding add`, using the finding payload shape in `<verification_run_contract>`; its `producerIdentity` matches the coverage unit's `expectedProducer`.
-
-Finding identity for convergence is content and stable producer identity, not plugin version. Version changes preserve provenance without making the same finding look new.
+Record each accepted concern finding through `spx verification run finding add`, using the finding payload shape in `<verification_run_contract>`; its `producerIdentity` matches the coverage unit's `expectedProducer`. Finding identity for convergence is content and stable producer identity, not plugin version, so a version change preserves provenance without making the same finding look new.
 
 </finding_model>
 
@@ -493,7 +492,7 @@ existing no-retry rule; these records authorize no replacement invocation.
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
 - The sealed run carries the resolver's complete `changed_paths` in its start payload, placed there by the pipe rather than by transcription, so the expected path set is readable from the run itself.
 - The sealed run's recorded subject set equals that inventory: a claimed path carries its concern's unit, an unclaimed path carries its accounting record, every required unit carries `audited`, `not-applicable`, `missing-skill`, or `unsupported`, every finding follows the coverage rows of its own concern and references an accepted unit, and every subject body was read complete from the resolved `base..head` scope.
-- The stage 7 reconciler exited zero on the sealed run, and re-running it against that run reproduces the zero exit — so any reader establishes the inspection's completeness from the run without the run driver's account of it. A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
+- The stage 7 reconciler exited zero on the sealed run, so its recorded subjects account for its sealed inventory with no required unit left non-final — a coverage verdict any reader recomputes from the run itself rather than from the run driver's account of it, and one a later re-run reproduces wherever the selector still resolves to that inventory. A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>
