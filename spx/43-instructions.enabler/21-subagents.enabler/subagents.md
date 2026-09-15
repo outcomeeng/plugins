@@ -12,6 +12,8 @@ The subagents-about-subagents cluster is three peers with distinct roles:
 
 ## Assertions
 
+### Compliance
+
 - ALWAYS: subagent configuration guidance specifies a target path or scope as the
   complete task prompt and delegates context discovery to the owning skill while
   preserving its output contract, per `spx/15-subagent-execution.pdr.md` ([audit]).
@@ -23,9 +25,6 @@ The subagents-about-subagents cluster is three peers with distinct roles:
   native configuration together; Standard is the default, Strong and Fast
   require explicit governing selection, and independent model or reasoning
   overrides and product-defined profiles are forbidden ([audit]).
-
-### Compliance
-
 - ALWAYS: `/subagent-standards` owns every rule `/audit-subagent` enforces — standards and enforcement stay in one place so drift cannot open between them ([audit])
 - ALWAYS: `/create-subagent` and `/audit-subagent` load `/subagent-standards` before doing any authoring or evaluation work — prevents memory-based assessment ([audit])
 - ALWAYS: `/audit-subagent` judges exactly one subagent configuration per invocation, and auditing several configurations dispatches one invocation per configuration ([audit])
