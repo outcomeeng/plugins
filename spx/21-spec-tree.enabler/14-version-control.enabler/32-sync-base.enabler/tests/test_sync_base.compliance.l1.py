@@ -17,6 +17,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     detach_head,
     head_oid,
     load_sync_base_module,
+    rebase_in_progress,
     repository_root,
     working_tree_has_tracked_changes,
 )
@@ -62,6 +63,9 @@ def test_clean_rebase_has_no_conflict_details_conflict_does(
     assert conflict.conflict is not None
     assert conflict.conflict.summary == module.CONFLICT_SUMMARY
     assert "CONFLICT (content): Merge conflict in" in conflict.conflict.git_output
+    # The conflicted rebase is left active for the operator, never aborted at
+    # handoff.
+    assert rebase_in_progress(conflict_root / "repo")
 
 
 @pytest.mark.parametrize("edit", tracked_edits())

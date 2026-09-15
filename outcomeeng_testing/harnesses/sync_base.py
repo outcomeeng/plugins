@@ -453,6 +453,14 @@ def build_rename_base_repo(root: pathlib.Path) -> RenameBaseRepo:
     )
 
 
+def rebase_in_progress(repo: pathlib.Path) -> bool:
+    """Observe whether an interrupted rebase is still active in ``repo``."""
+    git_dir = pathlib.Path(_git(repo, "rev-parse", "--git-dir"))
+    if not git_dir.is_absolute():
+        git_dir = repo / git_dir
+    return (git_dir / "rebase-merge").exists() or (git_dir / "rebase-apply").exists()
+
+
 def detach_head(repo: pathlib.Path) -> None:
     """Detach HEAD so the branch cannot be resolved for a rebase."""
     sha = _git(repo, "rev-parse", "HEAD")

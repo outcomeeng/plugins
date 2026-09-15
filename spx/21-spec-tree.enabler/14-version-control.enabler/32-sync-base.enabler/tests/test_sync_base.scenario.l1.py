@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import pathlib
 
 import pytest
@@ -81,7 +82,10 @@ def test_rebase_conflict_stops_with_active_conflict_details(
     assert "<<<<<<<" in (handle.repo / handle.conflict_file).read_text(encoding="utf-8")
     payload = result.to_json_dict()
     assert payload["conflict"] is not None
-    assert "git_output" in payload["conflict"]
+    conflict_fields = {
+        field.name for field in dataclasses.fields(module.ConflictDetails)
+    }
+    assert set(payload["conflict"]) == conflict_fields
     assert "stderr" not in payload["conflict"]
     assert "action_token" not in payload
 

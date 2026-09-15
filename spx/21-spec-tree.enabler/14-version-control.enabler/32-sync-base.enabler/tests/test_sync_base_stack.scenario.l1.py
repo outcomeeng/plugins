@@ -158,7 +158,9 @@ def test_conflict_report_lists_the_restack_recovery(
 
     assert result.status is module.SyncStatus.CONFLICT
     assert result.conflict is not None
+    # The spec declares the restack form literally; the case literal belongs at
+    # the test site rather than being rebuilt through the production formatter.
     assert (
-        module.restack_operator_option(handle.remote_ref)
+        f"git rebase --onto {handle.remote_ref} <fork>"
         in result.conflict.operator_options
     )
