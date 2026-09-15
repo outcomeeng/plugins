@@ -6,9 +6,29 @@ Known defects in the repository-installation evidence. Each entry names the arti
 
 `tests/test_native_profile_execution.compliance.l1.py` indexes the child-thread document with the literal `parentThreadId` while `outcomeeng/distribution/native_thread_evidence.py` owns that key as `ChildIdentityField.PARENT`, and asserts the retained child-listing artifact through the literals `childIds`, `pages`, and `result`, for which that module publishes no field constants. Both are source-ownership defects: a rename in the owning module leaves the evidence asserting a contract production no longer emits.
 
-**Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, then import every key the test indexes from that module.
+`outcomeeng_testing/harnesses/native_thread_evidence.py` repeats the class in `RecordingThreadReader`: its failure-shaping methods hand-write `childIds`, `thread`, `turns`, `status`, and `items` while the same harness builds the payloads through `NativeChildLookupPayload`, `NativeChildThread`, and `NativeTurn` elsewhere.
 
-**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b`; the cited test file lies outside that changeset's diff.
+Two clauses of the same assertion are also unfalsified: removing the ambient model and effort override filter from `_isolated_environment` in `outcomeeng_testing/harnesses/native_profile_execution.py`, or passing the unfiltered environment instead of `credential_free_environment`, breaks no linked test, because the tests inspect the recorded native calls only for their count and never read `NativeCall.environment`.
+
+**Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, import every key the test and the recording reader index from that module, and add predicates over the recorded child environment that reject an ambient override or a second credential.
+
+**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b`, then `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`; the cited test and harness files lie outside both changesets' diffs.
+
+## Pending plugins' prior owned definitions have no reconciliation evidence
+
+The reconciliation assertion states that a pending plugin's prior owned definitions are preserved, and both `spx/12-marketplace-state.adr.md` and `21-installation-architecture.adr.md` require it, but no harness case combines a pending-publication plugin with agent-home reconciliation: `observe_agent_home_reconciliation` builds both preflights from a changed catalog with every plugin published. The clause therefore reaches no predicate. The plan builder also composes the agent-home plan before any command runs, so a plugin that turns out pending during execution still has its checkout definitions in the desired set; whether the applied plan copies definitions for unavailable skill content, against the decision, is undetermined until the scenario exists.
+
+**Resolution shape**: add a harness scenario that installs, then re-runs with one plugin unpublished, and assert that the pending plugin's recorded definitions are neither pruned nor rewritten; if the scenario shows the plan copying definitions for a pending plugin, defer agent-home plan composition until the pending set is known. That is a new reconciliation capability with its own harness and a likely production change, independent of the machine-wide Claude Code refresh.
+
+**Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
+
+## The Codex executable name is spelled as a literal beside its exported constant
+
+`REQUIRED_BINARIES` and the marketplace-add invocations in `outcomeeng_testing/harnesses/installation.py`, and `SESSION_COMMAND` in `outcomeeng_testing/harnesses/discovery_auth_cases.py`, spell `codex` literally while `outcomeeng/distribution/installation.py` exports `CODEX_EXECUTABLE` and the same harness imports it.
+
+**Resolution shape**: import the executable name at every site.
+
+**Evidence**: test-evidence audit warning `f-006` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
 
 ## The noncanonical marketplace source is replaced where the decisions say it is rejected
 
@@ -20,11 +40,11 @@ Known defects in the repository-installation evidence. Each entry names the arti
 
 ## Claude Code renderings ship the Codex-only placement script and paraphrase its output
 
-The `<plugin>-plugin` skill's Claude Code rendering carries `scripts/place_agents.py`, roughly 330 lines that its own `<agent_delivery>` section says are never invoked there, because the shared template `src/templates/plugin/SKILL.md` conditions other sections on the build target but not the script directory. The same skill's `<examples>` paraphrases the manifest-delivery line instead of quoting the sentence `<verbs>` prints.
+The `<plugin>-plugin` skill's Claude Code rendering carries `scripts/place_agents.py`, roughly 330 lines that its own `<agent_delivery>` section says are never invoked there, because the shared template `src/templates/plugin/SKILL.md` conditions other sections on the build target but not the script directory. The same skill's `<examples>` paraphrases the manifest-delivery line instead of quoting the sentence `<verbs>` prints, and the `<verbs>` table's result column for `init`, `upgrade`, and `check` describes the Codex home reconciliation in the Claude Code rendering too, leaving the next sentence to walk all three rows back for that target.
 
-**Resolution shape**: exclude `scripts/` from the Claude Code rendering in the shared template, or state in `<agent_delivery>` why an inert copy must ship; quote the printed sentence verbatim in `<examples>`. Either change touches every plugin's rendered skill, so it lands as one template change gated by the skill auditor.
+**Resolution shape**: exclude `scripts/` from the Claude Code rendering in the shared template, or state in `<agent_delivery>` why an inert copy must ship; quote the printed sentence verbatim in `<examples>`; render the three result cells per target. Either change touches every plugin's rendered skill, so it lands as one template change gated by the skill auditor.
 
-**Evidence**: skill audit warnings `f-007` and `f-008` against `06b86db6b`.
+**Evidence**: skill audit warnings `f-007` and `f-008` against `06b86db6b`, and `f-006` and `f-007` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
 
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
