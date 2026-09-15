@@ -1,4 +1,8 @@
-<required_reading>none</required_reading>
+<required_reading>
+
+Read `${SKILL_DIR}/references/verify-session-claims.md` before Step 5.
+
+</required_reading>
 
 <process>
 
