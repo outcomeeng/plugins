@@ -4,7 +4,7 @@ Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownersh
 
 Decision and spec aligned: `spx/21-spec-tree.enabler/79-diagnostics.enabler/13-diagnose-engine.adr.md`
 re-declares the diagnose contract — marketplace-install diagnosis derives expected plugin state
-from Claude Code project-installed inventory and raw selected-home Codex declarations, including disabled
+from Claude Code's project- and local-scope inventory for the invocation checkout and raw selected-home Codex declarations, including disabled
 and uncached entries, bounded by committed catalog membership. Product activation does not select the
 Codex home-wide set, and native inspection excludes product configuration discovery. The shipped
 manifest embeds no plugin set — and the node's `diagnostics.md` conformance assertion is aligned to that contract in the same
