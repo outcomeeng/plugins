@@ -21,6 +21,7 @@ from outcomeeng.distribution.installation import (
     Operation,
     ReportField,
     SPEC_TREE_PLUGIN,
+    UNREADABLE_SETTINGS_DIAGNOSTIC,
     USER_SCOPE_COLLISION_DIAGNOSTIC,
     marketplace_plugin_name,
     report_document,
@@ -41,6 +42,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_noncanonical_registry_plan,
     observe_noncanonical_source,
     observe_pathless_record_listing,
+    observe_unreadable_source,
     observe_record_refresh_plan,
     observe_unpublished_plugin,
     observe_verification_recipe,
@@ -302,6 +304,14 @@ def test_a_pathless_refresh_scope_entry_stops_before_any_plan() -> None:
     assert error == PATHLESS_LISTING_ENTRY_DIAGNOSTIC.format(
         index=0, scope=CLAUDE_PROJECT_SCOPE
     )
+
+
+def test_unreadable_invocation_settings_stop_before_any_plan() -> None:
+    observation = observe_unreadable_source()
+
+    assert observation.error is not None
+    assert observation.error.startswith(UNREADABLE_SETTINGS_DIAGNOSTIC)
+    assert str(observation.settings_path) in observation.error
 
 
 def test_a_noncanonical_registry_source_stops_before_any_plan() -> None:

@@ -952,6 +952,37 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
         )
 
 
+@dataclass(frozen=True)
+class UnreadableSourceObservation:
+    """Persistent preflight against an invocation checkout whose settings cannot be read."""
+
+    settings_path: Path
+    error: str | None
+
+
+def observe_unreadable_source() -> UnreadableSourceObservation:
+    """Run persistent preflight with the invocation checkout's own settings unreadable.
+
+    The mirrored checkout's project settings carry malformed JSON, which
+    preflight reads before any plan; the rejection message, if any, is the
+    observation beside the path it names.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
+        settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
+        settings.parent.mkdir(parents=True, exist_ok=True)
+        settings.write_text(MALFORMED_SETTINGS_CONTENT, encoding="utf-8")
+        environment = _persistent_environment(temporary_root)
+        try:
+            build_persistent_preflight(mirror, environment)
+        except ValueError as error:
+            return UnreadableSourceObservation(settings_path=settings, error=str(error))
+    return UnreadableSourceObservation(settings_path=settings, error=None)
+
+
 def observe_noncanonical_registry_plan() -> str | None:
     """Plan a persistent run whose machine registry names a noncanonical source.
 

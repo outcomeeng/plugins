@@ -152,6 +152,7 @@ UNREADABLE_SETTINGS_WARNING = (
 )
 REGISTRY_SOURCE_DIAGNOSTIC = "Claude Code marketplace registry source mismatch"
 PROJECT_SOURCE_DIAGNOSTIC = "Claude Code project marketplace source mismatch"
+UNREADABLE_SETTINGS_DIAGNOSTIC = "invalid Claude Code settings"
 CODEX_SOURCE_DIAGNOSTIC = "Codex marketplace source mismatch"
 PATHLESS_LISTING_ENTRY_DIAGNOSTIC = (
     "claude plugin listing entry {index} at {scope} scope names no project path"
@@ -2136,9 +2137,11 @@ def _settings_document(path: Path) -> dict[str, object]:
     try:
         document = cast(object, json.loads(path.read_text(encoding="utf-8")))
     except (OSError, json.JSONDecodeError) as error:
-        raise ValueError(f"invalid Claude Code settings {path}: {error}") from error
+        raise ValueError(f"{UNREADABLE_SETTINGS_DIAGNOSTIC} {path}: {error}") from error
     if not isinstance(document, dict):
-        raise ValueError(f"Claude Code settings {path} must be a JSON object")
+        raise ValueError(
+            f"{UNREADABLE_SETTINGS_DIAGNOSTIC} {path}: must be a JSON object"
+        )
     return document
 
 
@@ -2580,6 +2583,7 @@ __all__ = [
     "CLAUDE_MANAGED_SCOPE",
     "REGISTRY_SOURCE_DIAGNOSTIC",
     "PROJECT_SOURCE_DIAGNOSTIC",
+    "UNREADABLE_SETTINGS_DIAGNOSTIC",
     "PATHLESS_LISTING_ENTRY_DIAGNOSTIC",
     "marketplace_plugin_identifier",
     "marketplace_plugin_name",
