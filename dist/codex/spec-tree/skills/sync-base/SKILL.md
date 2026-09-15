@@ -18,7 +18,7 @@ The current checkout brought current with its fetched base, with authorized dirt
 python3 "${SKILL_DIR}/scripts/sync_base.py" [repo] [--base <branch>] [--no-fetch]
 ```
 
-It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). A stacked branch synchronizes against its predecessor without `--base`; see `<stacked_branches>`.
+It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). A stacked branch synchronizes against its predecessor without `--base`; with `--base`, the named base is the target and a record's tip only bounds the replay, so a stacked pull request retargeted to the default branch restacks as well; see `<stacked_branches>`.
 
 Those primitives belong to the sibling `scope-changeset` skill, which the synchronizer reaches by a path relative to its own file, so both skills must be installed from the same plugin tree. A missing sibling fails the primitive at import, naming the expected path, before any git command runs; that failure is a traceback, not a JSON result. Treat it as an installation defect of the plugin tree: report the named path, attempt no git movement, and claim no currency.
 
@@ -44,7 +44,7 @@ Pass `--no-fetch` only when the remote-tracking ref is already current and a fet
 
 <stacked_branches>
 
-A branch stacked on a predecessor branch carries a stack record in git configuration — `branch.<name>.stackPredecessor` and `branch.<name>.stackTip`, the predecessor's name and the full OID of the predecessor tip the branch last sat on. The synchronizer writes it from git facts: when a `rebased` result rewrites a branch, every local branch containing the pre-rebase head receives a record naming the rewritten branch and that head, except a branch that already records a different predecessor, which keeps its record; when a sync runs with a non-default `--base`, the synchronized branch receives a record naming that base. The record is never an input; the synchronizer alone writes it.
+A branch stacked on a predecessor branch carries a stack record in git configuration — `branch.<name>.stackPredecessor` and `branch.<name>.stackTip`, the predecessor's name and the full OID of the predecessor tip the branch last sat on. The synchronizer writes it from git facts: when a `rebased` result rewrites a branch, every local branch other than the default branch that contains the pre-rebase head receives a record naming the rewritten branch and that head, except a branch that already records a different predecessor, which keeps its record; when a sync runs with a non-default `--base`, the synchronized branch receives a record naming that base. The record is never an input; the synchronizer alone writes it.
 
 A later sync of a recorded branch without `--base` takes the predecessor as its base. After a pruning fetch, the predecessor's state selects the movement:
 
@@ -56,6 +56,8 @@ A later sync of a recorded branch without `--base` takes the predecessor as its 
 | merged — absent from origin with no surviving local branch, or reachable from `origin/<default>` | replay only the commits above the recorded tip onto `origin/<default>`                                                                               | removed                            |
 
 Each is a rebase; the recorded tip bounds the branch's own commits. The result is `rebased` and the proof carries `stack_predecessor`, `stack_tip_before`, and `stack_tip_after`.
+
+With `--base`, the named base is always the target: a recorded tip that bounds the branch and is absent from the target bounds the replay, and the record is cleared when the named base is the default. A recorded tip that no longer bounds the branch — an operator completed a conflicted restack by hand — is re-derived from the branch's merge-base with the target, so the branch is reported current and its record rewritten or cleared.
 
 A branch with no record derives its predecessor from local topology. The candidates are the local branches, other than the default, that forked from the default before the branch forked from them; the candidate whose fork with the branch descends from every other candidate's is the nearest predecessor, and the synchronizer records it with that fork as the tip and proceeds as above. Two candidates whose forks are unordered yield no predecessor and no record. A conflict on a branch with no stack record and no derivable predecessor lists `git rebase --onto origin/<base> <fork>` among its operator options; the fork is the commit the branch's own commits sit on, which the operator names.
 
@@ -199,6 +201,9 @@ The bundled synchronizer is covered before release by this real-git test matrix:
 | unrecorded branch merging two unordered local candidates                      | exit 0; no record written; synced against the default base                                                                              |
 | rewritten predecessor force-pushed and still open on origin                   | exit 0; `status=rebased` onto `origin/<predecessor>` from the recorded tip                                                              |
 | stack record write or removal refused by git                                  | exit 1; `status=git_failure` naming the configuration key                                                                               |
+| recorded branch synced with `--base <default>` after its predecessor merged   | exit 0; `status=rebased`; only the branch's own commits above `origin/<default>`; record removed                                        |
+| recorded branch whose conflicted restack an operator completed by hand        | exit 0; `status=already_current`; record rewritten or removed                                                                           |
+| rebased branch whose local default branch contains its pre-rebase head        | exit 0; `status=rebased`; no record on the default branch                                                                               |
 | chain of three stacked branches, the first rebased                            | exit 0; `status=rebased`; the middle branch records the first and its pre-rebase tip; the top branch keeps its record naming the middle |
 
 Every fixture uses an invocation-unique temporary directory owned and removed by pytest's `tmp_path` fixture.
