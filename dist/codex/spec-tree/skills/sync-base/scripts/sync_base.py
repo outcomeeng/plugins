@@ -76,9 +76,11 @@ import json
 import pathlib
 import subprocess
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
 from types import ModuleType
+from typing import Literal, Protocol
 
 _CHANGESET_SCOPE_PATH = (
     pathlib.Path(__file__).resolve().parent.parent.parent
@@ -160,6 +162,36 @@ BaseRefNotConfiguredError = _changeset_scope.BaseRefNotConfiguredError
 DetachedHeadError = _changeset_scope.DetachedHeadError
 
 
+class GitRunner(Protocol):
+    """Execute one git command through an injectable process boundary.
+
+    ``subprocess.run`` satisfies this protocol and is the default runner. The
+    shape matches the changeset-scope ``Runner`` protocol so one injected runner
+    serves both the synchronizer's own git calls and the shared primitives it
+    reaches; ``input`` carries the diff ``git patch-id`` reads from stdin.
+    """
+
+    def __call__(
+        self,
+        argv: Sequence[str],
+        /,
+        *,
+        cwd: pathlib.Path,
+        capture_output: bool,
+        text: Literal[True],
+        check: bool,
+        input: str | None = None,  # noqa: A002 — subprocess.run's parameter name
+    ) -> subprocess.CompletedProcess[str]: ...
+
+
+@dataclass(frozen=True)
+class _Repository:
+    """A working tree together with the runner every git call goes through."""
+
+    path: pathlib.Path
+    runner: GitRunner
+
+
 class SyncStatus(str, Enum):
     """Terminal outcome of a base-synchronization run."""
 
@@ -193,8 +225,32 @@ class StackRecord:
     tip: str
 
 
-def read_stack_record(repo: pathlib.Path, branch: str) -> StackRecord | None:
+def read_stack_record(
+    repo: pathlib.Path, branch: str, *, runner: GitRunner = subprocess.run
+) -> StackRecord | None:
     """Return ``branch``'s stack record, or ``None`` when either key is absent."""
+    return _read_stack_record(_Repository(repo, runner), branch)
+
+
+def write_stack_record(
+    repo: pathlib.Path,
+    branch: str,
+    record: StackRecord,
+    *,
+    runner: GitRunner = subprocess.run,
+) -> None:
+    """Write both stack-record keys for ``branch``."""
+    _write_stack_record(_Repository(repo, runner), branch, record)
+
+
+def clear_stack_record(
+    repo: pathlib.Path, branch: str, *, runner: GitRunner = subprocess.run
+) -> None:
+    """Remove both stack-record keys from ``branch``; absent keys are not an error."""
+    _clear_stack_record(_Repository(repo, runner), branch)
+
+
+def _read_stack_record(repo: _Repository, branch: str) -> StackRecord | None:
     predecessor = _git(
         repo, "config", "--get", stack_config_key(branch, STACK_PREDECESSOR_KEY)
     )
@@ -208,8 +264,7 @@ def read_stack_record(repo: pathlib.Path, branch: str) -> StackRecord | None:
     return StackRecord(predecessor=predecessor_name, tip=tip_oid)
 
 
-def write_stack_record(repo: pathlib.Path, branch: str, record: StackRecord) -> None:
-    """Write both stack-record keys for ``branch``."""
+def _write_stack_record(repo: _Repository, branch: str, record: StackRecord) -> None:
     _git(
         repo,
         "config",
@@ -219,8 +274,7 @@ def write_stack_record(repo: pathlib.Path, branch: str, record: StackRecord) -> 
     _git(repo, "config", stack_config_key(branch, STACK_TIP_KEY), record.tip)
 
 
-def clear_stack_record(repo: pathlib.Path, branch: str) -> None:
-    """Remove both stack-record keys from ``branch``; absent keys are not an error."""
+def _clear_stack_record(repo: _Repository, branch: str) -> None:
     _git(repo, "config", "--unset", stack_config_key(branch, STACK_PREDECESSOR_KEY))
     _git(repo, "config", "--unset", stack_config_key(branch, STACK_TIP_KEY))
 
@@ -373,12 +427,12 @@ class SyncBaseResult:
 
 
 def _git(
-    repo: pathlib.Path, *args: str, stdin: str | None = None
+    repo: _Repository, *args: str, stdin: str | None = None
 ) -> subprocess.CompletedProcess[str]:
-    """Run a git command in ``repo``, capturing output without raising."""
-    return subprocess.run(  # noqa: S603 — fixed argv, no shell, args from callers
-        ["git", *args],  # noqa: S607
-        cwd=repo,
+    """Run a git command in ``repo`` through its runner, capturing output without raising."""
+    return repo.runner(
+        ["git", *args],
+        cwd=repo.path,
         input=stdin,
         capture_output=True,
         text=True,
@@ -386,28 +440,28 @@ def _git(
     )
 
 
-def _rev(repo: pathlib.Path, ref: str) -> str | None:
+def _rev(repo: _Repository, ref: str) -> str | None:
     """Resolve ``ref`` to a full OID, or ``None`` when it does not resolve."""
     result = _git(repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
     oid = result.stdout.strip()
     return oid if result.returncode == 0 and oid else None
 
 
-def _merge_base(repo: pathlib.Path, a: str, b: str) -> str | None:
+def _merge_base(repo: _Repository, a: str, b: str) -> str | None:
     """Return the merge-base OID of ``a`` and ``b``, or ``None`` when none exists."""
     result = _git(repo, "merge-base", a, b)
     oid = result.stdout.strip()
     return oid if result.returncode == 0 and oid else None
 
 
-def _is_ancestor(repo: pathlib.Path, ancestor: str, descendant: str) -> bool:
+def _is_ancestor(repo: _Repository, ancestor: str, descendant: str) -> bool:
     """Return whether ``ancestor`` is reachable from ``descendant``."""
     return (
         _git(repo, "merge-base", "--is-ancestor", ancestor, descendant).returncode == 0
     )
 
 
-def _local_branches(repo: pathlib.Path) -> list[str]:
+def _local_branches(repo: _Repository) -> list[str]:
     """Return the short names of every ref under ``refs/heads/``."""
     listed = _git(repo, "for-each-ref", "--format=%(refname:short)", "refs/heads/")
     if listed.returncode != 0:
@@ -415,9 +469,7 @@ def _local_branches(repo: pathlib.Path) -> list[str]:
     return [name for name in listed.stdout.split() if name]
 
 
-def _write_dependent_records(
-    repo: pathlib.Path, branch: str, old_head_oid: str
-) -> None:
+def _write_dependent_records(repo: _Repository, branch: str, old_head_oid: str) -> None:
     """Record ``branch`` and its pre-rebase head on every local branch stacked on it.
 
     A local branch that contains the pre-rebase head sat on it. A dependent that
@@ -427,15 +479,15 @@ def _write_dependent_records(
     for dependent in _local_branches(repo):
         if dependent == branch or not _is_ancestor(repo, old_head_oid, dependent):
             continue
-        existing = read_stack_record(repo, dependent)
+        existing = _read_stack_record(repo, dependent)
         if existing is not None and existing.predecessor != branch:
             continue
-        write_stack_record(
+        _write_stack_record(
             repo, dependent, StackRecord(predecessor=branch, tip=old_head_oid)
         )
 
 
-def _diff_paths(repo: pathlib.Path, spec: str) -> list[str] | None:
+def _diff_paths(repo: _Repository, spec: str) -> list[str] | None:
     """Return the sorted changed paths for a diff spec, or ``None`` on failure.
 
     ``spec`` is a two-dot (``a..b``, net base advance) or three-dot
@@ -450,7 +502,7 @@ def _diff_paths(repo: pathlib.Path, spec: str) -> list[str] | None:
     return sorted(p for p in result.stdout.splitlines() if p)
 
 
-def _conflicted_paths(repo: pathlib.Path) -> list[str]:
+def _conflicted_paths(repo: _Repository) -> list[str]:
     """Return sorted paths with unmerged index entries in the active conflict."""
     result = _git(repo, "diff", "--name-only", "--diff-filter=U")
     if result.returncode != 0:
@@ -458,7 +510,7 @@ def _conflicted_paths(repo: pathlib.Path) -> list[str]:
     return sorted(p for p in result.stdout.splitlines() if p)
 
 
-def _patch_id(repo: pathlib.Path, base: str, head: str) -> str | None:
+def _patch_id(repo: _Repository, base: str, head: str) -> str | None:
     """Return the stable patch identity of ``base...head``, or ``None`` on failure.
 
     An empty diff yields the empty string, which compares equal across a sync
@@ -476,7 +528,7 @@ def _patch_id(repo: pathlib.Path, base: str, head: str) -> str | None:
 
 
 def _build_preservation(
-    repo: pathlib.Path,
+    repo: _Repository,
     *,
     old_base_oid: str | None,
     new_base_oid: str | None,
@@ -543,7 +595,7 @@ def _build_preservation(
 
 
 def _build_conflict_details(
-    repo: pathlib.Path,
+    repo: _Repository,
     *,
     remote_ref: str,
     old_base_oid: str | None,
@@ -589,7 +641,7 @@ def _build_conflict_details(
 
 
 def _sync_detached(
-    repo: pathlib.Path,
+    repo: _Repository,
     base_ref: str,
     remote_ref: str,
     *,
@@ -711,9 +763,9 @@ def _sync_detached(
     )
 
 
-def _resolve_default_base(repo: pathlib.Path) -> str | SyncBaseResult:
+def _resolve_default_base(repo: _Repository) -> str | SyncBaseResult:
     try:
-        return detect_base_ref(repo)
+        return detect_base_ref(repo.path, runner=repo.runner)
     except BaseRefNotConfiguredError as exc:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
@@ -746,7 +798,11 @@ def _with_stack(
 
 
 def sync_base(
-    repo: pathlib.Path, *, base_ref: str | None = None, fetch: bool = True
+    repo: pathlib.Path,
+    *,
+    base_ref: str | None = None,
+    fetch: bool = True,
+    runner: GitRunner = subprocess.run,
 ) -> SyncBaseResult:
     """Bring ``repo``'s current branch current with its fetched base.
 
@@ -758,13 +814,20 @@ def sync_base(
     tracks a non-default base passes it explicitly; the synchronized branch then
     records that base as its predecessor. The base is fetched (unless
     ``fetch=False``) and the branch is rebased onto it when it is behind.
-    Returns a :class:`SyncBaseResult`; never raises for an ordinary git outcome.
+    ``runner`` is the process boundary every git command goes through;
+    ``subprocess.run`` is the default and a controlled implementation may be
+    injected. Returns a :class:`SyncBaseResult`; never raises for an ordinary
+    git outcome.
     """
+    return _sync(_Repository(repo, runner), base_ref=base_ref, fetch=fetch)
+
+
+def _sync(repo: _Repository, *, base_ref: str | None, fetch: bool) -> SyncBaseResult:
     default = _resolve_default_base(repo)
     default_name = default if isinstance(default, str) else None
 
     try:
-        branch = detect_current_branch(repo)
+        branch = detect_current_branch(repo.path, runner=repo.runner)
     except DetachedHeadError:
         if base_ref is None:
             if isinstance(default, SyncBaseResult):
@@ -775,7 +838,7 @@ def sync_base(
         )
 
     if base_ref is not None:
-        record = read_stack_record(repo, branch)
+        record = _read_stack_record(repo, branch)
         if (
             record is not None
             and record.predecessor == base_ref
@@ -796,7 +859,7 @@ def sync_base(
             and base_ref != default_name
             and new_base_oid is not None
         ):
-            write_stack_record(
+            _write_stack_record(
                 repo, branch, StackRecord(predecessor=base_ref, tip=new_base_oid)
             )
             return _with_stack(
@@ -809,7 +872,7 @@ def sync_base(
 
     if isinstance(default, SyncBaseResult):
         return default
-    record = read_stack_record(repo, branch)
+    record = _read_stack_record(repo, branch)
     if record is None:
         record = _derive_predecessor(repo, branch, default)
     if record is not None:
@@ -820,7 +883,7 @@ def sync_base(
 
 
 def _derive_predecessor(
-    repo: pathlib.Path, branch: str, default_name: str
+    repo: _Repository, branch: str, default_name: str
 ) -> StackRecord | None:
     """Derive and record ``branch``'s predecessor from local topology, or ``None``.
 
@@ -858,12 +921,12 @@ def _derive_predecessor(
         return None
     name, fork = winners[0]
     record = StackRecord(predecessor=name, tip=fork)
-    write_stack_record(repo, branch, record)
+    _write_stack_record(repo, branch, record)
     return record
 
 
 def _sync_stacked(
-    repo: pathlib.Path,
+    repo: _Repository,
     branch: str,
     record: StackRecord,
     default_name: str,
@@ -925,7 +988,7 @@ def _sync_stacked(
             fork_oid=record.tip,
         )
         if result.status in (SyncStatus.REBASED, SyncStatus.ALREADY_CURRENT):
-            clear_stack_record(repo, branch)
+            _clear_stack_record(repo, branch)
         return _with_stack(
             result,
             predecessor=record.predecessor,
@@ -947,7 +1010,7 @@ def _sync_stacked(
             fork_oid=record.tip,
         )
     if result.status in (SyncStatus.REBASED, SyncStatus.ALREADY_CURRENT):
-        write_stack_record(
+        _write_stack_record(
             repo,
             branch,
             StackRecord(predecessor=record.predecessor, tip=predecessor_oid),
@@ -960,13 +1023,13 @@ def _sync_stacked(
     )
 
 
-def _dirty_tree(repo: pathlib.Path) -> subprocess.CompletedProcess[str]:
+def _dirty_tree(repo: _Repository) -> subprocess.CompletedProcess[str]:
     """Report uncommitted changes to tracked files; untracked files are excluded."""
     return _git(repo, "status", "--porcelain", "--untracked-files=no")
 
 
 def _restack(
-    repo: pathlib.Path,
+    repo: _Repository,
     branch: str,
     *,
     base_ref: str,
@@ -1068,7 +1131,7 @@ def _combined_output(completed: subprocess.CompletedProcess[str]) -> str:
 
 
 def _sync_branch_onto(
-    repo: pathlib.Path,
+    repo: _Repository,
     branch: str,
     base_ref: str,
     target_ref: str,
@@ -1221,6 +1284,7 @@ def main(argv: list[str] | None = None) -> int:
         pathlib.Path(args.repo).resolve(),
         base_ref=args.base,
         fetch=not args.no_fetch,
+        runner=subprocess.run,
     )
     print(json.dumps(result.to_json_dict()))
     return result.exit_code
