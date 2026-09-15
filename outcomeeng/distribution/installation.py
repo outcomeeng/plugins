@@ -557,9 +557,7 @@ class ClaudeInstallationAdapter:
             _claude_source_commands(source_action, source, scope, roots, environment)
         )
         recorded_here = frozenset(
-            record.plugin
-            for record in records
-            if record.scope == scope and record.project_path == roots.checkout
+            record.plugin for record in records if record.project_path == roots.checkout
         )
         for plugin in plugins:
             if plugin in recorded_here:
