@@ -126,8 +126,14 @@ ABSENT_PROJECT_PATH_WARNING = (
     "not exist; the record is left unchanged."
 )
 OUT_OF_SCOPE_RECORD_WARNING = (
-    "Claude Code records {plugin} at {scope} scope; persistent installation "
-    "refreshes only project and local scope, so the record is left unchanged."
+    "Claude Code records {plugin} at {scope} scope for {project_path}; persistent "
+    "installation refreshes only project and local scope, so the record is left "
+    "unchanged."
+)
+PATHLESS_OUT_OF_SCOPE_RECORD_WARNING = (
+    "Claude Code records {plugin} at {scope} scope with no project path; "
+    "persistent installation refreshes only project and local scope, so the "
+    "record is left unchanged."
 )
 UNCATALOGED_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}, but the "
@@ -1173,8 +1179,15 @@ def claude_refresh_records(
     warnings: list[InstallationWarning] = []
     for record in records:
         if record.scope not in CLAUDE_REFRESH_SCOPES:
-            message = OUT_OF_SCOPE_RECORD_WARNING.format(
-                plugin=record.plugin, scope=record.scope
+            template = (
+                PATHLESS_OUT_OF_SCOPE_RECORD_WARNING
+                if record.project_path is None
+                else OUT_OF_SCOPE_RECORD_WARNING
+            )
+            message = template.format(
+                plugin=record.plugin,
+                scope=record.scope,
+                project_path=record.project_path,
             )
         elif not record.refresh_path.is_dir():
             message = ABSENT_PROJECT_PATH_WARNING.format(
@@ -2513,6 +2526,7 @@ __all__ = [
     "FIRST_INSTALL_WARNING",
     "ABSENT_PROJECT_PATH_WARNING",
     "OUT_OF_SCOPE_RECORD_WARNING",
+    "PATHLESS_OUT_OF_SCOPE_RECORD_WARNING",
     "UNCATALOGED_RECORD_WARNING",
     "ClaudeInstallRecord",
     "claude_install_records",
