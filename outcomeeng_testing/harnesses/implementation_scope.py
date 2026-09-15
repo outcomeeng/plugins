@@ -1,11 +1,20 @@
 """Process boundary for the implementation audit's shipped scope entrypoint."""
 
+import contextlib
+import io
+import json
 import pathlib
 import runpy
 import subprocess
 import sys
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any, cast
+
+from outcomeeng.validation.implementation_audit_contract import (
+    ImplementationAuditConcern,
+    implementation_audit_unit_id,
+)
 
 SCRIPT_PATH = (
     pathlib.Path(__file__)
@@ -35,14 +44,116 @@ reconcile = cast(
     ],
     _MODULE["reconcile"],
 )
+_main = cast(Callable[..., int], _MODULE["main"])
+SPX_COMMAND = "spx"
+
+
+@dataclass(frozen=True)
+class InProcessRun:
+    """Exit code and captured streams of one in-process entrypoint run."""
+
+    returncode: int
+    stdout: str
+    stderr: str
+
+
+def run_implementation_scope_against_recorded_run(
+    repo: pathlib.Path,
+    selector: str,
+    *,
+    reconcile_run: str,
+    scope_identity: str,
+    recorded_changed_paths: Sequence[str],
+    scope_units: Sequence[Mapping[str, Any]],
+) -> InProcessRun:
+    """Drive the reconciler with a runner that answers spx reads from given records.
+
+    Interaction protocol at the external-tool boundary: git commands reach the
+    real subprocess adapter so the fresh resolution is genuine, while the two
+    ``spx verification run`` reads return the supplied sealed inventory and
+    recorded units, so the test observes how the reconciler pairs them.
+    """
+    replies = {
+        "input": {
+            AUDIT_FIELD.INPUT_CONTENT: json.dumps(
+                {"changed_paths": list(recorded_changed_paths)}
+            )
+        },
+        "render": {AUDIT_FIELD.SCOPE_UNITS: list(scope_units)},
+    }
+
+    def runner(args: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        if args[0] != SPX_COMMAND:
+            return subprocess.run(args, **kwargs)
+        return subprocess.CompletedProcess(
+            list(args), 0, stdout=json.dumps(replies[args[3]]) + "\n", stderr=""
+        )
+
+    return _run_in_process(
+        [
+            selector,
+            "--repo",
+            str(repo),
+            "--reconcile-run",
+            reconcile_run,
+            SCOPE_IDENTITY_OPTION,
+            scope_identity,
+        ],
+        runner,
+    )
+
+
+def _run_in_process(argv: list[str], runner: Callable[..., Any]) -> InProcessRun:
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = _main(argv, runner=runner)
+    return InProcessRun(code, out.getvalue(), err.getvalue())
+
+
+def run_implementation_scope_with_unlaunchable_spx(
+    repo: pathlib.Path, selector: str, *, reconcile_run: str, scope_identity: str
+) -> InProcessRun:
+    """Drive the entrypoint with a runner whose spx launch fails before spx runs.
+
+    Failure simulation at the external-tool boundary: git commands reach the
+    real subprocess adapter so scope resolution is genuine, while every spx
+    launch raises the ``OSError`` a missing or non-executable CLI produces.
+    """
+
+    def runner(args: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        if args[0] == SPX_COMMAND:
+            raise FileNotFoundError(
+                f"[Errno 2] No such file or directory: {SPX_COMMAND!r}"
+            )
+        return subprocess.run(args, **kwargs)
+
+    return _run_in_process(
+        [
+            selector,
+            "--repo",
+            str(repo),
+            "--reconcile-run",
+            reconcile_run,
+            SCOPE_IDENTITY_OPTION,
+            scope_identity,
+        ],
+        runner,
+    )
 
 
 def audit_scope_unit(
-    subject: str, *, requirement: str, status: str
+    subject: str,
+    *,
+    language: str,
+    concern: ImplementationAuditConcern,
+    requirement: str,
+    status: str,
 ) -> dict[str, object]:
     """Build one recorded audit scope unit in the shape the reconciler reads."""
     return {
-        AUDIT_FIELD.UNIT_ID: f"implementation:typescript:code:{subject}",
+        AUDIT_FIELD.UNIT_ID: implementation_audit_unit_id(
+            language, concern, subject_path=subject
+        ),
         AUDIT_FIELD.SUBJECT: subject,
         AUDIT_FIELD.COVERAGE_REQUIREMENT: requirement,
         AUDIT_FIELD.COVERAGE_STATUS: status,

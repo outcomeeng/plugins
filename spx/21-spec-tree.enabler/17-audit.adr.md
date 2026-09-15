@@ -18,12 +18,11 @@ Accounting for a path is not auditing it. A sealed run that is silent about a re
 
 ## Verification
 
-- ALWAYS: declaration audits recognize the canonical untagged authoring form from the artifact itself, including drafts alongside routed content, without requiring a caller identity or phase argument.
-- ALWAYS: declaration audits check every draft claim for its applicable declaration-quality rules and preserve tag, grouping, and evidence-fit checks for routed claims.
-- NEVER: approval of an untagged declaration establishes evidence completeness, implementation correctness, or Passing state.
-
 ### Audit
 
+- ALWAYS: declaration audits recognize the canonical untagged authoring form from the artifact itself, including drafts alongside routed content, without requiring a caller identity or phase argument ([audit])
+- ALWAYS: declaration audits check every draft claim for its applicable declaration-quality rules and preserve tag, grouping, and evidence-fit checks for routed claims ([audit])
+- NEVER: approval of an untagged declaration establishes evidence completeness, implementation correctness, or Passing state ([audit])
 - ALWAYS: the implementation-audit wrapper agent contains zero language-specific tokens beyond the dispatch template `audit-{lang}-{code|tests|architecture}` ([audit])
 - ALWAYS: every marketplace plugin that defines a programming language ships `audit-{lang}-code`, `audit-{lang}-tests`, and `audit-{lang}-architecture` skills ([audit])
 - NEVER: the spec-tree plugin ships multiple implementation-audit wrapper agents; implementation audit has one wrapper, `implementation-auditor` ([audit])

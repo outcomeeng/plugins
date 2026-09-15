@@ -155,7 +155,7 @@ def observe_implementation_audit_lifecycle(
     findings_per_subject: bool = False,
 ) -> VerificationRunObservation:
     """Drive one audit run and expose its sequences and sealed projection."""
-    spx_command = _minimum_release_spx_command()
+    spx_command = _floor_release_spx_command()
     rule = observe_implementation_audit_lifecycle.__name__
     message = observe_implementation_audit_lifecycle.__doc__ or rule
     terminal_status = AuditTerminalStatus.REJECTED
@@ -219,7 +219,7 @@ def observe_implementation_audit_lifecycle(
 
 def observe_mismatched_terminal_status_finish() -> int | None:
     """Return the finish exit status when approval follows a blocking finding."""
-    spx_command = _minimum_release_spx_command()
+    spx_command = _floor_release_spx_command()
     rule = observe_mismatched_terminal_status_finish.__name__
 
     with TemporaryDirectory() as temporary_directory:
@@ -797,18 +797,27 @@ def _plugin_version(plugin_name: str) -> str:
     return _required_string(manifest, "version")
 
 
-def _minimum_release_spx_command() -> tuple[str, ...]:
-    minimum_version = _required_string(_verification_run_release(), "version")
-    package_spec = f"{SPX_PACKAGE_NAME}@{minimum_version}"
-    minimum_command = minimum_release_package_command(package_spec)
+def _exact_release_spx_command(version: str) -> tuple[str, ...]:
+    package_spec = f"{SPX_PACKAGE_NAME}@{version}"
+    command = minimum_release_package_command(package_spec)
 
-    actual_version = _spx_version(minimum_command)
-    if actual_version != minimum_version:
+    actual_version = _spx_version(command)
+    if actual_version != version:
         raise RuntimeError(
-            "minimum-release SPX command returned "
-            f"{actual_version}, expected {minimum_version}"
+            f"exact-release SPX command returned {actual_version}, expected {version}"
         )
-    return minimum_command
+    return command
+
+
+def _floor_release_spx_command() -> tuple[str, ...]:
+    """Return the command for the release the repository pins as its floor.
+
+    The lifecycle observations run against this release, because the payload
+    contracts and the sealed projection they observe are the ones a consumer
+    at the floor receives; the first lifecycle release stays with the
+    floor-provides-lifecycle proof.
+    """
+    return _exact_release_spx_command(REQUIRED_SPX_VERSION)
 
 
 def _find_npx_only(executable: str) -> str | None:

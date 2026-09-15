@@ -37,7 +37,33 @@ with `spec-tree:test-evidence-auditor` before moving to the next.
 **Evidence.** Surfaced by `spec-tree:test-evidence-auditor` on the
 implementation-audit idempotency-key changeset, which audited the scenario
 assertion and named the same defect class in the other two functions of that
-file.
+file. Raised again as four `REJECT` findings (predicate-ownership, eleven
+functions across the trio, wrapper, and retired-name assertions) on the
+coverage-accounting changeset, which touches neither the compliance file nor
+its harness; deferred there for the reason above.
+
+## The l3 scenario's expected projection lives in a production module
+
+`expected_verification_projection` in
+`outcomeeng/validation/implementation_audit_contract.py` returns the tuple the
+sealed-projection assertion compares against, and nothing outside
+`tests/test_implementation_audit_contract.scenario.l3.py` consumes it: no
+packaging entry point, no `outcomeeng.validation` export, no shipped-skill or
+Justfile use, no declared schema. The expected value is author-written, so
+inverting the claim edits production rather than the linked test, and the
+predicate is not readable from the test that cites it.
+
+**Resolution shape**: move the expected tuple into the linked test as its own
+predicate over the observation `observe_implementation_audit_lifecycle`
+returns, and delete the production function once the test owns the value.
+Gate with `spec-tree:test-evidence-auditor`.
+
+**Why separate**: the coverage-accounting changeset that surfaced it changes
+the audit-lifecycle harness only to run against the pinned floor release; the
+production contract module and the l3 test file are untouched by it.
+
+**Evidence.** `REJECT` finding `f-001` (source-ownership) from
+`spec-tree:test-evidence-auditor` on the coverage-accounting changeset.
 
 ## `check_wrapper_surface` acceptance boundary has no fixture evidence
 
@@ -187,7 +213,7 @@ or widen the validator to a category rule that admits inert data files while
 still rejecting executable audit machinery.
 
 The constraint now also blocks the standard remedy for the skill's size.
-`SKILL.md` stands at 498 of the 500-line ceiling `/skill-standards` sets, and
+`SKILL.md` stands at 499 of the 500-line ceiling `/skill-standards` sets, and
 the content that would move — the scope and finding payload contracts — has
 nowhere to go, because `references/operational-failures.md` is the only
 reference file the inventory admits. The next necessary addition crosses the
@@ -229,7 +255,7 @@ repair.
 ## The scope resolver crossed the shipped-script size threshold
 
 `src/plugins/spec-tree/skills/audit-implementation/scripts/resolve_scope.py` is
-189 lines. `spx/12-shipped-scripting.adr.md` holds that a generic shipped script
+210 lines. `spx/12-shipped-scripting.adr.md` holds that a generic shipped script
 beyond fifty lines is debt awaiting extraction into the SPX CLI once it proves
 its value.
 
@@ -257,7 +283,7 @@ the bundled script. Filed as the SPX-side Change; the audit-payload schema work
 carries it.
 
 **Evidence.** The resolver grew from 48 to 61 lines closing the
-transcribed-inventory hole, then to 189 closing the coverage-accounting hole,
+transcribed-inventory hole, then to 210 closing the coverage-accounting hole,
 both recorded against `outcomeeng/changes#47`.
 
 ## A missing language plugin is invisible to the implementation audit

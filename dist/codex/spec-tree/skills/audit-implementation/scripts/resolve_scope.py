@@ -7,8 +7,8 @@ and a malformed run-input value, a sealed inventory path carrying no recorded
 scope unit, a required unit outside the final coverage statuses beside an
 optional unit carrying the same status, exact inventory agreement, drift in
 both directions, a recorded subject outside the inventory, a reconcile request
-carrying no sealed scope identity, and a run token the CLI cannot read, before
-this script is bundled.
+carrying no sealed scope identity, a run token the CLI cannot read, and a CLI
+that cannot be launched, before this script is bundled.
 """
 
 import argparse
@@ -130,6 +130,10 @@ def _reconcile_run(runner, scope, args, resolved):
         "--run",
         args.reconcile_run,
     ]
+    # Exit 2 is reserved for a run this script cannot read: a launch that fails
+    # before spx runs (OSError), a nonzero spx exit, a document without the
+    # field, or a unit shaped so the comparison cannot run. Exit 1 is reserved
+    # for a readable run that does not reconcile, so the two never overlap.
     try:
         recorded_input = json.loads(
             read_run_document(
@@ -139,14 +143,14 @@ def _reconcile_run(runner, scope, args, resolved):
         units = read_run_document(
             runner, args.repo, ["render", *locator], AuditField.SCOPE_UNITS
         )
-    except (RuntimeError, TypeError, json.JSONDecodeError) as exc:
+        verdict = reconcile(
+            recorded_input.get(scope.ScopeField.CHANGED_PATHS) or (),
+            resolved[scope.ScopeField.CHANGED_PATHS],
+            units,
+        )
+    except (OSError, RuntimeError, TypeError, json.JSONDecodeError) as exc:
         print(f"{RECONCILE_PREFIX}: {exc}", file=sys.stderr)
         return 2
-    verdict = reconcile(
-        recorded_input.get(scope.ScopeField.CHANGED_PATHS) or (),
-        resolved[scope.ScopeField.CHANGED_PATHS],
-        units,
-    )
     print(json.dumps(verdict, sort_keys=True))
     return 0 if verdict[ReconcileField.RECONCILED] else 1
 

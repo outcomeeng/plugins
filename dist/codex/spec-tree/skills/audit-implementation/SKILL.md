@@ -212,7 +212,7 @@ required.
   "priorContext": {
     "changedFilePartition": "<the exact resolved path>",
     "languagePartition": "<language-when-known>",
-    "concernPartition": "<code|tests|architecture>"
+    "concernPartition": "<code|tests|architecture|coverage-gap>"
   },
   "expectedProducer": {
     "producerKind": "skill",
@@ -238,7 +238,9 @@ may additionally carry `skipped`; no unit carries `incomplete`.
 language is unknown; never replace `priorContext` with top-level partition
 fields. Use `coverage-gap` with `producerProvenance` omitted, because no leaf
 skill executed, for a missing producer, an unsupported subject, and the
-accounting record `<coverage_model>` requires for an unclaimed resolved path.
+accounting record `<coverage_model>` requires for an unclaimed resolved path;
+the accounting record also carries `concernPartition` `coverage-gap` and
+repeats the run-driver identity as `expectedProducer`.
 
 Every finding payload uses the exact published SPX field names below. Its
 `unitId` references a scope unit already accepted by the run, its
@@ -342,16 +344,7 @@ Build an expected coverage inventory before invoking any language concern skill.
 
 Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; never manufacture a language name, a missing concern skill, or an unsupported unit for a path outside implementation-audit ownership.
 
-Leaving a path to another auditor is not leaving it unaccounted for. Record
-every resolved path no concern claimed as an accounting record: `subject` and
-`priorContext.changedFilePartition` carrying the exact resolved path,
-`auditKind` `coverage-gap`, `coverageRequirement` `optional`, `coverageStatus`
-`skipped`, no `languagePartition`, `producerProvenance` omitted. Reconciliation
-matches inventory paths against recorded subjects, so a `subject` that is
-anything but the literal path leaves that path unaccounted forever. The record
-says the path was considered and left to another auditor; it claims no coverage,
-creates no language partition, and rejects no run, and it makes the run's own
-recorded subject set equal its sealed inventory.
+Leaving a path to another auditor is not leaving it unaccounted for. Record every resolved path no concern claimed as an accounting record: `subject` and `priorContext.changedFilePartition` carrying the exact resolved path, `auditKind` and `priorContext.concernPartition` both `coverage-gap`, `coverageRequirement` `optional`, `coverageStatus` `skipped`, no `languagePartition`, `expectedProducer` repeating the run-driver identity because no leaf skill is expected to cover the path, `producerProvenance` omitted. Reconciliation matches inventory paths against recorded subjects, so a `subject` that is anything but the literal path leaves that path unaccounted forever. The record says the path was considered and left to another auditor; it claims no coverage, creates no language partition, and rejects no run, and it makes the run's own recorded subject set equal its sealed inventory.
 
 Give every complete trio the **complete** resolved three-dot changed-path set,
 the resolved endpoint identities, discovered governing context, and the advisory
@@ -371,11 +364,11 @@ concerns and rejects the run.
 Each expected unit records:
 
 - audit class: `implementation`
-- audit kind: `code`, `tests`, or `architecture`
-- language partition
-- concern partition: `code`, `tests`, or `architecture`
+- audit kind: `code`, `tests`, or `architecture` for an inspected unit; `coverage-gap` for an accounting record
+- language partition, omitted for an accounting record
+- concern partition: `code`, `tests`, or `architecture`; `coverage-gap` for an accounting record
 - one resolved path — inspected by the concern, or accounted for as unclaimed; every resolved path becomes one SPX scope unit whose preserved `subject` field is that exact path
-- stable `expectedProducer` identity using the six published producer fields
+- stable `expectedProducer` identity using the six published producer fields: the concern skill expected to cover the unit, or the run-driver identity itself for an accounting record
 - optional `producerProvenance` using both owning-plugin versions and optional SPX tool version when a concern skill executed
 - `recordedByRunDriver` identity for the SPX command driver, present for every unit so missing-skill and unsupported classifications still identify the recorder
 - coverage requirement: `required` or `optional`
@@ -491,9 +484,8 @@ existing no-retry rule; these records authorize no replacement invocation.
 - Every missing-skill, unsupported-path, and accounting unit appears in the rendered projection rather than in prose, and each audited concern preserves its complete inspected-path set as path-scoped units whose `subject` fields are the exact paths, audited only after that concern completes, with finding counts derived from accepted finding rows rather than a custom field.
 - The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
-- The run's expected path set is readable from the run itself, so the inspection's completeness is established without the run driver's account of it.
-- The sealed run's recorded subject set equals that inventory, every required unit carries a final status, and every finding references an accepted unit of its own concern.
-- The stage 7 reconciler exited zero on the sealed run. A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
+- The sealed run is self-describing: its recorded subject set equals the inventory its own start input carries, no recorded subject lies outside that inventory, every required unit carries a final status, and every finding references an accepted unit of its own concern — so a reader establishes the inspection's completeness from the run without the run driver's account of it.
+- A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>
