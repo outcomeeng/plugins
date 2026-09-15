@@ -167,7 +167,11 @@ def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None
     }
 
     for entry, disposition in observation.cases:
-        plugin = entry[CLAUDE_PLUGIN_ID_FIELD].split("@")[0]
+        plugin = marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD])
+        if disposition is RecordDisposition.EXCLUDED:
+            assert plugin is None, (entry, disposition)
+            continue
+        assert plugin is not None, (entry, disposition)
         scope = entry[CLAUDE_PLUGIN_SCOPE_FIELD]
         project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
         matching_updates = [
@@ -182,14 +186,6 @@ def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None
             unmatched_updates.remove(matching_updates[0])
             continue
         assert matching_updates == [], (entry, disposition)
-        if disposition is RecordDisposition.EXCLUDED:
-            assert marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]) is None
-            assert not any(
-                template.format(plugin=plugin, scope=scope, project_path=project_path)
-                in warnings
-                for template in templates.values()
-            )
-            continue
         template = templates[disposition]
         expected = template.format(
             plugin=plugin, scope=scope, project_path=project_path
