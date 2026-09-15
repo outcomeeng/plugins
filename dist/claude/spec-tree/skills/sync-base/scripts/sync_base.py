@@ -839,12 +839,6 @@ def _sync(repo: _Repository, *, base_ref: str | None, fetch: bool) -> SyncBaseRe
 
     if base_ref is not None:
         record = _read_stack_record(repo, branch)
-        if (
-            record is not None
-            and record.predecessor == base_ref
-            and default_name is not None
-        ):
-            return _sync_stacked(repo, branch, record, default_name, fetch=fetch)
         result = _sync_branch_onto(
             repo, branch, base_ref, remote_tracking_ref(base_ref), fetch=fetch
         )
