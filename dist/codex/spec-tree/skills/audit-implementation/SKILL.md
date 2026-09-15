@@ -71,21 +71,25 @@ Run these stages in order. Each names what holds before the next begins, and
    reachable only from its zero exit:
 
    ```bash
-   python3 "${SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}' --reconcile-run '{run-token}' --scope-identity '<base>..<head>'
+   python3 "${SKILL_DIR}/scripts/resolve_scope.py" '{committed-selector}' --repo '{repository-root}' --reconcile-run '{run-token}' --scope-identity '<base>..<head>'
    ```
 
-   `--scope-identity` is the stage 1 identity, unchanged: it addresses the run,
-   while the selector resolves afresh only to detect drift. A freshly resolved
+   `{committed-selector}` is the selector with any `worktree:` prefix removed,
+   exactly as stage 1 resolved it. `--scope-identity` is the stage 1 identity,
+   unchanged: it addresses the run, while the selector resolves afresh only to
+   detect drift. An advisory run's live paths are expected subjects beside the
+   committed inventory, because its start input sealed them under `live_paths`. A freshly resolved
    identity would make SPX reject the locator in exactly the drifted case,
    reporting a command failure instead of the drift. The reconciler reads the
    run's sealed start inventory and recorded units, and emits `unaccounted` (a
    sealed path with no unit), `unexpected` (a recorded subject outside the
    inventory), `drifted` (the selector no longer resolves to that inventory),
-   and `nonfinal` (a required unit without a final status). Exit 1 with
-   `unaccounted`, `unexpected`, or `nonfinal` returns the run to stage 5 or 6;
-   exit 1 with `drifted` is not repairable by inspection — the committed scope
-   moved after `start` — so it returns the `<verdict_format>` blocked
-   diagnostic naming the drift, and a new run addresses the new head. Exit 2
+   and `nonfinal` (a required unit without a final status). Drift dominates:
+   exit 1 with a non-empty `drifted` returns the `<verdict_format>` blocked
+   diagnostic naming the drift whatever else the verdict carries, because the
+   committed scope moved after `start` and no inspection repairs that; a new
+   run addresses the new head. Exit 1 with `drifted` empty returns the run to
+   stage 5 or 6 for its `unaccounted`, `unexpected`, or `nonfinal` rows. Exit 2
    is a command failure reported under `<verdict_format>`. Reconciling against
    the plan the run driver holds NEVER
    authorizes `finish` — a plan narrowed at stage 4 reconciles with itself and
@@ -174,8 +178,8 @@ python3 "${SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository
 
 The `--audit-input` object carries only the short values the invocation supplies:
 the original selector, the resolved repository root, the discovered live file
-list or `none`, available deterministic verification facts, generic run-driver
-identity, and advisory status. Render it as one single-quoted argument, applying
+list under `live_paths` for an advisory audit, available deterministic
+verification facts, generic run-driver identity, and advisory status. Render it as one single-quoted argument, applying
 the apostrophe splice below. The resolver merges it beneath the resolved scope,
 so a key that collides with `base`, `head`, or `changed_paths` is discarded
 rather than honored — the resolved scope is authoritative and unforgeable at
@@ -349,7 +353,7 @@ Build an expected coverage inventory before invoking any language concern skill.
 
 Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; never manufacture a language name, a missing concern skill, or an unsupported unit for a path outside implementation-audit ownership.
 
-Leaving a path to another auditor is not leaving it unaccounted for. Record every resolved path no concern claimed as an accounting record: `subject` and `priorContext.changedFilePartition` carrying the exact resolved path, `auditKind` and `priorContext.concernPartition` both `coverage-gap`, `coverageRequirement` `optional`, `coverageStatus` `skipped`, no `languagePartition`, `expectedProducer` repeating the run-driver identity because no leaf skill is expected to cover the path, `producerProvenance` omitted. Reconciliation matches inventory paths against recorded subjects, so a `subject` that is anything but the literal path leaves that path unaccounted forever. The record says the path was considered and left to another auditor; it claims no coverage, creates no language partition, and rejects no run, and it makes the run's own recorded subject set equal its sealed inventory.
+Leaving a path to another auditor is not leaving it unaccounted for. Record every resolved path no concern claimed as an accounting record: `subject` and `priorContext.changedFilePartition` carrying the exact resolved path, `auditKind` and `priorContext.concernPartition` both `coverage-gap`, `coverageRequirement` `optional`, `coverageStatus` `skipped`, no `languagePartition`, `expectedProducer` repeating the run-driver identity because no leaf skill is expected to cover the path, `producerProvenance` omitted, and `unitId` `implementation:unknown:coverage-gap:<path>` — the four-segment key with the language rendered as `unknown`. Reconciliation matches inventory paths against recorded subjects, so a `subject` that is anything but the literal path leaves that path unaccounted forever. The record says the path was considered and left to another auditor; it claims no coverage, creates no language partition, and rejects no run, and it makes the run's own recorded subject set equal its sealed inventory.
 
 Give every complete trio the **complete** resolved three-dot changed-path set,
 the resolved endpoint identities, discovered governing context, and the advisory

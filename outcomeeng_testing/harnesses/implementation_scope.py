@@ -15,7 +15,6 @@ from outcomeeng.validation.implementation_audit_contract import (
     ImplementationAuditConcern,
     implementation_audit_unit_id,
 )
-from outcomeeng_testing.harnesses.changeset_scope import CHANGESET_SCOPE
 
 SCRIPT_PATH = (
     pathlib.Path(__file__)
@@ -36,6 +35,15 @@ ERROR_PREFIX = cast(str, _MODULE["ERROR_PREFIX"])
 RECONCILE_PREFIX = cast(str, _MODULE["RECONCILE_PREFIX"])
 SCOPE_IDENTITY_OPTION = cast(str, _MODULE["SCOPE_IDENTITY_OPTION"])
 SPX_COMMAND = cast(str, _MODULE["SPX_COMMAND"])
+RUN_COMMAND_PREFIX = cast(tuple[str, ...], _MODULE["RUN_COMMAND_PREFIX"])
+INPUT_COMMAND = cast(str, _MODULE["INPUT_COMMAND"])
+RENDER_COMMAND = cast(str, _MODULE["RENDER_COMMAND"])
+SCOPE_OPTION = cast(str, _MODULE["SCOPE_OPTION"])
+LIVE_PATHS_KEY = cast(str, _MODULE["LIVE_PATHS_KEY"])
+# Handles for a run that was never started: any well-formed token no run has,
+# and a scope identity no commit can match.
+ABSENT_RUN_TOKEN = "1999-01-01_00-00-00-000-000000000000"
+SENTINEL_SCOPE_IDENTITY = f"{'0' * 40}..{'1' * 40}"
 EXIT_UNRECONCILED = cast(int, _MODULE["EXIT_UNRECONCILED"])
 EXIT_COMMAND_FAILURE = cast(int, _MODULE["EXIT_COMMAND_FAILURE"])
 REQUIRED_COVERAGE = cast(str, _MODULE["REQUIRED_COVERAGE"])
@@ -67,25 +75,22 @@ def run_implementation_scope_against_recorded_run(
     *,
     reconcile_run: str,
     scope_identity: str,
-    recorded_changed_paths: Sequence[str],
-    scope_units: Sequence[Mapping[str, Any]],
+    recorded_input: Mapping[str, Any],
+    scope_units: object,
 ) -> InProcessRun:
     """Drive the reconciler with a runner that answers spx reads from given records.
 
     Interaction protocol at the external-tool boundary: git commands reach the
     real subprocess adapter so the fresh resolution is genuine, while the two
-    ``spx verification run`` reads return the supplied sealed inventory and
-    recorded units, so the test observes how the reconciler pairs them.
+    ``spx verification run`` reads return the supplied start input and recorded
+    units verbatim, so the test observes how the reconciler pairs and rejects
+    them.
     """
     replies = {
-        "input": {
-            AUDIT_FIELD.INPUT_CONTENT: json.dumps(
-                {CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: list(recorded_changed_paths)}
-            )
-        },
-        "render": {AUDIT_FIELD.SCOPE_UNITS: list(scope_units)},
+        INPUT_COMMAND: {AUDIT_FIELD.INPUT_CONTENT: json.dumps(dict(recorded_input))},
+        RENDER_COMMAND: {AUDIT_FIELD.SCOPE_UNITS: scope_units},
     }
-
+    subcommand_index = 1 + len(RUN_COMMAND_PREFIX)
     invocations: list[tuple[str, ...]] = []
 
     def runner(args: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
@@ -93,7 +98,10 @@ def run_implementation_scope_against_recorded_run(
             return subprocess.run(args, **kwargs)
         invocations.append(tuple(args))
         return subprocess.CompletedProcess(
-            list(args), 0, stdout=json.dumps(replies[args[3]]) + "\n", stderr=""
+            list(args),
+            0,
+            stdout=json.dumps(replies[args[subcommand_index]]) + "\n",
+            stderr="",
         )
 
     return _run_in_process(
@@ -109,6 +117,16 @@ def run_implementation_scope_against_recorded_run(
         runner,
         invocations,
     )
+
+
+def spx_subcommands(run: InProcessRun) -> tuple[str, ...]:
+    """Return the spx subcommand each recorded invocation addressed."""
+    return tuple(call[1 + len(RUN_COMMAND_PREFIX)] for call in run.spx_invocations)
+
+
+def spx_scope_arguments(run: InProcessRun) -> tuple[str, ...]:
+    """Return the scope identity each recorded invocation carried."""
+    return tuple(call[call.index(SCOPE_OPTION) + 1] for call in run.spx_invocations)
 
 
 def _run_in_process(

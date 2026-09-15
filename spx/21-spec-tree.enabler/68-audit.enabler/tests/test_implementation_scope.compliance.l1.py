@@ -11,25 +11,34 @@ from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     source_language,
 )
 from outcomeeng_testing.harnesses.changeset_scope import (
+    ORIGIN_HEAD_REF,
     CHANGESET_SCOPE,
     git_commit_oid,
     stale_local_base_repo,
 )
+from outcomeeng_testing.generators.changeset_scope import distinct_subject_paths
 from outcomeeng_testing.harnesses.implementation_scope import (
+    ABSENT_RUN_TOKEN,
     AUDIT_FIELD,
     ERROR_PREFIX,
     EXIT_COMMAND_FAILURE,
     EXIT_UNRECONCILED,
     FINAL_COVERAGE_STATUSES,
+    INPUT_COMMAND,
+    LIVE_PATHS_KEY,
     RECONCILE_FIELD,
     RECONCILE_PREFIX,
+    RENDER_COMMAND,
     REQUIRED_COVERAGE,
     SCOPE_IDENTITY_OPTION,
+    SENTINEL_SCOPE_IDENTITY,
     audit_scope_unit,
     reconcile,
     run_implementation_scope,
     run_implementation_scope_against_recorded_run,
     run_implementation_scope_with_unlaunchable_spx,
+    spx_scope_arguments,
+    spx_subcommands,
 )
 
 LANGUAGE = source_language()
@@ -54,7 +63,7 @@ def test_supplied_keys_never_displace_the_resolved_scope() -> None:
         assert not completed.returncode
         resolved = json.loads(completed.stdout)
         assert resolved[CHANGESET_SCOPE.ScopeField.BASE] == git_commit_oid(
-            stale.repo, CHANGESET_SCOPE.remote_tracking_ref(stale.base_ref)
+            stale.repo, ORIGIN_HEAD_REF
         )
         assert resolved[CHANGESET_SCOPE.ScopeField.HEAD] == git_commit_oid(
             stale.repo, stale.feature_branch
@@ -88,7 +97,7 @@ def test_malformed_run_input_json_is_rejected_rather_than_ignored() -> None:
 
 
 def test_a_sealed_path_without_a_recorded_unit_leaves_the_run_unreconciled() -> None:
-    covered, omitted = "src/covered.ts", "src/omitted.ts"
+    covered, omitted = distinct_subject_paths(2)
 
     verdict = reconcile(
         (covered, omitted),
@@ -117,7 +126,7 @@ def test_a_required_unit_outside_the_final_statuses_leaves_the_run_unreconciled(
     accounting = AuditCoverageRequirement.OPTIONAL.value
     assert pending not in FINAL_COVERAGE_STATUSES
     assert accounting != REQUIRED_COVERAGE
-    subjects = ("src/pending.ts", "docs/left-to-its-owner.md")
+    subjects = distinct_subject_paths(2)
     required_unit = audit_scope_unit(
         subjects[0],
         language=LANGUAGE,
@@ -141,7 +150,8 @@ def test_a_required_unit_outside_the_final_statuses_leaves_the_run_unreconciled(
 
 
 def test_a_run_reconciles_only_on_exact_inventory_agreement() -> None:
-    sealed = ("src/one.ts", "src/two.ts")
+    paths = distinct_subject_paths(4)
+    sealed, (outside, extra) = paths[:2], paths[2:]
     units = tuple(
         audit_scope_unit(
             subject,
@@ -154,7 +164,7 @@ def test_a_run_reconciles_only_on_exact_inventory_agreement() -> None:
     )
 
     agreed = reconcile(sealed, sealed, units)
-    drifted_wider = reconcile(sealed, (*sealed, "src/three.ts"), units)
+    drifted_wider = reconcile(sealed, (*sealed, extra), units)
     drifted_narrower = reconcile(sealed, sealed[:1], units)
     widened = reconcile(
         sealed,
@@ -162,7 +172,7 @@ def test_a_run_reconciles_only_on_exact_inventory_agreement() -> None:
         (
             *units,
             audit_scope_unit(
-                "src/outside.ts",
+                outside,
                 language=LANGUAGE,
                 concern=CONCERN,
                 requirement=REQUIRED_COVERAGE,
@@ -172,11 +182,11 @@ def test_a_run_reconciles_only_on_exact_inventory_agreement() -> None:
     )
 
     assert agreed[RECONCILE_FIELD.RECONCILED] is True
-    assert drifted_wider[RECONCILE_FIELD.DRIFTED] == ["src/three.ts"]
+    assert drifted_wider[RECONCILE_FIELD.DRIFTED] == [extra]
     assert drifted_wider[RECONCILE_FIELD.RECONCILED] is False
     assert drifted_narrower[RECONCILE_FIELD.DRIFTED] == [sealed[1]]
     assert drifted_narrower[RECONCILE_FIELD.RECONCILED] is False
-    assert widened[RECONCILE_FIELD.UNEXPECTED] == ["src/outside.ts"]
+    assert widened[RECONCILE_FIELD.UNEXPECTED] == [outside]
     assert widened[RECONCILE_FIELD.RECONCILED] is False
 
 
@@ -185,13 +195,13 @@ def test_an_unreadable_run_yields_a_diagnostic_rather_than_a_verdict() -> None:
         completed = run_implementation_scope(
             stale.repo,
             CHANGESET_SCOPE.HEAD_REF,
-            reconcile_run="1999-01-01_00-00-00-000-000000000000",
-            scope_identity="0000000000000000000000000000000000000000..1111111111111111111111111111111111111111",
+            reconcile_run=ABSENT_RUN_TOKEN,
+            scope_identity=SENTINEL_SCOPE_IDENTITY,
         )
 
         assert completed.returncode == EXIT_COMMAND_FAILURE
         assert completed.stderr.startswith(RECONCILE_PREFIX)
-        assert "1999-01-01_00-00-00-000-000000000000" in completed.stderr
+        assert ABSENT_RUN_TOKEN in completed.stderr
         assert SCOPE_IDENTITY_OPTION not in completed.stderr
         assert not completed.stdout
 
@@ -201,7 +211,7 @@ def test_a_reconcile_request_without_a_sealed_identity_is_rejected() -> None:
         completed = run_implementation_scope(
             stale.repo,
             CHANGESET_SCOPE.HEAD_REF,
-            reconcile_run="1999-01-01_00-00-00-000-000000000000",
+            reconcile_run=ABSENT_RUN_TOKEN,
         )
 
         assert completed.returncode
@@ -217,8 +227,8 @@ def test_an_unlaunchable_cli_yields_a_diagnostic_rather_than_an_unreconciled_ver
         completed = run_implementation_scope_with_unlaunchable_spx(
             stale.repo,
             CHANGESET_SCOPE.HEAD_REF,
-            reconcile_run="1999-01-01_00-00-00-000-000000000000",
-            scope_identity="0000000000000000000000000000000000000000..1111111111111111111111111111111111111111",
+            reconcile_run=ABSENT_RUN_TOKEN,
+            scope_identity=SENTINEL_SCOPE_IDENTITY,
         )
 
         assert completed.returncode == EXIT_COMMAND_FAILURE
@@ -228,8 +238,9 @@ def test_an_unlaunchable_cli_yields_a_diagnostic_rather_than_an_unreconciled_ver
 
 def test_a_recorded_run_reconciles_against_a_fresh_resolution_of_its_selector() -> None:
     with stale_local_base_repo() as stale:
-        identity = "0000000000000000000000000000000000000000..1111111111111111111111111111111111111111"
+        identity = SENTINEL_SCOPE_IDENTITY
         final = sorted(FINAL_COVERAGE_STATUSES)[0]
+        (phantom,) = distinct_subject_paths(1)
         unit = audit_scope_unit(
             stale.feature_file,
             language=LANGUAGE,
@@ -237,7 +248,6 @@ def test_a_recorded_run_reconciles_against_a_fresh_resolution_of_its_selector() 
             requirement=REQUIRED_COVERAGE,
             status=final,
         )
-        phantom = "src/never-changed.ts"
         phantom_unit = audit_scope_unit(
             phantom,
             language=LANGUAGE,
@@ -249,17 +259,21 @@ def test_a_recorded_run_reconciles_against_a_fresh_resolution_of_its_selector() 
         agreed = run_implementation_scope_against_recorded_run(
             stale.repo,
             CHANGESET_SCOPE.HEAD_REF,
-            reconcile_run="1999-01-01_00-00-00-000-000000000000",
+            reconcile_run=ABSENT_RUN_TOKEN,
             scope_identity=identity,
-            recorded_changed_paths=[stale.feature_file],
+            recorded_input={
+                CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: [stale.feature_file]
+            },
             scope_units=[unit],
         )
         drifted = run_implementation_scope_against_recorded_run(
             stale.repo,
             CHANGESET_SCOPE.HEAD_REF,
-            reconcile_run="1999-01-01_00-00-00-000-000000000000",
+            reconcile_run=ABSENT_RUN_TOKEN,
             scope_identity=identity,
-            recorded_changed_paths=[stale.feature_file, phantom],
+            recorded_input={
+                CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: [stale.feature_file, phantom]
+            },
             scope_units=[unit, phantom_unit],
         )
 
@@ -267,13 +281,76 @@ def test_a_recorded_run_reconciles_against_a_fresh_resolution_of_its_selector() 
         assert json.loads(agreed.stdout)[RECONCILE_FIELD.RECONCILED] is True
         # The locator addresses the run by the sealed identity handed in, never
         # by the fresh resolution: the sentinel identity cannot match any commit.
-        assert [call[3] for call in agreed.spx_invocations] == ["input", "render"]
-        assert all(
-            call[call.index("--scope") + 1] == identity
-            for call in agreed.spx_invocations
-        )
+        assert spx_subcommands(agreed) == (INPUT_COMMAND, RENDER_COMMAND)
+        assert spx_scope_arguments(agreed) == (identity, identity)
         assert drifted.returncode == EXIT_UNRECONCILED
         verdict = json.loads(drifted.stdout)
         assert verdict[RECONCILE_FIELD.DRIFTED] == [phantom]
         assert verdict[RECONCILE_FIELD.UNACCOUNTED] == []
         assert verdict[RECONCILE_FIELD.RECONCILED] is False
+
+
+def test_an_advisory_live_path_is_expected_beside_the_committed_inventory() -> None:
+    with stale_local_base_repo() as stale:
+        final = sorted(FINAL_COVERAGE_STATUSES)[0]
+        (live,) = distinct_subject_paths(1)
+        recorded_input = {
+            CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: [stale.feature_file],
+            LIVE_PATHS_KEY: [live],
+        }
+        committed_unit = audit_scope_unit(
+            stale.feature_file,
+            language=LANGUAGE,
+            concern=CONCERN,
+            requirement=REQUIRED_COVERAGE,
+            status=final,
+        )
+        live_unit = audit_scope_unit(
+            live,
+            language=LANGUAGE,
+            concern=CONCERN,
+            requirement=REQUIRED_COVERAGE,
+            status=final,
+        )
+
+        covered = run_implementation_scope_against_recorded_run(
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            reconcile_run=ABSENT_RUN_TOKEN,
+            scope_identity=SENTINEL_SCOPE_IDENTITY,
+            recorded_input=recorded_input,
+            scope_units=[committed_unit, live_unit],
+        )
+        uncovered = run_implementation_scope_against_recorded_run(
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            reconcile_run=ABSENT_RUN_TOKEN,
+            scope_identity=SENTINEL_SCOPE_IDENTITY,
+            recorded_input=recorded_input,
+            scope_units=[committed_unit],
+        )
+
+        # A live path is an expected subject, never unexpected, and it never
+        # counts as drift: drift is judged on the committed inventory alone.
+        assert covered.returncode == 0
+        assert json.loads(covered.stdout)[RECONCILE_FIELD.DRIFTED] == []
+        assert uncovered.returncode == EXIT_UNRECONCILED
+        assert json.loads(uncovered.stdout)[RECONCILE_FIELD.UNACCOUNTED] == [live]
+
+
+def test_a_run_document_the_comparison_cannot_read_yields_a_diagnostic() -> None:
+    with stale_local_base_repo() as stale:
+        completed = run_implementation_scope_against_recorded_run(
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            reconcile_run=ABSENT_RUN_TOKEN,
+            scope_identity=SENTINEL_SCOPE_IDENTITY,
+            recorded_input={
+                CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: [stale.feature_file]
+            },
+            scope_units={AUDIT_FIELD.SUBJECT: stale.feature_file},
+        )
+
+        assert completed.returncode == EXIT_COMMAND_FAILURE
+        assert completed.stderr.startswith(RECONCILE_PREFIX)
+        assert not completed.stdout

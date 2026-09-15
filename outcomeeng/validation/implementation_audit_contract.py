@@ -189,11 +189,17 @@ def implementation_audit_scope_payload(
 
 
 ACCOUNTING_RECORD_KIND: Final = "coverage-gap"
+# A unit key always carries a language segment; a record with no language
+# partition renders it as this literal.
+UNKNOWN_LANGUAGE_SEGMENT: Final = "unknown"
 
 
 def implementation_audit_accounting_unit_id(*, subject_path: str) -> str:
     """Return the stable identity for one unclaimed path's accounting record."""
-    return f"{IMPLEMENTATION_AUDIT_CLASS}:{ACCOUNTING_RECORD_KIND}:{subject_path}"
+    return (
+        f"{IMPLEMENTATION_AUDIT_CLASS}:{UNKNOWN_LANGUAGE_SEGMENT}:"
+        f"{ACCOUNTING_RECORD_KIND}:{subject_path}"
+    )
 
 
 def implementation_audit_accounting_payload(*, subject_path: str) -> dict[str, object]:

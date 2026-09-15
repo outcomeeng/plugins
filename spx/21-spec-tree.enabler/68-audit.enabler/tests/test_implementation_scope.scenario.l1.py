@@ -3,6 +3,7 @@
 import json
 
 from outcomeeng_testing.harnesses.changeset_scope import (
+    ORIGIN_HEAD_REF,
     CHANGESET_SCOPE,
     git_commit_oid,
     stale_local_base_repo,
@@ -21,7 +22,7 @@ def test_scope_discovery_preserves_remote_base_and_feature_identity() -> None:
         assert not completed.returncode
         resolved = json.loads(completed.stdout)
         assert resolved[CHANGESET_SCOPE.ScopeField.BASE] == git_commit_oid(
-            stale.repo, CHANGESET_SCOPE.remote_tracking_ref(stale.base_ref)
+            stale.repo, ORIGIN_HEAD_REF
         )
         assert resolved[CHANGESET_SCOPE.ScopeField.HEAD] == git_commit_oid(
             stale.repo, stale.feature_branch

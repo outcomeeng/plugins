@@ -1,14 +1,17 @@
 """Resolve an implementation audit selector and reconcile a run against it.
 
-Tested inputs and error cases: the implementation-scope scenario and compliance
-suites exercise stale-local-base resolution, a nonexistent repository, a
-run-input object whose keys cannot displace the git-resolved scope, a non-object
-and a malformed run-input value, a sealed inventory path carrying no recorded
-scope unit, a required unit outside the final coverage statuses beside an
-optional unit carrying the same status, exact inventory agreement, drift in
-both directions, a recorded subject outside the inventory, a reconcile request
-carrying no sealed scope identity, a run token the CLI cannot read, and a CLI
-that cannot be launched, before this script is bundled.
+Tested before this script is bundled by
+spx/21-spec-tree.enabler/68-audit.enabler/tests/test_implementation_scope.scenario.l1.py
+(stale-local-base resolution, a nonexistent repository) and
+spx/21-spec-tree.enabler/68-audit.enabler/tests/test_implementation_scope.compliance.l1.py
+(a run-input object whose keys cannot displace the git-resolved scope, a
+non-object and a malformed run-input value, a sealed inventory path carrying no
+recorded scope unit, a required unit outside the final coverage statuses beside
+an optional unit carrying the same status, exact inventory agreement, drift in
+both directions, a recorded subject outside the inventory, an advisory live
+path beside the committed inventory, a reconcile request carrying no sealed
+scope identity, a run token the CLI cannot read, a CLI that cannot be launched,
+and a run document shaped so the comparison cannot run).
 """
 
 import argparse
@@ -23,6 +26,13 @@ from types import ModuleType
 ERROR_PREFIX = "error: implementation scope resolution failed"
 RECONCILE_PREFIX = "error: implementation audit reconciliation failed"
 SPX_COMMAND = "spx"
+RUN_COMMAND_PREFIX = ("verification", "run")
+INPUT_COMMAND = "input"
+RENDER_COMMAND = "render"
+SCOPE_OPTION = "--scope"
+# Audit-input key under which an advisory (`worktree:`) audit carries its live
+# modified and untracked paths; a committed audit omits it.
+LIVE_PATHS_KEY = "live_paths"
 # Exit 1 is a readable run that does not reconcile; exit 2 is a request or
 # command this script cannot carry out. The two never overlap.
 EXIT_UNRECONCILED = 1
@@ -72,7 +82,7 @@ def _provider() -> ModuleType:
 def read_run_document(runner, repo, argv, field):
     """Return the last `spx verification run` document carrying ``field``."""
     completed = runner(
-        [SPX_COMMAND, "verification", "run", *argv],
+        [SPX_COMMAND, *RUN_COMMAND_PREFIX, *argv],
         cwd=repo,
         capture_output=True,
         text=True,
@@ -91,16 +101,22 @@ def read_run_document(runner, repo, argv, field):
     raise RuntimeError(f"no {field} in `spx verification run {argv[0]}` output")
 
 
-def reconcile(expected_paths, resolved_paths, scope_units):
-    """Return the verdict comparing recorded coverage to the sealed inventory."""
+def reconcile(expected_paths, resolved_paths, scope_units, live_paths=()):
+    """Return the verdict comparing recorded coverage to the sealed inventory.
+
+    ``live_paths`` is the advisory live list the run's start input sealed, if
+    any: those paths are expected subjects beside the committed inventory, but
+    drift is judged on the committed inventory alone.
+    """
     expected = list(expected_paths)
+    expected += [path for path in live_paths if path not in expected]
     recorded = {unit.get(AuditField.SUBJECT) for unit in scope_units}
     verdict = {
         ReconcileField.EXPECTED: len(expected),
         ReconcileField.RECORDED: len(recorded),
         ReconcileField.UNACCOUNTED: [p for p in expected if p not in recorded],
         ReconcileField.UNEXPECTED: sorted(s for s in recorded if s not in expected),
-        ReconcileField.DRIFTED: sorted(set(expected) ^ set(resolved_paths)),
+        ReconcileField.DRIFTED: sorted(set(expected_paths) ^ set(resolved_paths)),
         ReconcileField.NONFINAL: sorted(
             str(unit.get(AuditField.UNIT_ID))
             for unit in scope_units
@@ -130,27 +146,33 @@ def _reconcile_run(runner, scope, args, resolved):
         "audit",
         "--scope-type",
         "changeset",
-        "--scope",
+        SCOPE_OPTION,
         args.scope_identity,
         "--run",
         args.reconcile_run,
     ]
     # A run this script cannot read — a launch that fails before spx runs
-    # (OSError), a nonzero spx exit, a document without the field, or a unit
-    # shaped so the comparison cannot run — is a command failure.
+    # (OSError), a nonzero spx exit, a document without the field, or a
+    # document shaped so the comparison cannot run — is a command failure.
     try:
         recorded_input = json.loads(
             read_run_document(
-                runner, args.repo, ["input", *locator], AuditField.INPUT_CONTENT
+                runner, args.repo, [INPUT_COMMAND, *locator], AuditField.INPUT_CONTENT
             )
         )
         units = read_run_document(
-            runner, args.repo, ["render", *locator], AuditField.SCOPE_UNITS
+            runner, args.repo, [RENDER_COMMAND, *locator], AuditField.SCOPE_UNITS
         )
+        if not isinstance(recorded_input, dict):
+            raise RuntimeError("recorded start input is not a JSON object")
+        if not isinstance(units, list) or not all(isinstance(u, dict) for u in units):
+            raise RuntimeError("recorded scope units are not a list of objects")
+        sealed = recorded_input.get(scope.ScopeField.CHANGED_PATHS) or []
+        live = recorded_input.get(LIVE_PATHS_KEY) or []
+        if not isinstance(sealed, list) or not isinstance(live, list):
+            raise RuntimeError("recorded start input path lists are not arrays")
         verdict = reconcile(
-            recorded_input.get(scope.ScopeField.CHANGED_PATHS) or (),
-            resolved[scope.ScopeField.CHANGED_PATHS],
-            units,
+            sealed, resolved[scope.ScopeField.CHANGED_PATHS], units, live
         )
     except (OSError, RuntimeError, TypeError, json.JSONDecodeError) as exc:
         print(f"{RECONCILE_PREFIX}: {exc}", file=sys.stderr)
