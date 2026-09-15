@@ -30,13 +30,26 @@ class RepositoryDomain:
     base_message: str
     alternate_message: str
     rename_message: str
+    predecessor_branch: str
+    stacked_branch: str
+    predecessor_file: str
+    predecessor_advance_file: str
+    stacked_file: str
+    predecessor_content: str
+    predecessor_rewrite_content: str
+    predecessor_advance_content: str
+    stacked_content: str
+    predecessor_message: str
+    predecessor_rewrite_message: str
+    predecessor_advance_message: str
+    stacked_message: str
 
 
 def repository_domain() -> RepositoryDomain:
     """Generate distinct names and payloads without choosing a sync outcome.
 
     The topology builders compose these independent values into the declared
-    ahead, behind, overlapping, conflicting, and detached relationships.
+    ahead, behind, overlapping, conflicting, detached, and stacked relationships.
     Multiple initial lines separate prepend and append edits for real Git merges.
     """
     return RepositoryDomain(
@@ -60,6 +73,19 @@ def repository_domain() -> RepositoryDomain:
         base_message=str(uuid4()),
         alternate_message=str(uuid4()),
         rename_message=str(uuid4()),
+        predecessor_branch=f"work/{uuid4()}",
+        stacked_branch=f"work/{uuid4()}",
+        predecessor_file=f"{uuid4()}.txt",
+        predecessor_advance_file=f"{uuid4()}.txt",
+        stacked_file=f"{uuid4()}.txt",
+        predecessor_content=_text(),
+        predecessor_rewrite_content=_text(),
+        predecessor_advance_content=_text(),
+        stacked_content=_text(),
+        predecessor_message=str(uuid4()),
+        predecessor_rewrite_message=str(uuid4()),
+        predecessor_advance_message=str(uuid4()),
+        stacked_message=str(uuid4()),
     )
 
 

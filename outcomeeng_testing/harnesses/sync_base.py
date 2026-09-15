@@ -613,3 +613,277 @@ def build_detached_no_remote_repo(root: pathlib.Path) -> DetachedRepo:
         detached_oid=sha,
         data=data,
     )
+
+
+def switch_branch(repo: pathlib.Path, branch: str) -> None:
+    """Check out ``branch`` in ``repo`` so synchronization acts on it."""
+    _git(repo, "switch", "-q", branch)
+
+
+def commits_above(repo: pathlib.Path, ref: str) -> list[str]:
+    """Observe the full OIDs of ``HEAD``'s commits that ``ref`` does not contain."""
+    listed = _git(repo, "rev-list", f"{ref}..HEAD")
+    return [line for line in listed.splitlines() if line]
+
+
+def commit_subjects_above(repo: pathlib.Path, ref: str) -> list[str]:
+    """Observe the subjects of ``HEAD``'s commits that ``ref`` does not contain."""
+    listed = _git(repo, "log", "--format=%s", f"{ref}..HEAD")
+    return [line for line in listed.splitlines() if line]
+
+
+def branch_config_entries(repo: pathlib.Path, branch: str) -> dict[str, str]:
+    """Observe every ``branch.<branch>.*`` configuration entry as a key-value map.
+
+    ``git config --get-regexp`` exits 1 when nothing matches; that reads as an
+    empty map rather than a harness failure.
+    """
+    env = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+    }
+    result = subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
+        ["git", "config", "--get-regexp", f"^branch\\.{branch}\\."],  # noqa: S607
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    entries: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        key, _, value = line.partition(" ")
+        if key:
+            entries[key] = value
+    return entries
+
+
+def is_ancestor(repo: pathlib.Path, ancestor: str, descendant: str) -> bool:
+    """Observe whether ``ancestor`` is reachable from ``descendant``."""
+    result = subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
+        ["git", "merge-base", "--is-ancestor", ancestor, descendant],  # noqa: S607
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+@dataclass(frozen=True)
+class StackedRepo:
+    """A working clone holding a predecessor branch and a branch stacked on it.
+
+    ``predecessor_branch`` forks from the base and carries ``predecessor_file``;
+    ``stacked_branch`` forks from the predecessor's tip and carries
+    ``stacked_file``. ``predecessor_tip`` is the full OID of the predecessor
+    commit the stacked branch sits on when the topology is built — the fork the
+    stack record names. ``base_file`` is a base advance pushed after the stack
+    was built, when the builder pushed one. ``predecessor_advance_file`` and
+    ``predecessor_rewrite_content`` describe what the builder did to the
+    predecessor afterwards, when it did anything.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    remote_ref: str
+    predecessor_branch: str
+    predecessor_remote_ref: str
+    stacked_branch: str
+    predecessor_file: str
+    predecessor_tip: str
+    stacked_file: str
+    stacked_message: str
+    data: RepositoryDomain
+    base_file: str | None = None
+    predecessor_advance_file: str | None = None
+    predecessor_rewrite_content: str | None = None
+
+
+def _build_stack(root: pathlib.Path) -> tuple[pathlib.Path, RepositoryDomain, str]:
+    """Build origin, clone, a pushed predecessor, and a stacked branch on its tip.
+
+    Returns the working clone (checked out on the stacked branch), the domain,
+    and the predecessor tip OID the stacked branch forked from.
+    """
+    data = repository_domain()
+    origin = _init_origin_with_base(root, data)
+    repo = root / "repo"
+    _git(root, "clone", "-q", str(origin), str(repo), cwd=root)
+    _configure(repo)
+    _git(repo, "remote", "set-head", "origin", data.base_branch)
+    _git(repo, "switch", "-q", "-c", data.predecessor_branch)
+    _commit_file(
+        repo, data.predecessor_file, data.predecessor_content, data.predecessor_message
+    )
+    _git(repo, "push", "-q", "-u", "origin", data.predecessor_branch)
+    predecessor_tip = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "switch", "-q", "-c", data.stacked_branch)
+    _commit_file(repo, data.stacked_file, data.stacked_content, data.stacked_message)
+    return repo, data, predecessor_tip
+
+
+def _stacked_handle(
+    repo: pathlib.Path,
+    data: RepositoryDomain,
+    predecessor_tip: str,
+    **extra: str | None,
+) -> StackedRepo:
+    return StackedRepo(
+        repo=repo,
+        base_ref=data.base_branch,
+        remote_ref=f"origin/{data.base_branch}",
+        predecessor_branch=data.predecessor_branch,
+        predecessor_remote_ref=f"origin/{data.predecessor_branch}",
+        stacked_branch=data.stacked_branch,
+        predecessor_file=data.predecessor_file,
+        predecessor_tip=predecessor_tip,
+        stacked_file=data.stacked_file,
+        stacked_message=data.stacked_message,
+        data=data,
+        **extra,
+    )
+
+
+def build_stacked_repo_behind_base(root: pathlib.Path) -> StackedRepo:
+    """Build a stack whose predecessor is behind an unfetched base advance.
+
+    The working clone is checked out on the predecessor, so synchronizing it
+    rewrites the predecessor's commit and exposes the stacked branch as a
+    dependent that contained the predecessor's pre-rebase tip.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    pusher = root / "pusher"
+    _commit_file(pusher, data.base_file, data.base_content, data.base_message)
+    _git(pusher, "push", "-q", "origin", data.base_branch)
+    _git(repo, "switch", "-q", data.predecessor_branch)
+    return _stacked_handle(repo, data, predecessor_tip, base_file=data.base_file)
+
+
+def build_stacked_repo_without_record(root: pathlib.Path) -> StackedRepo:
+    """Build a stack checked out on the stacked branch with no stack record.
+
+    The predecessor's local branch survives and its remote-tracking ref contains
+    the fork, so topology derivation can name it and a sync lands on it.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    return _stacked_handle(repo, data, predecessor_tip)
+
+
+def build_stacked_repo_open_predecessor_advanced(root: pathlib.Path) -> StackedRepo:
+    """Build a recorded stack whose predecessor gained a pushed commit.
+
+    ``origin/<predecessor>`` still contains the recorded tip, so the stacked
+    branch is behind an open predecessor: an ordinary rebase onto the
+    predecessor's remote-tracking ref brings ``predecessor_advance_file`` in.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    _write_record(repo, data.stacked_branch, data.predecessor_branch, predecessor_tip)
+    pusher = root / "pusher"
+    _git(pusher, "fetch", "-q", "origin", data.predecessor_branch)
+    _git(
+        pusher,
+        "switch",
+        "-q",
+        "-c",
+        data.predecessor_branch,
+        f"origin/{data.predecessor_branch}",
+    )
+    _commit_file(
+        pusher,
+        data.predecessor_advance_file,
+        data.predecessor_advance_content,
+        data.predecessor_advance_message,
+    )
+    _git(pusher, "push", "-q", "origin", data.predecessor_branch)
+    return _stacked_handle(
+        repo,
+        data,
+        predecessor_tip,
+        predecessor_advance_file=data.predecessor_advance_file,
+    )
+
+
+def build_stacked_repo_merged_predecessor(root: pathlib.Path) -> StackedRepo:
+    """Build a recorded stack whose predecessor was rewritten, merged, and deleted.
+
+    Out of band, the predecessor's commit is rewritten with different content in
+    the same file, merged into the base, and its branch deleted on origin and in
+    the working clone — the shape a review-driven rebase followed by a merge and
+    branch cleanup leaves behind. A plain rebase of the stacked branch onto the
+    base would replay the stale predecessor commit against its rewritten form
+    and conflict; a restack from the recorded tip replays only the stacked
+    branch's own commit.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    _write_record(repo, data.stacked_branch, data.predecessor_branch, predecessor_tip)
+    pusher = root / "pusher"
+    _git(pusher, "fetch", "-q", "origin", data.predecessor_branch)
+    _git(
+        pusher,
+        "switch",
+        "-q",
+        "-c",
+        data.predecessor_branch,
+        f"origin/{data.predecessor_branch}",
+    )
+    (pusher / data.predecessor_file).write_text(
+        data.predecessor_rewrite_content, encoding="utf-8"
+    )
+    _git(pusher, "add", data.predecessor_file)
+    _git(pusher, "commit", "-q", "--amend", "-m", data.predecessor_rewrite_message)
+    _git(pusher, "switch", "-q", data.base_branch)
+    _git(
+        pusher,
+        "merge",
+        "-q",
+        "--no-ff",
+        "-m",
+        data.base_message,
+        data.predecessor_branch,
+    )
+    _git(pusher, "push", "-q", "origin", data.base_branch)
+    _git(pusher, "push", "-q", "origin", "--delete", data.predecessor_branch)
+    _git(repo, "branch", "-q", "-D", data.predecessor_branch)
+    return _stacked_handle(
+        repo,
+        data,
+        predecessor_tip,
+        predecessor_rewrite_content=data.predecessor_rewrite_content,
+    )
+
+
+def build_stacked_repo_unpublished_predecessor(root: pathlib.Path) -> StackedRepo:
+    """Build a recorded stack whose predecessor was rewritten locally and unpublished.
+
+    The predecessor's commit is amended in the working clone and its remote
+    branch deleted, so after a pruning fetch no ``origin/<predecessor>`` exists
+    while the local predecessor survives unmerged. The stacked branch must follow
+    that local branch rather than restack onto the base.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    _write_record(repo, data.stacked_branch, data.predecessor_branch, predecessor_tip)
+    _git(repo, "switch", "-q", data.predecessor_branch)
+    (repo / data.predecessor_file).write_text(
+        data.predecessor_rewrite_content, encoding="utf-8"
+    )
+    _git(repo, "add", data.predecessor_file)
+    _git(repo, "commit", "-q", "--amend", "-m", data.predecessor_rewrite_message)
+    _git(repo, "push", "-q", "origin", "--delete", data.predecessor_branch)
+    _git(repo, "switch", "-q", data.stacked_branch)
+    return _stacked_handle(
+        repo,
+        data,
+        predecessor_tip,
+        predecessor_rewrite_content=data.predecessor_rewrite_content,
+    )
+
+
+def _write_record(repo: pathlib.Path, branch: str, predecessor: str, tip: str) -> None:
+    """Arrange a stack record through the synchronizer's own writer."""
+    load_sync_base_module().write_stack_record(
+        repo,
+        branch,
+        load_sync_base_module().StackRecord(predecessor=predecessor, tip=tip),
+    )
