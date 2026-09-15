@@ -62,7 +62,10 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PROJECT_SETTINGS_PATH,
     CODEX_AGENTS_PATH,
     CLAUDE_EXECUTABLE,
+    CLAUDE_LIST_COMMAND,
     CLAUDE_LOCAL_SETTINGS_PATH,
+    CLAUDE_SCOPE_FLAG,
+    CODEX_LIST_COMMAND,
     CODEX_EXEC_SUBCOMMAND,
     CODEX_EXECUTABLE,
     CODEX_MARKETPLACES_FIELD,
@@ -2553,12 +2556,12 @@ def _register_persistent_claude_marketplace(
 ) -> None:
     result = subprocess.run(
         (
-            "claude",
+            CLAUDE_EXECUTABLE,
             "plugin",
             "marketplace",
             "add",
             CANONICAL_MARKETPLACE_SOURCE,
-            "--scope",
+            CLAUDE_SCOPE_FLAG,
             CLAUDE_PROJECT_SCOPE,
         ),
         cwd=checkout,
@@ -2580,7 +2583,7 @@ def _register_persistent_codex_marketplace(
 ) -> None:
     result = subprocess.run(
         (
-            "codex",
+            CODEX_EXECUTABLE,
             "plugin",
             "marketplace",
             "add",
@@ -2609,11 +2612,11 @@ def _seed_persistent_plugins(
         (
             Agent.CLAUDE,
             (
-                "claude",
+                CLAUDE_EXECUTABLE,
                 "plugin",
                 "install",
                 f"{plugin}@{MARKETPLACE_NAME}",
-                "--scope",
+                CLAUDE_SCOPE_FLAG,
                 CLAUDE_PROJECT_SCOPE,
             ),
         )
@@ -2622,7 +2625,7 @@ def _seed_persistent_plugins(
         (
             Agent.CODEX,
             (
-                "codex",
+                CODEX_EXECUTABLE,
                 "plugin",
                 "add",
                 f"{plugin}@{MARKETPLACE_NAME}",
@@ -2652,18 +2655,7 @@ def _run_listing_unchecked(
     checkout: Path,
     environment: Mapping[str, str],
 ) -> subprocess.CompletedProcess[str]:
-    argv = (
-        ("claude", "plugin", "list", "--json")
-        if agent is Agent.CLAUDE
-        else (
-            "codex",
-            "plugin",
-            "list",
-            "--marketplace",
-            MARKETPLACE_NAME,
-            "--json",
-        )
-    )
+    argv = CLAUDE_LIST_COMMAND if agent is Agent.CLAUDE else CODEX_LIST_COMMAND
     result = subprocess.run(
         argv,
         cwd=checkout,
