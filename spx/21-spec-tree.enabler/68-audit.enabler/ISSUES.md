@@ -259,3 +259,29 @@ carries it.
 **Evidence.** The resolver grew from 48 to 61 lines closing the
 transcribed-inventory hole, then to 189 closing the coverage-accounting hole,
 both recorded against `outcomeeng/changes#47`.
+
+## A missing language plugin is invisible to the implementation audit
+
+Language discovery reads the installed `code-{lang}` skill inventory, and the
+contract forbids recognizing a language from a changed path, so the installed
+surface defines the universe of languages the run can see. A `.rs` change in a
+repository without the rust plugin reaches no concern, becomes an accounting
+record left to its artifact-type auditor, and the run can seal `approved`. The
+rule against extension-derived partitions exists for a narrower reason — a
+workflow YAML once produced `missing required skill: audit-yaml-kind` — and it
+overshoots by also hiding a language the marketplace ships but the consumer has
+not installed.
+
+**Resolution shape**: a language oracle independent of the plugin inventory,
+rendered into the shipped skill at build time from the source-owned language
+surface and its file extensions, so a recognized language with no installed
+trio becomes a required `missing-skill` unit while an unrecognized path stays an
+accounting record. Tracked as
+<https://github.com/outcomeeng/changes/issues/64>, which generalizes the same
+registry to agent instructions and prose.
+
+**Evidence.** Surfaced by a live `spec-tree:implementation-auditor` run on
+spec-tree 0.94.2 (session `b99a883c-8c51-402b-8f44-7eab326575fb`, subagent
+`aa0aa721a3fc5350c`) that probed for python and rust by invoking their audit
+skills; the probe itself is repaired in the 0.94.3 discovery contract, the
+visibility gap is not.

@@ -19,6 +19,7 @@ Observed implementation-audit failures and their causes and prevention.
 - `transcribed_inventory`
 - `vacuous_reconciliation`
 - `coverage_stated_as_findings`
+- `language_probe_by_invocation`
 
 </contents>
 
@@ -307,3 +308,27 @@ before `finish`. Then run the stage 7 reconciler, which fails on exactly this
 shape by naming the paths the run left unaccounted.
 
 </coverage_stated_as_findings>
+
+<language_probe_by_invocation>
+
+**Languages were discovered by invoking skills that did not exist**
+
+What happened: A run on a TypeScript changeset loaded the complete TypeScript
+trio, then invoked `python:audit-python-code` and `rust:audit-rust-code` "to
+probe whether the python and rust concern trios are loadable", received
+`Unknown skill` for both, and read the two errors as evidence that no other
+language was installed.
+
+Why it failed: The skill named installed `code-{lang}` skills as the discovery
+source but never said how to read that inventory, so the run driver fell back
+to trial invocation. A failed invocation is one step from a manufactured
+`missing-skill` unit: a run that records those errors as coverage seals
+`rejected` for two languages the changeset never touched, and the language set
+the run records becomes the driver's guess rather than the installed surface.
+The run avoided that outcome by prose judgment alone.
+
+How to avoid: Read the installed skill inventory this context already carries
+for `code-{lang}` names; a name absent from it is a language that is not
+installed. Invoke a concern skill only as dispatch to a discovered language.
+
+</language_probe_by_invocation>

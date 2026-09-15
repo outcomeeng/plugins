@@ -26,6 +26,7 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER assign `incomplete` or `skipped` to a required coverage unit; neither describes an admissible terminal state for required coverage.
 - NEVER derive a subject body from a single commit's patch, or leave a truncated read unrecovered — a partial read is re-issued, never converted into coverage evidence.
 - NEVER hand-transcribe the resolved changed-path set into a payload — the resolver's own output reaches the run through a pipe, because a retyped inventory drops and substitutes paths without any later step noticing.
+- NEVER invoke a skill to discover whether a language is installed — the installed skill inventory this context carries is the discovery source, and a failed invocation is not discovery evidence.
 - NEVER narrow the changed-path set handed to a concern skill, and NEVER record fewer subject units than a concern returned — applicability is the concern's judgment, and the driver records its complete result.
 - ALWAYS record a concern's complete claimed-path coverage before recording any finding for that concern — a run that records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
@@ -53,10 +54,9 @@ Run these stages in order. Each names what holds before the next begins, and
    overlays.
 4. **Enumerate.** Build the complete expected coverage inventory per
    `<coverage_model>` before invoking any concern, reading the path set from the
-   `resolvedScope` the `start` result returned rather than from a retyped or
-   remembered list. Every resolved path enters the inventory — claimed by a
-   concern or left to another auditor — and a unit enters planned, without a
-   status.
+   `resolvedScope` the `start` result returned, never from a retyped list. Every
+   resolved path enters the inventory — claimed by a concern or left to another
+   auditor — and a unit enters planned, without a status.
 5. **Inspect.** Read each subject body completely from the resolved
    `base..head` scope. MUST re-issue a truncated or partial read in bounded
    ranges until the body is complete. NEVER derive a subject body from a single
@@ -338,7 +338,7 @@ The final response relays the rendered SPX projection and run token. Do not summ
 
 <coverage_model>
 
-Build an expected coverage inventory before invoking any language concern skill. Discover programming-language plugins from installed `code-{lang}` skill names, then validate the complete read-only `audit-{lang}-{code|tests|architecture}` trio for each discovered language before invoking any concern. Never load a write-capable `code-{lang}` skill inside the audit, and never create a language partition from a file extension, filename, or artifact class alone.
+Build an expected coverage inventory before invoking any language concern skill. Discover programming-language plugins by reading the installed skill inventory this context carries for `code-{lang}` names — a name absent from that inventory is a language that is not installed, and invoking a concern skill is dispatch to a discovered language, never a probe for whether one exists — then validate the complete read-only `audit-{lang}-{code|tests|architecture}` trio for each discovered language before invoking any concern. Never load a write-capable `code-{lang}` skill inside the audit, and never create a language partition from a file extension, filename, or artifact class alone.
 
 Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; never manufacture a language name, a missing concern skill, or an unsupported unit for a path outside implementation-audit ownership.
 
