@@ -78,7 +78,13 @@ from outcomeeng_testing.generators.audit_verification_run_contract import (
 )
 
 from outcomeeng_testing.harnesses.changeset_scope import CHANGESET_SCOPE
-from outcomeeng_testing.harnesses.implementation_scope import AUDIT_FIELD
+from outcomeeng_testing.harnesses.implementation_scope import (
+    AUDIT_FIELD,
+    INPUT_COMMAND,
+    RENDER_COMMAND,
+    RUN_COMMAND_PREFIX,
+    SCOPE_OPTION,
+)
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 SPX_RELEASE_FIXTURE: Final = (
@@ -219,7 +225,7 @@ def observe_implementation_audit_lifecycle(
         render_report = _run_spx(
             repository,
             spx_command,
-            ("render",),
+            (RENDER_COMMAND,),
             scope,
             run_token=run_token,
         )
@@ -709,7 +715,7 @@ def _start_implementation_audit_run(
     )
     run_token = _required_string(start_report, RUN_TOKEN_FIELD)
     input_report = _run_spx(
-        repository, spx_command, ("input",), scope, run_token=run_token
+        repository, spx_command, (INPUT_COMMAND,), scope, run_token=run_token
     )
     scope_reports = tuple(
         _run_spx(
@@ -856,14 +862,13 @@ def _run_spx(
 ) -> dict[str, object]:
     command = (
         *spx_command,
-        "verification",
-        "run",
+        *RUN_COMMAND_PREFIX,
         *action,
         "--verification-type",
         "audit",
         "--scope-type",
         "changeset",
-        "--scope",
+        SCOPE_OPTION,
         scope,
     )
     if action == ("start",):
