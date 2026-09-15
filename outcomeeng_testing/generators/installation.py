@@ -15,6 +15,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
     CLAUDE_LOCAL_SCOPE,
+    CLAUDE_MANAGED_SCOPE,
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_USER_SCOPE,
     CODEX_CATALOG_PATH,
@@ -174,6 +175,7 @@ class RecordDisposition(StrEnum):
     OUT_OF_SCOPE = "out-of-scope"
     UNCATALOGED = "uncataloged"
     NONCANONICAL_SOURCE = "noncanonical-source"
+    UNREADABLE_SETTINGS = "unreadable-settings"
     EXCLUDED = "excluded"
 
 
@@ -184,16 +186,18 @@ def generated_claude_install_records(
     absent_path: Path,
     forked_checkout: Path,
     forked_local_checkout: Path,
+    malformed_checkout: Path,
 ) -> tuple[tuple[tuple[dict[str, str], RecordDisposition], ...], ...]:
     """Cycle every catalog plugin through each install-record disposition.
 
     Each plugin yields one record per disposition: an update at project scope
     in the invocation checkout, an update at project scope in another existing
     checkout, an update at local scope in the invocation checkout, a record
-    whose project path does not exist, a user-scope record, a record in a
-    checkout whose project settings register the marketplace from a
-    noncanonical source, a record in a checkout whose local settings alone do
-    so, and an entry from another marketplace. One uncataloged plugin
+    whose project path does not exist, a user-scope record, a managed-scope
+    record, a record in a checkout whose project settings register the
+    marketplace from a noncanonical source, a record in a checkout whose local
+    settings alone do so, a record in a checkout whose settings cannot be
+    parsed, and an entry from another marketplace. One uncataloged plugin
     record is appended so the catalog bound has a rejected member.
     """
     groups: list[tuple[tuple[dict[str, str], RecordDisposition], ...]] = []
@@ -239,6 +243,22 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_USER_SCOPE,
                     },
                     RecordDisposition.OUT_OF_SCOPE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_MANAGED_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
+                    },
+                    RecordDisposition.OUT_OF_SCOPE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(malformed_checkout),
+                    },
+                    RecordDisposition.UNREADABLE_SETTINGS,
                 ),
                 (
                     {

@@ -132,6 +132,8 @@ EXTERNAL_DEFINITION_CONTENT = b'name = "external"\n'
 CONCURRENT_EDIT_CONTENT = b"edited while the run was planning\n"
 """Bytes a concurrent writer leaves at a destination between preflight and mutation."""
 MALFORMED_OWNERSHIP_DIGEST = "z" * 64
+MALFORMED_SETTINGS_CONTENT = "{ not json"
+"""A settings document no reader can parse, standing for a foreign checkout's defect."""
 """A 64-character digest the ownership record must reject as non-hex."""
 REQUIRED_BINARIES: tuple[str, ...] = ("just", CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
@@ -831,6 +833,7 @@ class RecordRefreshObservation:
     absent_path: Path
     forked_checkout: Path
     forked_local_checkout: Path
+    malformed_checkout: Path
     cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
     plan: InstallationPlan
     catalog: tuple[str, ...]
@@ -856,6 +859,10 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
         _write_project_marketplace(
             forked_local, NONCANONICAL_MARKETPLACE_SOURCE, local=True
         )
+        malformed = temporary_root / "malformed-checkout"
+        malformed_settings = malformed / CLAUDE_PROJECT_SETTINGS_PATH
+        malformed_settings.parent.mkdir(parents=True)
+        malformed_settings.write_text(MALFORMED_SETTINGS_CONTENT, encoding="utf-8")
         mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
@@ -868,6 +875,7 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             absent.resolve(),
             forked.resolve(),
             forked_local.resolve(),
+            malformed.resolve(),
         )
         cases = tuple(case for group in groups for case in group)
         plan = build_persistent_installation_plan(
@@ -893,6 +901,7 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             absent_path=absent.resolve(),
             forked_checkout=forked.resolve(),
             forked_local_checkout=forked_local.resolve(),
+            malformed_checkout=malformed.resolve(),
             cases=cases,
             plan=plan,
             catalog=catalog,

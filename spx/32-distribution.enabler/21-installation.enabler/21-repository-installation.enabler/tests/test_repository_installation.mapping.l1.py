@@ -14,6 +14,7 @@ from outcomeeng.distribution.installation import (
     MARKETPLACE_NAME,
     NONCANONICAL_SOURCE_WARNING,
     OUT_OF_SCOPE_RECORD_WARNING,
+    UNREADABLE_SETTINGS_WARNING,
     UNCATALOGED_RECORD_WARNING,
     CODEX_CATALOG_PATH,
     CODEX_PLUGIN_ENTRIES_FIELD,
@@ -160,6 +161,7 @@ def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None
         RecordDisposition.OUT_OF_SCOPE: OUT_OF_SCOPE_RECORD_WARNING,
         RecordDisposition.UNCATALOGED: UNCATALOGED_RECORD_WARNING,
         RecordDisposition.NONCANONICAL_SOURCE: NONCANONICAL_SOURCE_WARNING,
+        RecordDisposition.UNREADABLE_SETTINGS: UNREADABLE_SETTINGS_WARNING,
     }
 
     for entry, disposition in observation.cases:
