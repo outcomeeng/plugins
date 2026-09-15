@@ -1313,7 +1313,7 @@ def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
         home_initial = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
 
         first_preflight = build_persistent_preflight(mirror, environment)
-        desired_first = _definition_snapshot(first_preflight)
+        desired_first = _shipped_agent_snapshot(mirror)
         first_report = execute_persistent_installation(
             mirror,
             environment,
@@ -1327,8 +1327,7 @@ def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
 
         retired = first_preflight.codex_agents[0]
         retired.source.unlink()
-        second_preflight = build_persistent_preflight(mirror, environment)
-        desired_second = _definition_snapshot(second_preflight)
+        desired_second = _shipped_agent_snapshot(mirror)
         second_report = execute_persistent_installation(
             mirror,
             environment,
@@ -2804,18 +2803,12 @@ def _agent_snapshot(codex_home: Path) -> tuple[tuple[str, bytes], ...]:
     )
 
 
-def _definition_snapshot(
-    preflight: PersistentPreflight,
-) -> tuple[tuple[str, bytes], ...]:
-    return tuple(
-        sorted(
-            (definition.destination.name, definition.content)
-            for definition in preflight.codex_agents
-        )
-    )
-
-
 def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
+    """Read the shipped Codex agent definitions straight from the generated tree.
+
+    The snapshot is independent of the production preflight, so a narrowed
+    definition collection there cannot narrow the expectation with it.
+    """
     shipped: dict[str, bytes] = {}
     definitions = (checkout / "dist/codex").glob("*/skills/*/agents/*.toml")
     for definition in sorted(definitions):
