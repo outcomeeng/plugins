@@ -6,8 +6,9 @@ run-input object whose keys cannot displace the git-resolved scope, a non-object
 and a malformed run-input value, a sealed inventory path carrying no recorded
 scope unit, a required unit outside the final coverage statuses beside an
 optional unit carrying the same status, exact inventory agreement, drift in
-both directions, a recorded subject outside the inventory, and a run token the
-CLI cannot read, before this script is bundled.
+both directions, a recorded subject outside the inventory, a reconcile request
+carrying no sealed scope identity, and a run token the CLI cannot read, before
+this script is bundled.
 """
 
 import argparse
@@ -21,6 +22,7 @@ from types import ModuleType
 
 ERROR_PREFIX = "error: implementation scope resolution failed"
 RECONCILE_PREFIX = "error: implementation audit reconciliation failed"
+SCOPE_IDENTITY_OPTION = "--scope-identity"
 REQUIRED_COVERAGE = "required"
 FINAL_COVERAGE_STATUSES = frozenset(
     {"audited", "not-applicable", "missing-skill", "unsupported"}
@@ -114,13 +116,17 @@ def reconcile(expected_paths, resolved_paths, scope_units):
 
 
 def _reconcile_run(runner, scope, args, resolved):
+    # The locator carries the run's own sealed scope identity, never the freshly
+    # resolved one: a drifted selector resolves to an identity SPX cannot match
+    # against the recorded run, which would surface drift as a command failure
+    # rather than as the `drifted` field reporting it.
     locator = [
         "--verification-type",
         "audit",
         "--scope-type",
         "changeset",
         "--scope",
-        f"{resolved[scope.ScopeField.BASE]}..{resolved[scope.ScopeField.HEAD]}",
+        args.scope_identity,
         "--run",
         args.reconcile_run,
     ]
@@ -157,7 +163,18 @@ def main(argv: list[str] | None = None, runner=subprocess.run) -> int:
         "--reconcile-run",
         help="run token whose recorded coverage is reconciled against its sealed inventory",
     )
+    parser.add_argument(
+        SCOPE_IDENTITY_OPTION,
+        help="the run's sealed <base>..<head> identity, required with --reconcile-run",
+    )
     args = parser.parse_args(argv)
+    if args.reconcile_run is not None and args.scope_identity is None:
+        print(
+            f"{RECONCILE_PREFIX}: --reconcile-run requires {SCOPE_IDENTITY_OPTION}, "
+            "the sealed <base>..<head> the run was started with",
+            file=sys.stderr,
+        )
+        return 2
     try:
         scope = _provider()
     except (ImportError, OSError) as exc:

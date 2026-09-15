@@ -11,7 +11,7 @@ allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/resolve_scope.py":*), Ba
 
 <objective>
 
-An authoritative SPX projection and raw run token for the requested implementation scope, carrying `terminalStatus` (`approved` or `rejected`) and findings that name the artifact, the violated rule, and observed-versus-expected evidence. A run that cannot reach that projection yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
+An authoritative SPX projection and raw run token for the requested implementation scope, judged against its governing decisions and specs and each language's code, test, and architecture standards, carrying `terminalStatus` (`approved` or `rejected`) and findings that name the artifact, the violated rule, and observed-versus-expected evidence. A run that cannot reach that projection yields a `BLOCKED` diagnostic naming the request failure, command failure, or absent prerequisite that stopped it.
 
 </objective>
 
@@ -71,18 +71,21 @@ Run these stages in order. Each names what holds before the next begins, and
    reachable only from its zero exit:
 
    ```bash
-   python3 "${SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}' --reconcile-run '{run-token}'
+   python3 "${SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}' --reconcile-run '{run-token}' --scope-identity '<base>..<head>'
    ```
 
-   It reads the run's own sealed start inventory and its recorded units, and
-   emits `unaccounted` (a sealed path with no unit), `unexpected` (a recorded
-   subject outside the inventory), `drifted` (the selector no longer resolves to
-   the sealed inventory), and `nonfinal` (a required unit without a final
-   status). Exit 1 is a failed reconciliation that returns the run to stage 5 or
-   6; exit 2 is a command failure reported under `<verdict_format>`. Reconciling
-   the recorded units against the plan the run driver holds NEVER authorizes
-   `finish` — a plan narrowed at stage 4 reconciles with itself and seals a
-   partial inspection as complete, which is why the referent is the run's own
+   `--scope-identity` is the stage 1 identity, unchanged: it addresses the run,
+   while the selector resolves afresh only to detect drift. A freshly resolved
+   identity would make SPX reject the locator in exactly the drifted case,
+   reporting a command failure instead of the drift. The reconciler reads the
+   run's sealed start inventory and recorded units, and emits `unaccounted` (a
+   sealed path with no unit), `unexpected` (a recorded subject outside the
+   inventory), `drifted` (the selector no longer resolves to that inventory),
+   and `nonfinal` (a required unit without a final status). Exit 1 returns the
+   run to stage 5 or 6; exit 2 is a command failure reported under
+   `<verdict_format>`. Reconciling against the plan the run driver holds NEVER
+   authorizes `finish` — a plan narrowed at stage 4 reconciles with itself and
+   seals a partial inspection as complete, which is why the referent is the
    sealed inventory and the verdict is an exit code rather than an account.
 
 A run that cannot bring a required unit to a stage 6 status returns the
@@ -180,16 +183,16 @@ field exactly and use that token for every later command, and read its
 enumerates and stage 7 reconciles against. Never pass the whole locator as
 `--run`.
 
-Execute every state-changing `spx verification run` command serially. A tool
-response or tool-call batch contains at most one `start`, `scope add`, `finding
-add`, or `finish` command for a run. Wait for that command to exit and preserve
-its result before issuing the next mutation in a later response. NEVER place two
-journal mutations in a parallel tool group, multi-call batch, shell background
-group, or concurrently executing concern. Parallel concern analysis emits no
-SPX commands; the run driver queues its completed results and persists them one
-at a time. Parallel writes can race sequence assignment and produce a sealed
+Execute every state-changing `spx verification run` command serially: a tool
+response or batch contains at most one `start`, `scope add`, `finding add`, or
+`finish` for a run, and the next mutation waits for that command to exit and
+preserves its result. NEVER place two journal mutations in a parallel tool
+group, multi-call batch, shell background group, or concurrently executing
+concern — parallel writes race sequence assignment and produce a sealed
 projection whose event prefix is neither strictly increasing nor contiguous.
-Render only after `finish` exits successfully.
+Parallel concern analysis emits no SPX commands; the driver queues its completed
+results and persists them one at a time. Render only after `finish` exits
+successfully.
 
 Every scope payload uses the published SPX field names below. Emit one scope
 unit per subject path and concern partition; `subject` and
@@ -347,9 +350,8 @@ every resolved path no concern claimed as an accounting record: `subject` and
 matches inventory paths against recorded subjects, so a `subject` that is
 anything but the literal path leaves that path unaccounted forever. The record
 says the path was considered and left to another auditor; it claims no coverage,
-creates no language partition, and rejects no run. Completeness is then readable
-from the run itself — its recorded subject set equals its sealed inventory —
-rather than from the driver's account of it.
+creates no language partition, and rejects no run, and it makes the run's own
+recorded subject set equal its sealed inventory.
 
 Give every complete trio the **complete** resolved three-dot changed-path set,
 the resolved endpoint identities, discovered governing context, and the advisory
@@ -462,9 +464,9 @@ exitCode: <exact-exit-code>
 stderr: <exact-stderr>
 ```
 
-Never return the command alone. The run token locates durable state, the
-payload source and key identify the rejected boundary, and the exit code plus
-stderr carry the failure evidence.
+Never return the command alone: the run token locates durable state, the payload
+source and key identify the rejected boundary, and the exit code and stderr
+carry the failure evidence.
 
 Each finding row names every field of the finding payload shape in `<verification_run_contract>`, so a reader sees the producer, unit, rule, severity, location, message, and observed-versus-expected evidence without opening the journal.
 
@@ -486,13 +488,12 @@ existing no-retry rule; these records authorize no replacement invocation.
 - The verdict covers every required implementation concern for every language partition in the supplied scope: code, tests, and architecture.
 - A completed run returns the raw run token and rendered projection with no competing prose verdict; the projection's `terminalStatus` is the sole determination (`approved` or `rejected`). A missing required concern skill after run start appears as `missing-skill` rejected coverage in that projection. A blocked run names the exact malformed request field or failed SPX command that prevented a valid completed projection.
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
-- Every missing-skill, unsupported-path, or coverage-gap unit within a recognized implementation-language partition appears in the rendered projection rather than being hidden in prose; artifacts outside implementation-audit ownership produce no fabricated coverage unit.
-- Every audited concern preserves its complete non-empty inspected-path set as path-scoped units whose `subject` fields are the exact paths; every expected unit is audited only after the concern completes, and its finding count derives from accepted finding rows rather than a custom field.
+- Every missing-skill, unsupported-path, and accounting unit appears in the rendered projection rather than in prose, and each audited concern preserves its complete inspected-path set as path-scoped units whose `subject` fields are the exact paths, audited only after that concern completes, with finding counts derived from accepted finding rows rather than a custom field.
 - The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
-- The sealed run carries the resolver's complete `changed_paths` in its start payload, placed there by the pipe rather than by transcription, so the expected path set is readable from the run itself.
-- The sealed run's recorded subject set equals that inventory: a claimed path carries its concern's unit, an unclaimed path carries its accounting record, every required unit carries `audited`, `not-applicable`, `missing-skill`, or `unsupported`, every finding follows the coverage rows of its own concern and references an accepted unit, and every subject body was read complete from the resolved `base..head` scope.
-- The stage 7 reconciler exited zero on the sealed run, so its recorded subjects account for its sealed inventory with no required unit left non-final — a coverage verdict any reader recomputes from the run itself rather than from the run driver's account of it, and one a later re-run reproduces wherever the selector still resolves to that inventory. A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
+- The run's expected path set is readable from the run itself, so the inspection's completeness is established without the run driver's account of it.
+- The sealed run's recorded subject set equals that inventory, every required unit carries a final status, and every finding references an accepted unit of its own concern.
+- The stage 7 reconciler exited zero on the sealed run. A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>

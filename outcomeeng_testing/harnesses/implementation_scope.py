@@ -24,6 +24,7 @@ SCRIPT_PATH = (
 _MODULE = runpy.run_path(str(SCRIPT_PATH))
 ERROR_PREFIX = cast(str, _MODULE["ERROR_PREFIX"])
 RECONCILE_PREFIX = cast(str, _MODULE["RECONCILE_PREFIX"])
+SCOPE_IDENTITY_OPTION = cast(str, _MODULE["SCOPE_IDENTITY_OPTION"])
 REQUIRED_COVERAGE = cast(str, _MODULE["REQUIRED_COVERAGE"])
 FINAL_COVERAGE_STATUSES = cast(frozenset[str], _MODULE["FINAL_COVERAGE_STATUSES"])
 AUDIT_FIELD = cast(Any, _MODULE["AuditField"])
@@ -55,10 +56,13 @@ def run_implementation_scope(
     repo_override: pathlib.Path | None = None,
     audit_input: str | None = None,
     reconcile_run: str | None = None,
+    scope_identity: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Capture the real CLI result while keeping cwd separate from --repo."""
     audit_input_argv = () if audit_input is None else ("--audit-input", audit_input)
     reconcile_argv = () if reconcile_run is None else ("--reconcile-run", reconcile_run)
+    if scope_identity is not None:
+        reconcile_argv = (*reconcile_argv, "--scope-identity", scope_identity)
     return subprocess.run(
         (
             sys.executable,

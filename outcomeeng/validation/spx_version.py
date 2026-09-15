@@ -84,6 +84,7 @@ MINIMUM_RELEASE_PACKAGE_RUNNERS: Final = (
 )
 VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
     "start",
+    "input",
     "scope",
     "finding",
     "finish",

@@ -14,6 +14,7 @@ from outcomeeng_testing.harnesses.implementation_scope import (
     RECONCILE_FIELD,
     RECONCILE_PREFIX,
     REQUIRED_COVERAGE,
+    SCOPE_IDENTITY_OPTION,
     audit_scope_unit,
     reconcile,
     run_implementation_scope,
@@ -158,8 +159,24 @@ def test_an_unreadable_run_yields_a_diagnostic_rather_than_a_verdict() -> None:
             stale.repo,
             CHANGESET_SCOPE.HEAD_REF,
             reconcile_run="1999-01-01_00-00-00-000-000000000000",
+            scope_identity="0000000000000000000000000000000000000000..1111111111111111111111111111111111111111",
         )
 
         assert completed.returncode
         assert completed.stderr.startswith(RECONCILE_PREFIX)
+        assert SCOPE_IDENTITY_OPTION not in completed.stderr
+        assert not completed.stdout
+
+
+def test_a_reconcile_request_without_a_sealed_identity_is_rejected() -> None:
+    with stale_local_base_repo() as stale:
+        completed = run_implementation_scope(
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            reconcile_run="1999-01-01_00-00-00-000-000000000000",
+        )
+
+        assert completed.returncode
+        assert completed.stderr.startswith(RECONCILE_PREFIX)
+        assert SCOPE_IDENTITY_OPTION in completed.stderr
         assert not completed.stdout
