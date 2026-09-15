@@ -5,7 +5,7 @@ description: >-
   against its governing decisions, specs, and language standards, covering
   per-language code, test, and architecture concerns, finding falsifiability,
   and completeness of the inspection.
-argument-hint: "<scope>"
+argument-hint: "<HEAD | branch | base...head | worktree:selector>"
 allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Bash(printf:*), Glob, Grep, Skill
 ---
 
@@ -357,26 +357,15 @@ audits. Each read-only concern skill owns language-specific applicability and
 identifies the subject paths it audited or returns `NOT_APPLICABLE`; the
 orchestration never substitutes its own file-pattern table. Build the
 pre-invocation inventory by discovered language and concern, then expand each
-concern's result into subject-path units when its final coverage status is known.
+concern's result into subject-path units when its coverage status is settled: a
+required unit settles on a final status, an accounting record settles on `skipped`.
 A discovered language with an incomplete trio records the missing required
 concerns and rejects the run.
 
-Each expected unit records:
-
-- audit class: `implementation`
-- audit kind: `code`, `tests`, or `architecture` for an inspected unit; `coverage-gap` for an accounting record
-- language partition, omitted for an accounting record
-- concern partition: `code`, `tests`, or `architecture`; `coverage-gap` for an accounting record
-- one resolved path — inspected by the concern, or accounted for as unclaimed; every resolved path becomes one SPX scope unit whose preserved `subject` field is that exact path
-- stable `expectedProducer` identity using the six published producer fields: the concern skill expected to cover the unit, or the run-driver identity itself for an accounting record
-- optional `producerProvenance` using both owning-plugin versions and optional SPX tool version when a concern skill executed
-- `recordedByRunDriver` identity for the SPX command driver, present for every unit so missing-skill and unsupported classifications still identify the recorder
-- coverage requirement: `required` or `optional`
-- coverage status: `audited`, `not-applicable`, `missing-skill`, or `unsupported` for a required unit; an optional unit may additionally carry `skipped`
-- concern result: completion is represented by every expected path unit carrying `coverageStatus: audited`, and the finding count is the count of accepted finding rows for those path-scoped units
+Each expected unit carries the scope payload in `<verification_run_contract>`: one resolved path as its `subject` — inspected by a concern, or accounted for as unclaimed — with `recordedByRunDriver` present on every unit so a missing-skill, unsupported, or accounting unit still identifies its recorder, `expectedProducer` naming the concern skill expected to cover it or the run-driver identity for an accounting record, and `producerProvenance` only where a concern skill executed. A concern's completion is every expected path unit carrying `coverageStatus: audited`; its finding count is the count of accepted finding rows for those path-scoped units.
 
 - Plan the complete inventory before invoking any concern skill. NEVER mark a planned unit `audited`.
-- Queue each unit only once its final coverage status is known: immediately for a classified gap or accounting record, or after its concern finishes for an executed producer.
+- Queue each unit only once its coverage status is settled: immediately for a classified gap or accounting record, or after its concern finishes for an executed producer.
 - NEVER append a preliminary required unit before its final coverage status is known — every accepted required uncovered event rejects the terminal rollup permanently.
 - A concern skill returns its result to the run driver and never writes SPX state itself.
 - After a concern returns, queue one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`. NEVER record fewer rows than the concern returned paths, and NEVER collapse several inspected paths into one representative row — the recorded subject set is the evidence that the inspection happened, so a reduced set is an unverifiable claim.
@@ -479,12 +468,12 @@ existing no-retry rule; these records authorize no replacement invocation.
 <success_criteria>
 
 - The verdict covers every required implementation concern for every language partition in the supplied scope: code, tests, and architecture.
-- A completed run returns the raw run token and rendered projection with no competing prose verdict; the projection's `terminalStatus` is the sole determination (`approved` or `rejected`). A missing required concern skill after run start appears as `missing-skill` rejected coverage in that projection. A blocked run names the exact malformed request field or failed SPX command that prevented a valid completed projection.
+- A missing required concern skill after run start appears as `missing-skill` rejected coverage in the projection, and a blocked run names the exact malformed request field or failed SPX command that prevented a valid completed projection; the projection's `terminalStatus` is the sole determination.
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-path, and accounting unit appears in the rendered projection rather than in prose, and each audited concern preserves its complete inspected-path set as path-scoped units whose `subject` fields are the exact paths, audited only after that concern completes, with finding counts derived from accepted finding rows rather than a custom field.
 - The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
-- The sealed run is self-describing: its recorded subject set equals the inventory its own start input carries, no recorded subject lies outside that inventory, every required unit carries a final status, and every finding references an accepted unit of its own concern — so a reader establishes the inspection's completeness from the run without the run driver's account of it.
+- The sealed run is self-describing: its recorded subject set equals the inventory its own start input carries, no recorded subject lies outside that inventory, every required unit carries a final status and every unclaimed path its accounting record, and every finding references an accepted unit of its own concern — so a reader establishes the inspection's completeness from the run without the run driver's account of it.
 - A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 

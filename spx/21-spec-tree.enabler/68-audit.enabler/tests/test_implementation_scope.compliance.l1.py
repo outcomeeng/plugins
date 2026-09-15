@@ -3,7 +3,12 @@
 import json
 
 from outcomeeng.validation.implementation_audit_contract import (
+    AuditCoverageRequirement,
+    AuditCoverageStatus,
     ImplementationAuditConcern,
+)
+from outcomeeng_testing.harnesses.audit_verification_run_contract import (
+    source_language,
 )
 from outcomeeng_testing.harnesses.changeset_scope import (
     CHANGESET_SCOPE,
@@ -13,6 +18,8 @@ from outcomeeng_testing.harnesses.changeset_scope import (
 from outcomeeng_testing.harnesses.implementation_scope import (
     AUDIT_FIELD,
     ERROR_PREFIX,
+    EXIT_COMMAND_FAILURE,
+    EXIT_UNRECONCILED,
     FINAL_COVERAGE_STATUSES,
     RECONCILE_FIELD,
     RECONCILE_PREFIX,
@@ -25,7 +32,7 @@ from outcomeeng_testing.harnesses.implementation_scope import (
     run_implementation_scope_with_unlaunchable_spx,
 )
 
-LANGUAGE = "typescript"
+LANGUAGE = source_language()
 CONCERN = ImplementationAuditConcern.CODE
 
 
@@ -106,7 +113,8 @@ def test_a_sealed_path_without_a_recorded_unit_leaves_the_run_unreconciled() -> 
 def test_a_required_unit_outside_the_final_statuses_leaves_the_run_unreconciled() -> (
     None
 ):
-    pending, accounting = "incomplete", "optional"
+    pending = AuditCoverageStatus.SKIPPED.value
+    accounting = AuditCoverageRequirement.OPTIONAL.value
     assert pending not in FINAL_COVERAGE_STATUSES
     assert accounting != REQUIRED_COVERAGE
     subjects = ("src/pending.ts", "docs/left-to-its-owner.md")
@@ -181,8 +189,9 @@ def test_an_unreadable_run_yields_a_diagnostic_rather_than_a_verdict() -> None:
             scope_identity="0000000000000000000000000000000000000000..1111111111111111111111111111111111111111",
         )
 
-        assert completed.returncode
+        assert completed.returncode == EXIT_COMMAND_FAILURE
         assert completed.stderr.startswith(RECONCILE_PREFIX)
+        assert "1999-01-01_00-00-00-000-000000000000" in completed.stderr
         assert SCOPE_IDENTITY_OPTION not in completed.stderr
         assert not completed.stdout
 
@@ -212,7 +221,7 @@ def test_an_unlaunchable_cli_yields_a_diagnostic_rather_than_an_unreconciled_ver
             scope_identity="0000000000000000000000000000000000000000..1111111111111111111111111111111111111111",
         )
 
-        assert completed.returncode == 2
+        assert completed.returncode == EXIT_COMMAND_FAILURE
         assert completed.stderr.startswith(RECONCILE_PREFIX)
         assert not completed.stdout
 
@@ -256,7 +265,7 @@ def test_a_recorded_run_reconciles_against_a_fresh_resolution_of_its_selector() 
 
         assert agreed.returncode == 0
         assert json.loads(agreed.stdout)[RECONCILE_FIELD.RECONCILED] is True
-        assert drifted.returncode == 1
+        assert drifted.returncode == EXIT_UNRECONCILED
         verdict = json.loads(drifted.stdout)
         assert verdict[RECONCILE_FIELD.DRIFTED] == [phantom]
         assert verdict[RECONCILE_FIELD.UNACCOUNTED] == []

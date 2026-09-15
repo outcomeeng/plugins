@@ -7,7 +7,7 @@ CAN contribute code, test, and architecture audit intelligence without shipping 
 ## Assertions
 
 - ALWAYS: the `spec-tree:audit-implementation` prompt contract admits only `audited`, `not-applicable`, `missing-skill`, or `unsupported` as a required coverage unit's final status, and requires a run that reaches none of those to return the blocked diagnostic naming the concrete failed operation or absent prerequisite ([audit])
-- ALWAYS: the `spec-tree:audit-implementation` prompt contract requires every planned unit to carry a final status and every recorded finding to reference an accepted unit before the run finishes, and continues the run when that reconciliation fails ([audit])
+- ALWAYS: the `spec-tree:audit-implementation` prompt contract requires every required unit to carry a final status, every unclaimed resolved path to carry its accounting record, and every recorded finding to reference an accepted unit before the run finishes, and continues the run when that reconciliation fails ([audit])
 - ALWAYS: the `spec-tree:audit-implementation` prompt contract requires each subject body to be inspected completely from the resolved base-to-head scope, re-issuing a truncated or partial read in bounded ranges until the body is complete ([audit])
 - ALWAYS: the `spec-tree:audit-implementation` prompt contract requires each concern's governing standards and the audited repository's declared `spx/local/` overlays to load before a finding is accepted ([audit])
 - NEVER: the `spec-tree:audit-implementation` prompt contract admits remaining work, elapsed time, context pressure, or unfinished reading as a cause for ending a run, or derives a subject body from a single commit's patch rather than the resolved base-to-head scope ([audit])
@@ -26,6 +26,7 @@ CAN contribute code, test, and architecture audit intelligence without shipping 
 - Given a nonexistent repository path, when implementation-audit scope discovery receives it through `--repo`, then it returns an unsuccessful scope-resolution diagnostic naming that path, without scope JSON or a Python traceback ([test](tests/test_implementation_scope.scenario.l1.py))
 - Given the pinned published SPX CLI and source-owned implementation-audit payload contracts, when the verification-run lifecycle records scope and finding evidence and finishes with the evidence-derived status, then it returns monotonic evidence sequences and a sealed projection carrying the authoritative finding count ([test](tests/test_implementation_audit_contract.scenario.l3.py))
 - Given a verification run carrying a recorded blocking finding, when the lifecycle finishes with an approving terminal status, then the finish fails rather than sealing a terminal status the recorded evidence contradicts ([test](tests/test_implementation_audit_contract.scenario.l3.py))
+- Given a changeset carrying a path no language concern claims, when the lifecycle records that path's accounting record through the pinned published SPX CLI and finishes, then the sealed projection carries exactly one optional, skipped coverage-gap unit for that path with no language partition, and the terminal status is the one the findings derive ([test](tests/test_implementation_audit_contract.scenario.l3.py))
 
 ### Compliance
 

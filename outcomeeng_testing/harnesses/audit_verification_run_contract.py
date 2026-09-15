@@ -46,6 +46,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     ImplementationAuditConcern,
     implementation_audit_finding_key,
     implementation_audit_finding_payload,
+    implementation_audit_accounting_payload,
     implementation_audit_input_payload,
     implementation_audit_provenance,
     implementation_audit_scope_payload,
@@ -77,6 +78,10 @@ REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 SPX_RELEASE_FIXTURE: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "spx_verification_run_release.json"
 )
+# One changed path no language concern claims, so the lifecycle records the
+# accounting record the audit skill requires and the projection carries it.
+ACCOUNTING_PATH: Final = "docs/left-to-its-owner.md"
+RENDERED_SCOPE_UNITS_FIELD: Final = "auditScopeUnits"
 SPX_VERIFICATION_RUN_HELP_FIXTURE: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "spx_verification_run_help.txt"
 )
@@ -145,9 +150,11 @@ class VerificationRunObservation:
     terminal_status: AuditTerminalStatus
     recorded_finding_count: int
     subject_paths: tuple[str, ...]
+    accounting_path: str
     scope_sequences: tuple[object, ...]
     finding_sequences: tuple[object, ...]
     sealed_projection: tuple[object, ...]
+    rendered_scope_units: tuple[Mapping[str, object], ...]
 
 
 def observe_implementation_audit_lifecycle(
@@ -200,6 +207,13 @@ def observe_implementation_audit_lifecycle(
         terminal_status=terminal_status,
         recorded_finding_count=len(finding_reports),
         subject_paths=tuple(probe.subject_path for probe in finding_probes),
+        accounting_path=ACCOUNTING_PATH,
+        rendered_scope_units=tuple(
+            cast(Mapping[str, object], unit)
+            for unit in cast(
+                list[object], render_report.get(RENDERED_SCOPE_UNITS_FIELD, [])
+            )
+        ),
         scope_sequences=tuple(
             scope_report.get(RUN_SEQUENCE_FIELD) for scope_report in scope_reports
         ),
@@ -247,7 +261,7 @@ def observe_mismatched_terminal_status_finish() -> int | None:
 
 def audit_contract_rejects_language_specific_wrapper() -> bool:
     """Return whether validation rejects every language wrapper filename."""
-    language = _source_language()
+    language = source_language()
     return all(
         _language_wrapper_filename_is_rejected(language, filename)
         for filename in language_specific_auditor_filenames(language)
@@ -256,7 +270,7 @@ def audit_contract_rejects_language_specific_wrapper() -> bool:
 
 def audit_contract_rejects_language_wrapper_under_spec_tree() -> bool:
     """Reject every language wrapper filename under the generic host."""
-    language = _source_language()
+    language = source_language()
     return all(
         _language_wrapper_filename_is_rejected(
             SPEC_TREE_PLUGIN_NAME,
@@ -311,7 +325,7 @@ def minimum_release_runner_preserves_precedence() -> bool:
 
 def implementation_audit_unit_ids_are_subject_specific() -> bool:
     """Keep coverage and finding identity distinct for each subject path."""
-    language = _source_language()
+    language = source_language()
     provenance = implementation_audit_provenance(
         agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
         language_plugin_version=_plugin_version(language),
@@ -355,7 +369,7 @@ def implementation_audit_unit_ids_are_subject_specific() -> bool:
 
 def implementation_audit_payloads_reject_empty_subject() -> bool:
     """Reject scope and finding payloads without a concrete subject."""
-    language = _source_language()
+    language = source_language()
     concern = ImplementationAuditConcern.CODE
     provenance = implementation_audit_provenance(
         agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
@@ -410,7 +424,7 @@ def audit_contract_rejects_retired_wrappers_in_every_plugin() -> bool:
 def audit_contract_rejects_incomplete_language_trio() -> bool:
     """Return whether validation rejects a missing language concern skill."""
     with _valid_surface() as surface:
-        language = _source_language()
+        language = source_language()
         concern = LANGUAGE_AUDIT_CONCERNS[-1]
         _language_concern_path(surface, language, concern).unlink()
         return bool(check_language_concern_surface(surface))
@@ -419,7 +433,7 @@ def audit_contract_rejects_incomplete_language_trio() -> bool:
 def audit_contract_rejects_retired_language_audit_skill() -> bool:
     """Return whether validation rejects a retired aggregate language audit skill."""
     with _valid_surface() as surface:
-        language = _source_language()
+        language = source_language()
         retired_skill = (
             surface
             / language
@@ -449,7 +463,7 @@ def audit_contract_rejects_missing_single_surface_audit_host() -> bool:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         surface = root / PLUGIN_SURFACE_PATHS[0]
-        _populate_valid_surface(surface, _source_language())
+        _populate_valid_surface(surface, source_language())
         rmtree(surface / SPEC_TREE_PLUGIN_NAME)
         return bool(check_audit_artifact_contract(root))
 
@@ -457,7 +471,7 @@ def audit_contract_rejects_missing_single_surface_audit_host() -> bool:
 def audit_contract_rejects_missing_generated_language() -> bool:
     """Reject a generated surface missing an expected language plugin."""
     with _valid_repository_surfaces() as root:
-        rmtree(root / PLUGIN_SURFACE_PATHS[-1] / _source_language())
+        rmtree(root / PLUGIN_SURFACE_PATHS[-1] / source_language())
         return bool(check_audit_artifact_contract(root))
 
 
@@ -466,7 +480,7 @@ def audit_contract_rejects_missing_single_surface_language() -> bool:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         surface = root / PLUGIN_SURFACE_PATHS[0]
-        language = _source_language()
+        language = source_language()
         _populate_valid_surface(surface, language)
         _language_concern_path(
             surface,
@@ -520,7 +534,7 @@ def runtime_errors_with_retired_artifact_in_other_skill() -> list[str]:
 def runtime_errors_with_retired_artifact_in_language_skill() -> list[str]:
     """Observe validation with a retired file in a language concern skill."""
     with _valid_surface() as surface:
-        language = _source_language()
+        language = source_language()
         runtime_dir = _language_concern_path(
             surface,
             language,
@@ -538,7 +552,7 @@ def _all_live_surfaces_pass(check: Callable[[Path], list[str]]) -> bool:
 def _valid_surface() -> Iterator[Path]:
     with TemporaryDirectory() as temporary_directory:
         surface = Path(temporary_directory)
-        _populate_valid_surface(surface, _source_language())
+        _populate_valid_surface(surface, source_language())
         yield surface
 
 
@@ -546,7 +560,7 @@ def _valid_surface() -> Iterator[Path]:
 def _valid_repository_surfaces() -> Iterator[Path]:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
-        language = _source_language()
+        language = source_language()
         for relative_surface in PLUGIN_SURFACE_PATHS:
             _populate_valid_surface(root / relative_surface, language)
         yield root
@@ -597,7 +611,8 @@ def _language_wrapper_filename_is_rejected(
         return bool(check_wrapper_surface(surface))
 
 
-def _source_language() -> str:
+def source_language() -> str:
+    """Return the first programming language the source plugin surface ships."""
     return implementation_languages(REPO_ROOT / PLUGIN_SURFACE_PATHS[0])[0]
 
 
@@ -619,7 +634,7 @@ def _start_implementation_audit_run(
     tuple[ImplementationAuditVerificationProbe, ...],
     tuple[dict[str, object], ...],
 ]:
-    language = _source_language()
+    language = source_language()
     probes = implementation_audit_verification_probes(language)
     provenance = implementation_audit_provenance(
         agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
@@ -628,7 +643,7 @@ def _start_implementation_audit_run(
     )
     _initialize_changeset_repository(
         repository,
-        tuple(probe.subject_path for probe in probes),
+        (*(probe.subject_path for probe in probes), ACCOUNTING_PATH),
     )
     scope = _changeset_scope(repository)
     start_report = _run_spx(
@@ -656,7 +671,19 @@ def _start_implementation_audit_run(
         )
         for probe in probes
     )
-    return scope, run_token, provenance, probes, scope_reports
+    accounting_payload = implementation_audit_accounting_payload(
+        subject_path=ACCOUNTING_PATH
+    )
+    accounting_report = _run_spx(
+        repository,
+        spx_command,
+        ("scope", "add"),
+        scope,
+        run_token=run_token,
+        payload=accounting_payload,
+        idempotency_key=str(accounting_payload["unitId"]),
+    )
+    return scope, run_token, provenance, probes, (*scope_reports, accounting_report)
 
 
 def _add_implementation_audit_finding(

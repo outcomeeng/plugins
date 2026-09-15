@@ -15,6 +15,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     ImplementationAuditConcern,
     implementation_audit_unit_id,
 )
+from outcomeeng_testing.harnesses.changeset_scope import CHANGESET_SCOPE
 
 SCRIPT_PATH = (
     pathlib.Path(__file__)
@@ -34,6 +35,9 @@ _MODULE = runpy.run_path(str(SCRIPT_PATH))
 ERROR_PREFIX = cast(str, _MODULE["ERROR_PREFIX"])
 RECONCILE_PREFIX = cast(str, _MODULE["RECONCILE_PREFIX"])
 SCOPE_IDENTITY_OPTION = cast(str, _MODULE["SCOPE_IDENTITY_OPTION"])
+SPX_COMMAND = cast(str, _MODULE["SPX_COMMAND"])
+EXIT_UNRECONCILED = cast(int, _MODULE["EXIT_UNRECONCILED"])
+EXIT_COMMAND_FAILURE = cast(int, _MODULE["EXIT_COMMAND_FAILURE"])
 REQUIRED_COVERAGE = cast(str, _MODULE["REQUIRED_COVERAGE"])
 FINAL_COVERAGE_STATUSES = cast(frozenset[str], _MODULE["FINAL_COVERAGE_STATUSES"])
 AUDIT_FIELD = cast(Any, _MODULE["AuditField"])
@@ -45,7 +49,6 @@ reconcile = cast(
     _MODULE["reconcile"],
 )
 _main = cast(Callable[..., int], _MODULE["main"])
-SPX_COMMAND = "spx"
 
 
 @dataclass(frozen=True)
@@ -76,7 +79,7 @@ def run_implementation_scope_against_recorded_run(
     replies = {
         "input": {
             AUDIT_FIELD.INPUT_CONTENT: json.dumps(
-                {"changed_paths": list(recorded_changed_paths)}
+                {CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: list(recorded_changed_paths)}
             )
         },
         "render": {AUDIT_FIELD.SCOPE_UNITS: list(scope_units)},

@@ -22,6 +22,11 @@ from types import ModuleType
 
 ERROR_PREFIX = "error: implementation scope resolution failed"
 RECONCILE_PREFIX = "error: implementation audit reconciliation failed"
+SPX_COMMAND = "spx"
+# Exit 1 is a readable run that does not reconcile; exit 2 is a request or
+# command this script cannot carry out. The two never overlap.
+EXIT_UNRECONCILED = 1
+EXIT_COMMAND_FAILURE = 2
 SCOPE_IDENTITY_OPTION = "--scope-identity"
 REQUIRED_COVERAGE = "required"
 FINAL_COVERAGE_STATUSES = frozenset(
@@ -67,7 +72,7 @@ def _provider() -> ModuleType:
 def read_run_document(runner, repo, argv, field):
     """Return the last `spx verification run` document carrying ``field``."""
     completed = runner(
-        ["spx", "verification", "run", *argv],
+        [SPX_COMMAND, "verification", "run", *argv],
         cwd=repo,
         capture_output=True,
         text=True,
@@ -130,10 +135,9 @@ def _reconcile_run(runner, scope, args, resolved):
         "--run",
         args.reconcile_run,
     ]
-    # Exit 2 is reserved for a run this script cannot read: a launch that fails
-    # before spx runs (OSError), a nonzero spx exit, a document without the
-    # field, or a unit shaped so the comparison cannot run. Exit 1 is reserved
-    # for a readable run that does not reconcile, so the two never overlap.
+    # A run this script cannot read — a launch that fails before spx runs
+    # (OSError), a nonzero spx exit, a document without the field, or a unit
+    # shaped so the comparison cannot run — is a command failure.
     try:
         recorded_input = json.loads(
             read_run_document(
@@ -150,9 +154,9 @@ def _reconcile_run(runner, scope, args, resolved):
         )
     except (OSError, RuntimeError, TypeError, json.JSONDecodeError) as exc:
         print(f"{RECONCILE_PREFIX}: {exc}", file=sys.stderr)
-        return 2
+        return EXIT_COMMAND_FAILURE
     print(json.dumps(verdict, sort_keys=True))
-    return 0 if verdict[ReconcileField.RECONCILED] else 1
+    return 0 if verdict[ReconcileField.RECONCILED] else EXIT_UNRECONCILED
 
 
 def main(argv: list[str] | None = None, runner=subprocess.run) -> int:
@@ -178,19 +182,19 @@ def main(argv: list[str] | None = None, runner=subprocess.run) -> int:
             "the sealed <base>..<head> the run was started with",
             file=sys.stderr,
         )
-        return 2
+        return EXIT_COMMAND_FAILURE
     try:
         scope = _provider()
     except (ImportError, OSError) as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
-        return 2
+        return EXIT_COMMAND_FAILURE
     try:
         resolved = scope.resolve_committed_scope(
             args.scope, repo=args.repo, runner=runner
         )
     except scope.ScopeResolutionError as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
-        return 2
+        return EXIT_COMMAND_FAILURE
     if args.reconcile_run is not None:
         return _reconcile_run(runner, scope, args, resolved)
     if args.audit_input is not None:
@@ -201,7 +205,7 @@ def main(argv: list[str] | None = None, runner=subprocess.run) -> int:
                 f"{ERROR_PREFIX}: --audit-input must be a JSON object: {exc}",
                 file=sys.stderr,
             )
-            return 2
+            return EXIT_COMMAND_FAILURE
     print(json.dumps(resolved, sort_keys=True))
     return 0
 

@@ -164,6 +164,39 @@ def implementation_audit_scope_payload(
     }
 
 
+ACCOUNTING_RECORD_KIND: Final = "coverage-gap"
+
+
+def implementation_audit_accounting_unit_id(*, subject_path: str) -> str:
+    """Return the stable identity for one unclaimed path's accounting record."""
+    return f"{IMPLEMENTATION_AUDIT_CLASS}:{ACCOUNTING_RECORD_KIND}:{subject_path}"
+
+
+def implementation_audit_accounting_payload(*, subject_path: str) -> dict[str, object]:
+    """Return the accounting record for a resolved path no language concern claimed.
+
+    The record states that the path was considered and left to its
+    artifact-type auditor: it claims no coverage, names no language, and never
+    rejects a run. No leaf skill is expected to cover it, so the run driver's
+    own identity stands as its expected producer, and no provenance is recorded.
+    """
+    subject_path = _require_subject_path(subject_path)
+    return {
+        "unitId": implementation_audit_accounting_unit_id(subject_path=subject_path),
+        "auditClass": IMPLEMENTATION_AUDIT_CLASS,
+        "auditKind": ACCOUNTING_RECORD_KIND,
+        "subject": subject_path,
+        "coverageRequirement": AuditCoverageRequirement.OPTIONAL.value,
+        "coverageStatus": AuditCoverageStatus.SKIPPED.value,
+        "priorContext": {
+            "changedFilePartition": subject_path,
+            "concernPartition": ACCOUNTING_RECORD_KIND,
+        },
+        "expectedProducer": implementation_audit_run_driver_identity(),
+        "recordedByRunDriver": implementation_audit_run_driver_identity(),
+    }
+
+
 def implementation_audit_finding_payload(
     language: str,
     concern: ImplementationAuditConcern,
