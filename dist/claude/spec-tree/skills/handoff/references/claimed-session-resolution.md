@@ -1,8 +1,5 @@
 <objective>
-The authoritative claimed-session set, same-conversation artifact candidates, classifications, and `<RESOLVED_CLAIMED_SESSIONS>` marker consumed by the handoff workflows.
-
-The algorithm also locates any mid-session handoff artifacts (session files this conversation produced by running `spx session handoff` earlier). Workflow 04 reconciles artifacts separately: create a fresh canonical session when continuation remains, then archive every superseded same-conversation artifact.
-
+The authoritative claimed-session set, same-conversation artifact candidates including mid-session handoff artifacts, classifications, and `<RESOLVED_CLAIMED_SESSIONS>` marker consumed by the handoff workflows.
 </objective>
 
 <algorithm>
