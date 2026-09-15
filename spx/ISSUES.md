@@ -157,3 +157,13 @@ The rules' natural owner is `spx/31-outcomeeng.enabler/31-verification.enabler/1
 **Why separate**: the move re-opens a decision the PDR auditor approved in its current placement and re-points four node specs whose assertions the same changeset would rewrite, against no behavior change in any shipped skill. It is a decision-placement pass, not part of widening the rules' reach.
 
 **Revisit condition**: when a third workflow outside the delivery path needs the readiness record, or when `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` is next restructured.
+
+## Harnesses raise `AssertionError` for lifecycle failures
+
+Harness modules under `outcomeeng_testing/harnesses/` and a generator under `outcomeeng_testing/generators/` raise `AssertionError` when a resource fails to start, a process fails to announce itself, a build implementation is unavailable, or a generated value has the wrong shape — `gate_signal.py`, `plugin_build.py`, `build_orchestration.py`, `runtime_parameterization.py`, `hooks.py`, `coding_agents.py`, `gate.py`, `bump.py`, `evals/factories.py`, and `generators/prowl_environment.py` among them. The predicate-seam rule in `/test-evidence-standards` reserves assertion failures for the linked test; infrastructure raises only setup, dependency, lifecycle, or execution errors. Raising `AssertionError` from infrastructure reports a failure away from every `assert` site and can read as a verdict the harness owns.
+
+**Evidence.** The isolated test-evidence audit of `spx/13-infrastructure.enabler/13-host-readiness.enabler` on head `e3bf060ce4dd29ff34984b5d66f8302d9ca22e95` rejected the same shape in that node's harness (finding `f-001`), fixed there by raising a `RuntimeError` subclass from a harness-owned horizon. A grep over the harness home found the instances above outside that node.
+
+**Resolution shape.** Replace each infrastructure `AssertionError` with a lifecycle or dependency error type owned by the harness, leaving every behavioral predicate in the linked tests; take each owning node through its test-evidence audit.
+
+**Why separate.** The instances sit in harnesses the host-readiness changeset does not touch, each governed by its own node, so the sweep is one changeset per owning node or one dedicated pass.
