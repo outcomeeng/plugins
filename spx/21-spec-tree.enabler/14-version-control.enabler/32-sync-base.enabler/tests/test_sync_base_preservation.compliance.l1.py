@@ -26,15 +26,19 @@ def test_proof_carries_schema_version_and_full_oids_no_lane_name(
     old_base = merge_base_oid(handle.repo, handle.remote_ref)
     new_base = resolve_ref(handle.repo, handle.remote_ref)
 
-    payload = module.sync_base(handle.repo).to_json_dict()
-    proof = payload["preservation"]
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+    assert proof is not None
 
-    assert proof[module.SCHEMA_VERSION_KEY] == module.READINESS_SCHEMA_VERSION
-    assert proof["old_head_oid"] == old_head
-    assert proof["old_base_oid"] == old_base
-    assert proof["new_base_oid"] == new_base
-    assert proof["new_head_oid"] == head_oid(handle.repo)
-    assert set(proof) == {field.name for field in fields(module.Preservation)} | {
+    # Full OIDs: equal to git's own full rev-parse observations, never abbreviated.
+    assert proof.old_head_oid == old_head
+    assert proof.old_base_oid == old_base
+    assert proof.new_base_oid == new_base
+    assert proof.new_head_oid == head_oid(handle.repo)
+    payload = result.to_json_dict()["preservation"]
+    assert isinstance(payload, dict)
+    assert payload[module.SCHEMA_VERSION_KEY] == module.READINESS_SCHEMA_VERSION
+    assert set(payload) == {field.name for field in fields(module.Preservation)} | {
         module.SCHEMA_VERSION_KEY
     }
-    assert not any("lane" in key or "validation" in key for key in proof)
+    assert not any("lane" in key or "validation" in key for key in payload)
