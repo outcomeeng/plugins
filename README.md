@@ -160,7 +160,7 @@ into the selected `$CODEX_HOME/agents/` registry under a digest-bound marketplac
 ownership record, leaving foreign and modified files untouched. A checkout
 `.codex/agents/` definition whose invoked skills live in the selected home is a
 scope split that stops the run before mutation, per
-`spx/12-marketplace-state.adr.md`; marketplace installation never requires
+`spx/12-agent-delivery.pdr.md`; marketplace installation never requires
 committing agent definitions into a checkout.
 
 ### Bumping plugin versions on a branch
