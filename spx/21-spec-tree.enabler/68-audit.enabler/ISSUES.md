@@ -213,7 +213,7 @@ or widen the validator to a category rule that admits inert data files while
 still rejecting executable audit machinery.
 
 The constraint now also blocks the standard remedy for the skill's size.
-`SKILL.md` stands at 494 of the 500-line ceiling `/skill-standards` sets, and
+`SKILL.md` stands at 499 of the 500-line ceiling `/skill-standards` sets, and
 the content that would move — the scope and finding payload contracts — has
 nowhere to go, because `references/operational-failures.md` is the only
 reference file the inventory admits. The next necessary addition crosses the

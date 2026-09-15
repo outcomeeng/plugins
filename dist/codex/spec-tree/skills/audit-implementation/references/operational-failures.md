@@ -20,6 +20,7 @@ Observed implementation-audit failures and their causes and prevention.
 - `vacuous_reconciliation`
 - `coverage_stated_as_findings`
 - `language_probe_by_invocation`
+- `empty_argument_taken_as_selector`
 
 </contents>
 
@@ -334,3 +335,26 @@ for `code-{lang}` names; a name absent from it is a language that is not
 installed. Invoke a concern skill only as dispatch to a discovered language.
 
 </language_probe_by_invocation>
+
+<empty_argument_taken_as_selector>
+
+**A preloaded skill's empty argument was read as the target**
+
+What happened: A configured `implementation-auditor` received `HEAD` as its
+task message while the harness preloaded this skill with `$ARGUMENTS`
+substituted empty. The run bound the empty substitution, returned `BLOCKED`
+with `runToken: not-started` naming an absent selector, and never read the
+task message that carried it. Three runs on the identical input shape bound
+the task message and proceeded; nothing in the contract said which source was
+the selector.
+
+Why it failed: The request contract named `$ARGUMENTS` as the only selector
+source. In a configured-agent invocation that argument is rendered at preload,
+before any task exists, so it is always empty there, and a driver that takes
+it literally reports its own launch mechanics as a caller error.
+
+How to avoid: Bind the selector from the task message in a configured-agent
+invocation and from `$ARGUMENTS` in a direct one; an empty substitution binds
+nothing, and only a task message with no selector is the missing-input case.
+
+</empty_argument_taken_as_selector>

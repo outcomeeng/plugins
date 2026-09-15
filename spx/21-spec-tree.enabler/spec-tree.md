@@ -17,6 +17,9 @@ CAN operate within a structured, spec-first framework with deterministic context
   discover the target's context. The invocation policy preserves audit result
   contracts and repair workflows, and root guides may carry necessary
   agent-specific mechanical examples ([audit]).
+- ALWAYS: an invoked skill takes its target from the configured subagent's task
+  message, never from a skill argument the harness substituted at preload, per
+  `spx/15-subagent-execution.pdr.md` ([audit]).
 
 ### Scenarios
 

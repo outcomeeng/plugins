@@ -27,8 +27,7 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER derive a subject body from a single commit's patch, or leave a truncated read unrecovered — a partial read is re-issued, never converted into coverage evidence.
 - NEVER hand-transcribe the resolved changed-path set into a payload — the resolver's own output reaches the run through a pipe, because a retyped inventory drops and substitutes paths without any later step noticing.
 - NEVER invoke a skill to discover whether a language is installed — the installed skill inventory this context carries is the discovery source, and a failed invocation is not discovery evidence.
-- NEVER narrow the changed-path set handed to a concern skill, and NEVER record fewer subject units than a concern returned — applicability is the concern's judgment, and the driver records its complete result.
-- ALWAYS record a concern's complete claimed-path coverage before recording any finding for that concern — a run that records a unit only where it found something states its findings as its coverage.
+- ALWAYS record coverage as `<coverage_model>` states — the complete set to every concern, one row per returned path, every row before any finding — a run that narrows a set or records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
 - ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading language concern standards — every substantive project inspection and concern result belongs to the open run.
 
@@ -61,11 +60,9 @@ Run these stages in order. Each names what holds before the next begins, and
    `base..head` scope, re-issuing a truncated or partial read in bounded
    ranges until the body is complete, per the subject-body constraint.
 6. **Record.** Hold each unit planned until its concern returns a final result,
-   then persist that concern's complete claimed-path coverage before any of its
-   findings. A required unit reaches only `audited`, `not-applicable`,
-   `missing-skill`, or `unsupported`. NEVER accept a finding raised before stage
-   3 loaded that concern's standards and overlays — withdraw it rather than
-   record it.
+   then persist per `<coverage_model>`: complete claimed coverage before any
+   finding, one row per returned path. NEVER accept a finding raised before
+   stage 3 loaded that concern's standards and overlays — withdraw it.
 7. **Reconcile, then finish.** Run the bundled reconciler; `finish` is
    reachable only from its zero exit:
 
@@ -74,26 +71,17 @@ Run these stages in order. Each names what holds before the next begins, and
    ```
 
    `{committed-selector}` is the selector with any `worktree:` prefix removed,
-   exactly as stage 1 resolved it. `--scope-identity` is the stage 1 identity,
-   unchanged: it addresses the run, while the selector resolves afresh only to
-   detect drift. An advisory run's live paths are expected subjects beside the
-   committed inventory, because its start input sealed them under `live_paths`. A freshly resolved
-   identity would make SPX reject the locator in exactly the drifted case,
-   reporting a command failure instead of the drift. The reconciler reads the
-   run's sealed start inventory and recorded units, and emits `unaccounted` (a
-   sealed path with no unit), `unexpected` (a recorded subject outside the
-   inventory), `drifted` (the selector no longer resolves to that inventory),
-   and `nonfinal` (a required unit without a final status). Drift dominates:
-   exit 1 with a non-empty `drifted` returns the `<verdict_format>` blocked
-   diagnostic naming the drift whatever else the verdict carries, because the
-   committed scope moved after `start` and no inspection repairs that; a new
-   run addresses the new head. Exit 1 with `drifted` empty returns the run to
-   stage 5 or 6 for its `unaccounted`, `unexpected`, or `nonfinal` rows. Exit 2
-   is a command failure reported under `<verdict_format>`. Reconciling against
-   the plan the run driver holds NEVER
-   authorizes `finish` — a plan narrowed at stage 4 reconciles with itself and
-   seals a partial inspection as complete, which is why the referent is the
-   sealed inventory and the verdict is an exit code rather than an account.
+   exactly as stage 1 resolved it; `--scope-identity` is the stage 1 identity,
+   unchanged. The reconciler reads the run's sealed start inventory — with an
+   advisory run's `live_paths` beside it — and its recorded units, and emits
+   `unaccounted`, `unexpected`, `drifted`, and `nonfinal`. Exit 0 reaches
+   `finish`. Exit 1 with a non-empty `drifted` returns the `<verdict_format>`
+   blocked diagnostic naming the drift, whatever else the verdict carries; a
+   new run addresses the new head. Exit 1 with `drifted` empty returns the run
+   to stage 5 or 6 for its remaining rows. Exit 2 is a command failure reported
+   under `<verdict_format>`. The referent is the sealed inventory, never the
+   plan the run driver holds; `<vacuous_reconciliation>` in the failure
+   reference carries the reasoning.
 
 A run that cannot bring a required unit to a stage 6 status returns the
 `<verdict_format>` blocked diagnostic naming the concrete failed operation or
@@ -104,9 +92,12 @@ unfinished reading are never such a cause.
 
 <request_contract>
 
-Capture `$ARGUMENTS` as the target scope selector before discovery. The target
-is one scope selector: `HEAD`, a branch, or an explicit three-dot
-range. `worktree:` before a selector explicitly requests an advisory audit of
+Bind the target scope selector before discovery. In a direct invocation it is
+`$ARGUMENTS`; in a configured-agent invocation it is the agent's task message,
+which carries only the selector, and the argument substituted when the skill
+was preloaded — rendered empty in that case — binds nothing. Only a task
+message that carries no selector is the missing-input case. The target is one
+scope selector: `HEAD`, a branch, or an explicit three-dot range. `worktree:` before a selector explicitly requests an advisory audit of
 that committed scope plus the complete modified and untracked file set. Preserve
 the selector verbatim. Never infer advisory intent from a dirty checkout.
 
@@ -240,7 +231,21 @@ required.
 ```
 
 The `coverageStatus` values above are the required-unit set. An optional unit
-may additionally carry `skipped`; no unit carries `incomplete`.
+may additionally carry `skipped`; no unit carries `incomplete`. The accounting
+record for a resolved path no concern claimed is the same shape with these
+values, the six run-driver identity fields repeated as `expectedProducer` and
+`producerProvenance` omitted:
+
+```json
+{
+  "unitId": "implementation:unknown:coverage-gap:<the exact resolved path>",
+  "auditKind": "coverage-gap",
+  "subject": "<the exact resolved path>",
+  "coverageRequirement": "optional",
+  "coverageStatus": "skipped",
+  "priorContext": { "changedFilePartition": "<the exact resolved path>", "concernPartition": "coverage-gap" }
+}
+```
 
 `languagePartition` is the only optional prior-context field. Omit it when the
 language is unknown; never replace `priorContext` with top-level partition
@@ -352,7 +357,7 @@ Build an expected coverage inventory before invoking any language concern skill.
 
 Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; never manufacture a language name, a missing concern skill, or an unsupported unit for a path outside implementation-audit ownership.
 
-Leaving a path to another auditor is not leaving it unaccounted for. Record every resolved path no concern claimed as an accounting record: `subject` and `priorContext.changedFilePartition` carrying the exact resolved path, `auditKind` and `priorContext.concernPartition` both `coverage-gap`, `coverageRequirement` `optional`, `coverageStatus` `skipped`, no `languagePartition`, `expectedProducer` repeating the run-driver identity because no leaf skill is expected to cover the path, `producerProvenance` omitted, and `unitId` `implementation:unknown:coverage-gap:<path>` — the four-segment key with the language rendered as `unknown`. Reconciliation matches inventory paths against recorded subjects, so a `subject` that is anything but the literal path leaves that path unaccounted forever. The record says the path was considered and left to another auditor; it claims no coverage, creates no language partition, and rejects no run, and it makes the run's own recorded subject set equal its sealed inventory.
+Leaving a path to another auditor is not leaving it unaccounted for. Record every resolved path no concern claimed as the accounting record shown in `<verification_run_contract>`, with the exact resolved path as its `subject`: reconciliation matches inventory paths against recorded subjects, so a `subject` that is anything but the literal path leaves that path unaccounted forever. The record says the path was considered and left to another auditor; it claims no coverage, creates no language partition, and rejects no run, and it makes the run's own recorded subject set equal its sealed inventory.
 
 Give every complete trio the **complete** resolved three-dot changed-path set,
 the resolved endpoint identities, discovered governing context, and the advisory
