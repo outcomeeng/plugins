@@ -506,6 +506,29 @@ class DetachedRepo:
     base_file: str | None = None
     dirty_file: str | None = None
     dirty_marker: str | None = None
+    feature_file: str | None = None
+
+
+def build_diverged_detached_repo(root: pathlib.Path) -> DetachedRepo:
+    """Build a detached worktree carrying a commit the advanced base lacks.
+
+    The feature branch is built behind the base, then HEAD is detached at its
+    tip, so the detached commit has diverged from ``origin/<base>``: it carries
+    ``feature_file``, which the base never receives. ``detached_oid`` is that
+    feature commit, the OID synchronization must leave in place.
+    """
+    behind = build_behind_base_repo(root)
+    detached_oid = _git(behind.repo, "rev-parse", "HEAD")
+    detach_head(behind.repo)
+    return DetachedRepo(
+        repo=behind.repo,
+        base_ref=behind.base_ref,
+        remote_ref=behind.remote_ref,
+        detached_oid=detached_oid,
+        data=behind.data,
+        base_file=behind.base_file,
+        feature_file=behind.feature_file,
+    )
 
 
 def build_detached_behind_base_repo(root: pathlib.Path) -> DetachedRepo:

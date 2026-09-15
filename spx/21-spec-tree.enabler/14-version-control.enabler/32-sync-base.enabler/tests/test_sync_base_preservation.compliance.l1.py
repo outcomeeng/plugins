@@ -29,12 +29,12 @@ def test_proof_carries_schema_version_and_full_oids_no_lane_name(
     payload = module.sync_base(handle.repo).to_json_dict()
     proof = payload["preservation"]
 
-    assert proof["schema_version"] == module.READINESS_SCHEMA_VERSION
+    assert proof[module.SCHEMA_VERSION_KEY] == module.READINESS_SCHEMA_VERSION
     assert proof["old_head_oid"] == old_head
     assert proof["old_base_oid"] == old_base
     assert proof["new_base_oid"] == new_base
     assert proof["new_head_oid"] == head_oid(handle.repo)
     assert set(proof) == {field.name for field in fields(module.Preservation)} | {
-        "schema_version"
+        module.SCHEMA_VERSION_KEY
     }
     assert not any("lane" in key or "validation" in key for key in proof)
