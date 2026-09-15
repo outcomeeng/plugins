@@ -12,6 +12,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_stacked_repo_open_predecessor_advanced,
     build_stacked_repo_unpublished_predecessor,
     build_stacked_repo_without_record,
+    build_three_level_stack_behind_base,
     commit_subjects_above,
     load_sync_base_module,
     repository_root,
@@ -36,6 +37,29 @@ def test_rebased_predecessor_writes_the_record_on_its_dependent(
     ) == module.StackRecord(
         predecessor=handle.predecessor_branch, tip=handle.predecessor_tip
     )
+
+
+def test_rebased_predecessor_leaves_a_farther_dependent_recording_its_nearer_one(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_three_level_stack_behind_base(repository_root(tmp_path))
+    assert handle.third_branch is not None
+    assert handle.stacked_tip is not None
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.REBASED
+    # The middle branch sat on the rebased tip and records it; the top branch
+    # already names the middle branch as its nearer predecessor and keeps it.
+    assert module.read_stack_record(
+        handle.repo, handle.stacked_branch
+    ) == module.StackRecord(
+        predecessor=handle.predecessor_branch, tip=handle.predecessor_tip
+    )
+    assert module.read_stack_record(
+        handle.repo, handle.third_branch
+    ) == module.StackRecord(predecessor=handle.stacked_branch, tip=handle.stacked_tip)
 
 
 def test_explicit_base_sync_writes_the_record_on_the_synced_branch(
@@ -158,9 +182,10 @@ def test_conflict_report_lists_the_restack_recovery(
 
     assert result.status is module.SyncStatus.CONFLICT
     assert result.conflict is not None
-    # The spec declares the restack form literally; the case literal belongs at
-    # the test site rather than being rebuilt through the production formatter.
+    # The restack form is a spec-declared value the source owns; its agreement
+    # with the spec is audit evidence, and this test exercises the behavior of
+    # listing it for the conflicted base.
     assert (
-        f"git rebase --onto {handle.remote_ref} <fork>"
+        module.restack_operator_option(handle.remote_ref)
         in result.conflict.operator_options
     )

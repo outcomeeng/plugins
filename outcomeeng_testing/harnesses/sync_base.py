@@ -623,17 +623,6 @@ def build_detached_no_remote_repo(root: pathlib.Path) -> DetachedRepo:
     )
 
 
-def switch_branch(repo: pathlib.Path, branch: str) -> None:
-    """Check out ``branch`` in ``repo`` so synchronization acts on it."""
-    _git(repo, "switch", "-q", branch)
-
-
-def commits_above(repo: pathlib.Path, ref: str) -> list[str]:
-    """Observe the full OIDs of ``HEAD``'s commits that ``ref`` does not contain."""
-    listed = _git(repo, "rev-list", f"{ref}..HEAD")
-    return [line for line in listed.splitlines() if line]
-
-
 def commit_subjects_above(repo: pathlib.Path, ref: str) -> list[str]:
     """Observe the subjects of ``HEAD``'s commits that ``ref`` does not contain."""
     listed = _git(repo, "log", "--format=%s", f"{ref}..HEAD")
@@ -707,6 +696,8 @@ class StackedRepo:
     base_file: str | None = None
     predecessor_advance_file: str | None = None
     predecessor_rewrite_content: str | None = None
+    third_branch: str | None = None
+    stacked_tip: str | None = None
 
 
 def _build_stack(root: pathlib.Path) -> tuple[pathlib.Path, RepositoryDomain, str]:
@@ -894,4 +885,37 @@ def _write_record(repo: pathlib.Path, branch: str, predecessor: str, tip: str) -
         repo,
         branch,
         load_sync_base_module().StackRecord(predecessor=predecessor, tip=tip),
+    )
+
+
+def build_three_level_stack_behind_base(root: pathlib.Path) -> StackedRepo:
+    """Build a chain of three stacked branches with the first behind the base.
+
+    The predecessor forks from the base, the stacked branch sits on its tip,
+    and a third branch (the generated alternate name) sits on the stacked
+    branch's tip and records the stacked branch as its predecessor. The base
+    then advances out of band and the clone is checked out on the predecessor,
+    so synchronizing it rewrites the predecessor's commit while both the
+    stacked branch and the third branch contain the pre-rebase tip.
+    ``third_branch`` names the top of the chain and ``stacked_tip`` the stacked
+    branch's tip the third branch sits on.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    stacked_tip = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "switch", "-q", "-c", data.alternate_branch)
+    _commit_file(
+        repo, data.alternate_file, data.alternate_content, data.alternate_message
+    )
+    _write_record(repo, data.alternate_branch, data.stacked_branch, stacked_tip)
+    pusher = root / "pusher"
+    _commit_file(pusher, data.base_file, data.base_content, data.base_message)
+    _git(pusher, "push", "-q", "origin", data.base_branch)
+    _git(repo, "switch", "-q", data.predecessor_branch)
+    return _stacked_handle(
+        repo,
+        data,
+        predecessor_tip,
+        base_file=data.base_file,
+        third_branch=data.alternate_branch,
+        stacked_tip=stacked_tip,
     )
