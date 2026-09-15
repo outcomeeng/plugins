@@ -1030,6 +1030,47 @@ def observe_noncanonical_source(agent: Agent) -> str | None:
     return None
 
 
+def observe_pathless_record_listing() -> str | None:
+    """Plan a persistent run whose Claude listing names a project-scope record with no path.
+
+    The rejection message, if any, is the observation.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        preflight = build_persistent_preflight(mirror, environment)
+        listing = json.dumps(
+            [
+                {
+                    CLAUDE_PLUGIN_ID_FIELD: f"{SPEC_TREE_PLUGIN}@{MARKETPLACE_NAME}",
+                    CLAUDE_PLUGIN_ENABLED_FIELD: True,
+                    CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                }
+            ]
+        )
+        try:
+            build_persistent_installation_plan(
+                preflight,
+                claude_marketplace_payload=claude_marketplace_listing_payload(
+                    CANONICAL_MARKETPLACE_SOURCE
+                ),
+                claude_plugins_payload=listing,
+                codex_marketplace_payload=codex_marketplace_listing_payload(
+                    CANONICAL_CODEX_SOURCE
+                ),
+                codex_plugins_payload=_plugin_listing_payload(
+                    Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+                ),
+            )
+        except ValueError as error:
+            return str(error)
+    return None
+
+
 def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
     """Plan a persistent run whose only Claude record is local scope at the checkout.
 
