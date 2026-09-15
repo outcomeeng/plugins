@@ -12,7 +12,7 @@ Merge lifecycle closeout uses this skill even when no session was claimed. The c
 </precondition>
 
 <objective>
-A closed spec-tree session with session-owned work committed and pushed, encountered coordination notes reconciled or fixed, the imperfection ledger drained, and continuation disposition recorded.
+A completed spec-tree work closeout with session-owned work committed and pushed, encountered coordination notes reconciled or fixed, the imperfection ledger drained, and continuation disposition recorded.
 </objective>
 
 <change_coordination>
