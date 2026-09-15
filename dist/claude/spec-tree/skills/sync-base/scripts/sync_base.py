@@ -56,8 +56,10 @@ the commits above the recorded tip onto it; merged into the default branch
 commits above the recorded tip onto ``origin/<default>`` and clears the
 record. An unpublished predecessor — absent from origin while its local branch
 survives unmerged — stands in through that local branch. A branch with no
-record derives a predecessor from local topology when exactly one local branch
-forked from the default before the branch forked from it.
+record derives a predecessor from local topology by the nearest-fork rule: among
+the local branches that forked from the default before the branch forked from
+them, the one whose fork descends from every other candidate's is recorded;
+unordered candidates yield no predecessor and no record.
 
 The base ref and its remote-tracking form are resolved through the shared
 changeset-scope primitives, never re-derived here. The primitives ship under a
@@ -241,13 +243,6 @@ def write_stack_record(
 ) -> None:
     """Write both stack-record keys for ``branch``."""
     _write_stack_record(_Repository(repo, runner), branch, record)
-
-
-def clear_stack_record(
-    repo: pathlib.Path, branch: str, *, runner: GitRunner = subprocess.run
-) -> None:
-    """Remove both stack-record keys from ``branch``; absent keys are not an error."""
-    _clear_stack_record(_Repository(repo, runner), branch)
 
 
 def _read_stack_record(repo: _Repository, branch: str) -> StackRecord | None:
