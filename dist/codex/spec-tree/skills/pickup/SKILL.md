@@ -9,20 +9,57 @@ allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(sp
 A claimed handoff session — or, under `spx/local/coordination.md`, a claimed Change — loaded, reconciled against current repository state, and marked with canonical pickup markers, ready to continue prior work without repeating earlier mistakes.
 </objective>
 
-<constraints>
+<essential_principles>
 
 - Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly. The single session exception is the legacy-file archive `<change_coordination>` authorizes after the Change carrying that file as received input reaches a verified Claimed state. A Change is not a session: under the overlay, `${SKILL_DIR}/workflows/change.md` invokes `/handoff` to release a Change through Handoff, assignee removal, Status `Available`, and complete readback when an Executable Frame fails validation against current truth.
 - NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.
 - Before asking the operator to continue, review the loaded session evidence and present a no-surprises proposal: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation.
 - If session evidence shows another active context already owns the objective, report the owning session, branch, or PR and stop without archiving, releasing, handing off, or otherwise mutating the claimed session.
 
-</constraints>
+</essential_principles>
 
 <change_coordination>
 
 When `spx/local/coordination.md` exists at the repository root, the repository coordinates work through Changes and Handoffs — GitHub issues in the store that overlay names — and this skill follows `${SKILL_DIR}/workflows/change.md` in place of `${SKILL_DIR}/workflows/pickup.md` and the `<claim>` procedure below. A legacy queue file claimed under that overlay becomes an unassigned Proposed, Available Change carrying the whole file as received input, then follows the normal claim transition and is archived only after the complete Claimed state verifies; that archive is the one session mutation this skill performs, and only there. `<claimed_sessions>` keeps governing any `<CLAIMED_SESSIONS>` marker already present in the conversation. Without the overlay, everything below applies unchanged.
 
 </change_coordination>
+
+<intake>
+
+Preserve `$ARGUMENTS` as the requested Change reference, session id, listing
+request, or automatic-selection request. Check whether
+`spx/local/coordination.md` exists at the repository root without reading any
+other overlay. The overlay's presence deterministically selects the Change
+workflow; its absence selects the session workflow. This routing decision needs
+no operator question.
+
+</intake>
+
+<routing>
+
+| Repository state                      | Route                                                            |
+| ------------------------------------- | ---------------------------------------------------------------- |
+| `spx/local/coordination.md` exists    | `${SKILL_DIR}/workflows/change.md`                               |
+| `spx/local/coordination.md` is absent | The `<claim>` procedure, then `${SKILL_DIR}/workflows/pickup.md` |
+
+</routing>
+
+<reference_index>
+
+- `${SKILL_DIR}/references/verify-session-claims.md` — command inputs,
+  structured verdict output, error behavior, and tested cases for the read-only
+  verifier used by the session workflow.
+
+</reference_index>
+
+<workflows_index>
+
+| Workflow                           | Purpose                                                                           |
+| ---------------------------------- | --------------------------------------------------------------------------------- |
+| `${SKILL_DIR}/workflows/change.md` | Claim, validate, refine, execute, and release a Change from the configured store. |
+| `${SKILL_DIR}/workflows/pickup.md` | Reconcile and resume a claimed handoff session.                                   |
+
+</workflows_index>
 
 <claimed_sessions>
 Three rules govern a conversation's claimed-session set:
@@ -40,7 +77,7 @@ Three rules govern a conversation's claimed-session set:
 **Consequences of the three rules:**
 
 - Every successful `spx session pickup` adds that session id to the CLAIMED_SESSIONS marker for this conversation. A later pickup does not replace earlier entries — the set is additive.
-- The pickup workflow MUST NOT archive, release, delete, or manually move any session, except the legacy-file archive `<change_coordination>` authorizes after its Change exists; a Change release is not a session mutation, per `<constraints>`. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
+- The pickup workflow MUST NOT archive, release, delete, or manually move any session, except the legacy-file archive `<change_coordination>` authorizes after its Change exists; a Change release is not a session mutation, per `<essential_principles>`. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
 - A newly created handoff session is a workflow artifact, not a substitute for the claimed session. Its existence never grants permission to close any claimed session.
 - Queue inspection alone is never permission. Archival comes from completing the handoff workflow against the claimed-session set named in CLAIMED_SESSIONS.
 
