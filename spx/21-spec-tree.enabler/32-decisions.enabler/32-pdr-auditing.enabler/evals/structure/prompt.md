@@ -123,7 +123,9 @@ For each product property:
 
 Rules live under `## Verification`. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section contains no rules, mark `tag-validity` as `FAIL` with `missing-verification-rules`. An untagged rule directly under the section has the canonical authoring form and may coexist with routed subsections. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in `property-quality`, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type or tag during these checks; an absent draft tag alone causes no finding.
 
-A tagged rule requires its matching routed subsection. For each routed rule:
+A tagged rule requires its matching routed subsection. When `### Testing` contains rules, invoke `spec-tree:test` with this PDR path. Its decision-rule mode returns assertion-type selections without writing tests or changing the decision. Require one selection for every Testing rule, each naming the exact rule and one allowed assertion type. An unavailable, incomplete, or malformed selection produces a `REJECT` finding named `test-routing-unavailable` and a failed `tag-validity` row. Use the returned selections for the routed-rule checks below.
+
+For each routed rule:
 
 1. The rule carries exactly one tag, and the tag is valid for its subsection:
    - under `### Testing` → a `/test`-routed assertion type: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
@@ -218,7 +220,7 @@ The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise 
 }
 ```
 
-Each finding carries `location` (the section or property the objective requires it to name), `rule` (the violation pattern, e.g., `architecture-content`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `temporal-language`), `evidence` (the quoted artifact evidence), `message` (the one-line detail), and `severity`.
+Each finding carries `location` (the section or property the objective requires it to name), `rule` (the violation pattern, e.g., `architecture-content`, `invalid-draft-rule`, `invalid-tag`, `test-routing-unavailable`, `assertion-type-mismatch`, `temporal-language`), `evidence` (the quoted artifact evidence), `message` (the one-line detail), and `severity`.
 
 </verdict_format>
 
@@ -228,11 +230,15 @@ Each finding carries `location` (the section or property the objective requires 
 
 Claude saw a well-structured PDR with a clear decision statement and a Verification section, and approved it. The decision statement said "The system uses PostgreSQL with row-level locking for concurrent session management." That is an architecture decision, not a product decision. Users don't care about PostgreSQL or row-level locking — they care that concurrent sessions work.
 
+Why it failed: Claude treated structural completeness as proof of correct content classification.
+
 How to avoid: Step 3 classifies every statement. "Would a user be able to determine this?" is the test.
 
 **Failure 2: Accepted non-observable properties**
 
 Claude saw "Product properties: Database connections are pooled with a maximum of 50 connections." This is an implementation detail observable only by a DBA, not by users. The PDR version would be "The product handles at least 500 concurrent users without degradation."
+
+Why it failed: Claude treated an implementation detail measurable by a specialist as a guarantee observable by the product's users.
 
 How to avoid: Step 4 asks "Is this falsifiable from the user's perspective?"
 
