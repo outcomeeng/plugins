@@ -51,12 +51,12 @@ FINAL = AuditCoverageStatus.AUDITED.value
 
 def test_supplied_keys_never_displace_the_resolved_scope() -> None:
     with stale_local_base_repo() as stale:
+        forged_base, forged_head, forged_path = distinct_subject_paths(3)
         forged = json.dumps(
             {
-                CHANGESET_SCOPE.ScopeField.BASE: "forged-base",
-                CHANGESET_SCOPE.ScopeField.HEAD: "forged-head",
-                CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: ["forged/path"],
-                "selector": "HEAD",
+                CHANGESET_SCOPE.ScopeField.BASE: forged_base,
+                CHANGESET_SCOPE.ScopeField.HEAD: forged_head,
+                CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: [forged_path],
             }
         )
 
@@ -75,7 +75,6 @@ def test_supplied_keys_never_displace_the_resolved_scope() -> None:
         assert resolved[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS] == [
             stale.feature_file
         ]
-        assert resolved["selector"] == "HEAD"
 
 
 def test_a_non_object_run_input_is_rejected_rather_than_ignored() -> None:

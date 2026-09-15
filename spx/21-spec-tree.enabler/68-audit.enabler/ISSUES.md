@@ -311,3 +311,32 @@ spec-tree 0.94.2 (session `b99a883c-8c51-402b-8f44-7eab326575fb`, subagent
 `aa0aa721a3fc5350c`) that probed for python and rust by invoking their audit
 skills; the probe itself is repaired in the 0.94.4 discovery contract, the
 visibility gap is not.
+
+## The skill's payload templates and the contract module declare the same shapes twice
+
+`src/plugins/spec-tree/skills/audit-implementation/SKILL.md` carries the scope
+and finding payload shapes as prose templates, and
+`outcomeeng/validation/implementation_audit_contract.py` builds the same
+shapes for the l3 lifecycle evidence. No build derives one from the other, so
+drift between them is invisible to the evidence.
+
+**Resolution shape**: render the shipped templates from the contract module at
+build time, the way the diagnose manifest and the language registry are
+rendered; tracked with <https://github.com/outcomeeng/changes/issues/64>,
+which introduces build-time rendering into this skill.
+
+**Evidence.** `INFO` finding (source-ownership) from
+`spec-tree:test-evidence-auditor` on the coverage-accounting changeset.
+
+## The selector argument is captured as `$ARGUMENTS` rather than a named argument
+
+The skill accepts one stable token — `HEAD`, a branch, `base...head`, or
+`worktree:selector` — through whole-string `$ARGUMENTS`. `/skill-standards`
+prefers a named `arguments: selector` for a stable single token. The change
+depends on the pending Codex argument-rendering audit recorded in
+`spx/18-plugin-build.enabler/ISSUES.md`, so it waits for that outcome rather
+than changing the capture form blind.
+
+**Evidence.** `WARNING` (argument capture style) from
+`instructions:skill-auditor` on the coverage-accounting changeset, three
+rounds running.
