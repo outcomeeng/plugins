@@ -17,8 +17,7 @@ The subagents-about-subagents cluster is three peers with distinct roles:
   preserving its output contract, per `spx/15-subagent-execution.pdr.md` ([audit]).
 - ALWAYS: subagent invocation guidance requires plugin authorization and an active
   skill's explicit call request, uses the native tool schema, and requires analysis
-  and reporting of a failed launch or unusable result without retry or substitution.
-  Codex guidance targets v2 without v1 compatibility machinery ([audit]).
+  and reporting of a failed launch or unusable result without retry or substitution ([audit]).
 - ALWAYS: configuration guidance selects one central Standard, Strong, or Fast
   profile declared in `spx/15-subagent-execution.pdr.md` and obtains the complete
   native configuration together; Standard is the default, Strong and Fast

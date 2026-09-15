@@ -25,9 +25,6 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
   Accepted requirements are persisted in decisions and specs before verification.
   The native invocation guidance explicitly disables history inheritance when
   the tool otherwise enables it by default ([audit]).
-- ALWAYS: Codex invocation guidance targets v2 directly, uses the exposed tool schema,
-  and omits v1-specific lifecycle rules, compatibility adapters, and
-  unsupported-v1 diagnostics ([audit]).
 
 ### Scenarios
 
