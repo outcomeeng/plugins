@@ -158,11 +158,3 @@ The rules' natural owner is `spx/31-outcomeeng.enabler/31-verification.enabler/1
 **Why separate**: the move re-opens a decision the PDR auditor approved in its current placement and re-points four node specs whose assertions the same changeset would rewrite, against no behavior change in any shipped skill. It is a decision-placement pass, not part of widening the rules' reach.
 
 **Revisit condition**: when a third workflow outside the delivery path needs the readiness record, or when `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` is next restructured.
-
-## Tagged assertions sit ungrouped under `## Assertions` in six specs
-
-**Evidence.** The `/understand` assertion model admits untagged authoring declarations directly under `## Assertions`; a tagged assertion is routed and sits under its claim-shape subsection — `### Compliance` for a tagged ALWAYS or NEVER rule, `### Properties` for a tagged property. Tagged bullets sit directly under `## Assertions`, above the subsections, in `spx/18-plugin-build.enabler/plugin-build.md` (three), `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` (three), `spx/43-instructions.enabler/instructions.md` (one), `spx/43-go.enabler/go.md` (one), `spx/43-rust.enabler/rust.md` (one), and `spx/43-typescript.enabler/typescript.md` (one).
-
-**Impact.** The spec audit rejects each of these nodes on `section-structure` the next time one is dispatched, and a reader cannot tell a routed rule from a pending declaration.
-
-**Settlement condition.** Every tagged bullet in those six specs sits under the subsection its claim shape names, with `## Assertions` holding untagged declarations only.
