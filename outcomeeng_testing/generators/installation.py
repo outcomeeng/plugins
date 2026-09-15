@@ -180,6 +180,7 @@ class RecordDisposition(StrEnum):
     UPDATE = "update"
     ABSENT_PATH = "absent-path"
     OUT_OF_SCOPE = "out-of-scope"
+    PATHLESS_OUT_OF_SCOPE = "pathless-out-of-scope"
     UNCATALOGED = "uncataloged"
     NONCANONICAL_SOURCE = "noncanonical-source"
     UNREADABLE_SETTINGS = "unreadable-settings"
@@ -202,8 +203,9 @@ def generated_claude_install_records(
     Each plugin yields one record per disposition: an update at project scope
     in the invocation checkout, an update at project scope in another existing
     checkout, an update at local scope in the invocation checkout, a record
-    whose project path does not exist, a user-scope record, a managed-scope
-    record, a record in a checkout whose project settings register the
+    whose project path does not exist, a user-scope record carrying no path,
+    managed-scope records at the invocation checkout and at the other existing
+    checkout, a record in a checkout whose project settings register the
     marketplace from a noncanonical source, a record in a checkout whose local
     settings alone do so, a record in a checkout whose local settings register
     a noncanonical source over a canonical project declaration, a record in a
@@ -256,13 +258,21 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_ID_FIELD: identifier,
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_USER_SCOPE,
                     },
-                    RecordDisposition.OUT_OF_SCOPE,
+                    RecordDisposition.PATHLESS_OUT_OF_SCOPE,
                 ),
                 (
                     {
                         CLAUDE_PLUGIN_ID_FIELD: identifier,
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_MANAGED_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
+                    },
+                    RecordDisposition.OUT_OF_SCOPE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_MANAGED_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(other_checkout),
                     },
                     RecordDisposition.OUT_OF_SCOPE,
                 ),
