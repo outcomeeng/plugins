@@ -115,6 +115,7 @@ from outcomeeng_testing.generators.installation import (
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
 )
+from outcomeeng.validation.ci_gate import JUST_BINARY
 from outcomeeng_testing.harnesses.discovery_auth import (
     DiscoveryAuthentication,
     DiscoveryAuthenticationError,
@@ -137,12 +138,14 @@ MALFORMED_OWNERSHIP_DIGEST = "z" * 64
 """A 64-character digest the ownership record must reject as non-hex."""
 MALFORMED_SETTINGS_CONTENT = "{ not json"
 """A settings document no reader can parse, standing for a foreign checkout's defect."""
-REQUIRED_BINARIES: tuple[str, ...] = ("just", CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
+REQUIRED_BINARIES: tuple[str, ...] = (JUST_BINARY, CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
-PLUGIN_DISABLING_CODEX_CONFIG = (
-    f"[plugins]\n{CODEX_PLUGIN_ENABLED_FIELD} = false\n".encode()
-)
+CODEX_CONFIG_PLUGINS_TABLE = "plugins"
+"""The trusted-product `config.toml` table carrying plugin activation overrides."""
+CODEX_CONFIG_PLUGIN_ENABLED_KEY = "enabled"
+"""The activation key inside that table, read by the Codex CLI and never by production."""
+PLUGIN_DISABLING_CODEX_CONFIG = f"[{CODEX_CONFIG_PLUGINS_TABLE}]\n{CODEX_CONFIG_PLUGIN_ENABLED_KEY} = false\n".encode()
 
 SUBAGENT_DISCOVERY_NAMES_FIELD = "subagent_names"
 RENAMED_CHECKOUT_AGENT_NAME = "local_helper.toml"
@@ -1850,13 +1853,13 @@ def observe_codex_config_independence() -> ConfigObservation:
 
 def observe_verification_recipe() -> VerificationRecipeObservation:
     """Run the public isolated-verification recipe."""
-    real_just = _required_binary("just")
+    real_just = _required_binary(JUST_BINARY)
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         invocation_path = temporary_root / "invocation.json"
         shim_directory = temporary_root / "bin"
         shim_directory.mkdir()
-        shim = shim_directory / "just"
+        shim = shim_directory / JUST_BINARY
         shim.write_text(
             "#!/usr/bin/env python3\n"
             "import json\n"
@@ -2225,7 +2228,7 @@ def observe_codex_subagent_discovery(
         child_environment = dict(plan.commands[0].environment)
         install = auth.run(
             (
-                "just",
+                JUST_BINARY,
                 "install-marketplace",
                 "--checkout",
                 str(mirror),
@@ -2507,7 +2510,7 @@ def _run_recipe(
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         (
-            "just",
+            JUST_BINARY,
             "install-marketplace",
             "--checkout",
             str(mirror),
@@ -2530,7 +2533,7 @@ def _run_persistent_recipe(
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         (
-            "just",
+            JUST_BINARY,
             "install-marketplace",
             "--checkout",
             str(mirror),
