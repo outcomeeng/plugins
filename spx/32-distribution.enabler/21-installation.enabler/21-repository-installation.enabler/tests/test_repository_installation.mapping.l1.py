@@ -12,6 +12,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
     MARKETPLACE_NAME,
+    NONCANONICAL_SOURCE_WARNING,
     OUT_OF_SCOPE_RECORD_WARNING,
     UNCATALOGED_RECORD_WARNING,
     CODEX_CATALOG_PATH,
@@ -158,6 +159,7 @@ def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None
         RecordDisposition.ABSENT_PATH: ABSENT_PROJECT_PATH_WARNING,
         RecordDisposition.OUT_OF_SCOPE: OUT_OF_SCOPE_RECORD_WARNING,
         RecordDisposition.UNCATALOGED: UNCATALOGED_RECORD_WARNING,
+        RecordDisposition.NONCANONICAL_SOURCE: NONCANONICAL_SOURCE_WARNING,
     }
 
     for entry, disposition in observation.cases:

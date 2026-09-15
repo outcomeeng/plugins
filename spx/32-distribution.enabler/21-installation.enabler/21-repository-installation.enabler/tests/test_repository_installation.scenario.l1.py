@@ -11,6 +11,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_SCOPE_FIELD,
     CLAUDE_SCOPE_FLAG,
     MARKETPLACE_NAME,
+    REGISTRY_SOURCE_DIAGNOSTIC,
     FIRST_INSTALL_WARNING,
     Operation,
     ReportField,
@@ -32,6 +33,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_invalid_isolated_selection,
     observe_invalid_persistent_selection,
     observe_persistent_plan,
+    observe_noncanonical_registry_plan,
     observe_record_refresh_plan,
     observe_unpublished_plugin,
     observe_verification_recipe,
@@ -298,3 +300,12 @@ def test_persistent_run_updates_every_recorded_checkout_and_reinstalls_nothing()
             list[dict[str, str]], observation.document[ReportField.CLAUDE_RECORDS]
         )
     } == expected
+
+
+def test_a_noncanonical_registry_source_stops_before_any_plan() -> None:
+    error = observe_noncanonical_registry_plan()
+
+    assert error is not None
+    assert error.startswith(REGISTRY_SOURCE_DIAGNOSTIC)
+    assert NONCANONICAL_MARKETPLACE_SOURCE in error
+    assert CANONICAL_MARKETPLACE_SOURCE in error

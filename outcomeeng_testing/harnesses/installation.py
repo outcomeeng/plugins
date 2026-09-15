@@ -825,6 +825,7 @@ class RecordRefreshObservation:
     checkout: Path
     other_checkout: Path
     absent_path: Path
+    forked_checkout: Path
     cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
     plan: InstallationPlan
     catalog: tuple[str, ...]
@@ -842,6 +843,9 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
         other = temporary_root / "other-checkout"
         other.mkdir()
         absent = temporary_root / "removed-checkout"
+        forked = temporary_root / "forked-checkout"
+        forked.mkdir()
+        _write_project_marketplace(forked, NONCANONICAL_MARKETPLACE_SOURCE)
         mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
@@ -852,6 +856,7 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             preflight.roots.checkout,
             other.resolve(),
             absent.resolve(),
+            forked.resolve(),
         )
         cases = tuple(case for group in groups for case in group)
         plan = build_persistent_installation_plan(
@@ -875,6 +880,7 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             checkout=preflight.roots.checkout,
             other_checkout=other.resolve(),
             absent_path=absent.resolve(),
+            forked_checkout=forked.resolve(),
             cases=cases,
             plan=plan,
             catalog=catalog,
@@ -882,6 +888,42 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             document=report_document(report),
             attempted=tuple(runner.calls),
         )
+
+
+def observe_noncanonical_registry_plan() -> str | None:
+    """Plan a persistent run whose machine registry names a noncanonical source.
+
+    The invocation checkout declares the canonical source, so the registry
+    entry alone carries the mismatch; the rejection message, if any, is the
+    observation.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        preflight = build_persistent_preflight(mirror, environment)
+        try:
+            build_persistent_installation_plan(
+                preflight,
+                claude_marketplace_payload=claude_marketplace_listing_payload(
+                    NONCANONICAL_MARKETPLACE_SOURCE
+                ),
+                claude_plugins_payload=_plugin_listing_payload(
+                    Agent.CLAUDE, mirror, frozenset({SPEC_TREE_PLUGIN})
+                ),
+                codex_marketplace_payload=codex_marketplace_listing_payload(
+                    CANONICAL_CODEX_SOURCE
+                ),
+                codex_plugins_payload=_plugin_listing_payload(
+                    Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+                ),
+            )
+        except ValueError as error:
+            return str(error)
+    return None
 
 
 def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
@@ -2712,6 +2754,7 @@ __all__ = [
     "observe_persistent_plan",
     "observe_record_refresh_plan",
     "observe_local_record_bootstrap_plan",
+    "observe_noncanonical_registry_plan",
     "RecordRefreshObservation",
     "observe_planned_operations",
     "observe_real_first_install",

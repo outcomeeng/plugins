@@ -173,6 +173,7 @@ class RecordDisposition(StrEnum):
     ABSENT_PATH = "absent-path"
     OUT_OF_SCOPE = "out-of-scope"
     UNCATALOGED = "uncataloged"
+    NONCANONICAL_SOURCE = "noncanonical-source"
     EXCLUDED = "excluded"
 
 
@@ -181,15 +182,17 @@ def generated_claude_install_records(
     checkout: Path,
     other_checkout: Path,
     absent_path: Path,
+    forked_checkout: Path,
 ) -> tuple[tuple[tuple[dict[str, str], RecordDisposition], ...], ...]:
     """Cycle every catalog plugin through each install-record disposition.
 
     Each plugin yields one record per disposition: an update at project scope
     in the invocation checkout, an update at project scope in another existing
     checkout, an update at local scope in the invocation checkout, a record
-    whose project path does not exist, a user-scope record, and an entry from
-    another marketplace. One uncataloged plugin record is appended so the
-    catalog bound has a rejected member.
+    whose project path does not exist, a user-scope record, a record in a
+    checkout whose own settings register the marketplace from a noncanonical
+    source, and an entry from another marketplace. One uncataloged plugin
+    record is appended so the catalog bound has a rejected member.
     """
     groups: list[tuple[tuple[dict[str, str], RecordDisposition], ...]] = []
     for plugin in catalog:
@@ -234,6 +237,14 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_USER_SCOPE,
                     },
                     RecordDisposition.OUT_OF_SCOPE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(forked_checkout),
+                    },
+                    RecordDisposition.NONCANONICAL_SOURCE,
                 ),
                 (
                     {
