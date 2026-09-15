@@ -7,6 +7,8 @@ from outcomeeng_testing.harnesses.host_readiness import (
     run_interrupted_during_wait,
     run_interval_clamped_to_remaining,
     run_ready_before_deadline,
+    run_ready_confirmed_after_wait,
+    run_rising_confirmation_then_ready,
     run_unsupported_platform,
 )
 
@@ -18,6 +20,7 @@ def test_initial_ready_observation_returns_without_sleeping() -> None:
     assert run.result.ready is True
     assert run.result.exit_code is run.module.ExitCode.READY
     assert not run.clock.sleeps
+    assert run.sequence.index == 1
 
 
 def test_load_becoming_ready_returns_from_the_same_invocation() -> None:
@@ -25,8 +28,28 @@ def test_load_becoming_ready_returns_from_the_same_invocation() -> None:
 
     assert run.result.status is run.module.Status.READY
     assert run.clock.sleeps
-    assert run.result.wait_cycles == len(run.clock.sleeps)
+    assert run.result.wait_cycles < len(run.clock.sleeps)
     assert run.result.waited_seconds < run.module.MAXIMUM_WAIT_SECONDS
+
+
+def test_ready_after_a_wait_is_confirmed_after_a_settle_delay() -> None:
+    run = run_ready_confirmed_after_wait()
+
+    assert run.result.status is run.module.Status.READY
+    assert run.result.wait_cycles == 1
+    assert run.sequence.index == 3
+    assert run.clock.sleeps[-1] == (
+        sum(run.clock.sleeps[:-1]) % run.module.SETTLE_WINDOW_SECONDS
+    )
+
+
+def test_rising_confirmation_returns_to_the_wait_loop() -> None:
+    run = run_rising_confirmation_then_ready()
+
+    assert run.result.status is run.module.Status.READY
+    assert run.result.wait_cycles == 2
+    assert run.sequence.index == 5
+    assert run.clock.sleeps[2] >= run.module.MINIMUM_WAIT_SECONDS
 
 
 def test_load_remaining_high_returns_not_ready_at_the_deadline() -> None:

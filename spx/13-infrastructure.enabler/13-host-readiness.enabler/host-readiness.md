@@ -13,7 +13,6 @@ CAN start only when normalized host load is ready, defer while it remains above 
 - Given a confirming observation whose one-minute average exceeds the five-minute average by more than the trend tolerance, when the waiter confirms, then it returns to the wait loop instead of emitting `ready`, and emits `ready` only once a later confirmation holds ([test](tests/test_host_readiness.scenario.l1.py))
 - Given normalized host load that remains above capacity for four hours, when the waiter reaches its deadline, then it emits one terminal `not_ready` result with `ready: false`, the final observation, and the `not_ready` exit code ([test](tests/test_host_readiness.scenario.l1.py))
 - Given normalized host load whose computed interval is longer than the time left before the four-hour deadline, when the waiter sleeps, then it sleeps only the time remaining and reaches its deadline exactly ([test](tests/test_host_readiness.scenario.l1.py))
-- Given any terminal result, when the waiter exits, then its single JSON document is on standard error and standard output is empty ([test](tests/test_host_readiness.scenario.l1.py))
 - Given a host reporting no positive CPU count, when the waiter observes load, then it emits one terminal `unsupported` result with `ready: false` and the `unsupported` exit code ([test](tests/test_host_readiness.scenario.l1.py))
 - Given an interrupt arriving while the waiter sleeps between observations, when the wait is cut short, then it emits one terminal `interrupted` result with `ready: false` and the `interrupted` exit code ([test](tests/test_host_readiness.scenario.l1.py))
 - Given a load reader that fails unexpectedly, when the waiter observes load, then it emits one terminal `error` result with `ready: false` and the `error` exit code ([test](tests/test_host_readiness.scenario.l1.py))
@@ -21,6 +20,7 @@ CAN start only when normalized host load is ready, defer while it remains above 
 ### Mappings
 
 - Every terminal status carries both a readiness boolean and an exit code, readiness holding only for `ready` — the status set, the readiness table, and the exit-code table enumerate the same statuses ([test](tests/test_host_readiness.mapping.l1.py))
+- Every terminal status maps its one JSON document to standard error with standard output left empty — the status set enumerates the domain, and the exit code follows the status ([test](tests/test_host_readiness.mapping.l1.py))
 
 ### Compliance
 

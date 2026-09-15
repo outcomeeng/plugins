@@ -9,18 +9,23 @@ waiter's own ``Dependencies`` seam; the module under test is never patched.
 - Stage 5 #3 (Time and concurrency): `ControlledClock` replaces
   `time.monotonic` and `time.sleep`, and `LoadSequence` scripts the observation
   each recheck reads. The waiter's bounded retry loop is the behavior under
-  test, and neither a real ten-minute deadline nor real host load is
+  test, and neither a real four-hour deadline nor real host load is
   controllable or cheap enough to drive it.
 - Stage 5 #1 (Failure simulation): the `read_cpu_count` stub returning no
   positive count, the `sleep` callable raising `KeyboardInterrupt`, and the
   `read_load_averages` callable raising produce the `unsupported`,
   `interrupted`, and `error` terminal results. A real host offers no way to
   induce those failures on demand.
+
+The CLI runs drive the waiter's `run` entry with in-memory streams so the
+assertion files observe where the terminal document lands without a
+subprocess.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import io
 import math
 import pathlib
 import sys
@@ -138,11 +143,22 @@ class WaitResult(Protocol):
 
 @dataclass(frozen=True)
 class WaitRun:
-    """Result plus controlled clock evidence from one waiter invocation."""
+    """Result plus controlled clock and observation evidence from one waiter invocation."""
 
     module: ModuleType
     result: WaitResult
     clock: ControlledClock
+    sequence: LoadSequence
+
+
+@dataclass(frozen=True)
+class CliRun:
+    """Exit code and captured streams from one waiter CLI invocation."""
+
+    module: ModuleType
+    exit_code: int
+    stdout: str
+    stderr: str
 
 
 def _load_at_ratio(ratio: float) -> tuple[float, float, float]:
@@ -159,6 +175,16 @@ def _ready_load(module: ModuleType) -> tuple[float, float, float]:
 def _high_load(module: ModuleType) -> tuple[float, float, float]:
     """Build the smallest observation above the readiness boundary."""
     return _load_at_ratio(math.nextafter(module.CAPACITY_RATIO, math.inf))
+
+
+def _ready_rising_load(module: ModuleType) -> tuple[float, float, float]:
+    """Build a ready observation whose one-minute load has just risen.
+
+    The five- and fifteen-minute loads sit at zero and the one-minute load
+    sits the smallest step past the source-owned trend tolerance, so every
+    average stays at or below capacity while the trend reads as rising.
+    """
+    return (math.nextafter(module.TREND_TOLERANCE_LOAD, math.inf), 0.0, 0.0)
 
 
 def _load_demanding_more_than_the_deadline(
@@ -204,6 +230,35 @@ def _run(
         module=module,
         result=cast(WaitResult, module.wait_until_ready(dependencies)),
         clock=clock,
+        sequence=sequence,
+    )
+
+
+def _run_cli(
+    observations: list[tuple[float, float, float]],
+    *,
+    read_cpu_count: Callable[[], int | None] | None = None,
+    read_load_averages: Callable[[], tuple[float, float, float]] | None = None,
+    sleep: Callable[[float], None] | None = None,
+) -> CliRun:
+    """Run the waiter's CLI entry against controlled dependencies and streams."""
+    module = load_host_readiness_module()
+    clock = ControlledClock(horizon=module.MAXIMUM_WAIT_SECONDS)
+    sequence = LoadSequence(observations)
+    dependencies = module.Dependencies(
+        read_load_averages=read_load_averages or sequence.read,
+        read_cpu_count=read_cpu_count or (lambda: CPU_COUNT),
+        monotonic=clock.monotonic,
+        sleep=sleep or clock.sleep,
+    )
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    exit_code = module.run([], dependencies, stdout, stderr)
+    return CliRun(
+        module=module,
+        exit_code=exit_code,
+        stdout=stdout.getvalue(),
+        stderr=stderr.getvalue(),
     )
 
 
@@ -217,6 +272,31 @@ def run_ready_before_deadline() -> WaitRun:
     """Run one invocation whose second observation is ready."""
     module = load_host_readiness_module()
     return _run([_high_load(module), _ready_load(module)])
+
+
+def run_ready_confirmed_after_wait() -> WaitRun:
+    """Run one invocation that waits once, then confirms readiness after settling."""
+    module = load_host_readiness_module()
+    return _run([_high_load(module), _ready_load(module), _ready_load(module)])
+
+
+def run_rising_confirmation_then_ready() -> WaitRun:
+    """Run one invocation whose first confirmation reads a rising trend.
+
+    The sequence waits once, observes readiness, confirms against a rising
+    observation, returns to the loop, observes readiness again, and confirms
+    against a level observation.
+    """
+    module = load_host_readiness_module()
+    return _run(
+        [
+            _high_load(module),
+            _ready_load(module),
+            _ready_rising_load(module),
+            _ready_load(module),
+            _ready_load(module),
+        ]
+    )
 
 
 def run_deadline_not_ready() -> WaitRun:
@@ -255,3 +335,31 @@ def run_error_reading_load() -> WaitRun:
         raise RuntimeError("load averages unavailable")
 
     return _run([_ready_load(module)], read_load_averages=fail)
+
+
+def run_cli_for_status(status: object) -> CliRun:
+    """Run the CLI entry under the controlled dependencies that reach one terminal status.
+
+    Each status is driven by the same dependency shape the wait runs above use
+    for it, so the CLI evidence observes stream placement for every terminal
+    outcome the source enumerates.
+    """
+    module = load_host_readiness_module()
+
+    def interrupt(seconds: float) -> None:
+        raise KeyboardInterrupt
+
+    def fail() -> tuple[float, float, float]:
+        raise RuntimeError("load averages unavailable")
+
+    if status is module.Status.READY:
+        return _run_cli([_ready_load(module)])
+    if status is module.Status.NOT_READY:
+        return _run_cli([_high_load(module)])
+    if status is module.Status.UNSUPPORTED:
+        return _run_cli([_ready_load(module)], read_cpu_count=lambda: None)
+    if status is module.Status.INTERRUPTED:
+        return _run_cli([_high_load(module)], sleep=interrupt)
+    if status is module.Status.ERROR:
+        return _run_cli([_ready_load(module)], read_load_averages=fail)
+    raise ValueError(f"no controlled drive reaches status {status!r}")
