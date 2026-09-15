@@ -28,6 +28,8 @@ from outcomeeng.validation.ci_gate import (
     DISCOVERY_AUTH_MODE_ENVIRONMENT,
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
+    SAVED_LOGIN_ACCOUNT_FIELD,
+    SAVED_LOGIN_TOKENS_FIELD,
     AUTH_FILENAME,
     WORKSPACE_TOKEN_ENV,
     AuthenticationMode,
@@ -97,7 +99,7 @@ class NativeCredentialRunner:
             if self.fault is NativeFault.INCOMPATIBLE_WRITER:
                 target.unlink(missing_ok=True)
             target.write_text(
-                json.dumps({"OPENAI_API_KEY": input_text}), encoding="utf-8"
+                json.dumps({CODEX_API_KEY_ENVIRONMENT: input_text}), encoding="utf-8"
             )
             return subprocess.CompletedProcess(argv, 0, input_text or "", "")
         if self.fault is NativeFault.REPLACE_LINK:
@@ -110,9 +112,9 @@ class NativeCredentialRunner:
         target.write_text(self.refreshed, encoding="utf-8")
         if self.fault is NativeFault.SWITCH_ACCOUNT:
             document = json.loads(self.refreshed)
-            document["tokens"]["account_id"] += "-other"
+            document[SAVED_LOGIN_TOKENS_FIELD][SAVED_LOGIN_ACCOUNT_FIELD] += "-other"
             target.write_text(json.dumps(document), encoding="utf-8")
-        echo = " ".join(json.loads(self.refreshed)["tokens"].values())
+        echo = " ".join(json.loads(self.refreshed)[SAVED_LOGIN_TOKENS_FIELD].values())
         if self.fault is NativeFault.TIMEOUT:
             raise subprocess.TimeoutExpired(
                 argv, timeout, output=echo.encode(), stderr=echo.encode()
@@ -141,7 +143,9 @@ def authentication_case(
 ) -> Iterator[AuthenticationCase]:
     initial = (FIXTURE_ROOT / "chatgpt.json").read_text(encoding="utf-8")
     refreshed = (FIXTURE_ROOT / "refreshed.json").read_text(encoding="utf-8")
-    api = json.loads(API_FIXTURE_PATH.read_text(encoding="utf-8"))["OPENAI_API_KEY"]
+    api = json.loads(API_FIXTURE_PATH.read_text(encoding="utf-8"))[
+        CODEX_API_KEY_ENVIRONMENT
+    ]
     with TemporaryDirectory() as directory:
         root = Path(directory).resolve()
         selected_home = root / "saved"
@@ -154,7 +158,9 @@ def authentication_case(
             CODEX_HOME_ENV: str(selected_home),
             DISCOVERY_AUTH_MODE_ENVIRONMENT: mode.value,
             CODEX_API_KEY_ENVIRONMENT: api,
-            WORKSPACE_TOKEN_ENV: json.loads(initial)["tokens"]["access_token"],
+            WORKSPACE_TOKEN_ENV: json.loads(initial)[SAVED_LOGIN_TOKENS_FIELD][
+                "access_token"
+            ],
         }
         if not explicit_mode:
             del original[DISCOVERY_AUTH_MODE_ENVIRONMENT]
@@ -184,7 +190,7 @@ def missing_credential_environment(mode: AuthenticationMode) -> dict[str, str]:
     )
     return {
         DISCOVERY_AUTH_MODE_ENVIRONMENT: mode.value,
-        other: document["OPENAI_API_KEY"],
+        other: document[CODEX_API_KEY_ENVIRONMENT],
     }
 
 

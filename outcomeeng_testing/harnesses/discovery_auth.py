@@ -114,7 +114,7 @@ class CredentialRedactor:
                 "Saved login is missing or malformed; use the CLI to log in with the file credential store."
             ) from None
         if isinstance(document, dict):
-            key = document.get("OPENAI_API_KEY")
+            key = document.get(CODEX_API_KEY_ENVIRONMENT)
             if isinstance(key, str):
                 self.add(key)
             tokens = document.get(SAVED_LOGIN_TOKENS_FIELD)
@@ -320,7 +320,7 @@ class DiscoveryAuthentication:
                 or link.resolve() != owner
                 or (identity.st_dev, identity.st_ino) != (after.st_dev, after.st_ino)
                 or not isinstance(document, dict)
-                or document.get("OPENAI_API_KEY") != fabricated
+                or document.get(CODEX_API_KEY_ENVIRONMENT) != fabricated
             ):
                 raise DiscoveryAuthenticationError(
                     "The CLI credential writer cannot preserve the saved-login link; subscription discovery is unsupported by this CLI."
