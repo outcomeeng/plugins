@@ -31,6 +31,7 @@ Separating declaration parsing, installed-state inspection, scope and collision 
 ## Invariants
 
 - Installation operations preserve their declaration-derived order.
+- Finite selection mappings enumerate every catalog-bounded subset admitted by the assertion, and plugin-operation failure mappings cover every catalog member; a representative per cardinality or the first catalog member does not establish completeness.
 - Every persistent selection, source, and collision inspection completes before any mutation begins.
 - An empty persistent selection maps to `spec-tree` plus one warning and disabled activation where no activation is declared; every nonempty selection is valid only when it contains `spec-tree`.
 - Catalog ordering never adds an unselected plugin to a persistent plan.
