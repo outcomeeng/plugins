@@ -6,7 +6,7 @@ CAN refresh selected Claude Code and Codex plugins without widening either insta
 
 ## Assertions
 
-- For each supported agent, isolated installation selects the complete committed catalog in catalog order; persistent refresh selects Claude Code's project-installed catalog members and Codex's selected-home configured catalog members, including disabled entries and entries with missing caches, in catalog order.
+- For each supported agent, isolated installation selects the complete committed catalog in catalog order; persistent refresh selects Claude Code's project-installed catalog members in the invocation checkout for bootstrap, every project- or local-scope Claude Code install record on the machine for the native update, and Codex's selected-home configured catalog members, including disabled entries and entries with missing caches, in catalog order.
 - ALWAYS: persistent refresh preserves selection and activation through native update operations; an empty selection supplies only `spec-tree` with a warning and disabled activation where no activation is declared.
 - ALWAYS: trusted Codex products select skill activation independently of home-wide refresh and the globally registered home subagent definitions.
 - NEVER: an existing noncanonical marketplace registration reaches a persistent state-changing operation; source repair requires an explicit operation outside refresh.
