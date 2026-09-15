@@ -10,9 +10,11 @@ Known defects in the repository-installation evidence. Each entry names the arti
 
 Two clauses of the same assertion are also unfalsified: removing the ambient model and effort override filter from `_isolated_environment` in `outcomeeng_testing/harnesses/native_profile_execution.py`, or passing the unfiltered environment instead of `credential_free_environment`, breaks no linked test, because the tests inspect the recorded native calls only for their count and never read `NativeCall.environment`.
 
-**Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, import every key the test and the recording reader index from that module, and add predicates over the recorded child environment that reject an ambient override or a second credential.
+The mapping assertion's identifier and disposable-state-root derivation is unfalsified in the same way: collapsing `identifier` in `native_profile_rows` to a constant makes every row share one `state_root` and one artifact directory, while `test_native_profile_rows_cover_the_central_configuration_matrix` still keys on target and profile and `test_native_profile_artifacts_are_separate_from_disposable_state` checks only parent-directory relations, so no predicate observes that the identifier and state root derive from the registry entry or are distinct per row.
 
-**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b`, then `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`; the cited test and harness files lie outside both changesets' diffs.
+**Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, import every key the test and the recording reader index from that module, add predicates over the recorded child environment that reject an ambient override or a second credential, and assert that every row's identifier and state root derive from its registry entry and differ from every other row's.
+
+**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, and `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`; the cited test and harness files lie outside every changeset's diff.
 
 ## Pending plugins' prior owned definitions have no reconciliation evidence
 
@@ -20,15 +22,7 @@ The reconciliation assertion states that a pending plugin's prior owned definiti
 
 **Resolution shape**: add a harness scenario that installs, then re-runs with one plugin unpublished, and assert that the pending plugin's recorded definitions are neither pruned nor rewritten; if the scenario shows the plan copying definitions for a pending plugin, defer agent-home plan composition until the pending set is known. That is a new reconciliation capability with its own harness and a likely production change, independent of the machine-wide Claude Code refresh.
 
-**Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
-
-## The noncanonical marketplace source is replaced where the decisions say it is rejected
-
-`spx/12-marketplace-state.adr.md` and `21-installation-architecture.adr.md` state that an existing registration with a noncanonical source stops the run before mutation and requires explicit repair, and this node's spec asserts that no agent performs a state-changing operation in that case. `claude_source_action` in `outcomeeng/distribution/installation.py` classifies such a source as `REPLACE`, the plan emits a marketplace removal followed by an add, and `test_persistent_installation_replaces_noncanonical_sources` together with `test_restoring_the_selection_keeps_the_reconciled_marketplace_source` pin that replacement.
-
-**Resolution shape**: decide which layer is wrong — a replacement the decisions must admit, or an implementation that must stop — then align the decision, the spec assertion (which carries no evidence tag), the source-action classification, and both tests in one changeset.
-
-**Evidence**: test-evidence audit finding `f-005` (recorded as information) against `06b86db6b`.
+**Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2` and `f-004` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`.
 
 ## Claude Code renderings ship the Codex-only placement script and paraphrase its output
 
