@@ -215,7 +215,7 @@ def main(
     current_digest: Callable[[Path], str | None] = _current_digest,
 ) -> int:
     parser = argparse.ArgumentParser(
-        description=(__doc__ or "").strip().splitlines()[0]
+        description=next(iter((__doc__ or "").strip().splitlines()), None)
     )
     parser.add_argument("--home", type=Path, default=os.environ.get("CODEX_HOME"))
     parser.add_argument("--checkout", type=Path, default=Path.cwd())
