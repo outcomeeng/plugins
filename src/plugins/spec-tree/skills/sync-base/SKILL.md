@@ -18,7 +18,11 @@ The current checkout brought current with its fetched base, with authorized dirt
 python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py" [repo] [--base <branch>] [--no-fetch]
 ```
 
-It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. Those primitives belong to the sibling `scope-changeset` skill, which the synchronizer reaches by a path relative to its own file, so both skills must be installed from the same plugin tree; a missing sibling fails the primitive at import, naming the expected path, before any git command runs. When an attached branch is behind, it rebases the branch onto the fetched base. When a clean detached HEAD is an ancestor of the fetched base, it advances the worktree with `git switch --detach origin/<base>`; a detached HEAD carrying commits absent from the base fails without moving. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). A stacked branch synchronizes against its predecessor without `--base`; see `<stacked_branches>`.
+It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). A stacked branch synchronizes against its predecessor without `--base`; see `<stacked_branches>`.
+
+Those primitives belong to the sibling `scope-changeset` skill, which the synchronizer reaches by a path relative to its own file, so both skills must be installed from the same plugin tree. A missing sibling fails the primitive at import, naming the expected path, before any git command runs.
+
+When an attached branch is behind, it rebases the branch onto the fetched base. When a clean detached HEAD is an ancestor of the fetched base, it advances the worktree with `git switch --detach origin/<base>`; a detached HEAD carrying commits absent from the base fails without moving.
 
 It prints a JSON result (`status`, `base_ref`, `remote_ref`, `branch`, `detail`, `preservation` on a clean outcome, and `conflict` on an active rebase conflict) and exits:
 
@@ -44,12 +48,12 @@ A branch stacked on a predecessor branch carries a stack record in git configura
 
 A later sync of a recorded branch without `--base` takes the predecessor as its base. After a pruning fetch, the predecessor's state selects the movement:
 
-| Predecessor state after the fetch                                                                | Movement                                                                   | Record afterwards                  |
-| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | ---------------------------------- |
-| open on origin and still containing the recorded tip                                             | ordinary rebase onto `origin/<predecessor>`                                | tip becomes the predecessor's tip  |
-| open on origin and rewritten (recorded tip absent)                                               | replay only the commits above the recorded tip onto `origin/<predecessor>` | tip becomes the predecessor's tip  |
-| unpublished — absent from origin while its local branch survives unmerged                        | the two open rows, through that local branch                               | tip becomes the local branch's tip |
-| merged — absent from origin with no surviving local branch, or reachable from `origin/<default>` | replay only the commits above the recorded tip onto `origin/<default>`     | removed                            |
+| Predecessor state after the fetch                                                                | Movement                                                                                                                                             | Record afterwards                  |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| open on origin and still containing the recorded tip                                             | ordinary rebase onto `origin/<predecessor>`                                                                                                          | tip becomes the predecessor's tip  |
+| open on origin and rewritten (recorded tip absent)                                               | replay only the commits above the recorded tip onto `origin/<predecessor>`                                                                           | tip becomes the predecessor's tip  |
+| unpublished — absent from origin while its local branch survives unmerged                        | ordinary rebase onto the local predecessor when it still contains the recorded tip; otherwise replay only the commits above the recorded tip onto it | tip becomes the local branch's tip |
+| merged — absent from origin with no surviving local branch, or reachable from `origin/<default>` | replay only the commits above the recorded tip onto `origin/<default>`                                                                               | removed                            |
 
 Each is a rebase; the recorded tip bounds the branch's own commits. The result is `rebased` and the proof carries `stack_predecessor`, `stack_tip_before`, and `stack_tip_after`.
 
