@@ -64,7 +64,8 @@ def test_successful_rows_retain_artifacts_and_launch_once_without_overrides(
             parents = [
                 call
                 for call in observed.processes
-                if Path(call.environment[CODEX_HOME_ENV]).parent == row.state_root.resolve()
+                if Path(call.environment[CODEX_HOME_ENV]).parent
+                == row.state_root.resolve()
                 and call.argv[0] == row.launch_commands[0][0]
                 and row.launch_commands[0][1] in call.argv
             ]
@@ -81,7 +82,8 @@ def test_successful_rows_retain_artifacts_and_launch_once_without_overrides(
             children = [
                 call
                 for call in observed.children
-                if Path(call.environment[CODEX_HOME_ENV]).parent == row.state_root.resolve()
+                if Path(call.environment[CODEX_HOME_ENV]).parent
+                == row.state_root.resolve()
             ]
             assert len(children) == (1 if row.target is Target.CODEX else 0)
             for child in children:
@@ -103,7 +105,8 @@ def test_successful_rows_propagate_only_the_selected_credential_channel(
             calls = [
                 call
                 for call in observed.processes
-                if Path(call.environment[CODEX_HOME_ENV]).parent == row.state_root.resolve()
+                if Path(call.environment[CODEX_HOME_ENV]).parent
+                == row.state_root.resolve()
             ]
             parents = [
                 call
