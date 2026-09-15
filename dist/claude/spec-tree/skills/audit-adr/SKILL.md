@@ -100,7 +100,7 @@ Check EVERY section for temporal language:
 
 Read each rule's placement before judging tags. An untagged rule directly under `## Verification` has the canonical authoring form. For every such rule, identify its subject, the condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in the `tag-validity` row, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Check each draft rule against the decision statement and governing decisions; a contradiction also produces `invalid-draft-rule`, citing both conflicting declarations. Select no evidence type or tag during these checks.
 
-A tagged rule must have the matching routed subsection. When `### Testing` contains rules, invoke `spec-tree:test` with this ADR path. Its decision-rule mode returns assertion-type selections without writing tests or changing the decision. Require one selection for every Testing rule, each naming the exact rule and one allowed assertion type. An unavailable, incomplete, or malformed selection produces a blocking `test-routing-unavailable` finding and a failed `tag-validity` row. Use the returned selections for the routed-rule checks below.
+A tagged rule must have the matching routed subsection. When `### Testing` contains rules, invoke `spec-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a blocking `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the ADR during this audit.
 
 For each routed rule:
 
@@ -108,7 +108,7 @@ For each routed rule:
    - under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
    - under `### Eval` → `([eval])`;
    - under `### Audit` → `([audit])`.
-2. Under `### Testing`, the assertion type fits the claim's shape per the `/test` router. Read the claim's quantifier: a universal (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`; a single existential interaction takes `scenario`. Within the universal branch the router yields one type by domain shape (finite source-owned → `mapping`; external/internal contract → `conformance`; rule exercised against violating cases → `compliance`; open or infinite → `property`). Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
+2. Under `### Testing`, the declared assertion type is compatible with the claim's quantifier and evidence shape under the loaded foundation and shared assertion-type litmus. A universal claim cannot carry `scenario`. Reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration.
 
 An unsupported bare mechanism tag, a tag disagreeing with its subsection, a missing tag inside a routed subsection, more than one tag, or an assertion type that contradicts the claim's shape is invalid.
 
@@ -165,7 +165,7 @@ The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_
 }
 ```
 
-Each finding carries `rule`, `severity: "blocking"`, `location`, `message`, `observed`, and `expected`. Native findings use `missing-target`, `missing-section`, `temporal-voice`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `test-routing-unavailable`, `language-routing-unavailable`, `language-skill-unavailable`, or `language-result-invalid`; validated composed findings retain the invoked skill's rule identifier.
+Each finding carries `rule`, `severity: "blocking"`, `location`, `message`, `observed`, and `expected`. Native findings use `missing-target`, `missing-section`, `temporal-voice`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `test-standards-unavailable`, `language-routing-unavailable`, `language-skill-unavailable`, or `language-result-invalid`; validated composed findings retain the invoked skill's rule identifier.
 
 </verdict_format>
 

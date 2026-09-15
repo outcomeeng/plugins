@@ -123,7 +123,7 @@ For each product property:
 
 Rules live under `## Verification`. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section contains no rules, mark `tag-validity` as `FAIL` with `missing-verification-rules`. An untagged rule directly under the section has the canonical authoring form and may coexist with routed subsections. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in `property-quality`, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type or tag during these checks; an absent draft tag alone causes no finding.
 
-A tagged rule requires its matching routed subsection. When `### Testing` contains rules, invoke `spec-tree:test` with this PDR path. Its decision-rule mode returns assertion-type selections without writing tests or changing the decision. Require one selection for every Testing rule, each naming the exact rule and one allowed assertion type. An unavailable, incomplete, or malformed selection produces a `REJECT` finding named `test-routing-unavailable` and a failed `tag-validity` row. Use the returned selections for the routed-rule checks below.
+A tagged rule requires its matching routed subsection. When `### Testing` contains rules, invoke `spec-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a `REJECT` finding named `test-standards-unavailable` and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the PDR during this audit.
 
 For each routed rule:
 
@@ -133,7 +133,7 @@ For each routed rule:
    - under `### Audit` → `([audit])` — the rule governs a Spec Tree decision, spec, skill, or agent that admits no deterministic test or graded eval.
 
    An unsupported bare mechanism tag, a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid.
-2. Under `### Testing`, the assertion type fits the claim's shape per the `/test` router. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`, which fits only a single existential interaction. Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
+2. Under `### Testing`, the declared assertion type is compatible with the claim's quantifier and evidence shape under the loaded foundation and shared assertion-type litmus. A universal claim cannot carry `scenario`. Reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration.
 
 A rule earns a sound tag only when it is verifiable (a test, eval, or audit skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict). An unverifiable or vague rule produces a `REJECT` finding under `invalid-tag` in `tag-validity`, marking the row `FAIL` even when the tag's syntax is valid; quote the rule and identify the missing observable condition or ambiguous criterion.
 
@@ -220,7 +220,7 @@ The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise 
 }
 ```
 
-Each finding carries `location` (the section or property the objective requires it to name), `rule` (the violation pattern, e.g., `architecture-content`, `invalid-draft-rule`, `invalid-tag`, `test-routing-unavailable`, `assertion-type-mismatch`, `temporal-language`), `evidence` (the quoted artifact evidence), `message` (the one-line detail), and `severity`.
+Each finding carries `location` (the section or property the objective requires it to name), `rule` (the violation pattern, e.g., `architecture-content`, `invalid-draft-rule`, `invalid-tag`, `test-standards-unavailable`, `assertion-type-mismatch`, `temporal-language`), `evidence` (the quoted artifact evidence), `message` (the one-line detail), and `severity`.
 
 </verdict_format>
 
