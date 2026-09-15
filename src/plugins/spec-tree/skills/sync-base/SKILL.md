@@ -20,7 +20,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py" [repo] [--base <branch>] [--n
 
 It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). A stacked branch synchronizes against its predecessor without `--base`; see `<stacked_branches>`.
 
-Those primitives belong to the sibling `scope-changeset` skill, which the synchronizer reaches by a path relative to its own file, so both skills must be installed from the same plugin tree. A missing sibling fails the primitive at import, naming the expected path, before any git command runs.
+Those primitives belong to the sibling `scope-changeset` skill, which the synchronizer reaches by a path relative to its own file, so both skills must be installed from the same plugin tree. A missing sibling fails the primitive at import, naming the expected path, before any git command runs; that failure is a traceback, not a JSON result. Treat it as an installation defect of the plugin tree: report the named path, attempt no git movement, and claim no currency.
 
 When an attached branch is behind, it rebases the branch onto the fetched base. When a clean detached HEAD is an ancestor of the fetched base, it advances the worktree with `git switch --detach origin/<base>`; a detached HEAD carrying commits absent from the base fails without moving.
 
@@ -32,7 +32,7 @@ It prints a JSON result (`status`, `base_ref`, `remote_ref`, `branch`, `detail`,
 | `rebased`         | 0    | the branch was rebased onto `origin/<base>`, or restacked from its recorded predecessor tip onto the predecessor or the default                      | proceed; use `<readiness_preservation>` to identify which verification and review evidence the base movement invalidated                                   |
 | `conflict`        | 3    | the rebase stopped with active conflict state; the result's `conflict` object names the conflicted paths, git facts, git conflict text, and options  | reconcile per `<conflict_reconciliation>`; stop for the operator only after deterministic evidence cannot decide product intent, leaving the rebase active |
 | `dirty_tree`      | 4    | the branch is behind, but uncommitted changes to tracked files block the rebase; no rebase is attempted and the tree is left untouched               | classify ownership per `<dirty_tree_resolution>`; commit authorized changes to the right branch, leave operator-owned work untouched, and re-run           |
-| `git_failure`     | 1    | a diverged detached HEAD carrying its own commits, an unresolved base, or a failed fetch — a clean behind-base detached HEAD is advanced, not failed | report `detail`; do not rebase                                                                                                                             |
+| `git_failure`     | 1    | a diverged detached HEAD carrying its own commits, an unresolved base, or a failed fetch — a clean behind-base detached HEAD is advanced, not failed | report `detail`; NEVER rebase                                                                                                                              |
 
 These statuses and exit codes belong to the primitive. Complete this workflow only after `already_current` or `rebased` establishes currency for the recorded checkout and base. A checkpoint alone establishes no currency, and a successful synchronization establishes neither working-tree cleanliness nor verification readiness. In particular, an already-current checkout may carry pending edits; those edits alone require no recovery checkpoint.
 
@@ -69,7 +69,7 @@ A `dirty_tree` outcome means uncommitted tracked changes block base movement. In
 
 1. **Authorized session-owned changes.** Classify changes Claude made during the active objective, respect explicit operator limits, and clear the precondition within the same invocation:
    - **Related to the objective** → when the worktree is detached or sitting on the default branch, create a neutral `work/<objective-slug>` branch from the current commit; invoke `/commit-changes` immediately on that branch, regardless of whether verification is passing, failing, or not run.
-   - **An unrelated coordination note** — a `PLAN.md` / `ISSUES.md` recording future work that is not part of the objective → commit it onto its own local branch, and record in the imperfection ledger that the branch is pending `/merge`; the merge lifecycle owns how that branch reaches the default branch.
+   - **An unrelated coordination note** — a `PLAN.md` / `ISSUES.md` recording future work that is not part of the objective → commit it onto its own local branch, and record in the conversation's imperfection ledger, which `/handoff` persists, that the branch is pending `/merge`; the merge lifecycle owns how that branch reaches the default branch.
 2. **Operator-owned or unknown work.** When existing authorization covers committing the exact paths, invoke `/commit-changes` on their owning branch and continue. Otherwise preserve those files and their index state, report the blocked commit and exact paths, and request authority with a recommended commit option and a pause-and-inspect option. Apply the same boundary when an explicit operator limit withholds authority over session-owned paths. Never classify absent authority as a rebase conflict.
 3. **Confirm the checkpoint.** Require `/commit-changes` to report a zero commit exit, changed full HEAD identity, committed and remaining paths, and verification state (`passing`, `failing`, or `not-run`). All three verification states permit preservation; later gates decide eligibility. A rejected hook, failed commit, unchanged HEAD, or incomplete result leaves recovery blocked. Preserve its exact diagnostics and repair through the owning workflow before retrying; never bypass hooks or infer success from a commit attempt.
 4. **Re-run the primitive.** After a successful checkpoint, run `sync_base.py` again for the recorded checkout and base within the same invocation. Resolve any remaining authorized tracked changes through this recovery protocol. Finish only with `already_current` or `rebased`, or report the specific unresolved condition. Never report an intermediate authorized `dirty_tree` as completed synchronization.
@@ -80,7 +80,7 @@ The branch routing above places each concern on the branch the merge lifecycle l
 
 <conflict_reconciliation>
 
-A `conflict` outcome means a rebase is active. Do not abort it reflexively. Read the `conflict` object, inspect the repository state, and reconcile every conflict that deterministic evidence can decide:
+A `conflict` outcome means a rebase is active. NEVER abort it reflexively. Read the `conflict` object, inspect the repository state, and reconcile every conflict that deterministic evidence can decide:
 
 1. Inspect:
    - `git status`
@@ -115,7 +115,7 @@ Allowed direct commands:
 - Resolve: edit files, `git checkout --ours <path>` or `git checkout --theirs <path>` for one classified path only, `git add <resolved-paths>`, `git rebase --continue`.
 - Recover a dirty tree: `git switch -c work/<objective-slug>` from the current commit, only as `<dirty_tree_resolution>` step 1 directs, so the checkpoint has an owning branch.
 
-The synchronizer script owns base movement. It runs `git fetch origin <base>` and either `git rebase origin/<base>` for an attached branch or `git switch --detach origin/<base>` for a clean detached HEAD that is an ancestor of the fetched base; for a recorded stacked branch it runs `git fetch --prune origin` and `git rebase --onto <target> <recorded tip>`, and it alone writes or removes the stack record. Do not substitute direct sync commands for the script.
+The synchronizer script owns base movement. It runs `git fetch origin <base>` and either `git rebase origin/<base>` for an attached branch or `git switch --detach origin/<base>` for a clean detached HEAD that is an ancestor of the fetched base; for a recorded stacked branch it runs `git fetch --prune origin` and `git rebase --onto <target> <recorded tip>`, and it alone writes or removes the stack record. NEVER substitute direct sync commands for the script.
 
 Explicitly disallowed:
 
@@ -164,7 +164,7 @@ The proof carries git facts only: no validation-lane name, no governance-surface
 Apply the authority and checkpoint checks in `<dirty_tree_resolution>` before dirty-tree recovery. Report any remaining stop with its exact blocked action, paths, and evidence: absent authority identifies the missing permission; checkpoint failure carries the commit or hook diagnostic; hard Git failure carries `detail`; unresolved product intent carries the active conflict facts. Finish every independent authorized action before asking. Once authority is established and no checkpoint failure remains, none of the following alone warrants an operator question:
 
 - A tracked edit Claude made this session that blocks base movement — commit it per `<dirty_tree_resolution>` and re-run.
-- An unrelated tracked coordination note (`PLAN.md` / `ISSUES.md`) Claude edited that blocks base movement — commit it to its own branch, record the pending `/merge` in the imperfection ledger, and re-run.
+- An unrelated tracked coordination note (`PLAN.md` / `ISSUES.md`) Claude edited that blocks base movement — commit it to its own branch, record the pending `/merge` in the conversation's imperfection ledger, which `/handoff` persists, and re-run.
 - A conflict in a coordination note where one side is stale or superseded — reconcile the note to still-true facts and continue the rebase.
 - A conflict in a generated artifact whose source of truth can be resolved — resolve the source, return the exact project-declared regeneration command, and continue after re-entry with regenerated output.
 - A version bump conflict with an objectively monotonic/latest valid value — choose it, return the exact validation command, and run validation after the rebase completes.
