@@ -220,22 +220,33 @@ repair.
 ## The scope resolver crossed the shipped-script size threshold
 
 `src/plugins/spec-tree/skills/audit-implementation/scripts/resolve_scope.py` is
-61 lines. `spx/12-shipped-scripting.adr.md` holds that a generic shipped script
+179 lines. `spx/12-shipped-scripting.adr.md` holds that a generic shipped script
 beyond fifty lines is debt awaiting extraction into the SPX CLI once it proves
 its value.
 
-The lines that crossed the threshold implement `--audit-input`: the option that
-merges the invocation's short context values beneath the git-resolved scope so
-the resolved changed-path set reaches `spx verification run start` through a
-pipe instead of being retyped. The behavior is audit-specific rather than
-agent-specific, and SPX owns the audit verification-run contract, so the natural
-end state is `spx verification run start` resolving and embedding the scope from
-a selector itself — at which point the skill passes a selector and the script
-disappears.
+Two mechanizations carried it past the threshold, both closing a hole that
+prose alone had failed to close twice. `--audit-input` merges the invocation's
+short context values beneath the git-resolved scope, so the changed-path set
+reaches `spx verification run start` through a pipe instead of being retyped.
+`--reconcile-run` reads a run's sealed start inventory and its recorded scope
+units back through `spx verification run input` and `render`, and returns an
+exit code for whether the recorded subjects account for that inventory.
 
-**Resolution shape**: fold scope resolution and run-input composition into the
-SPX `verification run start` contract, then reduce or remove the bundled script.
-Tracked against the SPX-side payload-schema Change.
+Neither is agent-specific, and SPX owns both sides: it already returns
+`resolvedScope` from `start`, and it holds both the sealed inventory and the
+recorded units at `finish`. The end state is SPX resolving the scope from a
+selector at `start` and refusing to seal a changeset audit whose required units
+do not account for that run's own inventory — at which point the skill passes a
+selector, the reconciler becomes a `finish` precondition no caller can skip, and
+this script disappears. Until then the reconciler is advisory: a caller that
+never runs it can still seal a partial inspection, which is why the same check
+must reach `finish` itself.
 
-**Evidence.** The resolver grew from 48 to 61 lines while closing the
-transcribed-inventory hole recorded against `outcomeeng/changes#47`.
+**Resolution shape**: fold scope resolution, run-input composition, and
+inventory reconciliation into the SPX `verification run` contract, then remove
+the bundled script. Filed as the SPX-side Change; the audit-payload schema work
+carries it.
+
+**Evidence.** The resolver grew from 48 to 61 lines closing the
+transcribed-inventory hole, then to 179 closing the coverage-accounting hole,
+both recorded against `outcomeeng/changes#47`.

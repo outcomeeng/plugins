@@ -23,6 +23,17 @@ An entry is written by the changeset that ships the change. A later changeset ad
 - **Claim and release write Status.** Pickup writes `Claimed`; handoff writes `Available`; both verify project fields, assignees, and the transition comment.
 - **New Change bodies contain no metadata line.** Legacy metadata is removed only after project fields are reconciled and verified from issue history.
 
+## 0.94.3
+
+### Fixed
+
+- **An implementation audit can no longer record a scope unit only where it found something.** `audit-implementation` now persists a concern's complete claimed-path coverage *before* any of that concern's findings, so a path inspected and found clean produces a scope row rather than none, and a raised finding or a `rejected` terminal status never shortens the inspection — rejection is a verdict about what was inspected, not permission to leave a concern or a resolved path unrecorded. An observed run piped in the correct 48-path inventory, loaded all three concern skills, read fourteen subject bodies, then recorded two `code` units — both carrying its single finding — and sealed `rejected` with no `tests` or `architecture` unit at all.
+- **Pre-finish reconciliation is a command with an exit code, not an account the run driver gives of itself.** `resolve_scope.py` accepts `--reconcile-run <token>`, reads the run's sealed start inventory and recorded scope units back through `spx verification run input` and `render`, and reports `unaccounted`, `unexpected`, `drifted`, and `nonfinal`. Exit 1 returns the run to inspection; `finish` is reachable only from exit 0. The referent is the run's own sealed inventory rather than a fresh resolution, so the check does not depend on the selector still resolving the same way, and any reader re-runs it against a sealed run to reproduce the verdict. The prior stage-7 wording asked for the same reconciliation in prose and two consecutive released versions omitted it without leaving a trace.
+
+### Changed
+
+- **A sealed run's recorded subject set equals the changed-path inventory its own start input carries.** Every resolved path a concern did not claim is now recorded as an accounting record — `auditKind` `coverage-gap`, `coverageRequirement` `optional`, `coverageStatus` `skipped`, no `languagePartition`, `producerProvenance` omitted — which states that the path was considered and left to its artifact-type auditor. It claims no coverage, creates no language partition, and rejects no run. Previously such a path carried no unit at all, so a run that stopped early and a run that finished were indistinguishable in the projection. Consumers reading `auditScopeUnits` will see one row per changed path where earlier versions emitted rows only for claimed paths.
+
 ## 0.94.2
 
 ### Fixed

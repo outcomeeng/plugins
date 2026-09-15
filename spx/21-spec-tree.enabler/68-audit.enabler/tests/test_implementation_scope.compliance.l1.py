@@ -8,7 +8,14 @@ from outcomeeng_testing.harnesses.changeset_scope import (
     stale_local_base_repo,
 )
 from outcomeeng_testing.harnesses.implementation_scope import (
+    AUDIT_FIELD,
     ERROR_PREFIX,
+    FINAL_COVERAGE_STATUSES,
+    RECONCILE_FIELD,
+    RECONCILE_PREFIX,
+    REQUIRED_COVERAGE,
+    audit_scope_unit,
+    reconcile,
     run_implementation_scope,
 )
 
@@ -61,4 +68,87 @@ def test_malformed_run_input_json_is_rejected_rather_than_ignored() -> None:
 
         assert completed.returncode
         assert completed.stderr.startswith(ERROR_PREFIX)
+        assert not completed.stdout
+
+
+def test_a_sealed_path_without_a_recorded_unit_leaves_the_run_unreconciled() -> None:
+    covered, omitted = "src/covered.ts", "src/omitted.ts"
+
+    verdict = reconcile(
+        (covered, omitted),
+        (covered, omitted),
+        (
+            audit_scope_unit(
+                covered,
+                requirement=REQUIRED_COVERAGE,
+                status=sorted(FINAL_COVERAGE_STATUSES)[0],
+            ),
+        ),
+    )
+
+    assert verdict[RECONCILE_FIELD.UNACCOUNTED] == [omitted]
+    assert verdict[RECONCILE_FIELD.EXPECTED] == 2
+    assert verdict[RECONCILE_FIELD.RECORDED] == 1
+    assert verdict[RECONCILE_FIELD.RECONCILED] is False
+
+
+def test_a_required_unit_outside_the_final_statuses_leaves_the_run_unreconciled() -> (
+    None
+):
+    pending = "incomplete"
+    assert pending not in FINAL_COVERAGE_STATUSES
+    unit = audit_scope_unit(
+        "src/pending.ts", requirement=REQUIRED_COVERAGE, status=pending
+    )
+
+    verdict = reconcile(("src/pending.ts",), ("src/pending.ts",), (unit,))
+
+    assert verdict[RECONCILE_FIELD.NONFINAL] == [unit[AUDIT_FIELD.UNIT_ID]]
+    assert verdict[RECONCILE_FIELD.UNACCOUNTED] == []
+    assert verdict[RECONCILE_FIELD.RECONCILED] is False
+
+
+def test_a_run_reconciles_only_on_exact_inventory_agreement() -> None:
+    sealed = ("src/one.ts", "src/two.ts")
+    units = tuple(
+        audit_scope_unit(
+            subject,
+            requirement=REQUIRED_COVERAGE,
+            status=sorted(FINAL_COVERAGE_STATUSES)[0],
+        )
+        for subject in sealed
+    )
+
+    agreed = reconcile(sealed, sealed, units)
+    drifted = reconcile(sealed, (*sealed, "src/three.ts"), units)
+    widened = reconcile(
+        sealed,
+        sealed,
+        (
+            *units,
+            audit_scope_unit(
+                "src/outside.ts",
+                requirement=REQUIRED_COVERAGE,
+                status=sorted(FINAL_COVERAGE_STATUSES)[0],
+            ),
+        ),
+    )
+
+    assert agreed[RECONCILE_FIELD.RECONCILED] is True
+    assert drifted[RECONCILE_FIELD.DRIFTED] == ["src/three.ts"]
+    assert drifted[RECONCILE_FIELD.RECONCILED] is False
+    assert widened[RECONCILE_FIELD.UNEXPECTED] == ["src/outside.ts"]
+    assert widened[RECONCILE_FIELD.RECONCILED] is False
+
+
+def test_an_unreadable_run_yields_a_diagnostic_rather_than_a_verdict() -> None:
+    with stale_local_base_repo() as stale:
+        completed = run_implementation_scope(
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            reconcile_run="1999-01-01_00-00-00-000-000000000000",
+        )
+
+        assert completed.returncode
+        assert completed.stderr.startswith(RECONCILE_PREFIX)
         assert not completed.stdout

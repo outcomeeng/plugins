@@ -18,6 +18,7 @@ Observed implementation-audit failures and their causes and prevention.
 - `finding_before_standards`
 - `transcribed_inventory`
 - `vacuous_reconciliation`
+- `coverage_stated_as_findings`
 
 </contents>
 
@@ -271,10 +272,38 @@ internal consistency, never correspondence to the changeset. A plan narrowed
 before enumeration reconciles perfectly, so the check that was meant to prevent
 a partial seal certified one instead.
 
-How to avoid: Reconcile at stage 7 against a fresh resolver invocation for the
-same selector, not against the plan. Every resolved path a discovered concern
-claimed carries a recorded unit, and every remaining resolved path is named with
-the ownership reason it carries none. A recorded subject set that accounts for
-fewer paths than the resolver returned is unreconciled and cannot seal.
+How to avoid: Reconcile at stage 7 with the bundled reconciler, whose referent
+is the run's own sealed start inventory rather than the plan. Its exit code is
+the verdict: exit 1 names the unaccounted paths and returns the run to
+inspection, and only its zero exit reaches `finish`.
 
 </vacuous_reconciliation>
+
+<coverage_stated_as_findings>
+
+**A run recorded a unit only where it found something, then let the rejection end it**
+
+What happened: Claude started the run with the complete 48-path inventory
+piped in, loaded all three concern skills for the recognized language, and read
+fourteen subject bodies. It then recorded two scope units — both `code`, both
+for paths carrying its one finding — added that finding, and finished
+`rejected`. Twelve inspected paths, every `tests` unit, and every
+`architecture` unit went unrecorded. The stage 7 reconciliation never ran.
+
+Why it failed: Two failures compose. Scope rows were treated as anchors a
+finding needs rather than as the evidence that an inspection happened, so a path
+inspected and found clean produced no row at all. The early `rejected` verdict
+then read as settled — the run's outcome could not change — which made the
+remaining concerns look like work with no consequence. Both are invisible in the
+sealed projection unless a reader compares its subjects against its inventory,
+and the run driver comparing against its own recollection has nothing to
+contradict it.
+
+How to avoid: Persist a concern's complete claimed-path coverage before any of
+its findings, so a row exists for every inspected path whether or not it carries
+one. Treat `rejected` as a verdict about what was inspected, never as permission
+to stop: the remaining concerns and every unclaimed resolved path are recorded
+before `finish`. Then run the stage 7 reconciler, which fails on exactly this
+shape by naming the paths the run left unaccounted.
+
+</coverage_stated_as_findings>

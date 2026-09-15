@@ -27,6 +27,8 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER derive a subject body from a single commit's patch, or leave a truncated read unrecovered — a partial read is re-issued, never converted into coverage evidence.
 - NEVER hand-transcribe the resolved changed-path set into a payload — the resolver's own output reaches the run through a pipe, because a retyped inventory drops and substitutes paths without any later step noticing.
 - NEVER narrow the changed-path set handed to a concern skill, and NEVER record fewer subject units than a concern returned — applicability is the concern's judgment, and the driver records its complete result.
+- ALWAYS record a concern's complete claimed-path coverage before recording any finding for that concern — a run that records a unit only where it found something states its findings as its coverage.
+- NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
 - ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading language concern standards — every substantive project inspection and concern result belongs to the open run.
 
 </constraints>
@@ -51,27 +53,37 @@ Run these stages in order. Each names what holds before the next begins, and
    overlays.
 4. **Enumerate.** Build the complete expected coverage inventory per
    `<coverage_model>` before invoking any concern, reading the path set from the
-   `changed_paths` the start payload carries rather than from a retyped or
-   remembered list. A unit enters the inventory planned and carries no status.
+   `resolvedScope` the `start` result returned rather than from a retyped or
+   remembered list. Every resolved path enters the inventory — claimed by a
+   concern or left to another auditor — and a unit enters planned, without a
+   status.
 5. **Inspect.** Read each subject body completely from the resolved
    `base..head` scope. MUST re-issue a truncated or partial read in bounded
    ranges until the body is complete. NEVER derive a subject body from a single
    commit's patch, and NEVER treat an unrecovered read as coverage evidence.
-6. **Resolve.** Hold each unit planned until its concern returns a final result.
-   A required unit reaches only `audited`, `not-applicable`, `missing-skill`, or
-   `unsupported`. NEVER accept a finding raised before stage 3 loaded that
-   concern's standards and overlays — withdraw it rather than record it.
-7. **Reconcile against the resolved set, then finish.** Re-invoke the resolver
-   for the same selector and repository and compare its `changed_paths` against
-   the subjects the run has recorded. Every resolved path a discovered concern
-   claimed MUST carry a recorded unit, every planned unit MUST carry a final
-   status, and every recorded finding MUST reference an accepted unit. Name each
-   remaining resolved path and the ownership reason it carries no unit; a count
-   that does not add up to the resolved set is a failed reconciliation.
-   Reconciling the recorded units against the plan alone NEVER authorizes
+6. **Record.** Hold each unit planned until its concern returns a final result,
+   then persist that concern's complete claimed-path coverage before any of its
+   findings. A required unit reaches only `audited`, `not-applicable`,
+   `missing-skill`, or `unsupported`. NEVER accept a finding raised before stage
+   3 loaded that concern's standards and overlays — withdraw it rather than
+   record it.
+7. **Reconcile, then finish.** Run the bundled reconciler; `finish` is
+   reachable only from its zero exit:
+
+   ```bash
+   python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}' --reconcile-run '{run-token}'
+   ```
+
+   It reads the run's own sealed start inventory and its recorded units, and
+   emits `unaccounted` (a sealed path with no unit), `unexpected` (a recorded
+   subject outside the inventory), `drifted` (the selector no longer resolves to
+   the sealed inventory), and `nonfinal` (a required unit without a final
+   status). Exit 1 is a failed reconciliation that returns the run to stage 5 or
+   6; exit 2 is a command failure reported under `<verdict_format>`. Reconciling
+   the recorded units against the plan the run driver holds NEVER authorizes
    `finish` — a plan narrowed at stage 4 reconciles with itself and seals a
-   partial inspection as complete. A failed reconciliation returns the run to
-   stage 5 or 6.
+   partial inspection as complete, which is why the referent is the run's own
+   sealed inventory and the verdict is an exit code rather than an account.
 
 A run that cannot bring a required unit to a stage 6 status returns the
 `<verdict_format>` blocked diagnostic naming the concrete failed operation or
@@ -104,13 +116,12 @@ Before reading project file bodies:
 
    Read its `base` and `head`; the full endpoint IDs form the SPX scope identity
    `{base}..{head}`. Never reinterpret that identity as a two-dot changed-file
-   query or substitute a local base branch. Its three-dot `changed_paths` define
-   the subject and reach the run through the pipe in
-   `<verification_run_contract>`, never by being read out and retyped into a
-   payload. A changeset carries more paths than a response reproduces reliably,
-   and a dropped or substituted path there is invisible to every later stage.
-   Quote each substituted argument independently, applying the apostrophe
-   splice documented below when its value contains a literal apostrophe.
+   query or substitute a local base branch. Its three-dot `changed_paths` reach
+   the run through the pipe in `<verification_run_contract>`, never by being
+   read out and retyped: a changeset carries more paths than a response
+   reproduces reliably, and a dropped path there is invisible to every later
+   stage. Quote each substituted argument independently, applying the
+   apostrophe splice below.
 3. Read `git status --porcelain=v1 -z --untracked-files=all` at the repository
    root. An advisory audit includes every reported modified or untracked path,
    consuming NUL-delimited paths and both paths of a rename or copy. A committed
@@ -164,8 +175,10 @@ this boundary.
 
 Governing nodes are discovered after start and accompany the concern inputs and
 coverage evidence. The command returns a JSON locator; extract its `runToken`
-field exactly and use that token for every later command. Never pass the whole
-JSON locator as `--run`.
+field exactly and use that token for every later command, and read its
+`resolvedScope` array as the run's sealed inventory — the path set stage 4
+enumerates and stage 7 reconciles against. Never pass the whole locator as
+`--run`.
 
 Execute every state-changing `spx verification run` command serially. A tool
 response or tool-call batch contains at most one `start`, `scope add`, `finding
@@ -206,14 +219,7 @@ required.
     "skillOwningPluginName": "<lang>",
     "invocationRole": "leaf-skill"
   },
-  "recordedByRunDriver": {
-    "producerKind": "<run-driver-producer-kind>",
-    "agentName": "<run-driver-agent-name>",
-    "agentOwningPluginName": "<run-driver-agent-owning-plugin-name>",
-    "skillName": "<run-driver-skill-name>",
-    "skillOwningPluginName": "<run-driver-skill-owning-plugin-name>",
-    "invocationRole": "<run-driver-invocation-role>"
-  },
+  "recordedByRunDriver": "<the six producer fields of the run-driver identity>",
   "producerProvenance": {
     "agentOwningPluginVersion": "<spec-tree-plugin-version>",
     "skillOwningPluginVersion": "<language-plugin-version>",
@@ -227,8 +233,9 @@ may additionally carry `skipped`; no unit carries `incomplete`.
 
 `languagePartition` is the only optional prior-context field. Omit it when the
 language is unknown; never replace `priorContext` with top-level partition
-fields. Use `coverage-gap` for a missing producer or unsupported subject and
-omit `producerProvenance` because no leaf skill executed.
+fields. Use `coverage-gap` with `producerProvenance` omitted, because no leaf
+skill executed, for a missing producer, an unsupported subject, and the
+accounting record `<coverage_model>` requires for an unclaimed resolved path.
 
 Every finding payload uses the exact published SPX field names below. Its
 `unitId` references a scope unit already accepted by the run, its
@@ -238,19 +245,8 @@ expected text lives under `evidence`.
 ```json
 {
   "unitId": "<accepted-scope-unit-id>",
-  "producerIdentity": {
-    "producerKind": "skill",
-    "agentName": "<run-driver-agent-name>",
-    "agentOwningPluginName": "<run-driver-agent-owning-plugin-name>",
-    "skillName": "audit-<lang>-<concern>",
-    "skillOwningPluginName": "<lang>",
-    "invocationRole": "leaf-skill"
-  },
-  "producerProvenance": {
-    "agentOwningPluginVersion": "<spec-tree-plugin-version>",
-    "skillOwningPluginVersion": "<language-plugin-version>",
-    "toolVersion": "<spx-version-when-known>"
-  },
+  "producerIdentity": "<the unit's expectedProducer object, repeated exactly>",
+  "producerProvenance": "<the unit's producerProvenance object, repeated exactly>",
   "rule": "<violated-rule-or-principle>",
   "severity": "<blocking|debt>",
   "location": "<path-and-line-or-subject-location>",
@@ -341,13 +337,18 @@ The final response relays the rendered SPX projection and run token. Do not summ
 
 Build an expected coverage inventory before invoking any language concern skill. Discover programming-language plugins from installed `code-{lang}` skill names, then validate the complete read-only `audit-{lang}-{code|tests|architecture}` trio for each discovered language before invoking any concern. Never load a write-capable `code-{lang}` skill inside the audit, and never create a language partition from a file extension, filename, or artifact class alone.
 
-Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; do not manufacture a language name, missing concern skill, unsupported unit, or coverage gap for a path outside implementation-audit ownership.
+Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; never manufacture a language name, a missing concern skill, or an unsupported unit for a path outside implementation-audit ownership.
 
-Leaving a path to another auditor is not leaving it unaccounted for. Stage 7
-names every resolved path that carries no unit together with the ownership
-reason it carries none, so a reader of the run can tell a path that was
-considered and left to its artifact-type auditor from a path that was never
-reached. Silence over a resolved path is the shape a narrowed inspection takes.
+Leaving a path to another auditor is not leaving it unaccounted for. Record
+every resolved path no concern claimed as an accounting record: `auditKind`
+`coverage-gap`, `coverageRequirement` `optional`, `coverageStatus` `skipped`,
+`priorContext` without `languagePartition`, and `producerProvenance` omitted.
+That record says the path was considered and left to another auditor; it claims
+no coverage, creates no language partition, and rejects no run. Completeness is
+then readable from the run itself — its recorded subject set equals its sealed
+inventory — rather than from the driver's account of it, and silence over a
+resolved path, which is the shape a narrowed inspection takes, stops being
+indistinguishable from thoroughness.
 
 Give every complete trio the **complete** resolved three-dot changed-path set,
 the resolved endpoint identities, discovered governing context, and the advisory
@@ -379,10 +380,11 @@ Each expected unit records:
 - concern result: completion is represented by every expected path unit carrying `coverageStatus: audited`, and the finding count is the count of accepted finding rows for those path-scoped units
 
 - Plan the complete inventory before invoking any concern skill. NEVER mark a planned unit `audited`.
-- Queue each unit only once its final coverage status is known: immediately for a classified gap, or after its concern finishes for an executed producer.
+- Queue each unit only once its final coverage status is known: immediately for a classified gap or accounting record, or after its concern finishes for an executed producer.
 - NEVER append a preliminary required unit before its final coverage status is known — every accepted required uncovered event rejects the terminal rollup permanently.
 - A concern skill returns its result to the run driver and never writes SPX state itself.
 - After a concern returns, queue one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`. NEVER record fewer rows than the concern returned paths, and NEVER collapse several inspected paths into one representative row — the recorded subject set is the evidence that the inspection happened, so a reduced set is an unverifiable claim.
+- Queue that concern's complete scope rows BEFORE any of its findings. A finding is recorded against coverage already accepted, never in place of it; recording a row only where a finding landed states the findings as the coverage.
 - Queue each returned finding after those scope rows, associated with its matching path-scoped unit.
 - Persist queued units one `spx verification run scope add` command at a time, ordered by language discovery order then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation.
 - Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
@@ -417,7 +419,7 @@ Finding identity for convergence is content and stable producer identity, not pl
 
 <terminal_model>
 
-Finish the run only after stage 7 of `<execution_sequence>` reconciles against the resolved path set. Record missing required skills, unsupported paths claimed by recognized implementation-language partitions, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
+Finish the run only after the stage 7 reconciler exits zero. Record missing required skills, unsupported paths claimed by recognized implementation-language partitions, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
 
 Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding exists; `rejected` when a required unit is uncovered or any finding exists. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
 
@@ -489,8 +491,9 @@ existing no-retry rule; these records authorize no replacement invocation.
 - Every audited concern preserves its complete non-empty inspected-path set as path-scoped units whose `subject` fields are the exact paths; every expected unit is audited only after the concern completes, and its finding count derives from accepted finding rows rather than a custom field.
 - The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
-- The sealed run carries the resolver's complete `changed_paths` in its start payload, placed there by the pipe rather than by transcription, so the expected path set is readable from the run itself and matches a fresh resolver invocation for the same selector.
-- Every sealed run reconciles against that resolved path set before finishing: every resolved path a discovered concern claimed carries a recorded unit, every remaining resolved path is named with its ownership reason, every required unit carries `audited`, `not-applicable`, `missing-skill`, or `unsupported`, every finding references an accepted unit, and every subject body was read complete from the resolved `base..head` scope. A run whose recorded subjects account for fewer paths than the resolver returned is unreconciled and cannot seal. A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
+- The sealed run carries the resolver's complete `changed_paths` in its start payload, placed there by the pipe rather than by transcription, so the expected path set is readable from the run itself.
+- The sealed run's recorded subject set equals that inventory: a claimed path carries its concern's unit, an unclaimed path carries its accounting record, every required unit carries `audited`, `not-applicable`, `missing-skill`, or `unsupported`, every finding follows the coverage rows of its own concern and references an accepted unit, and every subject body was read complete from the resolved `base..head` scope.
+- The stage 7 reconciler exited zero on the sealed run, and re-running it against that run reproduces the zero exit — so any reader establishes the inspection's completeness from the run without the run driver's account of it. A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>
