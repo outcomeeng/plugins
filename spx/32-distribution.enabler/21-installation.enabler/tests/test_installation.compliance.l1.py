@@ -22,7 +22,6 @@ from outcomeeng.distribution.installation import (
 )
 from outcomeeng_testing.generators.installation import RecordDisposition
 from outcomeeng_testing.harnesses.installation import (
-    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_first_failure,
     observe_inspection_failure,
     observe_invalid_persistent_selections,
@@ -71,14 +70,11 @@ def test_persistent_installation_requires_selected_codex_home() -> None:
 
 def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None:
     refreshing = observe_persistent_execution()
-    replacing = observe_persistent_plan(
-        claude_repository=NONCANONICAL_MARKETPLACE_SOURCE,
-        codex_source=NONCANONICAL_MARKETPLACE_SOURCE,
-    )
+    registering = observe_persistent_plan(claude_repository=None)
     bootstrapping = observe_persistent_plan(
         installed={agent: frozenset() for agent in Agent},
     )
-    plans = (refreshing.report.plan, replacing.plan, bootstrapping.plan)
+    plans = (refreshing.report.plan, registering.plan, bootstrapping.plan)
     claude_commands = [
         command
         for plan in plans

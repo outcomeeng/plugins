@@ -65,7 +65,7 @@ def test_explicit_isolated_subsets_map_to_their_selection_in_catalog_order() -> 
         assert positions == sorted(set(positions))
 
 
-def test_claude_inventory_maps_only_the_invocation_checkout_project_scope() -> None:
+def test_claude_inventory_maps_only_the_invocation_checkout_refresh_scopes() -> None:
     checkout = repository_root()
     catalog = catalog_plugin_names_from_document(checkout / CLAUDE_CATALOG_PATH)
     entries, in_scope = generated_claude_listing_entries(catalog, checkout)
@@ -114,7 +114,7 @@ def test_every_planned_operation_reports_its_failure_and_stops_installation() ->
 )
 def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
     mode: InstallationMode,
-    source: str,
+    source: str | None,
     operation: Operation,
 ) -> None:
     plugin = sorted(committed_catalog_plugin_names())[0]
