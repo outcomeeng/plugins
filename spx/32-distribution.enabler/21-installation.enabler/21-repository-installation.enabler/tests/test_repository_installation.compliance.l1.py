@@ -15,7 +15,7 @@ from outcomeeng.distribution.installation import (
     Operation,
     SourceAction,
 )
-from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT
+from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT, JUST_BINARY
 from outcomeeng_testing.harnesses.discovery_auth import (
     API_LOGIN_FLAG,
     WORKSPACE_LOGIN_FLAG,
@@ -568,7 +568,7 @@ def test_failed_installation_stops_before_credentials_are_attached() -> None:
             observe_codex_subagent_discovery(
                 environment=case.original_environment, runner=case.runner
             )
-        assert all(call.argv[0] == "just" for call in case.runner.calls)
+        assert all(call.argv[0] == JUST_BINARY for call in case.runner.calls)
         assert case.saved.read_text() == case.initial
 
 
