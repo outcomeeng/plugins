@@ -17,6 +17,13 @@ smoke_cases = [
   "routes-observation-claim-to-probe",
   "routes-observation-claim-to-probe-specialist",
   "rejects-unsupported-tag",
+  "rejects-validation-tag",
+  "rejects-verification-type-name-as-tag",
+  "rejects-test-assertion-type-as-tag",
+  "rejects-unknown-tag",
+  "rejects-test-tag-without-path",
+  "rejects-audit-tag-with-path",
+  "rejects-multiple-verification-tags",
   "accepts-slugged-audit-tag",
 ]
 threshold = 1.0
