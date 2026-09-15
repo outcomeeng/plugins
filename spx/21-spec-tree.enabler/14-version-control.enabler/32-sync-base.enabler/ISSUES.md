@@ -26,11 +26,11 @@ edit to the current diff.
 
 ## Synchronizer extraction awaits a published SPX CLI capability
 
-`src/plugins/spec-tree/skills/sync-base/scripts/sync_base.py` runs to 785 lines
+`src/plugins/spec-tree/skills/sync-base/scripts/sync_base.py` runs to 1294 lines
 — base-ref and remote-tracking resolution, behind-base detection, the
 attached-branch rebase and the detached-head advance, the dirty-tree
-precondition, structured conflict reporting, and the readiness-preservation
-proof. Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script
+precondition, structured conflict reporting, the readiness-preservation
+proof, and the stack record with its restack and topology derivation. Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script
 debt whose logic moves into the SPX CLI once the script proves its value; the
 synchronizer has proven its value in use, so extraction is what it owes.
 
