@@ -6,6 +6,12 @@ CAN use the selected credential channel while preserving native refresh writes a
 
 ## Assertions
 
+### Mappings
+
+- Each unsupported saved-login condition — a missing file, a malformed document, or a non-subscription credential — maps to a diagnostic before any native command runs. ([test](tests/test_authentication.mapping.l1.py))
+
+### Compliance
+
 - ALWAYS: discovery selects subscription by default locally, requires an explicit authentication mode in CI, and requires the selected mode's credential without falling back to another mode. ([test](tests/test_authentication.compliance.l1.py))
 
 - ALWAYS: subscription discovery checks native file-store write-through compatibility before linking only the selected saved-login file into disposable state, then serializes participating uses and reports detected file, link, or account replacement without restoring an older copy. ([test](tests/test_authentication.compliance.l1.py))

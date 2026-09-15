@@ -20,6 +20,6 @@ Why separate: each plugin's skill edit carries the `skill-auditor` gate and a bu
 
 `spx.config.yaml` declares methodology 4.0. The shipped foundation, router, and specs still state the 3.x grammar: five verification types without Probe, `{slug}.md` spec files, enabler and outcome as the only node kinds, no front matter, no malleability, no outcome records or alternatives. Each move amends its governing decision first (`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` for the type set), and the whole is refined with the operator as a Change before any slice executes.
 
-## Relocate installation governance and split the repository-installation node
+## Installation execution
 
-Installation work is coordinated in [Change #48](https://github.com/outcomeeng/changes/issues/48), with the structural proposal received through [Change #14](https://github.com/outcomeeng/changes/issues/14). The governing declarations are `spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md` and `spx/32-distribution.enabler/21-installation.enabler/15-installation-architecture.adr.md`.
+The structural and evidence-quality work is coordinated in [Change #14](https://github.com/outcomeeng/changes/issues/14). Persistent refresh implementation remains in [Change #48](https://github.com/outcomeeng/changes/issues/48), governed by `spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md` and `spx/32-distribution.enabler/21-installation.enabler/15-installation-architecture.adr.md`.

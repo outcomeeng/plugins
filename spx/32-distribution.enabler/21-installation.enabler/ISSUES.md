@@ -1,6 +1,4 @@
-# ISSUES — repository installation
-
-Known defects in the repository-installation evidence. Each entry names the artifact, the observed failure, and the smallest unit of work that resolves it.
+# Installation evidence gaps
 
 ## Native-profile evidence restates protocol vocabulary the owning modules hold
 
@@ -20,7 +18,7 @@ The mapping assertion's identifier and disposable-state-root derivation is unfal
 
 ## Pending plugins' prior owned definitions have no reconciliation evidence
 
-The reconciliation assertion states that a pending plugin's prior owned definitions are preserved, and both `spx/12-marketplace-state.adr.md` and `21-installation-architecture.adr.md` require it, but no harness case combines a pending-publication plugin with agent-home reconciliation: `observe_agent_home_reconciliation` builds both preflights from a changed catalog with every plugin published. The clause therefore reaches no predicate, and the same observer retires one agent source rather than dropping a plugin from the home selection, so the clause that prunes owned definitions of plugins outside the catalog-bounded selection is likewise never driven. The plan builder also composes the agent-home plan before any command runs, so a plugin that turns out pending during execution still has its checkout definitions in the desired set; whether the applied plan copies definitions for unavailable skill content, against the decision, is undetermined until the scenario exists.
+The reconciliation assertion states that a pending plugin's prior owned definitions are preserved, and both `spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md` and `spx/32-distribution.enabler/21-installation.enabler/15-installation-architecture.adr.md` require it, but no harness case combines a pending-publication plugin with agent-home reconciliation: `observe_agent_home_reconciliation` builds both preflights from a changed catalog with every plugin published. The clause therefore reaches no predicate, and the same observer retires one agent source rather than dropping a plugin from the home selection, so the clause that prunes owned definitions of plugins outside the catalog-bounded selection is likewise never driven. The plan builder also composes the agent-home plan before any command runs, so a plugin that turns out pending during execution still has its checkout definitions in the desired set; whether the applied plan copies definitions for unavailable skill content, against the decision, is undetermined until the scenario exists.
 
 **Resolution shape**: add a harness scenario that installs, then re-runs with one plugin unpublished, and assert that the pending plugin's recorded definitions are neither pruned nor rewritten; if the scenario shows the plan copying definitions for a pending plugin, defer agent-home plan composition until the pending set is known. That is a new reconciliation capability with its own harness and a likely production change, independent of the machine-wide Claude Code refresh.
 
@@ -133,7 +131,7 @@ time in `outcomeeng/distribution/installation.py`, which argues the logic is
 generic rather than Codex-bound.
 
 **Resolution shape**: choose one of the two paths the ADR admits and record it —
-amend `21-installation-architecture.adr.md` to name the placement script a
+amend `spx/32-distribution.enabler/21-installation.enabler/15-installation-architecture.adr.md` to name the placement script a
 Codex-specific adapter kept plugin-local under the exemption, or schedule the
 extraction into `spx` and reduce the shipped script to the skill instruction the
 ADR prescribes for a proven script. The duplicated algorithm in
@@ -145,34 +143,3 @@ addition deepens whichever path is not chosen.
 **Evidence**: raised by changeset review `2026-08-17_01-03-44-668-0ddd9fe582a1`;
 supersedes the ceiling entry the agents-conversion node carried for the earlier
 fifty-line version.
-
-## Cross-plugin agent-home cleanup is reachable only through the maintainers' installer
-
-`spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md` separates a plugin's namespace-bounded
-placement from marketplace-scope reconciliation — the pass that prunes
-definitions of plugins later removed or renamed from the catalog under the
-marketplace's recorded ownership. The shipped `place_agents.py` implements only
-its own plugin's namespace; the marketplace-scope pass lives in
-`outcomeeng/distribution/installation.py` and is reachable solely through
-`just install-marketplace` in this repository. An ordinary consumer whose
-`$CODEX_HOME/agents/` carries a definition for a plugin the catalog no longer
-publishes has no shipped path to prune it: the definition stays until the
-consumer removes it by hand.
-
-The retired plan for this node proposed embedding a committed-catalog snapshot,
-stamped with a deterministic catalog revision, in each plugin's shipped tree so
-any single plugin's lifecycle skill could run the marketplace-scope pass. That
-mechanism was not built; the ownership record shipped instead, which lets the
-maintainers' installer prune safely but gives a shipped script no view of the
-current catalog.
-
-**Resolution shape**: either ship the consumer-reachable marketplace-scope pass —
-an embedded catalog snapshot the shipped script consults, or an `spx` command
-that reads the marketplace source directly — or narrow the decision's
-reconciliation invariant to the maintainers' installer and say so where the
-consumer would look for the missing prune.
-
-**Revisit condition**: before a plugin is removed or renamed in the catalog,
-since that is the event that leaves a stale owned definition in consumer homes.
-
-**Evidence**: raised by changeset review `2026-08-17_01-03-44-668-0ddd9fe582a1`.

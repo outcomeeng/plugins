@@ -1,21 +1,25 @@
 # Installation
 
-PROVIDES selection-preserving persistent marketplace installation and isolated end-to-end verification from committed checkout declarations
-SO THAT marketplace maintainers and release automation
-CAN refresh selected Claude Code and Codex plugins without widening either installation while proving full and subset behavior safely in disposable homes
+PROVIDES catalog-derived installation plans, explicit state boundaries, and ownership-bounded native agent placement
+SO THAT marketplace maintainers and isolated verification
+CAN inspect installation operations and preserve unrelated files while reconciling skill content with its native definitions
 
 Installation follows `spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md` and `spx/32-distribution.enabler/21-installation.enabler/15-installation-architecture.adr.md`. Agent delivery preserves the shared guarantees in `spx/12-agent-delivery.pdr.md`.
 
 ## Assertions
 
-- For each supported agent, isolated installation selects the complete committed catalog in catalog order, and persistent refresh selects the catalog-bounded members that agent reports installed in the invocation checkout or selected home, disabled entries included, in catalog order: an empty inventory bootstraps `spec-tree` alone, a nonempty Claude Code inventory is refreshed through native updates rather than installs, and a Codex inventory is refreshed through its native plugin operations. ([test](tests/test_installation.mapping.l1.py))
-- Persistent refresh reaches every project- or local-scope Claude Code install record on the machine for a cataloged plugin whose project path is an existing directory and whose readable project settings declare no noncanonical marketplace source for the native update, reporting every other record unchanged, while the invocation checkout's own noncanonical declaration or unreadable settings stop the run before any plan, and Codex's selected-home configured catalog members include entries with missing caches; the repository-installation node declares and evidences those dispositions.
-- ALWAYS: persistent refresh preserves selection and activation through native update operations; an empty selection supplies only `spec-tree` with a warning and disabled activation where no activation is declared.
-- ALWAYS: trusted Codex products select skill activation independently of home-wide refresh and the globally registered home subagent definitions.
-- NEVER: an existing noncanonical marketplace registration reaches a persistent state-changing operation; source repair requires an explicit operation outside refresh.
-- ALWAYS: persistent planning rejects every nonempty selected subset that omits `spec-tree` before a state-changing operation.
-- ALWAYS: an agent-CLI failure identifies the exact agent and operation and stops every subsequent installation operation, except an established pending-publication absence for a selected plugin in persistent mode.
+### Scenarios
+
+- Given `just verify-marketplace-installation`, when the recipe runs, then it passes `spx/32-distribution.enabler/21-installation.enabler` to the repository test command so pytest discovers the common evidence and every installation descendant. ([test](tests/test_installation_contracts.scenario.l1.py))
+
+### Mappings
+
+- Each marketplace, plugin, and lifecycle operation an installation plan performs maps to a failure report naming that operation and its agent, with attempted commands ending at that operation and no later operation performed, except an established pending-publication absence in persistent mode. ([test](tests/test_installation_contracts.mapping.l1.py))
+- For each supported agent and selected installation mode, the selected plugin set maps to catalog order; an empty persistent selection maps to only `spec-tree`, and isolated full-catalog selection maps to every committed member. ([test](tests/test_installation.mapping.l1.py))
 
 ### Compliance
 
-- ALWAYS: persistent installation targets Claude Code project scope in the invocation checkout for marketplace, inspection, and bootstrap operations, each recorded plugin's own project or local scope and project path for its native update, and the selected `CODEX_HOME`, while isolated verification targets only caller-selected disposable homes. ([test](tests/test_installation.compliance.l1.py))
+- ALWAYS: persistent installation targets Claude Code project scope in the invocation checkout for marketplace, inspection, and bootstrap operations, each recorded plugin's own project or local scope and project path for its native update, and the selected `CODEX_HOME`, while isolated verification targets only caller-selected disposable homes; an agent-CLI failure reports its exact agent and operation and stops subsequent operations except established pending publication in persistent mode. ([test](tests/test_installation.compliance.l1.py))
+- ALWAYS: a plugin lifecycle places and prunes only its own recorded definitions, adopts identical unrecorded content without rewriting it, and preserves definition and ownership-file identity on an unchanged repeat. ([test](tests/test_installation_contracts.compliance.l1.py))
+- NEVER: placement overwrites or prunes foreign, modified, symlinked, or otherwise invalid destinations; changes after preflight stop mutation. ([test](tests/test_installation_contracts.compliance.l1.py))
+- ALWAYS: scope-split preflight reports every mismatched definition even when ownership or the selected agent directory is invalid, distinguishing byte-identical directed removals from changed or renamed collisions. ([test](tests/test_installation_contracts.compliance.l1.py))

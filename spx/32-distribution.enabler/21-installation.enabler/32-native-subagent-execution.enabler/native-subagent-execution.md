@@ -6,16 +6,22 @@ CAN inspect definition loading, child execution, and process cleanup against dis
 
 ## Assertions
 
+### Scenarios
+
 - Given a native probe command whose parent emits a byte sequence that is invalid UTF-8 and exits while a descendant keeps the captured output stream open, when the runner collects the result, then it returns the parent's completed result promptly, replaces undecodable bytes, and terminates the descendant before returning. ([test](tests/test_native_profile_process.scenario.l1.py))
 
 - Given a native probe command whose parent and descendant remain running, when the execution timeout expires, then the runner reports the timeout promptly and terminates the descendant before returning. ([test](tests/test_native_profile_process.scenario.l1.py))
 
 - Given a disposable `CODEX_HOME` that isolated installation populated and authentication from the explicitly selected mode, when a fresh non-interactive Codex session in that home is asked for its available subagent names as structured output, then the returned subagent name set contains every canonical subagent name whose definition the installation placed under that home's `agents/` directory. ([test](tests/test_native_subagent_execution.scenario.l3.py))
 
+### Mappings
+
 - Every target/profile pair in `outcomeeng.distribution.profiles.AGENT_PROFILES`
   maps to one native-profile probe row whose immutable identifier, complete native
   configuration, disposable state root, and artifact paths derive from that
   registry entry. ([test](tests/test_native_profile_execution.mapping.l1.py))
+
+### Compliance
 
 - ALWAYS: for every native-profile probe row, the producer materializes the
   native definition, retains configuration/loading/result artifacts, removes

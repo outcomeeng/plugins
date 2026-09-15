@@ -107,7 +107,7 @@ chosen when the node is authored.
 `spx/18-plugin-build.enabler/15-build-architecture.adr.md` capability-keyed for committed agent
 delivery. The build decision now resolves per-target agent format, filename shape, and namespace
 behavior from the source-owned per-target registry, so a new target is a registry entry; the
-catalog and state-boundary enumeration in the marketplace-state decision is the remaining
+catalog and state-boundary enumeration in the installation-state decision is the remaining
 per-agent coupling.
 
 **Revisit condition.** Resolve before a third agent harness ships, since that is the change the
