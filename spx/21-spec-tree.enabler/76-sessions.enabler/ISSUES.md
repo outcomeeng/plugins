@@ -56,14 +56,6 @@ The same rule reaches `src/plugins/spec-tree/skills/open-pr/SKILL.md`, whose `gh
 
 **Evidence.** The `skill-auditor` verdict on the pickup bundle at `41b304b691460afca90c7b92559123fdc3e6a3a1` names the duplication (`reference_skill_extraction_candidate`).
 
-## 7. The Change-coordination mechanism has no decision record
-
-The overlay contract declared in `spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md`, `25-handoff.enabler/handoff.md`, and `28-pickup.enabler/pickup.md` — claim by assignee plus earliest `Claim:` comment, Maturity gating, the five-line Handoff comment, the authorized close comments, the secret inspection before every store write — is decided in the assertions and the two skill workflows, with no ADR or PDR under this node the way `13-handoff-persistence.adr.md` and `28-pickup.enabler/20-claim-verification.adr.md` decide their narrower mechanisms. The operator directed the GitHub realization to ship as a prototype without a PDR, following methodology 4.0 coordination (`versions/4.0/methodology/coordination/changes.md` of `outcomeeng/methodology`) and its GitHub realization note directly.
-
-**Resolution shape**: when the prototype graduates, author the decision under this node — a PDR when the Maturity and Lifecycle vocabulary is user-observable product behaviour, otherwise an ADR — and repoint the three overlay assertions at it; `/decompose` places it.
-
-**Evidence.** The local review of `work/session-pointer-truth-derivation` at `488bd2e6c9c43d83d13c50b63029b903e2e03880` recorded the missing decision as a DEBT finding; the operator's prototype direction is the recorded reason it is tracked here rather than fixed in that changeset.
-
 ## 8. The Change store is bound by workflow discipline, not by the tool grant
 
 Every `gh` grant the Change workflows carry — `gh issue create:*`, `gh issue edit:*`, `gh project item-add:*`, `gh api repos/*/issues/*/dependencies/blocked_by:*`, and the rest — admits any repository the authenticated account reaches; a Bash allow-list pattern cannot name a per-consumer store, and the store comes from `spx/local/coordination.md` at runtime. Both workflows therefore state their own discipline as the containment: only the overlay's store, only the named endpoints and methods. The `gh api` write at Framed (`dependencies/blocked_by -X POST`) is the widest such capability, since a value read from a Change body or a migrated file feeds the call.
