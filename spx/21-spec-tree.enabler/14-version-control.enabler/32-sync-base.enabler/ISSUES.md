@@ -44,6 +44,8 @@ preservation proof into the SPX CLI, publish it, advance the floor, and reduce
 the shipped skill to its instruction with no script. The derivation this script
 shares with its siblings extracts with the primitives tracked in
 `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/ISSUES.md`.
-Carry the rebase-never-reset invariant and the untracked-collision gap above
-into the ported surface rather than leaving either behind. Revisit when the
-capability publishes.
+Carry the rebase-never-reset invariant, the stack record and restack contract
+(`branch.<name>.stackPredecessor` and `branch.<name>.stackTip`, the predecessor
+states, topology derivation, and the `--onto` replay), and the
+untracked-collision gap above into the ported surface rather than leaving any
+behind. Revisit when the capability publishes.
