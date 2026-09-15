@@ -5,17 +5,22 @@ from pathlib import Path
 
 from outcomeeng.distribution.installation import (
     Agent,
+    CLAUDE_PLUGIN_ID_FIELD,
+    CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
+    CLAUDE_PLUGIN_SCOPE_FIELD,
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_REFRESH_SCOPES,
     CLAUDE_SCOPE_BEARING_OPERATIONS,
     CLAUDE_SCOPE_FLAG,
     CODEX_HOME_ENV,
     InstallationMode,
+    MARKETPLACE_NAME,
     Operation,
     ReportField,
     SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
 )
+from outcomeeng_testing.generators.installation import RecordDisposition
 from outcomeeng_testing.harnesses.installation import (
     NONCANONICAL_MARKETPLACE_SOURCE,
     observe_first_failure,
@@ -24,6 +29,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_missing_codex_home,
     observe_persistent_execution,
     observe_persistent_plan,
+    observe_record_refresh_plan,
     observe_repository_plan,
 )
 
@@ -101,16 +107,36 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         and command.operation is not Operation.PLUGIN_UPDATE
     )
     assert all(
-        command.argv[-2] == CLAUDE_SCOPE_FLAG
-        and any(
-            record.scope == command.argv[-1]
-            and record.project_path == command.cwd
-            and record.plugin == command.plugin
-            and record.scope in CLAUDE_REFRESH_SCOPES
-            for record in plan.claude_records
-        )
+        command.argv[-2:] == (CLAUDE_SCOPE_FLAG, CLAUDE_PROJECT_SCOPE)
+        and command.cwd == plan.roots.checkout
         for plan in plans
         for command in plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation is Operation.PLUGIN_UPDATE
+    )
+    spread = observe_record_refresh_plan()
+    expected_updates = {
+        (
+            entry[CLAUDE_PLUGIN_ID_FIELD].removesuffix(f"@{MARKETPLACE_NAME}"),
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+            Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
+        )
+        for entry, disposition in spread.cases
+        if disposition is RecordDisposition.UPDATE
+    }
+    observed_updates = [
+        (command.plugin, command.argv[-1], command.cwd)
+        for command in spread.plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation is Operation.PLUGIN_UPDATE
+    ]
+    assert {scope for _, scope, _ in expected_updates} == CLAUDE_REFRESH_SCOPES
+    assert {path for _, _, path in expected_updates} > {spread.checkout}
+    assert set(observed_updates) == expected_updates
+    assert len(observed_updates) == len(expected_updates)
+    assert all(
+        command.argv[-2] == CLAUDE_SCOPE_FLAG
+        for command in spread.plan.commands
         if command.agent is Agent.CLAUDE
         and command.operation is Operation.PLUGIN_UPDATE
     )
