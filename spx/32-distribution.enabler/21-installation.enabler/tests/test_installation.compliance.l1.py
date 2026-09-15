@@ -11,6 +11,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_REFRESH_SCOPES,
     CLAUDE_SCOPE_BEARING_OPERATIONS,
+    CLAUDE_SCOPELESS_OPERATIONS,
     CLAUDE_SCOPE_FLAG,
     CODEX_HOME_ENV,
     InstallationMode,
@@ -91,8 +92,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     observed = {command.operation for command in claude_commands}
 
     assert all(plan.mode is InstallationMode.PERSISTENT for plan in plans)
-    assert observed >= CLAUDE_SCOPE_BEARING_OPERATIONS
-    assert observed - CLAUDE_SCOPE_BEARING_OPERATIONS
+    assert observed == CLAUDE_SCOPE_BEARING_OPERATIONS | CLAUDE_SCOPELESS_OPERATIONS
     assert all(
         command.argv[-2:] == (CLAUDE_SCOPE_FLAG, CLAUDE_PROJECT_SCOPE)
         and command.cwd == plan.roots.checkout

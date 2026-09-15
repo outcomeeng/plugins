@@ -226,6 +226,14 @@ marketplace and plugin inspections and the closing plugin listing are the fixed
 tuples `CLAUDE_MARKETPLACE_LIST_COMMAND` and `CLAUDE_LIST_COMMAND`, which carry
 no scope.
 """
+CLAUDE_SCOPELESS_OPERATIONS: frozenset[Operation] = frozenset(
+    {Operation.MARKETPLACE_REFRESH, Operation.PLUGIN_LIST}
+)
+"""Claude plan operations whose public CLI takes no installation scope.
+
+With `CLAUDE_SCOPE_BEARING_OPERATIONS` this partitions every Claude operation a
+plan carries; the preflight inspections run outside any plan.
+"""
 CLAUDE_SCOPE_FLAG = "--scope"
 
 
@@ -2458,6 +2466,7 @@ __all__ = [
     "CLAUDE_PROJECT_SCOPE",
     "CLAUDE_REFRESH_SCOPES",
     "CLAUDE_SCOPE_BEARING_OPERATIONS",
+    "CLAUDE_SCOPELESS_OPERATIONS",
     "CLAUDE_SCOPE_FLAG",
     "CLAUDE_USER_SCOPE",
     "CLAUDE_ENABLED_PLUGINS_FIELD",
