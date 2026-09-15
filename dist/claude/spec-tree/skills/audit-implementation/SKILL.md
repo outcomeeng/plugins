@@ -81,9 +81,13 @@ Run these stages in order. Each names what holds before the next begins, and
    run's sealed start inventory and recorded units, and emits `unaccounted` (a
    sealed path with no unit), `unexpected` (a recorded subject outside the
    inventory), `drifted` (the selector no longer resolves to that inventory),
-   and `nonfinal` (a required unit without a final status). Exit 1 returns the
-   run to stage 5 or 6; exit 2 is a command failure reported under
-   `<verdict_format>`. Reconciling against the plan the run driver holds NEVER
+   and `nonfinal` (a required unit without a final status). Exit 1 with
+   `unaccounted`, `unexpected`, or `nonfinal` returns the run to stage 5 or 6;
+   exit 1 with `drifted` is not repairable by inspection — the committed scope
+   moved after `start` — so it returns the `<verdict_format>` blocked
+   diagnostic naming the drift, and a new run addresses the new head. Exit 2
+   is a command failure reported under `<verdict_format>`. Reconciling against
+   the plan the run driver holds NEVER
    authorizes `finish` — a plan narrowed at stage 4 reconciles with itself and
    seals a partial inspection as complete, which is why the referent is the
    sealed inventory and the verdict is an exit code rather than an account.
@@ -103,7 +107,8 @@ range. `worktree:` before a selector explicitly requests an advisory audit of
 that committed scope plus the complete modified and untracked file set. Preserve
 the selector verbatim. Never infer advisory intent from a dirty checkout.
 
-Run-driver identity uses the six published producer fields in the invocation
+Run-driver identity uses the six published producer fields (the
+`expectedProducer` shape in `<verification_run_contract>`) in the invocation
 context, separate from `$ARGUMENTS`. Accept that identity generically in direct and composed invocations;
 never infer it from a role name, installed plugin, or descriptive text.
 
@@ -359,8 +364,10 @@ orchestration never substitutes its own file-pattern table. Build the
 pre-invocation inventory by discovered language and concern, then expand each
 concern's result into subject-path units when its coverage status is settled: a
 required unit settles on a final status, an accounting record settles on `skipped`.
-A discovered language with an incomplete trio records the missing required
-concerns and rejects the run.
+A discovered language with an incomplete trio records each missing concern
+as one required `missing-skill` unit per resolved path — the complete set is
+what the concern would have been offered and none of it was answered — with
+the absent skill as `expectedProducer`, and rejects the run.
 
 Each expected unit carries the scope payload in `<verification_run_contract>`: one resolved path as its `subject` — inspected by a concern, or accounted for as unclaimed — with `recordedByRunDriver` present on every unit so a missing-skill, unsupported, or accounting unit still identifies its recorder, `expectedProducer` naming the concern skill expected to cover it or the run-driver identity for an accounting record, and `producerProvenance` only where a concern skill executed. A concern's completion is every expected path unit carrying `coverageStatus: audited`; its finding count is the count of accepted finding rows for those path-scoped units.
 

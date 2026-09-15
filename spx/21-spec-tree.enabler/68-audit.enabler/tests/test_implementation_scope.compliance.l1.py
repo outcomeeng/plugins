@@ -228,7 +228,7 @@ def test_an_unlaunchable_cli_yields_a_diagnostic_rather_than_an_unreconciled_ver
 
 def test_a_recorded_run_reconciles_against_a_fresh_resolution_of_its_selector() -> None:
     with stale_local_base_repo() as stale:
-        identity = f"{stale.base_ref}..{stale.feature_branch}"
+        identity = "0000000000000000000000000000000000000000..1111111111111111111111111111111111111111"
         final = sorted(FINAL_COVERAGE_STATUSES)[0]
         unit = audit_scope_unit(
             stale.feature_file,
@@ -265,6 +265,13 @@ def test_a_recorded_run_reconciles_against_a_fresh_resolution_of_its_selector() 
 
         assert agreed.returncode == 0
         assert json.loads(agreed.stdout)[RECONCILE_FIELD.RECONCILED] is True
+        # The locator addresses the run by the sealed identity handed in, never
+        # by the fresh resolution: the sentinel identity cannot match any commit.
+        assert [call[3] for call in agreed.spx_invocations] == ["input", "render"]
+        assert all(
+            call[call.index("--scope") + 1] == identity
+            for call in agreed.spx_invocations
+        )
         assert drifted.returncode == EXIT_UNRECONCILED
         verdict = json.loads(drifted.stdout)
         assert verdict[RECONCILE_FIELD.DRIFTED] == [phantom]

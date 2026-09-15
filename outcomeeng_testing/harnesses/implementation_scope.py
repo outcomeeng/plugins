@@ -53,11 +53,12 @@ _main = cast(Callable[..., int], _MODULE["main"])
 
 @dataclass(frozen=True)
 class InProcessRun:
-    """Exit code and captured streams of one in-process entrypoint run."""
+    """Exit code, captured streams, and spx invocations of one in-process run."""
 
     returncode: int
     stdout: str
     stderr: str
+    spx_invocations: tuple[tuple[str, ...], ...]
 
 
 def run_implementation_scope_against_recorded_run(
@@ -85,9 +86,12 @@ def run_implementation_scope_against_recorded_run(
         "render": {AUDIT_FIELD.SCOPE_UNITS: list(scope_units)},
     }
 
+    invocations: list[tuple[str, ...]] = []
+
     def runner(args: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         if args[0] != SPX_COMMAND:
             return subprocess.run(args, **kwargs)
+        invocations.append(tuple(args))
         return subprocess.CompletedProcess(
             list(args), 0, stdout=json.dumps(replies[args[3]]) + "\n", stderr=""
         )
@@ -103,14 +107,19 @@ def run_implementation_scope_against_recorded_run(
             scope_identity,
         ],
         runner,
+        invocations,
     )
 
 
-def _run_in_process(argv: list[str], runner: Callable[..., Any]) -> InProcessRun:
+def _run_in_process(
+    argv: list[str],
+    runner: Callable[..., Any],
+    invocations: Sequence[tuple[str, ...]] = (),
+) -> InProcessRun:
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         code = _main(argv, runner=runner)
-    return InProcessRun(code, out.getvalue(), err.getvalue())
+    return InProcessRun(code, out.getvalue(), err.getvalue(), tuple(invocations))
 
 
 def run_implementation_scope_with_unlaunchable_spx(

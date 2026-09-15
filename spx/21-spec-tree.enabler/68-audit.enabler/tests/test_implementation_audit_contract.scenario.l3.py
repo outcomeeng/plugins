@@ -1,17 +1,21 @@
 from __future__ import annotations
 
+import json
 from itertools import pairwise
 
 from outcomeeng.validation.implementation_audit_contract import (
     ACCOUNTING_RECORD_KIND,
     AuditCoverageRequirement,
     AuditCoverageStatus,
+    PriorContextField,
+    ScopeUnitField,
     expected_verification_projection,
 )
 from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     observe_implementation_audit_lifecycle,
     observe_mismatched_terminal_status_finish,
 )
+from outcomeeng_testing.harnesses.changeset_scope import CHANGESET_SCOPE
 
 
 def test_verification_run_evidence_sequences_are_monotonic() -> None:
@@ -59,15 +63,33 @@ def test_verification_run_seals_an_accounting_record_for_an_unclaimed_path() -> 
     accounting_rows = [
         unit
         for unit in observation.rendered_scope_units
-        if unit.get("subject") == observation.accounting_path
+        if unit.get(ScopeUnitField.SUBJECT) == observation.accounting_path
     ]
     assert len(accounting_rows) == 1
     row = accounting_rows[0]
-    prior_context = row.get("priorContext")
+    prior_context = row.get(ScopeUnitField.PRIOR_CONTEXT)
     assert isinstance(prior_context, dict)
-    assert row.get("auditKind") == ACCOUNTING_RECORD_KIND
-    assert row.get("coverageRequirement") == AuditCoverageRequirement.OPTIONAL.value
-    assert row.get("coverageStatus") == AuditCoverageStatus.SKIPPED.value
-    assert prior_context.get("changedFilePartition") == observation.accounting_path
-    assert "languagePartition" not in prior_context
+    assert row.get(ScopeUnitField.AUDIT_KIND) == ACCOUNTING_RECORD_KIND
+    assert (
+        row.get(ScopeUnitField.COVERAGE_REQUIREMENT)
+        == AuditCoverageRequirement.OPTIONAL.value
+    )
+    assert row.get(ScopeUnitField.COVERAGE_STATUS) == AuditCoverageStatus.SKIPPED.value
+    assert (
+        prior_context.get(PriorContextField.CHANGED_FILE_PARTITION)
+        == observation.accounting_path
+    )
+    assert PriorContextField.LANGUAGE_PARTITION not in prior_context
     assert observation.sealed_projection[0] == observation.terminal_status.value
+
+
+def test_verification_run_start_and_input_carry_the_fields_the_skill_reads() -> None:
+    observation = observe_implementation_audit_lifecycle()
+
+    assert isinstance(observation.start_resolved_scope, list)
+    assert sorted(observation.start_resolved_scope) == sorted(observation.changed_paths)
+    assert isinstance(observation.recorded_input_content, str)
+    recorded_input = json.loads(observation.recorded_input_content)
+    assert recorded_input[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS] == list(
+        observation.changed_paths
+    )

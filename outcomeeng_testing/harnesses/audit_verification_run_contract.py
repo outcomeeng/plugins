@@ -47,6 +47,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     implementation_audit_finding_key,
     implementation_audit_finding_payload,
     implementation_audit_accounting_payload,
+    RUN_RESOLVED_SCOPE_FIELD,
     implementation_audit_input_payload,
     implementation_audit_provenance,
     implementation_audit_scope_payload,
@@ -71,17 +72,17 @@ from outcomeeng.validation.spx_version import (
 )
 from outcomeeng_testing.generators.audit_verification_run_contract import (
     ImplementationAuditVerificationProbe,
+    implementation_audit_unclaimed_path,
     implementation_audit_verification_probes,
 )
+
+from outcomeeng_testing.harnesses.changeset_scope import CHANGESET_SCOPE
+from outcomeeng_testing.harnesses.implementation_scope import AUDIT_FIELD
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 SPX_RELEASE_FIXTURE: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "spx_verification_run_release.json"
 )
-# One changed path no language concern claims, so the lifecycle records the
-# accounting record the audit skill requires and the projection carries it.
-ACCOUNTING_PATH: Final = "docs/left-to-its-owner.md"
-RENDERED_SCOPE_UNITS_FIELD: Final = "auditScopeUnits"
 SPX_VERIFICATION_RUN_HELP_FIXTURE: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "spx_verification_run_help.txt"
 )
@@ -151,6 +152,9 @@ class VerificationRunObservation:
     recorded_finding_count: int
     subject_paths: tuple[str, ...]
     accounting_path: str
+    changed_paths: tuple[str, ...]
+    start_resolved_scope: object
+    recorded_input_content: object
     scope_sequences: tuple[object, ...]
     finding_sequences: tuple[object, ...]
     sealed_projection: tuple[object, ...]
@@ -169,8 +173,13 @@ def observe_implementation_audit_lifecycle(
 
     with TemporaryDirectory() as temporary_directory:
         repository = Path(temporary_directory)
+        started = _start_implementation_audit_run(repository, rule, spx_command)
         scope, run_token, provenance, probes, scope_reports = (
-            _start_implementation_audit_run(repository, rule, spx_command)
+            started.scope,
+            started.run_token,
+            started.provenance,
+            started.probes,
+            started.scope_reports,
         )
         finding_probes = probes if findings_per_subject else probes[-1:]
         finding_reports = tuple(
@@ -207,11 +216,14 @@ def observe_implementation_audit_lifecycle(
         terminal_status=terminal_status,
         recorded_finding_count=len(finding_reports),
         subject_paths=tuple(probe.subject_path for probe in finding_probes),
-        accounting_path=ACCOUNTING_PATH,
+        accounting_path=implementation_audit_unclaimed_path(),
+        changed_paths=started.changed_paths,
+        start_resolved_scope=started.start_resolved_scope,
+        recorded_input_content=started.recorded_input_content,
         rendered_scope_units=tuple(
             cast(Mapping[str, object], unit)
             for unit in cast(
-                list[object], render_report.get(RENDERED_SCOPE_UNITS_FIELD, [])
+                list[object], render_report.get(AUDIT_FIELD.SCOPE_UNITS, [])
             )
         ),
         scope_sequences=tuple(
@@ -623,17 +635,25 @@ def _source_plugin_names() -> tuple[str, ...]:
     )
 
 
+@dataclass(frozen=True)
+class LifecycleStart:
+    """One started audit run with its recorded scope units and floor fields."""
+
+    scope: str
+    run_token: str
+    provenance: Mapping[str, object]
+    probes: tuple[ImplementationAuditVerificationProbe, ...]
+    scope_reports: tuple[dict[str, object], ...]
+    changed_paths: tuple[str, ...]
+    start_resolved_scope: object
+    recorded_input_content: object
+
+
 def _start_implementation_audit_run(
     repository: Path,
     rule: str,
     spx_command: tuple[str, ...],
-) -> tuple[
-    str,
-    str,
-    Mapping[str, object],
-    tuple[ImplementationAuditVerificationProbe, ...],
-    tuple[dict[str, object], ...],
-]:
+) -> LifecycleStart:
     language = source_language()
     probes = implementation_audit_verification_probes(language)
     provenance = implementation_audit_provenance(
@@ -643,17 +663,32 @@ def _start_implementation_audit_run(
     )
     _initialize_changeset_repository(
         repository,
-        (*(probe.subject_path for probe in probes), ACCOUNTING_PATH),
+        (
+            *(probe.subject_path for probe in probes),
+            implementation_audit_unclaimed_path(),
+        ),
     )
     scope = _changeset_scope(repository)
+    changed_paths = (
+        *(probe.subject_path for probe in probes),
+        implementation_audit_unclaimed_path(),
+    )
+    # The skill pipes the resolver's scope beneath the request, so the run's
+    # own start input carries the changed paths the reconciler reads back.
     start_report = _run_spx(
         repository,
         spx_command,
         ("start",),
         scope,
-        payload=implementation_audit_input_payload(rule),
+        payload={
+            **implementation_audit_input_payload(rule),
+            CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: list(changed_paths),
+        },
     )
     run_token = _required_string(start_report, RUN_TOKEN_FIELD)
+    input_report = _run_spx(
+        repository, spx_command, ("input",), scope, run_token=run_token
+    )
     scope_reports = tuple(
         _run_spx(
             repository,
@@ -672,7 +707,7 @@ def _start_implementation_audit_run(
         for probe in probes
     )
     accounting_payload = implementation_audit_accounting_payload(
-        subject_path=ACCOUNTING_PATH
+        subject_path=implementation_audit_unclaimed_path()
     )
     accounting_report = _run_spx(
         repository,
@@ -683,7 +718,16 @@ def _start_implementation_audit_run(
         payload=accounting_payload,
         idempotency_key=str(accounting_payload["unitId"]),
     )
-    return scope, run_token, provenance, probes, (*scope_reports, accounting_report)
+    return LifecycleStart(
+        scope=scope,
+        run_token=run_token,
+        provenance=provenance,
+        probes=probes,
+        scope_reports=(*scope_reports, accounting_report),
+        changed_paths=changed_paths,
+        start_resolved_scope=start_report.get(RUN_RESOLVED_SCOPE_FIELD),
+        recorded_input_content=input_report.get(AUDIT_FIELD.INPUT_CONTENT),
+    )
 
 
 def _add_implementation_audit_finding(
@@ -728,8 +772,13 @@ def _record_implementation_audit_finding(
     message: str,
     spx_command: tuple[str, ...],
 ) -> tuple[str, str, tuple[dict[str, object], ...], dict[str, object]]:
+    started = _start_implementation_audit_run(repository, rule, spx_command)
     scope, run_token, provenance, probes, scope_reports = (
-        _start_implementation_audit_run(repository, rule, spx_command)
+        started.scope,
+        started.run_token,
+        started.provenance,
+        started.probes,
+        started.scope_reports,
     )
     finding_report = _add_implementation_audit_finding(
         repository,
@@ -801,10 +850,12 @@ def _run_spx(
     if terminal_status is not None:
         command += ("--terminal-status", terminal_status)
     input_text = None if payload is None else f"{json.dumps(payload)}\n"
-    parsed = cast(
-        object,
-        json.loads(_run(repository, command, input_text).stdout),
-    )
+    lines = [
+        line
+        for line in _run(repository, command, input_text).stdout.splitlines()
+        if line.strip()
+    ]
+    parsed = cast(object, json.loads(lines[-1]) if lines else None)
     if not isinstance(parsed, dict):
         raise TypeError("spx command did not return a JSON object")
     return cast(dict[str, object], parsed)
