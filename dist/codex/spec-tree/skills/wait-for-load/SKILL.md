@@ -6,19 +6,20 @@ allowed-tools: Bash(python3 "${SKILL_DIR}/scripts/wait_for_load.py")
 ---
 
 <objective>
-One terminal host-readiness result, produced by one silent foreground process chained ahead of the resource-intensive command it guards.
+One terminal host-readiness result gating the resource-intensive command it guards.
 </objective>
 
 <workflow>
+
 1. Run the waiter and the guarded command as one shell line, on every agent harness alike:
 
 ```bash
 python3 "${SKILL_DIR}/scripts/wait_for_load.py" && <resource-intensive command>
 ```
 
-Give the call the longest foreground timeout the agent harness allows. A harness that moves a long call to the background when that timeout elapses re-invokes the session when the line exits, and that re-invocation is the only collection the line needs.
+Give the call the longest foreground timeout the agent harness allows. A harness that moves a long call to the background when that timeout elapses re-invokes the session when the line exits, and that re-invocation is the only collection the line needs. The tool grant above covers the waiter alone; the guarded command takes its own approval path on the chained line.
 
-2. Collect that one line. Never re-read host load, compute an interval, schedule a timer, poll, or start another waiter while it runs. On Codex the chained line is one exec call whose nested process handle is collected until its exit code is observed.
+2. Collect that one line. Never re-read host load, compute an interval, schedule a timer, poll, or start another waiter while it runs. When the harness hands back a process handle for the line, collect that same handle until its exit code is observed.
 
 3. Read the result. The waiter writes exactly one JSON document to standard error immediately before it exits, and standard output stays empty, so the guarded command's own output and exit code follow the document untouched.
    - Exit 0 with `status: "ready"` and `ready: true`: the guarded command started.
@@ -48,6 +49,7 @@ Immediately before exit it writes exactly one compact JSON document to standard 
 </input_output>
 
 <dependencies>
+
 - Python 3.13 or 3.14 as the supported window, with 3.13 as the floor
 - `os.getloadavg()` and a positive `os.cpu_count()` result
 - Python standard library only; no repository-local package, subprocess, file, or network dependency
@@ -83,6 +85,7 @@ Release verification covers these controlled boundaries without wall-clock delay
 </testing>
 
 <failure_modes>
+
 **Manual delay churn**
 
 - **What happened:** Claude manually selected 1-, 5-, 17-, 20-, and 9-minute delays while waiting for load.
@@ -112,7 +115,7 @@ Release verification covers these controlled boundaries without wall-clock delay
 <success_criteria>
 
 - the guarded command starts only on the waiter's zero exit in the same shell line, identically on every agent harness
-- one waiter process is active per attempt; no agent-owned host-load arithmetic, repeated load command, timer, heartbeat, shell sleep, or polling loop is used
+- one waiter process is active per attempt; no Claude-owned host-load arithmetic, repeated load command, timer, heartbeat, shell sleep, or polling loop is used
 - no stdout or stderr output appears before the terminal JSON document, the document is on standard error, and standard output stays empty
 - a `not_ready` result after four hours ends the attempt; `error`, `unsupported`, and `interrupted` leave the guarded command unstarted; a lost or truncated result re-runs the line rather than stopping for the operator
 - a lightweight command runs without the waiter
