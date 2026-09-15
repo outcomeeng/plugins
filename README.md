@@ -146,8 +146,8 @@ exists and whose project declares no noncanonical source, at that record's own s
 and project path, and the selected `$CODEX_HOME`; a record outside project and local scope,
 outside the catalog, at a vanished path, in a project declaring a noncanonical source,
 or in a project whose settings cannot be read is reported and left unchanged.
-The invocation checkout's own records are refreshed after its registration is
-reconciled, and its unreadable settings stop the run.
+A noncanonical source in the invocation checkout's own settings, or settings it
+cannot read, stops the run before any plan.
 The declared refresh selection uses Claude Code's install records
 and Codex's raw selected-home plugin declarations, including disabled and uncached plugins.
 Committed catalogs bound membership; trusted product configuration controls activation separately.
