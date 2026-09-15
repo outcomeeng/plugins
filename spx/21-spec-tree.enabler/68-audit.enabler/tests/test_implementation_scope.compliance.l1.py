@@ -6,6 +6,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     AuditCoverageRequirement,
     AuditCoverageStatus,
     ImplementationAuditConcern,
+    implementation_audit_concern_skill_name,
 )
 from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     source_language,
@@ -26,6 +27,7 @@ from outcomeeng_testing.harnesses.implementation_scope import (
     FINAL_COVERAGE_STATUSES,
     INPUT_COMMAND,
     LIVE_PATHS_KEY,
+    MISSING_SKILL_STATUS,
     RECONCILE_FIELD,
     RECONCILE_PREFIX,
     RENDER_COMMAND,
@@ -36,6 +38,7 @@ from outcomeeng_testing.harnesses.implementation_scope import (
     reconcile,
     run_implementation_scope,
     run_implementation_scope_against_recorded_run,
+    run_implementation_scope_recording_every_command,
     run_implementation_scope_with_unlaunchable_spx,
     spx_scope_arguments,
     spx_subcommands,
@@ -43,6 +46,7 @@ from outcomeeng_testing.harnesses.implementation_scope import (
 
 LANGUAGE = source_language()
 CONCERN = ImplementationAuditConcern.CODE
+FINAL = AuditCoverageStatus.AUDITED.value
 
 
 def test_supplied_keys_never_displace_the_resolved_scope() -> None:
@@ -80,7 +84,7 @@ def test_a_non_object_run_input_is_rejected_rather_than_ignored() -> None:
             stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input='["not", "an", "object"]'
         )
 
-        assert completed.returncode
+        assert completed.returncode == EXIT_COMMAND_FAILURE
         assert completed.stderr.startswith(ERROR_PREFIX)
         assert not completed.stdout
 
@@ -91,7 +95,7 @@ def test_malformed_run_input_json_is_rejected_rather_than_ignored() -> None:
             stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input='{"selector": '
         )
 
-        assert completed.returncode
+        assert completed.returncode == EXIT_COMMAND_FAILURE
         assert completed.stderr.startswith(ERROR_PREFIX)
         assert not completed.stdout
 
@@ -108,7 +112,7 @@ def test_a_sealed_path_without_a_recorded_unit_leaves_the_run_unreconciled() -> 
                 language=LANGUAGE,
                 concern=CONCERN,
                 requirement=REQUIRED_COVERAGE,
-                status=sorted(FINAL_COVERAGE_STATUSES)[0],
+                status=FINAL,
             ),
         ),
     )
@@ -158,7 +162,7 @@ def test_a_run_reconciles_only_on_exact_inventory_agreement() -> None:
             language=LANGUAGE,
             concern=CONCERN,
             requirement=REQUIRED_COVERAGE,
-            status=sorted(FINAL_COVERAGE_STATUSES)[0],
+            status=FINAL,
         )
         for subject in sealed
     )
@@ -176,7 +180,7 @@ def test_a_run_reconciles_only_on_exact_inventory_agreement() -> None:
                 language=LANGUAGE,
                 concern=CONCERN,
                 requirement=REQUIRED_COVERAGE,
-                status=sorted(FINAL_COVERAGE_STATUSES)[0],
+                status=FINAL,
             ),
         ),
     )
@@ -208,16 +212,18 @@ def test_an_unreadable_run_yields_a_diagnostic_rather_than_a_verdict() -> None:
 
 def test_a_reconcile_request_without_a_sealed_identity_is_rejected() -> None:
     with stale_local_base_repo() as stale:
-        completed = run_implementation_scope(
+        completed = run_implementation_scope_recording_every_command(
             stale.repo,
             CHANGESET_SCOPE.HEAD_REF,
             reconcile_run=ABSENT_RUN_TOKEN,
         )
 
-        assert completed.returncode
+        assert completed.returncode == EXIT_COMMAND_FAILURE
         assert completed.stderr.startswith(RECONCILE_PREFIX)
         assert SCOPE_IDENTITY_OPTION in completed.stderr
         assert not completed.stdout
+        # The request fails before any command runs: git resolution included.
+        assert completed.recorded_launches == ()
 
 
 def test_an_unlaunchable_cli_yields_a_diagnostic_rather_than_an_unreconciled_verdict() -> (
@@ -239,21 +245,20 @@ def test_an_unlaunchable_cli_yields_a_diagnostic_rather_than_an_unreconciled_ver
 def test_a_recorded_run_reconciles_against_a_fresh_resolution_of_its_selector() -> None:
     with stale_local_base_repo() as stale:
         identity = SENTINEL_SCOPE_IDENTITY
-        final = sorted(FINAL_COVERAGE_STATUSES)[0]
         (phantom,) = distinct_subject_paths(1)
         unit = audit_scope_unit(
             stale.feature_file,
             language=LANGUAGE,
             concern=CONCERN,
             requirement=REQUIRED_COVERAGE,
-            status=final,
+            status=FINAL,
         )
         phantom_unit = audit_scope_unit(
             phantom,
             language=LANGUAGE,
             concern=CONCERN,
             requirement=REQUIRED_COVERAGE,
-            status=final,
+            status=FINAL,
         )
 
         agreed = run_implementation_scope_against_recorded_run(
@@ -292,7 +297,6 @@ def test_a_recorded_run_reconciles_against_a_fresh_resolution_of_its_selector() 
 
 def test_an_advisory_live_path_is_expected_beside_the_committed_inventory() -> None:
     with stale_local_base_repo() as stale:
-        final = sorted(FINAL_COVERAGE_STATUSES)[0]
         (live,) = distinct_subject_paths(1)
         recorded_input = {
             CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: [stale.feature_file],
@@ -303,14 +307,14 @@ def test_an_advisory_live_path_is_expected_beside_the_committed_inventory() -> N
             language=LANGUAGE,
             concern=CONCERN,
             requirement=REQUIRED_COVERAGE,
-            status=final,
+            status=FINAL,
         )
         live_unit = audit_scope_unit(
             live,
             language=LANGUAGE,
             concern=CONCERN,
             requirement=REQUIRED_COVERAGE,
-            status=final,
+            status=FINAL,
         )
 
         covered = run_implementation_scope_against_recorded_run(
@@ -354,3 +358,30 @@ def test_a_run_document_the_comparison_cannot_read_yields_a_diagnostic() -> None
         assert completed.returncode == EXIT_COMMAND_FAILURE
         assert completed.stderr.startswith(RECONCILE_PREFIX)
         assert not completed.stdout
+
+
+def test_a_missing_skill_unit_names_its_absent_skill_and_is_never_unexpected() -> None:
+    (path,) = distinct_subject_paths(1)
+    absent_concern = ImplementationAuditConcern.ARCHITECTURE
+    path_unit = audit_scope_unit(
+        path,
+        language=LANGUAGE,
+        concern=CONCERN,
+        requirement=REQUIRED_COVERAGE,
+        status=FINAL,
+    )
+    missing_unit = audit_scope_unit(
+        implementation_audit_concern_skill_name(LANGUAGE, absent_concern),
+        language=LANGUAGE,
+        concern=absent_concern,
+        requirement=REQUIRED_COVERAGE,
+        status=MISSING_SKILL_STATUS,
+    )
+
+    verdict = reconcile((path,), (path,), (path_unit, missing_unit))
+
+    # The absent skill's name is the unit's subject, not a path, so it stands
+    # beside the path units without counting as a subject outside the inventory.
+    assert verdict[RECONCILE_FIELD.UNEXPECTED] == []
+    assert verdict[RECONCILE_FIELD.NONFINAL] == []
+    assert verdict[RECONCILE_FIELD.RECONCILED] is True

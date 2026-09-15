@@ -7,6 +7,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     ACCOUNTING_RECORD_KIND,
     AuditCoverageRequirement,
     AuditCoverageStatus,
+    AuditTerminalStatus,
     PriorContextField,
     ScopeUnitField,
     expected_verification_projection,
@@ -51,14 +52,15 @@ def test_verification_run_counts_one_rule_across_subjects() -> None:
 
 
 def test_verification_run_rejects_approval_after_a_blocking_finding() -> None:
-    exit_status = observe_mismatched_terminal_status_finish()
+    observation = observe_mismatched_terminal_status_finish()
 
-    assert exit_status is not None
-    assert exit_status != 0
+    assert observation.finish_exit_status is not None
+    assert observation.finish_exit_status != 0
+    assert observation.sealed_after_finish is False
 
 
 def test_verification_run_seals_an_accounting_record_for_an_unclaimed_path() -> None:
-    observation = observe_implementation_audit_lifecycle()
+    observation = observe_implementation_audit_lifecycle(record_findings=False)
 
     accounting_rows = [
         unit
@@ -80,7 +82,10 @@ def test_verification_run_seals_an_accounting_record_for_an_unclaimed_path() -> 
         == observation.accounting_path
     )
     assert PriorContextField.LANGUAGE_PARTITION not in prior_context
-    assert observation.sealed_projection[0] == observation.terminal_status.value
+    # No finding was recorded, so an accounting record that forced the rollup
+    # would show here as rejected; the findings alone derive the status.
+    assert observation.recorded_finding_count == 0
+    assert observation.sealed_projection[0] == AuditTerminalStatus.APPROVED.value
 
 
 def test_verification_run_start_and_input_carry_the_fields_the_skill_reads() -> None:

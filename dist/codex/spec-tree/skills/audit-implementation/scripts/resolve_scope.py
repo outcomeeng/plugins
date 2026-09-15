@@ -7,8 +7,8 @@ nonexistent repository) and ``test_implementation_scope.compliance.l1.py``
 non-object and a malformed run-input value, a sealed inventory path carrying no
 recorded scope unit, a required unit outside the final coverage statuses beside
 an optional unit carrying the same status, exact inventory agreement, drift in
-both directions, a recorded subject outside the inventory, an advisory live
-path beside the committed inventory, a reconcile request carrying no sealed
+both directions, a recorded subject outside the inventory, a missing-skill unit
+naming its absent skill, an advisory live path beside the committed inventory, a reconcile request carrying no sealed
 scope identity, a run token the CLI cannot read, a CLI that cannot be launched,
 and a run document shaped so the comparison cannot run).
 """
@@ -38,8 +38,12 @@ EXIT_UNRECONCILED = 1
 EXIT_COMMAND_FAILURE = 2
 SCOPE_IDENTITY_OPTION = "--scope-identity"
 REQUIRED_COVERAGE = "required"
+# A missing-skill unit names the absent concern skill as its subject rather
+# than a path, so it stands beside the path units and never counts as a
+# recorded subject outside the inventory.
+MISSING_SKILL_STATUS = "missing-skill"
 FINAL_COVERAGE_STATUSES = frozenset(
-    {"audited", "not-applicable", "missing-skill", "unsupported"}
+    {"audited", "not-applicable", MISSING_SKILL_STATUS, "unsupported"}
 )
 
 
@@ -109,7 +113,11 @@ def reconcile(expected_paths, resolved_paths, scope_units, live_paths=()):
     """
     expected = list(expected_paths)
     expected += [path for path in live_paths if path not in expected]
-    recorded = {unit.get(AuditField.SUBJECT) for unit in scope_units}
+    recorded = {
+        unit.get(AuditField.SUBJECT)
+        for unit in scope_units
+        if unit.get(AuditField.COVERAGE_STATUS) != MISSING_SKILL_STATUS
+    }
     verdict = {
         ReconcileField.EXPECTED: len(expected),
         ReconcileField.RECORDED: len(recorded),

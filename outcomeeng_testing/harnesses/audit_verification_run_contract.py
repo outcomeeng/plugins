@@ -164,12 +164,22 @@ class VerificationRunObservation:
 def observe_implementation_audit_lifecycle(
     *,
     findings_per_subject: bool = False,
+    record_findings: bool = True,
 ) -> VerificationRunObservation:
-    """Drive one audit run and expose its sequences and sealed projection."""
+    """Drive one audit run and expose its sequences and sealed projection.
+
+    With ``record_findings`` false the run records coverage only and finishes
+    ``approved``, so a reader can tell whether a recorded unit alone changed
+    the terminal status.
+    """
     spx_command = _floor_release_spx_command()
     rule = observe_implementation_audit_lifecycle.__name__
     message = observe_implementation_audit_lifecycle.__doc__ or rule
-    terminal_status = AuditTerminalStatus.REJECTED
+    terminal_status = (
+        AuditTerminalStatus.REJECTED
+        if record_findings
+        else AuditTerminalStatus.APPROVED
+    )
 
     with TemporaryDirectory() as temporary_directory:
         repository = Path(temporary_directory)
@@ -182,6 +192,8 @@ def observe_implementation_audit_lifecycle(
             started.scope_reports,
         )
         finding_probes = probes if findings_per_subject else probes[-1:]
+        if not record_findings:
+            finding_probes = ()
         finding_reports = tuple(
             _add_implementation_audit_finding(
                 repository,
@@ -243,8 +255,16 @@ def observe_implementation_audit_lifecycle(
     )
 
 
-def observe_mismatched_terminal_status_finish() -> int | None:
-    """Return the finish exit status when approval follows a blocking finding."""
+@dataclass(frozen=True)
+class MismatchedFinishObservation:
+    """The rejected finish's exit status and the run's sealed state read afterwards."""
+
+    finish_exit_status: int | None
+    sealed_after_finish: object
+
+
+def observe_mismatched_terminal_status_finish() -> MismatchedFinishObservation:
+    """Observe approval following a blocking finding: the finish result and sealed state."""
     spx_command = _floor_release_spx_command()
     rule = observe_mismatched_terminal_status_finish.__name__
 
@@ -256,6 +276,7 @@ def observe_mismatched_terminal_status_finish() -> int | None:
             observe_mismatched_terminal_status_finish.__doc__ or rule,
             spx_command,
         )
+        finish_exit_status: int | None = None
         try:
             _run_spx(
                 repository,
@@ -266,9 +287,15 @@ def observe_mismatched_terminal_status_finish() -> int | None:
                 terminal_status=AuditTerminalStatus.APPROVED.value,
             )
         except subprocess.CalledProcessError as rejection:
-            return rejection.returncode
+            finish_exit_status = rejection.returncode
+        status_report = _run_spx(
+            repository, spx_command, ("status",), scope, run_token=run_token
+        )
 
-    return None
+    return MismatchedFinishObservation(
+        finish_exit_status=finish_exit_status,
+        sealed_after_finish=status_report.get(RUN_SEALED_FIELD),
+    )
 
 
 def audit_contract_rejects_language_specific_wrapper() -> bool:

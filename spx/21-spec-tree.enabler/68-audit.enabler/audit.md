@@ -6,6 +6,17 @@ CAN contribute code, test, and architecture audit intelligence without shipping 
 
 ## Assertions
 
+### Scenarios
+
+- Given a feature branch whose local base lags its remote-tracking base, when implementation-audit scope discovery receives `HEAD`, then it returns the full remote-base and feature commit identities and only the feature's changed paths ([test](tests/test_implementation_scope.scenario.l1.py))
+- Given a nonexistent repository path, when implementation-audit scope discovery receives it through `--repo`, then it returns an unsuccessful scope-resolution diagnostic naming that path, without scope JSON or a Python traceback ([test](tests/test_implementation_scope.scenario.l1.py))
+- Given the pinned published SPX CLI and source-owned implementation-audit payload contracts, when the verification-run lifecycle records scope and finding evidence and finishes with the evidence-derived status, then it returns monotonic evidence sequences and a sealed projection carrying the authoritative finding count ([test](tests/test_implementation_audit_contract.scenario.l3.py))
+- Given a verification run carrying a recorded blocking finding, when the lifecycle finishes with an approving terminal status, then the finish fails rather than sealing a terminal status the recorded evidence contradicts ([test](tests/test_implementation_audit_contract.scenario.l3.py))
+- Given a changeset carrying a path no language concern claims, when the lifecycle records that path's accounting record through the pinned published SPX CLI and finishes, then the sealed projection carries exactly one optional, skipped coverage-gap unit for that path with no language partition, and the terminal status is the one the findings derive ([test](tests/test_implementation_audit_contract.scenario.l3.py))
+- Given the pinned published SPX CLI, when a run starts from a piped input carrying the resolved changed paths and that input is read back, then `start` returns those paths as `resolvedScope` and `input` returns the piped document as a JSON string under `content` — the two fields the skill and its reconciler read ([test](tests/test_implementation_audit_contract.scenario.l3.py))
+
+### Compliance
+
 - ALWAYS: the `spec-tree:audit-implementation` prompt contract admits only `audited`, `not-applicable`, `missing-skill`, or `unsupported` as a required coverage unit's final status, and requires a run that reaches none of those to return the blocked diagnostic naming the concrete failed operation or absent prerequisite ([audit])
 - ALWAYS: the `spec-tree:audit-implementation` prompt contract requires every required unit to carry a final status, every unclaimed resolved path to carry its accounting record, and every recorded finding to reference an accepted unit before the run finishes, and continues the run when that reconciliation fails ([audit])
 - ALWAYS: the `spec-tree:audit-implementation` prompt contract requires each subject body to be inspected completely from the resolved base-to-head scope, re-issuing a truncated or partial read in bounded ranges until the body is complete ([audit])
@@ -19,24 +30,13 @@ CAN contribute code, test, and architecture audit intelligence without shipping 
 - NEVER: the `spec-tree:audit-implementation` prompt contract authorizes finishing from a reconciliation against the run's own planned inventory alone — a plan narrowed before enumeration reconciles with itself ([audit])
 - NEVER: the `spec-tree:audit-implementation` prompt contract admits a raised finding or a rejected terminal status as a reason to leave a remaining concern or resolved path uninspected or unrecorded ([audit])
 - ALWAYS: every `spx verification run` response field the implementation-audit skill and its bundled reconciler read is present in the repository's declared spx floor, so a consumer pinned at that floor reaches `finish` ([audit])
-
-### Scenarios
-
-- Given a feature branch whose local base lags its remote-tracking base, when implementation-audit scope discovery receives `HEAD`, then it returns the full remote-base and feature commit identities and only the feature's changed paths ([test](tests/test_implementation_scope.scenario.l1.py))
-- Given a nonexistent repository path, when implementation-audit scope discovery receives it through `--repo`, then it returns an unsuccessful scope-resolution diagnostic naming that path, without scope JSON or a Python traceback ([test](tests/test_implementation_scope.scenario.l1.py))
-- Given the pinned published SPX CLI and source-owned implementation-audit payload contracts, when the verification-run lifecycle records scope and finding evidence and finishes with the evidence-derived status, then it returns monotonic evidence sequences and a sealed projection carrying the authoritative finding count ([test](tests/test_implementation_audit_contract.scenario.l3.py))
-- Given a verification run carrying a recorded blocking finding, when the lifecycle finishes with an approving terminal status, then the finish fails rather than sealing a terminal status the recorded evidence contradicts ([test](tests/test_implementation_audit_contract.scenario.l3.py))
-- Given a changeset carrying a path no language concern claims, when the lifecycle records that path's accounting record through the pinned published SPX CLI and finishes, then the sealed projection carries exactly one optional, skipped coverage-gap unit for that path with no language partition, and the terminal status is the one the findings derive ([test](tests/test_implementation_audit_contract.scenario.l3.py))
-- Given the pinned published SPX CLI, when a run starts from a piped input carrying the resolved changed paths and that input is read back, then `start` returns those paths as `resolvedScope` and `input` returns the piped document as a JSON string under `content` — the two fields the skill and its reconciler read ([test](tests/test_implementation_audit_contract.scenario.l3.py))
-
-### Compliance
-
 - NEVER: a key supplied to the implementation-audit scope resolver's run-input option displaces the git-resolved base, head, or changed-path values ([test](tests/test_implementation_scope.compliance.l1.py))
 - NEVER: the implementation-audit scope resolver accepts a run-input value that is not a JSON object — it exits nonzero naming the failure and emits no payload ([test](tests/test_implementation_scope.compliance.l1.py))
 - ALWAYS: the implementation-audit reconciler reports a run unreconciled and names every path of the run's sealed inventory that carries no recorded scope unit ([test](tests/test_implementation_scope.compliance.l1.py))
 - ALWAYS: the implementation-audit reconciler reports a run unreconciled and names every required scope unit whose coverage status is not one of the final statuses ([test](tests/test_implementation_scope.compliance.l1.py))
 - ALWAYS: the implementation-audit reconciler reports a run reconciled only when every sealed-inventory path carries a recorded subject, no recorded subject lies outside that inventory, and the sealed inventory matches a fresh resolution of the same selector ([test](tests/test_implementation_scope.compliance.l1.py))
 - ALWAYS: the implementation-audit reconciler expects an advisory run's sealed live paths as subjects beside the committed inventory and never counts them as drift, so an advisory audit reconciles on the same terms as a committed one ([test](tests/test_implementation_scope.compliance.l1.py))
+- NEVER: the implementation-audit reconciler counts a `missing-skill` unit as a subject outside the sealed inventory — its subject names the absent skill, not a path, and it stands beside the path units as a required final unit ([test](tests/test_implementation_scope.compliance.l1.py))
 - NEVER: the implementation-audit reconciler emits a verdict for a run it cannot read — whether the CLI reports the run absent, cannot be launched at all, or returns a document shaped so the comparison cannot run, it exits with the command-failure code naming the failure, never with the code that returns a readable run to inspection ([test](tests/test_implementation_scope.compliance.l1.py))
 - NEVER: the implementation-audit reconciler addresses a run by a freshly resolved scope identity — the run's sealed identity is an explicit argument, and its absence exits nonzero naming the failure before any command runs ([test](tests/test_implementation_scope.compliance.l1.py))
 - ALWAYS: every programming-language plugin ships its implementation-code audit skill as `audit-{lang}-code` beside its `audit-{lang}-tests` and `audit-{lang}-architecture` concern skills ([test](tests/test_implementation_audit_contract.compliance.l1.py))

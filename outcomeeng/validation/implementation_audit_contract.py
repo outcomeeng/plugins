@@ -119,6 +119,13 @@ def implementation_audit_finding_key(
     return f"{unit_id}:{rule}"
 
 
+def implementation_audit_concern_skill_name(
+    language: str, concern: ImplementationAuditConcern
+) -> str:
+    """Return the name of the concern skill expected to cover one language partition."""
+    return f"audit-{language}-{concern.value}"
+
+
 def implementation_audit_producer_identity(
     language: str,
     concern: ImplementationAuditConcern,
@@ -128,7 +135,7 @@ def implementation_audit_producer_identity(
         "producerKind": "skill",
         "agentName": IMPLEMENTATION_AUDITOR_AGENT_NAME,
         "agentOwningPluginName": SPEC_TREE_PLUGIN_NAME,
-        "skillName": f"audit-{language}-{concern.value}",
+        "skillName": implementation_audit_concern_skill_name(language, concern),
         "skillOwningPluginName": language,
         "invocationRole": "leaf-skill",
     }

@@ -58,9 +58,8 @@ Run these stages in order. Each names what holds before the next begins, and
    resolved path enters the inventory — claimed by a concern or left to another
    auditor — and a unit enters planned, without a status.
 5. **Inspect.** Read each subject body completely from the resolved
-   `base..head` scope. MUST re-issue a truncated or partial read in bounded
-   ranges until the body is complete. NEVER derive a subject body from a single
-   commit's patch, and NEVER treat an unrecovered read as coverage evidence.
+   `base..head` scope, re-issuing a truncated or partial read in bounded
+   ranges until the body is complete, per the subject-body constraint.
 6. **Record.** Hold each unit planned until its concern returns a final result,
    then persist that concern's complete claimed-path coverage before any of its
    findings. A required unit reaches only `audited`, `not-applicable`,
@@ -217,7 +216,7 @@ required.
   "auditKind": "<code|tests|architecture|coverage-gap>",
   "subject": "<the exact resolved path>",
   "coverageRequirement": "<required|optional>",
-  "coverageStatus": "<audited|not-applicable|missing-skill|unsupported>",
+  "coverageStatus": "<audited|not-applicable|missing-skill|unsupported|skipped>",
   "priorContext": {
     "changedFilePartition": "<the exact resolved path>",
     "languagePartition": "<language-when-known>",
@@ -369,9 +368,13 @@ pre-invocation inventory by discovered language and concern, then expand each
 concern's result into subject-path units when its coverage status is settled: a
 required unit settles on a final status, an accounting record settles on `skipped`.
 A discovered language with an incomplete trio records each missing concern
-as one required `missing-skill` unit per resolved path — the complete set is
-what the concern would have been offered and none of it was answered — with
-the absent skill as `expectedProducer`, and rejects the run.
+as one required `missing-skill` unit whose `subject` and
+`priorContext.changedFilePartition` name the absent skill
+(`audit-<lang>-<concern>`) rather than a path — no concern claimed a path, so
+none is attached — with that skill as `expectedProducer`, and rejects the run.
+The reconciler never counts a `missing-skill` unit as a subject outside the
+inventory; the paths themselves stay accounted by the language's other concerns
+or by accounting records.
 
 Each expected unit carries the scope payload in `<verification_run_contract>`: one resolved path as its `subject` — inspected by a concern, or accounted for as unclaimed — with `recordedByRunDriver` present on every unit so a missing-skill, unsupported, or accounting unit still identifies its recorder, `expectedProducer` naming the concern skill expected to cover it or the run-driver identity for an accounting record, and `producerProvenance` only where a concern skill executed. A concern's completion is every expected path unit carrying `coverageStatus: audited`; its finding count is the count of accepted finding rows for those path-scoped units.
 

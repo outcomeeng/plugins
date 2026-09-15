@@ -48,6 +48,7 @@ EXIT_UNRECONCILED = cast(int, _MODULE["EXIT_UNRECONCILED"])
 EXIT_COMMAND_FAILURE = cast(int, _MODULE["EXIT_COMMAND_FAILURE"])
 REQUIRED_COVERAGE = cast(str, _MODULE["REQUIRED_COVERAGE"])
 FINAL_COVERAGE_STATUSES = cast(frozenset[str], _MODULE["FINAL_COVERAGE_STATUSES"])
+MISSING_SKILL_STATUS = cast(str, _MODULE["MISSING_SKILL_STATUS"])
 AUDIT_FIELD = cast(Any, _MODULE["AuditField"])
 RECONCILE_FIELD = cast(Any, _MODULE["ReconcileField"])
 reconcile = cast(
@@ -66,7 +67,9 @@ class InProcessRun:
     returncode: int
     stdout: str
     stderr: str
-    spx_invocations: tuple[tuple[str, ...], ...]
+    # Every launch the injected runner recorded: spx launches for the
+    # recorded-run runner, every launch for the record-everything runner.
+    recorded_launches: tuple[tuple[str, ...], ...]
 
 
 def run_implementation_scope_against_recorded_run(
@@ -119,14 +122,35 @@ def run_implementation_scope_against_recorded_run(
     )
 
 
+def run_implementation_scope_recording_every_command(
+    repo: pathlib.Path, selector: str, *, reconcile_run: str
+) -> InProcessRun:
+    """Drive a reconcile request that omits the sealed identity, recording every launch.
+
+    The runner delegates nothing and records everything, so the observation is
+    the complete list of commands the entrypoint attempted before returning.
+    """
+    invocations: list[tuple[str, ...]] = []
+
+    def runner(args: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        invocations.append(tuple(args))
+        return subprocess.CompletedProcess(list(args), 0, stdout="", stderr="")
+
+    return _run_in_process(
+        [selector, "--repo", str(repo), "--reconcile-run", reconcile_run],
+        runner,
+        invocations,
+    )
+
+
 def spx_subcommands(run: InProcessRun) -> tuple[str, ...]:
     """Return the spx subcommand each recorded invocation addressed."""
-    return tuple(call[1 + len(RUN_COMMAND_PREFIX)] for call in run.spx_invocations)
+    return tuple(call[1 + len(RUN_COMMAND_PREFIX)] for call in run.recorded_launches)
 
 
 def spx_scope_arguments(run: InProcessRun) -> tuple[str, ...]:
     """Return the scope identity each recorded invocation carried."""
-    return tuple(call[call.index(SCOPE_OPTION) + 1] for call in run.spx_invocations)
+    return tuple(call[call.index(SCOPE_OPTION) + 1] for call in run.recorded_launches)
 
 
 def _run_in_process(
