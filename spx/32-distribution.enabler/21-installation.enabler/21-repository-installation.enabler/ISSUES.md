@@ -32,6 +32,14 @@ The `<plugin>-plugin` skill's Claude Code rendering carries `scripts/place_agent
 
 **Evidence**: skill audit warnings `f-007` and `f-008` against `06b86db6b`, and `f-006` and `f-007` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
 
+## Lifecycle evidence cases are fabricated by the harness
+
+The lifecycle tests in `tests/test_repository_installation.compliance.l1.py` take their agent-definition bytes, filenames, and slugs from `PluginLifecycleHarness` in `outcomeeng_testing/harnesses/installation.py`, which formats them from the plugin name, and take the foreign, external, concurrent-edit, malformed-digest, and malformed-settings payloads from constants the same module declares. The vocabulary those tests assert against — the write, prune, and collision prefixes, the non-hex-digest message, and the cause names — is imported from the shipped placement script, and every resource arrangement is harness-owned. Whether the fabricated payloads are incidental values a harness handle may supply, because the script treats definition bytes opaquely by digest, or cases that need an independent provenance source is the open question.
+
+**Evidence.** The test-evidence audit for Change #39 rejected the earlier form of these tests (`f-001` against `f1358c4324eaef89ade99d8d41b42940ed881121`, repeated against `e58f52f1bcb25d2a7e9fabb79f70f33f4dfc46b0`) for constructing definition bytes and the expected ownership document inside the test. After the relocation into the harness, the isolated audits of this node against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `1ce7658833ad03c4a01e2a7ef749a875c225fe50`, `d955174c8464c2179062f2c4ff558d00a8f1b501`, and `b86d79b125f0820cdd7747e60d459a2564f41a3d` inspected the lifecycle chain and raised no finding on it; changeset reviews `2026-09-15_18-11-20-793-0414ce12ec4c` and `2026-09-15_18-30-45-255-d7e943a26e22` hold that relocation alone does not settle case provenance.
+
+**Settlement condition.** An isolated test-evidence audit that names the fabricated payloads as incidental harness-handle values, or a source-owned case origin for the definition bytes and slugs recorded in the assertion-design record.
+
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
 `test_real_agent_clis_map_full_and_generated_subsets` can fail at the `marketplace-refresh` operation. `codex plugin marketplace upgrade outcomeeng --json` then exits 1 with:
