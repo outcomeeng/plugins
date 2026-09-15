@@ -12,13 +12,13 @@ The current checkout brought current with its fetched base, with authorized dirt
 
 <workflow>
 
-`$ARGUMENTS` carries an optional working tree and an optional `--base <branch>`; the working tree defaults to the current directory and the base to `origin/HEAD`. Record the absolute checkout root and selected base, then run the synchronization primitive against that working tree. Retain the same checkout and base through checkpoint recovery and retry:
+`$ARGUMENTS` carries an optional `repo`, an optional `--base <branch>`, and an optional `--no-fetch`; `repo` defaults to the current directory and the base to `origin/HEAD`. Record the absolute checkout root and selected base, then run the synchronization primitive against that working tree. Retain the same checkout and base through checkpoint recovery and retry:
 
 ```bash
 python3 "${SKILL_DIR}/scripts/sync_base.py" [repo] [--base <branch>] [--no-fetch]
 ```
 
-It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. Those primitives live in the sibling `scope-changeset` skill's `scripts/changeset_scope.py`, which the synchronizer imports by a path relative to its own file, so both skills must be installed from the same plugin tree; a missing sibling script fails the primitive at import, naming the expected path, before any git command runs. When an attached branch is behind, it rebases the branch onto the fetched base. When a clean detached HEAD is an ancestor of the fetched base, it advances the worktree with `git switch --detach origin/<base>`; a detached HEAD carrying commits absent from the base fails without moving. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). A stacked branch synchronizes against its predecessor without `--base`; see `<stacked_branches>`.
+It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. Those primitives belong to the sibling `scope-changeset` skill, which the synchronizer reaches by a path relative to its own file, so both skills must be installed from the same plugin tree; a missing sibling fails the primitive at import, naming the expected path, before any git command runs. When an attached branch is behind, it rebases the branch onto the fetched base. When a clean detached HEAD is an ancestor of the fetched base, it advances the worktree with `git switch --detach origin/<base>`; a detached HEAD carrying commits absent from the base fails without moving. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). A stacked branch synchronizes against its predecessor without `--base`; see `<stacked_branches>`.
 
 It prints a JSON result (`status`, `base_ref`, `remote_ref`, `branch`, `detail`, `preservation` on a clean outcome, and `conflict` on an active rebase conflict) and exits:
 
@@ -184,7 +184,7 @@ The bundled synchronizer is covered before release by this real-git test matrix:
 | unrecorded branch above two ordered local predecessors          | exit 0; record written naming the nearer predecessor and its fork                                                                       |
 | unrecorded branch merging two unordered local candidates        | exit 0; no record written; synced against the default base                                                                              |
 | rewritten predecessor force-pushed and still open on origin     | exit 0; `status=rebased` onto `origin/<predecessor>` from the recorded tip                                                              |
-| stack record write refused by git                               | exit 1; `status=git_failure` naming the configuration key                                                                               |
+| stack record write or removal refused by git                    | exit 1; `status=git_failure` naming the configuration key                                                                               |
 | chain of three stacked branches, the first rebased              | exit 0; `status=rebased`; the middle branch records the first and its pre-rebase tip; the top branch keeps its record naming the middle |
 
 Every fixture uses an invocation-unique temporary directory owned and removed by pytest's `tmp_path` fixture.
@@ -213,12 +213,12 @@ How to avoid: Apply the operator's actual path-scoped authority and explicit lim
 
 <primitive_contract>
 
-- Exit 0 carries `status=already_current` or `status=rebased`, `conflict=null`, and a non-null `preservation` object.
+- A clean outcome — the workflow table's exit 0 rows — carries `conflict=null` and a non-null `preservation` object.
 - After an attached-branch `rebased` outcome, `git merge-base --is-ancestor origin/<base> HEAD` succeeds and the branch's commits remain reachable from HEAD.
 - After a detached-head `rebased` outcome, HEAD equals the full OID of the fetched `origin/<base>` tip.
-- Exit 4 carries `status=dirty_tree` and `conflict=null`; HEAD, index, and tracked working-tree content match their pre-invocation state.
-- Exit 3 carries `status=conflict`, a non-null `conflict` object with paths, git facts, conflict text, and operator options, and an active rebase state remains available for inspection.
-- Exit 1 carries `status=git_failure` and a non-empty `detail`; a diverged detached HEAD remains at its original full OID.
+- A `dirty_tree` outcome carries `conflict=null`; HEAD, index, and tracked working-tree content match their pre-invocation state.
+- A `conflict` outcome carries a non-null `conflict` object with paths, git facts, conflict text, and operator options, and an active rebase state remains available for inspection.
+- A `git_failure` outcome carries a non-empty `detail`; a diverged detached HEAD remains at its original full OID.
 - Every clean outcome's `preservation` object carries `schema_version`, full old/new base and head OIDs, base and branch path sets, overlap, and patch-identity booleans; it carries no project lane name.
 - Git state and command output show no synchronization through `git reset`, no commit or stash created by the bundled synchronizer, and no automatic `git rebase --abort` at conflict handoff.
 - Each result preserves the primitive's status and diagnostics; checkpoint recovery never invents additional primitive exit codes.
