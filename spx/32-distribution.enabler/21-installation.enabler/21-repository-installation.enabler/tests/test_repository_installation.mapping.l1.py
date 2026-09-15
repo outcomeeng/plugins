@@ -11,7 +11,6 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
-    MARKETPLACE_NAME,
     NONCANONICAL_SOURCE_WARNING,
     OUT_OF_SCOPE_RECORD_WARNING,
     PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
@@ -24,6 +23,7 @@ from outcomeeng.distribution.installation import (
     ReportField,
     Operation,
     installed_plugin_names,
+    marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import (
     RecordDisposition,
@@ -183,7 +183,7 @@ def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None
             continue
         assert matching_updates == [], (entry, disposition)
         if disposition is RecordDisposition.EXCLUDED:
-            assert not entry[CLAUDE_PLUGIN_ID_FIELD].endswith(f"@{MARKETPLACE_NAME}")
+            assert marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]) is None
             assert not any(
                 template.format(plugin=plugin, scope=scope, project_path=project_path)
                 in warnings

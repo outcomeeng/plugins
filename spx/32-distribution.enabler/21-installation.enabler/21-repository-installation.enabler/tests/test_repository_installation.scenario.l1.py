@@ -9,19 +9,20 @@ from outcomeeng.distribution.installation import (
     Agent,
     CANONICAL_MARKETPLACE_SOURCE,
     CODEX_SOURCE_DIAGNOSTIC,
+    PATHLESS_LISTING_ENTRY_DIAGNOSTIC,
     PROJECT_SOURCE_DIAGNOSTIC,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_SCOPE_FLAG,
-    MARKETPLACE_NAME,
     REGISTRY_SOURCE_DIAGNOSTIC,
     FIRST_INSTALL_WARNING,
     Operation,
     ReportField,
     SPEC_TREE_PLUGIN,
     USER_SCOPE_COLLISION_DIAGNOSTIC,
+    marketplace_plugin_name,
     report_document,
 )
 from pathlib import Path
@@ -263,7 +264,7 @@ def test_persistent_run_updates_every_recorded_checkout_and_reinstalls_nothing()
     ]
     expected = {
         (
-            entry[CLAUDE_PLUGIN_ID_FIELD].removesuffix(f"@{MARKETPLACE_NAME}"),
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]),
             entry[CLAUDE_PLUGIN_SCOPE_FIELD],
             Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
         )
@@ -298,9 +299,9 @@ def test_persistent_run_updates_every_recorded_checkout_and_reinstalls_nothing()
 def test_a_pathless_refresh_scope_entry_stops_before_any_plan() -> None:
     error = observe_pathless_record_listing()
 
-    assert error is not None
-    assert CLAUDE_PROJECT_SCOPE in error
-    assert "project path" in error
+    assert error == PATHLESS_LISTING_ENTRY_DIAGNOSTIC.format(
+        index=0, scope=CLAUDE_PROJECT_SCOPE
+    )
 
 
 def test_a_noncanonical_registry_source_stops_before_any_plan() -> None:
