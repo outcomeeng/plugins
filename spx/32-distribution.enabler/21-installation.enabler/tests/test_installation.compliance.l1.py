@@ -52,9 +52,11 @@ def test_every_command_uses_the_explicit_checkout_and_agent_homes() -> None:
         for name, value in command.environment
         if name in STATE_ENV_NAMES
     )
+    state_root = observation.plan.roots.state
+    assert state_root is not None
     assert all(
         all(
-            Path(value).is_relative_to(observation.plan.roots.state)
+            Path(value).is_relative_to(state_root)
             for name, value in command.environment
             if name in STATE_ENV_NAMES
         )
