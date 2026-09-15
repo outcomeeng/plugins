@@ -13,6 +13,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PROJECT_SCOPE,
     CLAUDE_SCOPE_FLAG,
     MARKETPLACE_NAME,
     REGISTRY_SOURCE_DIAGNOSTIC,
@@ -38,6 +39,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_persistent_plan,
     observe_noncanonical_registry_plan,
     observe_noncanonical_source,
+    observe_pathless_record_listing,
     observe_record_refresh_plan,
     observe_unpublished_plugin,
     observe_verification_recipe,
@@ -291,6 +293,14 @@ def test_persistent_run_updates_every_recorded_checkout_and_reinstalls_nothing()
             list[dict[str, str]], observation.document[ReportField.CLAUDE_RECORDS]
         )
     } == expected
+
+
+def test_a_pathless_refresh_scope_entry_stops_before_any_plan() -> None:
+    error = observe_pathless_record_listing()
+
+    assert error is not None
+    assert CLAUDE_PROJECT_SCOPE in error
+    assert "project path" in error
 
 
 def test_a_noncanonical_registry_source_stops_before_any_plan() -> None:
