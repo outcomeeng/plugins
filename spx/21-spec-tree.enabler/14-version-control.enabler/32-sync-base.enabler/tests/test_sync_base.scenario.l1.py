@@ -23,6 +23,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     detach_head,
     head_oid,
     load_sync_base_module,
+    rebase_in_progress,
     repository_root,
     resolve_ref,
 )
@@ -76,9 +77,7 @@ def test_rebase_conflict_stops_with_active_conflict_details(
     assert module.CONFLICT_ABORT in result.conflict.operator_options
     assert module.CONFLICT_CONTINUE in result.conflict.operator_options
     # The rebase remains active so the operator can inspect, continue, or abort.
-    assert (handle.repo / ".git" / "rebase-merge").exists() or (
-        handle.repo / ".git" / "rebase-apply"
-    ).exists()
+    assert rebase_in_progress(handle.repo)
     assert "<<<<<<<" in (handle.repo / handle.conflict_file).read_text(encoding="utf-8")
     payload = result.to_json_dict()
     assert payload["conflict"] is not None

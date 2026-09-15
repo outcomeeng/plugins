@@ -10,7 +10,9 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_behind_base_repo,
     build_current_repo,
     build_stacked_repo_merged_predecessor,
+    build_stacked_repo_nearest_of_two,
     build_stacked_repo_open_predecessor_advanced,
+    build_stacked_repo_unordered_candidates,
     commit_subjects_above,
     is_ancestor,
     load_sync_base_module,
@@ -148,4 +150,52 @@ def test_proof_reports_a_null_tip_before_when_the_record_is_new(
     assert payload["stack_tip_before"] is None
     assert payload["stack_tip_after"] == resolve_ref(
         handle.repo, handle.alternate_remote_ref
+    )
+
+
+def test_derivation_records_the_nearest_of_two_ordered_candidates(
+    tmp_path: pathlib.Path,
+) -> None:
+    # Two local branches forked from the default before this branch forked from
+    # them; the nearer fork wins, and a rule that picked the farther one would
+    # record the first predecessor instead.
+    module = load_sync_base_module()
+    handle = build_stacked_repo_nearest_of_two(repository_root(tmp_path))
+    assert handle.second_candidate_branch is not None
+    assert handle.second_candidate_tip is not None
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.ALREADY_CURRENT
+    assert result.remote_ref == module.remote_tracking_ref(
+        handle.second_candidate_branch
+    )
+    assert module.read_stack_record(
+        handle.repo, handle.stacked_branch
+    ) == module.StackRecord(
+        predecessor=handle.second_candidate_branch, tip=handle.second_candidate_tip
+    )
+
+
+def test_derivation_with_unordered_candidates_writes_no_record(
+    tmp_path: pathlib.Path,
+) -> None:
+    # Two candidates whose forks neither descend from the other name no
+    # predecessor: the sync lands on the default base and both keys stay absent.
+    module = load_sync_base_module()
+    handle = build_stacked_repo_unordered_candidates(repository_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.ALREADY_CURRENT
+    assert result.remote_ref == handle.remote_ref
+    assert module.read_stack_record(handle.repo, handle.stacked_branch) is None
+    entries = branch_config_entries(handle.repo, handle.stacked_branch)
+    assert (
+        module.stack_config_key(handle.stacked_branch, module.STACK_PREDECESSOR_KEY)
+        not in entries
+    )
+    assert (
+        module.stack_config_key(handle.stacked_branch, module.STACK_TIP_KEY)
+        not in entries
     )

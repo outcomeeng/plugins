@@ -698,6 +698,8 @@ class StackedRepo:
     predecessor_rewrite_content: str | None = None
     third_branch: str | None = None
     stacked_tip: str | None = None
+    second_candidate_branch: str | None = None
+    second_candidate_tip: str | None = None
 
 
 def _build_stack(root: pathlib.Path) -> tuple[pathlib.Path, RepositoryDomain, str]:
@@ -876,6 +878,81 @@ def build_stacked_repo_unpublished_predecessor(root: pathlib.Path) -> StackedRep
         data,
         predecessor_tip,
         predecessor_rewrite_content=data.predecessor_rewrite_content,
+    )
+
+
+def build_stacked_repo_nearest_of_two(root: pathlib.Path) -> StackedRepo:
+    """Build an unrecorded branch above two ordered local predecessors.
+
+    The predecessor forks from the base, a second candidate (the generated
+    alternate name) forks from the predecessor's tip, and the stacked branch
+    forks from the second candidate's pushed tip. Both candidates survive as
+    local branches with remote-tracking refs, so topology derivation sees two
+    ordered forks and the nearer one is the second candidate.
+    ``second_candidate_branch`` names it and ``second_candidate_tip`` the fork
+    the stacked branch sits on.
+    """
+    data = repository_domain()
+    origin = _init_origin_with_base(root, data)
+    repo = root / "repo"
+    _git(root, "clone", "-q", str(origin), str(repo), cwd=root)
+    _configure(repo)
+    _git(repo, "remote", "set-head", "origin", data.base_branch)
+    _git(repo, "switch", "-q", "-c", data.predecessor_branch)
+    _commit_file(
+        repo, data.predecessor_file, data.predecessor_content, data.predecessor_message
+    )
+    _git(repo, "push", "-q", "-u", "origin", data.predecessor_branch)
+    predecessor_tip = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "switch", "-q", "-c", data.alternate_branch)
+    _commit_file(
+        repo, data.alternate_file, data.alternate_content, data.alternate_message
+    )
+    _git(repo, "push", "-q", "-u", "origin", data.alternate_branch)
+    second_tip = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "switch", "-q", "-c", data.stacked_branch)
+    _commit_file(repo, data.stacked_file, data.stacked_content, data.stacked_message)
+    return _stacked_handle(
+        repo,
+        data,
+        predecessor_tip,
+        second_candidate_branch=data.alternate_branch,
+        second_candidate_tip=second_tip,
+    )
+
+
+def build_stacked_repo_unordered_candidates(root: pathlib.Path) -> StackedRepo:
+    """Build an unrecorded branch whose two local candidates are unordered.
+
+    The predecessor and a second candidate (the generated alternate name) each
+    fork from the base independently and are pushed. The stacked branch starts
+    at the predecessor's tip, merges the second candidate, and adds its own
+    commit, so its merge-base with each candidate is that candidate's tip and
+    neither tip descends from the other. ``second_candidate_branch`` names the
+    second candidate and ``second_candidate_tip`` its tip.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    _git(repo, "switch", "-q", data.base_branch)
+    _git(repo, "switch", "-q", "-c", data.alternate_branch)
+    _commit_file(
+        repo, data.alternate_file, data.alternate_content, data.alternate_message
+    )
+    _git(repo, "push", "-q", "-u", "origin", data.alternate_branch)
+    second_tip = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "switch", "-q", data.stacked_branch)
+    _git(repo, "merge", "-q", "--no-edit", "--no-ff", data.alternate_branch)
+    _commit_file(
+        repo,
+        data.predecessor_advance_file,
+        data.predecessor_advance_content,
+        data.predecessor_advance_message,
+    )
+    return _stacked_handle(
+        repo,
+        data,
+        predecessor_tip,
+        second_candidate_branch=data.alternate_branch,
+        second_candidate_tip=second_tip,
     )
 
 
