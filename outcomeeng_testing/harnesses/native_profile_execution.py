@@ -34,6 +34,7 @@ from outcomeeng.distribution.native_profile_execution import (
 from outcomeeng.distribution.native_thread_evidence import (
     THREAD_READ_COMMAND,
     THREAD_READ_TIMEOUT_SECONDS,
+    NativeChildLookup,
     read_native_child,
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
@@ -102,6 +103,7 @@ class NativeProfileInterval:
     """Bind process calls to one row's deadline and selected authentication."""
 
     runner: ProbeRunner
+    child_reader: NativeChildLookup = read_native_child
     authentication: DiscoveryAuthentication | None = None
     redactor: CredentialRedactor = field(default_factory=CredentialRedactor)
     deadline: float = field(
@@ -157,7 +159,7 @@ class NativeProfileInterval:
     def thread(
         self, thread_id: str, cwd: Path, environment: Mapping[str, str]
     ) -> CommandResult:
-        result = read_native_child(
+        result = self.child_reader(
             thread_id,
             cwd,
             environment,
@@ -235,6 +237,7 @@ def run_native_profile_execution(
     checkout: Path,
     environment: Mapping[str, str],
     runner: ProbeRunner = run_profile_process,
+    child_reader: NativeChildLookup = read_native_child,
     target: Target | None = None,
 ) -> tuple[NativeProfileExecutionObservation, ...]:
     """Retain every row's observations while removing its disposable state."""
@@ -248,7 +251,7 @@ def run_native_profile_execution(
                 row = native_profile_rows(artifact_root, Path(temporary_state))[index]
                 if target is not None and row.target is not target:
                     continue
-                interval = NativeProfileInterval(runner)
+                interval = NativeProfileInterval(runner, child_reader)
                 try:
                     materialize_native_profile(row)
                     observation = _execute_row(row, mirror, environment, interval)

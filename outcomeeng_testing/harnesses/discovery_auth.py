@@ -87,6 +87,8 @@ class AuthField(StrEnum):
     ACCESS_TOKEN = "access_token"
     REFRESH_TOKEN = "refresh_token"
     ID_TOKEN = "id_token"
+    MODE = "auth_mode"
+    API_KEY = "OPENAI_API_KEY"
 
 
 class NativeCommand(StrEnum):
@@ -105,6 +107,22 @@ class AuthenticationMode(StrEnum):
 
 class DiscoveryAuthenticationError(RuntimeError):
     """The selected authentication mechanism cannot safely run discovery."""
+
+
+class SavedLoginCondition(StrEnum):
+    """Unsupported saved-login states rejected before native execution."""
+
+    MISSING = "missing"
+    MALFORMED = "malformed"
+    NON_SUBSCRIPTION = "non-subscription"
+
+
+class SavedLoginError(DiscoveryAuthenticationError):
+    """A saved-login rejection with its machine-readable condition."""
+
+    def __init__(self, condition: SavedLoginCondition, message: str) -> None:
+        super().__init__(message)
+        self.condition = condition
 
 
 class ProbeRunner(Protocol):
@@ -156,12 +174,18 @@ class CredentialRedactor:
             raw = path.read_text(encoding="utf-8")
             self.add(raw)
             document: object = json.loads(raw)
-        except (OSError, ValueError):
-            raise DiscoveryAuthenticationError(
-                "Saved login is missing or malformed; use the CLI to log in with the file credential store."
+        except OSError:
+            raise SavedLoginError(
+                SavedLoginCondition.MISSING,
+                "Saved login is missing or malformed; use the CLI to log in with the file credential store.",
+            ) from None
+        except ValueError:
+            raise SavedLoginError(
+                SavedLoginCondition.MALFORMED,
+                "Saved login is missing or malformed; use the CLI to log in with the file credential store.",
             ) from None
         if isinstance(document, dict):
-            key = document.get(SAVED_LOGIN_API_KEY_FIELD)
+            key = document.get(AuthField.API_KEY)
             if isinstance(key, str):
                 self.add(key)
             tokens = document.get(AuthField.TOKENS)
@@ -317,20 +341,25 @@ class DiscoveryAuthentication:
     def _account(self, path: Path) -> str:
         try:
             if not stat.S_ISREG(path.stat().st_mode):
-                raise DiscoveryAuthenticationError(
-                    "Subscription credentials must be a regular file."
+                raise SavedLoginError(
+                    SavedLoginCondition.MALFORMED,
+                    "Subscription credentials must be a regular file.",
                 )
         except OSError:
-            raise DiscoveryAuthenticationError(
-                "Subscription discovery requires a saved file-backed ChatGPT login; keyring-only credentials are unsupported."
+            raise SavedLoginError(
+                SavedLoginCondition.MISSING,
+                "Subscription discovery requires a saved file-backed ChatGPT login; keyring-only credentials are unsupported.",
             ) from None
         document = self.redactor.read_document(path)
-        if (
-            not isinstance(document, dict)
-            or document.get(SAVED_LOGIN_MODE_FIELD) != SAVED_LOGIN_CHATGPT_MODE
-        ):
-            raise DiscoveryAuthenticationError(
-                "Subscription discovery requires a ChatGPT saved login."
+        if not isinstance(document, dict):
+            raise SavedLoginError(
+                SavedLoginCondition.MALFORMED,
+                "Subscription discovery requires a ChatGPT saved login.",
+            )
+        if document.get(AuthField.MODE) != SAVED_LOGIN_CHATGPT_MODE:
+            raise SavedLoginError(
+                SavedLoginCondition.NON_SUBSCRIPTION,
+                "Subscription discovery requires a ChatGPT saved login.",
             )
         tokens = document.get(AuthField.TOKENS)
         if not isinstance(tokens, dict) or not all(
@@ -342,8 +371,9 @@ class DiscoveryAuthentication:
                 AuthField.ACCOUNT_ID,
             )
         ):
-            raise DiscoveryAuthenticationError(
-                "Saved ChatGPT login lacks required tokens or account identity."
+            raise SavedLoginError(
+                SavedLoginCondition.MALFORMED,
+                "Saved ChatGPT login lacks required tokens or account identity.",
             )
         return str(tokens[AuthField.ACCOUNT_ID])
 
@@ -379,7 +409,7 @@ class DiscoveryAuthentication:
                 or link.resolve() != owner
                 or (identity.st_dev, identity.st_ino) != (after.st_dev, after.st_ino)
                 or not isinstance(document, dict)
-                or document.get(SAVED_LOGIN_API_KEY_FIELD) != fabricated
+                or document.get(AuthField.API_KEY) != fabricated
             ):
                 raise DiscoveryAuthenticationError(
                     "The CLI credential writer cannot preserve the saved-login link; subscription discovery is unsupported by this CLI."

@@ -1,0 +1,194 @@
+{
+  "pages": [
+    {
+      "id": 1,
+      "result": {
+        "data": [
+          {
+            "id": "01a0a6d4-0570-7733-8cbb-3916e127e6ec",
+            "environments": null,
+            "extra": null,
+            "sessionId": "01a0a6d4-0570-7733-8cbb-3916e127e6ec",
+            "forkedFromId": null,
+            "parentThreadId": "01a0a6d3-e6d2-79c2-8476-2eda0be5a7ab",
+            "preview": "",
+            "ephemeral": false,
+            "section": null,
+            "sectionEnteredAt": null,
+            "projectId": null,
+            "historyMode": "paginated",
+            "modelProvider": "openai",
+            "model": "gpt-5.6-terra",
+            "reasoningEffort": "high",
+            "createdAt": 1789505308,
+            "updatedAt": 1789505314,
+            "recencyAt": 1789505308,
+            "status": { "type": "notLoaded" },
+            "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmph25a1xkh/codex-standard/codex/sessions/2026/09/15/rollout-2026-09-15T22-48-28-01a0a6d4-0570-7733-8cbb-3916e127e6ec.jsonl",
+            "cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmp0krsrg8e/checkout",
+            "cliVersion": "0.154.0",
+            "originator": "codex_exec",
+            "source": {
+              "subAgent": {
+                "thread_spawn": {
+                  "parent_thread_id": "01a0a6d3-e6d2-79c2-8476-2eda0be5a7ab",
+                  "depth": 1,
+                  "agent_path": "/root/profile_probe",
+                  "agent_nickname": "Leibniz",
+                  "agent_role": "profile-probe-codex-standard"
+                }
+              }
+            },
+            "canAcceptDirectInput": null,
+            "threadSource": null,
+            "agentNickname": "Leibniz",
+            "agentRole": "profile-probe-codex-standard",
+            "gitInfo": null,
+            "name": null,
+            "daybreakEnabled": null,
+            "turns": []
+          }
+        ],
+        "nextCursor": null,
+        "backwardsCursor": "2026-09-15T20:48:27.999Z"
+      }
+    },
+    { "id": 2, "result": { "data": [], "nextCursor": null, "backwardsCursor": null } }
+  ],
+  "childIds": ["01a0a6d4-0570-7733-8cbb-3916e127e6ec"],
+  "read": {
+    "id": 3,
+    "result": {
+      "thread": {
+        "id": "01a0a6d4-0570-7733-8cbb-3916e127e6ec",
+        "environments": null,
+        "extra": null,
+        "sessionId": "01a0a6d4-0570-7733-8cbb-3916e127e6ec",
+        "forkedFromId": null,
+        "parentThreadId": "01a0a6d3-e6d2-79c2-8476-2eda0be5a7ab",
+        "preview": "",
+        "ephemeral": false,
+        "section": null,
+        "sectionEnteredAt": null,
+        "projectId": null,
+        "historyMode": "paginated",
+        "modelProvider": "openai",
+        "model": "gpt-5.6-terra",
+        "reasoningEffort": "high",
+        "createdAt": 1789505308,
+        "updatedAt": 1789505314,
+        "recencyAt": 1789505308,
+        "status": { "type": "notLoaded" },
+        "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmph25a1xkh/codex-standard/codex/sessions/2026/09/15/rollout-2026-09-15T22-48-28-01a0a6d4-0570-7733-8cbb-3916e127e6ec.jsonl",
+        "cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmp0krsrg8e/checkout",
+        "cliVersion": "0.154.0",
+        "originator": "codex_exec",
+        "source": {
+          "subAgent": {
+            "thread_spawn": {
+              "parent_thread_id": "01a0a6d3-e6d2-79c2-8476-2eda0be5a7ab",
+              "depth": 1,
+              "agent_path": "/root/profile_probe",
+              "agent_nickname": "Leibniz",
+              "agent_role": "profile-probe-codex-standard"
+            }
+          }
+        },
+        "canAcceptDirectInput": null,
+        "threadSource": "subagent",
+        "agentNickname": "Leibniz",
+        "agentRole": "profile-probe-codex-standard",
+        "gitInfo": null,
+        "name": null,
+        "daybreakEnabled": null,
+        "turns": [
+          {
+            "id": "01a0a6d4-05a9-7d21-a252-1e50eb469f49",
+            "items": [
+              {
+                "type": "agentMessage",
+                "id": "msg_0e63d9b2cbb3e74b016aa9af22a8c887d2ab84017331997987",
+                "text": "Completed.",
+                "phase": "final_answer",
+                "memoryCitation": null,
+                "delivery": null,
+                "questions": null
+              }
+            ],
+            "itemsView": "full",
+            "status": "completed",
+            "error": null,
+            "startedAt": 1789505308,
+            "completedAt": 1789505314,
+            "durationMs": 6794
+          }
+        ]
+      }
+    }
+  },
+  "thread": {
+    "id": "01a0a6d4-0570-7733-8cbb-3916e127e6ec",
+    "environments": null,
+    "extra": null,
+    "sessionId": "01a0a6d4-0570-7733-8cbb-3916e127e6ec",
+    "forkedFromId": null,
+    "parentThreadId": "01a0a6d3-e6d2-79c2-8476-2eda0be5a7ab",
+    "preview": "",
+    "ephemeral": false,
+    "section": null,
+    "sectionEnteredAt": null,
+    "projectId": null,
+    "historyMode": "paginated",
+    "modelProvider": "openai",
+    "model": "gpt-5.6-terra",
+    "reasoningEffort": "high",
+    "createdAt": 1789505308,
+    "updatedAt": 1789505314,
+    "recencyAt": 1789505308,
+    "status": { "type": "notLoaded" },
+    "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmph25a1xkh/codex-standard/codex/sessions/2026/09/15/rollout-2026-09-15T22-48-28-01a0a6d4-0570-7733-8cbb-3916e127e6ec.jsonl",
+    "cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmp0krsrg8e/checkout",
+    "cliVersion": "0.154.0",
+    "originator": "codex_exec",
+    "source": {
+      "subAgent": {
+        "thread_spawn": {
+          "parent_thread_id": "01a0a6d3-e6d2-79c2-8476-2eda0be5a7ab",
+          "depth": 1,
+          "agent_path": "/root/profile_probe",
+          "agent_nickname": "Leibniz",
+          "agent_role": "profile-probe-codex-standard"
+        }
+      }
+    },
+    "canAcceptDirectInput": null,
+    "threadSource": "subagent",
+    "agentNickname": "Leibniz",
+    "agentRole": "profile-probe-codex-standard",
+    "gitInfo": null,
+    "name": null,
+    "daybreakEnabled": null,
+    "turns": [
+      {
+        "id": "01a0a6d4-05a9-7d21-a252-1e50eb469f49",
+        "items": [
+          {
+            "type": "agentMessage",
+            "id": "msg_0e63d9b2cbb3e74b016aa9af22a8c887d2ab84017331997987",
+            "text": "Completed.",
+            "phase": "final_answer",
+            "memoryCitation": null,
+            "delivery": null,
+            "questions": null
+          }
+        ],
+        "itemsView": "full",
+        "status": "completed",
+        "error": null,
+        "startedAt": 1789505308,
+        "completedAt": 1789505314,
+        "durationMs": 6794
+      }
+    ]
+  }
+}

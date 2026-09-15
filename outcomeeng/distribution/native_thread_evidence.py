@@ -96,6 +96,20 @@ class NativeThreadReader(Protocol):
     ) -> CommandResult: ...
 
 
+class NativeChildLookup(Protocol):
+    """Native lookup boundary with explicit command and execution budget."""
+
+    def __call__(
+        self,
+        parent_id: str,
+        cwd: Path,
+        environment: Mapping[str, str],
+        *,
+        timeout: float,
+        command: Sequence[str],
+    ) -> CommandResult: ...
+
+
 @dataclass(frozen=True)
 class NativeChildEvidence:
     """Native records and the first unavailable or inconsistent observation."""

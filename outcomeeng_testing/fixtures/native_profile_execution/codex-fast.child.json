@@ -1,0 +1,206 @@
+{
+  "pages": [
+    {
+      "id": 1,
+      "result": {
+        "data": [
+          {
+            "id": "01a0a6d5-1c17-75f0-8c3f-20f1b49a173c",
+            "environments": null,
+            "extra": null,
+            "sessionId": "01a0a6d5-1c17-75f0-8c3f-20f1b49a173c",
+            "forkedFromId": null,
+            "parentThreadId": "01a0a6d4-fe27-74d1-9f41-e90537d32cc5",
+            "preview": "",
+            "ephemeral": false,
+            "section": null,
+            "sectionEnteredAt": null,
+            "projectId": null,
+            "historyMode": "paginated",
+            "modelProvider": "openai",
+            "model": "gpt-5.6-luna",
+            "reasoningEffort": "high",
+            "createdAt": 1789505379,
+            "updatedAt": 1789505384,
+            "recencyAt": 1789505379,
+            "status": { "type": "notLoaded" },
+            "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmpkg2b2d8n/codex-fast/codex/sessions/2026/09/15/rollout-2026-09-15T22-49-39-01a0a6d5-1c17-75f0-8c3f-20f1b49a173c.jsonl",
+            "cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmp0krsrg8e/checkout",
+            "cliVersion": "0.154.0",
+            "originator": "codex_exec",
+            "source": {
+              "subAgent": {
+                "thread_spawn": {
+                  "parent_thread_id": "01a0a6d4-fe27-74d1-9f41-e90537d32cc5",
+                  "depth": 1,
+                  "agent_path": "/root/profile_probe",
+                  "agent_nickname": "Hilbert",
+                  "agent_role": "profile-probe-codex-fast"
+                }
+              }
+            },
+            "canAcceptDirectInput": null,
+            "threadSource": null,
+            "agentNickname": "Hilbert",
+            "agentRole": "profile-probe-codex-fast",
+            "gitInfo": null,
+            "name": null,
+            "daybreakEnabled": null,
+            "turns": []
+          }
+        ],
+        "nextCursor": null,
+        "backwardsCursor": "2026-09-15T20:49:38.999Z"
+      }
+    },
+    { "id": 2, "result": { "data": [], "nextCursor": null, "backwardsCursor": null } }
+  ],
+  "childIds": ["01a0a6d5-1c17-75f0-8c3f-20f1b49a173c"],
+  "read": {
+    "id": 3,
+    "result": {
+      "thread": {
+        "id": "01a0a6d5-1c17-75f0-8c3f-20f1b49a173c",
+        "environments": null,
+        "extra": null,
+        "sessionId": "01a0a6d5-1c17-75f0-8c3f-20f1b49a173c",
+        "forkedFromId": null,
+        "parentThreadId": "01a0a6d4-fe27-74d1-9f41-e90537d32cc5",
+        "preview": "",
+        "ephemeral": false,
+        "section": null,
+        "sectionEnteredAt": null,
+        "projectId": null,
+        "historyMode": "paginated",
+        "modelProvider": "openai",
+        "model": "gpt-5.6-luna",
+        "reasoningEffort": "high",
+        "createdAt": 1789505379,
+        "updatedAt": 1789505384,
+        "recencyAt": 1789505379,
+        "status": { "type": "notLoaded" },
+        "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmpkg2b2d8n/codex-fast/codex/sessions/2026/09/15/rollout-2026-09-15T22-49-39-01a0a6d5-1c17-75f0-8c3f-20f1b49a173c.jsonl",
+        "cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmp0krsrg8e/checkout",
+        "cliVersion": "0.154.0",
+        "originator": "codex_exec",
+        "source": {
+          "subAgent": {
+            "thread_spawn": {
+              "parent_thread_id": "01a0a6d4-fe27-74d1-9f41-e90537d32cc5",
+              "depth": 1,
+              "agent_path": "/root/profile_probe",
+              "agent_nickname": "Hilbert",
+              "agent_role": "profile-probe-codex-fast"
+            }
+          }
+        },
+        "canAcceptDirectInput": null,
+        "threadSource": "subagent",
+        "agentNickname": "Hilbert",
+        "agentRole": "profile-probe-codex-fast",
+        "gitInfo": null,
+        "name": null,
+        "daybreakEnabled": null,
+        "turns": [
+          {
+            "id": "01a0a6d5-1c4e-7cd0-93ca-f53c05424412",
+            "items": [
+              {
+                "type": "reasoning",
+                "id": "rs_06235f8161787f92016aa9af66d13c87d294a5d1c7956dbe14",
+                "summary": [],
+                "content": []
+              },
+              {
+                "type": "agentMessage",
+                "id": "msg_06235f8161787f92016aa9af67df2887d28b5bce531cbd4946",
+                "text": "Complete.",
+                "phase": "final_answer",
+                "memoryCitation": null,
+                "delivery": null,
+                "questions": null
+              }
+            ],
+            "itemsView": "full",
+            "status": "completed",
+            "error": null,
+            "startedAt": 1789505379,
+            "completedAt": 1789505384,
+            "durationMs": 4636
+          }
+        ]
+      }
+    }
+  },
+  "thread": {
+    "id": "01a0a6d5-1c17-75f0-8c3f-20f1b49a173c",
+    "environments": null,
+    "extra": null,
+    "sessionId": "01a0a6d5-1c17-75f0-8c3f-20f1b49a173c",
+    "forkedFromId": null,
+    "parentThreadId": "01a0a6d4-fe27-74d1-9f41-e90537d32cc5",
+    "preview": "",
+    "ephemeral": false,
+    "section": null,
+    "sectionEnteredAt": null,
+    "projectId": null,
+    "historyMode": "paginated",
+    "modelProvider": "openai",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "high",
+    "createdAt": 1789505379,
+    "updatedAt": 1789505384,
+    "recencyAt": 1789505379,
+    "status": { "type": "notLoaded" },
+    "path": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmpkg2b2d8n/codex-fast/codex/sessions/2026/09/15/rollout-2026-09-15T22-49-39-01a0a6d5-1c17-75f0-8c3f-20f1b49a173c.jsonl",
+    "cwd": "/private/var/folders/vg/stx1n5ys4_lgr08v49lg6t880000gp/T/tmp0krsrg8e/checkout",
+    "cliVersion": "0.154.0",
+    "originator": "codex_exec",
+    "source": {
+      "subAgent": {
+        "thread_spawn": {
+          "parent_thread_id": "01a0a6d4-fe27-74d1-9f41-e90537d32cc5",
+          "depth": 1,
+          "agent_path": "/root/profile_probe",
+          "agent_nickname": "Hilbert",
+          "agent_role": "profile-probe-codex-fast"
+        }
+      }
+    },
+    "canAcceptDirectInput": null,
+    "threadSource": "subagent",
+    "agentNickname": "Hilbert",
+    "agentRole": "profile-probe-codex-fast",
+    "gitInfo": null,
+    "name": null,
+    "daybreakEnabled": null,
+    "turns": [
+      {
+        "id": "01a0a6d5-1c4e-7cd0-93ca-f53c05424412",
+        "items": [
+          {
+            "type": "reasoning",
+            "id": "rs_06235f8161787f92016aa9af66d13c87d294a5d1c7956dbe14",
+            "summary": [],
+            "content": []
+          },
+          {
+            "type": "agentMessage",
+            "id": "msg_06235f8161787f92016aa9af67df2887d28b5bce531cbd4946",
+            "text": "Complete.",
+            "phase": "final_answer",
+            "memoryCitation": null,
+            "delivery": null,
+            "questions": null
+          }
+        ],
+        "itemsView": "full",
+        "status": "completed",
+        "error": null,
+        "startedAt": 1789505379,
+        "completedAt": 1789505384,
+        "durationMs": 4636
+      }
+    ]
+  }
+}

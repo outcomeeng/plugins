@@ -18,6 +18,7 @@ import re
 import tempfile
 import tomllib
 from collections.abc import Callable
+from enum import IntEnum, StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -31,18 +32,36 @@ ENTRY_DESTINATION_FIELD = "destination"
 ENTRY_PLUGIN_FIELD = "plugin"
 ENTRY_DIGEST_FIELD = "digest"
 AGENTS_DIRECTORY = "agents"
-WRITE_PREFIX = "write: "
-PRUNE_PREFIX = "prune: "
-COLLISION_PREFIX = "collision: "
-SCOPE_SPLIT_REMOVAL_PREFIX = "scope-split directed-removal: "
-SCOPE_SPLIT_COLLISION_PREFIX = "scope-split collision: "
-CAUSE_SYMLINK = "symlink"
-CAUSE_UNRECORDED = "unrecorded"
-CAUSE_NOT_REGULAR_FILE = "not a regular file"
-CAUSE_DIGEST_MISMATCH = "digest mismatch"
-CAUSE_CHANGED_AFTER_PREFLIGHT = "changed after preflight"
-NON_HEX_DIGEST = "is not a lowercase sha256 hex string"
-SYMLINKED_AGENT_DIRECTORY = "selected agent directory {path} must not be a symlink"
+
+
+class PlacementStatus(IntEnum):
+    """Exit statuses of the placement lifecycle."""
+
+    SUCCESS = 0
+    CHANGES_REQUIRED = 1
+    COLLISION = 2
+
+
+class PlacementDiagnostic(StrEnum):
+    """Diagnostic categories emitted by planning and mutation."""
+
+    COLLISION = "collision"
+    SCOPE_COLLISION = "scope-split collision"
+    SCOPE_REMOVAL = "scope-split directed-removal"
+    WRITE = "write"
+    PRUNE = "prune"
+
+
+class CollisionCause(StrEnum):
+    """Reasons a destination cannot be safely changed."""
+
+    SYMLINK = "symlink"
+    UNRECORDED = "unrecorded"
+    NON_REGULAR = "not a regular file"
+    DIGEST_MISMATCH = "digest mismatch"
+    PREFLIGHT_DRIFT = "changed after preflight"
+    INVALID_DIGEST = "is not a lowercase sha256 hex string"
+    SYMLINK_DIRECTORY = "must not be a symlink"
 
 
 def _digest(content: bytes) -> str:
@@ -122,7 +141,7 @@ def _load_ownership(path: Path) -> list[dict[str, str]]:
         if re.fullmatch(r"[0-9a-f]{64}", digest) is None:
             raise ValueError(
                 f"agent ownership record {path} entry {index} digest {digest!r} "
-                f"{NON_HEX_DIGEST}"
+                f"{CollisionCause.INVALID_DIGEST}"
             )
         if destination in seen:
             raise ValueError(f"agent ownership record {path} repeats {destination}")
@@ -158,15 +177,15 @@ def _collision_cause(
     record was written; it is adopted, not a collision.
     """
     if path.is_symlink():
-        return CAUSE_SYMLINK
+        return CollisionCause.SYMLINK
     if recorded is None:
-        return None if current == desired else CAUSE_UNRECORDED
+        return None if current == desired else CollisionCause.UNRECORDED
     if recorded[ENTRY_PLUGIN_FIELD] != PLUGIN:
         return f"owned by {recorded[ENTRY_PLUGIN_FIELD]}"
     if current is None:
-        return CAUSE_NOT_REGULAR_FILE
+        return CollisionCause.NON_REGULAR
     if current != recorded[ENTRY_DIGEST_FIELD]:
-        return CAUSE_DIGEST_MISMATCH
+        return CollisionCause.DIGEST_MISMATCH
     return None
 
 
@@ -199,13 +218,13 @@ def _scope_splits(checkout: Path, shipped: dict[str, bytes]) -> list[str]:
     found: list[str] = []
     for path in sorted((checkout / ".codex" / "agents").glob("*.toml")):
         if path.is_symlink():
-            found.append(f"{SCOPE_SPLIT_COLLISION_PREFIX}{path}")
+            found.append(f"{PlacementDiagnostic.SCOPE_COLLISION}: {path}")
             continue
         content = path.read_bytes()
         if content in shipped.values():
-            found.append(f"{SCOPE_SPLIT_REMOVAL_PREFIX}{path}")
+            found.append(f"{PlacementDiagnostic.SCOPE_REMOVAL}: {path}")
         elif _mentions_plugin(path, content):
-            found.append(f"{SCOPE_SPLIT_COLLISION_PREFIX}{path}")
+            found.append(f"{PlacementDiagnostic.SCOPE_COLLISION}: {path}")
     return found
 
 
@@ -231,8 +250,11 @@ def main(
     splits = _scope_splits(args.checkout.resolve(), shipped)
     if agents.is_symlink():
         _print_each(splits)
-        print(f"{COLLISION_PREFIX}{SYMLINKED_AGENT_DIRECTORY.format(path=agents)}")
-        return 2
+        print(
+            f"{PlacementDiagnostic.COLLISION}: selected agent directory {agents} "
+            f"{CollisionCause.SYMLINK_DIRECTORY}"
+        )
+        return PlacementStatus.COLLISION
     ownership_path = agents / OWNERSHIP
     ownership_before = (
         ownership_path.read_bytes()
@@ -243,12 +265,10 @@ def main(
         entries = _load_ownership(ownership_path)
     except ValueError as error:
         _print_each(splits)
-        print(f"{COLLISION_PREFIX}{error}")
-        return 2
+        print(f"{PlacementDiagnostic.COLLISION}: {error}")
+        return PlacementStatus.COLLISION
     by_destination = {entry[ENTRY_DESTINATION_FIELD]: entry for entry in entries}
-    desired = {
-        f"{AGENTS_DIRECTORY}/{name}": content for name, content in shipped.items()
-    }
+    desired = {f"{AGENTS_DIRECTORY}/{name}": content for name, content in shipped.items()}
     writes: list[tuple[Path, bytes, str | None]] = []
     prunes: list[tuple[Path, str]] = []
     collisions: list[str] = []
@@ -261,7 +281,7 @@ def main(
         if present:
             cause = _collision_cause(path, recorded, current, digest)
             if cause is not None:
-                collisions.append(f"{COLLISION_PREFIX}{path} ({cause})")
+                collisions.append(f"{PlacementDiagnostic.COLLISION}: {path} ({cause})")
                 continue
         if current != digest:
             writes.append((path, content, current))
@@ -282,35 +302,48 @@ def main(
         present = path.exists() or path.is_symlink()
         current = current_digest(path)
         if present and path.is_symlink():
-            collisions.append(f"{COLLISION_PREFIX}{path} ({CAUSE_SYMLINK})")
+            collisions.append(
+                f"{PlacementDiagnostic.COLLISION}: {path} ({CollisionCause.SYMLINK})"
+            )
         elif present and current != entry[ENTRY_DIGEST_FIELD]:
-            collisions.append(f"{COLLISION_PREFIX}{path} ({CAUSE_DIGEST_MISMATCH})")
+            collisions.append(
+                f"{PlacementDiagnostic.COLLISION}: {path} ({CollisionCause.DIGEST_MISMATCH})"
+            )
         elif present:
             prunes.append((path, entry[ENTRY_DIGEST_FIELD]))
     _print_each([*splits, *collisions])
     for path, _, _ in writes:
-        print(f"{WRITE_PREFIX}{path}")
+        print(f"{PlacementDiagnostic.WRITE}: {path}")
     for path, _ in prunes:
-        print(f"{PRUNE_PREFIX}{path}")
+        print(f"{PlacementDiagnostic.PRUNE}: {path}")
     if splits or collisions:
-        return 2
+        return PlacementStatus.COLLISION
     if args.check:
-        return 1 if writes or prunes else 0
+        return (
+            PlacementStatus.CHANGES_REQUIRED
+            if writes or prunes
+            else PlacementStatus.SUCCESS
+        )
     current_ownership = (
         ownership_path.read_bytes()
         if ownership_path.is_file() and not ownership_path.is_symlink()
         else None
     )
     if current_ownership != ownership_before:
-        print(f"{COLLISION_PREFIX}{ownership_path} ({CAUSE_CHANGED_AFTER_PREFLIGHT})")
-        return 2
+        print(
+            f"{PlacementDiagnostic.COLLISION}: {ownership_path} "
+            f"({CollisionCause.PREFLIGHT_DRIFT})"
+        )
+        return PlacementStatus.COLLISION
     drifted = [
         path for path, _, expected in writes if current_digest(path) != expected
     ] + [path for path, expected in prunes if current_digest(path) != expected]
     if drifted:
         for path in drifted:
-            print(f"{COLLISION_PREFIX}{path} ({CAUSE_CHANGED_AFTER_PREFLIGHT})")
-        return 2
+            print(
+                f"{PlacementDiagnostic.COLLISION}: {path} ({CollisionCause.PREFLIGHT_DRIFT})"
+            )
+        return PlacementStatus.COLLISION
     for path, content, _ in writes:
         _atomic_write(path, content)
     for path, _ in prunes:
@@ -326,7 +359,7 @@ def main(
     ).encode()
     if current_ownership != ownership_content:
         _atomic_write(ownership_path, ownership_content)
-    return 0
+    return PlacementStatus.SUCCESS
 
 
 if __name__ == "__main__":

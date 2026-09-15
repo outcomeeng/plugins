@@ -31,6 +31,7 @@ from outcomeeng.validation.ci_gate import (
 from outcomeeng_testing.harnesses.discovery_auth import (
     AuthField,
     NativeCommand,
+    SavedLoginCondition,
     AUTH_FILENAME,
     WORKSPACE_TOKEN_ENV,
     AuthenticationMode,
@@ -52,12 +53,6 @@ class NativeFault(StrEnum):
     LOGIN_FAILURE = "login-failure"
     TIMEOUT = "timeout"
     INCOMPATIBLE_WRITER = "incompatible-writer"
-
-
-class SavedLoginFault(StrEnum):
-    MISSING = "missing"
-    MALFORMED = "malformed"
-    NON_SUBSCRIPTION = "non-subscription"
 
 
 @dataclass(frozen=True)
@@ -100,7 +95,7 @@ class NativeCredentialRunner:
             if self.fault is NativeFault.INCOMPATIBLE_WRITER:
                 target.unlink(missing_ok=True)
             target.write_text(
-                json.dumps({SAVED_LOGIN_API_KEY_FIELD: input_text}), encoding="utf-8"
+                json.dumps({AuthField.API_KEY: input_text}), encoding="utf-8"
             )
             return subprocess.CompletedProcess(argv, 0, input_text or "", "")
         if self.fault is NativeFault.REPLACE_LINK:
@@ -144,9 +139,7 @@ def authentication_case(
 ) -> Iterator[AuthenticationCase]:
     initial = (FIXTURE_ROOT / "chatgpt.json").read_text(encoding="utf-8")
     refreshed = (FIXTURE_ROOT / "refreshed.json").read_text(encoding="utf-8")
-    api = json.loads(API_FIXTURE_PATH.read_text(encoding="utf-8"))[
-        SAVED_LOGIN_API_KEY_FIELD
-    ]
+    api = json.loads(API_FIXTURE_PATH.read_text(encoding="utf-8"))[AuthField.API_KEY]
     with TemporaryDirectory() as directory:
         root = Path(directory).resolve()
         selected_home = root / "saved"
@@ -191,7 +184,7 @@ def missing_credential_environment(mode: AuthenticationMode) -> dict[str, str]:
     )
     return {
         DISCOVERY_AUTH_MODE_ENVIRONMENT: mode.value,
-        other: document[SAVED_LOGIN_API_KEY_FIELD],
+        other: document[AuthField.API_KEY],
     }
 
 
@@ -229,11 +222,11 @@ def lock_contention_case() -> Iterator[AuthenticationCase]:
 
 
 @contextmanager
-def invalid_saved_login(fault: SavedLoginFault) -> Iterator[AuthenticationCase]:
+def invalid_saved_login(fault: SavedLoginCondition) -> Iterator[AuthenticationCase]:
     with authentication_case() as case:
-        if fault is SavedLoginFault.MISSING:
+        if fault is SavedLoginCondition.MISSING:
             case.saved.unlink()
-        elif fault is SavedLoginFault.MALFORMED:
+        elif fault is SavedLoginCondition.MALFORMED:
             case.saved.write_text(
                 case.initial[: len(case.initial) // 2], encoding="utf-8"
             )
