@@ -6,6 +6,7 @@ from pathlib import Path
 from outcomeeng.distribution.installation import (
     Agent,
     CLAUDE_PROJECT_SCOPE,
+    CLAUDE_REFRESH_SCOPES,
     CLAUDE_SCOPE_BEARING_OPERATIONS,
     CLAUDE_SCOPE_FLAG,
     CODEX_HOME_ENV,
@@ -92,8 +93,26 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     assert observed - CLAUDE_SCOPE_BEARING_OPERATIONS
     assert all(
         command.argv[-2:] == (CLAUDE_SCOPE_FLAG, CLAUDE_PROJECT_SCOPE)
-        for command in claude_commands
-        if command.operation in CLAUDE_SCOPE_BEARING_OPERATIONS
+        and command.cwd == plan.roots.checkout
+        for plan in plans
+        for command in plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation in CLAUDE_SCOPE_BEARING_OPERATIONS
+        and command.operation is not Operation.PLUGIN_UPDATE
+    )
+    assert all(
+        command.argv[-2] == CLAUDE_SCOPE_FLAG
+        and any(
+            record.scope == command.argv[-1]
+            and record.project_path == command.cwd
+            and record.plugin == command.plugin
+            and record.scope in CLAUDE_REFRESH_SCOPES
+            for record in plan.claude_records
+        )
+        for plan in plans
+        for command in plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation is Operation.PLUGIN_UPDATE
     )
     assert all(
         CLAUDE_SCOPE_FLAG not in command.argv
