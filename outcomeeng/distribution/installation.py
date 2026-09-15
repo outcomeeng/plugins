@@ -29,6 +29,7 @@ CANONICAL_CODEX_SOURCE = "https://github.com/outcomeeng/plugins"
 CODEX_CATALOG_PATH = Path(".agents/plugins/marketplace.json")
 CLAUDE_CATALOG_PATH = Path(".claude-plugin/marketplace.json")
 CLAUDE_PROJECT_SETTINGS_PATH = Path(".claude/settings.json")
+CLAUDE_LOCAL_SETTINGS_PATH = Path(".claude/settings.local.json")
 CODEX_CONFIG_PATH = Path(".codex/config.toml")
 CODEX_AGENTS_PATH = Path(".codex/agents")
 CODEX_HOME_AGENTS_PATH = Path("agents")
@@ -129,6 +130,12 @@ UNCATALOGED_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}, but the "
     "committed catalog does not carry it; the record is left unchanged."
 )
+NONCANONICAL_SOURCE_WARNING = (
+    "Claude Code records {plugin} at {scope} scope for {project_path}, whose "
+    "settings register the marketplace from a noncanonical source; the record is "
+    "left unchanged."
+)
+REGISTRY_SOURCE_DIAGNOSTIC = "Claude Code marketplace registry source mismatch"
 
 
 class Agent(StrEnum):
@@ -840,9 +847,18 @@ def build_persistent_installation_plan(
     only where the live listing carries the marketplace, and an absent live
     marketplace is added regardless of the declaration.
     """
+    registered = claude_registered_source_action(claude_marketplace_payload)
+    if registered is SourceAction.REPLACE:
+        raise ValueError(
+            f"{REGISTRY_SOURCE_DIAGNOSTIC}: Claude Code registers `{MARKETPLACE_NAME}` "
+            f"from {claude_registered_source(claude_marketplace_payload)}; the "
+            f"canonical source is {CLAUDE_GITHUB_SOURCE_TYPE} "
+            f"{CANONICAL_MARKETPLACE_SOURCE}; repair the registration explicitly "
+            "before persistent installation"
+        )
     claude_action = (
         preflight.claude_source_action
-        if MARKETPLACE_NAME in claude_marketplace_names(claude_marketplace_payload)
+        if registered is SourceAction.REFRESH
         else SourceAction.ADD
     )
     codex_action = codex_source_action(codex_marketplace_payload)
@@ -1084,11 +1100,13 @@ def claude_refresh_records(
     """Split Claude install records into native-update targets and warnings.
 
     A record refreshes when its plugin is in the committed catalog, its scope
-    is one the project boundary admits, and its project path exists to host
-    the native command. Every other record is reported and left unchanged:
-    a record outside the catalog, outside project or local scope, or whose
-    project path is gone. Targets follow catalog order, then project path,
-    then scope, so the plan is stable across listings.
+    is one the project boundary admits, its project path exists to host the
+    native command, and that project's own settings register no noncanonical
+    marketplace source the update would resolve against. Every other record is
+    reported and left unchanged: a record outside the catalog, outside project
+    or local scope, whose project path is gone, or whose project declares a
+    noncanonical source. Targets follow catalog order, then project path, then
+    scope, so the plan is stable across listings.
     """
     targets: list[ClaudeInstallRecord] = []
     warnings: list[InstallationWarning] = []
@@ -1105,6 +1123,12 @@ def claude_refresh_records(
             )
         elif record.plugin not in catalog:
             message = UNCATALOGED_RECORD_WARNING.format(
+                plugin=record.plugin,
+                scope=record.scope,
+                project_path=record.project_path,
+            )
+        elif claude_project_source_action(record.project_path) is SourceAction.REPLACE:
+            message = NONCANONICAL_SOURCE_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
                 project_path=record.project_path,
@@ -2071,23 +2095,66 @@ def claude_source_action(document: Mapping[str, object]) -> SourceAction:
     return SourceAction.REPLACE
 
 
-def claude_marketplace_names(payload: str) -> frozenset[str]:
-    """Parse marketplace names from one Claude marketplace listing."""
+def claude_project_source_action(project_path: Path) -> SourceAction:
+    """Classify the marketplace source a checkout's own settings declare.
+
+    The project and local settings documents are read in that order; the
+    first that names the marketplace decides, and a checkout naming it in
+    neither leaves the machine registry's canonical entry in force.
+    """
+    for relative in (CLAUDE_PROJECT_SETTINGS_PATH, CLAUDE_LOCAL_SETTINGS_PATH):
+        action = claude_source_action(_settings_document(project_path / relative))
+        if action is not SourceAction.ADD:
+            return action
+    return SourceAction.ADD
+
+
+def claude_registered_source_action(payload: str) -> SourceAction:
+    """Classify the machine registry's marketplace entry from one listing.
+
+    An absent entry is added; the canonical GitHub source is refreshed; any
+    other source is a mismatch the run reports for explicit repair.
+    """
     try:
         document = cast(object, json.loads(payload))
     except json.JSONDecodeError as error:
         raise ValueError(f"invalid claude marketplace listing: {error}") from error
     if not isinstance(document, list):
         raise ValueError("claude marketplace listing must be a JSON array")
-    names: set[str] = set()
     for entry in document:
         if not isinstance(entry, dict):
             raise ValueError("claude marketplace listing contains a non-object")
         name = entry.get(CLAUDE_MARKETPLACE_NAME_FIELD)
         if not isinstance(name, str):
             raise ValueError("claude marketplace listing entry lacks a typed name")
-        names.add(name)
-    return frozenset(names)
+        if name != MARKETPLACE_NAME:
+            continue
+        if (
+            entry.get(CLAUDE_SOURCE_FIELD) == CLAUDE_GITHUB_SOURCE_TYPE
+            and entry.get(CLAUDE_REPOSITORY_FIELD) == CANONICAL_MARKETPLACE_SOURCE
+        ):
+            return SourceAction.REFRESH
+        return SourceAction.REPLACE
+    return SourceAction.ADD
+
+
+def claude_registered_source(payload: str) -> str:
+    """Render the machine registry's marketplace source for a diagnostic."""
+    document = cast(object, json.loads(payload))
+    if isinstance(document, list):
+        for entry in document:
+            if isinstance(entry, dict) and entry.get(CLAUDE_MARKETPLACE_NAME_FIELD) == (
+                MARKETPLACE_NAME
+            ):
+                return json.dumps(
+                    {
+                        key: value
+                        for key, value in entry.items()
+                        if key != CLAUDE_MARKETPLACE_NAME_FIELD
+                    },
+                    sort_keys=True,
+                )
+    return "absent"
 
 
 def claude_marketplace_listing_payload(repository: str) -> str:
@@ -2392,7 +2459,12 @@ __all__ = [
     "catalog_plugin_names",
     "checkout_scope_split_entries",
     "claude_marketplace_listing_payload",
-    "claude_marketplace_names",
+    "claude_project_source_action",
+    "claude_registered_source_action",
+    "claude_registered_source",
+    "CLAUDE_LOCAL_SETTINGS_PATH",
+    "NONCANONICAL_SOURCE_WARNING",
+    "REGISTRY_SOURCE_DIAGNOSTIC",
     "claude_marketplace_settings",
     "claude_source_action",
     "codex_marketplace_listing_payload",
