@@ -94,6 +94,8 @@ _CHANGESET_SCOPE_PATH = (
 CONFLICT_SUMMARY = "Base sync stopped: rebase conflict requires reconciliation"
 # ``git config --unset`` exits 5 when the key is absent; an absent key is not a failed removal.
 CONFIG_KEY_ABSENT_EXIT = 5
+# The one serialized proof key that is not a ``Preservation`` field.
+SCHEMA_VERSION_KEY = "schema_version"
 CONFLICT_INSPECT_STATUS = "git status"
 CONFLICT_INSPECT_DIFF = "git diff"
 CONFLICT_INSPECT_STAGES = "git ls-files -u"
@@ -344,7 +346,7 @@ class Preservation:
     def to_json_dict(self) -> dict[str, object]:
         """Serialize the proof with the schema version and stable keys."""
         return {
-            "schema_version": READINESS_SCHEMA_VERSION,
+            SCHEMA_VERSION_KEY: READINESS_SCHEMA_VERSION,
             "old_base_oid": self.old_base_oid,
             "new_base_oid": self.new_base_oid,
             "old_head_oid": self.old_head_oid,
