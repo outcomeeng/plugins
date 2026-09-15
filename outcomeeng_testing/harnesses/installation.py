@@ -31,7 +31,13 @@ from outcomeeng.distribution.contracts import (
     Target,
 )
 from outcomeeng.distribution.installation import (
+    AGENT_OWNERSHIP_DESTINATION_FIELD,
+    AGENT_OWNERSHIP_DIGEST_FIELD,
+    AGENT_OWNERSHIP_ENTRIES_FIELD,
     AGENT_OWNERSHIP_FILENAME,
+    AGENT_OWNERSHIP_PLUGIN_FIELD,
+    AGENT_OWNERSHIP_SCHEMA_FIELD,
+    AGENT_OWNERSHIP_SCHEMA_VERSION,
     AGENT_SKILL_NAME_FIELD,
     AGENT_SKILLS_CONFIG_FIELD,
     AGENT_SKILLS_FIELD,
@@ -115,6 +121,14 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 
 UNOWNED_AGENT_FILENAME = "developer-owned.toml"
 UNOWNED_AGENT_CONTENT = 'name = "developer-owned"\n'
+FOREIGN_DEFINITION_CONTENT = b'name = "foreign-definition"\n'
+"""A definition some other party wrote at a destination a plugin wants."""
+EXTERNAL_DEFINITION_CONTENT = b'name = "external"\n'
+"""A definition outside the agent home that a home symlink points at."""
+CONCURRENT_EDIT_CONTENT = b"edited while the run was planning\n"
+"""Bytes a concurrent writer leaves at a destination between preflight and mutation."""
+MALFORMED_OWNERSHIP_DIGEST = "z" * 64
+"""A 64-character digest the ownership record must reject as non-hex."""
 REQUIRED_BINARIES: tuple[str, ...] = ("just", "claude", "codex")
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
@@ -359,6 +373,40 @@ class PluginLifecycleHarness:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
+
+    def definition_name(self, slug: str) -> str:
+        """The shipped filename this plugin gives the agent named `slug`."""
+        return f"{self.plugin_name}_{slug}.toml"
+
+    def definition_content(self, slug: str) -> bytes:
+        """The shipped definition bytes for the agent named `slug`."""
+        return f'name = "{self.plugin_name}-{slug}"\n'.encode()
+
+    def ship(self, slug: str) -> Path:
+        """Write the shipped definition for `slug` and return its path."""
+        return self.write_shipped(
+            self.definition_name(slug), self.definition_content(slug)
+        )
+
+    def destination_of(self, name: str) -> str:
+        """The ownership-record destination for a home agent file name."""
+        return f"{CODEX_HOME_AGENTS_PATH.as_posix()}/{name}"
+
+    def ownership_entry(self, name: str, digest: str) -> dict[str, object]:
+        """One ownership entry claiming `name` for this plugin at `digest`."""
+        return {
+            AGENT_OWNERSHIP_DESTINATION_FIELD: self.destination_of(name),
+            AGENT_OWNERSHIP_PLUGIN_FIELD: self.plugin_name,
+            AGENT_OWNERSHIP_DIGEST_FIELD: digest,
+        }
+
+    @staticmethod
+    def ownership_document(*entries: Mapping[str, object]) -> dict[str, object]:
+        """An ownership record carrying `entries` under the current schema."""
+        return {
+            AGENT_OWNERSHIP_SCHEMA_FIELD: AGENT_OWNERSHIP_SCHEMA_VERSION,
+            AGENT_OWNERSHIP_ENTRIES_FIELD: list(entries),
+        }
 
     def write_shipped(self, name: str, content: bytes) -> Path:
         path = self.shipped_agents / name
@@ -2607,6 +2655,10 @@ __all__ = [
     "racing_digest_reader",
     "skill_enabling_definition",
     "RENAMED_CHECKOUT_AGENT_NAME",
+    "FOREIGN_DEFINITION_CONTENT",
+    "EXTERNAL_DEFINITION_CONTENT",
+    "CONCURRENT_EDIT_CONTENT",
+    "MALFORMED_OWNERSHIP_DIGEST",
     "RENAMED_CHECKOUT_SKILL_NAME",
     "absent_from_every_agent",
     "observe_unpublished_plugin",

@@ -5,12 +5,15 @@ import json
 import pytest
 
 from outcomeeng.distribution.installation import (
+    ABSENT_PROJECT_PATH_WARNING,
     Agent,
     CLAUDE_CATALOG_PATH,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
     MARKETPLACE_NAME,
+    OUT_OF_SCOPE_RECORD_WARNING,
+    UNCATALOGED_RECORD_WARNING,
     CODEX_CATALOG_PATH,
     CODEX_PLUGIN_ENTRIES_FIELD,
     InstallationMode,
@@ -151,6 +154,11 @@ def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None
     ]
     unmatched_updates = list(updates)
     unmatched_warnings = list(warnings)
+    templates = {
+        RecordDisposition.ABSENT_PATH: ABSENT_PROJECT_PATH_WARNING,
+        RecordDisposition.OUT_OF_SCOPE: OUT_OF_SCOPE_RECORD_WARNING,
+        RecordDisposition.UNCATALOGED: UNCATALOGED_RECORD_WARNING,
+    }
 
     for entry, disposition in observation.cases:
         plugin = entry[CLAUDE_PLUGIN_ID_FIELD].split("@")[0]
@@ -171,18 +179,17 @@ def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None
         if disposition is RecordDisposition.EXCLUDED:
             assert not entry[CLAUDE_PLUGIN_ID_FIELD].endswith(f"@{MARKETPLACE_NAME}")
             assert not any(
-                f"records {plugin} at {scope} scope for {project_path}" in message
-                for message in warnings
+                template.format(plugin=plugin, scope=scope, project_path=project_path)
+                in warnings
+                for template in templates.values()
             )
             continue
-        matching_warnings = [
-            message
-            for message in unmatched_warnings
-            if f"records {plugin} at {scope} scope" in message
-            and (project_path is None or project_path in message)
-        ]
-        assert len(matching_warnings) == 1, (entry, disposition, warnings)
-        unmatched_warnings.remove(matching_warnings[0])
+        template = templates[disposition]
+        expected = template.format(
+            plugin=plugin, scope=scope, project_path=project_path
+        )
+        assert unmatched_warnings.count(expected) == 1, (entry, disposition, warnings)
+        unmatched_warnings.remove(expected)
 
     assert unmatched_updates == []
     assert unmatched_warnings == []
