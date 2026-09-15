@@ -125,7 +125,7 @@ The plugin implementation-auditor model records implementation-audit coverage, f
 Open gaps:
 
 - Audit scope payloads require stable producer identity and producer provenance for every unit, but `missing-skill`, `unsupported`, and `coverage-gap` units may have no executed leaf skill and sometimes no skill or plugin version. SPX should distinguish the run driver that recorded the unit from the expected producer that would have covered it, and make provenance optional when the expected producer is absent.
-- The `coverage-gap` audit kind the skill contract documents is rejected by the installed CLI. `spx` 0.6.22 fails a `scope add` payload carrying `auditKind: "coverage-gap"` with `spx verification run scope add payload failed verification-type validation`, so a run that records a not-applicable language partition must substitute a concern-matching kind (`code`, `tests`, `architecture`) with `coverageStatus: "not-applicable"`. Either the CLI accepts the documented value or the skill contract drops it; until then every implementation-audit run over a single-language changeset carries a silent substitution. Observed while auditing `spx/13-infrastructure.enabler/13-host-readiness.enabler`.
+- The `coverage-gap` audit kind pairs only with an uncovered coverage status. `spx` 0.6.21 and 0.6.27 both accept `auditKind: "coverage-gap"` when the payload carries `coverageStatus: "skipped"` and reject it with `a coverage-gap unit carries an uncovered coverage status` when it carries `not-applicable` — so the kind is available and the constraint is on the status, not the kind. A required coverage-gap unit additionally forces the terminal rollup to `rejected`, which is why the accounting record for an unclaimed path is `optional` and `skipped`. An earlier reading of this boundary as a rejection of the kind itself is superseded by direct observation against both releases.
 - Audit unit identity and subject normalization are not specified. SPX should define deterministic `unit_id` derivation, parent/child identity stability, and normalized subject shape so findings, coverage gaps, and prior-run context converge across repeated runs.
 - Finding-key granularity is unspecified where the payload models a finer grain than the key. A finding payload carries `location`, so one concern can report two violations of the same rule at different locations within one subject, while the finding key is the unit key plus the rule alone — the second recording composes the first key, and the run counts one finding where the producer raised two. SPX should specify whether a finding's identity is one per subject and rule, with `location` describing the occurrence, or one per location, with a deterministic location component in the key; the plugin contract then follows that decision rather than choosing a key shape the CLI may not honor. **Why this is a separate larger concern.** The choice is the same identity specification the entry above defers to SPX, and adding a location segment now would publish a key shape the CLI has not agreed to, so a run recorded against it could stop converging with prior-run context. Surfaced by the pull-request reviewer on the idempotency-key changeset, which disambiguated the key across subjects and left this narrower collision open.
 - Audit class/kind validation needs a compatibility matrix for `instructions`, `spec`, and `implementation` classes so impossible combinations such as an implementation audit of `skill` or an instructions audit of `code` are rejected by schema validation.
@@ -186,9 +186,18 @@ its enforcement, and a line in `spx/local/skills.md` for the authoring surface �
 or widen the validator to a category rule that admits inert data files while
 still rejecting executable audit machinery.
 
+The constraint now also blocks the standard remedy for the skill's size.
+`SKILL.md` stands at 498 of the 500-line ceiling `/skill-standards` sets, and
+the content that would move — the scope and finding payload contracts — has
+nowhere to go, because `references/operational-failures.md` is the only
+reference file the inventory admits. The next necessary addition crosses the
+ceiling with no sanctioned extraction available, so widening the validator is
+the move that unblocks both this entry and the ceiling.
+
 **Evidence.** The pre-commit hook rejected a `templates/` directory carrying the
 two payload shapes during the completion-contract repair; the extraction was
-withdrawn and the payloads stay inline in `SKILL.md`.
+withdrawn and the payloads stay inline in `SKILL.md`. The ceiling pressure was
+surfaced by `instructions:skill-auditor` on the coverage-accounting repair.
 
 ## The run driver reports inconsistent provenance for its own plugin version
 
@@ -220,7 +229,7 @@ repair.
 ## The scope resolver crossed the shipped-script size threshold
 
 `src/plugins/spec-tree/skills/audit-implementation/scripts/resolve_scope.py` is
-179 lines. `spx/12-shipped-scripting.adr.md` holds that a generic shipped script
+189 lines. `spx/12-shipped-scripting.adr.md` holds that a generic shipped script
 beyond fifty lines is debt awaiting extraction into the SPX CLI once it proves
 its value.
 
@@ -248,5 +257,5 @@ the bundled script. Filed as the SPX-side Change; the audit-payload schema work
 carries it.
 
 **Evidence.** The resolver grew from 48 to 61 lines closing the
-transcribed-inventory hole, then to 179 closing the coverage-accounting hole,
+transcribed-inventory hole, then to 189 closing the coverage-accounting hole,
 both recorded against `outcomeeng/changes#47`.

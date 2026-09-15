@@ -25,6 +25,10 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ## 0.94.3
 
+### Requires
+
+- **`@outcomeeng/spx` 0.6.21 or newer.** Stage 4 enumerates the inventory from the `resolvedScope` array `spx verification run start` returns, and the stage 7 reconciler reads the recorded units from `render`'s `auditScopeUnits`. Both fields first appear in 0.6.21; below it `start` names the field `changedScope` and `render` omits the scope units entirely, so the reconciler cannot exit zero and `finish` is unreachable.
+
 ### Fixed
 
 - **An implementation audit can no longer record a scope unit only where it found something.** `audit-implementation` now persists a concern's complete claimed-path coverage *before* any of that concern's findings, so a path inspected and found clean produces a scope row rather than none, and a raised finding or a `rejected` terminal status never shortens the inspection — rejection is a verdict about what was inspected, not permission to leave a concern or a resolved path unrecorded. An observed run piped in the correct 48-path inventory, loaded all three concern skills, read fourteen subject bodies, then recorded two `code` units — both carrying its single finding — and sealed `rejected` with no `tests` or `architecture` unit at all.

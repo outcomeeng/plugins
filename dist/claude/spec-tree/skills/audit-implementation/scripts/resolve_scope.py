@@ -1,4 +1,14 @@
-"""Resolve an implementation audit selector and reconcile a run against it."""
+"""Resolve an implementation audit selector and reconcile a run against it.
+
+Tested inputs and error cases: the implementation-scope scenario and compliance
+suites exercise stale-local-base resolution, a nonexistent repository, a
+run-input object whose keys cannot displace the git-resolved scope, a non-object
+and a malformed run-input value, a sealed inventory path carrying no recorded
+scope unit, a required unit outside the final coverage statuses beside an
+optional unit carrying the same status, exact inventory agreement, drift in
+both directions, a recorded subject outside the inventory, and a run token the
+CLI cannot read, before this script is bundled.
+"""
 
 import argparse
 import importlib.util

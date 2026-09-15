@@ -17,6 +17,7 @@ CAN contribute code, test, and architecture audit intelligence without shipping 
 - ALWAYS: the `spec-tree:audit-implementation` prompt contract reconciles before finishing by running the bundled reconciler over the run's own sealed inventory and recorded units, and treats its nonzero exit as a failed reconciliation returning the run to inspection ([audit])
 - NEVER: the `spec-tree:audit-implementation` prompt contract authorizes finishing from a reconciliation against the run's own planned inventory alone — a plan narrowed before enumeration reconciles with itself ([audit])
 - NEVER: the `spec-tree:audit-implementation` prompt contract admits a raised finding or a rejected terminal status as a reason to leave a remaining concern or resolved path uninspected or unrecorded ([audit])
+- ALWAYS: every `spx verification run` response field the implementation-audit skill and its bundled reconciler read is present in the repository's declared spx floor, so a consumer pinned at that floor reaches `finish` ([audit])
 
 ### Scenarios
 
