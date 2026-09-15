@@ -5,6 +5,7 @@ from __future__ import annotations
 import pathlib
 
 from outcomeeng_testing.harnesses.sync_base import (
+    ConfigWriteRefusingRunner,
     branch_config_entries,
     build_alternate_base_repo,
     build_behind_base_repo,
@@ -199,3 +200,24 @@ def test_derivation_with_unordered_candidates_writes_no_record(
         module.stack_config_key(handle.stacked_branch, module.STACK_TIP_KEY)
         not in entries
     )
+
+
+def test_failed_record_write_is_never_reported_as_a_clean_sync(
+    tmp_path: pathlib.Path,
+) -> None:
+    # Stage 5 exception 1 (failure simulation): the injected runner refuses
+    # every git config write while the rebase itself runs for real, so the
+    # sync must report the refused record rather than a clean outcome.
+    module = load_sync_base_module()
+    handle = build_alternate_base_repo(repository_root(tmp_path))
+    runner = ConfigWriteRefusingRunner()
+
+    result = module.sync_base(handle.repo, base_ref=handle.alternate_ref, runner=runner)
+
+    assert result.status is module.SyncStatus.GIT_FAILURE
+    assert (
+        module.stack_config_key(handle.feature_branch, module.STACK_PREDECESSOR_KEY)
+        in result.detail
+    )
+    assert runner.refused
+    assert module.read_stack_record(handle.repo, handle.feature_branch) is None

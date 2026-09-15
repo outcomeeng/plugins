@@ -10,6 +10,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_stacked_repo_behind_base,
     build_stacked_repo_merged_predecessor,
     build_stacked_repo_open_predecessor_advanced,
+    build_stacked_repo_rewritten_published_predecessor,
     build_stacked_repo_unpublished_predecessor,
     build_stacked_repo_without_record,
     build_three_level_stack_behind_base,
@@ -121,6 +122,36 @@ def test_recorded_branch_follows_an_unpublished_rewritten_predecessor(
     ) == module.StackRecord(
         predecessor=handle.predecessor_branch,
         tip=resolve_ref(handle.repo, handle.predecessor_branch),
+    )
+
+
+def test_recorded_branch_follows_a_rewritten_published_predecessor(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_stacked_repo_rewritten_published_predecessor(
+        repository_root(tmp_path)
+    )
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.REBASED
+    assert result.remote_ref == handle.predecessor_remote_ref
+    # Only the stacked branch's own commit was replayed above the rewritten
+    # predecessor on origin; the stale predecessor commit left its history.
+    assert commit_subjects_above(handle.repo, handle.predecessor_remote_ref) == [
+        handle.stacked_message
+    ]
+    assert (handle.repo / handle.predecessor_file).read_text(
+        encoding="utf-8"
+    ) == handle.predecessor_rewrite_content
+    assert result.preservation is not None
+    assert result.preservation.old_base_oid == handle.predecessor_tip
+    assert module.read_stack_record(
+        handle.repo, handle.stacked_branch
+    ) == module.StackRecord(
+        predecessor=handle.predecessor_branch,
+        tip=resolve_ref(handle.repo, handle.predecessor_remote_ref),
     )
 
 

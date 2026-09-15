@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Literal
 import importlib.util
 import os
 import pathlib
@@ -954,6 +956,75 @@ def build_stacked_repo_unordered_candidates(root: pathlib.Path) -> StackedRepo:
         second_candidate_branch=data.alternate_branch,
         second_candidate_tip=second_tip,
     )
+
+
+def build_stacked_repo_rewritten_published_predecessor(
+    root: pathlib.Path,
+) -> StackedRepo:
+    """Build a recorded stack whose predecessor was rewritten and force-pushed.
+
+    The predecessor's commit is amended in the working clone and force-pushed,
+    so ``origin/<predecessor>`` survives unmerged without the recorded tip. The
+    stacked branch must replay only its own commit above the recorded tip onto
+    that remote-tracking ref.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    _write_record(repo, data.stacked_branch, data.predecessor_branch, predecessor_tip)
+    _git(repo, "switch", "-q", data.predecessor_branch)
+    (repo / data.predecessor_file).write_text(
+        data.predecessor_rewrite_content, encoding="utf-8"
+    )
+    _git(repo, "add", data.predecessor_file)
+    _git(repo, "commit", "-q", "--amend", "-m", data.predecessor_rewrite_message)
+    _git(repo, "push", "-q", "--force-with-lease", "origin", data.predecessor_branch)
+    _git(repo, "switch", "-q", data.stacked_branch)
+    return _stacked_handle(
+        repo,
+        data,
+        predecessor_tip,
+        predecessor_rewrite_content=data.predecessor_rewrite_content,
+    )
+
+
+class ConfigWriteRefusingRunner:
+    """A ``/test`` Stage 5 exception 1 (failure simulation) git runner.
+
+    Every ``git config`` write or unset returns a failed process; every read
+    and every other git command runs for real through ``subprocess.run``. The
+    runner exposes the failed invocation as an observation and owns no verdict.
+    """
+
+    def __init__(self) -> None:
+        self.refused: list[list[str]] = []
+
+    def __call__(
+        self,
+        argv: Sequence[str],
+        /,
+        *,
+        cwd: pathlib.Path,
+        capture_output: bool,
+        text: Literal[True],
+        check: bool,
+        input: str | None = None,  # noqa: A002 — subprocess.run's parameter name
+    ) -> subprocess.CompletedProcess[str]:
+        args = list(argv)
+        is_config_write = args[:2] == ["git", "config"] and not any(
+            arg.startswith("--get") for arg in args[2:]
+        )
+        if is_config_write:
+            self.refused.append(args)
+            return subprocess.CompletedProcess(
+                args, 1, "", "simulated failure: config write refused"
+            )
+        return subprocess.run(  # noqa: S603 — fixed argv from the synchronizer, no shell
+            args,
+            cwd=cwd,
+            input=input,
+            capture_output=capture_output,
+            text=text,
+            check=check,
+        )
 
 
 def _write_record(repo: pathlib.Path, branch: str, predecessor: str, tip: str) -> None:
