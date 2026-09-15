@@ -1,6 +1,6 @@
 <required_reading>
 
-Read @spx/local/coordination.md for the Change store, project, and Product values. Read no other overlay.
+Read spx/local/coordination.md for the Change store, project, and Product values. Read no other overlay.
 
 </required_reading>
 
