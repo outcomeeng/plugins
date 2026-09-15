@@ -11,7 +11,7 @@ A claimed handoff session — or, under `spx/local/coordination.md`, a claimed C
 
 <constraints>
 
-- Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly. The single session exception is the legacy-file archive `<change_coordination>` authorizes once the Change carrying that file as received input exists. A Change is not a session: under the overlay, `${SKILL_DIR}/workflows/change.md` releases a Change — posts a `Handoff:` comment and removes the assignee — when an Executable Frame fails validation against current truth, and that release is the workflow's own step.
+- Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly. The single session exception is the legacy-file archive `<change_coordination>` authorizes after the Change carrying that file as received input reaches a verified Claimed state. A Change is not a session: under the overlay, `${SKILL_DIR}/workflows/change.md` invokes `/handoff` to release a Change through Handoff, assignee removal, Status `Available`, and complete readback when an Executable Frame fails validation against current truth.
 - NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.
 - Before asking the operator to continue, review the loaded session evidence and present a no-surprises proposal: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation.
 - If session evidence shows another active context already owns the objective, report the owning session, branch, or PR and stop without archiving, releasing, handing off, or otherwise mutating the claimed session.
@@ -20,7 +20,7 @@ A claimed handoff session — or, under `spx/local/coordination.md`, a claimed C
 
 <change_coordination>
 
-When `spx/local/coordination.md` exists at the repository root, the repository coordinates work through Changes and Handoffs — GitHub issues in the store that overlay names — and this skill follows `${SKILL_DIR}/workflows/change.md` in place of `${SKILL_DIR}/workflows/pickup.md` and the `<claim>` procedure below. A legacy queue file claimed under that overlay becomes a Change carrying the whole file as received input and is archived once the Change exists; that archive is the one session mutation this skill performs, and only there. `<claimed_sessions>` keeps governing any `<CLAIMED_SESSIONS>` marker already present in the conversation. Without the overlay, everything below applies unchanged.
+When `spx/local/coordination.md` exists at the repository root, the repository coordinates work through Changes and Handoffs — GitHub issues in the store that overlay names — and this skill follows `${SKILL_DIR}/workflows/change.md` in place of `${SKILL_DIR}/workflows/pickup.md` and the `<claim>` procedure below. A legacy queue file claimed under that overlay becomes an unassigned Proposed, Available Change carrying the whole file as received input, then follows the normal claim transition and is archived only after the complete Claimed state verifies; that archive is the one session mutation this skill performs, and only there. `<claimed_sessions>` keeps governing any `<CLAIMED_SESSIONS>` marker already present in the conversation. Without the overlay, everything below applies unchanged.
 
 </change_coordination>
 
@@ -190,9 +190,9 @@ Authenticate gh (project scope) or fix the overlay; no Change was claimed or cre
 
 **Overlay incomplete**: `spx/local/coordination.md` names no store repository, project owner and number, or Product value — report the missing value and stop; never guess a store.
 
-**Change closed, held elsewhere, or another Product's**: `owned_elsewhere` — report the terminal state, the current holder (assignee, or the winning `Claim:` comment's session id when two sessions raced), or the mismatched `product`, and stop without mutating the Change beyond removing this session's own losing assignee when the winner is a different account.
+**Change closed, non-Available, held elsewhere, or another Product's**: `owned_elsewhere` — report the terminal state, Status, current holder, winning `Claim:` session id, or mismatched Product and stop without mutation.
 
-**Migration interrupted**: when `gh issue create` or `gh project item-add` fails after `spx session pickup <id>`, report the failed command and its output; the legacy file stays in `doing` unarchived and no further Change write is attempted. A lone `gh project item-edit` failure gets one re-read of the item and one retry of the missing field; a second failure is reported the same way, with the created issue named as the Change to resume from.
+**Change transition interrupted**: when any required issue, project-item, Product, Maturity, Status, assignee, Claim, Handoff, or readback operation fails, report the completed writes in order, the failed operation, and the complete observed state; stop before every later mutation. A legacy file stays in `doing` unarchived until its Change reaches a verified Claimed state.
 
 **Archive failed after the Change exists**: `spx session archive <id>` is retried once; on a second failure the created issue URL is reported beside the file id and the file stays in `doing`; the next pickup of that file finds the issue through the store search and resumes it rather than creating another.
 
@@ -234,15 +234,21 @@ Claude picked up a duplicate session, saw evidence that another active `doing` s
 
 How to avoid: Classify the session as `owned_elsewhere`, report the owning session, branch, or PR, and stop without archiving, releasing, handing off, or moving any session.
 
+**Failure 6: Claude treated assignee state as the complete Change claim**
+
+Claude added the assignee and Claim comment, then began execution while the project Status remained Available or unset. The body also carried a prose Lifecycle value, creating two competing homes for the same fact.
+
+How to avoid: Read Product, Maturity, and Status from the project item before mutation; require Available with no assignee; add the assignee; post the winning Claim; write Status `Claimed`; verify the complete state; then remove any legacy metadata line only after the project fields are settled.
+
 </failure_modes>
 
 <success_criteria>
-Each bullet is tagged `(both)` when it holds under and without `spx/local/coordination.md`, or `(session file only)` when it belongs to the session-file path alone. Under the overlay a successful pickup satisfies `${SKILL_DIR}/workflows/change.md`'s success criteria — a Change claimed by sole assignee or created from a legacy file that carries no secret, `<PICKUP_CLAIM change="...">` and a cumulative `<CLAIMED_CHANGES urls="...">` emitted, execution only from a validated Executable Change continuing at the Handoff's Next Activity, and a proposal that names the Frame's governing truth first — plus every `(both)` bullet. Without the overlay a successful pickup satisfies every bullet:
+Each bullet is tagged `(both)` when it holds under and without `spx/local/coordination.md`, or `(session file only)` when it belongs to the session-file path alone. Under the overlay a successful pickup satisfies `${SKILL_DIR}/workflows/change.md`'s success criteria — Product and Maturity verified, Status `Claimed`, exactly one assignee, the earliest Claim after the latest Handoff belonging to this session, `<PICKUP_CLAIM change="...">` and a cumulative `<CLAIMED_CHANGES urls="...">` emitted, execution only from a validated Executable Change continuing at the Handoff's Next Activity, and a proposal that names the Frame's governing truth first — plus every `(both)` bullet. Without the overlay a successful pickup satisfies every bullet:
 
 - [ ] (session file only) Session claimed via `spx session pickup`
 - [ ] (session file only) Canonical pickup claim marker emitted as `<PICKUP_CLAIM id="...">`
 - [ ] (session file only) Running CLAIMED_SESSIONS marker emitted as `<CLAIMED_SESSIONS ids="...">` including the newly claimed session id
-- [ ] (session file only) Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session, except the legacy-file archive `<change_coordination>` authorizes once its Change exists
+- [ ] (session file only) Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session, except the legacy-file archive `<change_coordination>` authorizes after its Change reaches a verified Claimed state
 - [ ] (session file only) No new handoff session is treated as permission to archive, release, or replace a claimed session
 - [ ] (both) `/understand` invoked immediately before the workflow's first product-content access — the coordination-note path check or the `/contextualize` invocation on the session-file path, the Change-body read on the Change path — and not before the claim, session presentation, checkout, base sync, or claim reconciliation
 - [ ] (session file only) Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work
