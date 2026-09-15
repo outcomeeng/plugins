@@ -42,6 +42,23 @@ which pre-push readiness predicates survive the base movement. The proof is git
 facts only — validation-lane mapping and the governance-surface list are the
 project overlay's — and it never satisfies a merge gate.
 
+A branch stacked on a predecessor branch carries a stack record in git
+configuration — ``branch.<name>.stackPredecessor`` and ``branch.<name>.stackTip``
+— written from git facts at the moments the relation is knowable: when a
+rebase rewrites a branch, every local branch containing the pre-rebase head
+receives a record naming the rewritten branch and that head; when a caller
+supplies a non-default ``--base``, the synchronized branch receives a record
+naming that base. A later sync of a recorded branch takes the predecessor as
+its base and resolves the predecessor's state: open and containing the
+recorded tip is an ordinary rebase onto it; open and rewritten replays only
+the commits above the recorded tip onto it; merged into the default branch
+(or absent from origin with no surviving local branch) replays only the
+commits above the recorded tip onto ``origin/<default>`` and clears the
+record. An unpublished predecessor — absent from origin while its local branch
+survives unmerged — stands in through that local branch. A branch with no
+record derives a predecessor from local topology when exactly one local branch
+forked from the default before the branch forked from it.
+
 The base ref and its remote-tracking form are resolved through the shared
 changeset-scope primitives, never re-derived here. The primitives ship under a
 runtime-substituted plugin skill directory and are not importable by package
@@ -52,6 +69,7 @@ identity preserved.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import hashlib
 import importlib.util
 import json
@@ -75,9 +93,25 @@ CONFLICT_INSPECT_DIFF = "git diff"
 CONFLICT_INSPECT_STAGES = "git ls-files -u"
 CONFLICT_CONTINUE = "git add <resolved-paths> && git rebase --continue"
 CONFLICT_ABORT = "git rebase --abort"
+#: Placeholder the operator replaces with the fork commit in the restack option.
+RESTACK_FORK_PLACEHOLDER = "<fork>"
+
+#: Branch-configuration keys of the stack record, under ``branch.<name>.``.
+STACK_PREDECESSOR_KEY = "stackPredecessor"
+STACK_TIP_KEY = "stackTip"
 
 #: Schema version of the readiness-preservation proof embedded in the result.
-READINESS_SCHEMA_VERSION = 1
+READINESS_SCHEMA_VERSION = 2
+
+
+def stack_config_key(branch: str, key: str) -> str:
+    """Return the git-configuration key of one stack-record field for ``branch``."""
+    return f"branch.{branch}.{key}"
+
+
+def restack_operator_option(remote_ref: str) -> str:
+    """Return the restack form an operator names a fork for after a conflict."""
+    return f"git rebase --onto {remote_ref} {RESTACK_FORK_PLACEHOLDER}"
 
 
 def _load_changeset_scope() -> ModuleType:
@@ -147,6 +181,51 @@ _EXIT_CODES = {
 
 
 @dataclass(frozen=True)
+class StackRecord:
+    """The stack relation a branch carries in its git configuration.
+
+    ``predecessor`` is the branch this branch is stacked on; ``tip`` is the full
+    OID of the predecessor commit this branch last sat on — the bound between
+    the predecessor's commits and the branch's own.
+    """
+
+    predecessor: str
+    tip: str
+
+
+def read_stack_record(repo: pathlib.Path, branch: str) -> StackRecord | None:
+    """Return ``branch``'s stack record, or ``None`` when either key is absent."""
+    predecessor = _git(
+        repo, "config", "--get", stack_config_key(branch, STACK_PREDECESSOR_KEY)
+    )
+    tip = _git(repo, "config", "--get", stack_config_key(branch, STACK_TIP_KEY))
+    if predecessor.returncode != 0 or tip.returncode != 0:
+        return None
+    predecessor_name = predecessor.stdout.strip()
+    tip_oid = tip.stdout.strip()
+    if not predecessor_name or not tip_oid:
+        return None
+    return StackRecord(predecessor=predecessor_name, tip=tip_oid)
+
+
+def write_stack_record(repo: pathlib.Path, branch: str, record: StackRecord) -> None:
+    """Write both stack-record keys for ``branch``."""
+    _git(
+        repo,
+        "config",
+        stack_config_key(branch, STACK_PREDECESSOR_KEY),
+        record.predecessor,
+    )
+    _git(repo, "config", stack_config_key(branch, STACK_TIP_KEY), record.tip)
+
+
+def clear_stack_record(repo: pathlib.Path, branch: str) -> None:
+    """Remove both stack-record keys from ``branch``; absent keys are not an error."""
+    _git(repo, "config", "--unset", stack_config_key(branch, STACK_PREDECESSOR_KEY))
+    _git(repo, "config", "--unset", stack_config_key(branch, STACK_TIP_KEY))
+
+
+@dataclass(frozen=True)
 class Preservation:
     """Git facts a caller reads to decide which pre-push readiness survives a sync.
 
@@ -163,7 +242,10 @@ class Preservation:
     unchanged and nothing in the base delta overlaps the branch — a caller still
     ANDs its own governance-surface check before reusing a prior local review. A
     field is ``None`` when a required OID could not be resolved, in which case
-    ``branch_diff_unchanged`` is ``False``.
+    ``branch_diff_unchanged`` is ``False``. ``stack_predecessor``,
+    ``stack_tip_before``, and ``stack_tip_after`` carry the stack record the
+    sync read and wrote — ``stack_tip_after`` is ``None`` once a restack onto the
+    default branch cleared it — and are all ``None`` for a branch with no stack.
 
     This proof scopes pre-push local verification only; it never satisfies a
     merge gate. Validation-lane mapping over ``base_delta_paths`` and the
@@ -180,6 +262,9 @@ class Preservation:
     path_overlap: list[str] | None
     branch_patch_changed: bool
     branch_diff_unchanged: bool
+    stack_predecessor: str | None = None
+    stack_tip_before: str | None = None
+    stack_tip_after: str | None = None
 
     def to_json_dict(self) -> dict[str, object]:
         """Serialize the proof with the schema version and stable keys."""
@@ -195,6 +280,9 @@ class Preservation:
             "path_overlap": self.path_overlap,
             "branch_patch_changed": self.branch_patch_changed,
             "branch_diff_unchanged": self.branch_diff_unchanged,
+            "stack_predecessor": self.stack_predecessor,
+            "stack_tip_before": self.stack_tip_before,
+            "stack_tip_after": self.stack_tip_after,
         }
 
 
@@ -312,6 +400,41 @@ def _merge_base(repo: pathlib.Path, a: str, b: str) -> str | None:
     return oid if result.returncode == 0 and oid else None
 
 
+def _is_ancestor(repo: pathlib.Path, ancestor: str, descendant: str) -> bool:
+    """Return whether ``ancestor`` is reachable from ``descendant``."""
+    return (
+        _git(repo, "merge-base", "--is-ancestor", ancestor, descendant).returncode == 0
+    )
+
+
+def _local_branches(repo: pathlib.Path) -> list[str]:
+    """Return the short names of every ref under ``refs/heads/``."""
+    listed = _git(repo, "for-each-ref", "--format=%(refname:short)", "refs/heads/")
+    if listed.returncode != 0:
+        return []
+    return [name for name in listed.stdout.split() if name]
+
+
+def _write_dependent_records(
+    repo: pathlib.Path, branch: str, old_head_oid: str
+) -> None:
+    """Record ``branch`` and its pre-rebase head on every local branch stacked on it.
+
+    A local branch that contains the pre-rebase head sat on it. A dependent that
+    already records a different predecessor keeps that record: its own
+    restack flows through that nearer predecessor when that one is rewritten.
+    """
+    for dependent in _local_branches(repo):
+        if dependent == branch or not _is_ancestor(repo, old_head_oid, dependent):
+            continue
+        existing = read_stack_record(repo, dependent)
+        if existing is not None and existing.predecessor != branch:
+            continue
+        write_stack_record(
+            repo, dependent, StackRecord(predecessor=branch, tip=old_head_oid)
+        )
+
+
 def _diff_paths(repo: pathlib.Path, spec: str) -> list[str] | None:
     """Return the sorted changed paths for a diff spec, or ``None`` on failure.
 
@@ -422,6 +545,7 @@ def _build_preservation(
 def _build_conflict_details(
     repo: pathlib.Path,
     *,
+    remote_ref: str,
     old_base_oid: str | None,
     new_base_oid: str | None,
     old_head_oid: str | None,
@@ -458,6 +582,7 @@ def _build_conflict_details(
             CONFLICT_INSPECT_DIFF,
             CONFLICT_INSPECT_STAGES,
             CONFLICT_CONTINUE,
+            restack_operator_option(remote_ref),
             CONFLICT_ABORT,
         ],
     )
@@ -599,38 +724,363 @@ def _resolve_default_base(repo: pathlib.Path) -> str | SyncBaseResult:
         )
 
 
+def _with_stack(
+    result: SyncBaseResult,
+    *,
+    predecessor: str,
+    tip_before: str | None,
+    tip_after: str | None,
+) -> SyncBaseResult:
+    """Return ``result`` with the stack facts carried in its preservation proof."""
+    if result.preservation is None:
+        return result
+    return dataclasses.replace(
+        result,
+        preservation=dataclasses.replace(
+            result.preservation,
+            stack_predecessor=predecessor,
+            stack_tip_before=tip_before,
+            stack_tip_after=tip_after,
+        ),
+    )
+
+
 def sync_base(
     repo: pathlib.Path, *, base_ref: str | None = None, fetch: bool = True
 ) -> SyncBaseResult:
     """Bring ``repo``'s current branch current with its fetched base.
 
-    ``base_ref`` is the bare base-branch name to synchronize onto. When omitted
-    it is resolved from ``origin/HEAD`` through the shared changeset-scope
-    primitives; callers that track a non-default base (a stacked pull request
-    whose base is another feature branch) pass it explicitly. The base is
-    fetched (unless ``fetch=False``) and the branch is rebased onto
-    ``origin/<base>`` when it is behind. Returns a :class:`SyncBaseResult`;
-    never raises for an ordinary git outcome.
+    ``base_ref`` is the bare base-branch name to synchronize onto. When omitted,
+    a branch carrying a stack record — or one whose predecessor local topology
+    derives — synchronizes against that predecessor by its recorded state, and
+    every other branch synchronizes onto the default base resolved from
+    ``origin/HEAD`` through the shared changeset-scope primitives. A caller that
+    tracks a non-default base passes it explicitly; the synchronized branch then
+    records that base as its predecessor. The base is fetched (unless
+    ``fetch=False``) and the branch is rebased onto it when it is behind.
+    Returns a :class:`SyncBaseResult`; never raises for an ordinary git outcome.
     """
-    if base_ref is None:
-        resolved_base = _resolve_default_base(repo)
-        if isinstance(resolved_base, SyncBaseResult):
-            return resolved_base
-        base_ref = resolved_base
-    return _sync_resolved_base(repo, base_ref=base_ref, fetch=fetch)
-
-
-def _sync_resolved_base(
-    repo: pathlib.Path, *, base_ref: str, fetch: bool
-) -> SyncBaseResult:
-    """Synchronize onto a caller-resolved bare base branch."""
-    remote_ref = remote_tracking_ref(base_ref)
+    default = _resolve_default_base(repo)
+    default_name = default if isinstance(default, str) else None
 
     try:
         branch = detect_current_branch(repo)
     except DetachedHeadError:
-        return _sync_detached(repo, base_ref, remote_ref, fetch=fetch)
+        if base_ref is None:
+            if isinstance(default, SyncBaseResult):
+                return default
+            base_ref = default
+        return _sync_detached(
+            repo, base_ref, remote_tracking_ref(base_ref), fetch=fetch
+        )
 
+    if base_ref is not None:
+        record = read_stack_record(repo, branch)
+        if (
+            record is not None
+            and record.predecessor == base_ref
+            and default_name is not None
+        ):
+            return _sync_stacked(repo, branch, record, default_name, fetch=fetch)
+        result = _sync_branch_onto(
+            repo, branch, base_ref, remote_tracking_ref(base_ref), fetch=fetch
+        )
+        new_base_oid = (
+            result.preservation.new_base_oid
+            if result.preservation is not None
+            else None
+        )
+        if (
+            result.status in (SyncStatus.REBASED, SyncStatus.ALREADY_CURRENT)
+            and default_name is not None
+            and base_ref != default_name
+            and new_base_oid is not None
+        ):
+            write_stack_record(
+                repo, branch, StackRecord(predecessor=base_ref, tip=new_base_oid)
+            )
+            return _with_stack(
+                result,
+                predecessor=base_ref,
+                tip_before=record.tip if record is not None else None,
+                tip_after=new_base_oid,
+            )
+        return result
+
+    if isinstance(default, SyncBaseResult):
+        return default
+    record = read_stack_record(repo, branch)
+    if record is None:
+        record = _derive_predecessor(repo, branch, default)
+    if record is not None:
+        return _sync_stacked(repo, branch, record, default, fetch=fetch)
+    return _sync_branch_onto(
+        repo, branch, default, remote_tracking_ref(default), fetch=fetch
+    )
+
+
+def _derive_predecessor(
+    repo: pathlib.Path, branch: str, default_name: str
+) -> StackRecord | None:
+    """Derive and record ``branch``'s predecessor from local topology, or ``None``.
+
+    A candidate is a local branch other than ``branch`` and the default branch
+    that does not contain HEAD and whose merge-base with HEAD lies strictly
+    above HEAD's merge-base with ``origin/<default>``: ``branch`` forked from it
+    after it forked from the default. The candidate whose merge-base descends
+    from every other candidate's is the predecessor; unordered candidates yield
+    none, and no record is written.
+    """
+    head = _rev(repo, "HEAD")
+    default_fork = _merge_base(repo, "HEAD", remote_tracking_ref(default_name))
+    if head is None or default_fork is None:
+        return None
+    candidates: list[tuple[str, str]] = []
+    for name in _local_branches(repo):
+        if name in (branch, default_name) or _is_ancestor(repo, head, name):
+            continue
+        fork = _merge_base(repo, "HEAD", name)
+        if (
+            fork is None
+            or fork == default_fork
+            or not _is_ancestor(repo, default_fork, fork)
+        ):
+            continue
+        candidates.append((name, fork))
+    winners = [
+        candidate
+        for candidate in candidates
+        if all(
+            _is_ancestor(repo, other_fork, candidate[1]) for _, other_fork in candidates
+        )
+    ]
+    if len(winners) != 1:
+        return None
+    name, fork = winners[0]
+    record = StackRecord(predecessor=name, tip=fork)
+    write_stack_record(repo, branch, record)
+    return record
+
+
+def _sync_stacked(
+    repo: pathlib.Path,
+    branch: str,
+    record: StackRecord,
+    default_name: str,
+    *,
+    fetch: bool,
+) -> SyncBaseResult:
+    """Synchronize a recorded branch against its predecessor's current state.
+
+    After a pruning fetch, ``origin/<predecessor>`` decides the state: present
+    and containing the recorded tip is an ordinary behind-base rebase onto it;
+    present without the recorded tip is a restack from the recorded tip onto it;
+    absent with a surviving unmerged local predecessor is the same two states
+    through that local branch; absent with no such branch, or reachable from
+    ``origin/<default>``, is merged — a restack from the recorded tip onto the
+    default, after which the record is removed.
+    """
+    default_remote = remote_tracking_ref(default_name)
+    predecessor_remote = remote_tracking_ref(record.predecessor)
+
+    if fetch:
+        fetched = _git(repo, "fetch", "--prune", "origin")
+        if fetched.returncode != 0:
+            return SyncBaseResult(
+                SyncStatus.GIT_FAILURE,
+                record.predecessor,
+                predecessor_remote,
+                branch,
+                f"git fetch --prune origin failed: {fetched.stderr.strip()}",
+            )
+
+    default_oid = _rev(repo, default_remote)
+    if default_oid is None:
+        return SyncBaseResult(
+            SyncStatus.GIT_FAILURE,
+            default_name,
+            default_remote,
+            branch,
+            f"base ref {default_remote} does not resolve to a commit",
+        )
+
+    target_ref = predecessor_remote
+    predecessor_oid = _rev(repo, predecessor_remote)
+    if predecessor_oid is None:
+        local_oid = _rev(repo, f"refs/heads/{record.predecessor}")
+        if local_oid is not None and not _is_ancestor(repo, local_oid, default_oid):
+            # Unpublished predecessor: its local branch stands in for the
+            # remote-tracking ref so the stack is never collapsed onto the
+            # default without the commits it depends on.
+            target_ref = record.predecessor
+            predecessor_oid = local_oid
+
+    if predecessor_oid is None or _is_ancestor(repo, predecessor_oid, default_oid):
+        result = _restack(
+            repo,
+            branch,
+            base_ref=default_name,
+            target_ref=default_remote,
+            target_oid=default_oid,
+            fork_oid=record.tip,
+        )
+        if result.status in (SyncStatus.REBASED, SyncStatus.ALREADY_CURRENT):
+            clear_stack_record(repo, branch)
+        return _with_stack(
+            result,
+            predecessor=record.predecessor,
+            tip_before=record.tip,
+            tip_after=None,
+        )
+
+    if _is_ancestor(repo, record.tip, predecessor_oid):
+        result = _sync_branch_onto(
+            repo, branch, record.predecessor, target_ref, fetch=False
+        )
+    else:
+        result = _restack(
+            repo,
+            branch,
+            base_ref=record.predecessor,
+            target_ref=target_ref,
+            target_oid=predecessor_oid,
+            fork_oid=record.tip,
+        )
+    if result.status in (SyncStatus.REBASED, SyncStatus.ALREADY_CURRENT):
+        write_stack_record(
+            repo,
+            branch,
+            StackRecord(predecessor=record.predecessor, tip=predecessor_oid),
+        )
+    return _with_stack(
+        result,
+        predecessor=record.predecessor,
+        tip_before=record.tip,
+        tip_after=predecessor_oid,
+    )
+
+
+def _dirty_tree(repo: pathlib.Path) -> subprocess.CompletedProcess[str]:
+    """Report uncommitted changes to tracked files; untracked files are excluded."""
+    return _git(repo, "status", "--porcelain", "--untracked-files=no")
+
+
+def _restack(
+    repo: pathlib.Path,
+    branch: str,
+    *,
+    base_ref: str,
+    target_ref: str,
+    target_oid: str,
+    fork_oid: str,
+) -> SyncBaseResult:
+    """Replay only the commits above ``fork_oid`` onto ``target_ref``.
+
+    ``fork_oid`` is the recorded predecessor tip that bounds the branch's own
+    commits. The movement is ``git rebase --onto``, a rebase of those commits;
+    the preservation proof names ``fork_oid`` as the old base.
+    """
+    old_head_oid = _rev(repo, "HEAD")
+    if old_head_oid is None or not _is_ancestor(repo, fork_oid, old_head_oid):
+        return SyncBaseResult(
+            SyncStatus.GIT_FAILURE,
+            base_ref,
+            target_ref,
+            branch,
+            f"recorded stack tip {fork_oid} is not an ancestor of {branch}; the "
+            f"record does not describe this branch",
+        )
+
+    if _is_ancestor(repo, target_oid, old_head_oid):
+        return SyncBaseResult(
+            SyncStatus.ALREADY_CURRENT,
+            base_ref,
+            target_ref,
+            branch,
+            f"branch {branch} is already current with {target_ref}",
+            preservation=_build_preservation(
+                repo,
+                old_base_oid=_merge_base(repo, old_head_oid, target_oid),
+                new_base_oid=target_oid,
+                old_head_oid=old_head_oid,
+                new_head_oid=old_head_oid,
+            ),
+        )
+
+    dirty = _dirty_tree(repo)
+    if dirty.returncode != 0:
+        return SyncBaseResult(
+            SyncStatus.GIT_FAILURE,
+            base_ref,
+            target_ref,
+            branch,
+            f"cannot inspect working tree state: {dirty.stderr.strip()}",
+        )
+    if dirty.stdout.strip():
+        return SyncBaseResult(
+            SyncStatus.DIRTY_TREE,
+            base_ref,
+            target_ref,
+            branch,
+            f"working tree of {branch} has uncommitted changes to tracked files; "
+            f"commit them before restacking onto {target_ref}",
+        )
+
+    rebased = _git(repo, "rebase", "--onto", target_ref, fork_oid)
+    if rebased.returncode == 0:
+        _write_dependent_records(repo, branch, old_head_oid)
+        return SyncBaseResult(
+            SyncStatus.REBASED,
+            base_ref,
+            target_ref,
+            branch,
+            f"restacked {branch} onto {target_ref} from {fork_oid}",
+            preservation=_build_preservation(
+                repo,
+                old_base_oid=fork_oid,
+                new_base_oid=target_oid,
+                old_head_oid=old_head_oid,
+                new_head_oid=_rev(repo, "HEAD"),
+            ),
+        )
+    return SyncBaseResult(
+        SyncStatus.CONFLICT,
+        base_ref,
+        target_ref,
+        branch,
+        f"restack of {branch} onto {target_ref} stopped with active conflicts",
+        conflict=_build_conflict_details(
+            repo,
+            remote_ref=target_ref,
+            old_base_oid=fork_oid,
+            new_base_oid=target_oid,
+            old_head_oid=old_head_oid,
+            git_output=_combined_output(rebased),
+        ),
+    )
+
+
+def _combined_output(completed: subprocess.CompletedProcess[str]) -> str:
+    """Join stdout and stderr, because git splits a conflict summary across them."""
+    return "\n".join(
+        part for part in (completed.stdout.strip(), completed.stderr.strip()) if part
+    )
+
+
+def _sync_branch_onto(
+    repo: pathlib.Path,
+    branch: str,
+    base_ref: str,
+    target_ref: str,
+    *,
+    fetch: bool,
+) -> SyncBaseResult:
+    """Bring ``branch`` current with ``target_ref`` by an ordinary rebase.
+
+    ``base_ref`` is the bare base-branch name and ``target_ref`` the ref the
+    branch rebases onto — its remote-tracking form for a fetched base, or the
+    local branch of an unpublished predecessor.
+    """
     # Capture the pre-rebase HEAD for the preservation proof; the base fork point
     # is derived after the fetch (below) so the base delta stays accurate even
     # when the caller already fetched the base.
@@ -642,49 +1092,44 @@ def _sync_resolved_base(
             return SyncBaseResult(
                 SyncStatus.GIT_FAILURE,
                 base_ref,
-                remote_ref,
+                target_ref,
                 branch,
                 f"git fetch origin {base_ref} failed: {fetched.stderr.strip()}",
             )
 
-    resolved = _git(
-        repo, "rev-parse", "--verify", "--quiet", f"{remote_ref}^{{commit}}"
-    )
-    if resolved.returncode != 0:
+    new_base_oid = _rev(repo, target_ref)
+    if new_base_oid is None:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
             base_ref,
-            remote_ref,
+            target_ref,
             branch,
-            f"base ref {remote_ref} does not resolve to a commit",
+            f"base ref {target_ref} does not resolve to a commit",
         )
 
-    behind = _git(repo, "rev-list", "--count", f"HEAD..{remote_ref}")
+    behind = _git(repo, "rev-list", "--count", f"HEAD..{target_ref}")
     if behind.returncode != 0:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
             base_ref,
-            remote_ref,
+            target_ref,
             branch,
-            f"cannot compute commits behind {remote_ref}: {behind.stderr.strip()}",
+            f"cannot compute commits behind {target_ref}: {behind.stderr.strip()}",
         )
-    new_base_oid = _rev(repo, remote_ref)
     # Anchor the base delta at the branch's fork point from the base — the
     # merge-base of the pre-rebase HEAD and the current base. This is stable
     # whether or not the caller pre-fetched, where the pre-fetch remote ref would
     # already equal the post-fetch base and report an empty base delta.
     old_base_oid = (
-        _merge_base(repo, old_head_oid, new_base_oid)
-        if old_head_oid and new_base_oid
-        else None
+        _merge_base(repo, old_head_oid, new_base_oid) if old_head_oid else None
     )
     if int(behind.stdout.strip() or "0") == 0:
         return SyncBaseResult(
             SyncStatus.ALREADY_CURRENT,
             base_ref,
-            remote_ref,
+            target_ref,
             branch,
-            f"branch {branch} is already current with {remote_ref}",
+            f"branch {branch} is already current with {target_ref}",
             preservation=_build_preservation(
                 repo,
                 old_base_oid=old_base_oid,
@@ -695,12 +1140,12 @@ def _sync_resolved_base(
         )
 
     # precondition: git refuses to replay over uncommitted tracked changes; untracked excluded
-    dirty = _git(repo, "status", "--porcelain", "--untracked-files=no")
+    dirty = _dirty_tree(repo)
     if dirty.returncode != 0:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
             base_ref,
-            remote_ref,
+            target_ref,
             branch,
             f"cannot inspect working tree state: {dirty.stderr.strip()}",
         )
@@ -708,20 +1153,22 @@ def _sync_resolved_base(
         return SyncBaseResult(
             SyncStatus.DIRTY_TREE,
             base_ref,
-            remote_ref,
+            target_ref,
             branch,
             f"working tree of {branch} has uncommitted changes to tracked files; "
-            f"commit them before rebasing onto {remote_ref}",
+            f"commit them before rebasing onto {target_ref}",
         )
 
-    rebased = _git(repo, "rebase", remote_ref)
+    rebased = _git(repo, "rebase", target_ref)
     if rebased.returncode == 0:
+        if old_head_oid is not None:
+            _write_dependent_records(repo, branch, old_head_oid)
         return SyncBaseResult(
             SyncStatus.REBASED,
             base_ref,
-            remote_ref,
+            target_ref,
             branch,
-            f"rebased {branch} onto {remote_ref}",
+            f"rebased {branch} onto {target_ref}",
             preservation=_build_preservation(
                 repo,
                 old_base_oid=old_base_oid,
@@ -731,22 +1178,20 @@ def _sync_resolved_base(
             ),
         )
 
-    conflict_details = _build_conflict_details(
-        repo,
-        old_base_oid=old_base_oid,
-        new_base_oid=new_base_oid,
-        old_head_oid=old_head_oid,
-        git_output="\n".join(
-            part for part in (rebased.stdout.strip(), rebased.stderr.strip()) if part
-        ),
-    )
     return SyncBaseResult(
         SyncStatus.CONFLICT,
         base_ref,
-        remote_ref,
+        target_ref,
         branch,
-        f"rebase of {branch} onto {remote_ref} stopped with active conflicts",
-        conflict=conflict_details,
+        f"rebase of {branch} onto {target_ref} stopped with active conflicts",
+        conflict=_build_conflict_details(
+            repo,
+            remote_ref=target_ref,
+            old_base_oid=old_base_oid,
+            new_base_oid=new_base_oid,
+            old_head_oid=old_head_oid,
+            git_output=_combined_output(rebased),
+        ),
     )
 
 

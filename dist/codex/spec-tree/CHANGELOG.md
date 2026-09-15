@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.96.2
+
+### Added
+
+- **`/sync-base` restacks a stacked branch after its predecessor merges.** A branch stacked on a predecessor branch carries a stack record in git configuration — `branch.<name>.stackPredecessor` and `branch.<name>.stackTip` — that the synchronizer writes from git facts: when a rebase rewrites a branch, every local branch containing the pre-rebase head is recorded as stacked on it, and a sync with a non-default `--base` records that base. A later sync of a recorded branch without `--base` takes the predecessor as its base and, once the predecessor has been rewritten or merged, replays only the commits above the recorded tip with `git rebase --onto`, so the stale predecessor commits are never replayed against their rewritten form. A merged predecessor clears the record; an unpublished predecessor is followed through its surviving local branch; a branch with no record derives its predecessor from local topology when exactly one local branch qualifies. The preservation proof gains `stack_predecessor`, `stack_tip_before`, and `stack_tip_after` and moves to schema version 2, and a conflict report lists the `git rebase --onto origin/<base> <fork>` restack form among its operator options.
+
 ## 0.96.1
 
 ### Fixed
