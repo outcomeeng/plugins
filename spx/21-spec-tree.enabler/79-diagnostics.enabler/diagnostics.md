@@ -6,9 +6,12 @@ CAN self-diagnose a misconfigured environment without recalling and typing the u
 
 ## Assertions
 
+- ALWAYS: marketplace-install diagnosis derives expected selection from Claude Code project-installed inventory and raw selected-home Codex plugin declarations, including disabled and uncached entries, bounded by the corresponding committed marketplace catalog.
+- NEVER: trusted-product activation or cache presence changes the expected Codex home-wide selection; native inspection executes outside trusted product configuration discovery.
+
 ### Conformance
 
-- On every shipped target, the plugin-shipped diagnose manifest carries the product's source-of-truth spx-version floor, the outcomeeng marketplace identity, and the selected check set, and embeds no expected or required plugin set — marketplace-install diagnosis derives expected plugin state from the checkout's committed per-agent agent-harness configuration, per `spx/12-marketplace-state.adr.md` ([test](tests/test_manifest.conformance.l1.py))
+- On every shipped target, the plugin-shipped diagnose manifest carries the product's source-of-truth spx-version floor, the outcomeeng marketplace identity, and the selected check set, and embeds no expected or required plugin set ([test](tests/test_manifest.conformance.l1.py))
 
 ### Compliance
 

@@ -212,7 +212,7 @@ Assertions declare observable product output at the layer that owns the behavior
 | probe    | `[probe](path)`       | Attested      | A claim about the running node that only an executed observation settles. |
 | audit    | `[audit:{rule-slug}]` | Agentic       | A semantic constraint with no structural verdict to score.                |
 
-Validate and Review back no assertion. A spec-malleable assertion may omit its tag; every harder assertion carries exactly one. A toolchain that has not adopted the slug form parses the pathless `[audit]` tag, and a tree keeps that form until its toolchain admits the slug. A dangling `[test]`, `[eval]`, or `[probe]` link derives Declared and is not a structural defect. The audit rule slug is unique within its spec and keys the result in the status claim.
+Validate and Review back no assertion. Authoring declarations await selection untagged directly under `## Assertions` or a decision's `## Verification`, alongside routed subsections if present. Audit judges their declaration quality; approval proves neither evidence completeness nor Passing. Once routed, a spec-malleable assertion may omit its tag; every harder assertion carries exactly one. A toolchain without slug support retains pathless `[audit]`. A dangling `[test]`, `[eval]`, or `[probe]` link derives Declared without a structural defect. Audit slugs are unique within their spec and key status-claim results.
 
 </verification_types>
 
@@ -349,11 +349,11 @@ The commit records verification state as `passing`, `failing`, or `not-run`; tha
 
 - ALWAYS: keep mutable work state outside the durable map — in Changes, Handoffs, and `ISSUES.md` — and never let it declare product, architecture, or methodology truth.
 
-A **Change** is the mutable coordination object for one intended Output: a decision or spec evolution, a lower-layer reconciliation, or both. It carries its Product, received input, what makes the work worth doing, and — as refinement adds them — Nodes, Assertion operations, Decision references, Activities, and blockers. **Maturity** advances Proposed → Framed → Sliced → Executable; Framed needs human judgment and the operator's attestation, a person stays accountable for Sliced, and an agent may advance Sliced to Executable inside the Frame. **Lifecycle** is Available, Claimed, Applied, Refined, or Abandoned; execution begins only on a Claimed, Executable lineage leaf with Refined predecessors and no unresolved blocker. Successors name their predecessors in an immutable `refined_from` set. A **Handoff** is the latest persisted continuation — branch or changeset, completed and next Activities, blockers, hazards, never a secret.
+A **Change** is the mutable coordination object for one intended Output: a decision or spec evolution, a lower-layer reconciliation, or both. It carries its Product, received input, what makes the work worth doing, and — as refinement adds them — Nodes, Assertion operations, Decision references, Activities, and blockers. **Maturity** advances Proposed → Framed → Sliced → Executable; Framed needs human judgment and the operator's attestation, a person stays accountable for Sliced, and Claude may advance Sliced to Executable inside the Frame. **Lifecycle** is Available, Claimed, Applied, Refined, or Abandoned; execution begins only on a Claimed, Executable lineage leaf with Refined predecessors and no unresolved blocker. Successors name their predecessors in an immutable `refined_from` set. A **Handoff** is the latest persisted continuation — branch or changeset, completed and next Activities, blockers, hazards, never a secret.
 
 **Roles**, capitalized: the **Refiner** holds the Change during refinement and is the operator's conversation, realized by loading the refinement skills into it; the **Executor** holds it during execution, sequences Activities, delegates, integrates, and produces no artifact; the **Author** produces one round's artifacts; the **Fixer** is a later round's Author; the **Verifier** produces an Agentic verdict — an Auditor for audit, a Reviewer for review. Author, Fixer, and Verifier hold no claim.
 
-When an agent calls both the Author and the Fixer, they must use separate agent sessions. When the operator calls the Author, the same session must also act as the Fixer whenever the operator requests, for as many rounds as necessary.
+When Claude calls both the Author and the Fixer, they must use separate agent sessions. When the operator calls the Author, the same session must also act as the Fixer whenever the operator requests, for as many rounds as necessary.
 
 `ISSUES.md` is the only node-local note: known defects, contradictions, and gaps with evidence, impact, and a settlement condition, and no work order, owner, priority, or next action. Notes inform judgment and never supply authority; reconcile every loaded note against current decisions, specs, evidence, and intent before acting. `spx/local/` holds product-specific overlays read by the skill that declares each; `spx/local/merging.md` is the lifecycle overlay `/merge` and `/contextualize` read; the coordination overlay names where the repository's Changes live.
 
@@ -425,7 +425,7 @@ Continue through `/merge` unless the operator explicitly limited the request to 
 2. Check internal consistency across every foundation section and surface any contradiction immediately. No mandatory foundation reference read follows this step.
 3. Locate these operational references and list their paths without reading them until another skill needs them: `${CLAUDE_SKILL_DIR}/references/kind-decision.md`, `${CLAUDE_SKILL_DIR}/references/grammar.md`, `${CLAUDE_SKILL_DIR}/references/artifact-placement.md`, `${CLAUDE_SKILL_DIR}/references/status-claims.md`, `${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md`, and `spx/local/*.md`. Note discovery belongs to `/contextualize`, never to `/understand`.
 4. Read `spx/local/merging.md` when present. Changes destined for the default branch route through `/merge`; absence of the overlay applies the default lifecycle.
-5. Locate the authoring templates under `${CLAUDE_SKILL_DIR}/templates/` — `product/product-name.spec.md`, `decisions/decision-name.adr.md`, `decisions/decision-name.pdr.md`, `nodes/{substrate,capability,domain,interface,surface,variant}-name.spec.md`, `records/node-name.outcome.md`, `probes/probe.md` — and `${CLAUDE_SKILL_DIR}/examples/*.md`; read them only when authoring.
+5. Locate templates under `${CLAUDE_SKILL_DIR}/templates/` — `product/product-name.spec.md`, `decisions/decision-name.{adr,pdr}.md`, `nodes/{substrate,capability,domain,interface,surface,variant}-name.spec.md`, `records/node-name.outcome.md`, `probes/probe.md` — and `${CLAUDE_SKILL_DIR}/examples/*.md`. Record the resolved absolute template directory as `Template root` in the marker; consuming authoring and audit workflows read their required templates there.
 6. Read the complete root `CLAUDE.md` from disk only when the live conversation does not already carry it complete; a harness that injects the whole file satisfies this step, and a truncated or absent injection requires the read. It routes skill invocation, names the repository's methodology declaration, and carries product commands.
 7. Emit the marker:
 
@@ -433,10 +433,11 @@ Continue through `/merge` unless the operator explicitly limited the request to 
 <SPEC_TREE_FOUNDATION>
 Loaded inline: truth-hierarchy, node-model, artifact-placement, assertion-model, ordering-model, verification-model, coordination-model, imperfection-protocol
 Operational references available: kind-decision, grammar, artifact-placement, status-claims, product-domain-shapes
-Local lifecycle route: changes route through /merge; spx/local/merging.md refines the route when present
-Default-branch completion boundary: delivered value reaches the default branch on origin through /merge; verified local work remains unfinished unless explicitly limited or stopped at an explicit gate with no independent action remaining
+Local lifecycle route: /merge, refined by spx/local/merging.md when present
+Default-branch completion: /merge delivers to origin's default branch; local work continues unless explicitly limited or a gate blocks every remaining action
 Routing guide: CLAUDE.md carried complete by the harness | read from disk | absent
 Templates available: product, adr, pdr, substrate, capability, domain, interface, surface, variant, outcome-record, probe
+Template root: <resolved absolute template directory>
 Examples available: adr, pdr, capability, domain, outcome-record, probe
 </SPEC_TREE_FOUNDATION>
 ```
@@ -451,7 +452,7 @@ Claude loaded `SKILL.md`, then opened six references required on every fresh inv
 
 **Higher-level truth was shaped to current code.**
 
-Claude treated implementation incompleteness as evidence against a coherent decision, and in a later session took a toolchain's measured limits as the gate on what the foundation may state. Preserve the higher declaration, align the first affected lower specs, and record the lower-layer work as a Change; the toolchain's gap is the work, never the authority.
+Claude rejected coherent decisions because implementation lagged or tooling could not realize them. Preserve the declaration, align first affected lower specs, and record downstream work in a Change.
 
 **A pushed branch was reported as complete.**
 

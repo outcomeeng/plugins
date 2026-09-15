@@ -1,29 +1,29 @@
 ---
 name: audit-specs
 description: >-
-  Spec-node audit methodology — judges one enabler or outcome spec against the
+  Spec-node audit methodology — judges one output or variant spec against the
   node-spec form, covering section structure, atemporal voice, and per-assertion
   tag fitness.
 argument-hint: "<node-spec-file-path>"
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
 ---
 
 <objective>
 
-A verdict on one spec node — an enabler or outcome `{slug}.md` — against the node-spec form: APPROVED, or REJECTED with each finding naming the section or assertion, the violated rule, and the evidence. Findings fall in three categories: section structure (claim-shape headings independent of verification type), atemporal voice, and per-assertion tag fitness (every assertion carries a valid verification-type tag that fits its claim, and no claim about authored prose carries `[test]`).
+A verdict on one output or variant spec, including prior enabler/outcome forms — APPROVED or REJECTED, with findings naming the section or assertion, rule, and evidence for section structure, atemporal voice, or declaration form and tag fitness.
 
 </objective>
 
-<essential_principles>
+<constraints>
 
 **VERIFICATION TYPE MUST FIT THE CLAIM.**
 
-Every assertion carries exactly one verification-type tag — `[test]`, `[eval]`, or `[audit]`. `/verify` selects the verification type; after test is selected, `/test` selects the test assertion type. This audit verifies both selections fit the claim — an audit that accepts any present tag verifies nothing. Two checks decide fitness:
+The canonical template distinguishes untagged authoring declarations directly under `## Assertions` from routed assertions. Drafts may coexist with routed subsections and receive all applicable declaration-quality checks without missing-tag or missing-heading findings. For routed assertions, apply the foundation's tag and malleability rules. `/verify` selects the verification type; after test is selected, `/test` selects the test assertion type. Two checks decide selected-tag fitness:
 
 - Under a `[test]` tag, the assertion type (scenario, mapping, conformance, property, compliance) fits the claim's quantifier. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") is never `scenario`, because a scenario proves one case and cannot establish a claim about every case; `scenario` fits only a single existential interaction.
 - The tag is reachable for the claim's subject. A claim whose subject is the content of an authored prose or documentation artifact — text the product authors and maintains in a document, not executable behavior — is never `[test]`. Behavioral evidence cannot verify it: the only evidence available reads the authored text and asserts on it, which proves the prose was authored, not that code behaves — whether the read is direct or laundered through test infrastructure. Such a claim's tag is `[eval]` or `[audit]`.
 
-A missing tag, a bare mechanism tag, a tag carried more than once, an assertion type the `/test` router would not produce for the claim, or `[test]` on a prose-content claim is a finding.
+A required tag missing from a routed assertion, an unsupported bare mechanism tag, a duplicate tag, an assertion type the `/test` router would not produce, or `[test]` on a prose-content claim is a finding. Declaration approval establishes no evidence completeness, implementation correctness, or Passing state for untagged claims.
 
 **HEADINGS DESCRIBE CLAIM SHAPE.**
 
@@ -41,10 +41,6 @@ A node states product truth. "The status rollup reports failing when any child f
 
 Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test-evidence quality is audited by `/audit-tests`. This audit checks the node spec's own form, not its tests or its decisions.
 
-</essential_principles>
-
-<constraints>
-
 - NEVER modify the node spec under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - ALWAYS judge each assertion's verification type against `/verify` and each test assertion type against `/test` — never accept a present tag as valid by its mere presence.
 - ALWAYS name the section or assertion, the violated rule, and the evidence in every REJECT finding.
@@ -60,7 +56,7 @@ Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test
 
 Read the required node-spec path from `$ARGUMENTS`, preserving spaces within the path. If the input is empty or whitespace-only, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all three property rows marked `FAIL`. Each row carries a `missing-target` finding with severity `REJECT`, location `input`, evidence naming the empty input, and a message naming the required node-spec path. Stop before context loading or artifact inspection.
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the directory containing the node spec. Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers for that directory.
+Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`, then invoke `/contextualize` on the directory containing the node spec. Read the kind's canonical template beneath that marker's resolved absolute template directory; derive current openings, front matter, and tag forms from it. For a prior enabler/outcome artifact, apply the prior grammar the foundation admits. Reject a product target as `unsupported-target`: product specs carry no assertions and belong to review. Run `git branch --show-current` for metadata. Do not proceed without the foundation, context, and required template; report an unavailable template as `template-missing`.
 
 </step>
 
@@ -68,7 +64,7 @@ Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, th
 
 **Step 2: Read the node**
 
-Read the node spec under audit. Identify its kind statement (the enabler `PROVIDES … SO THAT … CAN …` or outcome `WE BELIEVE THAT … WILL … CONTRIBUTING TO …` opening), its `## Assertions` section, and each assertion with its inline verification-type tag.
+Read the node spec. Identify its kind, opening, required front matter, `## Assertions` section, and each assertion's placement and optional tag. Current output kinds use their canonical template's opening; a variant uses its parent's kind. Prior enabler/outcome openings retain their admitted three-clause forms.
 
 </step>
 
@@ -78,11 +74,11 @@ Read the node spec under audit. Identify its kind statement (the enabler `PROVID
 
 Verify three structural properties:
 
-1. The node opens with a well-formed kind statement (no "Purpose" preamble) — an enabler's `PROVIDES … SO THAT … CAN …` carrying all three clauses, or an outcome's `WE BELIEVE THAT … WILL … CONTRIBUTING TO …` carrying all three. A missing clause, or a template that does not match the node's kind, is a malformed kind statement.
-2. An `## Assertions` section is present and carries at least one claim-shape heading.
+1. The opening and required front matter match the canonical kind template. Prior enablers retain `PROVIDES … SO THAT … CAN …`; prior outcomes retain `WE BELIEVE THAT … WILL … CONTRIBUTING TO …`. A missing required opening clause is `malformed-kind-statement`; missing required front matter is `missing-frontmatter`.
+2. An `## Assertions` section contains at least one assertion. Specific untagged declarations may appear directly under it without a heading. Tagged assertions require the template's routed grouping. An empty assertion section is `missing-assertions`.
 3. Each claim-shape heading (`### Scenarios`, `### Mappings`, `### Conformance`, `### Properties`, `### Compliance`) holds at least one assertion, and every assertion under it has the heading's claim shape independently of its verification-type tag. Classify explicit forms first: `Given … when … then …` is a scenario and belongs only under `### Scenarios`; `ALWAYS:` and `NEVER:` are universal and belong under `### Compliance` unless their content establishes a mapping, conformance rule, or property. A `### Scenarios` heading whose assertions are universal is mismatched; a `### Compliance` heading whose assertions are universal remains valid with `[test]`, `[eval]`, or `[audit]`; a `### Compliance` heading containing a `Given … when … then …` assertion is mismatched; and a verification-type heading such as `### Audit` is unsupported.
 
-**No kind statement or no `## Assertions` section → REJECT — "missing-section." A kind statement that does not match its node's enabler/outcome template → REJECT — "malformed-kind-statement." An empty or unsupported heading, or a heading whose assertions have a different claim shape → REJECT — "heading-mismatch."**
+**No kind statement or no `## Assertions` section → REJECT — "missing-section." A kind statement that differs from its template → REJECT — "malformed-kind-statement." An empty, unsupported, or claim-mismatched heading → REJECT — "heading-mismatch." A draft assertion's absent heading is valid.**
 
 </step>
 
@@ -108,11 +104,11 @@ Check EVERY section for temporal language:
 
 For each assertion under `## Assertions`:
 
-1. The assertion carries exactly one verification-type tag — `([test](path))` and `([eval](path))` carry a path; `([audit])` is bare by design. A missing tag, a tag carried more than once, an unsupported tag, or a `[test]` or `[eval]` mechanism tag with no path is invalid; only bare `([audit])` is valid without a path.
-2. Under `[test]`, the assertion type fits the claim's quantifier — apply the quantifier rule from `<essential_principles>` (a universal is never `scenario`). Reject a type the `/test` router would not produce; do not relitigate a choice the router leaves open between equally valid types.
+1. An untagged assertion directly under `## Assertions` is an authoring declaration; check its specificity and falsifiability without selecting evidence. For routed assertions, apply the foundation's malleability rule and canonical tag forms: test, eval, and probe carry paths; audit carries its rule slug, or the admitted pathless form for a toolchain without slug support. Missing required tags, duplicate or unsupported tags, and path-bearing mechanisms without a path are `invalid-tag`.
+2. Under `[test]`, the assertion type fits the claim's quantifier — apply the quantifier rule from `<constraints>` (a universal is never `scenario`). Reject a type the `/test` router would not produce; do not relitigate a choice the router leaves open between equally valid types.
 3. The tag is reachable for the claim's subject. When the claim's subject is the content of an authored prose or documentation artifact rather than executable behavior, `[test]` is unreachable — its only evidence reads the authored text and asserts on it (directly or through a fixture or harness that exposes or reads the artifact), proving the prose was authored rather than that code behaves. The tag belongs in `[eval]` (a graded judgment over the producer's structured verdict) or `[audit]` (a semantic constraint).
 
-**A missing tag, a duplicate tag, or a bare mechanism tag → REJECT — "invalid-tag." A `[test]` assertion type that contradicts the claim's quantifier → REJECT — "assertion-type-mismatch." `[test]` on a claim whose subject is authored prose content → REJECT — "prose-coupling."**
+**A required tag missing from a routed assertion, a duplicate tag, or an unsupported bare mechanism tag → REJECT — "invalid-tag." A `[test]` assertion type that contradicts the claim's quantifier → REJECT — "evidence-type-mismatch." `[test]` on an authored-prose claim → REJECT — "prose-coupling." An unfalsifiable draft → REJECT — "unfalsifiable-assertion."**
 
 </step>
 
@@ -159,7 +155,7 @@ The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `R
 }
 ```
 
-Every finding carries the section or assertion in `location`, the violation pattern in `rule` (`missing-section`, `malformed-kind-statement`, `heading-mismatch`, `temporal-voice`, `invalid-tag`, `assertion-type-mismatch`, or `prose-coupling`), the quoted artifact basis in `evidence`, a one-line `message`, and `severity`. A passing row carries an empty `findings` array.
+Every finding carries the section or assertion in `location`, the violation pattern in `rule` (`missing-target`, `unsupported-target`, `template-missing`, `missing-frontmatter`, `missing-section`, `missing-assertions`, `malformed-kind-statement`, `heading-mismatch`, `temporal-voice`, `invalid-tag`, `evidence-type-mismatch`, `unfalsifiable-assertion`, or `prose-coupling`), the quoted artifact basis in `evidence`, a one-line `message`, and `severity`. A passing row carries an empty `findings` array.
 
 </verdict_format>
 

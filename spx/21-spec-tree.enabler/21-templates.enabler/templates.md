@@ -6,6 +6,9 @@ CAN operate from a shared structural definition rather than ad hoc conventions
 
 ## Assertions
 
+- ALWAYS: decision and output-node templates distinguish untagged authoring declarations directly under `## Verification` or `## Assertions` from the grouped examples produced after verification selection, and permit both forms in one artifact.
+- NEVER: a declaration template treats authoring approval as evidence completeness or Passing state.
+
 ### Compliance
 
 - ALWAYS: the understanding skill provides templates for the product spec, ADRs, PDRs, one spec per output kind — substrate, capability, domain, interface, surface — the variant spec, the outcome record, and the probe protocol ([audit])

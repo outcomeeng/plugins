@@ -6,6 +6,8 @@ Every language plugin ships implementation-audit intelligence as skills only; no
 
 The marketplace's other auditor agents are artifact-type-scoped: each covers a single artifact type — a decision record or test evidence, for example — reading it against its governing standards, and each is owned by whichever plugin governs that artifact type. An artifact-type auditor with language-specific concerns composes the matching implementation-audit skill set, partitioned by the language detected in scope. Section structure, atemporal voice, and tag validity for decision records are judged by the artifact-type auditor reading the canonical decision templates; composed language architecture skills carry only language-specific architecture concerns and never re-judge those generic decision-record rules from copied template prose. Wrapper agents never construct a path into `scripts/`; implementation-audit persistence goes through `spx verification run`.
 
+Declaration audits distinguish authoring form from evidence completeness. The canonical templates admit untagged rules directly under `## Verification` and untagged assertions directly under `## Assertions` while verification selection is pending. These declarations may coexist with routed subsections. Auditors derive the form from the artifact without a caller identity or phase argument. Draft declarations receive the applicable structure, voice, specificity, and consistency checks; routed content retains its tag and grouping checks. Approval establishes declaration quality only and supplies no evidence that an untagged claim holds or that its node is Passing.
+
 ## Rationale
 
 The audit-specific decision lives here because neither shared verification nor review decides how audit partitions scope, which language skill names must exist, which artifact-type auditors compose language concerns, or which wrapper agents expose audit surfaces. Keeping those rules in the audit decision leaves the shared run-journal and projection architecture in `spx/21-spec-tree.enabler/16-verification.enabler/` and keeps review free to consume the same architecture with its own policy.
@@ -13,6 +15,10 @@ The audit-specific decision lives here because neither shared verification nor r
 The implementation-audit orchestration embeds no language-specific knowledge beyond the `code-{lang}` discovery form and `audit-{lang}-{code|tests|architecture}` dispatch template. Installed skill surfaces establish which programming languages are available, while each read-only concern skill owns its language's path and applicability knowledge. This keeps documentation, manifests, and other artifact classes from becoming fabricated language partitions while still requiring complete implementation coverage for paths a language concern claims. Validating the language trio before dispatch makes a missing concern skill a pre-execution failure. Skills own policy and the agents are thin wrappers because skills are the shared behavior surface across Claude Code-authored source and generated Codex output and are the only surface where `${CLAUDE_SKILL_DIR}` resolves.
 
 ## Verification
+
+- ALWAYS: declaration audits recognize the canonical untagged authoring form from the artifact itself, including drafts alongside routed content, without requiring a caller identity or phase argument.
+- ALWAYS: declaration audits check every draft claim for its applicable declaration-quality rules and preserve tag, grouping, and evidence-fit checks for routed claims.
+- NEVER: approval of an untagged declaration establishes evidence completeness, implementation correctness, or Passing state.
 
 ### Audit
 

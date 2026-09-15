@@ -11,6 +11,8 @@ CAN {the parent's consumer capability}
 
 ## Assertions
 
+Authoring form: state new assertions directly here without tags or headings until verification selection. Draft and routed assertions may coexist. Declaration approval supplies no evidence result or Passing state. The grouped examples below show the routed form; its tag requirements follow declared malleability.
+
 State only what the parent's contract does not say. The parent's assertions are this variant's evidence too: the toolchain runs them once with the selection source set to this variant and records the results in this variant's status claim. A variant carries no outcome record.
 
 ### Scenarios

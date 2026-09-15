@@ -12,6 +12,8 @@ CAN {what they can do at this boundary}
 
 ## Assertions
 
+Authoring form: state new assertions directly here without tags or headings until verification selection. Draft and routed assertions may coexist. Declaration approval supplies no evidence result or Passing state. The grouped examples below show the routed form; its tag requirements follow declared malleability.
+
 Only include assertion type headings that apply to this node. A spec-malleable assertion may omit its tag. A surface owns no product-domain semantics; a family surface states the shared audience, affordance class, packaging promise, and the contract that selects among its concrete children.
 
 ### Scenarios

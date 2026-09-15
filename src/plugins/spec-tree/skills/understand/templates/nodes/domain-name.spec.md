@@ -11,6 +11,8 @@ CAN {what those consumers could not do without one owner of these semantics}
 
 ## Assertions
 
+Authoring form: state new assertions directly here without tags or headings until verification selection. Draft and routed assertions may coexist. Declaration approval supplies no evidence result or Passing state. The grouped examples below show the routed form; its tag requirements follow declared malleability.
+
 Only include assertion type headings that apply to this node. A spec-malleable assertion may omit its tag. A domain states its class contract — the rule its children satisfy and how their contributions combine — and names no child.
 
 ### Scenarios

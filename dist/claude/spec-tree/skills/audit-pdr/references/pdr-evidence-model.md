@@ -109,7 +109,7 @@ Product properties are guarantees users can rely on. They must be:
 
 <tag_validity>
 
-Verification rules are the enforceable part of a PDR, grouped under `## Verification` into `### Testing`, `### Eval`, and `### Audit` by verification type. Each rule carries a tag valid for its subsection, and a `### Testing` rule's assertion type fits the claim:
+Derive authoring and routed forms from the canonical PDR template. Specific untagged rules directly under `## Verification` await selection and receive the same clarity and falsifiability checks. The following tag checks apply to rules in routed subsections; authoring approval supplies no evidence result:
 
 1. **Tag matching its subsection** — under `### Testing`, a `/test`-routed assertion type (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Eval`, `([eval])`; under `### Audit`, `([audit])`. An unsupported bare mechanism tag, a missing tag, more than one tag, or a tag that disagrees with its subsection is `invalid-tag`.
 2. **Assertion-type fit** — a `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router; a universal `ALWAYS`/`NEVER` claim tagged `scenario` is `assertion-type-mismatch`, since a single case cannot establish a universal.
