@@ -92,19 +92,19 @@ unfinished reading are never such a cause.
 
 <request_contract>
 
-Bind the target scope selector before discovery. In a direct invocation it is
-`$ARGUMENTS`; in a configured-agent invocation it is the agent's task message,
-which carries only the selector, and the argument substituted when the skill
-was preloaded — rendered empty in that case — binds nothing. Only a task
-message that carries no selector is the missing-input case. The target is one
-scope selector: `HEAD`, a branch, or an explicit three-dot range. `worktree:` before a selector explicitly requests an advisory audit of
-that committed scope plus the complete modified and untracked file set. Preserve
-the selector verbatim. Never infer advisory intent from a dirty checkout.
+Bind the target scope selector before discovery. `$ARGUMENTS` supplies it when
+that argument is non-empty; when it is empty, the selector is the one the
+request text carries, and the empty substitution binds nothing. Only a request
+that carries no selector is the missing-input case. The target is one scope
+selector: `HEAD`, a branch, or an explicit three-dot range. `worktree:` before
+a selector explicitly requests an advisory audit of that committed scope plus
+the complete modified and untracked file set. Preserve the selector verbatim.
+Never infer advisory intent from a dirty checkout.
 
 Run-driver identity uses the six published producer fields (the
 `expectedProducer` shape in `<verification_run_contract>`) in the invocation
-context, separate from `$ARGUMENTS`. Accept that identity generically in direct and composed invocations;
-never infer it from a role name, installed plugin, or descriptive text.
+context, separate from `$ARGUMENTS`. Accept that identity generically; never
+infer it from a role name, installed plugin, or descriptive text.
 
 Before reading project file bodies:
 
@@ -207,7 +207,7 @@ required.
   "auditKind": "<code|tests|architecture|coverage-gap>",
   "subject": "<the exact resolved path>",
   "coverageRequirement": "<required|optional>",
-  "coverageStatus": "<audited|not-applicable|missing-skill|unsupported|skipped>",
+  "coverageStatus": "<audited|not-applicable|missing-skill|unsupported>",
   "priorContext": {
     "changedFilePartition": "<the exact resolved path>",
     "languagePartition": "<language-when-known>",

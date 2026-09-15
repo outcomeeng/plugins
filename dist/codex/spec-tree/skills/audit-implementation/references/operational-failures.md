@@ -340,21 +340,20 @@ installed. Invoke a concern skill only as dispatch to a discovered language.
 
 **A preloaded skill's empty argument was read as the target**
 
-What happened: A configured `implementation-auditor` received `HEAD` as its
-task message while the harness preloaded this skill with `$ARGUMENTS`
-substituted empty. The run bound the empty substitution, returned `BLOCKED`
-with `runToken: not-started` naming an absent selector, and never read the
-task message that carried it. Three runs on the identical input shape bound
-the task message and proceeded; nothing in the contract said which source was
-the selector.
+What happened: A request carried `HEAD` as its text while the harness had
+preloaded this skill with `$ARGUMENTS` substituted empty. The run bound the
+empty substitution, returned `BLOCKED` with `runToken: not-started` naming an
+absent selector, and never read the request text that carried it. Three runs
+on the identical input shape bound the request text and proceeded; nothing in
+the contract said which source was the selector.
 
 Why it failed: The request contract named `$ARGUMENTS` as the only selector
-source. In a configured-agent invocation that argument is rendered at preload,
-before any task exists, so it is always empty there, and a driver that takes
-it literally reports its own launch mechanics as a caller error.
+source. A harness that preloads the skill renders that argument before any
+request exists, so it is empty there, and a driver that takes it literally
+reports its own launch mechanics as a request error.
 
-How to avoid: Bind the selector from the task message in a configured-agent
-invocation and from `$ARGUMENTS` in a direct one; an empty substitution binds
-nothing, and only a task message with no selector is the missing-input case.
+How to avoid: Bind the selector from `$ARGUMENTS` when it is non-empty and
+from the request text when it is empty; an empty substitution binds nothing,
+and only a request with no selector is the missing-input case.
 
 </empty_argument_taken_as_selector>
