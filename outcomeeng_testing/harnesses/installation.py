@@ -91,12 +91,15 @@ from outcomeeng.distribution.installation import (
     codex_marketplace_listing_payload,
     codex_source_action,
     execute_installation,
+    report_document,
     execute_persistent_installation,
     main,
 )
 from outcomeeng_testing.generators.installation import (
+    RecordDisposition,
     catalog_plugin_names_from_document,
     generated_agent_subsets,
+    generated_claude_install_records,
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
 )
@@ -182,6 +185,7 @@ class CatalogSubsetMapping:
     planned: tuple[str, ...]
     installs: tuple[str, ...]
     enables: tuple[str, ...]
+    updates: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -753,6 +757,77 @@ def observe_persistent_plan(
     )
 
 
+@dataclass(frozen=True)
+class RecordRefreshObservation:
+    """One persistent plan built from a generated machine-wide Claude listing.
+
+    Each generated record is paired with the disposition its construction
+    implies; the plan's update commands, warnings, and checkout are the
+    observations the linked test judges against those dispositions.
+    """
+
+    checkout: Path
+    other_checkout: Path
+    absent_path: Path
+    cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
+    plan: InstallationPlan
+    catalog: tuple[str, ...]
+    report: InstallationReport
+    document: dict[str, object]
+    attempted: tuple[InstallationCommand, ...]
+
+
+def observe_record_refresh_plan() -> RecordRefreshObservation:
+    """Plan a persistent run against records spread across scopes and paths."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        other = temporary_root / "other-checkout"
+        other.mkdir()
+        absent = temporary_root / "removed-checkout"
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        preflight = build_persistent_preflight(mirror, environment)
+        catalog = _catalogs_from_documents(mirror)[Agent.CLAUDE]
+        groups = generated_claude_install_records(
+            catalog,
+            preflight.roots.checkout,
+            other.resolve(),
+            absent.resolve(),
+        )
+        cases = tuple(case for group in groups for case in group)
+        plan = build_persistent_installation_plan(
+            preflight,
+            claude_marketplace_payload=claude_marketplace_listing_payload(
+                CANONICAL_MARKETPLACE_SOURCE
+            ),
+            claude_plugins_payload=json.dumps([entry for entry, _ in cases]),
+            codex_marketplace_payload=codex_marketplace_listing_payload(
+                CANONICAL_CODEX_SOURCE
+            ),
+            codex_plugins_payload=_plugin_listing_payload(
+                Agent.CODEX,
+                mirror,
+                frozenset(catalog),
+            ),
+        )
+        runner = RecordingRunner()
+        report = execute_installation(plan, runner)
+        return RecordRefreshObservation(
+            checkout=preflight.roots.checkout,
+            other_checkout=other.resolve(),
+            absent_path=absent.resolve(),
+            cases=cases,
+            plan=plan,
+            catalog=catalog,
+            report=report,
+            document=report_document(report),
+            attempted=tuple(runner.calls),
+        )
+
+
 def observe_persistent_execution(
     installed: Mapping[Agent, frozenset[str]] | None = None,
 ) -> PersistentExecutionObservation:
@@ -837,6 +912,13 @@ def observe_persistent_catalog_subset_plans() -> tuple[
                             for command in plan.commands
                             if command.agent is agent
                             and command.operation is Operation.PLUGIN_ENABLE
+                            and command.plugin is not None
+                        ),
+                        updates=tuple(
+                            command.plugin
+                            for command in plan.commands
+                            if command.agent is agent
+                            and command.operation is Operation.PLUGIN_UPDATE
                             and command.plugin is not None
                         ),
                     )
@@ -2515,6 +2597,8 @@ __all__ = [
     "observe_persistent_execution",
     "observe_persistent_catalog_subset_plans",
     "observe_persistent_plan",
+    "observe_record_refresh_plan",
+    "RecordRefreshObservation",
     "observe_planned_operations",
     "observe_real_first_install",
     "observe_real_installation",

@@ -6,6 +6,10 @@ from typing import cast
 from outcomeeng.distribution.installation import (
     Agent,
     CANONICAL_MARKETPLACE_SOURCE,
+    CLAUDE_PLUGIN_ID_FIELD,
+    CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
+    CLAUDE_PLUGIN_SCOPE_FIELD,
+    MARKETPLACE_NAME,
     FIRST_INSTALL_WARNING,
     Operation,
     ReportField,
@@ -14,6 +18,9 @@ from outcomeeng.distribution.installation import (
     USER_SCOPE_COLLISION_DIAGNOSTIC,
     report_document,
 )
+from pathlib import Path
+
+from outcomeeng_testing.generators.installation import RecordDisposition
 from outcomeeng_testing.harnesses.installation import (
     NONCANONICAL_MARKETPLACE_SOURCE,
     absent_from_every_agent,
@@ -24,6 +31,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_invalid_isolated_selection,
     observe_invalid_persistent_selection,
     observe_persistent_plan,
+    observe_record_refresh_plan,
     observe_unpublished_plugin,
     observe_verification_recipe,
 )
@@ -241,3 +249,51 @@ def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
         }
     ]
     assert source_operations == [Operation.MARKETPLACE_ADD]
+
+
+def test_persistent_run_updates_every_recorded_checkout_and_reinstalls_nothing() -> (
+    None
+):
+    observation = observe_record_refresh_plan()
+    claude_commands = [
+        command
+        for command in observation.plan.commands
+        if command.agent is Agent.CLAUDE
+    ]
+    updates = [
+        command
+        for command in claude_commands
+        if command.operation is Operation.PLUGIN_UPDATE
+    ]
+    expected = {
+        (
+            entry[CLAUDE_PLUGIN_ID_FIELD].removesuffix(f"@{MARKETPLACE_NAME}"),
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+            Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
+        )
+        for entry, disposition in observation.cases
+        if disposition is RecordDisposition.UPDATE
+    }
+
+    assert not any(
+        command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        for command in claude_commands
+    )
+    assert {(command.plugin, command.argv[-1], command.cwd) for command in updates} == (
+        expected
+    )
+    assert len(updates) == len(expected)
+    assert all(command.argv[-2] == "--scope" for command in updates)
+    assert observation.attempted[-len(observation.plan.commands) :] == (
+        observation.plan.commands
+    )
+    assert {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            Path(cast(str, record[ReportField.PROJECT_PATH])),
+        )
+        for record in cast(
+            list[dict[str, str]], observation.document[ReportField.CLAUDE_RECORDS]
+        )
+    } == expected

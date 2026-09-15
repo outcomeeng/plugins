@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Mapping, Sequence
+from enum import StrEnum
 from pathlib import Path
 from typing import cast
 
@@ -13,6 +14,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_LOCAL_SCOPE,
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_USER_SCOPE,
     CODEX_CATALOG_PATH,
@@ -160,6 +162,100 @@ def generated_claude_listing_entries(
     return tuple(entries), frozenset(in_scope)
 
 
+class RecordDisposition(StrEnum):
+    """What one generated Claude Code install record should map to."""
+
+    UPDATE = "update"
+    ABSENT_PATH = "absent-path"
+    OUT_OF_SCOPE = "out-of-scope"
+    UNCATALOGED = "uncataloged"
+    EXCLUDED = "excluded"
+
+
+def generated_claude_install_records(
+    catalog: Sequence[str],
+    checkout: Path,
+    other_checkout: Path,
+    absent_path: Path,
+) -> tuple[tuple[tuple[dict[str, str], RecordDisposition], ...], ...]:
+    """Cycle every catalog plugin through each install-record disposition.
+
+    Each plugin yields one record per disposition: an update at project scope
+    in the invocation checkout, an update at project scope in another existing
+    checkout, an update at local scope in the invocation checkout, a record
+    whose project path does not exist, a user-scope record, and an entry from
+    another marketplace. One uncataloged plugin record is appended so the
+    catalog bound has a rejected member.
+    """
+    groups: list[tuple[tuple[dict[str, str], RecordDisposition], ...]] = []
+    for plugin in catalog:
+        identifier = f"{plugin}@{MARKETPLACE_NAME}"
+        groups.append(
+            (
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
+                    },
+                    RecordDisposition.UPDATE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(other_checkout),
+                    },
+                    RecordDisposition.UPDATE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_LOCAL_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
+                    },
+                    RecordDisposition.UPDATE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(absent_path),
+                    },
+                    RecordDisposition.ABSENT_PATH,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_USER_SCOPE,
+                    },
+                    RecordDisposition.OUT_OF_SCOPE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}-other",
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
+                    },
+                    RecordDisposition.EXCLUDED,
+                ),
+            )
+        )
+    groups.append(
+        (
+            (
+                {
+                    CLAUDE_PLUGIN_ID_FIELD: f"retired-plugin@{MARKETPLACE_NAME}",
+                    CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                    CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
+                },
+                RecordDisposition.UNCATALOGED,
+            ),
+        )
+    )
+    return tuple(groups)
+
+
 def generated_codex_listing_entries(
     catalog: Sequence[str],
 ) -> tuple[tuple[dict[str, str], ...], frozenset[str]]:
@@ -203,7 +299,9 @@ __all__ = [
     "catalog_plugin_names_from_document",
     "generated_agent_subsets",
     "generated_catalog_subset",
+    "generated_claude_install_records",
     "generated_claude_listing_entries",
+    "RecordDisposition",
     "generated_codex_listing_entries",
     "generated_failure_classification_cases",
     "generated_invalid_catalog_subsets",

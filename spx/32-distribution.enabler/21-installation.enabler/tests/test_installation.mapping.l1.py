@@ -37,7 +37,13 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
                     observation.catalog.index(plugin) for plugin in mapping.planned
                 ]
                 assert positions == sorted(set(positions))
-            assert mapping.installs == mapping.planned
-            assert mapping.enables == (
-                mapping.planned if observation.agent is Agent.CLAUDE else ()
-            )
+            if observation.agent is Agent.CLAUDE and mapping.selected:
+                assert mapping.installs == ()
+                assert mapping.enables == ()
+                assert mapping.updates == mapping.planned
+            else:
+                assert mapping.installs == mapping.planned
+                assert mapping.enables == (
+                    mapping.planned if observation.agent is Agent.CLAUDE else ()
+                )
+                assert mapping.updates == ()
