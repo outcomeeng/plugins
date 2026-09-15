@@ -26,5 +26,5 @@ def test_every_terminal_status_writes_its_document_to_stderr(status: object) -> 
 
     assert run.stdout == ""
     assert len(run.stderr.splitlines()) == 1
-    assert json.loads(run.stderr)["status"] == status
+    assert json.loads(run.stderr)[MODULE.ResultField.STATUS] == status
     assert run.exit_code == MODULE.STATUS_EXIT_CODES[status]

@@ -16,7 +16,7 @@ import sys
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, StrEnum
 from typing import Final, TextIO
 
 LoadAverages = tuple[float, float, float]
@@ -59,6 +59,33 @@ STATUS_EXIT_CODES: Final = {
 STATUS_READINESS: Final = {status: status is Status.READY for status in Status}
 
 
+class ObservationField(StrEnum):
+    """Field names of one observation inside the terminal document."""
+
+    LOAD = "load"
+    CPU_COUNT = "cpu_count"
+    NORMALIZED = "normalized"
+
+
+class ErrorField(StrEnum):
+    """Field names of the error object inside the terminal document."""
+
+    TYPE = "type"
+    MESSAGE = "message"
+
+
+class ResultField(StrEnum):
+    """Top-level field names of the terminal document."""
+
+    STATUS = "status"
+    READY = "ready"
+    INITIAL = "initial"
+    FINAL = "final"
+    WAIT_CYCLES = "wait_cycles"
+    WAITED_SECONDS = "waited_seconds"
+    ERROR = "error"
+
+
 class UnsupportedPlatformError(RuntimeError):
     """Raised when the host cannot provide a valid load observation."""
 
@@ -74,9 +101,9 @@ class Observation:
     def as_dict(self) -> dict[str, object]:
         """Return the stable JSON representation of this observation."""
         return {
-            "load": list(self.load),
-            "cpu_count": self.cpu_count,
-            "normalized": list(self.normalized),
+            ObservationField.LOAD: list(self.load),
+            ObservationField.CPU_COUNT: self.cpu_count,
+            ObservationField.NORMALIZED: list(self.normalized),
         }
 
 
@@ -111,17 +138,19 @@ class Result:
     def as_dict(self) -> dict[str, object]:
         """Return the stable terminal JSON document."""
         payload: dict[str, object] = {
-            "status": self.status,
-            "ready": self.ready,
-            "initial": self.initial.as_dict() if self.initial is not None else None,
-            "final": self.final.as_dict() if self.final is not None else None,
-            "wait_cycles": self.wait_cycles,
-            "waited_seconds": self.waited_seconds,
+            ResultField.STATUS: self.status,
+            ResultField.READY: self.ready,
+            ResultField.INITIAL: (
+                self.initial.as_dict() if self.initial is not None else None
+            ),
+            ResultField.FINAL: self.final.as_dict() if self.final is not None else None,
+            ResultField.WAIT_CYCLES: self.wait_cycles,
+            ResultField.WAITED_SECONDS: self.waited_seconds,
         }
         if self.error_type is not None:
-            payload["error"] = {
-                "type": self.error_type,
-                "message": self.error_message,
+            payload[ResultField.ERROR] = {
+                ErrorField.TYPE: self.error_type,
+                ErrorField.MESSAGE: self.error_message,
             }
         return payload
 

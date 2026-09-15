@@ -59,6 +59,8 @@ def test_load_remaining_high_returns_not_ready_at_the_deadline() -> None:
     assert run.result.ready is False
     assert run.result.exit_code is run.module.ExitCode.NOT_READY
     assert run.result.final is not None
+    assert run.result.final.load == run.sequence.observations[-1]
+    assert run.result.final.load != run.sequence.observations[0]
     assert run.result.waited_seconds == run.module.MAXIMUM_WAIT_SECONDS
     assert sum(run.clock.sleeps) == run.module.MAXIMUM_WAIT_SECONDS
 

@@ -47,6 +47,7 @@ HOST_READINESS_MODULE_PATH = (
 )
 MODULE_NAME = "wait_for_load"
 CPU_COUNT = 1
+CLOCK_HORIZON_SECONDS = 86400.0
 
 
 def load_host_readiness_module() -> ModuleType:
@@ -67,24 +68,24 @@ def load_host_readiness_module() -> ModuleType:
     return module
 
 
-class UnboundedWaiterError(AssertionError):
-    """Raised when a waiter sleeps past the deadline its source declares."""
+class ClockExhaustedError(RuntimeError):
+    """Raised when the controlled clock cannot advance any further.
+
+    This is a resource-lifecycle error of the clock, not a verdict on the
+    waiter: the linked tests own every predicate about the waiter's deadline.
+    """
 
 
 @dataclass
 class ControlledClock:
     """Monotonic clock whose sleep advances deterministically within a horizon.
 
-    The horizon is the waiter's own source-declared maximum wait. A waiter that
-    never reaches a terminal result would spin forever here, because this clock
-    costs no wall-clock time. Two distinct failures produce that spin, and each
-    raises on the offending sleep so the test fails immediately and readably
-    rather than hanging:
-
-    - sleeping past the horizon, which overshoots the declared deadline; and
-    - sleeping a non-positive interval, which advances nothing and so can
-      repeat without ever reaching the deadline. A bounded waiter always makes
-      progress, so a non-advancing sleep is always a defect.
+    The horizon is the clock's own capacity, a harness-owned resource bound
+    well past any deadline the waiter declares. A waiter that never reaches a
+    terminal result would spin forever here, because this clock costs no
+    wall-clock time, so the clock stops on two shapes of runaway sleep —
+    past its horizon, or by a non-positive interval that advances nothing —
+    with a lifecycle error rather than hanging the run.
     """
 
     horizon: float
@@ -98,15 +99,14 @@ class ControlledClock:
     def sleep(self, seconds: float) -> None:
         """Record and advance by one requested sleep interval."""
         if seconds <= 0:
-            raise UnboundedWaiterError(
-                f"waiter slept {seconds}s at {self.current}s, advancing nothing "
-                f"after {len(self.sleeps)} intervals; it cannot reach its "
-                f"{self.horizon}s deadline"
+            raise ClockExhaustedError(
+                f"clock asked to sleep {seconds}s at {self.current}s, which "
+                f"advances nothing after {len(self.sleeps)} intervals"
             )
         if self.current + seconds > self.horizon:
-            raise UnboundedWaiterError(
-                f"waiter slept to {self.current + seconds}s past its "
-                f"{self.horizon}s deadline after {len(self.sleeps)} intervals"
+            raise ClockExhaustedError(
+                f"clock asked to sleep to {self.current + seconds}s past its "
+                f"{self.horizon}s horizon after {len(self.sleeps)} intervals"
             )
         self.sleeps.append(seconds)
         self.current += seconds
@@ -126,12 +126,18 @@ class LoadSequence:
         return self.observations[position]
 
 
+class ObservedLoad(Protocol):
+    """Observable load contract of an observation inside a terminal result."""
+
+    load: tuple[float, float, float]
+
+
 class WaitResult(Protocol):
     """Observable terminal result contract consumed by assertion files."""
 
     status: object
     ready: bool
-    final: object | None
+    final: ObservedLoad | None
     wait_cycles: int
     waited_seconds: float
 
@@ -177,6 +183,13 @@ def _high_load(module: ModuleType) -> tuple[float, float, float]:
     return _load_at_ratio(math.nextafter(module.CAPACITY_RATIO, math.inf))
 
 
+def _higher_load(module: ModuleType) -> tuple[float, float, float]:
+    """Build the next observation above `_high_load`, distinct from it."""
+    return _load_at_ratio(
+        math.nextafter(math.nextafter(module.CAPACITY_RATIO, math.inf), math.inf)
+    )
+
+
 def _ready_rising_load(module: ModuleType) -> tuple[float, float, float]:
     """Build a ready observation whose one-minute load has just risen.
 
@@ -218,7 +231,7 @@ def _run(
     wait interval, or a load reader that raises — without patching the module.
     """
     module = load_host_readiness_module()
-    clock = ControlledClock(horizon=module.MAXIMUM_WAIT_SECONDS)
+    clock = ControlledClock(horizon=CLOCK_HORIZON_SECONDS)
     sequence = LoadSequence(observations)
     dependencies = module.Dependencies(
         read_load_averages=read_load_averages or sequence.read,
@@ -243,7 +256,7 @@ def _run_cli(
 ) -> CliRun:
     """Run the waiter's CLI entry against controlled dependencies and streams."""
     module = load_host_readiness_module()
-    clock = ControlledClock(horizon=module.MAXIMUM_WAIT_SECONDS)
+    clock = ControlledClock(horizon=CLOCK_HORIZON_SECONDS)
     sequence = LoadSequence(observations)
     dependencies = module.Dependencies(
         read_load_averages=read_load_averages or sequence.read,
@@ -300,9 +313,13 @@ def run_rising_confirmation_then_ready() -> WaitRun:
 
 
 def run_deadline_not_ready() -> WaitRun:
-    """Run one invocation whose load stays above capacity through its deadline."""
+    """Run one invocation whose load stays above capacity through its deadline.
+
+    The second observation differs from the first and repeats to the deadline,
+    so the reported final observation is distinguishable from the initial one.
+    """
     module = load_host_readiness_module()
-    return _run([_high_load(module)])
+    return _run([_high_load(module), _higher_load(module)])
 
 
 def run_interval_clamped_to_remaining() -> WaitRun:
