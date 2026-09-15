@@ -2,6 +2,30 @@
 
 Known defects in the repository-installation evidence. Each entry names the artifact, the observed failure, and the smallest unit of work that resolves it.
 
+## Native-profile evidence restates protocol vocabulary the owning modules hold
+
+`tests/test_native_profile_execution.compliance.l1.py` indexes the child-thread document with the literal `parentThreadId` while `outcomeeng/distribution/native_thread_evidence.py` owns that key as `ChildIdentityField.PARENT`, and asserts the retained child-listing artifact through the literals `childIds`, `pages`, and `result`, for which that module publishes no field constants. Both are source-ownership defects: a rename in the owning module leaves the evidence asserting a contract production no longer emits.
+
+**Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, then import every key the test indexes from that module.
+
+**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b`; the cited test file lies outside that changeset's diff.
+
+## The noncanonical marketplace source is replaced where the decisions say it is rejected
+
+`spx/12-marketplace-state.adr.md` and `21-installation-architecture.adr.md` state that an existing registration with a noncanonical source stops the run before mutation and requires explicit repair, and this node's spec asserts that no agent performs a state-changing operation in that case. `claude_source_action` in `outcomeeng/distribution/installation.py` classifies such a source as `REPLACE`, the plan emits a marketplace removal followed by an add, and `test_persistent_installation_replaces_noncanonical_sources` together with `test_restoring_the_selection_keeps_the_reconciled_marketplace_source` pin that replacement.
+
+**Resolution shape**: decide which layer is wrong — a replacement the decisions must admit, or an implementation that must stop — then align the decision, the spec assertion (which carries no evidence tag), the source-action classification, and both tests in one changeset.
+
+**Evidence**: test-evidence audit finding `f-005` (recorded as information) against `06b86db6b`.
+
+## Claude Code renderings ship the Codex-only placement script and paraphrase its output
+
+The `<plugin>-plugin` skill's Claude Code rendering carries `scripts/place_agents.py`, roughly 330 lines that its own `<agent_delivery>` section says are never invoked there, because the shared template `src/templates/plugin/SKILL.md` conditions other sections on the build target but not the script directory. The same skill's `<examples>` paraphrases the manifest-delivery line instead of quoting the sentence `<verbs>` prints.
+
+**Resolution shape**: exclude `scripts/` from the Claude Code rendering in the shared template, or state in `<agent_delivery>` why an inert copy must ship; quote the printed sentence verbatim in `<examples>`. Either change touches every plugin's rendered skill, so it lands as one template change gated by the skill auditor.
+
+**Evidence**: skill audit warnings `f-007` and `f-008` against `06b86db6b`.
+
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
 `test_real_agent_clis_map_full_and_generated_subsets` can fail at the `marketplace-refresh` operation. `codex plugin marketplace upgrade outcomeeng --json` then exits 1 with:
