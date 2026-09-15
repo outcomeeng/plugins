@@ -2,7 +2,7 @@
 
 PROVIDES the resumption side of session continuity — reconciling a session document's recorded claims against current state, then loading the node it anchors and presenting an evaluated continuation proposal
 SO THAT an agent claiming a session written by another context
-CAN act on what the repository supports now rather than on what was true when the session was written
+CAN resume from repository-supported state with every recorded claim reconciled before use
 
 Claim reconciliation and the resumption flow it feeds are governed by the children below. `spx/21-spec-tree.enabler/76-sessions.enabler/28-pickup.enabler/20-claim-verification.adr.md` decides the reconciliation mechanism. Under the coordination overlay declared in `spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md`, the same resumption reads a Change instead of a session document and follows the claim transition in `spx/21-spec-tree.enabler/76-sessions.enabler/21-change-coordination.pdr.md`.
 
