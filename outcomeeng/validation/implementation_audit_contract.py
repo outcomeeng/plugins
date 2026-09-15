@@ -282,23 +282,6 @@ def implementation_audit_provenance(
     }
 
 
-def expected_verification_projection(
-    run_token: str,
-    *,
-    finding_count: int,
-    terminal_status: AuditTerminalStatus,
-) -> tuple[object, ...]:
-    """Return expected sealed-projection fields for one verification run."""
-    return (
-        terminal_status.value,
-        True,
-        run_token,
-        finding_count,
-        True,
-        terminal_status.value,
-    )
-
-
 def _require_subject_path(subject_path: str) -> str:
     """Return a concrete audit subject or reject the empty boundary value."""
     if not subject_path:

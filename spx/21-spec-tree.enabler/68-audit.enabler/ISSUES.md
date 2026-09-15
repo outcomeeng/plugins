@@ -42,29 +42,6 @@ functions across the trio, wrapper, and retired-name assertions) on the
 coverage-accounting changeset, which touches neither the compliance file nor
 its harness; deferred there for the reason above.
 
-## The l3 scenario's expected projection lives in a production module
-
-`expected_verification_projection` in
-`outcomeeng/validation/implementation_audit_contract.py` returns the tuple the
-sealed-projection assertion compares against, and nothing outside
-`tests/test_implementation_audit_contract.scenario.l3.py` consumes it: no
-packaging entry point, no `outcomeeng.validation` export, no shipped-skill or
-Justfile use, no declared schema. The expected value is author-written, so
-inverting the claim edits production rather than the linked test, and the
-predicate is not readable from the test that cites it.
-
-**Resolution shape**: move the expected tuple into the linked test as its own
-predicate over the observation `observe_implementation_audit_lifecycle`
-returns, and delete the production function once the test owns the value.
-Gate with `spec-tree:test-evidence-auditor`.
-
-**Why separate**: the coverage-accounting changeset that surfaced it changes
-the audit-lifecycle harness only to run against the pinned floor release; the
-production contract module and the l3 test file are untouched by it.
-
-**Evidence.** `REJECT` finding `f-001` (source-ownership) from
-`spec-tree:test-evidence-auditor` on the coverage-accounting changeset.
-
 ## `check_wrapper_surface` acceptance boundary has no fixture evidence
 
 `outcomeeng/validation/audit_artifacts.py` `check_wrapper_surface` scopes its

@@ -49,6 +49,9 @@ EXIT_COMMAND_FAILURE = cast(int, _MODULE["EXIT_COMMAND_FAILURE"])
 REQUIRED_COVERAGE = cast(str, _MODULE["REQUIRED_COVERAGE"])
 FINAL_COVERAGE_STATUSES = cast(frozenset[str], _MODULE["FINAL_COVERAGE_STATUSES"])
 MISSING_SKILL_STATUS = cast(str, _MODULE["MISSING_SKILL_STATUS"])
+# The two StrEnum classes come out of the runpy namespace as plain objects;
+# a concrete class annotation cannot name members the checker never sees, so
+# the cast admits attribute access and the tests pin each member by value.
 AUDIT_FIELD = cast(Any, _MODULE["AuditField"])
 RECONCILE_FIELD = cast(Any, _MODULE["ReconcileField"])
 reconcile = cast(

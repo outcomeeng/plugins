@@ -10,7 +10,6 @@ from outcomeeng.validation.implementation_audit_contract import (
     AuditTerminalStatus,
     PriorContextField,
     ScopeUnitField,
-    expected_verification_projection,
 )
 from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     observe_implementation_audit_lifecycle,
@@ -32,10 +31,13 @@ def test_verification_run_evidence_sequences_are_monotonic() -> None:
 def test_verification_run_seals_the_authoritative_finding_count() -> None:
     observation = observe_implementation_audit_lifecycle()
 
-    assert observation.sealed_projection == expected_verification_projection(
+    assert observation.sealed_projection == (
+        observation.terminal_status.value,
+        True,
         observation.run_token,
-        finding_count=observation.recorded_finding_count,
-        terminal_status=observation.terminal_status,
+        observation.recorded_finding_count,
+        True,
+        observation.terminal_status.value,
     )
 
 
@@ -44,10 +46,13 @@ def test_verification_run_counts_one_rule_across_subjects() -> None:
 
     distinct_subjects = set(observation.subject_paths)
     assert len(distinct_subjects) > 1
-    assert observation.sealed_projection == expected_verification_projection(
+    assert observation.sealed_projection == (
+        observation.terminal_status.value,
+        True,
         observation.run_token,
-        finding_count=len(distinct_subjects),
-        terminal_status=observation.terminal_status,
+        len(distinct_subjects),
+        True,
+        observation.terminal_status.value,
     )
 
 
@@ -62,13 +67,18 @@ def test_verification_run_rejects_approval_after_a_blocking_finding() -> None:
 def test_verification_run_seals_an_accounting_record_for_an_unclaimed_path() -> None:
     observation = observe_implementation_audit_lifecycle(record_findings=False)
 
-    rows_by_subject = {
-        unit.get(ScopeUnitField.SUBJECT): unit
+    accounting_rows = [
+        unit
         for unit in observation.rendered_scope_units
         if unit.get(ScopeUnitField.SUBJECT) in observation.accounting_paths
-    }
-    assert set(rows_by_subject) == set(observation.accounting_paths)
-    for path, row in rows_by_subject.items():
+    ]
+    # One row per unclaimed path: a second row for the same path would raise
+    # the row count, not vanish into a keyed lookup.
+    subjects = [row.get(ScopeUnitField.SUBJECT) for row in accounting_rows]
+    assert len(subjects) == len(observation.accounting_paths)
+    assert set(subjects) == set(observation.accounting_paths)
+    for row in accounting_rows:
+        path = row.get(ScopeUnitField.SUBJECT)
         prior_context = row.get(ScopeUnitField.PRIOR_CONTEXT)
         assert isinstance(prior_context, dict)
         assert row.get(ScopeUnitField.AUDIT_KIND) == ACCOUNTING_RECORD_KIND
