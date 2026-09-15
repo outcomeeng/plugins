@@ -17,6 +17,10 @@ It reads an optional `git_status` claim and pull-request references from the
 plain session document. Paths must be non-empty, relative to the checkout, and
 must not contain a parent-directory escape.
 
+The repository root must exist, be an accessible directory, and contain its
+`.git` repository metadata entry. An invalid root exits nonzero before any
+observation and names the rejected path on standard error.
+
 </inputs>
 
 <output>
@@ -55,6 +59,8 @@ The claim-verification node's mapping and compliance evidence covers:
   absolute, empty, or parent-escaping paths;
 - use of the injected command runner, stdlib-only imports, source-owned read-only
   commands, and unchanged repository status across verification.
+- rejection of a missing repository root, a non-directory path, and a directory
+  without repository metadata before any observation runs.
 
 An unloadable session produces exactly one `session_metadata` verdict with
 `Unverifiable`. An unavailable observation produces `Unverifiable` for that

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -40,6 +41,10 @@ GIT_STATUS_COMMAND: Final = ("git", "status", "--porcelain")
 GH_PR_VIEW_COMMAND: Final = ("gh", "pr", "view")
 GH_JSON_FLAG: Final = "--json"
 GH_PR_STATE_FIELD: Final = "state"
+REPOSITORY_DIRECTORY_ERROR: Final = (
+    "repository root must be an existing accessible directory"
+)
+REPOSITORY_METADATA_ERROR: Final = "repository root must contain a .git entry"
 
 SESSION_GIT_REF_FIELD: Final = "git_ref"
 SESSION_SPECS_FIELD: Final = "specs"
@@ -128,6 +133,22 @@ PR_REFERENCE_PATTERN: Final = re.compile(
 def verdict_for_relation(relation: ClaimRelation) -> Verdict:
     """Map the finite claim/observation relation domain to its verdict."""
     return CLAIM_RELATION_VERDICTS[relation]
+
+
+def repository_root(value: str) -> Path:
+    """Resolve and validate a repository root before command execution."""
+    candidate = Path(value).expanduser()
+    try:
+        resolved = candidate.resolve(strict=True)
+    except OSError as exc:
+        raise argparse.ArgumentTypeError(
+            f"{REPOSITORY_DIRECTORY_ERROR}: {candidate}"
+        ) from exc
+    if not resolved.is_dir() or not os.access(resolved, os.R_OK | os.X_OK):
+        raise argparse.ArgumentTypeError(f"{REPOSITORY_DIRECTORY_ERROR}: {candidate}")
+    if not (resolved / ".git").exists():
+        raise argparse.ArgumentTypeError(f"{REPOSITORY_METADATA_ERROR}: {candidate}")
+    return resolved
 
 
 class CommandRunner(Protocol):
@@ -512,7 +533,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("session_id", help="Claimed session id")
     parser.add_argument(
-        "--repo", type=Path, default=Path.cwd(), help="Repository root (default: cwd)"
+        "--repo",
+        type=repository_root,
+        default=str(Path.cwd()),
+        help="Repository root (default: cwd)",
     )
     args = parser.parse_args(argv)
     verdicts = verify(args.session_id, args.repo, SubprocessRunner(args.repo))
