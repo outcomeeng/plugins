@@ -26,7 +26,7 @@ edit to the current diff.
 
 ## Synchronizer extraction awaits a published SPX CLI capability
 
-`src/plugins/spec-tree/skills/sync-base/scripts/sync_base.py` runs to 1329 lines
+`src/plugins/spec-tree/skills/sync-base/scripts/sync_base.py` runs to 1342 lines
 — base-ref and remote-tracking resolution, behind-base detection, the
 attached-branch rebase and the detached-head advance, the dirty-tree
 precondition, structured conflict reporting, the readiness-preservation
