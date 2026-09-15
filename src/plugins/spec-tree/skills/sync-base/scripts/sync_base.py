@@ -45,11 +45,17 @@ project overlay's — and it never satisfies a merge gate.
 A branch stacked on a predecessor branch carries a stack record in git
 configuration — ``branch.<name>.stackPredecessor`` and ``branch.<name>.stackTip``
 — written from git facts at the moments the relation is knowable: when a
-rebase rewrites a branch, every local branch containing the pre-rebase head
-receives a record naming the rewritten branch and that head; when a caller
-supplies a non-default ``--base``, the synchronized branch receives a record
-naming that base. A later sync of a recorded branch takes the predecessor as
-its base and resolves the predecessor's state: open and containing the
+rebase rewrites a branch, every local branch other than the default branch
+that contains the pre-rebase head receives a record naming the rewritten
+branch and that head; when a caller supplies a non-default ``--base``, the
+synchronized branch receives a record naming that base. A caller-supplied
+``--base`` is always the target: a recorded tip that bounds the branch and is
+absent from the target bounds the replay onto it, and a record is cleared when
+the named base is the default. A recorded tip that no longer bounds the branch
+— an operator completed a conflicted restack by hand — is re-derived from the
+branch's merge-base with the target. A later sync of a recorded branch without
+``--base`` takes the predecessor as its base and resolves the predecessor's
+state: open and containing the
 recorded tip is an ordinary rebase onto it; open and rewritten replays only
 the commits above the recorded tip onto it; merged into the default branch
 (or absent from origin with no surviving local branch) replays only the
@@ -492,15 +498,25 @@ def _local_branches(repo: _Repository) -> list[str]:
     return [name for name in listed.stdout.split() if name]
 
 
-def _write_dependent_records(repo: _Repository, branch: str, old_head_oid: str) -> None:
+def _write_dependent_records(
+    repo: _Repository,
+    branch: str,
+    old_head_oid: str,
+    *,
+    default_name: str | None,
+) -> None:
     """Record ``branch`` and its pre-rebase head on every local branch stacked on it.
 
-    A local branch that contains the pre-rebase head sat on it. A dependent that
-    already records a different predecessor keeps that record: its own
-    restack flows through that nearer predecessor when that one is rewritten.
+    A local branch that contains the pre-rebase head sat on it. The default
+    branch is never a dependent: it contains a merged branch's head without
+    sitting on it. A dependent that already records a different predecessor
+    keeps that record: its own restack flows through that nearer predecessor
+    when that one is rewritten.
     """
     for dependent in _local_branches(repo):
-        if dependent == branch or not _is_ancestor(repo, old_head_oid, dependent):
+        if dependent in (branch, default_name) or not _is_ancestor(
+            repo, old_head_oid, dependent
+        ):
             continue
         existing = _read_stack_record(repo, dependent)
         if existing is not None and existing.predecessor != branch:
@@ -875,16 +891,29 @@ def _sync(repo: _Repository, *, base_ref: str | None, fetch: bool) -> SyncBaseRe
 
     if base_ref is not None:
         record = _read_stack_record(repo, branch)
-        result = _sync_branch_onto(
-            repo, branch, base_ref, remote_tracking_ref(base_ref), fetch=fetch
+        target_ref = remote_tracking_ref(base_ref)
+        result = _sync_explicit_base(
+            repo, branch, base_ref, target_ref, record, default_name, fetch=fetch
         )
         new_base_oid = (
             result.preservation.new_base_oid
             if result.preservation is not None
             else None
         )
+        clean = result.status in (SyncStatus.REBASED, SyncStatus.ALREADY_CURRENT)
+        if clean and record is not None and base_ref == default_name:
+            try:
+                _clear_stack_record(repo, branch)
+            except StackRecordError as error:
+                return _record_failure(base_ref, target_ref, branch, error)
+            return _with_stack(
+                result,
+                predecessor=record.predecessor,
+                tip_before=record.tip,
+                tip_after=None,
+            )
         if (
-            result.status in (SyncStatus.REBASED, SyncStatus.ALREADY_CURRENT)
+            clean
             and default_name is not None
             and base_ref != default_name
             and new_base_oid is not None
@@ -916,7 +945,71 @@ def _sync(repo: _Repository, *, base_ref: str | None, fetch: bool) -> SyncBaseRe
     if record is not None:
         return _sync_stacked(repo, branch, record, default, fetch=fetch)
     return _sync_branch_onto(
-        repo, branch, default, remote_tracking_ref(default), fetch=fetch
+        repo,
+        branch,
+        default,
+        remote_tracking_ref(default),
+        fetch=fetch,
+        default_name=default,
+    )
+
+
+def _sync_explicit_base(
+    repo: _Repository,
+    branch: str,
+    base_ref: str,
+    target_ref: str,
+    record: StackRecord | None,
+    default_name: str | None,
+    *,
+    fetch: bool,
+) -> SyncBaseResult:
+    """Synchronize ``branch`` onto the caller-named base.
+
+    The named base is always the target. When the branch carries a record whose
+    tip bounds it and the target does not contain that tip, only the commits
+    above the recorded tip replay onto the target — a stacked pull request
+    retargeted to the default branch after its predecessor merged restacks
+    rather than replaying the predecessor's commits. Otherwise the movement is
+    an ordinary rebase.
+    """
+    if record is None:
+        return _sync_branch_onto(
+            repo, branch, base_ref, target_ref, fetch=fetch, default_name=default_name
+        )
+    if fetch:
+        fetched = _git(repo, "fetch", "origin", base_ref)
+        if fetched.returncode != 0:
+            return SyncBaseResult(
+                SyncStatus.GIT_FAILURE,
+                base_ref,
+                target_ref,
+                branch,
+                f"git fetch origin {base_ref} failed: {fetched.stderr.strip()}",
+            )
+    target_oid = _rev(repo, target_ref)
+    if target_oid is None:
+        return SyncBaseResult(
+            SyncStatus.GIT_FAILURE,
+            base_ref,
+            target_ref,
+            branch,
+            f"base ref {target_ref} does not resolve to a commit",
+        )
+    head_oid = _rev(repo, "HEAD")
+    bounds_branch = head_oid is not None and _is_ancestor(repo, record.tip, head_oid)
+    if bounds_branch and not _is_ancestor(repo, record.tip, target_oid):
+        return _restack(
+            repo,
+            branch,
+            base_ref=base_ref,
+            target_ref=target_ref,
+            target_oid=target_oid,
+            fork_oid=record.tip,
+            default_name=default_name,
+        )
+    return _sync_branch_onto(
+        repo, branch, base_ref, target_ref, fetch=False, default_name=default_name
     )
 
 
@@ -1024,6 +1117,7 @@ def _sync_stacked(
             target_ref=default_remote,
             target_oid=default_oid,
             fork_oid=record.tip,
+            default_name=default_name,
         )
         if result.status in (SyncStatus.REBASED, SyncStatus.ALREADY_CURRENT):
             try:
@@ -1039,7 +1133,12 @@ def _sync_stacked(
 
     if _is_ancestor(repo, record.tip, predecessor_oid):
         result = _sync_branch_onto(
-            repo, branch, record.predecessor, target_ref, fetch=False
+            repo,
+            branch,
+            record.predecessor,
+            target_ref,
+            fetch=False,
+            default_name=default_name,
         )
     else:
         result = _restack(
@@ -1049,6 +1148,7 @@ def _sync_stacked(
             target_ref=target_ref,
             target_oid=predecessor_oid,
             fork_oid=record.tip,
+            default_name=default_name,
         )
     if result.status in (SyncStatus.REBASED, SyncStatus.ALREADY_CURRENT):
         try:
@@ -1080,23 +1180,39 @@ def _restack(
     target_ref: str,
     target_oid: str,
     fork_oid: str,
+    default_name: str | None,
 ) -> SyncBaseResult:
     """Replay only the commits above ``fork_oid`` onto ``target_ref``.
 
     ``fork_oid`` is the recorded predecessor tip that bounds the branch's own
     commits. The movement is ``git rebase --onto``, a rebase of those commits;
-    the preservation proof names ``fork_oid`` as the old base.
+    the preservation proof names ``fork_oid`` as the old base. A recorded tip
+    that is no longer an ancestor of the branch — an operator completed a
+    conflicted restack by hand and the record was not rewritten — does not
+    describe the branch's fork, so the fork is re-derived as the branch's
+    merge-base with the target: a branch already above the target is current.
     """
     old_head_oid = _rev(repo, "HEAD")
-    if old_head_oid is None or not _is_ancestor(repo, fork_oid, old_head_oid):
+    if old_head_oid is None:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
             base_ref,
             target_ref,
             branch,
-            f"recorded stack tip {fork_oid} is not an ancestor of {branch}; the "
-            f"record does not describe this branch",
+            f"cannot resolve HEAD of {branch}",
         )
+    if not _is_ancestor(repo, fork_oid, old_head_oid):
+        derived_fork = _merge_base(repo, old_head_oid, target_oid)
+        if derived_fork is None:
+            return SyncBaseResult(
+                SyncStatus.GIT_FAILURE,
+                base_ref,
+                target_ref,
+                branch,
+                f"recorded stack tip {fork_oid} is not an ancestor of {branch} and "
+                f"{branch} shares no history with {target_ref}",
+            )
+        fork_oid = derived_fork
 
     if _is_ancestor(repo, target_oid, old_head_oid):
         return SyncBaseResult(
@@ -1136,7 +1252,9 @@ def _restack(
     rebased = _git(repo, "rebase", "--onto", target_ref, fork_oid)
     if rebased.returncode == 0:
         try:
-            _write_dependent_records(repo, branch, old_head_oid)
+            _write_dependent_records(
+                repo, branch, old_head_oid, default_name=default_name
+            )
         except StackRecordError as error:
             return _record_failure(base_ref, target_ref, branch, error)
         return SyncBaseResult(
@@ -1184,6 +1302,7 @@ def _sync_branch_onto(
     target_ref: str,
     *,
     fetch: bool,
+    default_name: str | None,
 ) -> SyncBaseResult:
     """Bring ``branch`` current with ``target_ref`` by an ordinary rebase.
 
@@ -1273,7 +1392,9 @@ def _sync_branch_onto(
     if rebased.returncode == 0:
         if old_head_oid is not None:
             try:
-                _write_dependent_records(repo, branch, old_head_oid)
+                _write_dependent_records(
+                    repo, branch, old_head_oid, default_name=default_name
+                )
             except StackRecordError as error:
                 return _record_failure(base_ref, target_ref, branch, error)
         return SyncBaseResult(
