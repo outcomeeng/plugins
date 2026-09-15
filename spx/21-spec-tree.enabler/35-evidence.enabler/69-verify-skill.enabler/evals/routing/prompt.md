@@ -77,7 +77,7 @@ For each assertion, identify the real subject and the verdict it can produce:
 | A claim about the running node that only an executed observation protocol settles  | probe             | `[probe](path)`       |
 | Semantic constraint has no deterministic, attested, or structural verdict          | audit             | `[audit:{rule-slug}]` |
 
-Classify the real subject's execution, not the determinism of a downstream grader. Ask whether rerunning the real subject with the same input produces the same behavior without model variance. When producing the asserted output requires an LLM, select evaluate even though fixed expectations and a deterministic grader later convert that output into pass or fail. Select test only when the behavior under assertion is itself deterministic.
+Classify the behavior under assertion: deterministic CLI state uses test even when an LLM provides its readout; use evaluate when model-generated behavior is itself being evaluated, including through a CLI. A readout reports existing state for a test's independent comparison without interpreting its meaning or deciding the verdict. Fixed expectations and a deterministic grader alone do not make model-generated behavior deterministic.
 
 Prefer the strongest reachable evidence in that order after applying this boundary. A prose-content existence check is never deterministic behavior evidence; reading authored text and asserting its wording proves only that the text was authored.
 
@@ -213,7 +213,7 @@ For each assertion, identify the real subject and the verdict it can produce:
 | A claim about the running node that only an executed observation protocol settles  | probe             | `[probe](path)`       |
 | Semantic constraint has no deterministic, attested, or structural verdict          | audit             | `[audit:{rule-slug}]` |
 
-Classify the real subject's execution, not the determinism of a downstream grader. Ask whether rerunning the real subject with the same input produces the same behavior without model variance. When producing the asserted output requires an LLM, select evaluate even though fixed expectations and a deterministic grader later convert that output into pass or fail. Select test only when the behavior under assertion is itself deterministic.
+Classify the behavior under assertion: deterministic CLI state uses test even when an LLM provides its readout; use evaluate when model-generated behavior is itself being evaluated, including through a CLI. A readout reports existing state for a test's independent comparison without interpreting its meaning or deciding the verdict. Fixed expectations and a deterministic grader alone do not make model-generated behavior deterministic.
 
 Prefer the strongest reachable evidence in that order after applying this boundary. A prose-content existence check is never deterministic behavior evidence; reading authored text and asserting its wording proves only that the text was authored.
 
