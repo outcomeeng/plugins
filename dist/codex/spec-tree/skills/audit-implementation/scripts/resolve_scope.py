@@ -13,14 +13,23 @@ scope identity, a run token the CLI cannot read, a CLI that cannot be launched,
 and a run document shaped so the comparison cannot run).
 """
 
+from __future__ import annotations
+
 import argparse
 import importlib.util
 import json
 import pathlib
 import subprocess
 import sys
+from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from types import ModuleType
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # The provider skill publishes the process-boundary Protocol every consumer
+    # accepts; `_provider()` loads the same module by path at run time.
+    from changeset_scope import Runner
 
 ERROR_PREFIX = "error: implementation scope resolution failed"
 RECONCILE_PREFIX = "error: implementation audit reconciliation failed"
@@ -82,7 +91,9 @@ def _provider() -> ModuleType:
     return module
 
 
-def read_run_document(runner, repo, argv, field):
+def read_run_document(
+    runner: Runner, repo: pathlib.Path, argv: Sequence[str], field: str
+) -> object:
     """Return the last `spx verification run` document carrying ``field``."""
     completed = runner(
         [SPX_COMMAND, *RUN_COMMAND_PREFIX, *argv],
@@ -104,7 +115,12 @@ def read_run_document(runner, repo, argv, field):
     raise RuntimeError(f"no {field} in `spx verification run {argv[0]}` output")
 
 
-def reconcile(expected_paths, resolved_paths, scope_units, live_paths=()):
+def reconcile(
+    expected_paths: Sequence[str],
+    resolved_paths: Sequence[str],
+    scope_units: Sequence[Mapping[str, object]],
+    live_paths: Sequence[str] = (),
+) -> dict[str, object]:
     """Return the verdict comparing recorded coverage to the sealed inventory.
 
     ``live_paths`` is the advisory live list the run's start input sealed, if
@@ -114,11 +130,11 @@ def reconcile(expected_paths, resolved_paths, scope_units, live_paths=()):
     expected = list(expected_paths)
     expected += [path for path in live_paths if path not in expected]
     recorded = {
-        unit.get(AuditField.SUBJECT)
+        str(unit.get(AuditField.SUBJECT))
         for unit in scope_units
         if unit.get(AuditField.COVERAGE_STATUS) != MISSING_SKILL_STATUS
     }
-    verdict = {
+    verdict: dict[str, object] = {
         ReconcileField.EXPECTED: len(expected),
         ReconcileField.RECORDED: len(recorded),
         ReconcileField.UNACCOUNTED: [p for p in expected if p not in recorded],
@@ -143,7 +159,12 @@ def reconcile(expected_paths, resolved_paths, scope_units, live_paths=()):
     return verdict
 
 
-def _reconcile_run(runner, scope, args, resolved):
+def _reconcile_run(
+    runner: Runner,
+    scope: ModuleType,
+    args: argparse.Namespace,
+    resolved: Mapping[str, object],
+) -> int:
     # The locator carries the run's own sealed scope identity, never the freshly
     # resolved one: a drifted selector resolves to an identity SPX cannot match
     # against the recorded run, which would surface drift as a command failure
@@ -162,11 +183,12 @@ def _reconcile_run(runner, scope, args, resolved):
     # (OSError), a nonzero spx exit, a document without the field, or a
     # document shaped so the comparison cannot run — is a command failure.
     try:
-        recorded_input = json.loads(
-            read_run_document(
-                runner, args.repo, [INPUT_COMMAND, *locator], AuditField.INPUT_CONTENT
-            )
+        content = read_run_document(
+            runner, args.repo, [INPUT_COMMAND, *locator], AuditField.INPUT_CONTENT
         )
+        if not isinstance(content, str):
+            raise RuntimeError("recorded start input content is not a string")
+        recorded_input = json.loads(content)
         units = read_run_document(
             runner, args.repo, [RENDER_COMMAND, *locator], AuditField.SCOPE_UNITS
         )
@@ -176,11 +198,14 @@ def _reconcile_run(runner, scope, args, resolved):
             raise RuntimeError("recorded scope units are not a list of objects")
         sealed = recorded_input.get(scope.ScopeField.CHANGED_PATHS) or []
         live = recorded_input.get(LIVE_PATHS_KEY) or []
-        if not isinstance(sealed, list) or not isinstance(live, list):
+        fresh = resolved[scope.ScopeField.CHANGED_PATHS]
+        if (
+            not isinstance(sealed, list)
+            or not isinstance(live, list)
+            or not isinstance(fresh, list)
+        ):
             raise RuntimeError("recorded start input path lists are not arrays")
-        verdict = reconcile(
-            sealed, resolved[scope.ScopeField.CHANGED_PATHS], units, live
-        )
+        verdict = reconcile(sealed, fresh, units, live)
     except (OSError, RuntimeError, TypeError, json.JSONDecodeError) as exc:
         print(f"{RECONCILE_PREFIX}: {exc}", file=sys.stderr)
         return EXIT_COMMAND_FAILURE
@@ -188,7 +213,7 @@ def _reconcile_run(runner, scope, args, resolved):
     return 0 if verdict[ReconcileField.RECONCILED] else EXIT_UNRECONCILED
 
 
-def main(argv: list[str] | None = None, runner=subprocess.run) -> int:
+def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("scope", help="HEAD, a branch, or a three-dot range")
     parser.add_argument("--repo", type=pathlib.Path, default=pathlib.Path.cwd())

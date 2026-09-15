@@ -255,7 +255,7 @@ repair.
 ## The scope resolver crossed the shipped-script size threshold
 
 `src/plugins/spec-tree/skills/audit-implementation/scripts/resolve_scope.py` is
-243 lines. `spx/12-shipped-scripting.adr.md` holds that a generic shipped script
+268 lines. `spx/12-shipped-scripting.adr.md` holds that a generic shipped script
 beyond fifty lines is debt awaiting extraction into the SPX CLI once it proves
 its value.
 
@@ -283,7 +283,7 @@ the bundled script. Filed as the SPX-side Change; the audit-payload schema work
 carries it.
 
 **Evidence.** The resolver grew from 48 to 61 lines closing the
-transcribed-inventory hole, then to 243 closing the coverage-accounting hole,
+transcribed-inventory hole, then to 268 closing the coverage-accounting hole,
 both recorded against `outcomeeng/changes#47`.
 
 ## A missing language plugin is invisible to the implementation audit

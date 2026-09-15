@@ -227,7 +227,7 @@ def run_implementation_scope(
     audit_input_argv = () if audit_input is None else ("--audit-input", audit_input)
     reconcile_argv = () if reconcile_run is None else ("--reconcile-run", reconcile_run)
     if scope_identity is not None:
-        reconcile_argv = (*reconcile_argv, "--scope-identity", scope_identity)
+        reconcile_argv = (*reconcile_argv, SCOPE_IDENTITY_OPTION, scope_identity)
     return subprocess.run(
         (
             sys.executable,

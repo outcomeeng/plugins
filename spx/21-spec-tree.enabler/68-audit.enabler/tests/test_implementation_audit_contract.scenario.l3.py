@@ -62,26 +62,25 @@ def test_verification_run_rejects_approval_after_a_blocking_finding() -> None:
 def test_verification_run_seals_an_accounting_record_for_an_unclaimed_path() -> None:
     observation = observe_implementation_audit_lifecycle(record_findings=False)
 
-    accounting_rows = [
-        unit
+    rows_by_subject = {
+        unit.get(ScopeUnitField.SUBJECT): unit
         for unit in observation.rendered_scope_units
-        if unit.get(ScopeUnitField.SUBJECT) == observation.accounting_path
-    ]
-    assert len(accounting_rows) == 1
-    row = accounting_rows[0]
-    prior_context = row.get(ScopeUnitField.PRIOR_CONTEXT)
-    assert isinstance(prior_context, dict)
-    assert row.get(ScopeUnitField.AUDIT_KIND) == ACCOUNTING_RECORD_KIND
-    assert (
-        row.get(ScopeUnitField.COVERAGE_REQUIREMENT)
-        == AuditCoverageRequirement.OPTIONAL.value
-    )
-    assert row.get(ScopeUnitField.COVERAGE_STATUS) == AuditCoverageStatus.SKIPPED.value
-    assert (
-        prior_context.get(PriorContextField.CHANGED_FILE_PARTITION)
-        == observation.accounting_path
-    )
-    assert PriorContextField.LANGUAGE_PARTITION not in prior_context
+        if unit.get(ScopeUnitField.SUBJECT) in observation.accounting_paths
+    }
+    assert set(rows_by_subject) == set(observation.accounting_paths)
+    for path, row in rows_by_subject.items():
+        prior_context = row.get(ScopeUnitField.PRIOR_CONTEXT)
+        assert isinstance(prior_context, dict)
+        assert row.get(ScopeUnitField.AUDIT_KIND) == ACCOUNTING_RECORD_KIND
+        assert (
+            row.get(ScopeUnitField.COVERAGE_REQUIREMENT)
+            == AuditCoverageRequirement.OPTIONAL.value
+        )
+        assert (
+            row.get(ScopeUnitField.COVERAGE_STATUS) == AuditCoverageStatus.SKIPPED.value
+        )
+        assert prior_context.get(PriorContextField.CHANGED_FILE_PARTITION) == path
+        assert PriorContextField.LANGUAGE_PARTITION not in prior_context
     # No finding was recorded, so an accounting record that forced the rollup
     # would show here as rejected; the findings alone derive the status.
     assert observation.recorded_finding_count == 0

@@ -48,6 +48,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     implementation_audit_finding_payload,
     implementation_audit_accounting_payload,
     RUN_RESOLVED_SCOPE_FIELD,
+    ScopeUnitField,
     implementation_audit_input_payload,
     implementation_audit_provenance,
     implementation_audit_scope_payload,
@@ -72,7 +73,7 @@ from outcomeeng.validation.spx_version import (
 )
 from outcomeeng_testing.generators.audit_verification_run_contract import (
     ImplementationAuditVerificationProbe,
-    implementation_audit_unclaimed_path,
+    implementation_audit_unclaimed_paths,
     implementation_audit_verification_probes,
 )
 
@@ -151,7 +152,7 @@ class VerificationRunObservation:
     terminal_status: AuditTerminalStatus
     recorded_finding_count: int
     subject_paths: tuple[str, ...]
-    accounting_path: str
+    accounting_paths: tuple[str, ...]
     changed_paths: tuple[str, ...]
     start_resolved_scope: object
     recorded_input_content: object
@@ -228,7 +229,7 @@ def observe_implementation_audit_lifecycle(
         terminal_status=terminal_status,
         recorded_finding_count=len(finding_reports),
         subject_paths=tuple(probe.subject_path for probe in finding_probes),
-        accounting_path=implementation_audit_unclaimed_path(),
+        accounting_paths=implementation_audit_unclaimed_paths(),
         changed_paths=started.changed_paths,
         start_resolved_scope=started.start_resolved_scope,
         recorded_input_content=started.recorded_input_content,
@@ -688,18 +689,12 @@ def _start_implementation_audit_run(
         language_plugin_version=_plugin_version(language),
         tool_version=_spx_version(spx_command),
     )
-    _initialize_changeset_repository(
-        repository,
-        (
-            *(probe.subject_path for probe in probes),
-            implementation_audit_unclaimed_path(),
-        ),
-    )
-    scope = _changeset_scope(repository)
     changed_paths = (
         *(probe.subject_path for probe in probes),
-        implementation_audit_unclaimed_path(),
+        *implementation_audit_unclaimed_paths(),
     )
+    _initialize_changeset_repository(repository, changed_paths)
+    scope = _changeset_scope(repository)
     # The skill pipes the resolver's scope beneath the request, so the run's
     # own start input carries the changed paths the reconciler reads back.
     start_report = _run_spx(
@@ -733,24 +728,27 @@ def _start_implementation_audit_run(
         )
         for probe in probes
     )
-    accounting_payload = implementation_audit_accounting_payload(
-        subject_path=implementation_audit_unclaimed_path()
-    )
-    accounting_report = _run_spx(
-        repository,
-        spx_command,
-        ("scope", "add"),
-        scope,
-        run_token=run_token,
-        payload=accounting_payload,
-        idempotency_key=str(accounting_payload["unitId"]),
+    accounting_reports = tuple(
+        _run_spx(
+            repository,
+            spx_command,
+            ("scope", "add"),
+            scope,
+            run_token=run_token,
+            payload=payload,
+            idempotency_key=str(payload[ScopeUnitField.UNIT_ID]),
+        )
+        for payload in (
+            implementation_audit_accounting_payload(subject_path=path)
+            for path in implementation_audit_unclaimed_paths()
+        )
     )
     return LifecycleStart(
         scope=scope,
         run_token=run_token,
         provenance=provenance,
         probes=probes,
-        scope_reports=(*scope_reports, accounting_report),
+        scope_reports=(*scope_reports, *accounting_reports),
         changed_paths=changed_paths,
         start_resolved_scope=start_report.get(RUN_RESOLVED_SCOPE_FIELD),
         recorded_input_content=input_report.get(AUDIT_FIELD.INPUT_CONTENT),
