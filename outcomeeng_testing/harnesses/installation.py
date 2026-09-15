@@ -108,6 +108,8 @@ from outcomeeng.distribution.installation import (
     report_document,
     execute_persistent_installation,
     main,
+    marketplace_plugin_identifier,
+    marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import (
     RecordDisposition,
@@ -684,7 +686,7 @@ def _plugin_listing_payload(
         return json.dumps(
             [
                 {
-                    CLAUDE_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
+                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin),
                     CLAUDE_PLUGIN_ENABLED_FIELD: index % 2 == 0,
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout.resolve()),
@@ -696,7 +698,7 @@ def _plugin_listing_payload(
         {
             CODEX_PLUGIN_ENTRIES_FIELD: [
                 {
-                    CODEX_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
+                    CODEX_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin),
                     CODEX_PLUGIN_ENABLED_FIELD: index % 2 == 0,
                     CODEX_PLUGIN_MARKETPLACE_FIELD: MARKETPLACE_NAME,
                 }
@@ -1046,7 +1048,9 @@ def observe_pathless_record_listing() -> str | None:
         listing = json.dumps(
             [
                 {
-                    CLAUDE_PLUGIN_ID_FIELD: f"{SPEC_TREE_PLUGIN}@{MARKETPLACE_NAME}",
+                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                        SPEC_TREE_PLUGIN
+                    ),
                     CLAUDE_PLUGIN_ENABLED_FIELD: True,
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                 }
@@ -1092,7 +1096,9 @@ def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
         listing = json.dumps(
             [
                 {
-                    CLAUDE_PLUGIN_ID_FIELD: f"{SPEC_TREE_PLUGIN}@{MARKETPLACE_NAME}",
+                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                        SPEC_TREE_PLUGIN
+                    ),
                     CLAUDE_PLUGIN_ENABLED_FIELD: True,
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_LOCAL_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(preflight.roots.checkout),
@@ -1685,7 +1691,7 @@ class SettingsMutatingRunner:
                 "dict[str, object]",
                 document.setdefault(CLAUDE_ENABLED_PLUGINS_FIELD, {}),
             )
-            enabled[f"{command.plugin}@{MARKETPLACE_NAME}"] = True
+            enabled[marketplace_plugin_identifier(command.plugin)] = True
             self._write(document)
         if (
             command.agent is Agent.CLAUDE
@@ -2418,14 +2424,13 @@ def _listed_identity(agent: Agent, entry: object) -> tuple[str, bool]:
 
 def _listed_plugins(agent: Agent, payload: str) -> PluginListing:
     """Read installed and enabled plugin names from a real agent CLI listing."""
-    marketplace_suffix = f"@{MARKETPLACE_NAME}"
     installed: set[str] = set()
     enabled_names: set[str] = set()
     for entry in _listing_entries(agent, payload):
         plugin_id, enabled = _listed_identity(agent, entry)
-        if not plugin_id.endswith(marketplace_suffix):
+        name = marketplace_plugin_name(plugin_id)
+        if name is None:
             continue
-        name = plugin_id.removesuffix(marketplace_suffix)
         installed.add(name)
         if enabled:
             enabled_names.add(name)
@@ -2471,11 +2476,11 @@ def _declared_selection(settings: Path) -> frozenset[str]:
     enabled = document.get(CLAUDE_ENABLED_PLUGINS_FIELD)
     if not isinstance(enabled, dict):
         raise RuntimeError(f"{settings} declares no plugin selection")
-    suffix = f"@{MARKETPLACE_NAME}"
     return frozenset(
-        identifier.removesuffix(suffix)
+        plugin
         for identifier, active in enabled.items()
-        if active is True and identifier.endswith(suffix)
+        if active is True
+        and (plugin := marketplace_plugin_name(identifier)) is not None
     )
 
 
@@ -2656,7 +2661,7 @@ def _seed_persistent_plugins(
                 CLAUDE_EXECUTABLE,
                 "plugin",
                 "install",
-                f"{plugin}@{MARKETPLACE_NAME}",
+                marketplace_plugin_identifier(plugin),
                 CLAUDE_SCOPE_FLAG,
                 CLAUDE_PROJECT_SCOPE,
             ),
@@ -2669,7 +2674,7 @@ def _seed_persistent_plugins(
                 CODEX_EXECUTABLE,
                 "plugin",
                 "add",
-                f"{plugin}@{MARKETPLACE_NAME}",
+                marketplace_plugin_identifier(plugin),
                 "--json",
             ),
         )

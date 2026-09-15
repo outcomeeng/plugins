@@ -23,6 +23,8 @@ from outcomeeng.distribution.contracts import (
 )
 
 MARKETPLACE_NAME = "outcomeeng"
+MARKETPLACE_IDENTIFIER_JOINER = "@"
+"""The character both agent CLIs place between a plugin name and its marketplace name."""
 USER_SCOPE_COLLISION_DIAGNOSTIC = "Claude Code user-scope marketplace collision"
 CANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins"
 CANONICAL_CODEX_SOURCE = "https://github.com/outcomeeng/plugins"
@@ -151,6 +153,27 @@ UNREADABLE_SETTINGS_WARNING = (
 REGISTRY_SOURCE_DIAGNOSTIC = "Claude Code marketplace registry source mismatch"
 PROJECT_SOURCE_DIAGNOSTIC = "Claude Code project marketplace source mismatch"
 CODEX_SOURCE_DIAGNOSTIC = "Codex marketplace source mismatch"
+PATHLESS_LISTING_ENTRY_DIAGNOSTIC = (
+    "claude plugin listing entry {index} at {scope} scope names no project path"
+)
+
+
+def marketplace_plugin_identifier(
+    plugin: str, marketplace: str = MARKETPLACE_NAME
+) -> str:
+    """Compose the identifier an agent CLI gives one plugin of one marketplace."""
+    return f"{plugin}{MARKETPLACE_IDENTIFIER_JOINER}{marketplace}"
+
+
+def marketplace_plugin_name(identifier: str) -> str | None:
+    """Return the plugin name an identifier carries for the marketplace, or None.
+
+    An identifier from another marketplace yields None, so a reader skips it.
+    """
+    suffix = f"{MARKETPLACE_IDENTIFIER_JOINER}{MARKETPLACE_NAME}"
+    if not identifier.endswith(suffix):
+        return None
+    return identifier.removesuffix(suffix)
 
 
 class Agent(StrEnum):
@@ -605,7 +628,7 @@ class ClaudeInstallationAdapter:
         for plugin in plugins:
             if plugin in recorded:
                 continue
-            plugin_id = f"{plugin}@{MARKETPLACE_NAME}"
+            plugin_id = marketplace_plugin_identifier(plugin)
             commands.append(
                 _command(
                     self.agent,
@@ -648,7 +671,7 @@ class ClaudeInstallationAdapter:
                         Operation.PLUGIN_UPDATE,
                         "plugin",
                         "update",
-                        f"{record.plugin}@{MARKETPLACE_NAME}",
+                        marketplace_plugin_identifier(record.plugin),
                         scope=record.scope,
                     ),
                     roots,
@@ -719,7 +742,7 @@ class CodexInstallationAdapter:
                         CODEX_EXECUTABLE,
                         "plugin",
                         "add",
-                        f"{plugin}@{MARKETPLACE_NAME}",
+                        marketplace_plugin_identifier(plugin),
                         "--json",
                     ),
                     roots,
@@ -1117,7 +1140,6 @@ def claude_install_records(
         raise ValueError(f"invalid claude plugin listing: {error}") from error
     if not isinstance(document, list):
         raise ValueError("claude plugin listing must contain an array")
-    marketplace_suffix = f"@{MARKETPLACE_NAME}"
     records: list[ClaudeInstallRecord | PathlessInstallRecord] = []
     for index, entry in enumerate(document):
         if not isinstance(entry, dict):
@@ -1127,7 +1149,8 @@ def claude_install_records(
             raise ValueError(
                 f"claude plugin listing entry {index} has no typed identity"
             )
-        if not identifier.endswith(marketplace_suffix):
+        plugin = marketplace_plugin_name(identifier)
+        if plugin is None:
             continue
         scope = entry.get(CLAUDE_PLUGIN_SCOPE_FIELD)
         if not isinstance(scope, str):
@@ -1137,12 +1160,10 @@ def claude_install_records(
             raise ValueError(
                 f"claude plugin listing entry {index} has an untyped project path"
             )
-        plugin = identifier.removesuffix(marketplace_suffix)
         if project_path is None:
             if scope in CLAUDE_REFRESH_SCOPES:
                 raise ValueError(
-                    f"claude plugin listing entry {index} at {scope} scope names "
-                    "no project path"
+                    PATHLESS_LISTING_ENTRY_DIAGNOSTIC.format(index=index, scope=scope)
                 )
             records.append(PathlessInstallRecord(plugin=plugin, scope=scope))
             continue
@@ -1258,7 +1279,6 @@ def installed_plugin_names(
     if not isinstance(entries, list):
         raise ValueError(f"{agent.value} plugin listing must contain an array")
 
-    marketplace_suffix = f"@{MARKETPLACE_NAME}"
     installed: set[str] = set()
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
@@ -1270,7 +1290,8 @@ def installed_plugin_names(
             raise ValueError(
                 f"{agent.value} plugin listing entry {index} has no typed identity"
             )
-        if not identifier.endswith(marketplace_suffix):
+        plugin = marketplace_plugin_name(identifier)
+        if plugin is None:
             continue
         marketplace = entry.get(CODEX_PLUGIN_MARKETPLACE_FIELD)
         if not isinstance(marketplace, str):
@@ -1279,7 +1300,7 @@ def installed_plugin_names(
             )
         if marketplace != MARKETPLACE_NAME:
             continue
-        installed.add(identifier.removesuffix(marketplace_suffix))
+        installed.add(plugin)
     return frozenset(installed)
 
 
@@ -2532,6 +2553,7 @@ __all__ = [
     "claude_install_records",
     "claude_refresh_records",
     "MARKETPLACE_NAME",
+    "MARKETPLACE_IDENTIFIER_JOINER",
     "Operation",
     "PersistentPreflight",
     "ReportField",
@@ -2558,6 +2580,9 @@ __all__ = [
     "CLAUDE_MANAGED_SCOPE",
     "REGISTRY_SOURCE_DIAGNOSTIC",
     "PROJECT_SOURCE_DIAGNOSTIC",
+    "PATHLESS_LISTING_ENTRY_DIAGNOSTIC",
+    "marketplace_plugin_identifier",
+    "marketplace_plugin_name",
     "CODEX_SOURCE_DIAGNOSTIC",
     "CODEX_EXEC_SUBCOMMAND",
     "CLAUDE_SETTINGS_PRECEDENCE",

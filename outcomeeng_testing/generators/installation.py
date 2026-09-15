@@ -25,6 +25,7 @@ from outcomeeng.distribution.installation import (
     MARKETPLACE_NAME,
     Operation,
     SPEC_TREE_PLUGIN,
+    marketplace_plugin_identifier,
 )
 
 
@@ -149,7 +150,7 @@ def generated_claude_listing_entries(
     in_scope: set[str] = set()
     for index, plugin in enumerate(catalog):
         entry = {
-            CLAUDE_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
+            CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin),
             CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
             CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
         }
@@ -172,6 +173,8 @@ def generated_claude_listing_entries(
 
 UNCATALOGED_PLUGIN = "retired-plugin"
 """A plugin name no committed catalog carries, used as the catalog bound's rejected member."""
+FOREIGN_MARKETPLACE_NAME = f"{MARKETPLACE_NAME}-other"
+"""A marketplace name other than the product's, whose records every reader skips."""
 
 
 class RecordDisposition(StrEnum):
@@ -218,7 +221,7 @@ def generated_claude_install_records(
     """
     groups: list[tuple[tuple[dict[str, str], RecordDisposition], ...]] = []
     for plugin in catalog:
-        identifier = f"{plugin}@{MARKETPLACE_NAME}"
+        identifier = marketplace_plugin_identifier(plugin)
         groups.append(
             (
                 (
@@ -318,7 +321,9 @@ def generated_claude_install_records(
                 ),
                 (
                     {
-                        CLAUDE_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}-other",
+                        CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                            plugin, FOREIGN_MARKETPLACE_NAME
+                        ),
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
                     },
@@ -330,7 +335,9 @@ def generated_claude_install_records(
         (
             (
                 {
-                    CLAUDE_PLUGIN_ID_FIELD: f"{UNCATALOGED_PLUGIN}@{MARKETPLACE_NAME}",
+                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                        UNCATALOGED_PLUGIN
+                    ),
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
                 },
@@ -352,7 +359,7 @@ def generated_codex_listing_entries(
             in_scope.add(plugin)
         entries.append(
             {
-                CODEX_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
+                CODEX_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin),
                 CODEX_PLUGIN_MARKETPLACE_FIELD: (
                     MARKETPLACE_NAME if index % 2 == 0 else f"{MARKETPLACE_NAME}-other"
                 ),

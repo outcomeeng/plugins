@@ -15,11 +15,11 @@ from outcomeeng.distribution.installation import (
     CLAUDE_SCOPE_FLAG,
     CODEX_HOME_ENV,
     InstallationMode,
-    MARKETPLACE_NAME,
     Operation,
     ReportField,
     SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
+    marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import RecordDisposition
 from outcomeeng_testing.harnesses.installation import (
@@ -113,7 +113,7 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     spread = observe_record_refresh_plan()
     expected_updates = {
         (
-            entry[CLAUDE_PLUGIN_ID_FIELD].removesuffix(f"@{MARKETPLACE_NAME}"),
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]),
             entry[CLAUDE_PLUGIN_SCOPE_FIELD],
             Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
         )
