@@ -162,6 +162,10 @@ def generated_claude_listing_entries(
     return tuple(entries), frozenset(in_scope)
 
 
+UNCATALOGED_PLUGIN = "retired-plugin"
+"""A plugin name no committed catalog carries, used as the catalog bound's rejected member."""
+
+
 class RecordDisposition(StrEnum):
     """What one generated Claude Code install record should map to."""
 
@@ -245,7 +249,7 @@ def generated_claude_install_records(
         (
             (
                 {
-                    CLAUDE_PLUGIN_ID_FIELD: f"retired-plugin@{MARKETPLACE_NAME}",
+                    CLAUDE_PLUGIN_ID_FIELD: f"{UNCATALOGED_PLUGIN}@{MARKETPLACE_NAME}",
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
                 },
@@ -302,6 +306,7 @@ __all__ = [
     "generated_claude_install_records",
     "generated_claude_listing_entries",
     "RecordDisposition",
+    "UNCATALOGED_PLUGIN",
     "generated_codex_listing_entries",
     "generated_failure_classification_cases",
     "generated_invalid_catalog_subsets",

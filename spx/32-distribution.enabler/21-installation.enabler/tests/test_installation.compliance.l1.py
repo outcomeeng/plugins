@@ -130,6 +130,19 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         refreshing.attempted[len(refreshing.preflight.inspections) :]
         == refreshing.report.plan.commands
     )
+    inspections = refreshing.preflight.inspections
+    assert {command.operation for command in inspections} == {
+        Operation.MARKETPLACE_INSPECT,
+        Operation.PLUGIN_INSPECT,
+    }
+    assert {command.agent for command in inspections} == set(Agent)
+    assert all(
+        command.cwd == refreshing.preflight.roots.checkout
+        and CLAUDE_SCOPE_FLAG not in command.argv
+        and dict(command.environment)[CODEX_HOME_ENV]
+        == str(refreshing.preflight.roots.codex_home)
+        for command in inspections
+    )
 
 
 def test_an_enable_failure_stops_the_run_rather_than_reading_as_idempotent() -> None:

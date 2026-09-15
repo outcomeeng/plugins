@@ -53,6 +53,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_MARKETPLACE_LIST_COMMAND,
     CLAUDE_CONFIG_ENV,
     CLAUDE_ENABLED_PLUGINS_FIELD,
+    CLAUDE_LOCAL_SCOPE,
     CLAUDE_PLUGIN_ENABLED_FIELD,
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
@@ -103,6 +104,7 @@ from outcomeeng.distribution.installation import (
 )
 from outcomeeng_testing.generators.installation import (
     RecordDisposition,
+    UNCATALOGED_PLUGIN,
     catalog_plugin_names_from_document,
     generated_agent_subsets,
     generated_claude_install_records,
@@ -882,6 +884,55 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
         )
 
 
+def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
+    """Plan a persistent run whose only Claude record is local scope at the checkout.
+
+    The project-scope inventory is empty, so selection derives the bootstrap
+    set, while the local-scope record for the same checkout is a refresh
+    target; the plan's install, enable, and update commands are the
+    observations the linked test judges.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
+        codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
+        preflight = build_persistent_preflight(mirror, environment)
+        listing = json.dumps(
+            [
+                {
+                    CLAUDE_PLUGIN_ID_FIELD: f"{SPEC_TREE_PLUGIN}@{MARKETPLACE_NAME}",
+                    CLAUDE_PLUGIN_ENABLED_FIELD: True,
+                    CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_LOCAL_SCOPE,
+                    CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(preflight.roots.checkout),
+                }
+            ]
+        )
+        plan = build_persistent_installation_plan(
+            preflight,
+            claude_marketplace_payload=claude_marketplace_listing_payload(
+                CANONICAL_MARKETPLACE_SOURCE
+            ),
+            claude_plugins_payload=listing,
+            codex_marketplace_payload=codex_marketplace_listing_payload(
+                CANONICAL_CODEX_SOURCE
+            ),
+            codex_plugins_payload=_plugin_listing_payload(
+                Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+            ),
+        )
+    return PersistentPlanObservation(
+        preflight=preflight,
+        plan=plan,
+        claude_catalog=claude_catalog,
+        codex_catalog=codex_catalog,
+    )
+
+
 def observe_persistent_execution(
     installed: Mapping[Agent, frozenset[str]] | None = None,
 ) -> PersistentExecutionObservation:
@@ -910,7 +961,13 @@ def observe_persistent_execution(
 def observe_persistent_catalog_subset_plans() -> tuple[
     CatalogSubsetPlanObservation, ...
 ]:
-    """Build persistent plans for every valid subset of each agent catalog."""
+    """Build persistent plans for every valid subset of each agent catalog.
+
+    Each nonempty listing carries one plugin the committed catalog does not
+    name beside the selected subset, so a plan that admits a reported plugin
+    from outside the catalog has a member to be caught on; the empty listing
+    stays empty so the bootstrap case keeps its shape.
+    """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
@@ -927,7 +984,9 @@ def observe_persistent_catalog_subset_plans() -> tuple[
                 installed = {
                     candidate: frozenset({SPEC_TREE_PLUGIN}) for candidate in Agent
                 }
-                installed[agent] = selected
+                installed[agent] = (
+                    selected | {UNCATALOGED_PLUGIN} if selected else selected
+                )
                 plan = build_persistent_installation_plan(
                     preflight,
                     claude_marketplace_payload=claude_marketplace_listing_payload(
@@ -2652,6 +2711,7 @@ __all__ = [
     "observe_persistent_catalog_subset_plans",
     "observe_persistent_plan",
     "observe_record_refresh_plan",
+    "observe_local_record_bootstrap_plan",
     "RecordRefreshObservation",
     "observe_planned_operations",
     "observe_real_first_install",
