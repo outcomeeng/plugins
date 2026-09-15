@@ -2,7 +2,7 @@
 name: handoff
 description: ALWAYS invoke to close active spec-tree work or a merge lifecycle closeout — archive claimed sessions, decide session-file creation, prepare continuation context, and produce operator-useful closeout — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains or for an explicit direct `spx session archive` or `spx session release` request against identified sessions. NEVER create a spec-tree session file without this skill.
 argument-hint: "[--no-session] [--prune]"
-allowed-tools: Read,{!% if target == 'claude' %!} Edit, Write,{!% endif %!} Bash(printf:*),{!% if target == 'codex' %!} Bash(printenv CODEX_THREAD_ID),{!% else %!} Bash(printenv CLAUDE_CODE_SESSION_ID),{!% endif %!} Bash(spx diagnose:*), Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff:*), Bash(spx session archive:*), Bash(spx session delete:*), Bash(gh issue view:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh project view:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(gh project item-list:*), Bash(gh project field-list:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by), Bash(git status:*), Bash(git branch --show-current), Bash(git worktree list:*), Bash(git fetch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git cherry:*), {{! tool('ask_user') !}}, Glob, Grep, Skill
+allowed-tools: Read,{!% if target == 'claude' %!} Edit, Write,{!% endif %!} Bash(printf:*),{!% if target == 'codex' %!} Bash(printenv CODEX_THREAD_ID),{!% else %!} Bash(printenv CLAUDE_CODE_SESSION_ID),{!% endif %!} Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff:*), Bash(spx session archive:*), Bash(spx session delete:*), Bash(gh issue view:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh project view:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(gh project item-list:*), Bash(gh project field-list:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by), Bash(git status:*), Bash(git branch --show-current), Bash(git fetch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), {{! tool('ask_user') !}}, Glob, Grep, Skill
 ---
 
 <precondition>
@@ -128,6 +128,8 @@ Read these bundled references before executing the workflows:
 </required_reading>
 
 <workflows_index>
+Before workflow 01, require a live `<SPEC_TREE_FOUNDATION>` marker and invoke `/understand` when it is absent. Invoke `/contextualize` for every anchored node before reading or discussing product content that node governs.
+
 Execute workflows 01 through 04 in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete. Workflow 04 persists all work and coordination notes, then writes a session file only when a continuation reader is needed. Workflow 05 is not a fifth stage: when `spx/local/coordination.md` exists it runs inside 04, in place of 04's `<write_canonical_continuation>` and `<archive_claimed_sessions>` steps, so 04 never writes a session file under that overlay.
 
 1. `${CLAUDE_SKILL_DIR}/workflows/01-anchor-to-nodes.md` — identify every node worked on this session

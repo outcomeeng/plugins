@@ -79,7 +79,7 @@ Handoff:
 - Hazards: <what the next holder cannot derive quickly: an unsealed run, a held checkout, a flaky check — each with the read-only command that re-confirms it>
 ```
 
-Optional context lines after the five: the agent session id and the assigned worktree root. Nothing else — no insight, status, or restated plan; those live in the body. Then remove the assignee with `gh issue edit <N> --repo <store> --remove-assignee @me`, and write Status `Available` with `gh project item-edit`. Re-read the single project item and issue. Release completes only when Product equals the overlay Product, Maturity equals the intended current level, Status is `Available`, the assignee list is empty, and the newest Handoff is the exact comment just posted. A failure stops at its observed partial state under the transition failure boundary above.
+Optional context lines after the five: the current session id and the assigned worktree root. Nothing else — no insight, status, or restated plan; those live in the body. Then remove the assignee with `gh issue edit <N> --repo <store> --remove-assignee @me`, and write Status `Available` with `gh project item-edit`. Re-read the single project item and issue. Release completes only when Product equals the overlay Product, Maturity equals the intended current level, Status is `Available`, the assignee list is empty, and the newest Handoff is the exact comment just posted. A failure stops at its observed partial state under the transition failure boundary above.
 
 The store-write inspection at the top of this workflow applies to the Handoff comment as to every other write.
 
