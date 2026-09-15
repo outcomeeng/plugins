@@ -322,6 +322,23 @@ def build_conflicting_repo(root: pathlib.Path) -> ConflictRepo:
     )
 
 
+def build_behind_base_repo_with_default_at_feature_tip(
+    root: pathlib.Path,
+) -> BehindBaseRepo:
+    """Build a behind-base clone whose local default branch contains the feature tip.
+
+    The local default branch is fast-forwarded onto the feature branch's commit
+    — the shape a local merge of the feature leaves before the base advance is
+    fetched — so it contains the feature's pre-rebase head without being stacked
+    on it. The clone is checked out on the feature branch.
+    """
+    behind = build_behind_base_repo(root)
+    _git(behind.repo, "switch", "-q", behind.base_ref)
+    _git(behind.repo, "merge", "-q", "--ff-only", behind.feature_branch)
+    _git(behind.repo, "switch", "-q", behind.feature_branch)
+    return behind
+
+
 def build_untracked_only_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
     """Build a behind-base clone whose only working-tree change is an untracked file.
 
@@ -878,6 +895,25 @@ def build_stacked_repo_merged_predecessor(root: pathlib.Path) -> StackedRepo:
         predecessor_tip,
         predecessor_rewrite_content=data.predecessor_rewrite_content,
     )
+
+
+def build_stacked_repo_operator_restacked_after_merge(
+    root: pathlib.Path,
+) -> StackedRepo:
+    """Build a merged-predecessor stack whose restack an operator completed by hand.
+
+    After the predecessor merged and was deleted, the working clone fetches with
+    pruning and replays only the stacked branch's commit onto the base tip —
+    the movement a conflicted restack ends in once the operator resolves and
+    continues it — while the stack record still names the predecessor and its
+    stale tip, which is no longer an ancestor of the branch.
+    """
+    handle = build_stacked_repo_merged_predecessor(root)
+    _git(handle.repo, "fetch", "-q", "--prune", "origin")
+    _git(
+        handle.repo, "rebase", "-q", "--onto", handle.remote_ref, handle.predecessor_tip
+    )
+    return handle
 
 
 def build_stacked_repo_unpublished_predecessor(root: pathlib.Path) -> StackedRepo:

@@ -10,6 +10,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     branch_config_entries,
     build_alternate_base_repo,
     build_behind_base_repo,
+    build_behind_base_repo_with_default_at_feature_tip,
     build_current_repo,
     build_stacked_repo_merged_predecessor,
     build_stacked_repo_nearest_of_two,
@@ -283,3 +284,24 @@ def test_absent_record_key_on_removal_is_not_a_failure(
     assert result.status is module.SyncStatus.REBASED
     assert result.preservation is not None
     assert result.preservation.stack_tip_after is None
+
+
+def test_rebased_branch_never_records_the_default_branch_as_a_dependent(
+    tmp_path: pathlib.Path,
+) -> None:
+    # The local default branch contains the feature's pre-rebase head without
+    # being stacked on it; a rewrite of the feature must leave it unrecorded.
+    module = load_sync_base_module()
+    handle = build_behind_base_repo_with_default_at_feature_tip(
+        repository_root(tmp_path)
+    )
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.REBASED
+    assert module.read_stack_record(handle.repo, handle.base_ref) is None
+    entries = branch_config_entries(handle.repo, handle.base_ref)
+    assert (
+        module.stack_config_key(handle.base_ref, module.STACK_PREDECESSOR_KEY)
+        not in entries
+    )

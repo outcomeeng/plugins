@@ -10,6 +10,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_stacked_repo_behind_base,
     build_stacked_repo_merged_predecessor,
     build_stacked_repo_open_predecessor_advanced,
+    build_stacked_repo_operator_restacked_after_merge,
     build_stacked_repo_rewritten_published_predecessor,
     build_stacked_repo_unpublished_predecessor,
     build_stacked_repo_without_record,
@@ -181,6 +182,48 @@ def test_recorded_branch_restacks_onto_the_default_after_predecessor_merged(
     assert result.preservation.stack_predecessor == handle.predecessor_branch
     assert result.preservation.stack_tip_before == handle.predecessor_tip
     assert result.preservation.stack_tip_after is None
+    assert module.read_stack_record(handle.repo, handle.stacked_branch) is None
+
+
+def test_explicit_default_base_restacks_a_recorded_branch_after_its_predecessor_merged(
+    tmp_path: pathlib.Path,
+) -> None:
+    # The merge lifecycle passes the retargeted pull request's base explicitly;
+    # the named default is the target and the recorded tip bounds the replay.
+    module = load_sync_base_module()
+    handle = build_stacked_repo_merged_predecessor(repository_root(tmp_path))
+
+    result = module.sync_base(handle.repo, base_ref=handle.base_ref)
+
+    assert result.status is module.SyncStatus.REBASED
+    assert result.remote_ref == handle.remote_ref
+    assert commit_subjects_above(handle.repo, handle.remote_ref) == [
+        handle.stacked_message
+    ]
+    assert result.preservation is not None
+    assert result.preservation.old_base_oid == handle.predecessor_tip
+    assert result.preservation.stack_predecessor == handle.predecessor_branch
+    assert result.preservation.stack_tip_after is None
+    assert module.read_stack_record(handle.repo, handle.stacked_branch) is None
+
+
+def test_operator_completed_restack_is_reported_current_and_its_record_cleared(
+    tmp_path: pathlib.Path,
+) -> None:
+    # The recorded tip no longer bounds the branch; the fork is re-derived from
+    # the branch's merge-base with the target instead of failing.
+    module = load_sync_base_module()
+    handle = build_stacked_repo_operator_restacked_after_merge(
+        repository_root(tmp_path)
+    )
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.ALREADY_CURRENT
+    assert result.remote_ref == handle.remote_ref
+    assert commit_subjects_above(handle.repo, handle.remote_ref) == [
+        handle.stacked_message
+    ]
     assert module.read_stack_record(handle.repo, handle.stacked_branch) is None
 
 
