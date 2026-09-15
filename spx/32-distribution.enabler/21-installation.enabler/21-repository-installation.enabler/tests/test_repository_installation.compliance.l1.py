@@ -563,7 +563,9 @@ def test_failed_login_stops_before_session_execution_and_scrubs_the_error() -> N
             ):
                 pytest.fail("failed login reached session execution")
         assert all(CODEX_EXEC_SUBCOMMAND not in call.argv for call in case.runner.calls)
-        assert case.auth.selection.credential not in str(raised.value)
+        credential = case.auth.selection.credential
+        assert credential is not None
+        assert credential not in str(raised.value)
         assert REDACTED_CREDENTIAL in str(raised.value)
 
 
