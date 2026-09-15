@@ -140,8 +140,10 @@ each installed plugin's generated Codex agent definitions in the disposable
 home's `agents/` directory and leaves persistent plugin state unchanged.
 
 After merged distribution changes, `just install-marketplace` refreshes the
-project-scoped Claude Code marketplace, every Claude Code `outcomeeng` install record
-on the machine at its own scope and project path, and the selected `$CODEX_HOME`.
+project-scoped Claude Code marketplace, every project- or local-scope Claude Code
+`outcomeeng` install record on the machine for a cataloged plugin whose project path
+exists, at that record's own scope and project path, and the selected `$CODEX_HOME`;
+a user-scope, uncataloged, or vanished-path record is reported and left unchanged.
 The declared refresh selection uses Claude Code's install records
 and Codex's raw selected-home plugin declarations, including disabled and uncached plugins.
 Committed catalogs bound membership; trusted product configuration controls activation separately.
