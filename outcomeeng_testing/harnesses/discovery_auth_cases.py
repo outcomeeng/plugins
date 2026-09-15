@@ -27,10 +27,14 @@ from outcomeeng.distribution.installation import (
 from outcomeeng.validation.ci_gate import (
     CODEX_API_KEY_ENVIRONMENT,
     DISCOVERY_AUTH_MODE_ENVIRONMENT,
+    JUST_BINARY,
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
+    CI_ENVIRONMENT,
     CODEX_LOGIN_SUBCOMMAND,
+    SAVED_LOGIN_ACCESS_TOKEN_FIELD,
     SAVED_LOGIN_ACCOUNT_FIELD,
+    SAVED_LOGIN_API_KEY_FIELD,
     SAVED_LOGIN_TOKENS_FIELD,
     AUTH_FILENAME,
     WORKSPACE_TOKEN_ENV,
@@ -88,7 +92,7 @@ class NativeCredentialRunner:
     ) -> subprocess.CompletedProcess[str]:
         home = Path(env[CODEX_HOME_ENV])
         self.calls.append(NativeCall(tuple(argv), home, dict(env), input_text))
-        if argv[0] == "just":
+        if argv[0] == JUST_BINARY:
             return subprocess.CompletedProcess(
                 argv, NATIVE_FAILURE_EXIT_CODE, "", "installation failed"
             )
@@ -101,7 +105,7 @@ class NativeCredentialRunner:
             if self.fault is NativeFault.INCOMPATIBLE_WRITER:
                 target.unlink(missing_ok=True)
             target.write_text(
-                json.dumps({CODEX_API_KEY_ENVIRONMENT: input_text}), encoding="utf-8"
+                json.dumps({SAVED_LOGIN_API_KEY_FIELD: input_text}), encoding="utf-8"
             )
             return subprocess.CompletedProcess(argv, 0, input_text or "", "")
         if self.fault is NativeFault.REPLACE_LINK:
@@ -146,7 +150,7 @@ def authentication_case(
     initial = (FIXTURE_ROOT / "chatgpt.json").read_text(encoding="utf-8")
     refreshed = (FIXTURE_ROOT / "refreshed.json").read_text(encoding="utf-8")
     api = json.loads(API_FIXTURE_PATH.read_text(encoding="utf-8"))[
-        CODEX_API_KEY_ENVIRONMENT
+        SAVED_LOGIN_API_KEY_FIELD
     ]
     with TemporaryDirectory() as directory:
         root = Path(directory).resolve()
@@ -161,7 +165,7 @@ def authentication_case(
             DISCOVERY_AUTH_MODE_ENVIRONMENT: mode.value,
             CODEX_API_KEY_ENVIRONMENT: api,
             WORKSPACE_TOKEN_ENV: json.loads(initial)[SAVED_LOGIN_TOKENS_FIELD][
-                "access_token"
+                SAVED_LOGIN_ACCESS_TOKEN_FIELD
             ],
         }
         if not explicit_mode:
@@ -192,12 +196,12 @@ def missing_credential_environment(mode: AuthenticationMode) -> dict[str, str]:
     )
     return {
         DISCOVERY_AUTH_MODE_ENVIRONMENT: mode.value,
-        other: document[CODEX_API_KEY_ENVIRONMENT],
+        other: document[SAVED_LOGIN_API_KEY_FIELD],
     }
 
 
 def ci_without_authentication_mode() -> dict[str, str]:
-    return {"CI": "true"}
+    return {CI_ENVIRONMENT: "true"}
 
 
 @dataclass
