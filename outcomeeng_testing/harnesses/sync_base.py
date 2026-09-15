@@ -989,12 +989,15 @@ def build_stacked_repo_rewritten_published_predecessor(
 class ConfigWriteRefusingRunner:
     """A ``/test`` Stage 5 exception 1 (failure simulation) git runner.
 
-    Every ``git config`` write or unset returns a failed process; every read
-    and every other git command runs for real through ``subprocess.run``. The
-    runner exposes the failed invocation as an observation and owns no verdict.
+    Every ``git config`` write or unset returns a process that exited with
+    ``returncode`` (default 1, a refused mutation; the synchronizer's
+    absent-key exit simulates an already-absent key); every read and every
+    other git command runs for real through ``subprocess.run``. The runner
+    exposes the refused invocations as an observation and owns no verdict.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, returncode: int = 1) -> None:
+        self.returncode = returncode
         self.refused: list[list[str]] = []
 
     def __call__(
@@ -1015,7 +1018,7 @@ class ConfigWriteRefusingRunner:
         if is_config_write:
             self.refused.append(args)
             return subprocess.CompletedProcess(
-                args, 1, "", "simulated failure: config write refused"
+                args, self.returncode, "", "simulated failure: config write refused"
             )
         return subprocess.run(  # noqa: S603 — fixed argv from the synchronizer, no shell
             args,

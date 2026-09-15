@@ -57,15 +57,15 @@ def test_clean_rebase_has_no_conflict_details_conflict_does(
     assert clean.status is module.SyncStatus.REBASED
     assert clean.conflict is None
 
-    conflict_root = repository_root(tmp_path)
-    conflict = module.sync_base(build_conflicting_repo(conflict_root).repo)
+    conflicting = build_conflicting_repo(repository_root(tmp_path))
+    conflict = module.sync_base(conflicting.repo)
     assert conflict.status is module.SyncStatus.CONFLICT
     assert conflict.conflict is not None
     assert conflict.conflict.summary == module.CONFLICT_SUMMARY
     assert "CONFLICT (content): Merge conflict in" in conflict.conflict.git_output
     # The conflicted rebase is left active for the operator, never aborted at
     # handoff.
-    assert rebase_in_progress(conflict_root / "repo")
+    assert rebase_in_progress(conflicting.repo)
 
 
 @pytest.mark.parametrize("edit", tracked_edits())
