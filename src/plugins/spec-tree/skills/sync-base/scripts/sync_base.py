@@ -92,6 +92,8 @@ _CHANGESET_SCOPE_PATH = (
 )
 
 CONFLICT_SUMMARY = "Base sync stopped: rebase conflict requires reconciliation"
+# ``git config --unset`` exits 5 when the key is absent; an absent key is not a failed removal.
+CONFIG_KEY_ABSENT_EXIT = 5
 CONFLICT_INSPECT_STATUS = "git status"
 CONFLICT_INSPECT_DIFF = "git diff"
 CONFLICT_INSPECT_STAGES = "git ls-files -u"
@@ -259,19 +261,45 @@ def _read_stack_record(repo: _Repository, branch: str) -> StackRecord | None:
     return StackRecord(predecessor=predecessor_name, tip=tip_oid)
 
 
+class StackRecordError(RuntimeError):
+    """A stack-record write or removal failed after git reported it.
+
+    Raised by the record writers and converted by :func:`sync_base` into a
+    ``git_failure`` result naming the failed mutation, so a sync never reports
+    a record the repository does not carry.
+    """
+
+    def __init__(self, branch: str, detail: str) -> None:
+        super().__init__(detail)
+        self.branch = branch
+        self.detail = detail
+
+
 def _write_stack_record(repo: _Repository, branch: str, record: StackRecord) -> None:
-    _git(
-        repo,
-        "config",
-        stack_config_key(branch, STACK_PREDECESSOR_KEY),
-        record.predecessor,
-    )
-    _git(repo, "config", stack_config_key(branch, STACK_TIP_KEY), record.tip)
+    for key, value in (
+        (STACK_PREDECESSOR_KEY, record.predecessor),
+        (STACK_TIP_KEY, record.tip),
+    ):
+        config_key = stack_config_key(branch, key)
+        written = _git(repo, "config", config_key, value)
+        if written.returncode != 0:
+            raise StackRecordError(
+                branch,
+                f"stack record write failed: git config {config_key} exited "
+                f"{written.returncode}: {written.stderr.strip()}",
+            )
 
 
 def _clear_stack_record(repo: _Repository, branch: str) -> None:
-    _git(repo, "config", "--unset", stack_config_key(branch, STACK_PREDECESSOR_KEY))
-    _git(repo, "config", "--unset", stack_config_key(branch, STACK_TIP_KEY))
+    for key in (STACK_PREDECESSOR_KEY, STACK_TIP_KEY):
+        config_key = stack_config_key(branch, key)
+        cleared = _git(repo, "config", "--unset", config_key)
+        if cleared.returncode not in (0, CONFIG_KEY_ABSENT_EXIT):
+            raise StackRecordError(
+                branch,
+                f"stack record removal failed: git config --unset {config_key} "
+                f"exited {cleared.returncode}: {cleared.stderr.strip()}",
+            )
 
 
 @dataclass(frozen=True)
@@ -814,7 +842,25 @@ def sync_base(
     injected. Returns a :class:`SyncBaseResult`; never raises for an ordinary
     git outcome.
     """
-    return _sync(_Repository(repo, runner), base_ref=base_ref, fetch=fetch)
+    repository = _Repository(repo, runner)
+    try:
+        return _sync(repository, base_ref=base_ref, fetch=fetch)
+    except StackRecordError as error:
+        return _record_failure(repository, base_ref, error)
+
+
+def _record_failure(
+    repo: _Repository, base_ref: str | None, error: StackRecordError
+) -> SyncBaseResult:
+    """Report a failed stack-record mutation as a ``git_failure`` result."""
+    base = base_ref
+    if base is None:
+        default = _resolve_default_base(repo)
+        base = default if isinstance(default, str) else default.base_ref
+    remote_ref = remote_tracking_ref(base) if base else base
+    return SyncBaseResult(
+        SyncStatus.GIT_FAILURE, base, remote_ref, error.branch, error.detail
+    )
 
 
 def _sync(repo: _Repository, *, base_ref: str | None, fetch: bool) -> SyncBaseResult:
