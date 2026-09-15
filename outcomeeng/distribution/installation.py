@@ -104,6 +104,7 @@ CLAUDE_PLUGIN_PROJECT_PATH_FIELD = "projectPath"
 CLAUDE_PROJECT_SCOPE = "project"
 CLAUDE_LOCAL_SCOPE = "local"
 CLAUDE_USER_SCOPE = "user"
+CLAUDE_MANAGED_SCOPE = "managed"
 CLAUDE_REFRESH_SCOPES: frozenset[str] = frozenset(
     {CLAUDE_PROJECT_SCOPE, CLAUDE_LOCAL_SCOPE}
 )
@@ -134,6 +135,10 @@ NONCANONICAL_SOURCE_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}, whose "
     "settings register the marketplace from a noncanonical source; the record is "
     "left unchanged."
+)
+UNREADABLE_SETTINGS_WARNING = (
+    "Claude Code records {plugin} at {scope} scope for {project_path}, whose "
+    "settings cannot be read; the record is left unchanged."
 )
 REGISTRY_SOURCE_DIAGNOSTIC = "Claude Code marketplace registry source mismatch"
 
@@ -1118,9 +1123,10 @@ def claude_refresh_records(
     `repaired_checkout`: the plan reconciles its registration before any
     update runs, so its records refresh in the same run. Every other record is
     reported and left unchanged: a record outside the catalog, outside project
-    or local scope, whose project path is gone, or whose project declares a
-    noncanonical source. Targets follow catalog order, then project path, then
-    scope, so the plan is stable across listings.
+    or local scope, whose project path is gone, whose project declares a
+    noncanonical source, or whose project settings cannot be read. Targets
+    follow catalog order, then project path, then scope, so the plan is stable
+    across listings.
     """
     targets: list[ClaudeInstallRecord] = []
     warnings: list[InstallationWarning] = []
@@ -1141,12 +1147,16 @@ def claude_refresh_records(
                 scope=record.scope,
                 project_path=record.project_path,
             )
-        elif (
-            record.project_path != repaired_checkout
-            and claude_project_source_action(record.project_path)
-            is SourceAction.REPLACE
+        elif record.project_path != repaired_checkout and (
+            (source := _foreign_source_action(record.project_path)) is None
+            or source is SourceAction.REPLACE
         ):
-            message = NONCANONICAL_SOURCE_WARNING.format(
+            template = (
+                UNREADABLE_SETTINGS_WARNING
+                if source is None
+                else NONCANONICAL_SOURCE_WARNING
+            )
+            message = template.format(
                 plugin=record.plugin,
                 scope=record.scope,
                 project_path=record.project_path,
@@ -2113,6 +2123,18 @@ def claude_source_action(document: Mapping[str, object]) -> SourceAction:
     return SourceAction.REPLACE
 
 
+def _foreign_source_action(project_path: Path) -> SourceAction | None:
+    """Classify another checkout's declared source, or None when unreadable.
+
+    A foreign checkout's malformed or unreadable settings are that checkout's
+    defect, reported for its record rather than aborting the machine-wide run.
+    """
+    try:
+        return claude_project_source_action(project_path)
+    except (OSError, ValueError):
+        return None
+
+
 def claude_project_source_action(project_path: Path) -> SourceAction:
     """Classify the marketplace source a checkout's own settings declare.
 
@@ -2482,6 +2504,8 @@ __all__ = [
     "claude_registered_source",
     "CLAUDE_LOCAL_SETTINGS_PATH",
     "NONCANONICAL_SOURCE_WARNING",
+    "UNREADABLE_SETTINGS_WARNING",
+    "CLAUDE_MANAGED_SCOPE",
     "REGISTRY_SOURCE_DIAGNOSTIC",
     "claude_marketplace_settings",
     "claude_source_action",
