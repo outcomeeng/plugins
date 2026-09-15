@@ -22,14 +22,6 @@ The reconciliation assertion states that a pending plugin's prior owned definiti
 
 **Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
 
-## The Codex executable name is spelled as a literal beside its exported constant
-
-`REQUIRED_BINARIES` and the marketplace-add invocations in `outcomeeng_testing/harnesses/installation.py`, and `SESSION_COMMAND` in `outcomeeng_testing/harnesses/discovery_auth_cases.py`, spell `codex` literally while `outcomeeng/distribution/installation.py` exports `CODEX_EXECUTABLE` and the same harness imports it.
-
-**Resolution shape**: import the executable name at every site.
-
-**Evidence**: test-evidence audit warning `f-006` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
-
 ## The noncanonical marketplace source is replaced where the decisions say it is rejected
 
 `spx/12-marketplace-state.adr.md` and `21-installation-architecture.adr.md` state that an existing registration with a noncanonical source stops the run before mutation and requires explicit repair, and this node's spec asserts that no agent performs a state-changing operation in that case. `claude_source_action` in `outcomeeng/distribution/installation.py` classifies such a source as `REPLACE`, the plan emits a marketplace removal followed by an add, and `test_persistent_installation_replaces_noncanonical_sources` together with `test_restoring_the_selection_keeps_the_reconciled_marketplace_source` pin that replacement.
