@@ -9,18 +9,6 @@ CAN operate within a structured, spec-first framework with deterministic context
 - ALWAYS: the foundation exposes the resolved absolute template directory in its live marker so authoring and auditing can read the same canonical templates independently.
 - ALWAYS: the foundation distinguishes valid untagged authoring declarations from the evidence required for Passing at each malleability, preserving verification selection as a separate step.
 
-- ALWAYS: root guides retain explicit standing authorization for every subagent
-  supplied by a plugin in their complete authorized plugin list, requiring an
-  active skill's explicit request before launch, per
-  `spx/15-subagent-execution.pdr.md` ([audit]).
-- ALWAYS: calling skills own role selection and target-only prompts; invoked skills
-  discover the target's context. The invocation policy preserves audit result
-  contracts and repair workflows, and root guides may carry necessary
-  agent-specific mechanical examples ([audit]).
-- ALWAYS: an invoked skill takes its target from the configured subagent's task
-  message, never from a skill argument the harness substituted at preload, per
-  `spx/15-subagent-execution.pdr.md` ([audit]).
-
 ### Scenarios
 
 - Given a spec-tree enabler directory, when its contents are listed, then a spec file named `{slug}.md` exists ([test](tests/test_spec_tree.scenario.l1.py))
@@ -43,6 +31,17 @@ CAN operate within a structured, spec-first framework with deterministic context
 
 ### Compliance
 
+- ALWAYS: root guides retain explicit standing authorization for every subagent
+  supplied by a plugin in their complete authorized plugin list, requiring an
+  active skill's explicit request before launch, per
+  `spx/15-subagent-execution.pdr.md` ([audit]).
+- ALWAYS: calling skills own role selection and target-only prompts; invoked skills
+  discover the target's context. The invocation policy preserves audit result
+  contracts and repair workflows, and root guides may carry necessary
+  agent-specific mechanical examples ([audit]).
+- ALWAYS: an invoked skill takes its target from the configured subagent's task
+  message, never from a skill argument the harness substituted at preload, per
+  `spx/15-subagent-execution.pdr.md` ([audit]).
 - ALWAYS: load complete spec-tree context before any implementation work ([audit])
 - ALWAYS: use atemporal voice in all specs — specs are permanent truth ([audit])
 - ALWAYS: the `/understand` skill's references declare that test harnesses, generators, and inert fixtures are governed by naturally placed spec nodes rather than by a mandatory top-level category subtree, per `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` ([audit])
