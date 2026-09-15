@@ -183,6 +183,7 @@ def generated_claude_install_records(
     other_checkout: Path,
     absent_path: Path,
     forked_checkout: Path,
+    forked_local_checkout: Path,
 ) -> tuple[tuple[tuple[dict[str, str], RecordDisposition], ...], ...]:
     """Cycle every catalog plugin through each install-record disposition.
 
@@ -190,8 +191,9 @@ def generated_claude_install_records(
     in the invocation checkout, an update at project scope in another existing
     checkout, an update at local scope in the invocation checkout, a record
     whose project path does not exist, a user-scope record, a record in a
-    checkout whose own settings register the marketplace from a noncanonical
-    source, and an entry from another marketplace. One uncataloged plugin
+    checkout whose project settings register the marketplace from a
+    noncanonical source, a record in a checkout whose local settings alone do
+    so, and an entry from another marketplace. One uncataloged plugin
     record is appended so the catalog bound has a rejected member.
     """
     groups: list[tuple[tuple[dict[str, str], RecordDisposition], ...]] = []
@@ -243,6 +245,14 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_ID_FIELD: identifier,
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(forked_checkout),
+                    },
+                    RecordDisposition.NONCANONICAL_SOURCE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_LOCAL_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(forked_local_checkout),
                     },
                     RecordDisposition.NONCANONICAL_SOURCE,
                 ),

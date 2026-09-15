@@ -18,7 +18,11 @@ from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from outcomeeng.distribution.installation import CODEX_HOME_ENV, HOME_ENV
+from outcomeeng.distribution.installation import (
+    CODEX_EXECUTABLE,
+    CODEX_HOME_ENV,
+    HOME_ENV,
+)
 from outcomeeng.validation.ci_gate import (
     CODEX_API_KEY_ENVIRONMENT,
     DISCOVERY_AUTH_MODE_ENVIRONMENT,
@@ -33,7 +37,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "discovery_auth"
 API_FIXTURE_PATH = FIXTURE_ROOT / "api.json"
-SESSION_COMMAND = ("codex", "exec")
+SESSION_COMMAND = (CODEX_EXECUTABLE, "exec")
 NATIVE_FAILURE_EXIT_CODE = 17
 
 

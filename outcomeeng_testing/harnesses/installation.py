@@ -61,6 +61,8 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_PROJECT_SETTINGS_PATH,
     CODEX_AGENTS_PATH,
+    CLAUDE_EXECUTABLE,
+    CLAUDE_LOCAL_SETTINGS_PATH,
     CODEX_EXECUTABLE,
     CODEX_CATALOG_PATH,
     CODEX_CONFIG_PATH,
@@ -131,10 +133,12 @@ CONCURRENT_EDIT_CONTENT = b"edited while the run was planning\n"
 """Bytes a concurrent writer leaves at a destination between preflight and mutation."""
 MALFORMED_OWNERSHIP_DIGEST = "z" * 64
 """A 64-character digest the ownership record must reject as non-hex."""
-REQUIRED_BINARIES: tuple[str, ...] = ("just", "claude", "codex")
+REQUIRED_BINARIES: tuple[str, ...] = ("just", CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
-PLUGIN_DISABLING_CODEX_CONFIG = b"[plugins]\nenabled = false\n"
+PLUGIN_DISABLING_CODEX_CONFIG = (
+    f"[plugins]\n{CODEX_PLUGIN_ENABLED_FIELD} = false\n".encode()
+)
 
 SUBAGENT_DISCOVERY_NAMES_FIELD = "subagent_names"
 RENAMED_CHECKOUT_AGENT_NAME = "local_helper.toml"
@@ -826,6 +830,7 @@ class RecordRefreshObservation:
     other_checkout: Path
     absent_path: Path
     forked_checkout: Path
+    forked_local_checkout: Path
     cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
     plan: InstallationPlan
     catalog: tuple[str, ...]
@@ -846,6 +851,11 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
         forked = temporary_root / "forked-checkout"
         forked.mkdir()
         _write_project_marketplace(forked, NONCANONICAL_MARKETPLACE_SOURCE)
+        forked_local = temporary_root / "forked-local-checkout"
+        forked_local.mkdir()
+        _write_project_marketplace(
+            forked_local, NONCANONICAL_MARKETPLACE_SOURCE, local=True
+        )
         mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
@@ -857,6 +867,7 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             other.resolve(),
             absent.resolve(),
             forked.resolve(),
+            forked_local.resolve(),
         )
         cases = tuple(case for group in groups for case in group)
         plan = build_persistent_installation_plan(
@@ -881,6 +892,7 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             other_checkout=other.resolve(),
             absent_path=absent.resolve(),
             forked_checkout=forked.resolve(),
+            forked_local_checkout=forked_local.resolve(),
             cases=cases,
             plan=plan,
             catalog=catalog,
@@ -2337,8 +2349,13 @@ def _declared_selection(settings: Path) -> frozenset[str]:
     )
 
 
-def _write_project_marketplace(checkout: Path, repository: str) -> None:
-    settings = checkout / CLAUDE_PROJECT_SETTINGS_PATH
+def _write_project_marketplace(
+    checkout: Path, repository: str, *, local: bool = False
+) -> None:
+    """Declare the marketplace source in a checkout's project or local settings."""
+    settings = checkout / (
+        CLAUDE_LOCAL_SETTINGS_PATH if local else CLAUDE_PROJECT_SETTINGS_PATH
+    )
     settings.parent.mkdir(parents=True, exist_ok=True)
     settings.write_text(
         json.dumps(claude_marketplace_settings(repository)),

@@ -45,12 +45,14 @@ from outcomeeng_testing.harnesses.installation import (
     EXTERNAL_DEFINITION_CONTENT,
     FOREIGN_DEFINITION_CONTENT,
     MALFORMED_OWNERSHIP_DIGEST,
+    NONCANONICAL_MARKETPLACE_SOURCE,
     UNOWNED_AGENT_CONTENT,
     UNOWNED_AGENT_FILENAME,
     observe_designated_failure,
     observe_interrupted_reconciliation,
     observe_local_record_bootstrap_plan,
     observe_persistent_execution,
+    observe_persistent_plan,
     ScopeSplitClassification,
     racing_digest_reader,
     RENAMED_CHECKOUT_AGENT_NAME,
@@ -715,6 +717,21 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
         command.cwd == execution.report.plan.roots.checkout
         for command in claude_commands
         if command.operation is Operation.PLUGIN_UPDATE
+    )
+    replacing = observe_persistent_plan(
+        claude_repository=NONCANONICAL_MARKETPLACE_SOURCE,
+        codex_source=NONCANONICAL_MARKETPLACE_SOURCE,
+    )
+    assert replacing.plan.claude_plugins
+    assert not any(
+        command.agent is Agent.CLAUDE
+        and command.operation
+        in {
+            Operation.PLUGIN_INSTALL,
+            Operation.PLUGIN_ENABLE,
+            Operation.PLUGIN_UPDATE,
+        }
+        for command in replacing.plan.commands
     )
     assert failure.report is None
     assert failure.failure is not None
