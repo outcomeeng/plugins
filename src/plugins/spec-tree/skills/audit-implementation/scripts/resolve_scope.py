@@ -1,9 +1,8 @@
 """Resolve an implementation audit selector and reconcile a run against it.
 
-Tested before this script is bundled by
-spx/21-spec-tree.enabler/68-audit.enabler/tests/test_implementation_scope.scenario.l1.py
-(stale-local-base resolution, a nonexistent repository) and
-spx/21-spec-tree.enabler/68-audit.enabler/tests/test_implementation_scope.compliance.l1.py
+Tested before this script is bundled by the audit node's
+``test_implementation_scope.scenario.l1.py`` (stale-local-base resolution, a
+nonexistent repository) and ``test_implementation_scope.compliance.l1.py``
 (a run-input object whose keys cannot displace the git-resolved scope, a
 non-object and a malformed run-input value, a sealed inventory path carrying no
 recorded scope unit, a required unit outside the final coverage statuses beside
