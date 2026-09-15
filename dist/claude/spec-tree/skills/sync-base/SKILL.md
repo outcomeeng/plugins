@@ -2,7 +2,8 @@
 name: sync-base
 description: >-
   ALWAYS invoke this skill to bring a branch behind its base current — before reading product truth, before verifying, and before every merge push. NEVER rebase a behind-base branch by hand or bring it current with git reset.
-allowed-tools: Read, Edit, Skill, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git branch:*), Bash(git switch -c:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git config --get:*), Bash(git config --get-regexp:*), Bash(git for-each-ref:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*)
+argument-hint: "[repo] [--base <branch>]"
+allowed-tools: Read, Edit, Skill, AskUserQuestion, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git switch -c:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git config --get:*), Bash(git config --get-regexp:*), Bash(git for-each-ref:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*)
 ---
 
 <objective>
@@ -11,13 +12,13 @@ The current checkout brought current with its fetched base, with authorized dirt
 
 <workflow>
 
-Record the absolute checkout root and selected base, then run the synchronization primitive against that working tree (default: the current directory). Retain the same checkout and base through checkpoint recovery and retry:
+`$ARGUMENTS` carries an optional working tree and an optional `--base <branch>`; the working tree defaults to the current directory and the base to `origin/HEAD`. Record the absolute checkout root and selected base, then run the synchronization primitive against that working tree. Retain the same checkout and base through checkpoint recovery and retry:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py" [repo] [--base <branch>]
 ```
 
-It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. When an attached branch is behind, it rebases the branch onto the fetched base. When a clean detached HEAD is an ancestor of the fetched base, it advances the worktree with `git switch --detach origin/<base>`; a detached HEAD carrying commits absent from the base fails without moving. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). A branch that carries a stack record, or a branch with no record whose predecessor is derived from local topology, synchronizes against that predecessor without `--base`; see `<stacked_branches>`.
+It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. When an attached branch is behind, it rebases the branch onto the fetched base. When a clean detached HEAD is an ancestor of the fetched base, it advances the worktree with `git switch --detach origin/<base>`; a detached HEAD carrying commits absent from the base fails without moving. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). A stacked branch synchronizes against its predecessor without `--base`; see `<stacked_branches>`.
 
 It prints a JSON result (`status`, `base_ref`, `remote_ref`, `branch`, `detail`, `preservation` on a clean outcome, and `conflict` on an active rebase conflict) and exits:
 
@@ -118,7 +119,7 @@ Use `--ours` or `--theirs` only for a specific path after classification has alr
 
 <readiness_preservation>
 
-On `rebased` or `already_current`, the result carries a `preservation` object that identifies pre-push readiness work the base movement did not invalidate:
+On `rebased` or `already_current`, the result carries a `preservation` object of git facts about the base movement:
 
 - `old_base_oid`, `new_base_oid`, `old_head_oid`, `new_head_oid` — full OIDs before and after the sync.
 - `base_delta_paths` — the files the base advanced over.
@@ -128,9 +129,7 @@ On `rebased` or `already_current`, the result carries a `preservation` object th
 - `branch_diff_unchanged` — the git-only reuse signal: the branch patch is unchanged and the base delta does not overlap the branch.
 - `stack_predecessor`, `stack_tip_before`, `stack_tip_after` — the stack record the sync read and wrote; `stack_tip_after` is null once a restack onto the default cleared it, and all three are null for a branch with no stack.
 
-Read `branch_diff_unchanged` to consider a prior local review reusable — and **also** confirm, against the project's overlay, that no `base_delta_paths` entry is a governance surface the reviewer judges against. Run the project overlay's narrowest deterministic lane covering `base_delta_paths`, falling back to the full gate when any path is unclassified or `path_overlap` is non-empty. The proof carries no lane name — lane mapping is the project overlay's.
-
-The proof scopes pre-push local work only. It never satisfies a merge gate: current-head pull-request checks and the current-head CI review still decide `MERGE_READINESS` after the push.
+The proof carries git facts only: no validation-lane name, no governance-surface list, and no verdict about which readiness survives. Mapping `base_delta_paths` to a lane and deciding whether `branch_diff_unchanged` lets a prior review stand belong to the workflow that consumes the result and to the project's merge overlay.
 
 </readiness_preservation>
 
