@@ -37,6 +37,7 @@ def test_every_planned_operation_reports_its_failure_and_stops_installation() ->
         assert attempted == observation.command_sequence[: len(attempted)]
 
 
+@pytest.mark.parametrize("plugin", committed_catalog_plugin_names())
 @pytest.mark.parametrize(
     ("mode", "source", "operation"),
     generated_failure_classification_cases(observe_failure_operation_domains()),
@@ -45,8 +46,8 @@ def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
     mode: InstallationMode,
     source: str,
     operation: Operation,
+    plugin: str,
 ) -> None:
-    plugin = sorted(committed_catalog_plugin_names())[0]
     carries_plugin = operation in PLUGIN_OPERATIONS
     pending = mode is InstallationMode.PERSISTENT and carries_plugin
 
