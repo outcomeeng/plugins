@@ -16,7 +16,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **Change state now lives in project fields.** `/pickup` and `/handoff` treat Product, Maturity, and Status as the canonical metadata source.
 - **Transitions stop at partial state.** Each workflow reports completed writes, the failed operation, and the complete observed state before ending.
-- **Terminal candidates remain Available.** `/handoff` records the terminal condition as the next Activity until the complete terminal Status protocol ships.
+- **Terminal transitions are complete.** `/handoff` verifies the terminal precondition, posts the authorized record, removes the holder, writes `Applied`, `Refined`, or `Abandoned`, closes the issue with the matching reason, and reads the complete terminal state back.
 
 ### Fixed
 

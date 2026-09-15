@@ -31,7 +31,13 @@ Classify `$ARGUMENTS`:
 
 <step name="claim_or_migrate">
 
-**Existing Change.** Read `gh issue view <N> --repo <store> --json number,title,body,state,assignees,comments,url` and the single project item's Product, Maturity, and Status. A claim may start only when the issue is open, Product equals the overlay Product, Maturity is one declared value, Status is `Available`, and the assignee list is empty. Any other state reports the terminal state, field mismatch, or holder and stops without mutation.
+**Existing Change.** Read `gh issue view <N> --repo <store> --json number,title,body,state,assignees,comments,url` and the single project item's Product, Maturity, and Status.
+
+Before applying the claim precondition, migrate an open, unassigned Change when any canonical field is absent or its body begins with legacy `Product:`, `Maturity:`, `Lifecycle:`, or `Status:` metadata. Reconstruct each absent value from the latest unambiguous issue edit, comment, and project-item history. Preserve every explicit canonical project-field value. An open, unassigned Change whose history contains no unreleased `Claim:` after the newest `Handoff:` and no terminal record reconstructs a missing Status as `Available`; a leading legacy Status or Lifecycle value is usable only when the later history does not contradict it. A missing Product or Maturity requires an explicit value in that history. When two sources disagree and their timestamps do not decide the later intent, or an absent value cannot be reconstructed, stop before mutation and ask through `AskUserQuestion`.
+
+Resolve the project and Product, Maturity, and Status field and option ids through `gh project view` and `gh project field-list`. Write every reconstructed field with a separate `gh project item-edit`, preserving already-populated fields, then re-read the issue and its single project item and require all three canonical values to equal the reconstructed state. Only after that readback succeeds, remove the one leading legacy metadata line with `gh issue edit <N> --repo <store> --body-file -` under the inert-stdin and store-write inspection rules, and re-read the body to verify its removal. A failed migration stops under the transition failure boundary and never enters the claim sequence.
+
+A claim may start only after that migration check, when the issue is open, Product equals the overlay Product, Maturity is one declared value, Status is `Available`, and the assignee list is empty. Any other state reports the terminal state, field mismatch, or holder and stops without mutation.
 
 Resolve the current account once with `gh api user --jq .login`, require one non-empty login, and record it as `<current-login>`. Claim through this exact sequence:
 
