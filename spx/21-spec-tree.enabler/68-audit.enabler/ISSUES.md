@@ -309,5 +309,5 @@ registry to agent instructions and prose.
 **Evidence.** Surfaced by a live `spec-tree:implementation-auditor` run on
 spec-tree 0.94.2 (session `b99a883c-8c51-402b-8f44-7eab326575fb`, subagent
 `aa0aa721a3fc5350c`) that probed for python and rust by invoking their audit
-skills; the probe itself is repaired in the 0.94.3 discovery contract, the
+skills; the probe itself is repaired in the 0.94.4 discovery contract, the
 visibility gap is not.
