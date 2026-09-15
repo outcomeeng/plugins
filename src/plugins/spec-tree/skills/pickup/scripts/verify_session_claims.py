@@ -8,6 +8,16 @@ claim resolves to exactly one verdict -- ``Confirmed`` when current state matche
 the verdicts are emitted as JSON for the workflow to render in place of the
 recorded snapshot.
 
+The command accepts a session id and an optional ``--repo`` checkout root. Its
+successful output is a JSON array whose objects carry ``kind``, ``subject``,
+``verdict``, and human-readable ``evidence``. Tests exercise branch and commit
+references, present and missing injected paths, projected and absent node status,
+clean and dirty working trees, and referenced pull requests. They also cover
+unavailable commands; malformed, incomplete, or unsafe session metadata; fatal
+git lookups; missing projection records; and failed status or pull-request reads.
+Those failures remain successful reconciliation runs and appear as one or more
+``Unverifiable`` verdicts instead of aborting the process.
+
 Stdlib-only ``python3`` shipped inside the pickup skill; runs under the two most
 recent Python feature releases. Every ``spx``, ``gh``, and ``git`` call is issued
 through an injected ``CommandRunner`` so the claim-checking logic is testable
