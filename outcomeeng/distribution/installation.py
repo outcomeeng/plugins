@@ -526,6 +526,7 @@ class AgentAdapter(Protocol):
         environment: tuple[tuple[str, str], ...],
         plugins: Sequence[str],
         records: Sequence[ClaudeInstallRecord] = (),
+        recorded: frozenset[str] = frozenset(),
     ) -> tuple[InstallationCommand, ...]: ...
 
     def normalize_result(
@@ -549,6 +550,7 @@ class ClaudeInstallationAdapter:
         environment: tuple[tuple[str, str], ...],
         plugins: Sequence[str],
         records: Sequence[ClaudeInstallRecord] = (),
+        recorded: frozenset[str] = frozenset(),
     ) -> tuple[InstallationCommand, ...]:
         scope = (
             CLAUDE_PROJECT_SCOPE
@@ -563,11 +565,8 @@ class ClaudeInstallationAdapter:
         commands = list(
             _claude_source_commands(source_action, source, scope, roots, environment)
         )
-        recorded_here = frozenset(
-            record.plugin for record in records if record.project_path == roots.checkout
-        )
         for plugin in plugins:
-            if plugin in recorded_here:
+            if plugin in recorded:
                 continue
             plugin_id = f"{plugin}@{MARKETPLACE_NAME}"
             commands.append(
@@ -668,6 +667,7 @@ class CodexInstallationAdapter:
         environment: tuple[tuple[str, str], ...],
         plugins: Sequence[str],
         records: Sequence[ClaudeInstallRecord] = (),
+        recorded: frozenset[str] = frozenset(),
     ) -> tuple[InstallationCommand, ...]:
         source = (
             CANONICAL_MARKETPLACE_SOURCE
@@ -777,8 +777,7 @@ def build_persistent_preflight(
             f"{user_settings} declares `{MARKETPLACE_NAME}`; remove that user-scope "
             "registration before project-scoped installation"
         )
-    project_document = _settings_document(roots.checkout / CLAUDE_PROJECT_SETTINGS_PATH)
-    project_source_action = claude_source_action(project_document)
+    project_source_action = claude_project_source_action(roots.checkout)
     environment = persistent_environment(roots, base_environment)
     codex_plugins = catalog_plugin_names(roots.checkout / CODEX_CATALOG_PATH)
     codex_agents = generated_codex_agent_definitions(
@@ -880,9 +879,15 @@ def build_persistent_installation_plan(
             checkout=preflight.roots.checkout,
         ),
     )
+    reported_records = claude_install_records(claude_plugins_payload)
     claude_records, record_warnings = claude_refresh_records(
-        claude_install_records(claude_plugins_payload),
+        reported_records,
         preflight.claude_plugins,
+    )
+    claude_recorded = frozenset(
+        record.plugin
+        for record in reported_records
+        if record.project_path == preflight.roots.checkout
     )
     return _build_plan(
         InstallationMode.PERSISTENT,
@@ -901,6 +906,7 @@ def build_persistent_installation_plan(
             if warning is not None
         ),
         claude_records=claude_records,
+        claude_recorded=claude_recorded,
     )
 
 
@@ -1005,6 +1011,7 @@ def _build_plan(
     codex_agents: tuple[AgentDefinition, ...] | None = None,
     warnings: tuple[InstallationWarning, ...] = (),
     claude_records: tuple[ClaudeInstallRecord, ...] = (),
+    claude_recorded: frozenset[str] = frozenset(),
 ) -> InstallationPlan:
     selected_codex_agents = (
         generated_codex_agent_definitions(
@@ -1031,6 +1038,7 @@ def _build_plan(
             environment,
             plugins_by_agent[adapter.agent],
             claude_records,
+            claude_recorded,
         )
     )
     agent_home = build_agent_home_plan(
