@@ -282,27 +282,24 @@ class ClaudeInstallRecord:
 
     Claude Code keys its install records by scope and project path and moves a
     record only through its native plugin update, so persistent refresh reaches
-    every record on the machine rather than the invocation checkout alone. A
-    user-scope record carries no project path.
+    every record on the machine rather than the invocation checkout alone.
     """
 
     plugin: str
     scope: str
-    project_path: Path | None
+    project_path: Path
 
-    @property
-    def refresh_path(self) -> Path:
-        """The project path a project- or local-scope record refreshes from.
 
-        `claude_install_records` admits no such record without one, so an
-        absent path here is a construction defect, never a listing state.
-        """
-        if self.project_path is None:
-            raise ValueError(
-                f"Claude install record {self.plugin} at {self.scope} scope "
-                "carries no project path"
-            )
-        return self.project_path
+@dataclass(frozen=True, order=True)
+class PathlessInstallRecord:
+    """A Claude Code install record that names no project path.
+
+    Only a scope outside project and local scope reports one — user scope
+    today — so the record is reported and never refreshed.
+    """
+
+    plugin: str
+    scope: str
 
 
 @dataclass(frozen=True)
@@ -656,7 +653,7 @@ class ClaudeInstallationAdapter:
                     ),
                     roots,
                     environment,
-                    cwd=record.refresh_path,
+                    cwd=record.project_path,
                 )
             )
         commands.append(
@@ -1105,7 +1102,9 @@ def _build_plan(
     )
 
 
-def claude_install_records(payload: str) -> tuple[ClaudeInstallRecord, ...]:
+def claude_install_records(
+    payload: str,
+) -> tuple[ClaudeInstallRecord | PathlessInstallRecord, ...]:
     """Parse every `outcomeeng` install record one Claude Code listing reports.
 
     A project- or local-scope entry that names no project path is a listing
@@ -1119,7 +1118,7 @@ def claude_install_records(payload: str) -> tuple[ClaudeInstallRecord, ...]:
     if not isinstance(document, list):
         raise ValueError("claude plugin listing must contain an array")
     marketplace_suffix = f"@{MARKETPLACE_NAME}"
-    records: list[ClaudeInstallRecord] = []
+    records: list[ClaudeInstallRecord | PathlessInstallRecord] = []
     for index, entry in enumerate(document):
         if not isinstance(entry, dict):
             raise ValueError(f"claude plugin listing entry {index} must be an object")
@@ -1138,27 +1137,27 @@ def claude_install_records(payload: str) -> tuple[ClaudeInstallRecord, ...]:
             raise ValueError(
                 f"claude plugin listing entry {index} has an untyped project path"
             )
-        if project_path is None and scope in CLAUDE_REFRESH_SCOPES:
-            raise ValueError(
-                f"claude plugin listing entry {index} at {scope} scope names no "
-                "project path"
+        plugin = identifier.removesuffix(marketplace_suffix)
+        if project_path is None:
+            if scope in CLAUDE_REFRESH_SCOPES:
+                raise ValueError(
+                    f"claude plugin listing entry {index} at {scope} scope names "
+                    "no project path"
+                )
+            records.append(PathlessInstallRecord(plugin=plugin, scope=scope))
+            continue
+        records.append(
+            ClaudeInstallRecord(
+                plugin=plugin,
+                scope=scope,
+                project_path=Path(project_path).expanduser().resolve(),
             )
-        record = ClaudeInstallRecord(
-            plugin=identifier.removesuffix(marketplace_suffix),
-            scope=scope,
-            project_path=(
-                None
-                if project_path is None
-                else Path(project_path).expanduser().resolve()
-            ),
         )
-        if record not in records:
-            records.append(record)
     return tuple(records)
 
 
 def claude_refresh_records(
-    records: Sequence[ClaudeInstallRecord],
+    records: Sequence[ClaudeInstallRecord | PathlessInstallRecord],
     catalog: Sequence[str],
 ) -> tuple[tuple[ClaudeInstallRecord, ...], tuple[InstallationWarning, ...]]:
     """Split Claude install records into native-update targets and warnings.
@@ -1178,18 +1177,17 @@ def claude_refresh_records(
     targets: list[ClaudeInstallRecord] = []
     warnings: list[InstallationWarning] = []
     for record in records:
-        if record.scope not in CLAUDE_REFRESH_SCOPES:
-            template = (
-                PATHLESS_OUT_OF_SCOPE_RECORD_WARNING
-                if record.project_path is None
-                else OUT_OF_SCOPE_RECORD_WARNING
+        if isinstance(record, PathlessInstallRecord):
+            message = PATHLESS_OUT_OF_SCOPE_RECORD_WARNING.format(
+                plugin=record.plugin, scope=record.scope
             )
-            message = template.format(
+        elif record.scope not in CLAUDE_REFRESH_SCOPES:
+            message = OUT_OF_SCOPE_RECORD_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
                 project_path=record.project_path,
             )
-        elif not record.refresh_path.is_dir():
+        elif not record.project_path.is_dir():
             message = ABSENT_PROJECT_PATH_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
@@ -1202,7 +1200,7 @@ def claude_refresh_records(
                 project_path=record.project_path,
             )
         elif (
-            source := _foreign_source_action(record.refresh_path)
+            source := _foreign_source_action(record.project_path)
         ) is None or source is SourceAction.MISMATCH:
             template = (
                 UNREADABLE_SETTINGS_WARNING
@@ -1246,7 +1244,8 @@ def installed_plugin_names(
         return frozenset(
             record.plugin
             for record in claude_install_records(payload)
-            if record.scope in CLAUDE_REFRESH_SCOPES
+            if isinstance(record, ClaudeInstallRecord)
+            and record.scope in CLAUDE_REFRESH_SCOPES
             and record.project_path == resolved_checkout
         )
     try:
@@ -2529,6 +2528,7 @@ __all__ = [
     "PATHLESS_OUT_OF_SCOPE_RECORD_WARNING",
     "UNCATALOGED_RECORD_WARNING",
     "ClaudeInstallRecord",
+    "PathlessInstallRecord",
     "claude_install_records",
     "claude_refresh_records",
     "MARKETPLACE_NAME",
