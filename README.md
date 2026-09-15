@@ -143,8 +143,9 @@ After merged distribution changes, `just install-marketplace` refreshes the
 project-scoped Claude Code marketplace, every project- or local-scope Claude Code
 `outcomeeng` install record on the machine for a cataloged plugin whose project path
 exists and whose project declares no noncanonical source, at that record's own scope
-and project path, and the selected `$CODEX_HOME`; a user-scope, uncataloged,
-vanished-path, or noncanonical-source record is reported and left unchanged.
+and project path, and the selected `$CODEX_HOME`; a record outside project and local scope,
+outside the catalog, at a vanished path, in a project declaring a noncanonical source,
+or in a project whose settings cannot be read is reported and left unchanged.
 The declared refresh selection uses Claude Code's install records
 and Codex's raw selected-home plugin declarations, including disabled and uncached plugins.
 Committed catalogs bound membership; trusted product configuration controls activation separately.
