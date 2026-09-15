@@ -42,7 +42,16 @@ Pass `--no-fetch` only when the remote-tracking ref is already current and a fet
 
 A branch stacked on a predecessor branch carries a stack record in git configuration — `branch.<name>.stackPredecessor` and `branch.<name>.stackTip`, the predecessor's name and the full OID of the predecessor tip the branch last sat on. The synchronizer writes it from git facts: when a `rebased` result rewrites a branch, every local branch containing the pre-rebase head receives a record naming the rewritten branch and that head, except a branch that already records a different predecessor, which keeps its record; when a sync runs with a non-default `--base`, the synchronized branch receives a record naming that base. The record is never an input; the synchronizer alone writes it.
 
-A later sync of a recorded branch without `--base` takes the predecessor as its base. After a pruning fetch: an open predecessor that still contains the recorded tip is an ordinary rebase onto `origin/<predecessor>`; an open predecessor that was rewritten replays only the commits above the recorded tip onto `origin/<predecessor>`; an unpublished predecessor — absent from origin while its local branch survives unmerged — is handled the same way through that local branch; a merged predecessor — absent from origin with no surviving local branch, or reachable from `origin/<default>` — replays only the commits above the recorded tip onto `origin/<default>` and the record is removed. Each is a rebase; the recorded tip bounds the branch's own commits. The result is `rebased` and the proof carries `stack_predecessor`, `stack_tip_before`, and `stack_tip_after`.
+A later sync of a recorded branch without `--base` takes the predecessor as its base. After a pruning fetch, the predecessor's state selects the movement:
+
+| Predecessor state after the fetch                                                                | Movement                                                                   | Record afterwards                  |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | ---------------------------------- |
+| open on origin and still containing the recorded tip                                             | ordinary rebase onto `origin/<predecessor>`                                | tip becomes the predecessor's tip  |
+| open on origin and rewritten (recorded tip absent)                                               | replay only the commits above the recorded tip onto `origin/<predecessor>` | tip becomes the predecessor's tip  |
+| unpublished — absent from origin while its local branch survives unmerged                        | the two open rows, through that local branch                               | tip becomes the local branch's tip |
+| merged — absent from origin with no surviving local branch, or reachable from `origin/<default>` | replay only the commits above the recorded tip onto `origin/<default>`     | removed                            |
+
+Each is a rebase; the recorded tip bounds the branch's own commits. The result is `rebased` and the proof carries `stack_predecessor`, `stack_tip_before`, and `stack_tip_after`.
 
 A branch with no record derives its predecessor from local topology. The candidates are the local branches, other than the default, that forked from the default before the branch forked from them; the candidate whose fork with the branch descends from every other candidate's is the nearest predecessor, and the synchronizer records it with that fork as the tip and proceeds as above. Two candidates whose forks are unordered yield no predecessor and no record. A conflict on a branch with neither lists `git rebase --onto origin/<base> <fork>` among its operator options; the fork is the commit the branch's own commits sit on, which the operator names.
 
@@ -168,24 +177,25 @@ Preserve each failure's classification through recovery. A decision about mutati
 
 The bundled synchronizer is covered before release by this real-git test matrix:
 
-| Input                                                           | Expected result                                                                                                                         |
-| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| attached branch at the fetched base tip                         | exit 0; `status=already_current`; non-null `preservation`                                                                               |
-| attached branch behind the fetched base                         | exit 0; `status=rebased`; branch commit preserved; non-null `preservation`                                                              |
-| attached branch behind the fetched base with a tracked edit     | exit 4; `status=dirty_tree`; HEAD and working tree unchanged; no `conflict`                                                             |
-| attached branch with conflicting commits                        | exit 3; `status=conflict`; active rebase state and structured `conflict`                                                                |
-| clean detached HEAD behind the fetched base                     | exit 0; `status=rebased`; HEAD advanced to `origin/<base>`; non-null `preservation`                                                     |
-| detached HEAD carrying a commit absent from the base            | exit 1; `status=git_failure`; HEAD unchanged                                                                                            |
-| missing `origin` during fetch                                   | exit 1; `status=git_failure`; actionable `detail`                                                                                       |
-| recorded branch whose predecessor merged and was deleted        | exit 0; `status=rebased`; only the branch's own commits above `origin/<default>`; record removed                                        |
-| recorded branch whose predecessor advanced on origin            | exit 0; `status=rebased` onto `origin/<predecessor>`; record tip advanced                                                               |
-| rewritten unpublished predecessor with a surviving local branch | exit 0; `status=rebased` onto the local predecessor from the recorded tip                                                               |
-| unrecorded branch on a surviving local predecessor's tip        | exit 0; record written naming the predecessor and the fork                                                                              |
-| unrecorded branch above two ordered local predecessors          | exit 0; record written naming the nearer predecessor and its fork                                                                       |
-| unrecorded branch merging two unordered local candidates        | exit 0; no record written; synced against the default base                                                                              |
-| rewritten predecessor force-pushed and still open on origin     | exit 0; `status=rebased` onto `origin/<predecessor>` from the recorded tip                                                              |
-| stack record write or removal refused by git                    | exit 1; `status=git_failure` naming the configuration key                                                                               |
-| chain of three stacked branches, the first rebased              | exit 0; `status=rebased`; the middle branch records the first and its pre-rebase tip; the top branch keeps its record naming the middle |
+| Input                                                                         | Expected result                                                                                                                         |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| attached branch at the fetched base tip                                       | exit 0; `status=already_current`; non-null `preservation`                                                                               |
+| attached branch behind the fetched base                                       | exit 0; `status=rebased`; branch commit preserved; non-null `preservation`                                                              |
+| attached branch behind the fetched base with a tracked edit                   | exit 4; `status=dirty_tree`; HEAD and working tree unchanged; no `conflict`                                                             |
+| attached branch with conflicting commits                                      | exit 3; `status=conflict`; active rebase state and structured `conflict`                                                                |
+| clean detached HEAD behind the fetched base                                   | exit 0; `status=rebased`; HEAD advanced to `origin/<base>`; non-null `preservation`                                                     |
+| detached HEAD carrying a commit absent from the base                          | exit 1; `status=git_failure`; HEAD unchanged                                                                                            |
+| `--no-fetch` with an explicit base whose remote-tracking ref does not resolve | exit 1; `status=git_failure`; no fetch attempted                                                                                        |
+| missing `origin` during fetch                                                 | exit 1; `status=git_failure`; actionable `detail`                                                                                       |
+| recorded branch whose predecessor merged and was deleted                      | exit 0; `status=rebased`; only the branch's own commits above `origin/<default>`; record removed                                        |
+| recorded branch whose predecessor advanced on origin                          | exit 0; `status=rebased` onto `origin/<predecessor>`; record tip advanced                                                               |
+| rewritten unpublished predecessor with a surviving local branch               | exit 0; `status=rebased` onto the local predecessor from the recorded tip                                                               |
+| unrecorded branch on a surviving local predecessor's tip                      | exit 0; record written naming the predecessor and the fork                                                                              |
+| unrecorded branch above two ordered local predecessors                        | exit 0; record written naming the nearer predecessor and its fork                                                                       |
+| unrecorded branch merging two unordered local candidates                      | exit 0; no record written; synced against the default base                                                                              |
+| rewritten predecessor force-pushed and still open on origin                   | exit 0; `status=rebased` onto `origin/<predecessor>` from the recorded tip                                                              |
+| stack record write or removal refused by git                                  | exit 1; `status=git_failure` naming the configuration key                                                                               |
+| chain of three stacked branches, the first rebased                            | exit 0; `status=rebased`; the middle branch records the first and its pre-rebase tip; the top branch keeps its record naming the middle |
 
 Every fixture uses an invocation-unique temporary directory owned and removed by pytest's `tmp_path` fixture.
 
@@ -219,7 +229,7 @@ How to avoid: Apply the operator's actual path-scoped authority and explicit lim
 - A `dirty_tree` outcome carries `conflict=null`; HEAD, index, and tracked working-tree content match their pre-invocation state.
 - A `conflict` outcome carries a non-null `conflict` object with paths, git facts, conflict text, and operator options, and an active rebase state remains available for inspection.
 - A `git_failure` outcome carries a non-empty `detail`; a diverged detached HEAD remains at its original full OID.
-- Every clean outcome's `preservation` object carries `schema_version`, full old/new base and head OIDs, base and branch path sets, overlap, and patch-identity booleans; it carries no project lane name.
+- Every clean outcome's `preservation` object carries `schema_version`, full old/new base and head OIDs, base and branch path sets, overlap, patch-identity booleans, and `stack_predecessor`, `stack_tip_before`, and `stack_tip_after` — null for a branch with no stack, and `stack_tip_after` null once a restack onto the default cleared the record; it carries no project lane name.
 - Git state and command output show no synchronization through `git reset`, no commit or stash created by the bundled synchronizer, and no automatic `git rebase --abort` at conflict handoff.
 - Each result preserves the primitive's status and diagnostics; checkpoint recovery never invents additional primitive exit codes.
 
