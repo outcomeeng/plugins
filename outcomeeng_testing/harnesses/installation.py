@@ -84,7 +84,6 @@ from outcomeeng.distribution.installation import (
     CODEX_PLUGIN_MARKETPLACE_FIELD,
     CODEX_SQLITE_HOME_ENV,
     CommandResult,
-    EXTRA_MARKETPLACES_FIELD,
     HOME_ENV,
     InstallationCommand,
     InstallationFailure,
