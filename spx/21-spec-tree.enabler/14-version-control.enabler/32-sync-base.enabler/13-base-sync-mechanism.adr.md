@@ -64,6 +64,7 @@ These rules govern the deterministic synchronization primitive. Its caller is th
 - ALWAYS: a branch with no record and no `--base` derives its predecessor from local topology by the nearest-fork rule, records it, and proceeds by the predecessor states; unordered candidates yield no predecessor and no record ([compliance])
 - ALWAYS: a conflict report on a branch with no record and no derived predecessor lists the `git rebase --onto origin/<default> <fork>` restack form among its operator options ([compliance])
 - NEVER: the stack record is written from any input other than git facts at rewrite time or the caller's `--base` — a restack never replays a commit the recorded tip does not bound ([compliance])
+- NEVER: a failed write or removal of the stack record is reported as a clean synchronization — the result is `git_failure` naming the failed configuration key, so the proof never claims a record the repository does not carry ([compliance])
 - NEVER: the readiness-preservation proof satisfies a merge gate — it scopes pre-push local verification only, leaving current-head pull-request checks and the current-head CI review as required `MERGE_READINESS` predicates after every push ([compliance])
 
 ### Audit
