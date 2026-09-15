@@ -2,7 +2,7 @@
 name: handoff
 description: ALWAYS invoke to close active spec-tree work or a merge lifecycle closeout — archive claimed sessions, decide session-file creation, prepare continuation context, and produce operator-useful closeout — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains or for an explicit direct `spx session archive` or `spx session release` request against identified sessions. NEVER create a spec-tree session file without this skill.
 argument-hint: "[--no-session] [--prune]"
-allowed-tools: Read, Bash(printf:*), Bash(printenv CODEX_THREAD_ID), Bash(spx diagnose:*), Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff:*), Bash(spx session archive:*), Bash(spx session delete:*), Bash(gh issue view:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh project view:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(gh project item-list:*), Bash(gh project field-list:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by), Bash(git status:*), Bash(git branch --show-current), Bash(git worktree list:*), Bash(git fetch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git cherry:*), request_user_input, Glob, Grep
+allowed-tools: Read, Bash(printf:*), Bash(printenv CODEX_THREAD_ID), Bash(spx diagnose:*), Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff:*), Bash(spx session archive:*), Bash(spx session delete:*), Bash(gh issue view:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh project view:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(gh project item-list:*), Bash(gh project field-list:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by), Bash(git status:*), Bash(git branch --show-current), Bash(git worktree list:*), Bash(git fetch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git cherry:*), request_user_input, Glob, Grep, Skill
 ---
 
 <precondition>
@@ -17,7 +17,7 @@ A closed spec-tree session with session-owned work committed and pushed, encount
 
 <change_coordination>
 
-When `spx/local/coordination.md` exists at the repository root, continuation is a Handoff on a Change — a comment, assignee state, and canonical Changes project fields in the store the overlay names — and this skill follows `${SKILL_DIR}/workflows/05-change.md` in place of the `<write_canonical_continuation>` and `<archive_claimed_sessions>` steps of `${SKILL_DIR}/workflows/04-execute.md`. It writes no session file. The precondition above, the reflection, the commit, and the work-branch release run unchanged; what this conversation learned about the Output is refined into the Change body before the Handoff is posted, and the Handoff carries only what the next holder cannot derive quickly. Creation writes and verifies Product, Maturity, and Status; release posts the Handoff, removes the assignee, writes Status `Available`, and verifies the complete state. Without the overlay, everything below applies unchanged.
+When `spx/local/coordination.md` exists at the repository root, continuation is a Handoff on a Change — a comment, assignee state, and canonical Changes project fields in the store the overlay names — and this skill follows `${SKILL_DIR}/workflows/05-change.md` in place of the `<write_canonical_continuation>` and `<archive_claimed_sessions>` steps of `${SKILL_DIR}/workflows/04-execute.md`. It writes no session file. The precondition above, the reflection, the commit, and the work-branch release run unchanged; what this conversation learned about the Output is refined into the Change body before the Handoff is posted, and the Handoff carries only what the next holder cannot derive quickly. Creation writes and verifies Product, Maturity, and Status; release posts the Handoff, removes the assignee, writes Status `Available`, and verifies the complete state; terminal closure posts the authorized record, removes the assignee, writes `Applied`, `Refined`, or `Abandoned`, closes the issue with the matching reason, and verifies the complete terminal state. Without the overlay, everything below applies unchanged.
 
 </change_coordination>
 
@@ -134,7 +134,7 @@ Execute workflows 01 through 04 in sequence. Each workflow has its own success c
 2. `${SKILL_DIR}/workflows/02-reflect.md` — review imperfections, claimed sessions, and starting point
 3. `${SKILL_DIR}/workflows/03-propose.md` — present persistence proposal to user for approval
 4. `${SKILL_DIR}/workflows/04-execute.md` — create or update coordination notes, commit, then write or omit each thread's canonical continuation session file
-   - Conditional, inside 04: `${SKILL_DIR}/workflows/05-change.md` — when `spx/local/coordination.md` exists, post the Handoff on each held Change, release it through the complete Available-state transition, and preserve any terminal condition as the next Activity until the terminal Status protocol is implemented, in place of 04's session-file and archive steps
+   - Conditional, inside 04: `${SKILL_DIR}/workflows/05-change.md` — when `spx/local/coordination.md` exists, either close each terminal Change through its complete terminal transition or post the Handoff and release it through the complete Available-state transition, in place of 04's session-file and archive steps
 
 </workflows_index>
 
@@ -150,6 +150,8 @@ Execute workflows 01 through 04 in sequence. Each workflow has its own success c
 
 **Status remained implicit after a Change release.** Claude posted the Handoff and removed the assignee, then treated the issue's open state as Available while its project Status remained Claimed or unset. Follow workflow 05's full release sequence: post Handoff, remove assignee, write Status `Available`, and read back Product, Maturity, Status, assignees, and the newest Handoff before closure.
 
+**Terminal Change closed from an incomplete transition.** Claude closed the issue before the authorized terminal comment, assignee removal, and terminal Status write had succeeded, or reported completion without reading the complete state back. Follow workflow 05's terminal sequence in order and stop before each later mutation when a required write fails.
+
 </failure_modes>
 
 <success_criteria>
@@ -159,7 +161,7 @@ A closure or handoff is sound when:
 - Every session-owned change and coordination decision is recoverable from committed, published repository state before any continuation document points at it.
 - The continuation disposition matches observable state: no session when no reader is needed, one fresh canonical session per independent continuation thread when work cannot continue now, and no duplicate or mutated session artifact.
 - Every claimed session and superseded same-conversation artifact is archived only after its replacement is verified or zero-handoff closure is established; unrelated and ambiguous sessions remain untouched.
-- Under the coordination overlay, every held Change is released only after Product and Maturity verify, Status is `Available`, the assignee list is empty, and the exact new Handoff is the newest Handoff.
+- Under the coordination overlay, every held Change either closes with its authorized terminal record, terminal Status, empty assignee list, matching issue close reason, and complete readback, or releases only after Product and Maturity verify, Status is `Available`, the assignee list is empty, and the exact new Handoff is the newest Handoff.
 - Any created session is a thin coordination envelope whose repository anchors, first action, and external-state facts let `/pickup` re-derive current truth without copying durable content.
 - The operator-facing closeout explains product value and changed surface in product language, reports exact verification and inspection evidence, states delivered location and remaining work, and classifies every merge-lifecycle branch with full identities.
 

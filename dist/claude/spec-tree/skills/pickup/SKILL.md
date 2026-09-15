@@ -2,7 +2,7 @@
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
 argument-hint: "[#N | owner/repo#N | issue-url | session-id | --list] [--auto-continue]"
-allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh project item-list:*), Bash(gh project view:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(gh project field-list:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/* --jq .id), Bash(spx session archive:*), Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/verify_session_claims.py":*), AskUserQuestion, Glob, Skill
+allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh project item-list:*), Bash(gh project view:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(gh project field-list:*), Bash(gh api user --jq .login), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/* --jq .id), Bash(spx session archive:*), Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/verify_session_claims.py":*), AskUserQuestion, Glob, Skill
 ---
 
 <objective>
@@ -11,7 +11,7 @@ A claimed handoff session — or, under `spx/local/coordination.md`, a claimed C
 
 <essential_principles>
 
-- Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly. The single session exception is the legacy-file archive `<change_coordination>` authorizes after the Change carrying that file as received input reaches a verified Claimed state. A Change is not a session: under the overlay, `${CLAUDE_SKILL_DIR}/workflows/change.md` invokes `/handoff` to release a Change through Handoff, assignee removal, Status `Available`, and complete readback when an Executable Frame fails validation against current truth.
+- The pickup workflow opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly. An operator's explicit `spx session release <id>` request is a direct session-management operation outside `/pickup`. The single session exception inside pickup is the legacy-file archive `<change_coordination>` authorizes after the Change carrying that file as received input reaches a verified Claimed state. A Change is not a session: under the overlay, `${CLAUDE_SKILL_DIR}/workflows/change.md` invokes `/handoff` to release a Change through Handoff, assignee removal, Status `Available`, and complete readback when an Executable Frame fails validation against current truth.
 - NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.
 - Before asking the operator to continue, review the loaded session evidence and present a no-surprises proposal: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation.
 - If session evidence shows another active context already owns the objective, report the owning session, branch, or PR and stop without archiving, releasing, handing off, or otherwise mutating the claimed session.
@@ -70,14 +70,14 @@ Three rules govern a conversation's claimed-session set:
 
 3. **Quick-exit shortcut.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
    - Invoke `/handoff --no-session` to archive the wrongly-claimed session immediately. The session leaves the claimed-session set but is archived, not returned to the todo queue.
-   - Run `spx session release <id>` to move the session from `doing/` back to `todo/` for another context to claim.
+   - Exit `/pickup` and directly request `spx session release <id>` as session management to move the session from `doing/` back to `todo/` for another context to claim.
 
    Neither action counts toward the closure workload for the claimed-session set — the wrongly-claimed session leaves the set the moment the user confirms the quick exit.
 
 **Consequences of the three rules:**
 
 - Every successful `spx session pickup` adds that session id to the CLAIMED_SESSIONS marker for this conversation. A later pickup does not replace earlier entries — the set is additive.
-- The pickup workflow MUST NOT archive, release, delete, or manually move any session, except the legacy-file archive `<change_coordination>` authorizes after its Change exists; a Change release is not a session mutation, per `<essential_principles>`. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
+- The pickup workflow MUST NOT archive, release, delete, or manually move any session, except the legacy-file archive `<change_coordination>` authorizes after its Change exists; a Change release is not a session mutation, per `<essential_principles>`. After the post-context checkpoint, leave the claimed session in `doing`; an explicit direct release request exits this workflow before session management executes it.
 - A newly created handoff session is a workflow artifact, not a substitute for the claimed session. Its existence never grants permission to close any claimed session.
 - Queue inspection alone is never permission. Archival comes from completing the handoff workflow against the claimed-session set named in CLAIMED_SESSIONS.
 

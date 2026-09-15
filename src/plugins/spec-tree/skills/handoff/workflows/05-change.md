@@ -1,5 +1,5 @@
 <objective>
-Every held Change released Available with a current `Handoff:` comment and complete canonical state, with terminal conditions preserved for the later terminal protocol and no session file written.
+Every held Change either closed through its verified terminal transition or released Available with a current `Handoff:` comment and complete canonical state, with no session file written.
 </objective>
 
 <required_reading>
@@ -18,7 +18,7 @@ This workflow replaces `<write_canonical_continuation>` and `<archive_claimed_se
 
 **`gh api` stays inside the declared store.** The exact-match grant `gh api repos/*/issues/*/dependencies/blocked_by` admits only that read and no appended method flag; this workflow passes it only the overlay store's `repos/<store>/issues/<N>/dependencies/blocked_by` to mirror blockers into a Handoff, so the tool grant and the workflow agree: no `-X` method, no other endpoint, no other repository.
 
-**Every Change transition is an ordered write with a complete readback.** Run `gh project item-list <number> --owner <owner> --format json`, select by exact issue URL, and require exactly one matching item; its `product`, `maturity`, and `status` keys are the canonical Product, Maturity, and Status values. Read those values together with `gh issue view <N> --repo <store> --json assignees,body,comments,state,url`; never derive a field from issue prose. A transition records each successful write in order. When a required command fails, a required field is absent, or readback differs from the intended state, stop before every later mutation and report: the successful writes in order, the failed command or mismatched value, and the observed Product, Maturity, Status, assignees, and newest `Claim:` or `Handoff:` comment. Never repair a partial transition by guessing which later mutation would make it look complete.
+**Every Change transition is an ordered write with a complete readback.** Run `gh project item-list <number> --owner <owner> --format json`, select by exact issue URL, and require exactly one matching item; its `product`, `maturity`, and `status` keys are the canonical Product, Maturity, and Status values. Read those values together with `gh issue view <N> --repo <store> --json assignees,body,comments,state,stateReason,url`; never derive a field from issue prose. A transition records each successful write in order. When a required command fails, a required field is absent, or readback differs from the intended state, stop before every later mutation and report: the successful writes in order, the failed command or mismatched value, and the observed Product, Maturity, Status, assignees, issue state and reason, and newest `Claim:`, `Handoff:`, or terminal comment. Never repair a partial transition by guessing which later mutation would make it look complete.
 
 **Legacy body metadata migrates only after canonical state is settled.** A leading prose line that carries `Product:`, `Maturity:`, `Lifecycle:`, or `Status:` is legacy input, never a fourth metadata store. Compare it with the project fields and the issue's edit, comment, and project-item history. When they disagree, reconstruct the latest intended value from that history; when the history does not decide, stop before editing the body and ask through `{{! tool('ask_user') !}}`. Write and verify the canonical project fields first. Then remove only the legacy metadata line with `gh issue edit <N> --repo <store> --body-file -` and re-read the body. New and refined bodies never add such a line.
 
@@ -50,13 +50,22 @@ An in-place refinement completes through the release sequence below: body first,
 
 For each held Change, after `<release_work_branch>` has left the work committed, pushed, and the worktree stepped off the branch:
 
-**Applied.** When the changeset has integrated into the authoritative branch, the Assertions and evidence governing the Change's Nodes are satisfied, and the Output is delivered, the terminal protocol targets Status `Applied` and the comment `Application complete: changeset integrated, evidence satisfied, and Output delivered.` A merged pull request alone is not Applied.
+**Applied.** When the changeset has integrated into the authoritative branch, the Assertions and evidence governing the Change's Nodes are satisfied, and the Output is delivered, target Status `Applied`, comment `Application complete: changeset integrated, evidence satisfied, and Output delivered.`, and close reason `completed`. A merged pull request alone is not Applied.
 
-**Refined.** When this conversation created every known successor (each carrying `## Refined from` with this Change's URL), the terminal protocol targets Status `Refined` and the comment `Refinement complete: all known successors exist.`
+**Refined.** When this conversation created every known successor and complete readback shows each successor carrying `## Refined from` with this Change's URL, target Status `Refined`, comment `Refinement complete: all known successors exist.`, and close reason `completed`.
 
-**Abandoned.** Only on the operator's explicit direction, the terminal protocol targets Status `Abandoned`, the comment `Abandoned: <the operator's stated reason>`, and close reason `not planned`.
+**Abandoned.** Only on the operator's explicit direction, target Status `Abandoned`, comment `Abandoned: <the operator's stated reason>`, and close reason `not planned`.
 
-This workflow does not yet execute a terminal protocol. When a terminal condition holds, preserve it as the Next Activity and run the Available release below. Never close a Change while its terminal Status write, authorized comment, assignee removal, and complete readback remain unimplemented as one ordered transition.
+When one terminal condition holds, execute this sequence and record each successful write:
+
+1. Re-read the issue and its single project item and verify the terminal precondition above from current authoritative state.
+2. Post the exact authorized terminal comment with `gh issue comment <N> --repo <store> --body-file -`.
+3. Remove the current assignee with `gh issue edit <N> --repo <store> --remove-assignee @me`.
+4. Write the target terminal Status with `gh project item-edit`.
+5. Close the issue with `gh issue close <N> --repo <store> --reason 'completed'` for Applied or Refined, or `gh issue close <N> --repo <store> --reason 'not planned'` for Abandoned.
+6. Re-read the issue and single project item. Terminal closure completes only when Product equals the overlay Product, Maturity equals the intended current level, Status equals the target terminal Status, the assignee list is empty, issue state is `CLOSED`, `stateReason` is `COMPLETED` for Applied or Refined and `NOT_PLANNED` for Abandoned, and the newest terminal comment is the exact comment just posted.
+
+Each step is subject to the transition failure boundary above. A failure leaves the completed prefix visible, performs no later mutation, and reports the complete observed partial state. A terminal Change receives no `Handoff:` release comment and is never written back to `Available`.
 
 **Otherwise release.** Post the continuation below as one comment with `gh issue comment <N> --repo <store> --body-file -`, the body on stdin per the rule above, then remove the assignee:
 
@@ -78,7 +87,7 @@ The store-write inspection at the top of this workflow applies to the Handoff co
 
 <closeout_rows>
 
-In `<confirm>`, the session-mechanics rows become Change rows: each Change URL with verified Status `Available`, its Maturity, the released work branch, and any pending terminal condition. Legacy archived session ids keep their existing rows.
+In `<confirm>`, the session-mechanics rows become Change rows: each Change URL with its verified terminal Status and close reason, or verified Status `Available`, Maturity, and released work branch. Legacy archived session ids keep their existing rows.
 
 </closeout_rows>
 
@@ -87,9 +96,9 @@ In `<confirm>`, the session-mechanics rows become Change rows: each Change URL w
 <success_criteria>
 
 - Every `gh issue create`, `gh issue edit --body-file`, and `gh issue comment` this workflow performs is inspected for secret values and credential payloads before it lands, and a hit writes nothing.
-- After the closure, every held Change is open with Product and Maturity verified, Status `Available`, an empty assignee list, and the exact new `Handoff:` as its newest Handoff; no Change stays Claimed by a conversation that has ended.
+- After the closure, every held Change is either closed with Product and Maturity verified, its intended terminal Status, matching close reason, empty assignee list, and exact authorized terminal comment, or open with Product and Maturity verified, Status `Available`, an empty assignee list, and the exact new `Handoff:` as its newest Handoff; no Change stays Claimed by a conversation that has ended.
 - A Handoff carries the five continuation lines and nothing that belongs in the body; refinement edits landed in the body before the Handoff was posted.
-- Terminal conditions are recorded for later execution; this workflow never closes a Change without the complete terminal Status protocol.
+- Every terminal condition is executed through the authorized comment, assignee removal, terminal Status write, issue close, and complete readback sequence; a failed prefix stops before later mutation.
 - Every failed transition stops before later mutation and reports the ordered successful writes, failed operation, and complete observed state.
 - No session file is written when `spx/local/coordination.md` exists; new continuation without a Change becomes one Proposed, Available Change carrying its received input.
 
