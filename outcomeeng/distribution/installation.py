@@ -284,6 +284,20 @@ class ClaudeInstallRecord:
     scope: str
     project_path: Path | None
 
+    @property
+    def refresh_path(self) -> Path:
+        """The project path a project- or local-scope record refreshes from.
+
+        `claude_install_records` admits no such record without one, so an
+        absent path here is a construction defect, never a listing state.
+        """
+        if self.project_path is None:
+            raise ValueError(
+                f"Claude install record {self.plugin} at {self.scope} scope "
+                "carries no project path"
+            )
+        return self.project_path
+
 
 @dataclass(frozen=True)
 class InstallationCommand:
@@ -622,11 +636,6 @@ class ClaudeInstallationAdapter:
                 )
             )
         for record in records:
-            if record.project_path is None:
-                raise ValueError(
-                    f"Claude install record {record.plugin} at {record.scope} scope "
-                    "has no project path to refresh from"
-                )
             commands.append(
                 _command(
                     self.agent,
@@ -641,7 +650,7 @@ class ClaudeInstallationAdapter:
                     ),
                     roots,
                     environment,
-                    cwd=record.project_path,
+                    cwd=record.refresh_path,
                 )
             )
         commands.append(
@@ -1091,7 +1100,12 @@ def _build_plan(
 
 
 def claude_install_records(payload: str) -> tuple[ClaudeInstallRecord, ...]:
-    """Parse every `outcomeeng` install record one Claude Code listing reports."""
+    """Parse every `outcomeeng` install record one Claude Code listing reports.
+
+    A project- or local-scope entry that names no project path is a listing
+    defect rather than a record the run could report, so it stops the run
+    like any other malformed entry.
+    """
     try:
         document = cast(object, json.loads(payload))
     except json.JSONDecodeError as error:
@@ -1117,6 +1131,11 @@ def claude_install_records(payload: str) -> tuple[ClaudeInstallRecord, ...]:
         if project_path is not None and not isinstance(project_path, str):
             raise ValueError(
                 f"claude plugin listing entry {index} has an untyped project path"
+            )
+        if project_path is None and scope in CLAUDE_REFRESH_SCOPES:
+            raise ValueError(
+                f"claude plugin listing entry {index} at {scope} scope names no "
+                "project path"
             )
         record = ClaudeInstallRecord(
             plugin=identifier.removesuffix(marketplace_suffix),
@@ -1157,7 +1176,7 @@ def claude_refresh_records(
             message = OUT_OF_SCOPE_RECORD_WARNING.format(
                 plugin=record.plugin, scope=record.scope
             )
-        elif record.project_path is None or not record.project_path.is_dir():
+        elif not record.refresh_path.is_dir():
             message = ABSENT_PROJECT_PATH_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
@@ -1170,7 +1189,7 @@ def claude_refresh_records(
                 project_path=record.project_path,
             )
         elif (
-            source := _foreign_source_action(record.project_path)
+            source := _foreign_source_action(record.refresh_path)
         ) is None or source is SourceAction.MISMATCH:
             template = (
                 UNREADABLE_SETTINGS_WARNING
@@ -1205,62 +1224,49 @@ def installed_plugin_names(
     """Parse one agent's installed outcomeeng inventory for its selected scope.
 
     Claude Code's inventory is every record at project or local scope for the
-    invocation checkout, the two scopes persistent refresh updates natively;
-    Codex's is the selected home's marketplace entries.
+    invocation checkout, the two scopes persistent refresh updates natively,
+    read through the same record parser the refresh consumes; Codex's is the
+    selected home's marketplace entries.
     """
+    if agent is Agent.CLAUDE:
+        resolved_checkout = checkout.resolve()
+        return frozenset(
+            record.plugin
+            for record in claude_install_records(payload)
+            if record.scope in CLAUDE_REFRESH_SCOPES
+            and record.project_path == resolved_checkout
+        )
     try:
         document = cast(object, json.loads(payload))
     except json.JSONDecodeError as error:
         raise ValueError(f"invalid {agent.value} plugin listing: {error}") from error
-    entries: object = document
-    if agent is Agent.CODEX:
-        if not isinstance(document, dict):
-            raise ValueError("Codex plugin listing must be a JSON object")
-        entries = document.get(CODEX_PLUGIN_ENTRIES_FIELD)
+    if not isinstance(document, dict):
+        raise ValueError("Codex plugin listing must be a JSON object")
+    entries = document.get(CODEX_PLUGIN_ENTRIES_FIELD)
     if not isinstance(entries, list):
         raise ValueError(f"{agent.value} plugin listing must contain an array")
 
     marketplace_suffix = f"@{MARKETPLACE_NAME}"
-    resolved_checkout = checkout.resolve()
     installed: set[str] = set()
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
             raise ValueError(
                 f"{agent.value} plugin listing entry {index} must be an object"
             )
-        identifier_field = (
-            CLAUDE_PLUGIN_ID_FIELD if agent is Agent.CLAUDE else CODEX_PLUGIN_ID_FIELD
-        )
-        identifier = entry.get(identifier_field)
+        identifier = entry.get(CODEX_PLUGIN_ID_FIELD)
         if not isinstance(identifier, str):
             raise ValueError(
                 f"{agent.value} plugin listing entry {index} has no typed identity"
             )
         if not identifier.endswith(marketplace_suffix):
             continue
-        if agent is Agent.CLAUDE:
-            scope = entry.get(CLAUDE_PLUGIN_SCOPE_FIELD)
-            if not isinstance(scope, str):
-                raise ValueError(
-                    f"Claude plugin listing entry {index} has no typed scope"
-                )
-            if scope not in CLAUDE_REFRESH_SCOPES:
-                continue
-            project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
-            if not isinstance(project_path, str):
-                raise ValueError(
-                    f"Claude plugin listing entry {index} has no typed project path"
-                )
-            if Path(project_path).expanduser().resolve() != resolved_checkout:
-                continue
-        else:
-            marketplace = entry.get(CODEX_PLUGIN_MARKETPLACE_FIELD)
-            if not isinstance(marketplace, str):
-                raise ValueError(
-                    f"Codex plugin listing entry {index} has no typed marketplace"
-                )
-            if marketplace != MARKETPLACE_NAME:
-                continue
+        marketplace = entry.get(CODEX_PLUGIN_MARKETPLACE_FIELD)
+        if not isinstance(marketplace, str):
+            raise ValueError(
+                f"Codex plugin listing entry {index} has no typed marketplace"
+            )
+        if marketplace != MARKETPLACE_NAME:
+            continue
         installed.add(identifier.removesuffix(marketplace_suffix))
     return frozenset(installed)
 
