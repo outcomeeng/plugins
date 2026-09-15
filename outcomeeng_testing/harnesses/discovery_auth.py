@@ -31,6 +31,10 @@ WORKSPACE_TOKEN_ENV = "CODEX_ACCESS_TOKEN"
 API_LOGIN_FLAG = "--with-api-key"
 WORKSPACE_LOGIN_FLAG = "--with-access-token"
 AUTH_FILENAME = "auth.json"
+SAVED_LOGIN_TOKENS_FIELD = "tokens"
+"""The saved-login document field carrying the ChatGPT token set."""
+SAVED_LOGIN_ACCOUNT_FIELD = "account_id"
+"""The token-set field naming the account the saved login belongs to."""
 FILE_STORE_ARGS = ("-c", 'cli_auth_credentials_store="file"')
 DISCOVERY_TIMEOUT_SECONDS = 600
 LOCK_RETRY_SECONDS = 0.05
@@ -113,7 +117,7 @@ class CredentialRedactor:
             key = document.get("OPENAI_API_KEY")
             if isinstance(key, str):
                 self.add(key)
-            tokens = document.get("tokens")
+            tokens = document.get(SAVED_LOGIN_TOKENS_FIELD)
             if isinstance(tokens, dict):
                 for value in tokens.values():
                     if isinstance(value, str):
@@ -274,15 +278,20 @@ class DiscoveryAuthentication:
             raise DiscoveryAuthenticationError(
                 "Subscription discovery requires a ChatGPT saved login."
             )
-        tokens = document.get("tokens")
+        tokens = document.get(SAVED_LOGIN_TOKENS_FIELD)
         if not isinstance(tokens, dict) or not all(
             isinstance(tokens.get(name), str) and tokens[name]
-            for name in ("access_token", "refresh_token", "id_token", "account_id")
+            for name in (
+                "access_token",
+                "refresh_token",
+                "id_token",
+                SAVED_LOGIN_ACCOUNT_FIELD,
+            )
         ):
             raise DiscoveryAuthenticationError(
                 "Saved ChatGPT login lacks required tokens or account identity."
             )
-        return str(tokens["account_id"])
+        return str(tokens[SAVED_LOGIN_ACCOUNT_FIELD])
 
     def _check_write_through(self, *, cwd: Path, env: Mapping[str, str]) -> None:
         with TemporaryDirectory() as directory:
