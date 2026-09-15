@@ -20,6 +20,8 @@ from outcomeeng_testing.harnesses.discovery_auth import (
     AUTH_FILENAME,
     CREDENTIAL_ENVIRONMENTS,
     REDACTED_CREDENTIAL,
+    SAVED_LOGIN_ACCOUNT_FIELD,
+    SAVED_LOGIN_TOKENS_FIELD,
     AuthenticationMode,
     DiscoveryAuthentication,
     DiscoveryAuthenticationError,
@@ -421,7 +423,7 @@ def test_subscription_refresh_writes_through_only_the_saved_login_link() -> None
         )
         assert all(
             token not in result.stdout + result.stderr
-            for token in json.loads(case.refreshed)["tokens"].values()
+            for token in json.loads(case.refreshed)[SAVED_LOGIN_TOKENS_FIELD].values()
         )
         assert REDACTED_CREDENTIAL in result.stdout
 
@@ -467,8 +469,12 @@ def test_switching_account_fails_without_restoring_the_previous_account() -> Non
             ):
                 case.auth.run(SESSION_COMMAND, cwd=case.home, env=case.environment)
         assert (
-            json.loads(case.saved.read_text())["tokens"]["account_id"]
-            != json.loads(case.initial)["tokens"]["account_id"]
+            json.loads(case.saved.read_text())[SAVED_LOGIN_TOKENS_FIELD][
+                SAVED_LOGIN_ACCOUNT_FIELD
+            ]
+            != json.loads(case.initial)[SAVED_LOGIN_TOKENS_FIELD][
+                SAVED_LOGIN_ACCOUNT_FIELD
+            ]
         )
 
 
@@ -482,7 +488,7 @@ def test_timeout_capture_scrubs_credentials_after_native_rotation() -> None:
         assert all(
             token.encode()
             not in (raised.value.output or b"") + (raised.value.stderr or b"")
-            for token in json.loads(case.refreshed)["tokens"].values()
+            for token in json.loads(case.refreshed)[SAVED_LOGIN_TOKENS_FIELD].values()
         )
         assert REDACTED_CREDENTIAL.encode() in (raised.value.output or b"")
         assert case.saved.read_text() == case.refreshed

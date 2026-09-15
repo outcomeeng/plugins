@@ -9,6 +9,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_SCOPE_FLAG,
     MARKETPLACE_NAME,
     FIRST_INSTALL_WARNING,
     Operation,
@@ -283,7 +284,7 @@ def test_persistent_run_updates_every_recorded_checkout_and_reinstalls_nothing()
         expected
     )
     assert len(updates) == len(expected)
-    assert all(command.argv[-2] == "--scope" for command in updates)
+    assert all(command.argv[-2] == CLAUDE_SCOPE_FLAG for command in updates)
     assert observation.attempted[-len(observation.plan.commands) :] == (
         observation.plan.commands
     )

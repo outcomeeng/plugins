@@ -657,17 +657,23 @@ def _plugin_listing_payload(
     checkout: Path,
     plugins: frozenset[str],
 ) -> str:
+    """One agent's installed listing for `plugins` at the invocation checkout.
+
+    Every second entry is listed disabled, so a selection that must include
+    disabled plugins has a disabled member to lose whenever an enabled-state
+    filter creeps into selection.
+    """
     identifiers = sorted(plugins)
     if agent is Agent.CLAUDE:
         return json.dumps(
             [
                 {
                     CLAUDE_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
-                    CLAUDE_PLUGIN_ENABLED_FIELD: True,
+                    CLAUDE_PLUGIN_ENABLED_FIELD: index % 2 == 0,
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout.resolve()),
                 }
-                for plugin in identifiers
+                for index, plugin in enumerate(identifiers)
             ]
         )
     return json.dumps(
@@ -675,10 +681,10 @@ def _plugin_listing_payload(
             CODEX_PLUGIN_ENTRIES_FIELD: [
                 {
                     CODEX_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}",
-                    CODEX_PLUGIN_ENABLED_FIELD: True,
+                    CODEX_PLUGIN_ENABLED_FIELD: index % 2 == 0,
                     CODEX_PLUGIN_MARKETPLACE_FIELD: MARKETPLACE_NAME,
                 }
-                for plugin in identifiers
+                for index, plugin in enumerate(identifiers)
             ]
         }
     )
