@@ -264,14 +264,14 @@ def _read_stack_record(repo: _Repository, branch: str) -> StackRecord | None:
 class StackRecordError(RuntimeError):
     """A stack-record write or removal failed after git reported it.
 
-    Raised by the record writers and converted by :func:`sync_base` into a
-    ``git_failure`` result naming the failed mutation, so a sync never reports
-    a record the repository does not carry.
+    Raised by the record writers; the sync step that was in flight converts it
+    through :func:`_record_failure` into a ``git_failure`` result naming the
+    failed mutation, so a sync never reports a record the repository does not
+    carry.
     """
 
-    def __init__(self, branch: str, detail: str) -> None:
+    def __init__(self, detail: str) -> None:
         super().__init__(detail)
-        self.branch = branch
         self.detail = detail
 
 
@@ -284,7 +284,6 @@ def _write_stack_record(repo: _Repository, branch: str, record: StackRecord) -> 
         written = _git(repo, "config", config_key, value)
         if written.returncode != 0:
             raise StackRecordError(
-                branch,
                 f"stack record write failed: git config {config_key} exited "
                 f"{written.returncode}: {written.stderr.strip()}",
             )
@@ -296,7 +295,6 @@ def _clear_stack_record(repo: _Repository, branch: str) -> None:
         cleared = _git(repo, "config", "--unset", config_key)
         if cleared.returncode not in (0, CONFIG_KEY_ABSENT_EXIT):
             raise StackRecordError(
-                branch,
                 f"stack record removal failed: git config --unset {config_key} "
                 f"exited {cleared.returncode}: {cleared.stderr.strip()}",
             )
@@ -842,24 +840,19 @@ def sync_base(
     injected. Returns a :class:`SyncBaseResult`; never raises for an ordinary
     git outcome.
     """
-    repository = _Repository(repo, runner)
-    try:
-        return _sync(repository, base_ref=base_ref, fetch=fetch)
-    except StackRecordError as error:
-        return _record_failure(repository, base_ref, error)
+    return _sync(_Repository(repo, runner), base_ref=base_ref, fetch=fetch)
 
 
 def _record_failure(
-    repo: _Repository, base_ref: str | None, error: StackRecordError
+    base_ref: str, target_ref: str, branch: str, error: StackRecordError
 ) -> SyncBaseResult:
-    """Report a failed stack-record mutation as a ``git_failure`` result."""
-    base = base_ref
-    if base is None:
-        default = _resolve_default_base(repo)
-        base = default if isinstance(default, str) else default.base_ref
-    remote_ref = remote_tracking_ref(base) if base else base
+    """Report a failed stack-record mutation against the sync that was in flight.
+
+    ``branch`` is the synchronized branch and ``base_ref``/``target_ref`` the
+    base that sync targeted; the failed configuration key stays in ``detail``.
+    """
     return SyncBaseResult(
-        SyncStatus.GIT_FAILURE, base, remote_ref, error.branch, error.detail
+        SyncStatus.GIT_FAILURE, base_ref, target_ref, branch, error.detail
     )
 
 
@@ -894,9 +887,14 @@ def _sync(repo: _Repository, *, base_ref: str | None, fetch: bool) -> SyncBaseRe
             and base_ref != default_name
             and new_base_oid is not None
         ):
-            _write_stack_record(
-                repo, branch, StackRecord(predecessor=base_ref, tip=new_base_oid)
-            )
+            try:
+                _write_stack_record(
+                    repo, branch, StackRecord(predecessor=base_ref, tip=new_base_oid)
+                )
+            except StackRecordError as error:
+                return _record_failure(
+                    base_ref, remote_tracking_ref(base_ref), branch, error
+                )
             return _with_stack(
                 result,
                 predecessor=base_ref,
@@ -909,7 +907,10 @@ def _sync(repo: _Repository, *, base_ref: str | None, fetch: bool) -> SyncBaseRe
         return default
     record = _read_stack_record(repo, branch)
     if record is None:
-        record = _derive_predecessor(repo, branch, default)
+        try:
+            record = _derive_predecessor(repo, branch, default)
+        except StackRecordError as error:
+            return _record_failure(default, remote_tracking_ref(default), branch, error)
     if record is not None:
         return _sync_stacked(repo, branch, record, default, fetch=fetch)
     return _sync_branch_onto(
@@ -1023,7 +1024,10 @@ def _sync_stacked(
             fork_oid=record.tip,
         )
         if result.status in (SyncStatus.REBASED, SyncStatus.ALREADY_CURRENT):
-            _clear_stack_record(repo, branch)
+            try:
+                _clear_stack_record(repo, branch)
+            except StackRecordError as error:
+                return _record_failure(default_name, default_remote, branch, error)
         return _with_stack(
             result,
             predecessor=record.predecessor,
@@ -1045,11 +1049,14 @@ def _sync_stacked(
             fork_oid=record.tip,
         )
     if result.status in (SyncStatus.REBASED, SyncStatus.ALREADY_CURRENT):
-        _write_stack_record(
-            repo,
-            branch,
-            StackRecord(predecessor=record.predecessor, tip=predecessor_oid),
-        )
+        try:
+            _write_stack_record(
+                repo,
+                branch,
+                StackRecord(predecessor=record.predecessor, tip=predecessor_oid),
+            )
+        except StackRecordError as error:
+            return _record_failure(record.predecessor, target_ref, branch, error)
     return _with_stack(
         result,
         predecessor=record.predecessor,
@@ -1126,7 +1133,10 @@ def _restack(
 
     rebased = _git(repo, "rebase", "--onto", target_ref, fork_oid)
     if rebased.returncode == 0:
-        _write_dependent_records(repo, branch, old_head_oid)
+        try:
+            _write_dependent_records(repo, branch, old_head_oid)
+        except StackRecordError as error:
+            return _record_failure(base_ref, target_ref, branch, error)
         return SyncBaseResult(
             SyncStatus.REBASED,
             base_ref,
@@ -1260,7 +1270,10 @@ def _sync_branch_onto(
     rebased = _git(repo, "rebase", target_ref)
     if rebased.returncode == 0:
         if old_head_oid is not None:
-            _write_dependent_records(repo, branch, old_head_oid)
+            try:
+                _write_dependent_records(repo, branch, old_head_oid)
+            except StackRecordError as error:
+                return _record_failure(base_ref, target_ref, branch, error)
         return SyncBaseResult(
             SyncStatus.REBASED,
             base_ref,
