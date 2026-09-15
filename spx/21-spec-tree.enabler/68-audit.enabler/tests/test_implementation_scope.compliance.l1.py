@@ -95,15 +95,23 @@ def test_a_sealed_path_without_a_recorded_unit_leaves_the_run_unreconciled() -> 
 def test_a_required_unit_outside_the_final_statuses_leaves_the_run_unreconciled() -> (
     None
 ):
-    pending = "incomplete"
+    pending, accounting = "incomplete", "optional"
     assert pending not in FINAL_COVERAGE_STATUSES
-    unit = audit_scope_unit(
+    assert accounting != REQUIRED_COVERAGE
+    required_unit = audit_scope_unit(
         "src/pending.ts", requirement=REQUIRED_COVERAGE, status=pending
     )
+    accounting_unit = audit_scope_unit(
+        "docs/left-to-its-owner.md", requirement=accounting, status=pending
+    )
 
-    verdict = reconcile(("src/pending.ts",), ("src/pending.ts",), (unit,))
+    verdict = reconcile(
+        (required_unit[AUDIT_FIELD.SUBJECT], accounting_unit[AUDIT_FIELD.SUBJECT]),
+        (required_unit[AUDIT_FIELD.SUBJECT], accounting_unit[AUDIT_FIELD.SUBJECT]),
+        (required_unit, accounting_unit),
+    )
 
-    assert verdict[RECONCILE_FIELD.NONFINAL] == [unit[AUDIT_FIELD.UNIT_ID]]
+    assert verdict[RECONCILE_FIELD.NONFINAL] == [required_unit[AUDIT_FIELD.UNIT_ID]]
     assert verdict[RECONCILE_FIELD.UNACCOUNTED] == []
     assert verdict[RECONCILE_FIELD.RECONCILED] is False
 
@@ -120,7 +128,8 @@ def test_a_run_reconciles_only_on_exact_inventory_agreement() -> None:
     )
 
     agreed = reconcile(sealed, sealed, units)
-    drifted = reconcile(sealed, (*sealed, "src/three.ts"), units)
+    drifted_wider = reconcile(sealed, (*sealed, "src/three.ts"), units)
+    drifted_narrower = reconcile(sealed, sealed[:1], units)
     widened = reconcile(
         sealed,
         sealed,
@@ -135,8 +144,10 @@ def test_a_run_reconciles_only_on_exact_inventory_agreement() -> None:
     )
 
     assert agreed[RECONCILE_FIELD.RECONCILED] is True
-    assert drifted[RECONCILE_FIELD.DRIFTED] == ["src/three.ts"]
-    assert drifted[RECONCILE_FIELD.RECONCILED] is False
+    assert drifted_wider[RECONCILE_FIELD.DRIFTED] == ["src/three.ts"]
+    assert drifted_wider[RECONCILE_FIELD.RECONCILED] is False
+    assert drifted_narrower[RECONCILE_FIELD.DRIFTED] == [sealed[1]]
+    assert drifted_narrower[RECONCILE_FIELD.RECONCILED] is False
     assert widened[RECONCILE_FIELD.UNEXPECTED] == ["src/outside.ts"]
     assert widened[RECONCILE_FIELD.RECONCILED] is False
 
