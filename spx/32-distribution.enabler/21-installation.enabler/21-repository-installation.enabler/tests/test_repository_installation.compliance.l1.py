@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from outcomeeng.distribution.installation import (
+    Agent,
     CODEX_CONFIG_PATH,
     Operation,
     SourceAction,
@@ -36,7 +37,9 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
     missing_credential_environment,
 )
 from outcomeeng_testing.harnesses.installation import (
+    observe_designated_failure,
     observe_interrupted_reconciliation,
+    observe_persistent_execution,
     ScopeSplitClassification,
     racing_digest_reader,
     RENAMED_CHECKOUT_AGENT_NAME,
@@ -330,7 +333,7 @@ def test_restoring_the_selection_keeps_the_reconciled_marketplace_source() -> No
 
 
 def test_failed_persistent_run_restores_the_committed_selection() -> None:
-    observation = observe_failed_run_restore(Operation.PLUGIN_ENABLE)
+    observation = observe_failed_run_restore(Operation.PLUGIN_UPDATE)
 
     assert observation.failure is not None
     assert observation.settings_after == observation.settings_before
@@ -685,3 +688,43 @@ def test_a_symlinked_agent_directory_still_reports_every_scope_split(
         "must not be a symlink" in result.stdout
     )
     assert not (real_agents / exact.name).exists()
+
+
+def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall() -> (
+    None
+):
+    execution = observe_persistent_execution()
+    claude_commands = [
+        command
+        for command in execution.report.plan.commands
+        if command.agent is Agent.CLAUDE
+    ]
+    updated = [
+        command.plugin
+        for command in claude_commands
+        if command.operation is Operation.PLUGIN_UPDATE
+    ]
+    failure = observe_designated_failure(
+        isolated=False,
+        operation=Operation.PLUGIN_UPDATE,
+        stderr="update failed for a reason the marketplace did not name",
+    )
+
+    assert execution.report.plan.claude_plugins
+    assert not any(
+        command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        for command in claude_commands
+    )
+    assert tuple(updated) == execution.report.plan.claude_plugins
+    assert all(
+        command.cwd == execution.report.plan.roots.checkout
+        for command in claude_commands
+        if command.operation is Operation.PLUGIN_UPDATE
+    )
+    assert failure.report is None
+    assert failure.failure is not None
+    assert failure.failure.command.operation is Operation.PLUGIN_UPDATE
+    assert not any(
+        command.operation is Operation.PLUGIN_LIST and command.agent is Agent.CLAUDE
+        for command in failure.calls
+    )

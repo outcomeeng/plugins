@@ -101,7 +101,12 @@ CLAUDE_PLUGIN_ENABLED_FIELD = "enabled"
 CLAUDE_PLUGIN_SCOPE_FIELD = "scope"
 CLAUDE_PLUGIN_PROJECT_PATH_FIELD = "projectPath"
 CLAUDE_PROJECT_SCOPE = "project"
+CLAUDE_LOCAL_SCOPE = "local"
 CLAUDE_USER_SCOPE = "user"
+CLAUDE_REFRESH_SCOPES: frozenset[str] = frozenset(
+    {CLAUDE_PROJECT_SCOPE, CLAUDE_LOCAL_SCOPE}
+)
+"""Claude Code scopes whose install records persistent refresh updates natively."""
 CLAUDE_ENABLED_PLUGINS_FIELD = "enabledPlugins"
 CODEX_PLUGIN_ENTRIES_FIELD = "installed"
 CODEX_PLUGIN_ID_FIELD = "pluginId"
@@ -111,6 +116,18 @@ SPEC_TREE_PLUGIN = "spec-tree"
 FIRST_INSTALL_WARNING = (
     "No outcomeeng plugins are installed for {agent}; installing only spec-tree. "
     "You probably want to install more plugins."
+)
+ABSENT_PROJECT_PATH_WARNING = (
+    "Claude Code records {plugin} at {scope} scope for {project_path}, which does "
+    "not exist; the record is left unchanged."
+)
+OUT_OF_SCOPE_RECORD_WARNING = (
+    "Claude Code records {plugin} at {scope} scope; persistent installation "
+    "refreshes only project and local scope, so the record is left unchanged."
+)
+UNCATALOGED_RECORD_WARNING = (
+    "Claude Code records {plugin} at {scope} scope for {project_path}, but the "
+    "committed catalog does not carry it; the record is left unchanged."
 )
 
 
@@ -138,6 +155,7 @@ class Operation(StrEnum):
     MARKETPLACE_REFRESH = "marketplace-refresh"
     PLUGIN_INSTALL = "plugin-install"
     PLUGIN_ENABLE = "plugin-enable"
+    PLUGIN_UPDATE = "plugin-update"
     PLUGIN_LIST = "plugin-list"
 
 
@@ -154,6 +172,7 @@ class ReportField(StrEnum):
     COMPLETED_OPERATIONS = "completed_operations"
     MODE = "mode"
     CLAUDE_PLUGINS = "claude_plugins"
+    CLAUDE_RECORDS = "claude_records"
     CODEX_PLUGINS = "codex_plugins"
     STATE_ROOT = "state_root"
     CHECKOUT = "checkout"
@@ -167,10 +186,12 @@ class ReportField(StrEnum):
     COLLISIONS = "collisions"
     DESTINATION = "destination"
     REASON = "reason"
+    SCOPE = "scope"
+    PROJECT_PATH = "project_path"
 
 
 PLUGIN_OPERATIONS: frozenset[Operation] = frozenset(
-    {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+    {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE, Operation.PLUGIN_UPDATE}
 )
 """Operations that name one plugin, as opposed to a marketplace or the checkout."""
 
@@ -180,6 +201,7 @@ CLAUDE_SCOPE_BEARING_OPERATIONS: frozenset[Operation] = frozenset(
         Operation.MARKETPLACE_ADD,
         Operation.PLUGIN_INSTALL,
         Operation.PLUGIN_ENABLE,
+        Operation.PLUGIN_UPDATE,
     }
 )
 """Claude operations whose public CLI accepts an explicit installation scope."""
@@ -216,6 +238,21 @@ class InstallationRoots:
     claude_config: Path
     codex_home: Path
     codex_sqlite_home: Path | None
+
+
+@dataclass(frozen=True, order=True)
+class ClaudeInstallRecord:
+    """One Claude Code install record: a plugin at one scope for one project path.
+
+    Claude Code keys its install records by scope and project path and moves a
+    record only through its native plugin update, so persistent refresh reaches
+    every record on the machine rather than the invocation checkout alone. A
+    user-scope record carries no project path.
+    """
+
+    plugin: str
+    scope: str
+    project_path: Path | None
 
 
 @dataclass(frozen=True)
@@ -381,6 +418,7 @@ class InstallationPlan:
     commands: tuple[InstallationCommand, ...]
     agent_home: AgentHomePlan
     warnings: tuple[InstallationWarning, ...] = ()
+    claude_records: tuple[ClaudeInstallRecord, ...] = ()
 
 
 @dataclass(frozen=True, order=True)
@@ -426,6 +464,19 @@ class InstallationReport:
         )
         return frozenset(planned) - self.pending_for(agent)
 
+    def refreshed_claude_records(self) -> tuple[ClaudeInstallRecord, ...]:
+        """The Claude install records this run updated natively.
+
+        A record whose plugin the marketplace has not published is pending,
+        so its update did not refresh it.
+        """
+        pending = self.pending_for(Agent.CLAUDE)
+        return tuple(
+            record
+            for record in self.plan.claude_records
+            if record.plugin not in pending
+        )
+
 
 class InstallationFailure(RuntimeError):
     """The first failed installation command and completed prefix."""
@@ -464,6 +515,7 @@ class AgentAdapter(Protocol):
         roots: InstallationRoots,
         environment: tuple[tuple[str, str], ...],
         plugins: Sequence[str],
+        records: Sequence[ClaudeInstallRecord] = (),
     ) -> tuple[InstallationCommand, ...]: ...
 
     def normalize_result(
@@ -486,6 +538,7 @@ class ClaudeInstallationAdapter:
         roots: InstallationRoots,
         environment: tuple[tuple[str, str], ...],
         plugins: Sequence[str],
+        records: Sequence[ClaudeInstallRecord] = (),
     ) -> tuple[InstallationCommand, ...]:
         scope = (
             CLAUDE_PROJECT_SCOPE
@@ -500,7 +553,14 @@ class ClaudeInstallationAdapter:
         commands = list(
             _claude_source_commands(source_action, source, scope, roots, environment)
         )
+        recorded_here = frozenset(
+            record.plugin
+            for record in records
+            if record.scope == scope and record.project_path == roots.checkout
+        )
         for plugin in plugins:
+            if plugin in recorded_here:
+                continue
             plugin_id = f"{plugin}@{MARKETPLACE_NAME}"
             commands.append(
                 _command(
@@ -534,6 +594,30 @@ class ClaudeInstallationAdapter:
                     ),
                     roots,
                     environment,
+                )
+            )
+        for record in records:
+            if record.project_path is None:
+                raise ValueError(
+                    f"Claude install record {record.plugin} at {record.scope} scope "
+                    "has no project path to refresh from"
+                )
+            commands.append(
+                _command(
+                    self.agent,
+                    Operation.PLUGIN_UPDATE,
+                    record.plugin,
+                    (
+                        CLAUDE_EXECUTABLE,
+                        "plugin",
+                        "update",
+                        f"{record.plugin}@{MARKETPLACE_NAME}",
+                        "--scope",
+                        record.scope,
+                    ),
+                    roots,
+                    environment,
+                    cwd=record.project_path,
                 )
             )
         commands.append(
@@ -578,6 +662,7 @@ class CodexInstallationAdapter:
         roots: InstallationRoots,
         environment: tuple[tuple[str, str], ...],
         plugins: Sequence[str],
+        records: Sequence[ClaudeInstallRecord] = (),
     ) -> tuple[InstallationCommand, ...]:
         source = (
             CANONICAL_MARKETPLACE_SOURCE
@@ -781,6 +866,10 @@ def build_persistent_installation_plan(
             checkout=preflight.roots.checkout,
         ),
     )
+    claude_records, record_warnings = claude_refresh_records(
+        claude_install_records(claude_plugins_payload),
+        preflight.claude_plugins,
+    )
     return _build_plan(
         InstallationMode.PERSISTENT,
         preflight.roots,
@@ -794,9 +883,10 @@ def build_persistent_installation_plan(
         ),
         warnings=tuple(
             warning
-            for warning in (claude_warning, codex_warning)
+            for warning in (claude_warning, codex_warning, *record_warnings)
             if warning is not None
         ),
+        claude_records=claude_records,
     )
 
 
@@ -900,6 +990,7 @@ def _build_plan(
     codex_plugins: tuple[str, ...],
     codex_agents: tuple[AgentDefinition, ...] | None = None,
     warnings: tuple[InstallationWarning, ...] = (),
+    claude_records: tuple[ClaudeInstallRecord, ...] = (),
 ) -> InstallationPlan:
     selected_codex_agents = (
         generated_codex_agent_definitions(
@@ -925,6 +1016,7 @@ def _build_plan(
             roots,
             environment,
             plugins_by_agent[adapter.agent],
+            claude_records,
         )
     )
     agent_home = build_agent_home_plan(
@@ -941,7 +1033,96 @@ def _build_plan(
         commands=commands,
         agent_home=agent_home,
         warnings=warnings,
+        claude_records=claude_records,
     )
+
+
+def claude_install_records(payload: str) -> tuple[ClaudeInstallRecord, ...]:
+    """Parse every `outcomeeng` install record one Claude Code listing reports."""
+    try:
+        document = cast(object, json.loads(payload))
+    except json.JSONDecodeError as error:
+        raise ValueError(f"invalid claude plugin listing: {error}") from error
+    if not isinstance(document, list):
+        raise ValueError("claude plugin listing must contain an array")
+    marketplace_suffix = f"@{MARKETPLACE_NAME}"
+    records: list[ClaudeInstallRecord] = []
+    for index, entry in enumerate(document):
+        if not isinstance(entry, dict):
+            raise ValueError(f"claude plugin listing entry {index} must be an object")
+        identifier = entry.get(CLAUDE_PLUGIN_ID_FIELD)
+        if not isinstance(identifier, str):
+            raise ValueError(
+                f"claude plugin listing entry {index} has no typed identity"
+            )
+        if not identifier.endswith(marketplace_suffix):
+            continue
+        scope = entry.get(CLAUDE_PLUGIN_SCOPE_FIELD)
+        if not isinstance(scope, str):
+            raise ValueError(f"claude plugin listing entry {index} has no typed scope")
+        project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
+        if project_path is not None and not isinstance(project_path, str):
+            raise ValueError(
+                f"claude plugin listing entry {index} has an untyped project path"
+            )
+        record = ClaudeInstallRecord(
+            plugin=identifier.removesuffix(marketplace_suffix),
+            scope=scope,
+            project_path=(
+                None
+                if project_path is None
+                else Path(project_path).expanduser().resolve()
+            ),
+        )
+        if record not in records:
+            records.append(record)
+    return tuple(records)
+
+
+def claude_refresh_records(
+    records: Sequence[ClaudeInstallRecord],
+    catalog: Sequence[str],
+) -> tuple[tuple[ClaudeInstallRecord, ...], tuple[InstallationWarning, ...]]:
+    """Split Claude install records into native-update targets and warnings.
+
+    A record refreshes when its plugin is in the committed catalog, its scope
+    is one the project boundary admits, and its project path exists to host
+    the native command. Every other record is reported and left unchanged:
+    a record outside the catalog, outside project or local scope, or whose
+    project path is gone. Targets follow catalog order, then project path,
+    then scope, so the plan is stable across listings.
+    """
+    targets: list[ClaudeInstallRecord] = []
+    warnings: list[InstallationWarning] = []
+    for record in records:
+        if record.scope not in CLAUDE_REFRESH_SCOPES:
+            message = OUT_OF_SCOPE_RECORD_WARNING.format(
+                plugin=record.plugin, scope=record.scope
+            )
+        elif record.project_path is None or not record.project_path.is_dir():
+            message = ABSENT_PROJECT_PATH_WARNING.format(
+                plugin=record.plugin,
+                scope=record.scope,
+                project_path=record.project_path,
+            )
+        elif record.plugin not in catalog:
+            message = UNCATALOGED_RECORD_WARNING.format(
+                plugin=record.plugin,
+                scope=record.scope,
+                project_path=record.project_path,
+            )
+        else:
+            targets.append(record)
+            continue
+        warnings.append(InstallationWarning(agent=Agent.CLAUDE, message=message))
+    targets.sort(
+        key=lambda record: (
+            catalog.index(record.plugin),
+            str(record.project_path),
+            record.scope,
+        )
+    )
+    return tuple(targets), tuple(warnings)
 
 
 def installed_plugin_names(
@@ -1704,6 +1885,10 @@ def main(
         print(json.dumps(report_document(report), sort_keys=True))
     else:
         print(f"installed {len(report.installed_for(Agent.CLAUDE))} Claude plugins")
+        print(
+            f"refreshed {len(report.refreshed_claude_records())} Claude Code "
+            "install records"
+        )
         print(f"installed {len(report.installed_for(Agent.CODEX))} Codex plugins")
         for entry in report.pending_publication:
             print(
@@ -2000,13 +2185,15 @@ def _command(
     argv: tuple[str, ...],
     roots: InstallationRoots,
     environment: tuple[tuple[str, str], ...],
+    *,
+    cwd: Path | None = None,
 ) -> InstallationCommand:
     return InstallationCommand(
         agent=agent,
         operation=operation,
         plugin=plugin,
         argv=argv,
-        cwd=roots.checkout,
+        cwd=roots.checkout if cwd is None else cwd,
         environment=environment,
     )
 
@@ -2057,6 +2244,14 @@ def report_document(report: InstallationReport) -> dict[str, object]:
     return {
         ReportField.MODE: report.plan.mode.value,
         ReportField.CLAUDE_PLUGINS: sorted(report.installed_for(Agent.CLAUDE)),
+        ReportField.CLAUDE_RECORDS: [
+            {
+                ReportField.PLUGIN: record.plugin,
+                ReportField.SCOPE: record.scope,
+                ReportField.PROJECT_PATH: str(record.project_path),
+            }
+            for record in report.refreshed_claude_records()
+        ],
         ReportField.CODEX_PLUGINS: sorted(report.installed_for(Agent.CODEX)),
         ReportField.COMPLETED_OPERATIONS: len(report.results),
         ReportField.STATE_ROOT: (
@@ -2126,7 +2321,9 @@ __all__ = [
     "CLAUDE_PLUGIN_ID_FIELD",
     "CLAUDE_PLUGIN_PROJECT_PATH_FIELD",
     "CLAUDE_PLUGIN_SCOPE_FIELD",
+    "CLAUDE_LOCAL_SCOPE",
     "CLAUDE_PROJECT_SCOPE",
+    "CLAUDE_REFRESH_SCOPES",
     "CLAUDE_SCOPE_BEARING_OPERATIONS",
     "CLAUDE_SCOPELESS_OPERATIONS",
     "CLAUDE_USER_SCOPE",
@@ -2166,6 +2363,12 @@ __all__ = [
     "InstallationRoots",
     "InstallationWarning",
     "FIRST_INSTALL_WARNING",
+    "ABSENT_PROJECT_PATH_WARNING",
+    "OUT_OF_SCOPE_RECORD_WARNING",
+    "UNCATALOGED_RECORD_WARNING",
+    "ClaudeInstallRecord",
+    "claude_install_records",
+    "claude_refresh_records",
     "MARKETPLACE_NAME",
     "Operation",
     "PersistentPreflight",

@@ -68,7 +68,10 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         claude_repository=NONCANONICAL_MARKETPLACE_SOURCE,
         codex_source=NONCANONICAL_MARKETPLACE_SOURCE,
     )
-    plans = (refreshing.report.plan, replacing.plan)
+    bootstrapping = observe_persistent_plan(
+        installed={agent: frozenset() for agent in Agent},
+    )
+    plans = (refreshing.report.plan, replacing.plan, bootstrapping.plan)
     claude_commands = [
         command
         for plan in plans
