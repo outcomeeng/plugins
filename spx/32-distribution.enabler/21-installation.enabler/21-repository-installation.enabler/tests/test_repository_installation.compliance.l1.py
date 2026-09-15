@@ -11,6 +11,8 @@ from outcomeeng.distribution.installation import (
     Agent,
     CLAUDE_LOCAL_SCOPE,
     CODEX_CONFIG_PATH,
+    CODEX_EXEC_SUBCOMMAND,
+    FIRST_INSTALL_WARNING,
     SPEC_TREE_PLUGIN,
     Operation,
     SourceAction,
@@ -18,6 +20,8 @@ from outcomeeng.distribution.installation import (
 from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT, JUST_BINARY
 from outcomeeng_testing.harnesses.discovery_auth import (
     API_LOGIN_FLAG,
+    CODEX_LOGIN_SUBCOMMAND,
+    CODEX_LOGOUT_SUBCOMMAND,
     WORKSPACE_LOGIN_FLAG,
     AUTH_FILENAME,
     CREDENTIAL_ENVIRONMENTS,
@@ -45,7 +49,6 @@ from outcomeeng_testing.harnesses.installation import (
     EXTERNAL_DEFINITION_CONTENT,
     FOREIGN_DEFINITION_CONTENT,
     MALFORMED_OWNERSHIP_DIGEST,
-    NONCANONICAL_MARKETPLACE_SOURCE,
     UNOWNED_AGENT_CONTENT,
     UNOWNED_AGENT_FILENAME,
     observe_designated_failure,
@@ -62,7 +65,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_codex_config_independence,
     observe_codex_subagent_discovery,
     observe_failed_run_restore,
-    observe_noncanonical_reconciliation,
+    observe_missing_registration_reconciliation,
     observe_scope_split,
     skill_enabling_definition,
 )
@@ -327,11 +330,11 @@ def test_repository_codex_config_has_no_installation_semantics() -> None:
 
 
 def test_restoring_the_selection_keeps_the_reconciled_marketplace_source() -> None:
-    observation = observe_noncanonical_reconciliation()
+    observation = observe_missing_registration_reconciliation()
 
-    assert observation.source_action is SourceAction.REPLACE
+    assert observation.source_action is SourceAction.ADD
     assert observation.selection_after == observation.selection_before
-    assert observation.marketplace_before != observation.canonical_marketplace
+    assert observation.marketplace_before is None
     assert observation.marketplace_after == observation.canonical_marketplace
 
 
@@ -418,10 +421,12 @@ def test_subscription_refresh_writes_through_only_the_saved_login_link() -> None
         assert case.saved.read_text() == case.refreshed
         assert case.initial != case.refreshed
         assert all(
-            call.home != case.home or "login" not in call.argv
+            call.home != case.home or CODEX_LOGIN_SUBCOMMAND not in call.argv
             for call in case.runner.calls
         )
-        assert all("logout" not in call.argv for call in case.runner.calls)
+        assert all(
+            CODEX_LOGOUT_SUBCOMMAND not in call.argv for call in case.runner.calls
+        )
         assert all(
             not (set(call.environment) & CREDENTIAL_ENVIRONMENTS)
             for call in case.runner.calls
@@ -557,7 +562,7 @@ def test_failed_login_stops_before_session_execution_and_scrubs_the_error() -> N
                 case.home, cwd=case.home, env=case.environment
             ):
                 pytest.fail("failed login reached session execution")
-        assert all("exec" not in call.argv for call in case.runner.calls)
+        assert all(CODEX_EXEC_SUBCOMMAND not in call.argv for call in case.runner.calls)
         assert case.auth.selection.credential not in str(raised.value)
         assert REDACTED_CREDENTIAL in str(raised.value)
 
@@ -583,7 +588,7 @@ def test_saved_login_contention_times_out_before_linking_credentials() -> None:
                 )
         assert not (case.home / AUTH_FILENAME).is_symlink()
         assert case.saved.read_text() == case.initial
-        assert all("exec" not in call.argv for call in case.runner.calls)
+        assert all(CODEX_EXEC_SUBCOMMAND not in call.argv for call in case.runner.calls)
 
 
 @pytest.mark.parametrize("fault", list(SavedLoginFault), ids=str)
@@ -718,29 +723,28 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
         for command in claude_commands
         if command.operation is Operation.PLUGIN_UPDATE
     )
-    replacing = observe_persistent_plan(
-        claude_repository=NONCANONICAL_MARKETPLACE_SOURCE,
-        codex_source=NONCANONICAL_MARKETPLACE_SOURCE,
-    )
-    replacing_claude = [
-        command for command in replacing.plan.commands if command.agent is Agent.CLAUDE
+    registering = observe_persistent_plan(claude_repository=None)
+    registering_claude = [
+        command
+        for command in registering.plan.commands
+        if command.agent is Agent.CLAUDE
     ]
-    replacing_operations = [command.operation for command in replacing_claude]
-    assert replacing.plan.claude_plugins
+    registering_operations = [command.operation for command in registering_claude]
+    assert registering.plan.claude_plugins
     assert not any(
         operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
-        for operation in replacing_operations
+        for operation in registering_operations
     )
     assert (
         tuple(
             command.plugin
-            for command in replacing_claude
+            for command in registering_claude
             if command.operation is Operation.PLUGIN_UPDATE
         )
-        == replacing.plan.claude_plugins
+        == registering.plan.claude_plugins
     )
-    assert replacing_operations.index(Operation.MARKETPLACE_ADD) < (
-        replacing_operations.index(Operation.PLUGIN_UPDATE)
+    assert registering_operations.index(Operation.MARKETPLACE_ADD) < (
+        registering_operations.index(Operation.PLUGIN_UPDATE)
     )
     assert failure.report is None
     assert failure.failure is not None
@@ -772,4 +776,7 @@ def test_a_local_scope_record_for_the_checkout_suppresses_the_bootstrap_install(
     )
     assert [(command.plugin, command.argv[-1], command.cwd) for command in updates] == [
         (SPEC_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.plan.roots.checkout)
+    ]
+    assert FIRST_INSTALL_WARNING.format(agent=Agent.CLAUDE.value) not in [
+        warning.message for warning in observation.plan.warnings
     ]

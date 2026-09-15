@@ -19,6 +19,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.installation import (
+    CODEX_EXEC_SUBCOMMAND,
     CODEX_EXECUTABLE,
     CODEX_HOME_ENV,
     HOME_ENV,
@@ -28,6 +29,7 @@ from outcomeeng.validation.ci_gate import (
     DISCOVERY_AUTH_MODE_ENVIRONMENT,
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
+    CODEX_LOGIN_SUBCOMMAND,
     SAVED_LOGIN_ACCOUNT_FIELD,
     SAVED_LOGIN_TOKENS_FIELD,
     AUTH_FILENAME,
@@ -39,7 +41,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "discovery_auth"
 API_FIXTURE_PATH = FIXTURE_ROOT / "api.json"
-SESSION_COMMAND = (CODEX_EXECUTABLE, "exec")
+SESSION_COMMAND = (CODEX_EXECUTABLE, CODEX_EXEC_SUBCOMMAND)
 NATIVE_FAILURE_EXIT_CODE = 17
 
 
@@ -91,7 +93,7 @@ class NativeCredentialRunner:
                 argv, NATIVE_FAILURE_EXIT_CODE, "", "installation failed"
             )
         target = home / AUTH_FILENAME
-        if "login" in argv:
+        if CODEX_LOGIN_SUBCOMMAND in argv:
             if self.fault is NativeFault.LOGIN_FAILURE:
                 return subprocess.CompletedProcess(
                     argv, NATIVE_FAILURE_EXIT_CODE, "", input_text or ""

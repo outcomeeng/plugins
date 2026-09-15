@@ -28,6 +28,10 @@ from outcomeeng.validation.ci_gate import (
 )
 
 WORKSPACE_TOKEN_ENV = "CODEX_ACCESS_TOKEN"
+CODEX_LOGIN_SUBCOMMAND = "login"
+"""The native login subcommand; discovery issues it only against a disposable home."""
+CODEX_LOGOUT_SUBCOMMAND = "logout"
+"""The native logout subcommand; discovery never issues it."""
 API_LOGIN_FLAG = "--with-api-key"
 WORKSPACE_LOGIN_FLAG = "--with-access-token"
 AUTH_FILENAME = "auth.json"
@@ -307,7 +311,12 @@ class DiscoveryAuthentication:
             fabricated = uuid4().hex
             self.redactor.add(fabricated)
             result = self.run(
-                (CODEX_EXECUTABLE, *FILE_STORE_ARGS, "login", API_LOGIN_FLAG),
+                (
+                    CODEX_EXECUTABLE,
+                    *FILE_STORE_ARGS,
+                    CODEX_LOGIN_SUBCOMMAND,
+                    API_LOGIN_FLAG,
+                ),
                 cwd=cwd,
                 env={**env, CODEX_HOME_ENV: str(consumer)},
                 input_text=fabricated,
@@ -343,7 +352,7 @@ class DiscoveryAuthentication:
                 else WORKSPACE_LOGIN_FLAG
             )
             result = self.run(
-                (CODEX_EXECUTABLE, *FILE_STORE_ARGS, "login", flag),
+                (CODEX_EXECUTABLE, *FILE_STORE_ARGS, CODEX_LOGIN_SUBCOMMAND, flag),
                 cwd=cwd,
                 env=env,
                 input_text=self.selection.credential,

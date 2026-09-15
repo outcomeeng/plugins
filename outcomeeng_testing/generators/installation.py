@@ -140,9 +140,10 @@ def generated_claude_listing_entries(
 ) -> tuple[tuple[dict[str, str], ...], frozenset[str]]:
     """Cycle Claude listing entries across scope cases, naming the in-scope set.
 
-    Every third entry stays in the invocation checkout's project scope; the
-    others rotate through a foreign project path and user scope, so scope
-    filtering has both accepted and rejected members for every catalog window.
+    Entries rotate through five cases: project scope and local scope in the
+    invocation checkout, which the inventory admits, and a foreign project
+    path, user scope, and managed scope in the checkout, which it rejects, so
+    scope filtering has accepted and rejected members for every catalog window.
     """
     entries: list[dict[str, str]] = []
     in_scope: set[str] = set()
@@ -152,11 +153,17 @@ def generated_claude_listing_entries(
             CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
             CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
         }
-        if index % 3 == 1:
+        case = index % 5
+        if case == 1:
             entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] = str(checkout.parent)
-        elif index % 3 == 2:
+        elif case == 2:
             entry[CLAUDE_PLUGIN_SCOPE_FIELD] = CLAUDE_USER_SCOPE
             del entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        elif case == 3:
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD] = CLAUDE_LOCAL_SCOPE
+            in_scope.add(plugin)
+        elif case == 4:
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD] = CLAUDE_MANAGED_SCOPE
         else:
             in_scope.add(plugin)
         entries.append(entry)
@@ -186,6 +193,8 @@ def generated_claude_install_records(
     absent_path: Path,
     forked_checkout: Path,
     forked_local_checkout: Path,
+    local_forked_checkout: Path,
+    local_canonical_checkout: Path,
     malformed_checkout: Path,
 ) -> tuple[tuple[tuple[dict[str, str], RecordDisposition], ...], ...]:
     """Cycle every catalog plugin through each install-record disposition.
@@ -196,8 +205,13 @@ def generated_claude_install_records(
     whose project path does not exist, a user-scope record, a managed-scope
     record, a record in a checkout whose project settings register the
     marketplace from a noncanonical source, a record in a checkout whose local
-    settings alone do so, a record in a checkout whose settings cannot be
-    parsed, and an entry from another marketplace. One uncataloged plugin
+    settings alone do so, a record in a checkout whose local settings register
+    a noncanonical source over a canonical project declaration, a record in a
+    checkout whose local settings register the canonical source over a
+    noncanonical project declaration, a record in a checkout whose settings
+    cannot be parsed, and an entry from another marketplace. The two
+    conflicting checkouts are the precedence boundary: Claude Code lets the
+    local document override the project document. One uncataloged plugin
     record is appended so the catalog bound has a rejected member.
     """
     groups: list[tuple[tuple[dict[str, str], RecordDisposition], ...]] = []
@@ -278,6 +292,22 @@ def generated_claude_install_records(
                 ),
                 (
                     {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(local_forked_checkout),
+                    },
+                    RecordDisposition.NONCANONICAL_SOURCE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(local_canonical_checkout),
+                    },
+                    RecordDisposition.UPDATE,
+                ),
+                (
+                    {
                         CLAUDE_PLUGIN_ID_FIELD: f"{plugin}@{MARKETPLACE_NAME}-other",
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
@@ -322,15 +352,17 @@ def generated_codex_listing_entries(
 
 
 def generated_failure_classification_cases(
-    operation_domains: Sequence[tuple[InstallationMode, str, Sequence[Operation]]],
-) -> tuple[tuple[InstallationMode, str, Operation], ...]:
+    operation_domains: Sequence[
+        tuple[InstallationMode, str | None, Sequence[Operation]]
+    ],
+) -> tuple[tuple[InstallationMode, str | None, Operation], ...]:
     """Compose each reachable mode-operation pair with a plan source.
 
     Several source configurations can reach the same operation.  Keep the
     first source that reaches each mode-operation pair so every finite mapping
     case appears exactly once.
     """
-    reached: dict[tuple[InstallationMode, Operation], str] = {}
+    reached: dict[tuple[InstallationMode, Operation], str | None] = {}
     for mode, source, operations in operation_domains:
         for operation in operations:
             reached.setdefault((mode, operation), source)

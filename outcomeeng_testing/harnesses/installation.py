@@ -63,7 +63,9 @@ from outcomeeng.distribution.installation import (
     CODEX_AGENTS_PATH,
     CLAUDE_EXECUTABLE,
     CLAUDE_LOCAL_SETTINGS_PATH,
+    CODEX_EXEC_SUBCOMMAND,
     CODEX_EXECUTABLE,
+    CODEX_MARKETPLACES_FIELD,
     CODEX_CATALOG_PATH,
     CODEX_CONFIG_PATH,
     CODEX_HOME_ENV,
@@ -132,9 +134,9 @@ EXTERNAL_DEFINITION_CONTENT = b'name = "external"\n'
 CONCURRENT_EDIT_CONTENT = b"edited while the run was planning\n"
 """Bytes a concurrent writer leaves at a destination between preflight and mutation."""
 MALFORMED_OWNERSHIP_DIGEST = "z" * 64
+"""A 64-character digest the ownership record must reject as non-hex."""
 MALFORMED_SETTINGS_CONTENT = "{ not json"
 """A settings document no reader can parse, standing for a foreign checkout's defect."""
-"""A 64-character digest the ownership record must reject as non-hex."""
 REQUIRED_BINARIES: tuple[str, ...] = ("just", CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
@@ -723,20 +725,27 @@ def _successful_command_payload(
 
 def _persistent_plan_with_catalog_inventories(
     preflight: PersistentPreflight,
-    codex_source: str,
+    codex_source: str | None,
 ) -> InstallationPlan:
+    """Plan against catalog-wide inventories; `None` leaves both registries empty."""
     inventories = _installed_or_catalog_plugins(preflight.roots.checkout, None)
     return build_persistent_installation_plan(
         preflight,
-        claude_marketplace_payload=claude_marketplace_listing_payload(
-            CANONICAL_MARKETPLACE_SOURCE
+        claude_marketplace_payload=(
+            claude_marketplace_listing_payload(CANONICAL_MARKETPLACE_SOURCE)
+            if codex_source is not None
+            else json.dumps([])
         ),
         claude_plugins_payload=_plugin_listing_payload(
             Agent.CLAUDE,
             preflight.roots.checkout,
             inventories[Agent.CLAUDE],
         ),
-        codex_marketplace_payload=codex_marketplace_listing_payload(codex_source),
+        codex_marketplace_payload=(
+            codex_marketplace_listing_payload(codex_source)
+            if codex_source is not None
+            else json.dumps({CODEX_MARKETPLACES_FIELD: []})
+        ),
         codex_plugins_payload=_plugin_listing_payload(
             Agent.CODEX,
             preflight.roots.checkout,
@@ -775,18 +784,24 @@ def observe_repository_plan() -> PlanObservation:
 
 def observe_persistent_plan(
     *,
-    claude_repository: str = CANONICAL_MARKETPLACE_SOURCE,
+    claude_repository: str | None = CANONICAL_MARKETPLACE_SOURCE,
     claude_marketplace_listed: bool = True,
     codex_source: str = CANONICAL_CODEX_SOURCE,
     installed: Mapping[Agent, frozenset[str]] | None = None,
 ) -> PersistentPlanObservation:
-    """Build a persistent plan in caller-selected temporary homes."""
+    """Build a persistent plan in caller-selected temporary homes.
+
+    `claude_repository` is the marketplace source the mirrored checkout's
+    project settings declare; `None` leaves the checkout declaring none, the
+    registration-bootstrap case.
+    """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, claude_repository)
+        if claude_repository is not None:
+            _write_project_marketplace(mirror, claude_repository)
         environment = _persistent_environment(temporary_root)
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
         codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
@@ -833,6 +848,8 @@ class RecordRefreshObservation:
     absent_path: Path
     forked_checkout: Path
     forked_local_checkout: Path
+    local_forked_checkout: Path
+    local_canonical_checkout: Path
     malformed_checkout: Path
     cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
     plan: InstallationPlan
@@ -859,6 +876,18 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
         _write_project_marketplace(
             forked_local, NONCANONICAL_MARKETPLACE_SOURCE, local=True
         )
+        local_forked = temporary_root / "local-forked-checkout"
+        local_forked.mkdir()
+        _write_project_marketplace(local_forked, CANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(
+            local_forked, NONCANONICAL_MARKETPLACE_SOURCE, local=True
+        )
+        local_canonical = temporary_root / "local-canonical-checkout"
+        local_canonical.mkdir()
+        _write_project_marketplace(local_canonical, NONCANONICAL_MARKETPLACE_SOURCE)
+        _write_project_marketplace(
+            local_canonical, CANONICAL_MARKETPLACE_SOURCE, local=True
+        )
         malformed = temporary_root / "malformed-checkout"
         malformed_settings = malformed / CLAUDE_PROJECT_SETTINGS_PATH
         malformed_settings.parent.mkdir(parents=True)
@@ -875,6 +904,8 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             absent.resolve(),
             forked.resolve(),
             forked_local.resolve(),
+            local_forked.resolve(),
+            local_canonical.resolve(),
             malformed.resolve(),
         )
         cases = tuple(case for group in groups for case in group)
@@ -901,6 +932,8 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             absent_path=absent.resolve(),
             forked_checkout=forked.resolve(),
             forked_local_checkout=forked_local.resolve(),
+            local_forked_checkout=local_forked.resolve(),
+            local_canonical_checkout=local_canonical.resolve(),
             malformed_checkout=malformed.resolve(),
             cases=cases,
             plan=plan,
@@ -947,12 +980,56 @@ def observe_noncanonical_registry_plan() -> str | None:
     return None
 
 
+def observe_noncanonical_source(agent: Agent) -> str | None:
+    """Run persistent planning with one agent's own source noncanonical.
+
+    For Claude Code the mirrored checkout's project settings declare the
+    noncanonical source, which preflight reads; for Codex the selected home's
+    live marketplace listing carries it, which planning reads. The rejection
+    message, if any, is the observation.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(
+            mirror,
+            NONCANONICAL_MARKETPLACE_SOURCE
+            if agent is Agent.CLAUDE
+            else CANONICAL_MARKETPLACE_SOURCE,
+        )
+        environment = _persistent_environment(temporary_root)
+        try:
+            preflight = build_persistent_preflight(mirror, environment)
+            build_persistent_installation_plan(
+                preflight,
+                claude_marketplace_payload=claude_marketplace_listing_payload(
+                    CANONICAL_MARKETPLACE_SOURCE
+                ),
+                claude_plugins_payload=_plugin_listing_payload(
+                    Agent.CLAUDE, mirror, frozenset({SPEC_TREE_PLUGIN})
+                ),
+                codex_marketplace_payload=codex_marketplace_listing_payload(
+                    NONCANONICAL_MARKETPLACE_SOURCE
+                    if agent is Agent.CODEX
+                    else CANONICAL_CODEX_SOURCE
+                ),
+                codex_plugins_payload=_plugin_listing_payload(
+                    Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+                ),
+            )
+        except ValueError as error:
+            return str(error)
+    return None
+
+
 def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
     """Plan a persistent run whose only Claude record is local scope at the checkout.
 
-    The project-scope inventory is empty, so selection derives the bootstrap
-    set, while the local-scope record for the same checkout is a refresh
-    target; the plan's install, enable, and update commands are the
+    The checkout records `spec-tree` at local scope and nothing at project
+    scope, so the inventory is nonempty without a project-scope member; the
+    plan's install, enable, and update commands and its warnings are the
     observations the linked test judges.
     """
     checkout = repository_root()
@@ -1487,8 +1564,8 @@ def _installation_plans(temporary_root: Path) -> tuple[InstallationPlan, ...]:
     """Build every plan repository installation performs across its modes.
 
     A persistent plan against an already-canonical source refreshes it, while
-    a noncanonical source is replaced (removed, then added), so both persistent
-    variants are needed to cover the marketplace operation vocabulary.
+    an absent registration is added, so both persistent variants are needed to
+    cover the marketplace operation vocabulary.
     """
     checkout = repository_root()
     isolated_checkout = temporary_root / "isolated-checkout"
@@ -1499,12 +1576,11 @@ def _installation_plans(temporary_root: Path) -> tuple[InstallationPlan, ...]:
         os.environ,
     )
     plans = [isolated]
-    for index, source in enumerate(
-        (NONCANONICAL_MARKETPLACE_SOURCE, CANONICAL_MARKETPLACE_SOURCE)
-    ):
+    for index, source in enumerate((None, CANONICAL_MARKETPLACE_SOURCE)):
         mirror = temporary_root / f"checkout-{index}"
         mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, source)
+        if source is not None:
+            _write_project_marketplace(mirror, source)
         environment = _persistent_environment(temporary_root / f"state-{index}")
         preflight = build_persistent_preflight(mirror, environment)
         plans.append(_persistent_plan_with_catalog_inventories(preflight, source))
@@ -1515,8 +1591,8 @@ def observe_planned_operations() -> tuple[Operation, ...]:
     """Expose every operation a repository-installation plan performs.
 
     An isolated plan registers fresh sources, so it never carries the
-    marketplace remove and refresh operations a persistent plan performs
-    against an already-registered source. The union across every plan is the
+    marketplace refresh operation a persistent plan performs against an
+    already-registered source. The union across every plan is the
     domain of operations a plan itself performs; the persistent preflight's
     marketplace inspection fails outside any plan and is exposed separately.
     """
@@ -1602,8 +1678,8 @@ class ReconciliationObservation:
     source_action: SourceAction
 
 
-def observe_noncanonical_reconciliation() -> ReconciliationObservation:
-    """Run the persistent path from a checkout declaring a noncanonical source."""
+def observe_missing_registration_reconciliation() -> ReconciliationObservation:
+    """Run the persistent path from a checkout declaring no marketplace source."""
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
@@ -1612,9 +1688,7 @@ def observe_noncanonical_reconciliation() -> ReconciliationObservation:
         settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         _copy_committed_project_settings(checkout, settings)
         document = _settings_json(settings)
-        document[EXTRA_MARKETPLACES_FIELD] = claude_marketplace_settings(
-            NONCANONICAL_MARKETPLACE_SOURCE
-        )[EXTRA_MARKETPLACES_FIELD]
+        document.pop(EXTRA_MARKETPLACES_FIELD, None)
         settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
         before = _settings_json(settings)
         environment = _persistent_environment(temporary_root)
@@ -2180,7 +2254,7 @@ def observe_codex_subagent_discovery(
                 (
                     CODEX_EXECUTABLE,
                     *FILE_STORE_ARGS,
-                    "exec",
+                    CODEX_EXEC_SUBCOMMAND,
                     "--ephemeral",
                     "--skip-git-repo-check",
                     "-C",
@@ -2881,16 +2955,21 @@ class DesignatedFailureRunner:
 
 
 def _build_run_plan(
-    temporary_root: Path, *, isolated: bool, source: str
+    temporary_root: Path, *, isolated: bool, source: str | None
 ) -> InstallationPlan:
-    """One installation plan of the selected mode and configured source."""
+    """One installation plan of the selected mode and configured source.
+
+    `None` is the registration-bootstrap variant: the checkout declares no
+    marketplace and neither agent's live listing carries it.
+    """
     mirror = temporary_root / "checkout"
     mirror_installation_inputs(repository_root(), mirror)
     if isolated:
         return build_isolated_installation_plan(
             mirror, temporary_root / "state", os.environ
         )
-    _write_project_marketplace(mirror, source)
+    if source is not None:
+        _write_project_marketplace(mirror, source)
     environment = _persistent_environment(temporary_root)
     preflight = build_persistent_preflight(mirror, environment)
     codex_source = (
@@ -2900,10 +2979,14 @@ def _build_run_plan(
 
 
 def observe_failure_operation_domains() -> tuple[
-    tuple[InstallationMode, str, tuple[Operation, ...]], ...
+    tuple[InstallationMode, str | None, tuple[Operation, ...]], ...
 ]:
-    """Expose reachable operations for every mode and source plan variant."""
-    sources = (NONCANONICAL_MARKETPLACE_SOURCE, CANONICAL_MARKETPLACE_SOURCE)
+    """Expose reachable operations for every mode and source plan variant.
+
+    The persistent variants are an absent registration, which the plan adds,
+    and the canonical source, which it refreshes.
+    """
+    sources: tuple[str | None, ...] = (None, CANONICAL_MARKETPLACE_SOURCE)
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         domains = []
@@ -2925,7 +3008,7 @@ def _observe_installation_run(
     runner: UnpublishedPluginRunner | DesignatedFailureRunner,
     *,
     isolated: bool,
-    source: str = CANONICAL_MARKETPLACE_SOURCE,
+    source: str | None = CANONICAL_MARKETPLACE_SOURCE,
 ) -> UnpublishedPluginObservation:
     """Execute one installation plan of the selected mode through `runner`."""
     with TemporaryDirectory() as temporary_directory:
@@ -2972,7 +3055,7 @@ def observe_designated_failure(
     operation: Operation,
     stderr: str,
     plugin: str | None = None,
-    source: str = CANONICAL_MARKETPLACE_SOURCE,
+    source: str | None = CANONICAL_MARKETPLACE_SOURCE,
 ) -> UnpublishedPluginObservation:
     """Run one installation in which the designated command fails with `stderr`."""
     return _observe_installation_run(
