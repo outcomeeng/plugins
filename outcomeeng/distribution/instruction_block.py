@@ -327,10 +327,6 @@ WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
         "reconcile every known handle before another process sequence, an operator question, merge or publication, or turn end",
     ),
     (
-        "visible ready result",
-        "collected output visibly carries the waiter's terminal JSON with `ready: true`",
-    ),
-    (
         "abandoned process termination",
         "interrupt that process and collect its terminal result",
     ),

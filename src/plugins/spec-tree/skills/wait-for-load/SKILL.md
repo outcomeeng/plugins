@@ -6,7 +6,7 @@ allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/wait_for_load.py")
 ---
 
 <objective>
-One terminal host-readiness result, produced by one silent foreground process chained ahead of the resource-intensive command it guards, so that command starts only on the waiter's zero exit.
+One terminal host-readiness result, produced by one silent foreground process chained ahead of the resource-intensive command it guards.
 </objective>
 
 <workflow>
@@ -39,7 +39,12 @@ The waiter accepts no arguments. It reads the host's 1-, 5-, and 15-minute load 
 
 It emits nothing while waiting, and one invocation owns the whole attempt, bounded at four hours. A first observation with all three normalized averages at or below capacity starts the guarded command at once. Otherwise the waiter sleeps a load-derived interval of at least sixty seconds and rechecks; on its first ready observation it sleeps a settle delay equal to the elapsed wait modulo 180 seconds, observes once more, and starts only when that observation is still at or below capacity and its one-minute load has not risen past its five-minute load by more than half a core. A rising one-minute load means other work just started, so the waiter returns to its loop. Waiters that began waiting at different moments on one host therefore start at different moments, and a load dip does not release them together.
 
-Immediately before exit it writes exactly one compact JSON document to standard error containing the initial and final observations, readiness, terminal status, wait-cycle count, and elapsed wait, plus an `error` object carrying the type and message on an `error`, `unsupported`, or `interrupted` result. It stores no intermediate observation history.
+Immediately before exit it writes exactly one compact JSON document to standard error containing the initial and final observations, readiness, terminal status, wait-cycle count, and elapsed wait, plus an `error` object carrying the type and message on an `error`, `unsupported`, or `interrupted` result. It stores no intermediate observation history. A ready result after one wait and a settle delay reads, with its keys sorted:
+
+```json
+{ "final": { "cpu_count": 12, "load": [6.7, 4.5, 4.9], "normalized": [0.558, 0.375, 0.408] }, "initial": { "cpu_count": 12, "load": [14.2, 11.8, 9.6], "normalized": [1.183, 0.983, 0.8] }, "ready": true, "status": "ready", "wait_cycles": 1, "waited_seconds": 120.0 }
+```
+
 </input_output>
 
 <dependencies>

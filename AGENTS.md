@@ -112,7 +112,7 @@ A resource-intensive command is a test suite, an eval, a full gate, a compiling 
 **ALWAYS** let the waiter's zero exit start the selected command unchanged; a lost or truncated result re-runs the same line.
 **NEVER** use host load to reduce scope, workers, limits, deadlines, or verification.
 
-**Codex process lifecycle.** The chained line is one `functions.exec` call. Every nested `exec_command` that returns a `session_id` creates an owned process handle. Record it immediately, collect it with `write_stdin` until an `exit_code` is observed, and reconcile every known handle before another process sequence, an operator question, merge or publication, or turn end. Readiness is established only when the collected output visibly carries the waiter's terminal JSON with `ready: true` ahead of the command's own output. If the work is abandoned, interrupt that process and collect its terminal result. Error output or sufficient-looking partial output never closes the handle and never permits leaving its background terminal dangling.
+**Codex process lifecycle.** The chained line is one `functions.exec` call. Every nested `exec_command` that returns a `session_id` creates an owned process handle. Record it immediately, collect it with `write_stdin` until an `exit_code` is observed, and reconcile every known handle before another process sequence, an operator question, merge or publication, or turn end. If the work is abandoned, interrupt that process and collect its terminal result. Error output or sufficient-looking partial output never closes the handle and never permits leaving its background terminal dangling.
 
 ### When shipping work to the default branch -> `/merge` (transport dispatcher)
 
