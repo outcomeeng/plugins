@@ -151,7 +151,7 @@ install-marketplace *install_args:
 
 # Verify installation with real agent CLIs in disposable homes
 verify-marketplace-installation:
-    just test spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/tests
+    just test spx/32-distribution.enabler/21-installation.enabler
 
 # Capture one native child-execution record for every centrally configured profile
 verify-native-profile-execution artifact_directory *args:

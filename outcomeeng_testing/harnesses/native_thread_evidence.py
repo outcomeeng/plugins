@@ -34,7 +34,7 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 _EVIDENCE_SEED: Final = 20260912
 _EVIDENCE_REPLAY: Final = (
     "just test spx/32-distribution.enabler/21-installation.enabler/"
-    "21-repository-installation.enabler/tests/test_native_profile_execution.compliance.l1.py"
+    "32-native-subagent-execution.enabler/tests/test_native_profile_execution.compliance.l1.py"
 )
 
 

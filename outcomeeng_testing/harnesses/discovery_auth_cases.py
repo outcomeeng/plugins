@@ -19,7 +19,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.installation import (
-    CODEX_EXEC_SUBCOMMAND,
     CODEX_EXECUTABLE,
     CODEX_HOME_ENV,
     HOME_ENV,
@@ -30,12 +29,8 @@ from outcomeeng.validation.ci_gate import (
     JUST_BINARY,
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
-    CI_ENVIRONMENT,
-    CODEX_LOGIN_SUBCOMMAND,
-    SAVED_LOGIN_ACCESS_TOKEN_FIELD,
-    SAVED_LOGIN_ACCOUNT_FIELD,
-    SAVED_LOGIN_API_KEY_FIELD,
-    SAVED_LOGIN_TOKENS_FIELD,
+    AuthField,
+    NativeCommand,
     AUTH_FILENAME,
     WORKSPACE_TOKEN_ENV,
     AuthenticationMode,
@@ -45,7 +40,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "discovery_auth"
 API_FIXTURE_PATH = FIXTURE_ROOT / "api.json"
-SESSION_COMMAND = (CODEX_EXECUTABLE, CODEX_EXEC_SUBCOMMAND)
+SESSION_COMMAND = (CODEX_EXECUTABLE, NativeCommand.EXEC)
 NATIVE_FAILURE_EXIT_CODE = 17
 
 
@@ -97,7 +92,7 @@ class NativeCredentialRunner:
                 argv, NATIVE_FAILURE_EXIT_CODE, "", "installation failed"
             )
         target = home / AUTH_FILENAME
-        if CODEX_LOGIN_SUBCOMMAND in argv:
+        if NativeCommand.LOGIN in argv:
             if self.fault is NativeFault.LOGIN_FAILURE:
                 return subprocess.CompletedProcess(
                     argv, NATIVE_FAILURE_EXIT_CODE, "", input_text or ""
@@ -118,9 +113,9 @@ class NativeCredentialRunner:
         target.write_text(self.refreshed, encoding="utf-8")
         if self.fault is NativeFault.SWITCH_ACCOUNT:
             document = json.loads(self.refreshed)
-            document[SAVED_LOGIN_TOKENS_FIELD][SAVED_LOGIN_ACCOUNT_FIELD] += "-other"
+            document[AuthField.TOKENS][AuthField.ACCOUNT_ID] += "-other"
             target.write_text(json.dumps(document), encoding="utf-8")
-        echo = " ".join(json.loads(self.refreshed)[SAVED_LOGIN_TOKENS_FIELD].values())
+        echo = " ".join(json.loads(self.refreshed)[AuthField.TOKENS].values())
         if self.fault is NativeFault.TIMEOUT:
             raise subprocess.TimeoutExpired(
                 argv, timeout, output=echo.encode(), stderr=echo.encode()
@@ -164,8 +159,8 @@ def authentication_case(
             CODEX_HOME_ENV: str(selected_home),
             DISCOVERY_AUTH_MODE_ENVIRONMENT: mode.value,
             CODEX_API_KEY_ENVIRONMENT: api,
-            WORKSPACE_TOKEN_ENV: json.loads(initial)[SAVED_LOGIN_TOKENS_FIELD][
-                SAVED_LOGIN_ACCESS_TOKEN_FIELD
+            WORKSPACE_TOKEN_ENV: json.loads(initial)[AuthField.TOKENS][
+                AuthField.ACCESS_TOKEN
             ],
         }
         if not explicit_mode:

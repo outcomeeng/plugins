@@ -238,16 +238,6 @@ class CatalogSubsetPlanObservation:
 
 
 @dataclass(frozen=True)
-class PersistentCliObservation:
-    """Exit status and streams from one controlled persistent CLI run."""
-
-    exit_code: int
-    attempted: tuple[InstallationCommand, ...]
-    stdout: str
-    stderr: str
-
-
-@dataclass(frozen=True)
 class FailureObservation:
     """Public CLI streams and command prefix from one terminal failure."""
 
@@ -332,9 +322,7 @@ class PluginLifecycleHarness:
     plugin_name: str
 
     @classmethod
-    def create(
-        cls, root: Path, *, plugin_name: str = "fixture-plugin"
-    ) -> PluginLifecycleHarness:
+    def create(cls, root: Path, *, plugin_name: str) -> PluginLifecycleHarness:
         harness = cls(root=root, plugin_name=plugin_name)
         harness._materialize_script()
         return harness
@@ -537,23 +525,6 @@ class PluginListing:
 
     installed: frozenset[str]
     enabled: frozenset[str]
-
-
-@dataclass(frozen=True)
-class RealFirstInstallObservation:
-    """Real agent-CLI observations from one empty persistent installation."""
-
-    initial_state: tuple[tuple[str, bytes], ...]
-    initial_project_settings: bytes | None
-    exit_code: int
-    stdout: str
-    stderr: str
-    claude_listing_exit_code: int
-    claude_listing_stderr: str
-    claude_plugins: PluginListing | None
-    codex_listing_exit_code: int
-    codex_listing_stderr: str
-    codex_plugins: PluginListing | None
 
 
 @dataclass(frozen=True)
@@ -1290,32 +1261,6 @@ def observe_persistent_catalog_subset_plans() -> tuple[
     return tuple(observations)
 
 
-def observe_first_persistent_cli() -> PersistentCliObservation:
-    """Run the public persistent CLI against empty controlled agent inventories."""
-    checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
-        environment = _persistent_environment(temporary_root)
-        runner = RecordingRunner(installed={agent: frozenset() for agent in Agent})
-        stdout = StringIO()
-        stderr = StringIO()
-        with redirect_stdout(stdout), redirect_stderr(stderr):
-            exit_code = main(
-                (CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION),
-                base_environment=environment,
-                runner=runner,
-            )
-    return PersistentCliObservation(
-        exit_code=exit_code,
-        attempted=tuple(runner.calls),
-        stdout=stdout.getvalue(),
-        stderr=stderr.getvalue(),
-    )
-
-
 def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
     """Install selected-home agents, then remove one from the desired catalog set."""
     checkout = repository_root()
@@ -1706,140 +1651,6 @@ def observe_planned_operations() -> tuple[Operation, ...]:
     )
 
 
-@dataclass(frozen=True)
-class RestoreObservation:
-    """Settings bytes around a persistent run scripted to fail partway."""
-
-    settings_before: bytes
-    settings_after: bytes
-    failed_operation: Operation
-    attempted: tuple[InstallationCommand, ...]
-    failure: InstallationFailure | None
-
-
-@dataclass
-class SettingsMutatingRunner:
-    """Runner that writes plugin state like the agent CLI, then fails one command.
-
-    `/test` Stage 5 exception 1: a real mid-plan CLI failure after earlier
-    commands have already mutated the settings document cannot be produced
-    reliably against the real agent, and that partial-mutation state is
-    exactly what the restore has to undo.
-    """
-
-    settings: Path
-    failed_operation: Operation | None = None
-    failed_occurrence: int = 1
-    calls: list[InstallationCommand] = field(default_factory=list)
-    _seen: int = 0
-
-    def __call__(self, command: InstallationCommand) -> CommandResult:
-        self.calls.append(command)
-        if command.agent is Agent.CLAUDE and command.plugin is not None:
-            document = self._document()
-            enabled = cast(
-                "dict[str, object]",
-                document.setdefault(CLAUDE_ENABLED_PLUGINS_FIELD, {}),
-            )
-            enabled[marketplace_plugin_identifier(command.plugin)] = True
-            self._write(document)
-        if (
-            command.agent is Agent.CLAUDE
-            and command.operation is Operation.MARKETPLACE_ADD
-        ):
-            document = self._document()
-            document[EXTRA_MARKETPLACES_FIELD] = claude_marketplace_settings(
-                CANONICAL_MARKETPLACE_SOURCE
-            )[EXTRA_MARKETPLACES_FIELD]
-            self._write(document)
-        if command.operation is self.failed_operation:
-            self._seen += 1
-            if self._seen == self.failed_occurrence:
-                return CommandResult(command.argv, 1, "", command.operation.value)
-        stdout = _successful_command_payload(command, None)
-        return CommandResult(command.argv, 0, stdout, "")
-
-    def _document(self) -> dict[str, object]:
-        return _settings_json(self.settings)
-
-    def _write(self, document: dict[str, object]) -> None:
-        self.settings.write_text(
-            json.dumps(document, indent=2) + "\n",
-            encoding="utf-8",
-        )
-
-
-@dataclass(frozen=True)
-class ReconciliationObservation:
-    """Selection and marketplace source around a reconciling persistent run."""
-
-    selection_before: object
-    selection_after: object
-    marketplace_before: object
-    marketplace_after: object
-    canonical_marketplace: object
-    source_action: SourceAction
-
-
-def observe_missing_registration_reconciliation() -> ReconciliationObservation:
-    """Run the persistent path from a checkout declaring no marketplace source."""
-    checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        mirror_installation_inputs(checkout, mirror)
-        settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
-        _copy_committed_project_settings(checkout, settings)
-        document = _settings_json(settings)
-        document.pop(EXTRA_MARKETPLACES_FIELD, None)
-        settings.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
-        before = _settings_json(settings)
-        environment = _persistent_environment(temporary_root)
-        preflight = build_persistent_preflight(mirror, environment)
-        execute_persistent_installation(
-            mirror,
-            environment,
-            SettingsMutatingRunner(settings=settings),
-        )
-        after = _settings_json(settings)
-    return ReconciliationObservation(
-        selection_before=before.get(CLAUDE_ENABLED_PLUGINS_FIELD),
-        selection_after=after.get(CLAUDE_ENABLED_PLUGINS_FIELD),
-        marketplace_before=before.get(EXTRA_MARKETPLACES_FIELD),
-        marketplace_after=after.get(EXTRA_MARKETPLACES_FIELD),
-        canonical_marketplace=claude_marketplace_settings(CANONICAL_MARKETPLACE_SOURCE)[
-            EXTRA_MARKETPLACES_FIELD
-        ],
-        source_action=preflight.claude_source_action,
-    )
-
-
-def observe_failed_run_restore(operation: Operation) -> RestoreObservation:
-    """Fail a persistent run midway after it has already mutated settings."""
-    checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        mirror_installation_inputs(checkout, mirror)
-        settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
-        _copy_committed_project_settings(checkout, settings)
-        environment = _persistent_environment(temporary_root)
-        before = settings.read_bytes()
-        runner = SettingsMutatingRunner(settings=settings, failed_operation=operation)
-        failure: InstallationFailure | None = None
-        try:
-            execute_persistent_installation(mirror, environment, runner)
-        except InstallationFailure as raised:
-            failure = raised
-        return RestoreObservation(
-            settings_before=before,
-            settings_after=settings.read_bytes(),
-            failed_operation=operation,
-            attempted=tuple(runner.calls),
-            failure=failure,
-        )
-
-
 def observe_inspection_failure() -> FailureObservation:
     """Fail the persistent preflight's marketplace inspection before any plan."""
     checkout = repository_root()
@@ -2007,51 +1818,6 @@ def observe_verification_recipe() -> VerificationRecipeObservation:
 
 
 @cache
-def observe_real_first_install() -> RealFirstInstallObservation:
-    """Run persistent installation in empty selected homes with real agent CLIs."""
-    checkout = repository_root()
-    _require_binaries(REQUIRED_BINARIES)
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        selected_root = temporary_root / "selected-agent-state"
-        mirror_installation_inputs(checkout, mirror)
-        _copy_committed_project_settings(
-            checkout, mirror / CLAUDE_PROJECT_SETTINGS_PATH
-        )
-        environment = _persistent_environment(selected_root)
-        _prepare_agent_state(environment)
-        initial_state = _tree_snapshot(selected_root)
-        project_settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
-        initial_project_settings = (
-            project_settings.read_bytes() if project_settings.exists() else None
-        )
-        installation = _run_persistent_recipe(checkout, mirror, environment)
-        claude_listing = _run_listing_unchecked(Agent.CLAUDE, mirror, environment)
-        codex_listing = _run_listing_unchecked(Agent.CODEX, mirror, environment)
-    return RealFirstInstallObservation(
-        initial_state=initial_state,
-        initial_project_settings=initial_project_settings,
-        exit_code=installation.returncode,
-        stdout=installation.stdout,
-        stderr=installation.stderr,
-        claude_listing_exit_code=claude_listing.returncode,
-        claude_listing_stderr=claude_listing.stderr,
-        claude_plugins=(
-            _listed_plugins(Agent.CLAUDE, claude_listing.stdout)
-            if claude_listing.returncode == 0
-            else None
-        ),
-        codex_listing_exit_code=codex_listing.returncode,
-        codex_listing_stderr=codex_listing.stderr,
-        codex_plugins=(
-            _listed_plugins(Agent.CODEX, codex_listing.stdout)
-            if codex_listing.returncode == 0
-            else None
-        ),
-    )
-
-
 @dataclass(frozen=True)
 class RealRecordRefreshObservation:
     """A real persistent run over records in the invocation checkout and a second one.
@@ -3014,7 +2780,6 @@ __all__ = [
     "PluginLifecycleHarness",
     "PluginLifecycleRun",
     "DesignatedFailureRunner",
-    "RealFirstInstallObservation",
     "RealInstallationObservation",
     "RecordingRunner",
     "ScopeSplitClassification",
@@ -3032,7 +2797,6 @@ __all__ = [
     "observe_codex_subagent_discovery",
     "observe_designated_failure",
     "observe_first_failure",
-    "observe_failed_run_restore",
     "observe_failure_operation_domains",
     "observe_inspection_failure",
     "observe_invalid_isolated_selection",
@@ -3047,7 +2811,6 @@ __all__ = [
     "observe_noncanonical_registry_plan",
     "RecordRefreshObservation",
     "observe_planned_operations",
-    "observe_real_first_install",
     "observe_real_installation",
     "observe_real_record_refresh",
     "observe_repository_plan",

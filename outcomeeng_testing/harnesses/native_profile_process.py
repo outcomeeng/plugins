@@ -26,15 +26,15 @@ class NativeProfileProcessObservation:
     child: ControlledChild
     result: subprocess.CompletedProcess[str] | subprocess.TimeoutExpired
     elapsed_seconds: float
+    output: bytes | None = None
 
 
 @contextmanager
-def lingering_native_profile_process(
-    *, output: bytes = b"done"
-) -> Iterator[NativeProfileProcessObservation]:
+def lingering_native_profile_process() -> Iterator[NativeProfileProcessObservation]:
     """Run a real child and keep its process-state handle live for assertions."""
+    output = bytes(range(256))
     with child_exiting_with_lingering_descendant(output=output) as child:
-        yield _observe(child)
+        yield _observe(child, output=output)
 
 
 @contextmanager
@@ -49,7 +49,9 @@ def waiting_native_profile_process() -> Iterator[NativeProfileProcessObservation
         )
 
 
-def _observe(child: ControlledChild) -> NativeProfileProcessObservation:
+def _observe(
+    child: ControlledChild, *, output: bytes | None = None
+) -> NativeProfileProcessObservation:
     started = time.monotonic()
     outcome: subprocess.CompletedProcess[str] | subprocess.TimeoutExpired
     try:
@@ -66,4 +68,5 @@ def _observe(child: ControlledChild) -> NativeProfileProcessObservation:
         child=child,
         result=outcome,
         elapsed_seconds=time.monotonic() - started,
+        output=output,
     )

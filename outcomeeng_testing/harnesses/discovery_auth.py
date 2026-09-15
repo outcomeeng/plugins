@@ -79,6 +79,24 @@ CREDENTIAL_ENVIRONMENTS = frozenset(
 )
 
 
+class AuthField(StrEnum):
+    """Native saved-login document vocabulary."""
+
+    TOKENS = "tokens"
+    ACCOUNT_ID = "account_id"
+    ACCESS_TOKEN = "access_token"
+    REFRESH_TOKEN = "refresh_token"
+    ID_TOKEN = "id_token"
+
+
+class NativeCommand(StrEnum):
+    """Native authentication and session command vocabulary."""
+
+    LOGIN = "login"
+    LOGOUT = "logout"
+    EXEC = "exec"
+
+
 class AuthenticationMode(StrEnum):
     SUBSCRIPTION = "subscription"
     API = "api"
@@ -146,7 +164,7 @@ class CredentialRedactor:
             key = document.get(SAVED_LOGIN_API_KEY_FIELD)
             if isinstance(key, str):
                 self.add(key)
-            tokens = document.get(SAVED_LOGIN_TOKENS_FIELD)
+            tokens = document.get(AuthField.TOKENS)
             if isinstance(tokens, dict):
                 for value in tokens.values():
                     if isinstance(value, str):
@@ -314,15 +332,20 @@ class DiscoveryAuthentication:
             raise DiscoveryAuthenticationError(
                 "Subscription discovery requires a ChatGPT saved login."
             )
-        tokens = document.get(SAVED_LOGIN_TOKENS_FIELD)
+        tokens = document.get(AuthField.TOKENS)
         if not isinstance(tokens, dict) or not all(
             isinstance(tokens.get(name), str) and tokens[name]
-            for name in SAVED_LOGIN_TOKEN_FIELDS
+            for name in (
+                AuthField.ACCESS_TOKEN,
+                AuthField.REFRESH_TOKEN,
+                AuthField.ID_TOKEN,
+                AuthField.ACCOUNT_ID,
+            )
         ):
             raise DiscoveryAuthenticationError(
                 "Saved ChatGPT login lacks required tokens or account identity."
             )
-        return str(tokens[SAVED_LOGIN_ACCOUNT_FIELD])
+        return str(tokens[AuthField.ACCOUNT_ID])
 
     def _check_write_through(self, *, cwd: Path, env: Mapping[str, str]) -> None:
         with TemporaryDirectory() as directory:
@@ -341,7 +364,7 @@ class DiscoveryAuthentication:
                 (
                     CODEX_EXECUTABLE,
                     *FILE_STORE_ARGS,
-                    CODEX_LOGIN_SUBCOMMAND,
+                    NativeCommand.LOGIN,
                     API_LOGIN_FLAG,
                 ),
                 cwd=cwd,
@@ -379,7 +402,7 @@ class DiscoveryAuthentication:
                 else WORKSPACE_LOGIN_FLAG
             )
             result = self.run(
-                (CODEX_EXECUTABLE, *FILE_STORE_ARGS, CODEX_LOGIN_SUBCOMMAND, flag),
+                (CODEX_EXECUTABLE, *FILE_STORE_ARGS, NativeCommand.LOGIN, flag),
                 cwd=cwd,
                 env=env,
                 input_text=self.selection.credential,

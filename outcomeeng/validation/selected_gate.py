@@ -72,8 +72,8 @@ REACHED_TESTS_REASON: Final = "tests reaching changed test infrastructure"
 LIVE_DISCOVERY_MARKER: Final = "live_subagent_discovery"
 LIVE_DISCOVERY_TEST_PATH: Final = (
     "spx/32-distribution.enabler/21-installation.enabler/"
-    "21-repository-installation.enabler/tests/"
-    "test_repository_installation.scenario.l3.py"
+    "32-native-subagent-execution.enabler/tests/"
+    "test_native_subagent_execution.scenario.l3.py"
 )
 LIVE_DISCOVERY_TEST: Final = (
     f"{LIVE_DISCOVERY_TEST_PATH}::"
@@ -217,7 +217,7 @@ LIVE_DISCOVERY_PATTERNS: Final = (
     ".claude-plugin/**",
     "src/plugins/*/.codex-plugin/**",
     "src/plugins/*/.claude-plugin/**",
-    "spx/12-marketplace-state.adr.md",
+    "spx/12-agent-delivery.pdr.md",
     "spx/15-agent-terminology.pdr.md",
     "spx/32-distribution.enabler/21-installation.enabler/**",
     "spx/18-plugin-build.enabler/**",

@@ -12,10 +12,13 @@ from outcomeeng_testing.harnesses.native_profile_process import (
 
 
 def test_parent_exit_decodes_output_and_terminates_descendant() -> None:
-    with lingering_native_profile_process(output=b"done\xff") as observation:
+    with lingering_native_profile_process() as observation:
         assert isinstance(observation.result, subprocess.CompletedProcess)
         assert observation.result.returncode == 0
-        assert observation.result.stdout == "done\ufffd"
+        assert observation.output is not None
+        assert observation.result.stdout == observation.output.decode(
+            "utf-8", errors="replace"
+        )
         assert observation.child.pid_path.is_file()
         assert observation.elapsed_seconds < PROMPT_RETURN_CEILING_SECONDS
         assert not observation.child.descendant_alive()
