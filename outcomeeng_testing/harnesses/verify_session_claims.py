@@ -757,7 +757,7 @@ def rejected_repository_observations(
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 exit_code = module.main([generated_token(), "--repo", str(path)])
         except SystemExit as exc:
-            exit_code = int(exc.code)
+            exit_code = exc.code if isinstance(exc.code, int) else 1
         observations.append(
             RejectedRepositoryObservation(
                 path=path,
