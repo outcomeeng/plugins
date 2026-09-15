@@ -2,7 +2,7 @@
 
 PROVIDES the read-only reconciliation of a session document's recorded claims against current repository and external state, resolving each claim to exactly one of `Confirmed`, `Discrepancy`, or `Unverifiable`
 SO THAT the resumption flow
-CAN present observed state in place of a recorded snapshot the base, the working tree, or an external system has since moved past
+CAN present observed state in place of a recorded snapshot that differs from it
 
 ## Assertions
 
