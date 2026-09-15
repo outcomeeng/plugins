@@ -1,19 +1,22 @@
 ---
 name: audit-change
+user-invocable: false
 description: >-
   Change record audit methodology — judges one local Change against shared
   record standards at its declared maturity and records the complete judgment
   through SPX file-scoped verification.
-argument-hint: "<repository-relative-local-change-path>"
+argument-hint: "<JSON object with path and runDriver>"
 allowed-tools: Read, Glob, Grep, Skill, Bash(git rev-parse:*), Bash(spx --version), Bash(spx verification run:*), Bash(printf:*)
 ---
 
 <objective>
 
-An SPX run token and rendered projection for one complete local Change,
-with a judgment against every shared record rule at the candidate's declared
-maturity. A concrete prerequisite or command failure returns its complete
-`BLOCKED` diagnostic.
+A verdict on one complete local Change against `change-standards` at its
+declared maturity: `approved`, or `rejected` with each finding naming the
+artifact, violated rule, and observed-versus-expected evidence. Findings are
+classified as `blocking` or `debt` and attributed to their shared record rule.
+The SPX run token and rendered projection carry that verdict. A concrete
+prerequisite or command failure returns its complete `BLOCKED` diagnostic.
 
 </objective>
 
@@ -34,18 +37,20 @@ maturity. A concrete prerequisite or command failure returns its complete
 
 <request_contract>
 
-Capture `$ARGUMENTS` as exactly one normalized repository-relative path. Resolve
-the repository root with `git rev-parse --show-toplevel`. Require a file inside
-that root; reject an absolute path, parent traversal, ambiguous target, or a
-symbolic link that escapes it. A draft may be untracked or ignored. The caller
-passes only the path, with no authoring history or suggested verdict.
-
-The invocation context supplies the run-driver identity separately through
+Parse `$ARGUMENTS` as a JSON object with exactly two inputs: `path`, one
+normalized repository-relative local file path, and `runDriver`, an object with
 the six published producer fields: `producerKind`, `agentName`,
 `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and
-`invocationRole`. Accept a supplied identity generically; never infer it from
-the selector or invent a calling role. Missing target or identity returns
-`BLOCKED`, `runToken: not-started`, and the exact missing input.
+`invocationRole`. These explicit data inputs are the same for direct and
+composed execution. Never read identity from hidden invocation context, detect
+who invoked the skill, or choose behavior by that identity. Missing input
+returns `BLOCKED`, `runToken: not-started`, and the exact absent field.
+
+Resolve the repository root with `git rev-parse --show-toplevel`. Require the
+selected file inside that root; reject an absolute path, parent traversal,
+ambiguous target, or a symbolic link that escapes it. A draft may be untracked
+or ignored. Treat the supplied identity as provenance data, never authorization
+or a suggested verdict.
 
 Resolve the agent-owning and skill-owning plugin versions from their installed
 manifests. An unavailable required provenance value is a named prerequisite
@@ -205,12 +210,34 @@ rewrite the payload to evade validation, or manufacture a terminal result.
 
 <verdict_format>
 
-Return only the exact run token and SPX rendered projection. If blocked before
-that result, return `BLOCKED`, the run token or `not-started`, and the exact
-absent prerequisite or missing input. For any failed preparation or SPX command,
-include the exact command, payload source, payload key (or `none`), exit code,
-and stderr. Preserve already-recorded evidence; do not publish a replacement
-verdict or write findings into the Change.
+Return only the exact run token and the unmodified SPX rendered projection.
+The projection is the structured verdict; never wrap it in a second verdict or
+replace its field names. Its contract is:
+
+| Field             | Required meaning                                                                        |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| `runToken`        | Exact token returned by start and used throughout this audit.                           |
+| `sealed`          | `true` for a completed verdict.                                                         |
+| `terminalStatus`  | Overall determination: `approved` or `rejected`, derived under step 7.                  |
+| `findingCount`    | Number of accepted finding records. Zero is necessary for approval.                     |
+| `driveMode`       | SPX's recorded execution mode, preserved unchanged.                                     |
+| `nextActions`     | SPX's allowed next actions; an empty array for the sealed run.                          |
+| `auditScopeUnits` | Accepted root and per-rule units using every field in the scope payload schema above.   |
+| `events`          | Unmodified recorded events, including accepted finding payloads and the terminal event. |
+
+Each accepted finding payload names its `unitId`, six-field `producerIdentity`,
+`producerProvenance`, violated `rule`, `severity` (`blocking` or `debt`),
+`location`, `message`, and `evidence.observed` / `evidence.expected`.
+The child unit's `priorContext.concernPartition` attributes each finding to the
+shared record rule judged; the rule inventory supplies the finding groups.
+Keep any additional SPX fields unchanged. Both finding severities reject the
+run; required uncovered units also prevent approval.
+
+If blocked before a completed verdict, return `BLOCKED`, the run token or
+`not-started`, and the exact absent prerequisite or missing input. For any
+failed preparation or SPX command, include the exact command, payload source,
+payload key (or `none`), exit code, and stderr. Preserve already-recorded
+evidence; do not publish a replacement verdict or write findings into the Change.
 
 </verdict_format>
 
@@ -220,7 +247,7 @@ verdict or write findings into the Change.
 - Every shared rule has a reconciled judgment at the declared maturity, with concrete evidence for every finding.
 - The candidate is unchanged at completion, and SPX accepts the serial coverage, finding, and terminal writes.
 - The final output is the authoritative token and rendered projection, or the complete blocked diagnostic.
-- No candidate, store, claim, product artifact, or knowledge bundle was modified by the audit.
+- No candidate, Change store, claim, product artifact, or knowledge bundle was modified; only the SPX verification-run store received the required audit writes.
 
 </success_criteria>
 

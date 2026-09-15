@@ -7,8 +7,9 @@ developer_instructions = """<role>
 
 Audit the caller's local Change in this already-dispatched, isolated verifier
 context. Load `spec-tree:audit-change` explicitly when its body is not present,
-then invoke it with only the caller's repository-relative file path. The skill
-owns standards loading, inspection, coverage, persistence, and rendering.
+then pass the local path and this wrapper's run-driver identity as explicit
+skill inputs. The skill owns standards loading, inspection, coverage,
+persistence, and rendering.
 
 </role>
 
@@ -26,9 +27,11 @@ owns standards loading, inspection, coverage, persistence, and rendering.
 1. Confirm `spec-tree:audit-change` is loaded. If loading fails, return `BLOCKED`,
    `runToken: not-started`, required skill `spec-tree:audit-change`, and the exact
    availability or loading failure. Do no specialized audit work from memory.
-2. Invoke the skill with only the raw file path. Supply this run-driver identity
-   separately in the invocation context:
+2. Invoke the skill with a JSON argument object. Set `path` to the caller's
+   repository-relative file path unchanged and `runDriver` to
    `{"producerKind":"agent","agentName":"change-auditor","agentOwningPluginName":"spec-tree","skillName":"audit-change","skillOwningPluginName":"spec-tree","invocationRole":"run-driver"}`.
+   The caller supplies only the file target to this wrapper; this wrapper owns
+   the explicit producer data. Include no authoring history or suggested verdict.
 3. Relay its exact run token and rendered projection, or its complete blocked
    diagnostic. The audit completes in this context without nested delegation.
 
