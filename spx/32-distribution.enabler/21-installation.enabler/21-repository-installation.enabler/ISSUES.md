@@ -2,37 +2,6 @@
 
 Known defects in the repository-installation evidence. Each entry names the artifact, the observed failure, and the smallest unit of work that resolves it.
 
-## Lifecycle evidence constructs its own definition and ownership payloads
-
-The test-evidence audit for Change #39 rejected
-`tests/test_repository_installation.compliance.l1.py` because
-`test_plugin_lifecycle_places_owned_definitions_and_is_idempotent` constructs
-agent-definition bytes and the expected ownership document inside the test.
-Other lifecycle tests in the same file construct similar payloads, filesystem
-arrangements, and race callbacks. The shared test-evidence and Python test
-standards require independently sourced cases, source-owned vocabulary, and
-harness-owned resource setup while retaining predicates in linked tests.
-
-**Evidence.** The isolated audit returned `REJECTED`, finding `f-001`, against
-`f1358c4324eaef89ade99d8d41b42940ed881121`. The complete cited test file has no
-diff against `origin/main` at
-`455234ef0aa1b6669536b2341cb4a29a600dc361`. The audit stopped at this finding;
-it supplies no approval of the node's remaining evidence. The final audit for
-PR #571 reproduced the same `f-001` source-ownership finding against
-`e58f52f1bcb25d2a7e9fabb79f70f33f4dfc46b0`; the cited test file remains
-outside that changeset's diff.
-
-**Disposition.** Recorded under the merge policy's rule for an audit subject
-outside the changeset. Repair requires a case-provenance and resource-ownership
-pass over the lifecycle evidence, preserving its collision, pruning, race, and
-idempotency predicates. Moving invented payloads into another module alone does
-not resolve their provenance.
-
-**Revisit condition.** Before relying on this node's evidence-audit approval, or
-when changing its lifecycle test cases. Change #39 retains the failed verdict
-and records that integration before the required gates passed was an execution
-error; the operator granted no waiver of merge prerequisites.
-
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
 `test_real_agent_clis_map_full_and_generated_subsets` can fail at the `marketplace-refresh` operation. `codex plugin marketplace upgrade outcomeeng --json` then exits 1 with:
