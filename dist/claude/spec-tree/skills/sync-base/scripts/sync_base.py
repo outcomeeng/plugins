@@ -742,7 +742,7 @@ def _sync_detached(
 
     # precondition: advancing a worktree over uncommitted tracked changes would
     # clobber them, so a dirty tree blocks the advance just as it blocks a rebase
-    dirty = _git(repo, "status", "--porcelain", "--untracked-files=no")
+    dirty = _dirty_tree(repo)
     if dirty.returncode != 0:
         return SyncBaseResult(
             SyncStatus.GIT_FAILURE,
