@@ -148,7 +148,7 @@ fifty-line version.
 
 ## Cross-plugin agent-home cleanup is reachable only through the maintainers' installer
 
-`spx/12-marketplace-state.adr.md` separates a plugin's namespace-bounded
+`spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md` separates a plugin's namespace-bounded
 placement from marketplace-scope reconciliation — the pass that prunes
 definitions of plugins later removed or renamed from the catalog under the
 marketplace's recorded ownership. The shipped `place_agents.py` implements only

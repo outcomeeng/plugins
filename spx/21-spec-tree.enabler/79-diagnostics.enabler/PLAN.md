@@ -1,6 +1,6 @@
 # Plan
 
-Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownership).
+Governing decision: `spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md` (marketplace state ownership).
 
 Decision and spec aligned: `spx/21-spec-tree.enabler/79-diagnostics.enabler/13-diagnose-engine.adr.md`
 re-declares the diagnose contract — marketplace-install diagnosis derives expected plugin state

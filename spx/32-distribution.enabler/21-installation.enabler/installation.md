@@ -4,6 +4,8 @@ PROVIDES selection-preserving persistent marketplace installation and isolated e
 SO THAT marketplace maintainers and release automation
 CAN refresh selected Claude Code and Codex plugins without widening either installation while proving full and subset behavior safely in disposable homes
 
+Installation follows `spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md` and `spx/32-distribution.enabler/21-installation.enabler/15-installation-architecture.adr.md`. Agent delivery preserves the shared guarantees in `spx/12-agent-delivery.pdr.md`.
+
 ## Assertions
 
 - For each supported agent, isolated installation selects the complete committed catalog in catalog order, and persistent refresh selects the catalog-bounded members that agent reports installed in the invocation checkout or selected home, disabled entries included, in catalog order: an empty inventory bootstraps `spec-tree` alone, a nonempty Claude Code inventory is refreshed through native updates rather than installs, and a Codex inventory is refreshed through its native plugin operations. ([test](tests/test_installation.mapping.l1.py))

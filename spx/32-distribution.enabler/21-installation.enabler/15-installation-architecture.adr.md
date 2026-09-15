@@ -1,6 +1,6 @@
-# Repository Marketplace Installation Architecture
+# Installation Architecture
 
-Marketplace installation uses a Python ports-and-adapters boundary: typed observations become an immutable preflight report and plan, agent-specific adapters execute that plan through injected Protocols, and the CLI entry point binds the real subprocess runner. Persistent planning separates selected plugins, activation, registration source, and cache availability so refresh preserves the state contract in `spx/12-marketplace-state.adr.md`. Isolated planning redirects installation state into disposable homes and registers the invocation checkout.
+Marketplace installation uses a Python ports-and-adapters boundary: typed observations become an immutable preflight report and plan, agent-specific adapters execute that plan through injected Protocols, and the CLI entry point binds the real subprocess runner. Persistent planning separates selected plugins, activation, registration source, and cache availability so refresh preserves the state contract in `spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md`. Isolated planning redirects installation state into disposable homes and registers the invocation checkout.
 
 Persistent preflight reads Claude Code's complete install-record listing and the selected Codex home's raw plugin declarations, including disabled entries whose cache or marketplace snapshot is missing. From the Claude Code listing it derives two things: the invocation checkout's project- and local-scope inventory, which selects the bootstrap set, and every `outcomeeng` install record on the machine — one per plugin, scope, and project path — which the plan refreshes through the native plugin update. It validates every nonempty catalog-bounded selection contains `spec-tree`, derives empty state as the `spec-tree` bootstrap selection with a warning, and orders names through the committed catalog. Read-only activation observations retain the pre-run declarations for comparison. Registered sources, Claude Code user-scope collisions, selected subsets, and agent-definition collisions all validate before the first state-changing operation; any source mismatch rejects the whole plan with the observed source, canonical source, and explicit-repair requirement. Missing registration is a distinct state that permits native registration for bootstrap or recovery.
 
@@ -56,17 +56,17 @@ Separating declaration parsing, installed-state inspection, scope and collision 
 
 ## Verification
 
-- ALWAYS: preflight represents selection, activation, registered source, and cache availability separately in immutable typed observations, validating every selected agent before mutation.
-- ALWAYS: Codex selection derives from raw selected-home plugin declarations, including disabled and uncached entries, while Claude Code bootstrap selection derives from the invocation checkout's project- and local-scope inventory and Claude Code refresh reach derives from every install record the listing reports.
-- ALWAYS: empty selection produces only the `spec-tree` bootstrap plan, preserving declared activation and choosing disabled activation when absent; an empty Codex home declares it disabled.
-- ALWAYS: persistent native refresh and cache recovery preserve selection and activation, with post-run observation reporting drift as failure without restoring configuration snapshots.
-- ALWAYS: persistent Codex inspection and mutation execute with the selected home outside trusted product configuration discovery; the checkout remains a separate catalog and generated-definition input.
-- NEVER: persistent source mismatch emits a marketplace removal, replacement, or any other state-changing command; the complete plan stops for explicit repair.
-- ALWAYS: missing registration, snapshot, and selected plugin cache are distinct recoverable states; a retry preserves declared selection and activation even when the marketplace revision is unchanged.
-- ALWAYS: pending publication identifies established canonical-source absence, preserves that plugin's prior owned definitions, and allows only the other selected plugins' refresh to continue.
-- NEVER: trusted-product activation filters, generates, or prunes the home subagent registry; shipped plugin placement remains namespace-bounded and marketplace reconciliation remains home-selection-bound.
-
 ### Testing
+
+- ALWAYS: preflight represents selection, activation, registered source, and cache availability separately in immutable typed observations, validating every selected agent before mutation. ([compliance])
+- ALWAYS: Codex selection derives from raw selected-home plugin declarations, including disabled and uncached entries, while Claude Code bootstrap selection derives from the invocation checkout's project- and local-scope inventory and Claude Code refresh reach derives from every install record the listing reports. ([mapping])
+- ALWAYS: empty selection produces only the `spec-tree` bootstrap plan, preserving declared activation and choosing disabled activation when absent; an empty Codex home declares it disabled. ([compliance])
+- ALWAYS: persistent native refresh and cache recovery preserve selection and activation, with post-run observation reporting drift as failure without restoring configuration snapshots. ([compliance])
+- ALWAYS: persistent Codex inspection and mutation execute with the selected home outside trusted product configuration discovery; the checkout remains a separate catalog and generated-definition input. ([compliance])
+- NEVER: persistent source mismatch emits a marketplace removal, replacement, or any other state-changing command; the complete plan stops for explicit repair. ([compliance])
+- ALWAYS: missing registration, snapshot, and selected plugin cache are distinct recoverable states; a retry preserves declared selection and activation even when the marketplace revision is unchanged. ([compliance])
+- ALWAYS: pending publication identifies established canonical-source absence, preserves that plugin's prior owned definitions, and allows only the other selected plugins' refresh to continue. ([compliance])
+- NEVER: trusted-product activation filters, generates, or prunes the home subagent registry; shipped plugin placement remains namespace-bounded and marketplace reconciliation remains home-selection-bound. ([compliance])
 
 - ALWAYS: explicit authentication modes select their own required credential source and native login mechanism; local default subscription and required CI selection remain independent of credential-variable presence. ([compliance])
 - ALWAYS: subscription verification checks native credential write-through compatibility before linking only the saved-login file into disposable state. ([compliance])
@@ -86,7 +86,7 @@ Separating declaration parsing, installed-state inspection, scope and collision 
 - NEVER: placement overwrites or prunes an unrecorded destination, or a recorded destination whose current digest differs from its installed-content digest ([compliance])
 - ALWAYS: reconciliation adopts a present destination whose digest equals the desired shipped digest but which no ownership entry records by updating ownership without rewriting the definition, so a run interrupted before its ownership-record write completes cleanly when re-run ([compliance])
 - ALWAYS: a scope-split preflight reports byte-identical checkout copies as directed removals and changed or unrecognized checkout definitions as shadowing collisions, rejecting the complete plan before any mutation in either case ([compliance])
-- Given a disposable installation and an authenticated fresh session, when the session reports available subagent names, then its structured name set contains every canonical name whose definition that installation placed under the disposable home's `agents/` directory ([scenario])
+- ALWAYS: authenticated discovery from a disposable installation reports a structured name set containing every canonical name that installation placed under its home's `agents/` directory ([compliance])
 - NEVER: discovery exposes an initial or refreshed credential in a command argument, returned capture, diagnostic, or exception, or silently skips a selected check when credentials are absent ([compliance])
 
 ### Audit

@@ -19,6 +19,14 @@ owner. Ordinary prose words are not configuration assignments.
 
 ## Rationale
 
+For a target whose plugin manifest cannot declare agents, the build converts each
+authored definition once into that target's native format and ships it inside the
+plugin's declared skill surface. Consumer placement copies these native artifacts;
+it performs no second conversion. This preserves byte-identical delivery and keeps
+the definitions contractually reachable through the manifest-declared surface.
+The shipped plugin lifecycle placement script bridges packaged Codex definitions
+to the selected home's native registry under `spx/12-agent-delivery.pdr.md`.
+
 A single source plus committed `dist/` beats execution-time injection: Codex resolves bundled files through `${SKILL_DIR}` rather than `${CLAUDE_SKILL_DIR}`, so cross-skill sharing must either duplicate at the source, bake at build time, or be replaced by an "invoke this skill" instruction — build-time bake-out keeps one authored source while emitting deterministic outputs both coding agents consume natively. Jinja2 over a custom regex preprocessor because the build does fan-out, conditional frontmatter, path rewriting, and reference-tree copying that custom tooling grows into "Jinja2 but worse". Custom delimiters because standard `{% %}` collides with skill content that teaches templating. Committed `dist/` over CI-only generation because consumers install directly from HEAD and neither coding agent runs a build at install time. Build-time fan-out over execution-time `!`cat`` injection because injection inlines a multi-hundred-line file per invocation and multiplies token cost.
 
 No runtime is the source language. Authoring in one agent's tool and field names and translating only for the others privileges that agent, leaks its names into every other target as live instructions, and silently corrupts content when a name is swapped without regard to whether it was an instruction or a fact. A source-owned per-runtime registry plus a source-layer guard makes every divergent reference explicit and rendered for the reader's runtime, so a forgotten reference fails the guard — a visible, catchable error — rather than shipping a foreign tool or guide filename. Symmetric frontmatter stripping generalizes the same principle to schema differences: a field absent from a target's schema is dropped for that target, in whichever direction the asymmetry runs. Per-runtime conditional blocks carry claims whose truth differs by runtime, which name substitution alone cannot express. The guard binds only to runtime-divergent unique tokens — the `tool`, `field`, and `file` kinds; common-English-word tool names (`Read`, `Edit`, `Write`, `Glob`, `Grep`) and the `term` kind's concept terms cannot be substring-matched in prose without false positives, so the frontmatter schema and review cover them instead.
@@ -35,6 +43,9 @@ fallback participates in resolution.
 ## Verification
 
 ### Testing
+
+- ALWAYS: for a target whose plugin manifest cannot declare agents, native agent definitions ship inside the plugin's own declared skill surface ([compliance])
+- NEVER: agent-definition delivery depends on an undeclared directory surviving plugin installation ([compliance])
 
 - ALWAYS: the build renders each plugin's agent definitions into every target's native agent format, and no generated target tree carries an agent artifact that target cannot read ([compliance])
 - ALWAYS: a target whose agent namespace is flat receives agent filenames and names carrying the plugin as slug prefix, `<plugin>_<agent>`, rendering the namespaced `<plugin>:<agent>` identity; a target that namespaces plugin agents carries the bare agent name ([compliance])

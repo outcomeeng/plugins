@@ -2,7 +2,7 @@
 
 PROVIDES conversion of rendered plugin agent definitions into the Codex-native custom-agent artifacts the build publishes with each plugin
 SO THAT every Codex consumer and hosted agent environment
-CAN run one canonical marketplace role per authored agent, which a Codex plugin manifest cannot declare, per `spx/12-marketplace-state.adr.md`.
+CAN run one canonical marketplace role per authored agent, which a Codex plugin manifest cannot declare, per `spx/12-agent-delivery.pdr.md`.
 
 ## Assertions
 

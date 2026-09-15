@@ -87,7 +87,7 @@ Moving it is not a text edit. Both skills declare narrow prefix-matched grants â
 ## Agent-specific behavior is enumerated inside product-level decisions
 
 Product-level decisions carry per-agent facts inline, so adding an agent harness edits decisions
-whose subject is not that harness. `spx/12-marketplace-state.adr.md` enumerates each agent's
+whose subject is not that harness. `spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md` enumerates each agent's
 committed marketplace catalog, plugin-selection boundary, and configuration location â€” Codex's
 `.agents/plugins/marketplace.json` and caller-selected `CODEX_HOME` beside Claude Code's
 `.claude-plugin/marketplace.json` and project-scope `.claude/settings.json`. A third agent harness
@@ -103,7 +103,7 @@ rather than amending a decision. The node's location is undetermined and depends
 ownership and context-loading reach, so placement routes through `/decompose` rather than being
 chosen when the node is authored.
 
-**Evidence.** Surfaced while making `spx/12-marketplace-state.adr.md` and
+**Evidence.** Surfaced while making `spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md` and
 `spx/18-plugin-build.enabler/15-build-architecture.adr.md` capability-keyed for committed agent
 delivery. The build decision now resolves per-target agent format, filename shape, and namespace
 behavior from the source-owned per-target registry, so a new target is a registry entry; the

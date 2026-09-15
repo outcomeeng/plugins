@@ -22,4 +22,4 @@ Why separate: each plugin's skill edit carries the `skill-auditor` gate and a bu
 
 ## Relocate installation governance and split the repository-installation node
 
-Installation work is coordinated in [Change #48](https://github.com/outcomeeng/changes/issues/48), with the structural proposal received through [Change #14](https://github.com/outcomeeng/changes/issues/14). The governing declarations are `spx/12-marketplace-state.adr.md` and `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/21-installation-architecture.adr.md`.
+Installation work is coordinated in [Change #48](https://github.com/outcomeeng/changes/issues/48), with the structural proposal received through [Change #14](https://github.com/outcomeeng/changes/issues/14). The governing declarations are `spx/32-distribution.enabler/21-installation.enabler/12-installation-state.pdr.md` and `spx/32-distribution.enabler/21-installation.enabler/15-installation-architecture.adr.md`.
