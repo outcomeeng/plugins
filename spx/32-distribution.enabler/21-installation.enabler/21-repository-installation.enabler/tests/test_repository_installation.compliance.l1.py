@@ -9,7 +9,9 @@ import pytest
 
 from outcomeeng.distribution.installation import (
     Agent,
+    CLAUDE_LOCAL_SCOPE,
     CODEX_CONFIG_PATH,
+    SPEC_TREE_PLUGIN,
     Operation,
     SourceAction,
 )
@@ -47,6 +49,7 @@ from outcomeeng_testing.harnesses.installation import (
     UNOWNED_AGENT_FILENAME,
     observe_designated_failure,
     observe_interrupted_reconciliation,
+    observe_local_record_bootstrap_plan,
     observe_persistent_execution,
     ScopeSplitClassification,
     racing_digest_reader,
@@ -720,3 +723,27 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
         command.operation is Operation.PLUGIN_LIST and command.agent is Agent.CLAUDE
         for command in failure.calls
     )
+
+
+def test_a_local_scope_record_for_the_checkout_suppresses_the_bootstrap_install() -> (
+    None
+):
+    observation = observe_local_record_bootstrap_plan()
+    claude_commands = [
+        command
+        for command in observation.plan.commands
+        if command.agent is Agent.CLAUDE
+    ]
+    updates = [
+        command
+        for command in claude_commands
+        if command.operation is Operation.PLUGIN_UPDATE
+    ]
+
+    assert not any(
+        command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        for command in claude_commands
+    )
+    assert [(command.plugin, command.argv[-1], command.cwd) for command in updates] == [
+        (SPEC_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.plan.roots.checkout)
+    ]
