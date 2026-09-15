@@ -102,7 +102,9 @@ Check EVERY section for temporal language:
 
 **Step 5: Per-rule tag validity and assertion-type fit**
 
-Read each rule's placement before judging tags. A specific untagged rule directly under `## Verification` conforms to the canonical authoring form; evaluate its declaration quality without selecting evidence for it. A tagged rule must have the matching routed subsection. For each routed rule:
+Read each rule's placement before judging tags. An untagged rule directly under `## Verification` has the canonical authoring form. For every such rule, identify its subject, the condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in the `tag-validity` row, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Check each draft rule against the decision statement and governing decisions; a contradiction also produces `invalid-draft-rule`, citing both conflicting declarations. Select no evidence type or tag during these checks.
+
+A tagged rule must have the matching routed subsection. For each routed rule:
 
 1. The tag is valid for its subsection:
    - under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
@@ -165,7 +167,7 @@ The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_
 }
 ```
 
-Each finding carries `rule`, `severity: "blocking"`, `location`, `message`, `observed`, and `expected`. Native findings use `missing-target`, `missing-section`, `temporal-voice`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `language-routing-unavailable`, `language-skill-unavailable`, or `language-result-invalid`; validated composed findings retain the invoked skill's rule identifier.
+Each finding carries `rule`, `severity: "blocking"`, `location`, `message`, `observed`, and `expected`. Native findings use `missing-target`, `missing-section`, `temporal-voice`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `language-routing-unavailable`, `language-skill-unavailable`, or `language-result-invalid`; validated composed findings retain the invoked skill's rule identifier.
 
 </verdict_format>
 
