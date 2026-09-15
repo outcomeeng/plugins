@@ -4,7 +4,7 @@ from outcomeeng.distribution.installation import Operation
 from outcomeeng_testing.harnesses.installation import (
     observe_interrupted_reconciliation,
     ScopeSplitClassification,
-    RENAMED_CHECKOUT_AGENT_NAME,
+    installation_fixture,
     observe_agent_home_collision,
     observe_agent_home_reconciliation,
     observe_scope_split,
@@ -75,7 +75,7 @@ def test_scope_split_reports_exact_and_changed_copies_before_mutation() -> None:
     assert {
         entry.classification
         for entry in observation.entries
-        if entry.path.name == RENAMED_CHECKOUT_AGENT_NAME
+        if entry.path.name == installation_fixture("local_helper.toml").name
     } == {ScopeSplitClassification.SHADOWING_COLLISION}
     assert observation.attempted == ()
     assert observation.home_after == observation.home_before

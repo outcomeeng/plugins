@@ -18,11 +18,10 @@ from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
-from typing import cast
+from typing import TypedDict, cast
 
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
-    AGENT_SKILL_ENABLED_FIELD,
 )
 from outcomeeng.distribution.build import render_text
 from outcomeeng.distribution.contracts import (
@@ -83,6 +82,7 @@ from outcomeeng.distribution.installation import (
     CODEX_PLUGIN_ID_FIELD,
     CODEX_PLUGIN_MARKETPLACE_FIELD,
     CODEX_SQLITE_HOME_ENV,
+    CODEX_SOURCE_FIELD,
     CommandResult,
     HOME_ENV,
     InstallationCommand,
@@ -160,8 +160,6 @@ CODEX_CONFIG_PLUGIN_ENABLED_KEY = "enabled"
 PLUGIN_DISABLING_CODEX_CONFIG = f"[{CODEX_CONFIG_PLUGINS_TABLE}]\n{CODEX_CONFIG_PLUGIN_ENABLED_KEY} = false\n".encode()
 
 SUBAGENT_DISCOVERY_NAMES_FIELD = "subagent_names"
-RENAMED_CHECKOUT_AGENT_NAME = "local_helper.toml"
-RENAMED_CHECKOUT_SKILL_NAME = "renamed-skill"
 SUBAGENT_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "properties": {
@@ -559,6 +557,8 @@ class RealInstallationObservation:
     placed_first: tuple[tuple[str, bytes], ...]
     placed_second: tuple[tuple[str, bytes], ...]
     shipped_agents: tuple[tuple[str, bytes], ...]
+    installed_skills_first: tuple[tuple[str, Path, bytes], ...]
+    installed_skills_second: tuple[tuple[str, Path, bytes], ...]
     unowned_initial: bytes
     unowned_first: bytes
     unowned_second: bytes
@@ -1270,9 +1270,9 @@ def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         agents_root = Path(environment[CODEX_HOME_ENV]) / CODEX_HOME_AGENTS_PATH
-        foreign = agents_root / UNOWNED_AGENT_FILENAME
+        foreign = agents_root / installation_fixture("developer-owned.toml").name
         foreign.parent.mkdir(parents=True, exist_ok=True)
-        foreign.write_text(UNOWNED_AGENT_CONTENT, encoding="utf-8")
+        shutil.copyfile(installation_fixture("developer-owned.toml"), foreign)
         foreign_initial = foreign.read_bytes()
         home_initial = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
 
@@ -1384,7 +1384,7 @@ def observe_agent_home_collision() -> AgentHomeCollisionObservation:
         preflight = build_persistent_preflight(mirror, environment)
         destination = preflight.codex_agents[0].destination
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text('name = "foreign-definition"\n', encoding="utf-8")
+        shutil.copyfile(installation_fixture("developer-owned.toml"), destination)
         home_before = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
         runner = RecordingRunner()
         collisions: tuple[AgentHomeCollision, ...] = ()
@@ -1401,14 +1401,15 @@ def observe_agent_home_collision() -> AgentHomeCollisionObservation:
     )
 
 
-def skill_enabling_definition(plugin: str) -> bytes:
-    """A definition carrying no plugin filename prefix that enables one plugin skill."""
+def installation_fixture(filename: str) -> Path:
+    """Resolve a complete inert native-definition input."""
     return (
-        'name = "local-helper"\n'
-        f"[[{AGENT_SKILLS_FIELD}.{AGENT_SKILLS_CONFIG_FIELD}]]\n"
-        f'{AGENT_SKILL_NAME_FIELD} = "{plugin}:{RENAMED_CHECKOUT_SKILL_NAME}"\n'
-        f"{AGENT_SKILL_ENABLED_FIELD} = true\n"
-    ).encode("utf-8")
+        repository_root()
+        / "outcomeeng_testing"
+        / "fixtures"
+        / "installation"
+        / filename
+    )
 
 
 def observe_scope_split() -> ScopeSplitObservation:
@@ -1423,16 +1424,16 @@ def observe_scope_split() -> ScopeSplitObservation:
         preflight = build_persistent_preflight(mirror, environment)
         exact = preflight.codex_agents[0]
         changed = preflight.codex_agents[1]
+        linked = preflight.codex_agents[2]
         checkout_agents = mirror / CODEX_AGENTS_PATH
         checkout_agents.mkdir(parents=True, exist_ok=True)
         (checkout_agents / exact.destination.name).write_bytes(exact.content)
         (checkout_agents / changed.destination.name).write_bytes(
             changed.content + b"# locally changed\n"
         )
-        (checkout_agents / f"{changed.plugin}_symlink.toml").symlink_to(changed.source)
-        (checkout_agents / RENAMED_CHECKOUT_AGENT_NAME).write_bytes(
-            skill_enabling_definition(changed.plugin)
-        )
+        (checkout_agents / linked.destination.name).symlink_to(linked.source)
+        renamed_fixture = installation_fixture("local_helper.toml")
+        shutil.copyfile(renamed_fixture, checkout_agents / renamed_fixture.name)
         home_before = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
         runner = RecordingRunner()
         entries: tuple[ScopeSplitEntry, ...] = ()
@@ -2020,9 +2021,14 @@ def observe_real_installation() -> RealInstallationObservation:
         persistent_environment = _persistent_environment(persistent_root)
         _seed_persistent_state(persistent_root)
         persistent_initial = _tree_snapshot(persistent_root)
-        unowned = state / "codex" / CODEX_HOME_AGENTS_PATH / UNOWNED_AGENT_FILENAME
+        unowned = (
+            state
+            / "codex"
+            / CODEX_HOME_AGENTS_PATH
+            / installation_fixture("developer-owned.toml").name
+        )
         unowned.parent.mkdir(parents=True, exist_ok=True)
-        unowned.write_text(UNOWNED_AGENT_CONTENT, encoding="utf-8")
+        shutil.copyfile(installation_fixture("developer-owned.toml"), unowned)
         unowned_initial = unowned.read_bytes()
         placed_initial = _agent_snapshot(state / "codex")
         plan = build_isolated_installation_plan(mirror, state, persistent_environment)
@@ -2036,6 +2042,7 @@ def observe_real_installation() -> RealInstallationObservation:
         claude_first = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_first = _run_listing(Agent.CODEX, mirror, environment)
         placed_first = _agent_snapshot(state / "codex")
+        installed_skills_first = _installed_skill_snapshot(codex_first.stdout)
         unowned_first = unowned.read_bytes()
         persistent_first = _tree_snapshot(persistent_root)
         with _blocked_directory(persistent_root) as read_blocked_mode:
@@ -2044,6 +2051,7 @@ def observe_real_installation() -> RealInstallationObservation:
         claude_second = _run_listing(Agent.CLAUDE, mirror, environment)
         codex_second = _run_listing(Agent.CODEX, mirror, environment)
         placed_second = _agent_snapshot(state / "codex")
+        installed_skills_second = _installed_skill_snapshot(codex_second.stdout)
         unowned_second = unowned.read_bytes()
         persistent_second = _tree_snapshot(persistent_root)
         subset_mirror = temporary_root / "subset-checkout"
@@ -2128,6 +2136,8 @@ def observe_real_installation() -> RealInstallationObservation:
         placed_first=placed_first,
         placed_second=placed_second,
         shipped_agents=shipped_agents,
+        installed_skills_first=installed_skills_first,
+        installed_skills_second=installed_skills_second,
         unowned_initial=unowned_initial,
         unowned_first=unowned_first,
         unowned_second=unowned_second,
@@ -2338,6 +2348,32 @@ def _listed_identity(agent: Agent, entry: object) -> tuple[str, bool]:
             f"{agent.value} plugin listing entry lacks typed identity or state"
         )
     return plugin_id, enabled
+
+
+class NativePluginSource(TypedDict):
+    """The local source path reported by a native plugin listing."""
+
+    path: str
+
+
+def _installed_skill_snapshot(payload: str) -> tuple[tuple[str, Path, bytes], ...]:
+    """Read skill files from the installed sources the native CLI reports."""
+    skills: list[tuple[str, Path, bytes]] = []
+    suffix = f"@{MARKETPLACE_NAME}"
+    for entry in _listing_entries(Agent.CODEX, payload):
+        plugin_id, _ = _listed_identity(Agent.CODEX, entry)
+        if not plugin_id.endswith(suffix):
+            continue
+        if not isinstance(entry, dict):
+            raise TypeError("native plugin entry must be an object")
+        source = cast(NativePluginSource, entry[CODEX_SOURCE_FIELD])
+        plugin = plugin_id.removesuffix(suffix)
+        root = Path(source["path"])
+        for path in sorted((root / "skills").glob("*/SKILL.md")):
+            skills.append(
+                (f"{plugin}:{path.parent.name}", path.resolve(), path.read_bytes())
+            )
+    return tuple(skills)
 
 
 def _listed_plugins(agent: Agent, payload: str) -> PluginListing:
@@ -2813,15 +2849,13 @@ __all__ = [
     "observe_real_installation",
     "observe_real_record_refresh",
     "observe_repository_plan",
+    "installation_fixture",
     "observe_scope_split",
     "racing_digest_reader",
-    "skill_enabling_definition",
-    "RENAMED_CHECKOUT_AGENT_NAME",
     "FOREIGN_DEFINITION_CONTENT",
     "EXTERNAL_DEFINITION_CONTENT",
     "CONCURRENT_EDIT_CONTENT",
     "MALFORMED_OWNERSHIP_DIGEST",
-    "RENAMED_CHECKOUT_SKILL_NAME",
     "absent_from_every_agent",
     "observe_unpublished_plugin",
     "observe_verification_recipe",
