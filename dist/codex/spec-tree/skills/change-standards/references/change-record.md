@@ -18,6 +18,14 @@ Keep the explanation proportional to the change. A routine maintenance Change ca
 
 </rule>
 
+<rule id="proportional-refinement">
+
+ALWAYS retain choices whose consequences affect the Output: compatibility, affected consumers, failure behavior, dependencies, evidence, and operational constraints when applicable. Depth follows those consequences, never a mandatory questionnaire or the number of changed files. A precise internal rename can have a concise record; a public name change preserves the established compatibility and transition choice.
+
+Judge the record's completeness at its declared maturity from its content and governing references. NEVER demand beneficiary, Outcome, Impact, research, or alternative-analysis sections when they add no established intent. NEVER infer how an interview proceeded from the absence of an interview transcript. A consequential choice still open remains explicit and constrains maturity; settled choices remain available to the next holder.
+
+</rule>
+
 <rule id="identity-and-input">
 
 ALWAYS identify the title, exactly one Product, Maturity, and Lifecycle. The local working file carries these as metadata above the body so the complete candidate can be inspected and audited locally. An existing Change also carries its canonical reference; its Lifecycle and holder come from the configured store's confirmed state. A new local draft grants no claim or integration authority.

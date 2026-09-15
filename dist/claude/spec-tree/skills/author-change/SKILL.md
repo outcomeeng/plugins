@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when creating, interviewing, or revising an Outcome
   Engineering Change record. NEVER use it to author a spec or review a code changeset.
 argument-hint: "<local Change path and intent | existing Change reference and revision>"
-allowed-tools: Read, Write, Edit, Grep, Glob, Skill, collaboration.spawn_agent, collaboration.wait_agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
+allowed-tools: Read, Write, Edit, Grep, Glob, Skill, collaboration.spawn_agent, collaboration.wait_agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
 ---
 
 <objective>
@@ -17,11 +17,21 @@ Invoke `spec-tree:change-standards` through the skill-composition surface before
 
 Keep operator judgment in the main conversation. Delegate judgment of the authored record to the configured `change-auditor` role in a separate verifier session. NEVER invoke `audit-change` as an in-conversation replacement for that role.
 
-The scope is one Change. Resolve its local working-file path from the operator's request or the coordination configuration. Use a path inside the Product repository so SPX can select it by normalized repository-relative file scope. If neither supplies a path, ask one plain-text question and wait; never invent a storage directory or a new SPX command. Preserve an existing file until its identity and revision authority are established. This working document is the authored artifact, not a temporary command-payload file.
+The scope is one Change. Preserve an explicitly selected local working file inside the Product repository. Otherwise use `<local_draft>` to obtain an SPX-managed file. Preserve an existing file until its identity and revision authority are established. The working document is the authored artifact; SPX retains its complete contents as verification input without a separate payload file.
 
 Handle missing store configuration or ambiguous target identity before any external write. Never infer claim authority from access to the store. An existing holder's claim must be respected. A local draft grants no remote claim. Drafting and repair write only the selected local file; publication occurs after the audit gate passes.
 
 </essential_principles>
+
+<local_draft>
+
+Run from the selected Product repository. For a new working file, send the complete candidate as literal text to `spx change draft create --input stdin`. Consume the returned `draftId`, absolute `path`, and normalized `relativePath`; never construct a storage path or identifier. Edit the returned file directly for every refinement round. SPX owns storage and treats the document as opaque text; the shared standards own its metadata and Markdown format.
+
+For resumption without an exact path, use `spx change draft list` to locate existing draft descriptors. Inspect only candidates needed to resolve identity. An ambiguous match requires one plain-text question; never overwrite or create a competing draft by assumption. Keep a selected file through audit, publication, interruption, and handoff. Do not automatically delete local work after publication.
+
+Send content as data through stdin, using a quoted heredoc delimiter absent from the document or the tool's literal stdin facility. Never interpolate document text into executable shell syntax. A failed draft operation preserves its diagnostic and stops dependent work; never substitute a hand-created storage directory.
+
+</local_draft>
 
 <intake>
 
@@ -41,9 +51,9 @@ First identify what the request changes, the intended Output, and any consequent
 | Output clear; consequential choices unresolved | Invoke `/interview` only for choices that repository truth and supplied intent cannot settle. A public CLI rename can require a compatibility decision despite its small edit size.                          |
 | Problem described; Output unchosen             | Invoke `/interview` to help formulate a proposed Output. Pause for the operator when proceeding requires prioritizing competing outcomes or deciding whether to pursue the work. Discovery owns that choice. |
 
-Select questions by the unresolved choice: scope, compatibility, failure behavior, dependencies, or required evidence. Ask in plain text, one at a time, explain the consequences, and wait for the answer. Do not reopen a resolved choice or treat silence as a decision. The template is an output format, never a questionnaire.
+Select questions by the unresolved choice: scope, compatibility, failure behavior, dependencies, required evidence, or operation such as rollout, recovery, monitoring, and resource limits. Ask in plain text, one at a time, explain the consequences, and wait for the answer. Do not reopen a resolved choice or treat silence as a decision. The template is an output format, never a questionnaire.
 
-Triage controls refinement depth only. Preserve maturity requirements, operator attestation, independent verification, and publication authority on every route. A clear execution request does not by itself attest an unwritten Frame. Revisit triage when investigation exposes a consequential choice. Keep resulting specifications in the Change and its governing artifacts; reusable investigation and rejected alternatives belong in knowledge, without requiring a knowledge-bundle read or write on this workflow.
+Triage controls refinement depth only. Preserve maturity requirements, operator attestation, independent verification, and publication authority on every route. A clear execution request does not by itself attest an unwritten Frame. Revisit triage when investigation exposes a consequential choice. Keep resulting specifications in the Change and its governing artifacts. Reusable investigation and rejected alternatives belong in knowledge when separately requested; NEVER require a runtime knowledge-bundle read or automatically write back to a knowledge bundle.
 
 </triage>
 
@@ -61,8 +71,8 @@ Read the selected workflow completely. Both workflows use `${CLAUDE_SKILL_DIR}/t
 <audit_gate>
 
 1. Stabilize the complete local candidate against the shared standards. Resolve contradictions across metadata and body, remove template guidance, and read the file back before requesting audit. Its metadata identifies the maturity being judged. Keep the remote record unchanged throughout local iteration.
-2. Dispatch the configured `change-auditor` through the native subagent capability with only the target its audit contract declares. Start without authoring history; the verifier independently reads the candidate's metadata, body, and governing references. Preserve the returned handle. SPX records the local file as the audit subject. If the role or its supported SPX recording contract is unavailable, report the exact failure and stop publication; never substitute another artifact classification, an in-conversation verdict, or a GitHub audit comment.
-3. While verification runs, inspect still-unchecked relationships and continuation hazards in the current work. Preserve the candidate under audit unchanged. Collect the required final result and close the verifier session.
+2. Dispatch `spec-tree:change-auditor` through the native subagent capability with only the candidate's normalized repository-relative file path. Start without authoring history; the verifier independently reads the candidate's metadata, body, and governing references. Preserve the returned handle. SPX records the local file as the audit subject. If the role or its supported SPX recording contract is unavailable, report the exact failure and stop publication; never substitute another artifact classification, an in-conversation verdict, or a GitHub audit comment.
+3. While verification runs, inspect still-unchecked relationships and continuation hazards in the current work. Preserve the candidate under audit unchanged. Collect the required final result through the native result-collection capability.
 4. Inspect the returned SPX run token, retained input, and rendered projection. Only a complete `terminalStatus: approved` result over this file's unchanged metadata and body at the requested maturity passes. Any local edit invalidates that approval. After approval, proceed directly to publication; do not ask for a second confirmation of publication already authorized by this workflow.
 5. For a completed rejection, inspect the cited rule and sweep the entire candidate for the same defect class. Batch repairs in the local file, re-read affected sections together, and obtain a new independent audit. Ask the operator in plain text when a repair reopens judgment; preserve the question until answered. A failed launch or unusable result stops the invocation with its exact diagnostic; never retry, substitute another verifier, or issue a replacement verdict. Preserve the local candidate when the gate remains blocked.
 6. Stop after three consecutive rejected, unknown, or blocked results at this gate. Report the latest failure, the defect-class sweep, and why the repairs did not resolve it. Ask one plain-text question for the needed decision. NEVER advance maturity or claim the audit passed to end the loop.
