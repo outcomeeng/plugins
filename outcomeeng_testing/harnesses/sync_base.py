@@ -51,14 +51,14 @@ def load_sync_base_module() -> ModuleType:
     return module
 
 
-def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str:
-    """Run a git command with isolated config and fixed identity.
+def _git_environment() -> dict[str, str]:
+    """The environment every harness git invocation runs under.
 
-    Global and system config are suppressed so the harness does not inherit
+    Global and system config are suppressed so no observation inherits
     operator settings; a fixed identity and disabled signing make commits and
     rebases deterministic on any machine.
     """
-    env = {
+    return {
         **os.environ,
         "GIT_CONFIG_GLOBAL": "/dev/null",
         "GIT_CONFIG_SYSTEM": "/dev/null",
@@ -67,10 +67,14 @@ def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str
         "GIT_COMMITTER_NAME": "test",
         "GIT_COMMITTER_EMAIL": "test@example.invalid",
     }
+
+
+def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str:
+    """Run a git command under the harness environment and return its stdout."""
     result = subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
         ["git", *args],  # noqa: S607
         cwd=cwd if cwd is not None else repo,
-        env=env,
+        env=_git_environment(),
         capture_output=True,
         text=True,
         check=True,
@@ -660,15 +664,10 @@ def branch_config_entries(repo: pathlib.Path, branch: str) -> dict[str, str]:
     ``git config --get-regexp`` exits 1 when nothing matches; that reads as an
     empty map rather than a harness failure.
     """
-    env = {
-        **os.environ,
-        "GIT_CONFIG_GLOBAL": "/dev/null",
-        "GIT_CONFIG_SYSTEM": "/dev/null",
-    }
     result = subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
         ["git", "config", "--get-regexp", f"^branch\\.{branch}\\."],  # noqa: S607
         cwd=repo,
-        env=env,
+        env=_git_environment(),
         capture_output=True,
         text=True,
         check=False,
@@ -686,6 +685,7 @@ def is_ancestor(repo: pathlib.Path, ancestor: str, descendant: str) -> bool:
     result = subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
         ["git", "merge-base", "--is-ancestor", ancestor, descendant],  # noqa: S607
         cwd=repo,
+        env=_git_environment(),
         capture_output=True,
         text=True,
         check=False,
