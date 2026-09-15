@@ -206,9 +206,11 @@ CLAUDE_SCOPE_BEARING_OPERATIONS: frozenset[Operation] = frozenset(
 )
 """Claude operations whose public CLI accepts an explicit installation scope.
 
-Every Claude command is built through `_claude_argv`, which appends the scope
-exactly for these operations; the others — marketplace refresh and the plugin
-listing — take no scope argument.
+`_claude_argv` appends the scope exactly for these operations and for no other
+operation it builds; the marketplace refresh it builds takes none. The
+marketplace and plugin inspections and the closing plugin listing are the fixed
+tuples `CLAUDE_MARKETPLACE_LIST_COMMAND` and `CLAUDE_LIST_COMMAND`, which carry
+no scope.
 """
 CLAUDE_SCOPE_FLAG = "--scope"
 
@@ -623,9 +625,7 @@ class ClaudeInstallationAdapter:
                 self.agent,
                 Operation.PLUGIN_LIST,
                 None,
-                _claude_argv(
-                    Operation.PLUGIN_LIST, "plugin", "list", "--json", scope=scope
-                ),
+                CLAUDE_LIST_COMMAND,
                 roots,
                 environment,
             )
