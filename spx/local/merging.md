@@ -101,7 +101,7 @@ Record the checkout's full path and its new full HEAD SHA, or the named skip rea
 
 ## Release: refresh persistent plugin installation
 
-The `RELEASE` phase, governed by `RELEASE_READINESS`, runs after `DEPLOY`. Run the refresh with the designated main checkout `DEPLOY` fast-forwarded as its working directory, without leaving the assigned worktree: Claude Code project scope is keyed by checkout path, the main checkout is where the operator's plugin selection is installed, and a linked worktree's project scope is empty, so a refresh run there installs only `spec-tree` into that worktree and refreshes nothing the operator selected. The path is `readings.mainCheckoutPath` from the canonical checkout safety diagnosis above:
+The `RELEASE` phase, governed by `RELEASE_READINESS`, runs after `DEPLOY`. Run the refresh with the designated main checkout `DEPLOY` fast-forwarded as its working directory, without leaving the assigned worktree: Claude Code project scope is keyed by checkout path and a linked worktree holds no installed plugins, so a run from a linked worktree would bootstrap `spec-tree` into that worktree's project scope and read the committed catalogs and generated definitions from a checkout that is not the merged tip's designated home; the machine-wide record refresh reaches every recorded checkout from either working directory, and the main checkout is the one whose bootstrap and catalog inputs the release means. The path is `readings.mainCheckoutPath` from the canonical checkout safety diagnosis above:
 
 ```bash
 just --working-directory <main-checkout-path> --justfile <main-checkout-path>/justfile install-marketplace
