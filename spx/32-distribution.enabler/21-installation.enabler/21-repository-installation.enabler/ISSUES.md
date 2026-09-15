@@ -16,7 +16,7 @@ The mapping assertion's identifier and disposable-state-root derivation is unfal
 
 **Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, import every key the test and the recording reader index from that module, add predicates over the recorded child environment that reject an ambient override or a second credential, and assert that every row's identifier and state root derive from its registry entry and differ from every other row's.
 
-**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, and `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, the last naming the execution-level mismatch; the cited test and harness files lie outside every changeset's diff.
+**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, and `f-001` through `f-005` with `f-008` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, the last two naming the execution-level mismatch; the cited test and harness files lie outside every changeset's diff.
 
 ## Pending plugins' prior owned definitions have no reconciliation evidence
 
@@ -24,7 +24,7 @@ The reconciliation assertion states that a pending plugin's prior owned definiti
 
 **Resolution shape**: add a harness scenario that installs, then re-runs with one plugin unpublished, and assert that the pending plugin's recorded definitions are neither pruned nor rewritten; if the scenario shows the plan copying definitions for a pending plugin, defer agent-home plan composition until the pending set is known. That is a new reconciliation capability with its own harness and a likely production change, independent of the machine-wide Claude Code refresh.
 
-**Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2` and `f-004` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`.
+**Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-004` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, and `f-006` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`.
 
 ## Claude Code renderings ship the Codex-only placement script and paraphrase its output
 
@@ -33,14 +33,6 @@ The `<plugin>-plugin` skill's Claude Code rendering carries `scripts/place_agent
 **Resolution shape**: exclude `scripts/` from the Claude Code rendering in the shared template, or state in `<agent_delivery>` why an inert copy must ship; quote the printed sentence verbatim in `<examples>`; render the three result cells per target. Either change touches every plugin's rendered skill, so it lands as one template change gated by the skill auditor.
 
 **Evidence**: skill audit warnings `f-007` and `f-008` against `06b86db6b`, and `f-006` and `f-007` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
-
-## Lifecycle evidence cases are fabricated by the harness
-
-The lifecycle tests in `tests/test_repository_installation.compliance.l1.py` take their agent-definition bytes, filenames, and slugs from `PluginLifecycleHarness` in `outcomeeng_testing/harnesses/installation.py`, which formats them from the plugin name, and take the foreign, external, concurrent-edit, malformed-digest, and malformed-settings payloads from constants the same module declares. The vocabulary those tests assert against — the write, prune, and collision prefixes, the non-hex-digest message, and the cause names — is imported from the shipped placement script, and every resource arrangement is harness-owned. Whether the fabricated payloads are incidental values a harness handle may supply, because the script treats definition bytes opaquely by digest, or cases that need an independent provenance source is the open question.
-
-**Evidence.** The test-evidence audit for Change #39 rejected the earlier form of these tests (`f-001` against `f1358c4324eaef89ade99d8d41b42940ed881121`, repeated against `e58f52f1bcb25d2a7e9fabb79f70f33f4dfc46b0`) for constructing definition bytes and the expected ownership document inside the test. After the relocation into the harness, the isolated audits of this node against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `1ce7658833ad03c4a01e2a7ef749a875c225fe50`, `d955174c8464c2179062f2c4ff558d00a8f1b501`, and `b86d79b125f0820cdd7747e60d459a2564f41a3d` inspected the lifecycle chain and raised no finding on it; changeset reviews `2026-09-15_18-11-20-793-0414ce12ec4c` and `2026-09-15_18-30-45-255-d7e943a26e22` hold that relocation alone does not settle case provenance.
-
-**Settlement condition.** An isolated test-evidence audit that names the fabricated payloads as incidental harness-handle values, or a source-owned case origin for the definition bytes and slugs recorded in the assertion-design record.
 
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
