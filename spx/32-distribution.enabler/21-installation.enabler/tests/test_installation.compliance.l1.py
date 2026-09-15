@@ -7,7 +7,7 @@ from outcomeeng.distribution.installation import (
     Agent,
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_SCOPE_BEARING_OPERATIONS,
-    CLAUDE_SCOPELESS_OPERATIONS,
+    CLAUDE_SCOPE_FLAG,
     CODEX_HOME_ENV,
     InstallationMode,
     Operation,
@@ -85,19 +85,20 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         if command.agent is Agent.CODEX
     ]
 
+    observed = {command.operation for command in claude_commands}
+
     assert all(plan.mode is InstallationMode.PERSISTENT for plan in plans)
-    assert {command.operation for command in claude_commands} == (
-        CLAUDE_SCOPE_BEARING_OPERATIONS | CLAUDE_SCOPELESS_OPERATIONS
-    )
+    assert observed >= CLAUDE_SCOPE_BEARING_OPERATIONS
+    assert observed - CLAUDE_SCOPE_BEARING_OPERATIONS
     assert all(
-        "--scope" in command.argv and CLAUDE_PROJECT_SCOPE in command.argv
+        command.argv[-2:] == (CLAUDE_SCOPE_FLAG, CLAUDE_PROJECT_SCOPE)
         for command in claude_commands
         if command.operation in CLAUDE_SCOPE_BEARING_OPERATIONS
     )
     assert all(
-        "--scope" not in command.argv
+        CLAUDE_SCOPE_FLAG not in command.argv
         for command in claude_commands
-        if command.operation in CLAUDE_SCOPELESS_OPERATIONS
+        if command.operation not in CLAUDE_SCOPE_BEARING_OPERATIONS
     )
     assert codex_commands
     assert all(

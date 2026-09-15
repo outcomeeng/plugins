@@ -204,12 +204,13 @@ CLAUDE_SCOPE_BEARING_OPERATIONS: frozenset[Operation] = frozenset(
         Operation.PLUGIN_UPDATE,
     }
 )
-"""Claude operations whose public CLI accepts an explicit installation scope."""
+"""Claude operations whose public CLI accepts an explicit installation scope.
 
-CLAUDE_SCOPELESS_OPERATIONS: frozenset[Operation] = frozenset(
-    {Operation.MARKETPLACE_REFRESH, Operation.PLUGIN_LIST}
-)
-"""Claude operations whose public CLI has no installation-scope argument."""
+Every Claude command is built through `_claude_argv`, which appends the scope
+exactly for these operations; the others — marketplace refresh and the plugin
+listing — take no scope argument.
+"""
+CLAUDE_SCOPE_FLAG = "--scope"
 
 
 class SourceAction(StrEnum):
@@ -567,13 +568,12 @@ class ClaudeInstallationAdapter:
                     self.agent,
                     Operation.PLUGIN_INSTALL,
                     plugin,
-                    (
-                        CLAUDE_EXECUTABLE,
+                    _claude_argv(
+                        Operation.PLUGIN_INSTALL,
                         "plugin",
                         "install",
                         plugin_id,
-                        "--scope",
-                        scope,
+                        scope=scope,
                     ),
                     roots,
                     environment,
@@ -584,13 +584,12 @@ class ClaudeInstallationAdapter:
                     self.agent,
                     Operation.PLUGIN_ENABLE,
                     plugin,
-                    (
-                        CLAUDE_EXECUTABLE,
+                    _claude_argv(
+                        Operation.PLUGIN_ENABLE,
                         "plugin",
                         "enable",
                         plugin_id,
-                        "--scope",
-                        scope,
+                        scope=scope,
                     ),
                     roots,
                     environment,
@@ -607,13 +606,12 @@ class ClaudeInstallationAdapter:
                     self.agent,
                     Operation.PLUGIN_UPDATE,
                     record.plugin,
-                    (
-                        CLAUDE_EXECUTABLE,
+                    _claude_argv(
+                        Operation.PLUGIN_UPDATE,
                         "plugin",
                         "update",
                         f"{record.plugin}@{MARKETPLACE_NAME}",
-                        "--scope",
-                        record.scope,
+                        scope=record.scope,
                     ),
                     roots,
                     environment,
@@ -625,7 +623,9 @@ class ClaudeInstallationAdapter:
                 self.agent,
                 Operation.PLUGIN_LIST,
                 None,
-                CLAUDE_LIST_COMMAND,
+                _claude_argv(
+                    Operation.PLUGIN_LIST, "plugin", "list", "--json", scope=scope
+                ),
                 roots,
                 environment,
             )
@@ -1897,6 +1897,14 @@ def main(
     return 0
 
 
+def _claude_argv(operation: Operation, *words: str, scope: str) -> tuple[str, ...]:
+    """Build one Claude CLI argv, appending the scope only where the CLI takes it."""
+    argv = (CLAUDE_EXECUTABLE, *words)
+    if operation in CLAUDE_SCOPE_BEARING_OPERATIONS:
+        return (*argv, CLAUDE_SCOPE_FLAG, scope)
+    return argv
+
+
 def _claude_source_commands(
     action: SourceAction,
     source: str,
@@ -1911,14 +1919,13 @@ def _claude_source_commands(
                 Agent.CLAUDE,
                 Operation.MARKETPLACE_REMOVE,
                 None,
-                (
-                    CLAUDE_EXECUTABLE,
+                _claude_argv(
+                    Operation.MARKETPLACE_REMOVE,
                     "plugin",
                     "marketplace",
                     "remove",
                     MARKETPLACE_NAME,
-                    "--scope",
-                    scope,
+                    scope=scope,
                 ),
                 roots,
                 environment,
@@ -1930,14 +1937,13 @@ def _claude_source_commands(
                 Agent.CLAUDE,
                 Operation.MARKETPLACE_ADD,
                 None,
-                (
-                    CLAUDE_EXECUTABLE,
+                _claude_argv(
+                    Operation.MARKETPLACE_ADD,
                     "plugin",
                     "marketplace",
                     "add",
                     source,
-                    "--scope",
-                    scope,
+                    scope=scope,
                 ),
                 roots,
                 environment,
@@ -1949,12 +1955,13 @@ def _claude_source_commands(
                 Agent.CLAUDE,
                 Operation.MARKETPLACE_REFRESH,
                 None,
-                (
-                    CLAUDE_EXECUTABLE,
+                _claude_argv(
+                    Operation.MARKETPLACE_REFRESH,
                     "plugin",
                     "marketplace",
                     "update",
                     MARKETPLACE_NAME,
+                    scope=scope,
                 ),
                 roots,
                 environment,
@@ -2325,7 +2332,7 @@ __all__ = [
     "CLAUDE_PROJECT_SCOPE",
     "CLAUDE_REFRESH_SCOPES",
     "CLAUDE_SCOPE_BEARING_OPERATIONS",
-    "CLAUDE_SCOPELESS_OPERATIONS",
+    "CLAUDE_SCOPE_FLAG",
     "CLAUDE_USER_SCOPE",
     "CLAUDE_ENABLED_PLUGINS_FIELD",
     "EXTRA_MARKETPLACES_FIELD",
