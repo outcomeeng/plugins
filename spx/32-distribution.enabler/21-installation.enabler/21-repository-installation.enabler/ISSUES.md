@@ -2,36 +2,37 @@
 
 Known defects in the repository-installation evidence. Each entry names the artifact, the observed failure, and the smallest unit of work that resolves it.
 
-## Lifecycle evidence constructs its own definition and ownership payloads
+## Native-profile evidence restates protocol vocabulary the owning modules hold
 
-The test-evidence audit for Change #39 rejected
-`tests/test_repository_installation.compliance.l1.py` because
-`test_plugin_lifecycle_places_owned_definitions_and_is_idempotent` constructs
-agent-definition bytes and the expected ownership document inside the test.
-Other lifecycle tests in the same file construct similar payloads, filesystem
-arrangements, and race callbacks. The shared test-evidence and Python test
-standards require independently sourced cases, source-owned vocabulary, and
-harness-owned resource setup while retaining predicates in linked tests.
+`tests/test_native_profile_execution.compliance.l1.py` indexes the child-thread document with the literal `parentThreadId` while `outcomeeng/distribution/native_thread_evidence.py` owns that key as `ChildIdentityField.PARENT`, and asserts the retained child-listing artifact through the literals `childIds`, `pages`, and `result`, for which that module publishes no field constants. Both are source-ownership defects: a rename in the owning module leaves the evidence asserting a contract production no longer emits.
 
-**Evidence.** The isolated audit returned `REJECTED`, finding `f-001`, against
-`f1358c4324eaef89ade99d8d41b42940ed881121`. The complete cited test file has no
-diff against `origin/main` at
-`455234ef0aa1b6669536b2341cb4a29a600dc361`. The audit stopped at this finding;
-it supplies no approval of the node's remaining evidence. The final audit for
-PR #571 reproduced the same `f-001` source-ownership finding against
-`e58f52f1bcb25d2a7e9fabb79f70f33f4dfc46b0`; the cited test file remains
-outside that changeset's diff.
+`outcomeeng_testing/harnesses/native_thread_evidence.py` repeats the class in `RecordingThreadReader`: its failure-shaping methods hand-write `childIds`, `thread`, `turns`, `status`, and `items` while the same harness builds the payloads through `NativeChildLookupPayload`, `NativeChildThread`, and `NativeTurn` elsewhere. Its `_read_empty_native_state` builds the child environment from the literals `HOME`, `CODEX_HOME`, and `CODEX_SQLITE_HOME` while `outcomeeng/distribution/installation.py` publishes those names and the `STATE_ENV_NAMES` tuple.
 
-**Disposition.** Recorded under the merge policy's rule for an audit subject
-outside the changeset. Repair requires a case-provenance and resource-ownership
-pass over the lifecycle evidence, preserving its collision, pruning, race, and
-idempotency predicates. Moving invented payloads into another module alone does
-not resolve their provenance.
+Two clauses of the same assertion are also unfalsified: removing the ambient model and effort override filter from `_isolated_environment` in `outcomeeng_testing/harnesses/native_profile_execution.py`, or passing the unfiltered environment instead of `credential_free_environment`, breaks no linked test, because the tests inspect the recorded native calls only for their count and never read `NativeCall.environment`.
 
-**Revisit condition.** Before relying on this node's evidence-audit approval, or
-when changing its lifecycle test cases. Change #39 retains the failed verdict
-and records that integration before the required gates passed was an execution
-error; the operator granted no waiver of merge prerequisites.
+Two tests in the same compliance file, `test_real_native_read_reports_absent_thread_without_launching_a_turn` and `test_real_native_child_listing_retains_empty_pages_without_launching`, spawn the installed Codex CLI through the app-server read and listing commands while the file declares the `l1` cell; an installed agent CLI is an acquired executable whose level floor is `l2`, so those cases belong in an `l2` file.
+
+The mapping assertion's identifier and disposable-state-root derivation is unfalsified in the same way: collapsing `identifier` in `native_profile_rows` to a constant makes every row share one `state_root` and one artifact directory, while `test_native_profile_rows_cover_the_central_configuration_matrix` still keys on target and profile and `test_native_profile_artifacts_are_separate_from_disposable_state` checks only parent-directory relations, so no predicate observes that the identifier and state root derive from the registry entry or are distinct per row.
+
+**Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, import every key the test and the recording reader index from that module, add predicates over the recorded child environment that reject an ambient override or a second credential, and assert that every row's identifier and state root derive from its registry entry and differ from every other row's.
+
+**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, `f-001` through `f-005` with `f-008` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, and `f-001` through `f-007` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, the last three rounds naming the execution-level mismatch and the last naming the environment literals; the cited test and harness files lie outside every changeset's diff.
+
+## Pending plugins' prior owned definitions have no reconciliation evidence
+
+The reconciliation assertion states that a pending plugin's prior owned definitions are preserved, and both `spx/12-marketplace-state.adr.md` and `21-installation-architecture.adr.md` require it, but no harness case combines a pending-publication plugin with agent-home reconciliation: `observe_agent_home_reconciliation` builds both preflights from a changed catalog with every plugin published. The clause therefore reaches no predicate, and the same observer retires one agent source rather than dropping a plugin from the home selection, so the clause that prunes owned definitions of plugins outside the catalog-bounded selection is likewise never driven. The plan builder also composes the agent-home plan before any command runs, so a plugin that turns out pending during execution still has its checkout definitions in the desired set; whether the applied plan copies definitions for unavailable skill content, against the decision, is undetermined until the scenario exists.
+
+**Resolution shape**: add a harness scenario that installs, then re-runs with one plugin unpublished, and assert that the pending plugin's recorded definitions are neither pruned nor rewritten; if the scenario shows the plan copying definitions for a pending plugin, defer agent-home plan composition until the pending set is known. That is a new reconciliation capability with its own harness and a likely production change, independent of the machine-wide Claude Code refresh.
+
+**Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-004` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-006` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, and `f-008` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`.
+
+## Claude Code renderings ship the Codex-only placement script and paraphrase its output
+
+The `<plugin>-plugin` skill's Claude Code rendering carries `scripts/place_agents.py`, roughly 330 lines that its own `<agent_delivery>` section says are never invoked there, because the shared template `src/templates/plugin/SKILL.md` conditions other sections on the build target but not the script directory. The same skill's `<examples>` paraphrases the manifest-delivery line instead of quoting the sentence `<verbs>` prints, and the `<verbs>` table's result column for `init`, `upgrade`, and `check` describes the Codex home reconciliation in the Claude Code rendering too, leaving the next sentence to walk all three rows back for that target.
+
+**Resolution shape**: exclude `scripts/` from the Claude Code rendering in the shared template, or state in `<agent_delivery>` why an inert copy must ship; quote the printed sentence verbatim in `<examples>`; render the three result cells per target. Either change touches every plugin's rendered skill, so it lands as one template change gated by the skill auditor.
+
+**Evidence**: skill audit warnings `f-007` and `f-008` against `06b86db6b`, and `f-006` and `f-007` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
 
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 

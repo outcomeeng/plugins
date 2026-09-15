@@ -8,17 +8,26 @@ from pathlib import Path
 import pytest
 
 from outcomeeng.distribution.installation import (
+    Agent,
+    CLAUDE_LOCAL_SCOPE,
     CODEX_CONFIG_PATH,
+    CODEX_EXEC_SUBCOMMAND,
+    FIRST_INSTALL_WARNING,
+    SPEC_TREE_PLUGIN,
     Operation,
     SourceAction,
 )
-from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT
+from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT, JUST_BINARY
 from outcomeeng_testing.harnesses.discovery_auth import (
     API_LOGIN_FLAG,
+    CODEX_LOGIN_SUBCOMMAND,
+    CODEX_LOGOUT_SUBCOMMAND,
     WORKSPACE_LOGIN_FLAG,
     AUTH_FILENAME,
     CREDENTIAL_ENVIRONMENTS,
     REDACTED_CREDENTIAL,
+    SAVED_LOGIN_ACCOUNT_FIELD,
+    SAVED_LOGIN_TOKENS_FIELD,
     AuthenticationMode,
     DiscoveryAuthentication,
     DiscoveryAuthenticationError,
@@ -36,7 +45,17 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
     missing_credential_environment,
 )
 from outcomeeng_testing.harnesses.installation import (
+    CONCURRENT_EDIT_CONTENT,
+    EXTERNAL_DEFINITION_CONTENT,
+    FOREIGN_DEFINITION_CONTENT,
+    MALFORMED_OWNERSHIP_DIGEST,
+    UNOWNED_AGENT_CONTENT,
+    UNOWNED_AGENT_FILENAME,
+    observe_designated_failure,
     observe_interrupted_reconciliation,
+    observe_local_record_bootstrap_plan,
+    observe_persistent_execution,
+    observe_persistent_plan,
     ScopeSplitClassification,
     racing_digest_reader,
     RENAMED_CHECKOUT_AGENT_NAME,
@@ -46,7 +65,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_codex_config_independence,
     observe_codex_subagent_discovery,
     observe_failed_run_restore,
-    observe_noncanonical_reconciliation,
+    observe_missing_registration_reconciliation,
     observe_scope_split,
     skill_enabling_definition,
 )
@@ -56,14 +75,15 @@ def test_plugin_lifecycle_places_owned_definitions_and_is_idempotent(
     tmp_path: Path,
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    shipped = lifecycle.write_shipped(
-        "fixture_auditor.toml", b'name = "fixture-auditor"\n'
-    )
+    module = lifecycle.load_module()
+    shipped = lifecycle.ship("auditor")
 
     before_check = lifecycle.snapshot(lifecycle.home)
     check = lifecycle.run(check=True)
     assert check.exit_code == 1
-    assert f"write: {lifecycle.home_agents / shipped.name}" in check.stdout
+    assert f"{module.WRITE_PREFIX}{lifecycle.home_agents / shipped.name}" in (
+        check.stdout
+    )
     assert check.home_snapshot == before_check
 
     installed = lifecycle.run()
@@ -71,16 +91,11 @@ def test_plugin_lifecycle_places_owned_definitions_and_is_idempotent(
     destination = lifecycle.home_agents / shipped.name
     assert destination.read_bytes() == shipped.read_bytes()
     ownership = json.loads(lifecycle.ownership_path.read_text(encoding="utf-8"))
-    assert ownership == {
-        "entries": [
-            {
-                "destination": f"agents/{shipped.name}",
-                "digest": hashlib.sha256(destination.read_bytes()).hexdigest(),
-                "plugin": "fixture",
-            }
-        ],
-        "schema_version": 1,
-    }
+    assert ownership == lifecycle.ownership_document(
+        lifecycle.ownership_entry(
+            shipped.name, hashlib.sha256(destination.read_bytes()).hexdigest()
+        )
+    )
 
     ownership_identity = lifecycle.file_identity(lifecycle.ownership_path)
     clean_check = lifecycle.run(check=True)
@@ -95,42 +110,42 @@ def test_plugin_lifecycle_prunes_only_matching_owned_definitions(
     tmp_path: Path,
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    current = lifecycle.write_shipped(
-        "fixture_current.toml", b'name = "fixture-current"\n'
-    )
-    retired = lifecycle.write_shipped(
-        "fixture_retired.toml", b'name = "fixture-retired"\n'
-    )
+    module = lifecycle.load_module()
+    current = lifecycle.ship("current")
+    retired = lifecycle.ship("retired")
     foreign = lifecycle.write_home(
-        "developer-owned.toml", b'name = "developer-owned"\n'
+        UNOWNED_AGENT_FILENAME, UNOWNED_AGENT_CONTENT.encode()
     )
     assert lifecycle.run().exit_code == 0
 
     retired.unlink()
     check = lifecycle.run(check=True)
     assert check.exit_code == 1
-    assert f"prune: {lifecycle.home_agents / retired.name}" in check.stdout
+    assert f"{module.PRUNE_PREFIX}{lifecycle.home_agents / retired.name}" in (
+        check.stdout
+    )
 
     reconciled = lifecycle.run()
     assert reconciled.exit_code == 0
     assert (lifecycle.home_agents / current.name).read_bytes() == current.read_bytes()
     assert not (lifecycle.home_agents / retired.name).exists()
-    assert foreign.read_bytes() == b'name = "developer-owned"\n'
+    assert foreign.read_bytes() == UNOWNED_AGENT_CONTENT.encode()
 
 
 def test_plugin_lifecycle_rejects_an_unrecorded_destination_without_mutation(
     tmp_path: Path,
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    shipped = lifecycle.write_shipped(
-        "fixture_auditor.toml", b'name = "fixture-auditor"\n'
-    )
-    lifecycle.write_home(shipped.name, b'name = "foreign-definition"\n')
+    module = lifecycle.load_module()
+    shipped = lifecycle.ship("auditor")
+    lifecycle.write_home(shipped.name, FOREIGN_DEFINITION_CONTENT)
     before = lifecycle.snapshot(lifecycle.home)
 
     result = lifecycle.run()
     assert result.exit_code == 2
-    assert f"collision: {lifecycle.home_agents / shipped.name}" in result.stdout
+    assert f"{module.COLLISION_PREFIX}{lifecycle.home_agents / shipped.name}" in (
+        result.stdout
+    )
     assert result.home_snapshot == before
 
 
@@ -138,25 +153,18 @@ def test_plugin_lifecycle_rejects_a_non_hex_ownership_digest_without_mutation(
     tmp_path: Path,
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    lifecycle.write_shipped("fixture_auditor.toml", b'name = "fixture-auditor"\n')
+    module = lifecycle.load_module()
+    shipped = lifecycle.ship("auditor")
     lifecycle.write_ownership(
-        {
-            "schema_version": 1,
-            "entries": [
-                {
-                    "destination": "agents/fixture_auditor.toml",
-                    "plugin": "fixture",
-                    "digest": "z" * 64,
-                }
-            ],
-        }
+        lifecycle.ownership_document(
+            lifecycle.ownership_entry(shipped.name, MALFORMED_OWNERSHIP_DIGEST)
+        )
     )
     before = lifecycle.snapshot(lifecycle.home)
 
     result = lifecycle.run()
     assert result.exit_code == 2
-    assert "entry 0 digest" in result.stdout
-    assert "is not a lowercase sha256 hex string" in result.stdout
+    assert module.NON_HEX_DIGEST in result.stdout
     assert result.home_snapshot == before
 
 
@@ -164,30 +172,30 @@ def test_plugin_lifecycle_rejects_a_symlink_destination_without_mutation(
     tmp_path: Path,
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path / "case", plugin_name="fixture")
-    shipped = lifecycle.write_shipped(
-        "fixture_auditor.toml", b'name = "fixture-auditor"\n'
-    )
+    module = lifecycle.load_module()
+    shipped = lifecycle.ship("auditor")
     external = tmp_path / "external.toml"
-    external.write_bytes(b'name = "external"\n')
+    external.write_bytes(EXTERNAL_DEFINITION_CONTENT)
     lifecycle.home_agents.mkdir(parents=True, exist_ok=True)
     (lifecycle.home_agents / shipped.name).symlink_to(external)
     before = lifecycle.snapshot(lifecycle.home)
 
     result = lifecycle.run()
     assert result.exit_code == 2
-    assert f"collision: {lifecycle.home_agents / shipped.name}" in result.stdout
+    assert f"{module.COLLISION_PREFIX}{lifecycle.home_agents / shipped.name}" in (
+        result.stdout
+    )
     assert result.home_snapshot == before
-    assert external.read_bytes() == b'name = "external"\n'
+    assert external.read_bytes() == EXTERNAL_DEFINITION_CONTENT
 
 
 def test_plugin_lifecycle_reports_scope_splits_before_home_mutation(
     tmp_path: Path,
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    exact = lifecycle.write_shipped("fixture_exact.toml", b'name = "fixture-exact"\n')
-    changed = lifecycle.write_shipped(
-        "fixture_changed.toml", b'name = "fixture-changed"\n'
-    )
+    module = lifecycle.load_module()
+    exact = lifecycle.ship("exact")
+    changed = lifecycle.ship("changed")
     lifecycle.write_checkout(exact.name, exact.read_bytes())
     lifecycle.write_checkout(changed.name, changed.read_bytes() + b"# changed\n")
     renamed = lifecycle.write_checkout(
@@ -199,14 +207,14 @@ def test_plugin_lifecycle_reports_scope_splits_before_home_mutation(
     result = lifecycle.run()
     assert result.exit_code == 2
     assert (
-        f"scope-split directed-removal: {lifecycle.checkout_agents / exact.name}"
+        f"{module.SCOPE_SPLIT_REMOVAL_PREFIX}{lifecycle.checkout_agents / exact.name}"
         in result.stdout
     )
     assert (
-        f"scope-split collision: {lifecycle.checkout_agents / changed.name}"
-        in result.stdout
+        f"{module.SCOPE_SPLIT_COLLISION_PREFIX}"
+        f"{lifecycle.checkout_agents / changed.name}" in result.stdout
     )
-    assert f"scope-split collision: {renamed}" in result.stdout
+    assert f"{module.SCOPE_SPLIT_COLLISION_PREFIX}{renamed}" in result.stdout
     assert result.home_snapshot == before
 
 
@@ -255,14 +263,15 @@ def test_a_lifecycle_run_adopts_an_identical_unrecorded_destination(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    content = b'name = "auditor"\n'
-    shipped = lifecycle.write_shipped("fixture_auditor.toml", content)
+    module = lifecycle.load_module()
+    content = lifecycle.definition_content("auditor")
+    shipped = lifecycle.ship("auditor")
     lifecycle.write_home(shipped.name, content)
 
     run = lifecycle.run()
 
     assert run.exit_code == 0, run.stdout + run.stderr
-    assert "collision" not in run.stdout
+    assert module.COLLISION_PREFIX not in run.stdout
     assert (lifecycle.home_agents / shipped.name).read_bytes() == content
     assert lifecycle.ownership_path.is_file()
     check = lifecycle.run(check=True)
@@ -321,16 +330,16 @@ def test_repository_codex_config_has_no_installation_semantics() -> None:
 
 
 def test_restoring_the_selection_keeps_the_reconciled_marketplace_source() -> None:
-    observation = observe_noncanonical_reconciliation()
+    observation = observe_missing_registration_reconciliation()
 
-    assert observation.source_action is SourceAction.REPLACE
+    assert observation.source_action is SourceAction.ADD
     assert observation.selection_after == observation.selection_before
-    assert observation.marketplace_before != observation.canonical_marketplace
+    assert observation.marketplace_before is None
     assert observation.marketplace_after == observation.canonical_marketplace
 
 
 def test_failed_persistent_run_restores_the_committed_selection() -> None:
-    observation = observe_failed_run_restore(Operation.PLUGIN_ENABLE)
+    observation = observe_failed_run_restore(Operation.PLUGIN_UPDATE)
 
     assert observation.failure is not None
     assert observation.settings_after == observation.settings_before
@@ -341,13 +350,13 @@ def test_a_write_destination_changed_after_preflight_stops_before_mutation(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    shipped = lifecycle.write_shipped("fixture_auditor.toml", b'name = "auditor"\n')
+    shipped = lifecycle.ship("auditor")
     module = lifecycle.load_module()
     destination = lifecycle.home_agents / shipped.name
 
     def inject() -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(b"foreign concurrent content\n")
+        destination.write_bytes(CONCURRENT_EDIT_CONTENT)
 
     exit_code = module.main(
         ["--home", str(lifecycle.home), "--checkout", str(lifecycle.checkout)],
@@ -358,9 +367,10 @@ def test_a_write_destination_changed_after_preflight_stops_before_mutation(
 
     assert exit_code == 2
     assert (
-        f"collision: {destination} (changed after preflight)" in capsys.readouterr().out
+        f"{module.COLLISION_PREFIX}{destination} "
+        f"({module.CAUSE_CHANGED_AFTER_PREFLIGHT})" in capsys.readouterr().out
     )
-    assert destination.read_bytes() == b"foreign concurrent content\n"
+    assert destination.read_bytes() == CONCURRENT_EDIT_CONTENT
     assert not lifecycle.ownership_path.exists()
 
 
@@ -368,24 +378,17 @@ def test_a_prune_destination_changed_after_preflight_stops_before_mutation(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    retired = b'name = "retired"\n'
-    stale = lifecycle.write_home("fixture_retired.toml", retired)
+    retired = lifecycle.definition_content("retired")
+    stale = lifecycle.write_home(lifecycle.definition_name("retired"), retired)
     lifecycle.write_ownership(
-        {
-            "schema_version": 1,
-            "entries": [
-                {
-                    "destination": "agents/fixture_retired.toml",
-                    "plugin": "fixture",
-                    "digest": hashlib.sha256(retired).hexdigest(),
-                }
-            ],
-        }
+        lifecycle.ownership_document(
+            lifecycle.ownership_entry(stale.name, hashlib.sha256(retired).hexdigest())
+        )
     )
     module = lifecycle.load_module()
 
     def inject() -> None:
-        stale.write_bytes(b"edited while the run was planning\n")
+        stale.write_bytes(CONCURRENT_EDIT_CONTENT)
 
     exit_code = module.main(
         ["--home", str(lifecycle.home), "--checkout", str(lifecycle.checkout)],
@@ -393,8 +396,11 @@ def test_a_prune_destination_changed_after_preflight_stops_before_mutation(
     )
 
     assert exit_code == 2
-    assert f"collision: {stale} (changed after preflight)" in capsys.readouterr().out
-    assert stale.read_bytes() == b"edited while the run was planning\n"
+    assert (
+        f"{module.COLLISION_PREFIX}{stale} ({module.CAUSE_CHANGED_AFTER_PREFLIGHT})"
+        in capsys.readouterr().out
+    )
+    assert stale.read_bytes() == CONCURRENT_EDIT_CONTENT
 
 
 def test_a_missing_probe_credential_fails_before_any_agent_process() -> None:
@@ -415,17 +421,19 @@ def test_subscription_refresh_writes_through_only_the_saved_login_link() -> None
         assert case.saved.read_text() == case.refreshed
         assert case.initial != case.refreshed
         assert all(
-            call.home != case.home or "login" not in call.argv
+            call.home != case.home or CODEX_LOGIN_SUBCOMMAND not in call.argv
             for call in case.runner.calls
         )
-        assert all("logout" not in call.argv for call in case.runner.calls)
+        assert all(
+            CODEX_LOGOUT_SUBCOMMAND not in call.argv for call in case.runner.calls
+        )
         assert all(
             not (set(call.environment) & CREDENTIAL_ENVIRONMENTS)
             for call in case.runner.calls
         )
         assert all(
             token not in result.stdout + result.stderr
-            for token in json.loads(case.refreshed)["tokens"].values()
+            for token in json.loads(case.refreshed)[SAVED_LOGIN_TOKENS_FIELD].values()
         )
         assert REDACTED_CREDENTIAL in result.stdout
 
@@ -471,8 +479,12 @@ def test_switching_account_fails_without_restoring_the_previous_account() -> Non
             ):
                 case.auth.run(SESSION_COMMAND, cwd=case.home, env=case.environment)
         assert (
-            json.loads(case.saved.read_text())["tokens"]["account_id"]
-            != json.loads(case.initial)["tokens"]["account_id"]
+            json.loads(case.saved.read_text())[SAVED_LOGIN_TOKENS_FIELD][
+                SAVED_LOGIN_ACCOUNT_FIELD
+            ]
+            != json.loads(case.initial)[SAVED_LOGIN_TOKENS_FIELD][
+                SAVED_LOGIN_ACCOUNT_FIELD
+            ]
         )
 
 
@@ -486,7 +498,7 @@ def test_timeout_capture_scrubs_credentials_after_native_rotation() -> None:
         assert all(
             token.encode()
             not in (raised.value.output or b"") + (raised.value.stderr or b"")
-            for token in json.loads(case.refreshed)["tokens"].values()
+            for token in json.loads(case.refreshed)[SAVED_LOGIN_TOKENS_FIELD].values()
         )
         assert REDACTED_CREDENTIAL.encode() in (raised.value.output or b"")
         assert case.saved.read_text() == case.refreshed
@@ -550,8 +562,10 @@ def test_failed_login_stops_before_session_execution_and_scrubs_the_error() -> N
                 case.home, cwd=case.home, env=case.environment
             ):
                 pytest.fail("failed login reached session execution")
-        assert all("exec" not in call.argv for call in case.runner.calls)
-        assert case.auth.selection.credential not in str(raised.value)
+        assert all(CODEX_EXEC_SUBCOMMAND not in call.argv for call in case.runner.calls)
+        credential = case.auth.selection.credential
+        assert credential is not None
+        assert credential not in str(raised.value)
         assert REDACTED_CREDENTIAL in str(raised.value)
 
 
@@ -561,7 +575,7 @@ def test_failed_installation_stops_before_credentials_are_attached() -> None:
             observe_codex_subagent_discovery(
                 environment=case.original_environment, runner=case.runner
             )
-        assert all(call.argv[0] == "just" for call in case.runner.calls)
+        assert all(call.argv[0] == JUST_BINARY for call in case.runner.calls)
         assert case.saved.read_text() == case.initial
 
 
@@ -576,7 +590,7 @@ def test_saved_login_contention_times_out_before_linking_credentials() -> None:
                 )
         assert not (case.home / AUTH_FILENAME).is_symlink()
         assert case.saved.read_text() == case.initial
-        assert all("exec" not in call.argv for call in case.runner.calls)
+        assert all(CODEX_EXEC_SUBCOMMAND not in call.argv for call in case.runner.calls)
 
 
 @pytest.mark.parametrize("fault", list(SavedLoginFault), ids=str)
@@ -606,19 +620,13 @@ def test_a_malformed_ownership_record_still_reports_every_scope_split(
     tmp_path: Path,
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    exact = lifecycle.write_shipped("fixture_exact.toml", b'name = "fixture-exact"\n')
+    module = lifecycle.load_module()
+    exact = lifecycle.ship("exact")
     lifecycle.write_checkout(exact.name, exact.read_bytes())
     lifecycle.write_ownership(
-        {
-            "schema_version": 1,
-            "entries": [
-                {
-                    "destination": "agents/fixture_exact.toml",
-                    "plugin": "fixture",
-                    "digest": "z" * 64,
-                }
-            ],
-        }
+        lifecycle.ownership_document(
+            lifecycle.ownership_entry(exact.name, MALFORMED_OWNERSHIP_DIGEST)
+        )
     )
     before = lifecycle.snapshot(lifecycle.home)
 
@@ -626,10 +634,10 @@ def test_a_malformed_ownership_record_still_reports_every_scope_split(
 
     assert result.exit_code == 2
     assert (
-        f"scope-split directed-removal: {lifecycle.checkout_agents / exact.name}"
+        f"{module.SCOPE_SPLIT_REMOVAL_PREFIX}{lifecycle.checkout_agents / exact.name}"
         in result.stdout
     )
-    assert "is not a lowercase sha256 hex string" in result.stdout
+    assert module.NON_HEX_DIGEST in result.stdout
     assert result.home_snapshot == before
 
 
@@ -637,28 +645,25 @@ def test_a_recorded_destination_that_is_a_directory_names_its_cause(
     tmp_path: Path,
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
-    content = b'name = "fixture-auditor"\n'
-    shipped = lifecycle.write_shipped("fixture_auditor.toml", content)
+    module = lifecycle.load_module()
+    content = lifecycle.definition_content("auditor")
+    shipped = lifecycle.ship("auditor")
     destination = lifecycle.home_agents / shipped.name
     destination.mkdir(parents=True)
     lifecycle.write_ownership(
-        {
-            "schema_version": 1,
-            "entries": [
-                {
-                    "destination": f"agents/{shipped.name}",
-                    "plugin": "fixture",
-                    "digest": hashlib.sha256(content).hexdigest(),
-                }
-            ],
-        }
+        lifecycle.ownership_document(
+            lifecycle.ownership_entry(shipped.name, hashlib.sha256(content).hexdigest())
+        )
     )
     before = lifecycle.snapshot(lifecycle.home)
 
     result = lifecycle.run()
 
     assert result.exit_code == 2
-    assert f"collision: {destination} (not a regular file)" in result.stdout
+    assert (
+        f"{module.COLLISION_PREFIX}{destination} ({module.CAUSE_NOT_REGULAR_FILE})"
+        in result.stdout
+    )
     assert result.home_snapshot == before
 
 
@@ -666,7 +671,8 @@ def test_a_symlinked_agent_directory_still_reports_every_scope_split(
     tmp_path: Path,
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path / "case", plugin_name="fixture")
-    exact = lifecycle.write_shipped("fixture_exact.toml", b'name = "fixture-exact"\n')
+    module = lifecycle.load_module()
+    exact = lifecycle.ship("exact")
     lifecycle.write_checkout(exact.name, exact.read_bytes())
     real_agents = tmp_path / "real-agents"
     real_agents.mkdir()
@@ -677,11 +683,102 @@ def test_a_symlinked_agent_directory_still_reports_every_scope_split(
 
     assert result.exit_code == 2
     assert (
-        f"scope-split directed-removal: {lifecycle.checkout_agents / exact.name}"
+        f"{module.SCOPE_SPLIT_REMOVAL_PREFIX}{lifecycle.checkout_agents / exact.name}"
         in result.stdout
     )
     assert (
-        f"collision: selected agent directory {lifecycle.home_agents} "
-        "must not be a symlink" in result.stdout
+        f"{module.COLLISION_PREFIX}"
+        f"{module.SYMLINKED_AGENT_DIRECTORY.format(path=lifecycle.home_agents)}"
+        in result.stdout
     )
     assert not (real_agents / exact.name).exists()
+
+
+def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall() -> (
+    None
+):
+    execution = observe_persistent_execution()
+    claude_commands = [
+        command
+        for command in execution.report.plan.commands
+        if command.agent is Agent.CLAUDE
+    ]
+    updated = [
+        command.plugin
+        for command in claude_commands
+        if command.operation is Operation.PLUGIN_UPDATE
+    ]
+    failure = observe_designated_failure(
+        isolated=False,
+        operation=Operation.PLUGIN_UPDATE,
+        stderr="update failed for a reason the marketplace did not name",
+    )
+
+    assert execution.report.plan.claude_plugins
+    assert not any(
+        command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        for command in claude_commands
+    )
+    assert tuple(updated) == execution.report.plan.claude_plugins
+    assert all(
+        command.cwd == execution.report.plan.roots.checkout
+        for command in claude_commands
+        if command.operation is Operation.PLUGIN_UPDATE
+    )
+    registering = observe_persistent_plan(claude_repository=None)
+    registering_claude = [
+        command
+        for command in registering.plan.commands
+        if command.agent is Agent.CLAUDE
+    ]
+    registering_operations = [command.operation for command in registering_claude]
+    assert registering.plan.claude_plugins
+    assert not any(
+        operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        for operation in registering_operations
+    )
+    assert (
+        tuple(
+            command.plugin
+            for command in registering_claude
+            if command.operation is Operation.PLUGIN_UPDATE
+        )
+        == registering.plan.claude_plugins
+    )
+    assert registering_operations.index(Operation.MARKETPLACE_ADD) < (
+        registering_operations.index(Operation.PLUGIN_UPDATE)
+    )
+    assert failure.report is None
+    assert failure.failure is not None
+    assert failure.failure.command.operation is Operation.PLUGIN_UPDATE
+    assert not any(
+        command.operation is Operation.PLUGIN_LIST and command.agent is Agent.CLAUDE
+        for command in failure.calls
+    )
+
+
+def test_a_local_scope_record_for_the_checkout_suppresses_the_bootstrap_install() -> (
+    None
+):
+    observation = observe_local_record_bootstrap_plan()
+    claude_commands = [
+        command
+        for command in observation.plan.commands
+        if command.agent is Agent.CLAUDE
+    ]
+    updates = [
+        command
+        for command in claude_commands
+        if command.operation is Operation.PLUGIN_UPDATE
+    ]
+
+    assert not any(
+        command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        for command in claude_commands
+    )
+    assert [(command.plugin, command.argv[-1], command.cwd) for command in updates] == [
+        (SPEC_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.plan.roots.checkout)
+    ]
+    assert FIRST_INSTALL_WARNING.format(agent=Agent.CLAUDE.value) not in [
+        warning.message for warning in observation.plan.warnings
+    ]

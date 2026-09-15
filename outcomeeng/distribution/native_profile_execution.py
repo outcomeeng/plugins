@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Final, Mapping, Protocol
 
 from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.installation import (
+    CLAUDE_EXECUTABLE,
+    CODEX_EXEC_SUBCOMMAND,
+    CODEX_EXECUTABLE,
+)
 from outcomeeng.distribution.native_thread_evidence import (
     NativeThreadReader,
     collect_native_child_evidence,
@@ -30,9 +35,6 @@ NATIVE_PROFILE_OVERRIDE_ENVIRONMENT_VARIABLES: Final = frozenset(
         "CLAUDE_CODE_SUBAGENT_MODEL",
     }
 )
-
-_CLAUDE_EXECUTABLE: Final = "claude"
-_CODEX_EXECUTABLE: Final = "codex"
 
 
 @dataclass(frozen=True)
@@ -101,7 +103,7 @@ def _native_definition_path(state_root: Path, target: Target, name: str) -> Path
 def _native_launch_command(target: Target) -> tuple[str, ...]:
     if target is Target.CLAUDE:
         return (
-            _CLAUDE_EXECUTABLE,
+            CLAUDE_EXECUTABLE,
             "-p",
             "--output-format",
             "stream-json",
@@ -110,8 +112,8 @@ def _native_launch_command(target: Target) -> tuple[str, ...]:
             "--forward-subagent-text",
         )
     return (
-        _CODEX_EXECUTABLE,
-        "exec",
+        CODEX_EXECUTABLE,
+        CODEX_EXEC_SUBCOMMAND,
         "--json",
         "--strict-config",
         "--skip-git-repo-check",

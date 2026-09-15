@@ -6,7 +6,7 @@ CAN self-diagnose a misconfigured environment without recalling and typing the u
 
 ## Assertions
 
-- ALWAYS: marketplace-install diagnosis derives expected selection from Claude Code project-installed inventory and raw selected-home Codex plugin declarations, including disabled and uncached entries, bounded by the corresponding committed marketplace catalog.
+- ALWAYS: marketplace-install diagnosis derives expected selection from Claude Code's inventory recorded for the invocation checkout at project or local scope and raw selected-home Codex plugin declarations, including disabled and uncached entries, bounded by the corresponding committed marketplace catalog.
 - NEVER: trusted-product activation or cache presence changes the expected Codex home-wide selection; native inspection executes outside trusted product configuration discovery.
 
 ### Conformance

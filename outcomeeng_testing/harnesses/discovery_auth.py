@@ -28,9 +28,42 @@ from outcomeeng.validation.ci_gate import (
 )
 
 WORKSPACE_TOKEN_ENV = "CODEX_ACCESS_TOKEN"
+CODEX_LOGIN_SUBCOMMAND = "login"
+"""The native login subcommand; discovery issues it only against a disposable home."""
+CODEX_LOGOUT_SUBCOMMAND = "logout"
+"""The native logout subcommand; discovery never issues it."""
 API_LOGIN_FLAG = "--with-api-key"
 WORKSPACE_LOGIN_FLAG = "--with-access-token"
 AUTH_FILENAME = "auth.json"
+CI_ENVIRONMENT = "CI"
+"""The environment variable hosted runners set, which requires an explicit mode."""
+SAVED_LOGIN_MODE_FIELD = "auth_mode"
+"""The saved-login document field naming how the login was obtained."""
+SAVED_LOGIN_CHATGPT_MODE = "chatgpt"
+"""The saved-login mode value for a ChatGPT subscription login."""
+SAVED_LOGIN_API_KEY_FIELD = "OPENAI_API_KEY"
+"""The saved-login document field the native API-key login writes.
+
+It is spelled like the API-key environment variable but is a field of the
+credential document, a different surface from the child environment.
+"""
+SAVED_LOGIN_TOKENS_FIELD = "tokens"
+"""The saved-login document field carrying the ChatGPT token set."""
+SAVED_LOGIN_ACCESS_TOKEN_FIELD = "access_token"
+"""The token-set field carrying the access token a workspace login presents."""
+SAVED_LOGIN_REFRESH_TOKEN_FIELD = "refresh_token"
+"""The token-set field carrying the refresh token native refresh rotates."""
+SAVED_LOGIN_ID_TOKEN_FIELD = "id_token"
+"""The token-set field carrying the identity token."""
+SAVED_LOGIN_ACCOUNT_FIELD = "account_id"
+"""The token-set field naming the account the saved login belongs to."""
+SAVED_LOGIN_TOKEN_FIELDS: tuple[str, ...] = (
+    SAVED_LOGIN_ACCESS_TOKEN_FIELD,
+    SAVED_LOGIN_REFRESH_TOKEN_FIELD,
+    SAVED_LOGIN_ID_TOKEN_FIELD,
+    SAVED_LOGIN_ACCOUNT_FIELD,
+)
+"""Every token-set field a usable ChatGPT saved login carries."""
 FILE_STORE_ARGS = ("-c", 'cli_auth_credentials_store="file"')
 DISCOVERY_TIMEOUT_SECONDS = 600
 LOCK_RETRY_SECONDS = 0.05
@@ -110,10 +143,10 @@ class CredentialRedactor:
                 "Saved login is missing or malformed; use the CLI to log in with the file credential store."
             ) from None
         if isinstance(document, dict):
-            key = document.get("OPENAI_API_KEY")
+            key = document.get(SAVED_LOGIN_API_KEY_FIELD)
             if isinstance(key, str):
                 self.add(key)
-            tokens = document.get("tokens")
+            tokens = document.get(SAVED_LOGIN_TOKENS_FIELD)
             if isinstance(tokens, dict):
                 for value in tokens.values():
                     if isinstance(value, str):
@@ -148,7 +181,11 @@ class AuthenticationSelection:
 
 def select_authentication(environment: Mapping[str, str]) -> AuthenticationSelection:
     selected = environment.get(DISCOVERY_AUTH_MODE_ENVIRONMENT)
-    if selected is None and environment.get("CI", "").lower() not in ("", "0", "false"):
+    if selected is None and environment.get(CI_ENVIRONMENT, "").lower() not in (
+        "",
+        "0",
+        "false",
+    ):
         raise DiscoveryAuthenticationError(
             f"CI requires explicit {DISCOVERY_AUTH_MODE_ENVIRONMENT}."
         )
@@ -270,19 +307,22 @@ class DiscoveryAuthentication:
                 "Subscription discovery requires a saved file-backed ChatGPT login; keyring-only credentials are unsupported."
             ) from None
         document = self.redactor.read_document(path)
-        if not isinstance(document, dict) or document.get("auth_mode") != "chatgpt":
+        if (
+            not isinstance(document, dict)
+            or document.get(SAVED_LOGIN_MODE_FIELD) != SAVED_LOGIN_CHATGPT_MODE
+        ):
             raise DiscoveryAuthenticationError(
                 "Subscription discovery requires a ChatGPT saved login."
             )
-        tokens = document.get("tokens")
+        tokens = document.get(SAVED_LOGIN_TOKENS_FIELD)
         if not isinstance(tokens, dict) or not all(
             isinstance(tokens.get(name), str) and tokens[name]
-            for name in ("access_token", "refresh_token", "id_token", "account_id")
+            for name in SAVED_LOGIN_TOKEN_FIELDS
         ):
             raise DiscoveryAuthenticationError(
                 "Saved ChatGPT login lacks required tokens or account identity."
             )
-        return str(tokens["account_id"])
+        return str(tokens[SAVED_LOGIN_ACCOUNT_FIELD])
 
     def _check_write_through(self, *, cwd: Path, env: Mapping[str, str]) -> None:
         with TemporaryDirectory() as directory:
@@ -298,7 +338,12 @@ class DiscoveryAuthentication:
             fabricated = uuid4().hex
             self.redactor.add(fabricated)
             result = self.run(
-                (CODEX_EXECUTABLE, *FILE_STORE_ARGS, "login", API_LOGIN_FLAG),
+                (
+                    CODEX_EXECUTABLE,
+                    *FILE_STORE_ARGS,
+                    CODEX_LOGIN_SUBCOMMAND,
+                    API_LOGIN_FLAG,
+                ),
                 cwd=cwd,
                 env={**env, CODEX_HOME_ENV: str(consumer)},
                 input_text=fabricated,
@@ -311,7 +356,7 @@ class DiscoveryAuthentication:
                 or link.resolve() != owner
                 or (identity.st_dev, identity.st_ino) != (after.st_dev, after.st_ino)
                 or not isinstance(document, dict)
-                or document.get("OPENAI_API_KEY") != fabricated
+                or document.get(SAVED_LOGIN_API_KEY_FIELD) != fabricated
             ):
                 raise DiscoveryAuthenticationError(
                     "The CLI credential writer cannot preserve the saved-login link; subscription discovery is unsupported by this CLI."
@@ -334,7 +379,7 @@ class DiscoveryAuthentication:
                 else WORKSPACE_LOGIN_FLAG
             )
             result = self.run(
-                (CODEX_EXECUTABLE, *FILE_STORE_ARGS, "login", flag),
+                (CODEX_EXECUTABLE, *FILE_STORE_ARGS, CODEX_LOGIN_SUBCOMMAND, flag),
                 cwd=cwd,
                 env=env,
                 input_text=self.selection.credential,
