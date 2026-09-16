@@ -693,8 +693,13 @@ BASE_REF_BRANCH = "main"
 BASE_REF = "origin/main"
 LISTED_VERSION = recorded_version(0)
 """The one version every entry of a catalog-wide controlled listing carries."""
-SEEDED_OLDER_COMMIT_DISTANCE = 100
-"""How many first-parent commits behind the checkout head the seeded record is placed."""
+SEEDED_OLDER_COMMIT_DISTANCE = 1
+"""How many first-parent commits behind the checkout head the seeded record is placed.
+
+One is the depth every gate checkout carries: the CI checkout fetches two
+commits so the first parent stays reachable, and any commit other than the
+marketplace's current one is enough to age the record.
+"""
 SEEDED_OLDER_VERSION = recorded_version(0)
 """The version a seeded stale install record is rewritten to before a real refresh."""
 
@@ -2218,8 +2223,9 @@ def _seed_older_record_version(
     that older version; rewriting all three in the invocation checkout's
     record of the disposable install-record document, with the current cache
     copied to the older version's directory, is how the harness produces
-    that history without a second marketplace. The older commit is a real
-    ancestor of the checkout head, read through git.
+    that history without a second marketplace. The older commit is the
+    checkout head's first parent, read through git, which the shallowest
+    gate checkout still carries.
     """
     older_commit = subprocess.run(
         ("git", "rev-parse", f"HEAD~{SEEDED_OLDER_COMMIT_DISTANCE}"),
