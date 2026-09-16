@@ -3,17 +3,32 @@
 import json
 from typing import cast
 
+import pytest
+
 from outcomeeng.distribution.installation import (
     Agent,
     CANONICAL_MARKETPLACE_SOURCE,
+    CODEX_SOURCE_DIAGNOSTIC,
+    PATHLESS_LISTING_ENTRY_DIAGNOSTIC,
+    PROJECT_SOURCE_DIAGNOSTIC,
+    CLAUDE_PLUGIN_ID_FIELD,
+    CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
+    CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PROJECT_SCOPE,
+    CLAUDE_SCOPE_FLAG,
+    REGISTRY_SOURCE_DIAGNOSTIC,
     FIRST_INSTALL_WARNING,
     Operation,
     ReportField,
     SPEC_TREE_PLUGIN,
-    SourceAction,
+    UNREADABLE_SETTINGS_DIAGNOSTIC,
     USER_SCOPE_COLLISION_DIAGNOSTIC,
+    marketplace_plugin_name,
     report_document,
 )
+from pathlib import Path
+
+from outcomeeng_testing.generators.installation import RecordDisposition
 from outcomeeng_testing.harnesses.installation import (
     NONCANONICAL_MARKETPLACE_SOURCE,
     absent_from_every_agent,
@@ -24,6 +39,11 @@ from outcomeeng_testing.harnesses.installation import (
     observe_invalid_isolated_selection,
     observe_invalid_persistent_selection,
     observe_persistent_plan,
+    observe_noncanonical_registry_plan,
+    observe_noncanonical_source,
+    observe_pathless_record_listing,
+    observe_unreadable_source,
+    observe_record_refresh_plan,
     observe_unpublished_plugin,
     observe_verification_recipe,
 )
@@ -93,32 +113,23 @@ def test_invalid_isolated_subset_is_rejected_before_mutation() -> None:
     assert observation.attempted == ()
 
 
-def test_persistent_installation_replaces_noncanonical_sources() -> None:
-    observation = observe_persistent_plan(
-        claude_repository=NONCANONICAL_MARKETPLACE_SOURCE,
-        codex_source=NONCANONICAL_MARKETPLACE_SOURCE,
-    )
+@pytest.mark.parametrize(
+    ("agent", "diagnostic"),
+    [
+        (Agent.CLAUDE, PROJECT_SOURCE_DIAGNOSTIC),
+        (Agent.CODEX, CODEX_SOURCE_DIAGNOSTIC),
+    ],
+    ids=str,
+)
+def test_a_noncanonical_source_stops_either_agent_before_any_plan(
+    agent: Agent, diagnostic: str
+) -> None:
+    error = observe_noncanonical_source(agent)
 
-    assert observation.preflight.claude_source_action is SourceAction.REPLACE
-    assert [
-        command.operation
-        for command in observation.plan.commands
-        if command.agent is Agent.CLAUDE
-        and command.operation
-        in {Operation.MARKETPLACE_REMOVE, Operation.MARKETPLACE_ADD}
-    ] == [Operation.MARKETPLACE_REMOVE, Operation.MARKETPLACE_ADD]
-    assert [
-        command.operation
-        for command in observation.plan.commands
-        if command.agent is Agent.CODEX
-        and command.operation
-        in {Operation.MARKETPLACE_REMOVE, Operation.MARKETPLACE_ADD}
-    ] == [Operation.MARKETPLACE_REMOVE, Operation.MARKETPLACE_ADD]
-    assert any(
-        CANONICAL_MARKETPLACE_SOURCE in command.argv
-        for command in observation.plan.commands
-        if command.operation is Operation.MARKETPLACE_ADD
-    )
+    assert error is not None
+    assert error.startswith(diagnostic)
+    assert NONCANONICAL_MARKETPLACE_SOURCE in error
+    assert CANONICAL_MARKETPLACE_SOURCE in error
 
 
 def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> None:
@@ -234,10 +245,79 @@ def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
         for command in observation.plan.commands
         if command.agent is Agent.CLAUDE
         and command.operation
-        in {
-            Operation.MARKETPLACE_REMOVE,
-            Operation.MARKETPLACE_ADD,
-            Operation.MARKETPLACE_REFRESH,
-        }
+        in {Operation.MARKETPLACE_ADD, Operation.MARKETPLACE_REFRESH}
     ]
     assert source_operations == [Operation.MARKETPLACE_ADD]
+
+
+def test_persistent_run_updates_every_recorded_checkout_and_reinstalls_nothing() -> (
+    None
+):
+    observation = observe_record_refresh_plan()
+    claude_commands = [
+        command
+        for command in observation.plan.commands
+        if command.agent is Agent.CLAUDE
+    ]
+    updates = [
+        command
+        for command in claude_commands
+        if command.operation is Operation.PLUGIN_UPDATE
+    ]
+    expected = {
+        (
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]),
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+            Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
+        )
+        for entry, disposition in observation.cases
+        if disposition is RecordDisposition.UPDATE
+    }
+
+    assert not any(
+        command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
+        for command in claude_commands
+    )
+    assert {(command.plugin, command.argv[-1], command.cwd) for command in updates} == (
+        expected
+    )
+    assert len(updates) == len(expected)
+    assert all(command.argv[-2] == CLAUDE_SCOPE_FLAG for command in updates)
+    assert observation.attempted[-len(observation.plan.commands) :] == (
+        observation.plan.commands
+    )
+    assert {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            Path(cast(str, record[ReportField.PROJECT_PATH])),
+        )
+        for record in cast(
+            list[dict[str, str]], observation.document[ReportField.CLAUDE_RECORDS]
+        )
+    } == expected
+
+
+def test_a_pathless_refresh_scope_entry_stops_before_any_plan() -> None:
+    error = observe_pathless_record_listing()
+
+    assert error == PATHLESS_LISTING_ENTRY_DIAGNOSTIC.format(
+        index=0, scope=CLAUDE_PROJECT_SCOPE
+    )
+
+
+def test_unreadable_invocation_settings_stop_before_any_plan() -> None:
+    observation = observe_unreadable_source()
+
+    assert observation.error is not None
+    assert observation.error.startswith(UNREADABLE_SETTINGS_DIAGNOSTIC)
+    assert str(observation.settings_path) in observation.error
+
+
+def test_a_noncanonical_registry_source_stops_before_any_plan() -> None:
+    error = observe_noncanonical_registry_plan()
+
+    assert error is not None
+    assert error.startswith(REGISTRY_SOURCE_DIAGNOSTIC)
+    assert NONCANONICAL_MARKETPLACE_SOURCE in error
+    assert CANONICAL_MARKETPLACE_SOURCE in error

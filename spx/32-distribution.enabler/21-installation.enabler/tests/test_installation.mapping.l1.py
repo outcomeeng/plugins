@@ -5,6 +5,7 @@ from outcomeeng.distribution.installation import (
     SPEC_TREE_PLUGIN,
 )
 from outcomeeng_testing.generators.installation import (
+    UNCATALOGED_PLUGIN,
     catalog_plugin_names_from_bytes,
     generated_persistent_catalog_selections,
 )
@@ -29,6 +30,8 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
             generated_persistent_catalog_selections(observation.catalog)
         )
         for mapping in observation.mappings:
+            assert UNCATALOGED_PLUGIN not in observation.catalog
+            assert UNCATALOGED_PLUGIN not in mapping.planned
             if not mapping.selected:
                 assert mapping.planned == (SPEC_TREE_PLUGIN,)
             else:
@@ -37,7 +40,13 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
                     observation.catalog.index(plugin) for plugin in mapping.planned
                 ]
                 assert positions == sorted(set(positions))
-            assert mapping.installs == mapping.planned
-            assert mapping.enables == (
-                mapping.planned if observation.agent is Agent.CLAUDE else ()
-            )
+            if observation.agent is Agent.CLAUDE and mapping.selected:
+                assert mapping.installs == ()
+                assert mapping.enables == ()
+                assert mapping.updates == mapping.planned
+            else:
+                assert mapping.installs == mapping.planned
+                assert mapping.enables == (
+                    mapping.planned if observation.agent is Agent.CLAUDE else ()
+                )
+                assert mapping.updates == ()

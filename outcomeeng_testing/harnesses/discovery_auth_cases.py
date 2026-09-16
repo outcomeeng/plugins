@@ -18,12 +18,24 @@ from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from outcomeeng.distribution.installation import CODEX_HOME_ENV, HOME_ENV
+from outcomeeng.distribution.installation import (
+    CODEX_EXEC_SUBCOMMAND,
+    CODEX_EXECUTABLE,
+    CODEX_HOME_ENV,
+    HOME_ENV,
+)
 from outcomeeng.validation.ci_gate import (
     CODEX_API_KEY_ENVIRONMENT,
     DISCOVERY_AUTH_MODE_ENVIRONMENT,
+    JUST_BINARY,
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
+    CI_ENVIRONMENT,
+    CODEX_LOGIN_SUBCOMMAND,
+    SAVED_LOGIN_ACCESS_TOKEN_FIELD,
+    SAVED_LOGIN_ACCOUNT_FIELD,
+    SAVED_LOGIN_API_KEY_FIELD,
+    SAVED_LOGIN_TOKENS_FIELD,
     AUTH_FILENAME,
     WORKSPACE_TOKEN_ENV,
     AuthenticationMode,
@@ -33,7 +45,7 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "discovery_auth"
 API_FIXTURE_PATH = FIXTURE_ROOT / "api.json"
-SESSION_COMMAND = ("codex", "exec")
+SESSION_COMMAND = (CODEX_EXECUTABLE, CODEX_EXEC_SUBCOMMAND)
 NATIVE_FAILURE_EXIT_CODE = 17
 
 
@@ -80,12 +92,12 @@ class NativeCredentialRunner:
     ) -> subprocess.CompletedProcess[str]:
         home = Path(env[CODEX_HOME_ENV])
         self.calls.append(NativeCall(tuple(argv), home, dict(env), input_text))
-        if argv[0] == "just":
+        if argv[0] == JUST_BINARY:
             return subprocess.CompletedProcess(
                 argv, NATIVE_FAILURE_EXIT_CODE, "", "installation failed"
             )
         target = home / AUTH_FILENAME
-        if "login" in argv:
+        if CODEX_LOGIN_SUBCOMMAND in argv:
             if self.fault is NativeFault.LOGIN_FAILURE:
                 return subprocess.CompletedProcess(
                     argv, NATIVE_FAILURE_EXIT_CODE, "", input_text or ""
@@ -93,7 +105,7 @@ class NativeCredentialRunner:
             if self.fault is NativeFault.INCOMPATIBLE_WRITER:
                 target.unlink(missing_ok=True)
             target.write_text(
-                json.dumps({"OPENAI_API_KEY": input_text}), encoding="utf-8"
+                json.dumps({SAVED_LOGIN_API_KEY_FIELD: input_text}), encoding="utf-8"
             )
             return subprocess.CompletedProcess(argv, 0, input_text or "", "")
         if self.fault is NativeFault.REPLACE_LINK:
@@ -106,9 +118,9 @@ class NativeCredentialRunner:
         target.write_text(self.refreshed, encoding="utf-8")
         if self.fault is NativeFault.SWITCH_ACCOUNT:
             document = json.loads(self.refreshed)
-            document["tokens"]["account_id"] += "-other"
+            document[SAVED_LOGIN_TOKENS_FIELD][SAVED_LOGIN_ACCOUNT_FIELD] += "-other"
             target.write_text(json.dumps(document), encoding="utf-8")
-        echo = " ".join(json.loads(self.refreshed)["tokens"].values())
+        echo = " ".join(json.loads(self.refreshed)[SAVED_LOGIN_TOKENS_FIELD].values())
         if self.fault is NativeFault.TIMEOUT:
             raise subprocess.TimeoutExpired(
                 argv, timeout, output=echo.encode(), stderr=echo.encode()
@@ -137,7 +149,9 @@ def authentication_case(
 ) -> Iterator[AuthenticationCase]:
     initial = (FIXTURE_ROOT / "chatgpt.json").read_text(encoding="utf-8")
     refreshed = (FIXTURE_ROOT / "refreshed.json").read_text(encoding="utf-8")
-    api = json.loads(API_FIXTURE_PATH.read_text(encoding="utf-8"))["OPENAI_API_KEY"]
+    api = json.loads(API_FIXTURE_PATH.read_text(encoding="utf-8"))[
+        SAVED_LOGIN_API_KEY_FIELD
+    ]
     with TemporaryDirectory() as directory:
         root = Path(directory).resolve()
         selected_home = root / "saved"
@@ -150,7 +164,9 @@ def authentication_case(
             CODEX_HOME_ENV: str(selected_home),
             DISCOVERY_AUTH_MODE_ENVIRONMENT: mode.value,
             CODEX_API_KEY_ENVIRONMENT: api,
-            WORKSPACE_TOKEN_ENV: json.loads(initial)["tokens"]["access_token"],
+            WORKSPACE_TOKEN_ENV: json.loads(initial)[SAVED_LOGIN_TOKENS_FIELD][
+                SAVED_LOGIN_ACCESS_TOKEN_FIELD
+            ],
         }
         if not explicit_mode:
             del original[DISCOVERY_AUTH_MODE_ENVIRONMENT]
@@ -180,12 +196,12 @@ def missing_credential_environment(mode: AuthenticationMode) -> dict[str, str]:
     )
     return {
         DISCOVERY_AUTH_MODE_ENVIRONMENT: mode.value,
-        other: document["OPENAI_API_KEY"],
+        other: document[SAVED_LOGIN_API_KEY_FIELD],
     }
 
 
 def ci_without_authentication_mode() -> dict[str, str]:
-    return {"CI": "true"}
+    return {CI_ENVIRONMENT: "true"}
 
 
 @dataclass

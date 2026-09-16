@@ -6,6 +6,9 @@ import pytest
 
 from outcomeeng.distribution.installation import (
     Agent,
+    CLAUDE_LOCAL_SCOPE,
+    CLAUDE_PROJECT_SCOPE,
+    ClaudeInstallRecord,
     FIRST_INSTALL_WARNING,
     ReportField,
     SPEC_TREE_PLUGIN,
@@ -14,6 +17,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_codex_subagent_discovery,
     observe_real_first_install,
     observe_real_installation,
+    observe_real_record_refresh,
 )
 
 
@@ -58,6 +62,38 @@ def test_real_agent_clis_place_home_agents_and_repeat_full_installation() -> Non
     assert observation.placed_first == observation.placed_second
     assert observation.unowned_first == observation.unowned_initial
     assert observation.unowned_second == observation.unowned_initial
+
+
+def test_real_persistent_run_refreshes_a_second_checkout_at_local_scope() -> None:
+    observation = observe_real_record_refresh()
+
+    expected = {
+        (SPEC_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, observation.invocation_checkout),
+        (SPEC_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.other_checkout),
+    }
+    recorded_before = {
+        (record.plugin, record.scope, record.project_path)
+        for record in observation.records_before
+        if isinstance(record, ClaudeInstallRecord)
+    }
+    assert expected <= recorded_before
+    assert observation.exit_code == 0, observation.stderr
+    document = json.loads(observation.stdout)
+    refreshed = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        )
+        for record in document[ReportField.CLAUDE_RECORDS]
+    }
+    assert {(plugin, scope, str(path)) for plugin, scope, path in expected} <= refreshed
+    assert observation.records_after == observation.records_before
+    assert (
+        observation.invocation_activation_after
+        == observation.invocation_activation_before
+    )
+    assert observation.other_activation_after == observation.other_activation_before
 
 
 @pytest.mark.live_subagent_discovery

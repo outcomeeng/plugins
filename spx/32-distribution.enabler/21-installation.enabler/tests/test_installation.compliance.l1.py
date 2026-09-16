@@ -5,24 +5,31 @@ from pathlib import Path
 
 from outcomeeng.distribution.installation import (
     Agent,
+    CLAUDE_PLUGIN_ID_FIELD,
+    CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
+    CLAUDE_PLUGIN_SCOPE_FIELD,
     CLAUDE_PROJECT_SCOPE,
+    CLAUDE_REFRESH_SCOPES,
     CLAUDE_SCOPE_BEARING_OPERATIONS,
     CLAUDE_SCOPELESS_OPERATIONS,
+    CLAUDE_SCOPE_FLAG,
     CODEX_HOME_ENV,
     InstallationMode,
     Operation,
     ReportField,
     SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
+    marketplace_plugin_name,
 )
+from outcomeeng_testing.generators.installation import RecordDisposition
 from outcomeeng_testing.harnesses.installation import (
-    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_first_failure,
     observe_inspection_failure,
     observe_invalid_persistent_selections,
     observe_missing_codex_home,
     observe_persistent_execution,
     observe_persistent_plan,
+    observe_record_refresh_plan,
     observe_repository_plan,
 )
 
@@ -45,9 +52,11 @@ def test_every_command_uses_the_explicit_checkout_and_agent_homes() -> None:
         for name, value in command.environment
         if name in STATE_ENV_NAMES
     )
+    state_root = observation.plan.roots.state
+    assert state_root is not None
     assert all(
         all(
-            Path(value).is_relative_to(observation.plan.roots.state)
+            Path(value).is_relative_to(state_root)
             for name, value in command.environment
             if name in STATE_ENV_NAMES
         )
@@ -64,11 +73,11 @@ def test_persistent_installation_requires_selected_codex_home() -> None:
 
 def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None:
     refreshing = observe_persistent_execution()
-    replacing = observe_persistent_plan(
-        claude_repository=NONCANONICAL_MARKETPLACE_SOURCE,
-        codex_source=NONCANONICAL_MARKETPLACE_SOURCE,
+    registering = observe_persistent_plan(claude_repository=None)
+    bootstrapping = observe_persistent_plan(
+        installed={agent: frozenset() for agent in Agent},
     )
-    plans = (refreshing.report.plan, replacing.plan)
+    plans = (refreshing.report.plan, registering.plan, bootstrapping.plan)
     claude_commands = [
         command
         for plan in plans
@@ -82,19 +91,57 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         if command.agent is Agent.CODEX
     ]
 
+    observed = {command.operation for command in claude_commands}
+
     assert all(plan.mode is InstallationMode.PERSISTENT for plan in plans)
-    assert {command.operation for command in claude_commands} == (
-        CLAUDE_SCOPE_BEARING_OPERATIONS | CLAUDE_SCOPELESS_OPERATIONS
+    assert observed == CLAUDE_SCOPE_BEARING_OPERATIONS | CLAUDE_SCOPELESS_OPERATIONS
+    assert all(
+        command.argv[-2:] == (CLAUDE_SCOPE_FLAG, CLAUDE_PROJECT_SCOPE)
+        and command.cwd == plan.roots.checkout
+        for plan in plans
+        for command in plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation in CLAUDE_SCOPE_BEARING_OPERATIONS
+        and command.operation is not Operation.PLUGIN_UPDATE
     )
     assert all(
-        "--scope" in command.argv and CLAUDE_PROJECT_SCOPE in command.argv
-        for command in claude_commands
-        if command.operation in CLAUDE_SCOPE_BEARING_OPERATIONS
+        command.argv[-2:] == (CLAUDE_SCOPE_FLAG, CLAUDE_PROJECT_SCOPE)
+        and command.cwd == plan.roots.checkout
+        for plan in plans
+        for command in plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation is Operation.PLUGIN_UPDATE
+    )
+    spread = observe_record_refresh_plan()
+    expected_updates = {
+        (
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]),
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+            Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
+        )
+        for entry, disposition in spread.cases
+        if disposition is RecordDisposition.UPDATE
+    }
+    observed_updates = [
+        (command.plugin, command.argv[-1], command.cwd)
+        for command in spread.plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation is Operation.PLUGIN_UPDATE
+    ]
+    assert {scope for _, scope, _ in expected_updates} == CLAUDE_REFRESH_SCOPES
+    assert {path for _, _, path in expected_updates} > {spread.checkout}
+    assert set(observed_updates) == expected_updates
+    assert len(observed_updates) == len(expected_updates)
+    assert all(
+        command.argv[-2] == CLAUDE_SCOPE_FLAG
+        for command in spread.plan.commands
+        if command.agent is Agent.CLAUDE
+        and command.operation is Operation.PLUGIN_UPDATE
     )
     assert all(
-        "--scope" not in command.argv
+        CLAUDE_SCOPE_FLAG not in command.argv
         for command in claude_commands
-        if command.operation in CLAUDE_SCOPELESS_OPERATIONS
+        if command.operation not in CLAUDE_SCOPE_BEARING_OPERATIONS
     )
     assert codex_commands
     assert all(
@@ -106,6 +153,19 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     assert (
         refreshing.attempted[len(refreshing.preflight.inspections) :]
         == refreshing.report.plan.commands
+    )
+    inspections = refreshing.preflight.inspections
+    assert {command.operation for command in inspections} == {
+        Operation.MARKETPLACE_INSPECT,
+        Operation.PLUGIN_INSPECT,
+    }
+    assert {command.agent for command in inspections} == set(Agent)
+    assert all(
+        command.cwd == refreshing.preflight.roots.checkout
+        and CLAUDE_SCOPE_FLAG not in command.argv
+        and dict(command.environment)[CODEX_HOME_ENV]
+        == str(refreshing.preflight.roots.codex_home)
+        for command in inspections
     )
 
 

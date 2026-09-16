@@ -24,6 +24,25 @@ from typing import Any
 PLUGIN = "spec-tree"
 SHIPPED = Path(__file__).resolve().parent.parent / "agents"
 OWNERSHIP = ".outcomeeng-marketplace-ownership.json"
+OWNERSHIP_SCHEMA_FIELD = "schema_version"
+OWNERSHIP_SCHEMA_VERSION = 1
+OWNERSHIP_ENTRIES_FIELD = "entries"
+ENTRY_DESTINATION_FIELD = "destination"
+ENTRY_PLUGIN_FIELD = "plugin"
+ENTRY_DIGEST_FIELD = "digest"
+AGENTS_DIRECTORY = "agents"
+WRITE_PREFIX = "write: "
+PRUNE_PREFIX = "prune: "
+COLLISION_PREFIX = "collision: "
+SCOPE_SPLIT_REMOVAL_PREFIX = "scope-split directed-removal: "
+SCOPE_SPLIT_COLLISION_PREFIX = "scope-split collision: "
+CAUSE_SYMLINK = "symlink"
+CAUSE_UNRECORDED = "unrecorded"
+CAUSE_NOT_REGULAR_FILE = "not a regular file"
+CAUSE_DIGEST_MISMATCH = "digest mismatch"
+CAUSE_CHANGED_AFTER_PREFLIGHT = "changed after preflight"
+NON_HEX_DIGEST = "is not a lowercase sha256 hex string"
+SYMLINKED_AGENT_DIRECTORY = "selected agent directory {path} must not be a symlink"
 
 
 def _digest(content: bytes) -> str:
@@ -53,9 +72,15 @@ def _load_ownership(path: Path) -> list[dict[str, str]]:
         document: Any = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise ValueError(f"invalid agent ownership record {path}: {error}") from error
-    if not isinstance(document, dict) or document.get("schema_version") != 1:
-        raise ValueError(f"agent ownership record {path} must use schema_version 1")
-    values = document.get("entries")
+    if (
+        not isinstance(document, dict)
+        or document.get(OWNERSHIP_SCHEMA_FIELD) != OWNERSHIP_SCHEMA_VERSION
+    ):
+        raise ValueError(
+            f"agent ownership record {path} must use "
+            f"{OWNERSHIP_SCHEMA_FIELD} {OWNERSHIP_SCHEMA_VERSION}"
+        )
+    values = document.get(OWNERSHIP_ENTRIES_FIELD)
     if not isinstance(values, list):
         raise ValueError(f"agent ownership record {path} must contain an entries array")
     entries: list[dict[str, str]] = []
@@ -66,12 +91,13 @@ def _load_ownership(path: Path) -> list[dict[str, str]]:
                 f"agent ownership record {path} entry {index} must be an object"
             )
         destination, plugin, digest = (
-            value.get(key) for key in ("destination", "plugin", "digest")
+            value.get(key)
+            for key in (ENTRY_DESTINATION_FIELD, ENTRY_PLUGIN_FIELD, ENTRY_DIGEST_FIELD)
         )
         for key, item in (
-            ("destination", destination),
-            ("plugin", plugin),
-            ("digest", digest),
+            (ENTRY_DESTINATION_FIELD, destination),
+            (ENTRY_PLUGIN_FIELD, plugin),
+            (ENTRY_DIGEST_FIELD, digest),
         ):
             if not isinstance(item, str):
                 raise ValueError(
@@ -82,12 +108,12 @@ def _load_ownership(path: Path) -> list[dict[str, str]]:
         if (
             relative.is_absolute()
             or len(relative.parts) != 2
-            or relative.parts[0] != "agents"
+            or relative.parts[0] != AGENTS_DIRECTORY
             or relative.suffix != ".toml"
         ):
             raise ValueError(
                 f"agent ownership record {path} entry {index} destination "
-                f"{destination!r} is not agents/<name>.toml"
+                f"{destination!r} is not {AGENTS_DIRECTORY}/<name>.toml"
             )
         if not plugin:
             raise ValueError(
@@ -96,12 +122,18 @@ def _load_ownership(path: Path) -> list[dict[str, str]]:
         if re.fullmatch(r"[0-9a-f]{64}", digest) is None:
             raise ValueError(
                 f"agent ownership record {path} entry {index} digest {digest!r} "
-                "is not a lowercase sha256 hex string"
+                f"{NON_HEX_DIGEST}"
             )
         if destination in seen:
             raise ValueError(f"agent ownership record {path} repeats {destination}")
         seen.add(destination)
-        entries.append({"destination": destination, "plugin": plugin, "digest": digest})
+        entries.append(
+            {
+                ENTRY_DESTINATION_FIELD: destination,
+                ENTRY_PLUGIN_FIELD: plugin,
+                ENTRY_DIGEST_FIELD: digest,
+            }
+        )
     return entries
 
 
@@ -126,15 +158,15 @@ def _collision_cause(
     record was written; it is adopted, not a collision.
     """
     if path.is_symlink():
-        return "symlink"
+        return CAUSE_SYMLINK
     if recorded is None:
-        return None if current == desired else "unrecorded"
-    if recorded["plugin"] != PLUGIN:
-        return f"owned by {recorded['plugin']}"
+        return None if current == desired else CAUSE_UNRECORDED
+    if recorded[ENTRY_PLUGIN_FIELD] != PLUGIN:
+        return f"owned by {recorded[ENTRY_PLUGIN_FIELD]}"
     if current is None:
-        return "not a regular file"
-    if current != recorded["digest"]:
-        return "digest mismatch"
+        return CAUSE_NOT_REGULAR_FILE
+    if current != recorded[ENTRY_DIGEST_FIELD]:
+        return CAUSE_DIGEST_MISMATCH
     return None
 
 
@@ -167,13 +199,13 @@ def _scope_splits(checkout: Path, shipped: dict[str, bytes]) -> list[str]:
     found: list[str] = []
     for path in sorted((checkout / ".codex" / "agents").glob("*.toml")):
         if path.is_symlink():
-            found.append(f"scope-split collision: {path}")
+            found.append(f"{SCOPE_SPLIT_COLLISION_PREFIX}{path}")
             continue
         content = path.read_bytes()
         if content in shipped.values():
-            found.append(f"scope-split directed-removal: {path}")
+            found.append(f"{SCOPE_SPLIT_REMOVAL_PREFIX}{path}")
         elif _mentions_plugin(path, content):
-            found.append(f"scope-split collision: {path}")
+            found.append(f"{SCOPE_SPLIT_COLLISION_PREFIX}{path}")
     return found
 
 
@@ -182,7 +214,9 @@ def main(
     *,
     current_digest: Callable[[Path], str | None] = _current_digest,
 ) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=next(iter((__doc__ or "").strip().splitlines()), None)
+    )
     parser.add_argument("--home", type=Path, default=os.environ.get("CODEX_HOME"))
     parser.add_argument("--checkout", type=Path, default=Path.cwd())
     parser.add_argument("--check", action="store_true")
@@ -192,12 +226,12 @@ def main(
     if not args.home.is_absolute():
         parser.error(f"CODEX_HOME/--home resolved to a relative path: {args.home}")
     home = args.home.resolve()
-    agents = home / "agents"
+    agents = home / AGENTS_DIRECTORY
     shipped = {path.name: path.read_bytes() for path in sorted(SHIPPED.glob("*.toml"))}
     splits = _scope_splits(args.checkout.resolve(), shipped)
     if agents.is_symlink():
         _print_each(splits)
-        print(f"collision: selected agent directory {agents} must not be a symlink")
+        print(f"{COLLISION_PREFIX}{SYMLINKED_AGENT_DIRECTORY.format(path=agents)}")
         return 2
     ownership_path = agents / OWNERSHIP
     ownership_before = (
@@ -209,14 +243,16 @@ def main(
         entries = _load_ownership(ownership_path)
     except ValueError as error:
         _print_each(splits)
-        print(f"collision: {error}")
+        print(f"{COLLISION_PREFIX}{error}")
         return 2
-    by_destination = {entry["destination"]: entry for entry in entries}
-    desired = {f"agents/{name}": content for name, content in shipped.items()}
+    by_destination = {entry[ENTRY_DESTINATION_FIELD]: entry for entry in entries}
+    desired = {
+        f"{AGENTS_DIRECTORY}/{name}": content for name, content in shipped.items()
+    }
     writes: list[tuple[Path, bytes, str | None]] = []
     prunes: list[tuple[Path, str]] = []
     collisions: list[str] = []
-    next_entries = [entry for entry in entries if entry["plugin"] != PLUGIN]
+    next_entries = [entry for entry in entries if entry[ENTRY_PLUGIN_FIELD] != PLUGIN]
     for relative, content in desired.items():
         path, recorded = home / relative, by_destination.get(relative)
         present = path.exists() or path.is_symlink()
@@ -225,30 +261,37 @@ def main(
         if present:
             cause = _collision_cause(path, recorded, current, digest)
             if cause is not None:
-                collisions.append(f"collision: {path} ({cause})")
+                collisions.append(f"{COLLISION_PREFIX}{path} ({cause})")
                 continue
         if current != digest:
             writes.append((path, content, current))
         next_entries.append(
-            {"destination": relative, "plugin": PLUGIN, "digest": digest}
+            {
+                ENTRY_DESTINATION_FIELD: relative,
+                ENTRY_PLUGIN_FIELD: PLUGIN,
+                ENTRY_DIGEST_FIELD: digest,
+            }
         )
     for entry in entries:
-        if entry["plugin"] != PLUGIN or entry["destination"] in desired:
+        if (
+            entry[ENTRY_PLUGIN_FIELD] != PLUGIN
+            or entry[ENTRY_DESTINATION_FIELD] in desired
+        ):
             continue
-        path = home / entry["destination"]
+        path = home / entry[ENTRY_DESTINATION_FIELD]
         present = path.exists() or path.is_symlink()
         current = current_digest(path)
         if present and path.is_symlink():
-            collisions.append(f"collision: {path} (symlink)")
-        elif present and current != entry["digest"]:
-            collisions.append(f"collision: {path} (digest mismatch)")
+            collisions.append(f"{COLLISION_PREFIX}{path} ({CAUSE_SYMLINK})")
+        elif present and current != entry[ENTRY_DIGEST_FIELD]:
+            collisions.append(f"{COLLISION_PREFIX}{path} ({CAUSE_DIGEST_MISMATCH})")
         elif present:
-            prunes.append((path, entry["digest"]))
+            prunes.append((path, entry[ENTRY_DIGEST_FIELD]))
     _print_each([*splits, *collisions])
     for path, _, _ in writes:
-        print(f"write: {path}")
+        print(f"{WRITE_PREFIX}{path}")
     for path, _ in prunes:
-        print(f"prune: {path}")
+        print(f"{PRUNE_PREFIX}{path}")
     if splits or collisions:
         return 2
     if args.check:
@@ -259,22 +302,24 @@ def main(
         else None
     )
     if current_ownership != ownership_before:
-        print(f"collision: {ownership_path} (changed after preflight)")
+        print(f"{COLLISION_PREFIX}{ownership_path} ({CAUSE_CHANGED_AFTER_PREFLIGHT})")
         return 2
     drifted = [
         path for path, _, expected in writes if current_digest(path) != expected
     ] + [path for path, expected in prunes if current_digest(path) != expected]
     if drifted:
         for path in drifted:
-            print(f"collision: {path} (changed after preflight)")
+            print(f"{COLLISION_PREFIX}{path} ({CAUSE_CHANGED_AFTER_PREFLIGHT})")
         return 2
     for path, content, _ in writes:
         _atomic_write(path, content)
     for path, _ in prunes:
         path.unlink()
     ownership = {
-        "schema_version": 1,
-        "entries": sorted(next_entries, key=lambda entry: entry["destination"]),
+        OWNERSHIP_SCHEMA_FIELD: OWNERSHIP_SCHEMA_VERSION,
+        OWNERSHIP_ENTRIES_FIELD: sorted(
+            next_entries, key=lambda entry: entry[ENTRY_DESTINATION_FIELD]
+        ),
     }
     ownership_content = (
         json.dumps(ownership, indent=2, sort_keys=True) + "\n"
