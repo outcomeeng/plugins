@@ -1,7 +1,20 @@
 """Installation evidence grouped by its governing contract."""
 
-from outcomeeng.distribution.installation import CODEX_CONFIG_PATH
-from outcomeeng_testing.harnesses.installation import observe_codex_config_independence
+from outcomeeng.distribution.installation import (
+    CODEX_CONFIG_PATH,
+    Agent,
+    CLAUDE_LOCAL_SCOPE,
+    FIRST_INSTALL_WARNING,
+    SPEC_TREE_PLUGIN,
+    Operation,
+)
+from outcomeeng_testing.harnesses.installation import (
+    observe_codex_config_independence,
+    observe_designated_failure,
+    observe_local_record_bootstrap_plan,
+    observe_persistent_execution,
+    observe_persistent_plan,
+)
 
 
 def test_repository_codex_config_has_no_installation_semantics() -> None:
@@ -25,9 +38,6 @@ def test_repository_codex_config_has_no_installation_semantics() -> None:
         for argument in command.argv
     )
 
-
-from outcomeeng.distribution.installation import Agent, CLAUDE_LOCAL_SCOPE, FIRST_INSTALL_WARNING, SPEC_TREE_PLUGIN, Operation
-from outcomeeng_testing.harnesses.installation import observe_designated_failure, observe_local_record_bootstrap_plan, observe_persistent_execution, observe_persistent_plan
 
 def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall() -> (
     None

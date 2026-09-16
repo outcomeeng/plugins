@@ -1,9 +1,22 @@
 """Installation evidence grouped by its governing contract."""
 
-
-from outcomeeng.distribution.installation import NO_DIRECTORY_PATH_WARNING, Agent, CLAUDE_PLUGIN_ID_FIELD, CLAUDE_PLUGIN_PROJECT_PATH_FIELD, CLAUDE_PLUGIN_SCOPE_FIELD, NONCANONICAL_SOURCE_WARNING, OUT_OF_SCOPE_RECORD_WARNING, PATHLESS_OUT_OF_SCOPE_RECORD_WARNING, UNREADABLE_SETTINGS_WARNING, UNCATALOGED_RECORD_WARNING, Operation, marketplace_plugin_name
+from outcomeeng.distribution.installation import (
+    NO_DIRECTORY_PATH_WARNING,
+    Agent,
+    CLAUDE_PLUGIN_ID_FIELD,
+    CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
+    CLAUDE_PLUGIN_SCOPE_FIELD,
+    NONCANONICAL_SOURCE_WARNING,
+    OUT_OF_SCOPE_RECORD_WARNING,
+    PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
+    UNREADABLE_SETTINGS_WARNING,
+    UNCATALOGED_RECORD_WARNING,
+    Operation,
+    marketplace_plugin_name,
+)
 from outcomeeng_testing.generators.installation import RecordDisposition
 from outcomeeng_testing.harnesses.installation import observe_record_refresh_plan
+
 
 def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None:
     observation = observe_record_refresh_plan()

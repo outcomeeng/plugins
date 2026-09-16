@@ -1,11 +1,20 @@
 """Installation evidence grouped by its governing contract."""
 
-
 from typing import cast
-from outcomeeng.distribution.installation import Agent, CLAUDE_PLUGIN_ID_FIELD, CLAUDE_PLUGIN_PROJECT_PATH_FIELD, CLAUDE_PLUGIN_SCOPE_FIELD, CLAUDE_SCOPE_FLAG, Operation, ReportField, marketplace_plugin_name
+from outcomeeng.distribution.installation import (
+    Agent,
+    CLAUDE_PLUGIN_ID_FIELD,
+    CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
+    CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_SCOPE_FLAG,
+    Operation,
+    ReportField,
+    marketplace_plugin_name,
+)
 from pathlib import Path
 from outcomeeng_testing.generators.installation import RecordDisposition
 from outcomeeng_testing.harnesses.installation import observe_record_refresh_plan
+
 
 def test_persistent_run_updates_every_recorded_checkout_and_reinstalls_nothing() -> (
     None

@@ -268,7 +268,9 @@ def main(
         print(f"{PlacementDiagnostic.COLLISION}: {error}")
         return PlacementStatus.COLLISION
     by_destination = {entry[ENTRY_DESTINATION_FIELD]: entry for entry in entries}
-    desired = {f"{AGENTS_DIRECTORY}/{name}": content for name, content in shipped.items()}
+    desired = {
+        f"{AGENTS_DIRECTORY}/{name}": content for name, content in shipped.items()
+    }
     writes: list[tuple[Path, bytes, str | None]] = []
     prunes: list[tuple[Path, str]] = []
     collisions: list[str] = []

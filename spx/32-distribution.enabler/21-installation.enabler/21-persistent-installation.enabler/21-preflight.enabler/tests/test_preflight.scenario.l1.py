@@ -1,19 +1,29 @@
 """Installation evidence grouped by its governing contract."""
 
+import json
 from outcomeeng.distribution.installation import (
     Agent,
     Operation,
     ReportField,
     SPEC_TREE_PLUGIN,
     USER_SCOPE_COLLISION_DIAGNOSTIC,
+    CANONICAL_MARKETPLACE_SOURCE,
+    PATHLESS_LISTING_ENTRY_DIAGNOSTIC,
+    CLAUDE_PROJECT_SCOPE,
+    REGISTRY_SOURCE_DIAGNOSTIC,
+    UNREADABLE_SETTINGS_DIAGNOSTIC,
 )
 from outcomeeng_testing.harnesses.installation import (
     observe_claude_user_collision,
     observe_inspection_failure,
     observe_invalid_persistent_selection,
     observe_persistent_plan,
+    NONCANONICAL_MARKETPLACE_SOURCE,
+    observe_noncanonical_registry_plan,
+    observe_noncanonical_source,
+    observe_pathless_record_listing,
+    observe_unreadable_source,
 )
-import json
 
 
 def test_invalid_persistent_subset_is_rejected_before_mutation() -> None:
@@ -71,9 +81,6 @@ def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
     ]
     assert source_operations == [Operation.MARKETPLACE_ADD]
 
-
-from outcomeeng.distribution.installation import Agent, CANONICAL_MARKETPLACE_SOURCE, PATHLESS_LISTING_ENTRY_DIAGNOSTIC, CLAUDE_PROJECT_SCOPE, REGISTRY_SOURCE_DIAGNOSTIC, UNREADABLE_SETTINGS_DIAGNOSTIC
-from outcomeeng_testing.harnesses.installation import NONCANONICAL_MARKETPLACE_SOURCE, observe_noncanonical_registry_plan, observe_noncanonical_source, observe_pathless_record_listing, observe_unreadable_source
 
 def test_a_noncanonical_source_stops_either_agent_before_any_plan(
     agent: Agent, diagnostic: str

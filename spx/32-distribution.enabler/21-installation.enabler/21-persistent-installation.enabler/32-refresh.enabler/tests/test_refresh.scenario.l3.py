@@ -1,9 +1,15 @@
 """Installation evidence grouped by its governing contract."""
 
-
 import json
-from outcomeeng.distribution.installation import CLAUDE_LOCAL_SCOPE, CLAUDE_PROJECT_SCOPE, ClaudeInstallRecord, ReportField, SPEC_TREE_PLUGIN
+from outcomeeng.distribution.installation import (
+    CLAUDE_LOCAL_SCOPE,
+    CLAUDE_PROJECT_SCOPE,
+    ClaudeInstallRecord,
+    ReportField,
+    SPEC_TREE_PLUGIN,
+)
 from outcomeeng_testing.harnesses.installation import observe_real_record_refresh
+
 
 def test_real_persistent_run_refreshes_a_second_checkout_at_local_scope() -> None:
     observation = observe_real_record_refresh()

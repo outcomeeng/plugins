@@ -30,6 +30,7 @@ from outcomeeng.validation.ci_gate import (
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
     AuthField,
+    CI_ENVIRONMENT,
     NativeCommand,
     SavedLoginCondition,
     AUTH_FILENAME,
