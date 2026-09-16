@@ -167,3 +167,13 @@ Harness modules under `outcomeeng_testing/harnesses/` and a generator under `out
 **Resolution shape.** Replace each infrastructure `AssertionError` with a lifecycle or dependency error type owned by the harness, leaving every behavioral predicate in the linked tests; take each owning node through its test-evidence audit.
 
 **Why separate.** The instances sit in harnesses the host-readiness changeset does not touch, each governed by its own node, so the sweep is one changeset per owning node or one dedicated pass.
+
+## A Verifier's context load rebases the branch it audits
+
+`/contextualize` requires `/sync-base` before it reads product truth, and the test-evidence audit skill loads `/contextualize` for its target node. A Verifier's agent session therefore fetches, rebases the Author's branch onto its base, and resolves conflicts on its own, while other Verifiers dispatched against the same committed head are still running. `spec-tree:audit-implementation` states that an audit never synchronizes, rebases, or otherwise mutates the audited subject; the test-evidence path carries no such guard, and `/sync-base` has no read-only form a Verifier could select.
+
+**Evidence.** Rollout `agent-a4cedd803fc1a5758.jsonl` of the test-evidence audit dispatched against head `f07db1bbaf225ec031d7a777f02c166daa588871` on 2026-09-16: it invoked `spec-tree:sync-base`, ran `sync_base.py`, resolved two version and changelog conflicts with `git add` and `git rebase --continue`, and finished at `15d4309e69c26804cd1b04676248a529fd0235b9`. The concurrent implementation audit, run `2026-09-16_12-40-04-694-a2e206a2d753`, then found its sealed head superseded, and the Author's deterministic gate had run on the pre-rebase head only.
+
+**Resolution shape.** Decide where the guard lives: a Verifier-mode context load that reads the committed subject without `/sync-base`, or a `/sync-base` result that reports behind-base without moving the checkout when the caller is a Verifier. Amend the audit skills that load context to select it, so the dispatch-readiness record's clean committed head stays the audited head.
+
+**Why separate.** The fix amends the context-loading, base-sync, and audit skills, none of which the host-readiness changeset touches.
