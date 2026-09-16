@@ -13,7 +13,12 @@ from uuid import uuid4
 
 from hypothesis import given, seed, settings
 
-from outcomeeng.distribution.installation import CommandResult
+from outcomeeng.distribution.installation import (
+    CommandResult,
+    HOME_ENV,
+    CODEX_HOME_ENV,
+    CODEX_SQLITE_HOME_ENV,
+)
 from outcomeeng.distribution.native_thread_evidence import (
     THREAD_READ_COMMAND,
     ChildIdentityField,
@@ -21,6 +26,7 @@ from outcomeeng.distribution.native_thread_evidence import (
     NativeChildThread,
     NativeChildLookupPayload,
     NativeTurnStatus,
+    NativeEvidenceField,
     collect_native_child_evidence,
     read_native_thread,
     read_native_child,
@@ -58,7 +64,9 @@ class RecordingThreadReader:
                 THREAD_READ_COMMAND,
                 0,
                 json.dumps(
-                    NativeChildLookupPayload(childIds=[thread["id"]], thread=thread)
+                    NativeChildLookupPayload(
+                        childIds=[thread[ChildIdentityField.ID.value]], thread=thread
+                    )
                 ),
                 "",
             )
@@ -74,7 +82,14 @@ class RecordingThreadReader:
             CommandResult(
                 THREAD_READ_COMMAND,
                 0,
-                json.dumps({"childIds": [thread["id"]], "thread": document}),
+                json.dumps(
+                    {
+                        NativeEvidenceField.CHILD_IDS: [
+                            thread[ChildIdentityField.ID.value]
+                        ],
+                        NativeEvidenceField.THREAD: document,
+                    }
+                ),
                 "",
             )
         )
@@ -89,7 +104,14 @@ class RecordingThreadReader:
             CommandResult(
                 THREAD_READ_COMMAND,
                 0,
-                json.dumps({"childIds": [thread["id"]], "thread": document}),
+                json.dumps(
+                    {
+                        NativeEvidenceField.CHILD_IDS: [
+                            thread[ChildIdentityField.ID.value]
+                        ],
+                        NativeEvidenceField.THREAD: document,
+                    }
+                ),
                 "",
             )
         )
@@ -103,17 +125,27 @@ class RecordingThreadReader:
         cls, thread: NativeChildThread, status: NativeTurnStatus
     ) -> RecordingThreadReader:
         document = json.loads(
-            json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
+            json.dumps(
+                NativeChildLookupPayload(
+                    childIds=[thread[ChildIdentityField.ID.value]], thread=thread
+                )
+            )
         )
-        document["thread"]["turns"][0]["status"] = status
+        document[NativeEvidenceField.THREAD][NativeEvidenceField.TURNS][0][
+            NativeEvidenceField.STATUS
+        ] = status
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
     @classmethod
     def without_turns(cls, thread: NativeChildThread) -> RecordingThreadReader:
         document = json.loads(
-            json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
+            json.dumps(
+                NativeChildLookupPayload(
+                    childIds=[thread[ChildIdentityField.ID.value]], thread=thread
+                )
+            )
         )
-        document["thread"]["turns"] = []
+        document[NativeEvidenceField.THREAD][NativeEvidenceField.TURNS] = []
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
     @classmethod
@@ -121,15 +153,21 @@ class RecordingThreadReader:
         cls, thread: NativeChildThread
     ) -> RecordingThreadReader:
         document = json.loads(
-            json.dumps(NativeChildLookupPayload(childIds=[thread["id"]], thread=thread))
+            json.dumps(
+                NativeChildLookupPayload(
+                    childIds=[thread[ChildIdentityField.ID.value]], thread=thread
+                )
+            )
         )
-        document["thread"]["turns"][0]["items"] = []
+        document[NativeEvidenceField.THREAD][NativeEvidenceField.TURNS][0][
+            NativeEvidenceField.ITEMS
+        ] = []
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
     @classmethod
     def with_extra_child(cls, thread: NativeChildThread) -> RecordingThreadReader:
         document = NativeChildLookupPayload(
-            childIds=[thread["id"], str(uuid4())], thread=thread
+            childIds=[thread[ChildIdentityField.ID.value], str(uuid4())], thread=thread
         )
         return cls(CommandResult(THREAD_READ_COMMAND, 0, json.dumps(document), ""))
 
@@ -187,9 +225,9 @@ def _read_empty_native_state(*, children: bool) -> CommandResult:
         (root / "sqlite").mkdir()
         environment = {
             "PATH": os.environ["PATH"],
-            "HOME": temporary,
-            "CODEX_HOME": str(root / "codex"),
-            "CODEX_SQLITE_HOME": str(root / "sqlite"),
+            HOME_ENV: temporary,
+            CODEX_HOME_ENV: str(root / "codex"),
+            CODEX_SQLITE_HOME_ENV: str(root / "sqlite"),
         }
         reader = read_native_child if children else read_native_thread
         return reader(str(uuid4()), root, environment)

@@ -34,6 +34,18 @@ class ChildIdentityField(StrEnum):
     EFFORT = "reasoningEffort"
 
 
+class NativeEvidenceField(StrEnum):
+    """Fields shared by native listing artifacts and child-turn observations."""
+
+    CHILD_IDS = "childIds"
+    THREAD = "thread"
+    PAGES = "pages"
+    RESULT = "result"
+    TURNS = "turns"
+    STATUS = "status"
+    ITEMS = "items"
+
+
 class NativeTurnStatus(StrEnum):
     """Turn states in the native app-server protocol."""
 
@@ -145,12 +157,14 @@ def collect_native_child_evidence(
         return NativeChildEvidence(
             parent_id, result, None, "native child thread read is not JSON"
         )
-    thread = document.get("thread") if isinstance(document, dict) else None
+    thread = (
+        document.get(NativeEvidenceField.THREAD) if isinstance(document, dict) else None
+    )
     if not isinstance(thread, dict):
         return NativeChildEvidence(
             parent_id, result, None, "native child thread is absent"
         )
-    child_ids = document.get("childIds")
+    child_ids = document.get(NativeEvidenceField.CHILD_IDS)
     if (
         not isinstance(child_ids, list)
         or len(child_ids) != 1
@@ -198,17 +212,17 @@ def _single_parent(stream: str) -> str:
 
 
 def _completion_condition(thread: Mapping[str, object]) -> str | None:
-    turns = thread.get("turns")
+    turns = thread.get(NativeEvidenceField.TURNS)
     if not isinstance(turns, list) or len(turns) != 1:
         return "native child does not contain exactly one turn"
     turn = turns[0]
     if (
         not isinstance(turn, dict)
-        or turn.get("status") != NativeTurnStatus.COMPLETED
+        or turn.get(NativeEvidenceField.STATUS) != NativeTurnStatus.COMPLETED
         or turn.get("error") is not None
     ):
         return "native child turn did not complete"
-    items = turn.get("items")
+    items = turn.get(NativeEvidenceField.ITEMS)
     if isinstance(items, list) and any(
         isinstance(item, dict)
         and item.get("type") == NATIVE_MESSAGE_TYPE
@@ -265,7 +279,11 @@ def _read_native_record(
                     else:
                         exchange.send({"method": "initialized"})
                         if children:
-                            response = {"result": _read_child(exchange, thread_id)}
+                            response = {
+                                NativeEvidenceField.RESULT: _read_child(
+                                    exchange, thread_id
+                                )
+                            }
                         else:
                             response = exchange.request(
                                 1,
@@ -297,7 +315,7 @@ def _read_native_record(
     return CommandResult(
         tuple(command),
         int(condition is not None),
-        json.dumps(response.get("result", response)),
+        json.dumps(response.get(NativeEvidenceField.RESULT, response)),
         diagnostic + (f"\n{condition}" if condition is not None else ""),
     )
 
@@ -337,7 +355,10 @@ def _read_child(exchange: _Exchange, parent_id: str) -> Mapping[str, object]:
         failure = _list_children(exchange, parent_id, archived, pages, child_ids)
         if failure is not None:
             return failure
-    document: dict[str, object] = {"pages": pages, "childIds": child_ids}
+    document: dict[str, object] = {
+        NativeEvidenceField.PAGES: pages,
+        NativeEvidenceField.CHILD_IDS: child_ids,
+    }
     if len(child_ids) == 1:
         response = exchange.request(
             len(pages) + 1,
@@ -345,9 +366,11 @@ def _read_child(exchange: _Exchange, parent_id: str) -> Mapping[str, object]:
             {"threadId": child_ids[0], "includeTurns": True},
         )
         document["read"] = response
-        result = response.get("result")
+        result = response.get(NativeEvidenceField.RESULT)
         if isinstance(result, dict):
-            document["thread"] = result.get("thread")
+            document[NativeEvidenceField.THREAD] = result.get(
+                NativeEvidenceField.THREAD
+            )
     return document
 
 
@@ -372,20 +395,20 @@ def _list_children(
             },
         )
         pages.append(response)
-        page = response.get("result")
+        page = response.get(NativeEvidenceField.RESULT)
         if (
             not isinstance(page, dict)
             or not isinstance(page.get("data"), list)
             or "nextCursor" not in page
         ):
             return {
-                "pages": pages,
-                "childIds": child_ids,
+                NativeEvidenceField.PAGES: pages,
+                NativeEvidenceField.CHILD_IDS: child_ids,
                 "error": "native child listing failed",
             }
         if not _append_child_ids(page["data"], parent_id, child_ids):
             return {
-                "pages": pages,
+                NativeEvidenceField.PAGES: pages,
                 "error": "native child listing identity is invalid",
             }
         cursor = page.get("nextCursor")
@@ -393,7 +416,7 @@ def _list_children(
             return None
         if not isinstance(cursor, str) or not cursor or cursor in seen:
             return {
-                "pages": pages,
+                NativeEvidenceField.PAGES: pages,
                 "error": "native child listing cursor is invalid",
             }
         seen.add(cursor)
@@ -448,7 +471,10 @@ class _Exchange:
             line, self.pending = self.pending.split(b"\n", 1)
             document = json.loads(line)
             if isinstance(document, dict) and document.get("id") == identifier:
-                if "result" not in document and "error" not in document:
+                if (
+                    NativeEvidenceField.RESULT not in document
+                    and "error" not in document
+                ):
                     raise ValueError(
                         "native app-server response has no result or error"
                     )

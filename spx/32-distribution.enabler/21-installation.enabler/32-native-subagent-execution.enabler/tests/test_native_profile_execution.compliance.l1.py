@@ -36,6 +36,7 @@ from outcomeeng.distribution.native_thread_evidence import (
     THREAD_READ_FAILED,
     ChildIdentityField,
     NativeTurnStatus,
+    NativeEvidenceField,
 )
 from outcomeeng_testing.generators.native_thread_evidence import NativeEvidenceCase
 from outcomeeng_testing.harnesses.native_thread_evidence import (
@@ -182,7 +183,7 @@ def test_native_child_read_retains_correlated_configuration_and_completion() -> 
         assert result.terminal_condition is None
         assert result.thread == case.thread
         assert len(reader.calls) == 1
-        assert reader.calls[0][0] == case.thread["parentThreadId"]
+        assert reader.calls[0][0] == case.thread[ChildIdentityField.PARENT.value]
         assert reader.calls[0][1] == context.cwd
         assert reader.calls[0][2] == context.environment
 
@@ -295,5 +296,8 @@ def test_unlisted_thread_cannot_supply_child_evidence() -> None:
 def test_real_native_child_listing_retains_empty_pages_without_launching() -> None:
     result = read_absent_native_child()
     assert result.exit_code == 0
-    assert json.loads(result.stdout)["childIds"] == []
-    assert all("result" in page for page in json.loads(result.stdout)["pages"])
+    assert json.loads(result.stdout)[NativeEvidenceField.CHILD_IDS] == []
+    assert all(
+        NativeEvidenceField.RESULT in page
+        for page in json.loads(result.stdout)[NativeEvidenceField.PAGES]
+    )
