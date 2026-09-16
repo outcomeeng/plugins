@@ -46,6 +46,9 @@ from outcomeeng.validation.implementation_audit_contract import (
     ImplementationAuditConcern,
     implementation_audit_finding_key,
     implementation_audit_finding_payload,
+    implementation_audit_accounting_payload,
+    RUN_RESOLVED_SCOPE_FIELD,
+    ScopeUnitField,
     implementation_audit_input_payload,
     implementation_audit_provenance,
     implementation_audit_scope_payload,
@@ -70,7 +73,17 @@ from outcomeeng.validation.spx_version import (
 )
 from outcomeeng_testing.generators.audit_verification_run_contract import (
     ImplementationAuditVerificationProbe,
+    implementation_audit_unclaimed_paths,
     implementation_audit_verification_probes,
+)
+
+from outcomeeng_testing.harnesses.changeset_scope import CHANGESET_SCOPE
+from outcomeeng_testing.harnesses.implementation_scope import (
+    AUDIT_FIELD,
+    INPUT_COMMAND,
+    RENDER_COMMAND,
+    RUN_COMMAND_PREFIX,
+    SCOPE_OPTION,
 )
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
@@ -145,27 +158,49 @@ class VerificationRunObservation:
     terminal_status: AuditTerminalStatus
     recorded_finding_count: int
     subject_paths: tuple[str, ...]
+    accounting_paths: tuple[str, ...]
+    changed_paths: tuple[str, ...]
+    start_resolved_scope: object
+    recorded_input_content: object
     scope_sequences: tuple[object, ...]
     finding_sequences: tuple[object, ...]
     sealed_projection: tuple[object, ...]
+    rendered_scope_units: tuple[Mapping[str, object], ...]
 
 
 def observe_implementation_audit_lifecycle(
     *,
     findings_per_subject: bool = False,
+    record_findings: bool = True,
 ) -> VerificationRunObservation:
-    """Drive one audit run and expose its sequences and sealed projection."""
-    spx_command = _minimum_release_spx_command()
+    """Drive one audit run and expose its sequences and sealed projection.
+
+    With ``record_findings`` false the run records coverage only and finishes
+    ``approved``, so a reader can tell whether a recorded unit alone changed
+    the terminal status.
+    """
+    spx_command = _floor_release_spx_command()
     rule = observe_implementation_audit_lifecycle.__name__
     message = observe_implementation_audit_lifecycle.__doc__ or rule
-    terminal_status = AuditTerminalStatus.REJECTED
+    terminal_status = (
+        AuditTerminalStatus.REJECTED
+        if record_findings
+        else AuditTerminalStatus.APPROVED
+    )
 
     with TemporaryDirectory() as temporary_directory:
         repository = Path(temporary_directory)
+        started = _start_implementation_audit_run(repository, rule, spx_command)
         scope, run_token, provenance, probes, scope_reports = (
-            _start_implementation_audit_run(repository, rule, spx_command)
+            started.scope,
+            started.run_token,
+            started.provenance,
+            started.probes,
+            started.scope_reports,
         )
         finding_probes = probes if findings_per_subject else probes[-1:]
+        if not record_findings:
+            finding_probes = ()
         finding_reports = tuple(
             _add_implementation_audit_finding(
                 repository,
@@ -190,7 +225,7 @@ def observe_implementation_audit_lifecycle(
         render_report = _run_spx(
             repository,
             spx_command,
-            ("render",),
+            (RENDER_COMMAND,),
             scope,
             run_token=run_token,
         )
@@ -200,6 +235,16 @@ def observe_implementation_audit_lifecycle(
         terminal_status=terminal_status,
         recorded_finding_count=len(finding_reports),
         subject_paths=tuple(probe.subject_path for probe in finding_probes),
+        accounting_paths=implementation_audit_unclaimed_paths(),
+        changed_paths=started.changed_paths,
+        start_resolved_scope=started.start_resolved_scope,
+        recorded_input_content=started.recorded_input_content,
+        rendered_scope_units=tuple(
+            cast(Mapping[str, object], unit)
+            for unit in cast(
+                list[object], render_report.get(AUDIT_FIELD.SCOPE_UNITS, [])
+            )
+        ),
         scope_sequences=tuple(
             scope_report.get(RUN_SEQUENCE_FIELD) for scope_report in scope_reports
         ),
@@ -217,9 +262,17 @@ def observe_implementation_audit_lifecycle(
     )
 
 
-def observe_mismatched_terminal_status_finish() -> int | None:
-    """Return the finish exit status when approval follows a blocking finding."""
-    spx_command = _minimum_release_spx_command()
+@dataclass(frozen=True)
+class MismatchedFinishObservation:
+    """The rejected finish's exit status and the run's sealed state read afterwards."""
+
+    finish_exit_status: int | None
+    sealed_after_finish: object
+
+
+def observe_mismatched_terminal_status_finish() -> MismatchedFinishObservation:
+    """Observe approval following a blocking finding: the finish result and sealed state."""
+    spx_command = _floor_release_spx_command()
     rule = observe_mismatched_terminal_status_finish.__name__
 
     with TemporaryDirectory() as temporary_directory:
@@ -230,6 +283,7 @@ def observe_mismatched_terminal_status_finish() -> int | None:
             observe_mismatched_terminal_status_finish.__doc__ or rule,
             spx_command,
         )
+        finish_exit_status: int | None = None
         try:
             _run_spx(
                 repository,
@@ -240,14 +294,20 @@ def observe_mismatched_terminal_status_finish() -> int | None:
                 terminal_status=AuditTerminalStatus.APPROVED.value,
             )
         except subprocess.CalledProcessError as rejection:
-            return rejection.returncode
+            finish_exit_status = rejection.returncode
+        status_report = _run_spx(
+            repository, spx_command, ("status",), scope, run_token=run_token
+        )
 
-    return None
+    return MismatchedFinishObservation(
+        finish_exit_status=finish_exit_status,
+        sealed_after_finish=status_report.get(RUN_SEALED_FIELD),
+    )
 
 
 def audit_contract_rejects_language_specific_wrapper() -> bool:
     """Return whether validation rejects every language wrapper filename."""
-    language = _source_language()
+    language = source_language()
     return all(
         _language_wrapper_filename_is_rejected(language, filename)
         for filename in language_specific_auditor_filenames(language)
@@ -256,7 +316,7 @@ def audit_contract_rejects_language_specific_wrapper() -> bool:
 
 def audit_contract_rejects_language_wrapper_under_spec_tree() -> bool:
     """Reject every language wrapper filename under the generic host."""
-    language = _source_language()
+    language = source_language()
     return all(
         _language_wrapper_filename_is_rejected(
             SPEC_TREE_PLUGIN_NAME,
@@ -311,7 +371,7 @@ def minimum_release_runner_preserves_precedence() -> bool:
 
 def implementation_audit_unit_ids_are_subject_specific() -> bool:
     """Keep coverage and finding identity distinct for each subject path."""
-    language = _source_language()
+    language = source_language()
     provenance = implementation_audit_provenance(
         agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
         language_plugin_version=_plugin_version(language),
@@ -355,7 +415,7 @@ def implementation_audit_unit_ids_are_subject_specific() -> bool:
 
 def implementation_audit_payloads_reject_empty_subject() -> bool:
     """Reject scope and finding payloads without a concrete subject."""
-    language = _source_language()
+    language = source_language()
     concern = ImplementationAuditConcern.CODE
     provenance = implementation_audit_provenance(
         agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
@@ -410,7 +470,7 @@ def audit_contract_rejects_retired_wrappers_in_every_plugin() -> bool:
 def audit_contract_rejects_incomplete_language_trio() -> bool:
     """Return whether validation rejects a missing language concern skill."""
     with _valid_surface() as surface:
-        language = _source_language()
+        language = source_language()
         concern = LANGUAGE_AUDIT_CONCERNS[-1]
         _language_concern_path(surface, language, concern).unlink()
         return bool(check_language_concern_surface(surface))
@@ -419,7 +479,7 @@ def audit_contract_rejects_incomplete_language_trio() -> bool:
 def audit_contract_rejects_retired_language_audit_skill() -> bool:
     """Return whether validation rejects a retired aggregate language audit skill."""
     with _valid_surface() as surface:
-        language = _source_language()
+        language = source_language()
         retired_skill = (
             surface
             / language
@@ -449,7 +509,7 @@ def audit_contract_rejects_missing_single_surface_audit_host() -> bool:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         surface = root / PLUGIN_SURFACE_PATHS[0]
-        _populate_valid_surface(surface, _source_language())
+        _populate_valid_surface(surface, source_language())
         rmtree(surface / SPEC_TREE_PLUGIN_NAME)
         return bool(check_audit_artifact_contract(root))
 
@@ -457,7 +517,7 @@ def audit_contract_rejects_missing_single_surface_audit_host() -> bool:
 def audit_contract_rejects_missing_generated_language() -> bool:
     """Reject a generated surface missing an expected language plugin."""
     with _valid_repository_surfaces() as root:
-        rmtree(root / PLUGIN_SURFACE_PATHS[-1] / _source_language())
+        rmtree(root / PLUGIN_SURFACE_PATHS[-1] / source_language())
         return bool(check_audit_artifact_contract(root))
 
 
@@ -466,7 +526,7 @@ def audit_contract_rejects_missing_single_surface_language() -> bool:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         surface = root / PLUGIN_SURFACE_PATHS[0]
-        language = _source_language()
+        language = source_language()
         _populate_valid_surface(surface, language)
         _language_concern_path(
             surface,
@@ -520,7 +580,7 @@ def runtime_errors_with_retired_artifact_in_other_skill() -> list[str]:
 def runtime_errors_with_retired_artifact_in_language_skill() -> list[str]:
     """Observe validation with a retired file in a language concern skill."""
     with _valid_surface() as surface:
-        language = _source_language()
+        language = source_language()
         runtime_dir = _language_concern_path(
             surface,
             language,
@@ -538,7 +598,7 @@ def _all_live_surfaces_pass(check: Callable[[Path], list[str]]) -> bool:
 def _valid_surface() -> Iterator[Path]:
     with TemporaryDirectory() as temporary_directory:
         surface = Path(temporary_directory)
-        _populate_valid_surface(surface, _source_language())
+        _populate_valid_surface(surface, source_language())
         yield surface
 
 
@@ -546,7 +606,7 @@ def _valid_surface() -> Iterator[Path]:
 def _valid_repository_surfaces() -> Iterator[Path]:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
-        language = _source_language()
+        language = source_language()
         for relative_surface in PLUGIN_SURFACE_PATHS:
             _populate_valid_surface(root / relative_surface, language)
         yield root
@@ -597,7 +657,8 @@ def _language_wrapper_filename_is_rejected(
         return bool(check_wrapper_surface(surface))
 
 
-def _source_language() -> str:
+def source_language() -> str:
+    """Return the first programming language the source plugin surface ships."""
     return implementation_languages(REPO_ROOT / PLUGIN_SURFACE_PATHS[0])[0]
 
 
@@ -608,37 +669,54 @@ def _source_plugin_names() -> tuple[str, ...]:
     )
 
 
+@dataclass(frozen=True)
+class LifecycleStart:
+    """One started audit run with its recorded scope units and floor fields."""
+
+    scope: str
+    run_token: str
+    provenance: Mapping[str, object]
+    probes: tuple[ImplementationAuditVerificationProbe, ...]
+    scope_reports: tuple[dict[str, object], ...]
+    changed_paths: tuple[str, ...]
+    start_resolved_scope: object
+    recorded_input_content: object
+
+
 def _start_implementation_audit_run(
     repository: Path,
     rule: str,
     spx_command: tuple[str, ...],
-) -> tuple[
-    str,
-    str,
-    Mapping[str, object],
-    tuple[ImplementationAuditVerificationProbe, ...],
-    tuple[dict[str, object], ...],
-]:
-    language = _source_language()
+) -> LifecycleStart:
+    language = source_language()
     probes = implementation_audit_verification_probes(language)
     provenance = implementation_audit_provenance(
         agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
         language_plugin_version=_plugin_version(language),
         tool_version=_spx_version(spx_command),
     )
-    _initialize_changeset_repository(
-        repository,
-        tuple(probe.subject_path for probe in probes),
+    changed_paths = (
+        *(probe.subject_path for probe in probes),
+        *implementation_audit_unclaimed_paths(),
     )
+    _initialize_changeset_repository(repository, changed_paths)
     scope = _changeset_scope(repository)
+    # The skill pipes the resolver's scope beneath the request, so the run's
+    # own start input carries the changed paths the reconciler reads back.
     start_report = _run_spx(
         repository,
         spx_command,
         ("start",),
         scope,
-        payload=implementation_audit_input_payload(rule),
+        payload={
+            **implementation_audit_input_payload(rule),
+            CHANGESET_SCOPE.ScopeField.CHANGED_PATHS: list(changed_paths),
+        },
     )
     run_token = _required_string(start_report, RUN_TOKEN_FIELD)
+    input_report = _run_spx(
+        repository, spx_command, (INPUT_COMMAND,), scope, run_token=run_token
+    )
     scope_reports = tuple(
         _run_spx(
             repository,
@@ -656,7 +734,31 @@ def _start_implementation_audit_run(
         )
         for probe in probes
     )
-    return scope, run_token, provenance, probes, scope_reports
+    accounting_reports = tuple(
+        _run_spx(
+            repository,
+            spx_command,
+            ("scope", "add"),
+            scope,
+            run_token=run_token,
+            payload=payload,
+            idempotency_key=str(payload[ScopeUnitField.UNIT_ID]),
+        )
+        for payload in (
+            implementation_audit_accounting_payload(subject_path=path)
+            for path in implementation_audit_unclaimed_paths()
+        )
+    )
+    return LifecycleStart(
+        scope=scope,
+        run_token=run_token,
+        provenance=provenance,
+        probes=probes,
+        scope_reports=(*scope_reports, *accounting_reports),
+        changed_paths=changed_paths,
+        start_resolved_scope=start_report.get(RUN_RESOLVED_SCOPE_FIELD),
+        recorded_input_content=input_report.get(AUDIT_FIELD.INPUT_CONTENT),
+    )
 
 
 def _add_implementation_audit_finding(
@@ -701,8 +803,13 @@ def _record_implementation_audit_finding(
     message: str,
     spx_command: tuple[str, ...],
 ) -> tuple[str, str, tuple[dict[str, object], ...], dict[str, object]]:
+    started = _start_implementation_audit_run(repository, rule, spx_command)
     scope, run_token, provenance, probes, scope_reports = (
-        _start_implementation_audit_run(repository, rule, spx_command)
+        started.scope,
+        started.run_token,
+        started.provenance,
+        started.probes,
+        started.scope_reports,
     )
     finding_report = _add_implementation_audit_finding(
         repository,
@@ -755,14 +862,13 @@ def _run_spx(
 ) -> dict[str, object]:
     command = (
         *spx_command,
-        "verification",
-        "run",
+        *RUN_COMMAND_PREFIX,
         *action,
         "--verification-type",
         "audit",
         "--scope-type",
         "changeset",
-        "--scope",
+        SCOPE_OPTION,
         scope,
     )
     if action == ("start",):
@@ -774,10 +880,12 @@ def _run_spx(
     if terminal_status is not None:
         command += ("--terminal-status", terminal_status)
     input_text = None if payload is None else f"{json.dumps(payload)}\n"
-    parsed = cast(
-        object,
-        json.loads(_run(repository, command, input_text).stdout),
-    )
+    lines = [
+        line
+        for line in _run(repository, command, input_text).stdout.splitlines()
+        if line.strip()
+    ]
+    parsed = cast(object, json.loads(lines[-1]) if lines else None)
     if not isinstance(parsed, dict):
         raise TypeError("spx command did not return a JSON object")
     return cast(dict[str, object], parsed)
@@ -797,18 +905,27 @@ def _plugin_version(plugin_name: str) -> str:
     return _required_string(manifest, "version")
 
 
-def _minimum_release_spx_command() -> tuple[str, ...]:
-    minimum_version = _required_string(_verification_run_release(), "version")
-    package_spec = f"{SPX_PACKAGE_NAME}@{minimum_version}"
-    minimum_command = minimum_release_package_command(package_spec)
+def _exact_release_spx_command(version: str) -> tuple[str, ...]:
+    package_spec = f"{SPX_PACKAGE_NAME}@{version}"
+    command = minimum_release_package_command(package_spec)
 
-    actual_version = _spx_version(minimum_command)
-    if actual_version != minimum_version:
+    actual_version = _spx_version(command)
+    if actual_version != version:
         raise RuntimeError(
-            "minimum-release SPX command returned "
-            f"{actual_version}, expected {minimum_version}"
+            f"exact-release SPX command returned {actual_version}, expected {version}"
         )
-    return minimum_command
+    return command
+
+
+def _floor_release_spx_command() -> tuple[str, ...]:
+    """Return the command for the release the repository pins as its floor.
+
+    The lifecycle observations run against this release, because the payload
+    contracts and the sealed projection they observe are the ones a consumer
+    at the floor receives; the first lifecycle release stays with the
+    floor-provides-lifecycle proof.
+    """
+    return _exact_release_spx_command(REQUIRED_SPX_VERSION)
 
 
 def _find_npx_only(executable: str) -> str | None:

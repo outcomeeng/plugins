@@ -175,6 +175,9 @@ def load_coherence_scope_module() -> ModuleType:
 
 
 CHANGESET_SCOPE = load_changeset_scope_module()
+# Git's own name for the remote's default branch, resolved by git alone so an
+# expected base identity never composes through the production ref derivation.
+ORIGIN_HEAD_REF = "origin/HEAD"
 CHANGESET_SCOPE_CONTRACT = load_changeset_scope_contract_module()
 MERGE_CLASSIFIER = load_merge_classifier_module()
 MERGE_CONTRACT = load_merge_contract_module()

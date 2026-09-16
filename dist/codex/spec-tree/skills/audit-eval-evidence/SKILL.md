@@ -44,7 +44,7 @@ PASS, FAIL, or UNKNOWN. If any required evidence property is missing for any `[e
 
 <audit_workflow>
 
-Use `$ARGUMENTS` as the spec-node target. If the supplied target is empty or whitespace-only, return `UNKNOWN` with every native gate row `UNKNOWN`, each carrying one `REJECT` finding with rule `missing-target`, this skill's file as `file`, `line: null`, and a message naming the required spec-node path. Preserve the supplied target string and set `metadata.branch` to JSON `null`; never inspect an inferred scope.
+Bind the spec-node target: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the target is the one the request text carries, and the empty substitution binds nothing. If the request carries no target, return `UNKNOWN` with all five gate rows `UNKNOWN`, each carrying one `REJECT` finding with rule `missing-target`, this skill's file as `file`, `line: null`, and a message naming the required spec-node path. Preserve the supplied target string and set `metadata.branch` to JSON `null`; never inspect an inferred scope.
 
 <step name="load_context">
 

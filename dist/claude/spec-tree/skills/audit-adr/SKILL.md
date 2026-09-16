@@ -48,7 +48,7 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 
 **Step 1: Load context**
 
-Read the required ADR path from `$ARGUMENTS`, preserving spaces within the path. If the input is empty or whitespace-only, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all three native rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, location `input`, `observed` naming the absent target, and `expected` and `message` naming the required ADR path. Stop before context loading or artifact inspection.
+Bind the required ADR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all three native rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, location `input`, `observed` naming the absent target, and `expected` and `message` naming the required ADR path. Stop before context loading or artifact inspection.
 
 Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.adr.md` beneath that marker's resolved absolute template directory. The template remains owned by `/understand`. Then invoke `/contextualize` on the directory containing the ADR. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 

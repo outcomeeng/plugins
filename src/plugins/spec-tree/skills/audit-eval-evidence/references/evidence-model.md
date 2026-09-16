@@ -6,6 +6,17 @@ Five properties define eval evidence: producer coupling, oracle independence, as
 
 </overview>
 
+<contents>
+- `artifact_model`
+- `producer_coupling`
+- `oracle_independence`
+- `alignment_model`
+- `falsifiability_model`
+- `run_evidence`
+- `rejection_categories`
+
+</contents>
+
 <artifact_model>
 
 Eval evidence consists of:

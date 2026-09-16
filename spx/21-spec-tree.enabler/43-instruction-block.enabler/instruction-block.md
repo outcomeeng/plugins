@@ -6,29 +6,6 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ## Assertions
 
-- ALWAYS: both generated root guides preserve the standing-request sentence in
-  `spx/15-subagent-execution.pdr.md` verbatim within explicit authorization for
-  every subagent supplied by their listed plugins. An active skill must explicitly
-  instruct each launch; availability, task wording, and role-description matching
-  supply no launch instruction ([audit]).
-- The generated root guide contains the complete authorized plugin list derived
-  from the owning catalog. Adding a role within an authorized plugin leaves the
-  guide unchanged, while adding an authorized plugin updates the list ([test](tests/test_plugin_authorization.property.l1.py)).
-- NEVER: a root guide contains a role inventory, per-role invocation table, task
-  prompt, or per-role result-contract copy ([audit]).
-- ALWAYS: root guides delegate role selection and target-only prompts to the calling
-  skills while permitting minimal agent-specific mechanical guidance, including
-  a call example for a demonstrated invocation problem. Each generated guide
-  addresses only its own agent. Both guides require every audit and review to
-  start without authoring history or author-written context packets and to
-  discover evidence independently from the target and configured instructions.
-  Accepted requirements are persisted in decisions and specs before verification.
-  The native invocation guidance explicitly disables history inheritance when
-  the tool otherwise enables it by default ([audit]).
-- ALWAYS: Codex invocation guidance targets v2 directly, uses the exposed tool schema,
-  and omits v1-specific lifecycle rules, compatibility adapters, and
-  unsupported-v1 diagnostics ([audit]).
-
 ### Scenarios
 
 - Given a template with language blocks and per-harness blocks, when the managed surface is generated for an enabled-language set, then both `CLAUDE.md` and `AGENTS.md` are written, each with its router block first, preserving content outside every managed fence, and containing inside the router block exactly the enabled languages' blocks and only its own harness's blocks ([test](tests/test_instruction_block.scenario.l1.py))
@@ -78,6 +55,9 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ### Properties
 
+- The generated root guide contains the complete authorized plugin list derived
+  from the owning catalog. Adding a role within an authorized plugin leaves the
+  guide unchanged, while adding an authorized plugin updates the list ([test](tests/test_plugin_authorization.property.l1.py)).
 - For every explicit language token outside the language set declared by the canonical instruction-block template, the CLI rejects the `--languages` override and names every allowed language ([test](tests/test_language_override.property.l1.py))
 - Every generated router block's `template_version` equals the installed template version ([test](tests/test_instruction_block.property.l1.py))
 - Every rendered managed surface ends with exactly one trailing newline ([test](tests/test_instruction_block.property.l1.py))
@@ -89,6 +69,22 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ### Compliance
 
+- ALWAYS: both generated root guides preserve the standing-request sentence in
+  `spx/15-subagent-execution.pdr.md` verbatim within explicit authorization for
+  every subagent supplied by their listed plugins. An active skill must explicitly
+  instruct each launch; availability, task wording, and role-description matching
+  supply no launch instruction ([audit]).
+- NEVER: a root guide contains a role inventory, per-role invocation table, task
+  prompt, or per-role result-contract copy ([audit]).
+- ALWAYS: root guides delegate role selection and target-only prompts to the calling
+  skills while permitting minimal agent-specific mechanical guidance, including
+  a call example for a demonstrated invocation problem. Each generated guide
+  addresses only its own agent. Both guides require every audit and review to
+  start without authoring history or author-written context packets and to
+  discover evidence independently from the target and configured instructions.
+  Accepted requirements are persisted in decisions and specs before verification.
+  The native invocation guidance explicitly disables history inheritance when
+  the tool otherwise enables it by default ([audit]).
 - ALWAYS: a rendered root instruction file exceeding the ceiling is reported as a breach carrying the exact byte counts — file size, ceiling, and overage ([test](tests/test_budget_measurement.compliance.l1.py))
 - ALWAYS: the drift gate reports a breach the checked change did not introduce and fails a regression above the ceiling by a surface that previously fit ([test](tests/test_budget_gate.compliance.l1.py))
 - ALWAYS: the Codex router states that the selected agent home contains one current canonical subagent definition per authored marketplace agent, with each name formed as `<plugin>_<unchanged-authored-role>`; a repeated word across those two components is valid ([test](tests/test_agent_registry.compliance.l1.py))

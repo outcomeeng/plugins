@@ -30,7 +30,11 @@ load only when needed without duplicating the native tool schema.
    neither selects a task nor independently triggers a call.
 2. The calling skill selects the configured subagent and supplies only its target
    path or scope, such as `HEAD`; the invoked skill discovers the remaining
-   context and performs its existing workflow. For verification, discovery starts
+   context and performs its existing workflow. The subagent's task message is
+   that target and is the invoked skill's selector: a skill argument the harness
+   substitutes when it preloads the skill into the subagent never stands for the
+   target, an empty substitution binds nothing, and only an empty task message
+   is the missing-target case. For verification, discovery starts
    from the target and configured instructions without the Author's conversation,
    reasoning, summaries, or suggested verdict. Accepted requirements are persisted
    in decisions and specs before verification; the Verifier reads those sources
@@ -97,9 +101,6 @@ load only when needed without duplicating the native tool schema.
   plugins without another operator confirmation ([audit])
 - NEVER: maintain a subagent inventory, per-subagent invocation table, task prompt, or
   per-subagent result-contract copy in the root guide ([audit])
-- NEVER: infer plugin ownership from a coincidentally matching subagent name or use
-  a filename prefix alone as authority to replace or prune a definition; the
-  configured plugin distribution and digest-bound ownership establish membership ([audit])
 - ALWAYS: require an active skill's explicit instruction to launch the specific
   configured subagent, following that skill's invocation instructions ([audit])
 - NEVER: infer a launch instruction from task wording, a subagent description,
@@ -107,6 +108,10 @@ load only when needed without duplicating the native tool schema.
 - ALWAYS: keep the actual subagent selection, launch condition, and target-only
   prompt in the calling skill, and target-context discovery in the invoked
   skill; root-guide examples describe invocation mechanics only ([audit])
+- ALWAYS: an invoked skill binds its target from the configured subagent's task
+  message; a skill argument substituted at preload never stands for the target,
+  and the skill reports a missing target only when the task message itself
+  carries none ([audit])
 - ALWAYS: launch every audit and review without inherited authoring history or
   an author-written context packet, following the isolation rule in
   `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`;
@@ -126,10 +131,6 @@ load only when needed without duplicating the native tool schema.
   launch mechanism, or a replacement audit in the authoring conversation ([audit])
 - NEVER: change audit verdict handling, output contracts, finding disposition,
   or repair workflows as part of simplifying subagent invocation ([audit])
-- ALWAYS: target Codex v2 directly and remove v1-specific guidance and machinery,
-  including obsolete fields, tool grants, and lifecycle assumptions ([audit])
-- NEVER: retain v1 aliases, schema adapters, fallback launch paths, version
-  detection, or unsupported-v1 diagnostics as backward compatibility ([audit])
 - ALWAYS: derive agent definitions, configuration examples, and model descriptions
   from the same centrally owned Standard, Strong, and Fast profiles; each
   supported harness receives its complete native configuration ([audit])

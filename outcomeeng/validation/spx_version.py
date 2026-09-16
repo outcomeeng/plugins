@@ -41,7 +41,12 @@ from typing import Final
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
-# above it. spx 0.6.15 made the manifest-independent default `spx diagnose`
+# above it. spx 0.6.21 is the first release whose `spx verification run start`
+# reports the resolved changed-path set as `resolvedScope` and whose `render`
+# projection carries `auditScopeUnits`; the implementation audit's stage-4
+# enumeration and its stage-7 reconciler read those two fields, and below this
+# floor `render` omits the scope units entirely, so the reconciler can never
+# exit zero and `finish` is unreachable. spx 0.6.15 made the manifest-independent default `spx diagnose`
 # provider set include `worktree-pool` and classify a missing, detached, or
 # wrong-branch designated main checkout through that record, which this
 # product's merge overlay uses before merge mutation and after feature-worktree
@@ -79,12 +84,13 @@ MINIMUM_RELEASE_PACKAGE_RUNNERS: Final = (
 )
 VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
     "start",
+    "input",
     "scope",
     "finding",
     "finish",
     "render",
 )
-REQUIRED_SPX_VERSION: Final = "0.6.15"
+REQUIRED_SPX_VERSION: Final = "0.6.21"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"

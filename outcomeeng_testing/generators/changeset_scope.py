@@ -98,3 +98,12 @@ def coordination_note_recognition_cases(
             )
         )
     return tuple(cases)
+
+
+def distinct_subject_paths(count: int) -> tuple[str, ...]:
+    """Return ``count`` distinct repository-relative paths that carry no meaning.
+
+    The values only need to differ from one another: reconciliation compares
+    paths as opaque subjects, so any distinct tokens serve.
+    """
+    return tuple(f"subject-{index}.txt" for index in range(count))

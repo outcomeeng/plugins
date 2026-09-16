@@ -1,14 +1,21 @@
 from __future__ import annotations
 
+import json
 from itertools import pairwise
 
 from outcomeeng.validation.implementation_audit_contract import (
-    expected_verification_projection,
+    ACCOUNTING_RECORD_KIND,
+    AuditCoverageRequirement,
+    AuditCoverageStatus,
+    AuditTerminalStatus,
+    PriorContextField,
+    ScopeUnitField,
 )
 from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     observe_implementation_audit_lifecycle,
     observe_mismatched_terminal_status_finish,
 )
+from outcomeeng_testing.harnesses.changeset_scope import CHANGESET_SCOPE
 
 
 def test_verification_run_evidence_sequences_are_monotonic() -> None:
@@ -24,10 +31,13 @@ def test_verification_run_evidence_sequences_are_monotonic() -> None:
 def test_verification_run_seals_the_authoritative_finding_count() -> None:
     observation = observe_implementation_audit_lifecycle()
 
-    assert observation.sealed_projection == expected_verification_projection(
+    assert observation.sealed_projection == (
+        observation.terminal_status.value,
+        True,
         observation.run_token,
-        finding_count=observation.recorded_finding_count,
-        terminal_status=observation.terminal_status,
+        observation.recorded_finding_count,
+        True,
+        observation.terminal_status.value,
     )
 
 
@@ -36,15 +46,64 @@ def test_verification_run_counts_one_rule_across_subjects() -> None:
 
     distinct_subjects = set(observation.subject_paths)
     assert len(distinct_subjects) > 1
-    assert observation.sealed_projection == expected_verification_projection(
+    assert observation.sealed_projection == (
+        observation.terminal_status.value,
+        True,
         observation.run_token,
-        finding_count=len(distinct_subjects),
-        terminal_status=observation.terminal_status,
+        len(distinct_subjects),
+        True,
+        observation.terminal_status.value,
     )
 
 
 def test_verification_run_rejects_approval_after_a_blocking_finding() -> None:
-    exit_status = observe_mismatched_terminal_status_finish()
+    observation = observe_mismatched_terminal_status_finish()
 
-    assert exit_status is not None
-    assert exit_status != 0
+    assert observation.finish_exit_status is not None
+    assert observation.finish_exit_status != 0
+    assert observation.sealed_after_finish is False
+
+
+def test_verification_run_seals_an_accounting_record_for_an_unclaimed_path() -> None:
+    observation = observe_implementation_audit_lifecycle(record_findings=False)
+
+    accounting_rows = [
+        unit
+        for unit in observation.rendered_scope_units
+        if unit.get(ScopeUnitField.SUBJECT) in observation.accounting_paths
+    ]
+    # One row per unclaimed path: a second row for the same path would raise
+    # the row count, not vanish into a keyed lookup.
+    subjects = [row.get(ScopeUnitField.SUBJECT) for row in accounting_rows]
+    assert len(subjects) == len(observation.accounting_paths)
+    assert set(subjects) == set(observation.accounting_paths)
+    for row in accounting_rows:
+        path = row.get(ScopeUnitField.SUBJECT)
+        prior_context = row.get(ScopeUnitField.PRIOR_CONTEXT)
+        assert isinstance(prior_context, dict)
+        assert row.get(ScopeUnitField.AUDIT_KIND) == ACCOUNTING_RECORD_KIND
+        assert (
+            row.get(ScopeUnitField.COVERAGE_REQUIREMENT)
+            == AuditCoverageRequirement.OPTIONAL.value
+        )
+        assert (
+            row.get(ScopeUnitField.COVERAGE_STATUS) == AuditCoverageStatus.SKIPPED.value
+        )
+        assert prior_context.get(PriorContextField.CHANGED_FILE_PARTITION) == path
+        assert PriorContextField.LANGUAGE_PARTITION not in prior_context
+    # No finding was recorded, so an accounting record that forced the rollup
+    # would show here as rejected; the findings alone derive the status.
+    assert observation.recorded_finding_count == 0
+    assert observation.sealed_projection[0] == AuditTerminalStatus.APPROVED.value
+
+
+def test_verification_run_start_and_input_carry_the_fields_the_skill_reads() -> None:
+    observation = observe_implementation_audit_lifecycle()
+
+    assert isinstance(observation.start_resolved_scope, list)
+    assert sorted(observation.start_resolved_scope) == sorted(observation.changed_paths)
+    assert isinstance(observation.recorded_input_content, str)
+    recorded_input = json.loads(observation.recorded_input_content)
+    assert recorded_input[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS] == list(
+        observation.changed_paths
+    )

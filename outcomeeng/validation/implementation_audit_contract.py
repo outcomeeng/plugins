@@ -16,6 +16,7 @@ RUN_SEQUENCE_FIELD: Final = "sequence"
 RUN_TERMINAL_STATUS_FIELD: Final = "terminalStatus"
 RUN_SEALED_FIELD: Final = "sealed"
 RUN_FINDING_COUNT_FIELD: Final = "findingCount"
+RUN_RESOLVED_SCOPE_FIELD: Final = "resolvedScope"
 
 
 class ImplementationAuditConcern(StrEnum):
@@ -24,6 +25,29 @@ class ImplementationAuditConcern(StrEnum):
     CODE = "code"
     TESTS = "tests"
     ARCHITECTURE = "architecture"
+
+
+class ScopeUnitField(StrEnum):
+    """Top-level fields of one SPX audit scope unit."""
+
+    UNIT_ID = "unitId"
+    AUDIT_CLASS = "auditClass"
+    AUDIT_KIND = "auditKind"
+    SUBJECT = "subject"
+    COVERAGE_REQUIREMENT = "coverageRequirement"
+    COVERAGE_STATUS = "coverageStatus"
+    PRIOR_CONTEXT = "priorContext"
+    EXPECTED_PRODUCER = "expectedProducer"
+    RECORDED_BY_RUN_DRIVER = "recordedByRunDriver"
+    PRODUCER_PROVENANCE = "producerProvenance"
+
+
+class PriorContextField(StrEnum):
+    """Fields of a scope unit's ``priorContext`` object."""
+
+    CHANGED_FILE_PARTITION = "changedFilePartition"
+    CONCERN_PARTITION = "concernPartition"
+    LANGUAGE_PARTITION = "languagePartition"
 
 
 class AuditCoverageRequirement(StrEnum):
@@ -95,6 +119,13 @@ def implementation_audit_finding_key(
     return f"{unit_id}:{rule}"
 
 
+def implementation_audit_concern_skill_name(
+    language: str, concern: ImplementationAuditConcern
+) -> str:
+    """Return the name of the concern skill expected to cover one language partition."""
+    return f"audit-{language}-{concern.value}"
+
+
 def implementation_audit_producer_identity(
     language: str,
     concern: ImplementationAuditConcern,
@@ -104,7 +135,7 @@ def implementation_audit_producer_identity(
         "producerKind": "skill",
         "agentName": IMPLEMENTATION_AUDITOR_AGENT_NAME,
         "agentOwningPluginName": SPEC_TREE_PLUGIN_NAME,
-        "skillName": f"audit-{language}-{concern.value}",
+        "skillName": implementation_audit_concern_skill_name(language, concern),
         "skillOwningPluginName": language,
         "invocationRole": "leaf-skill",
     }
@@ -140,27 +171,68 @@ def implementation_audit_scope_payload(
     """Return one audited implementation coverage unit."""
     subject_path = _require_subject_path(subject_path)
     return {
-        "unitId": implementation_audit_unit_id(
+        ScopeUnitField.UNIT_ID: implementation_audit_unit_id(
             language,
             concern,
             subject_path=subject_path,
         ),
-        "auditClass": IMPLEMENTATION_AUDIT_CLASS,
-        "auditKind": concern.value,
-        "subject": subject_path,
-        "coverageRequirement": AuditCoverageRequirement.REQUIRED.value,
-        "coverageStatus": AuditCoverageStatus.AUDITED.value,
-        "priorContext": {
-            "changedFilePartition": subject_path,
-            "concernPartition": concern.value,
-            "languagePartition": language,
+        ScopeUnitField.AUDIT_CLASS: IMPLEMENTATION_AUDIT_CLASS,
+        ScopeUnitField.AUDIT_KIND: concern.value,
+        ScopeUnitField.SUBJECT: subject_path,
+        ScopeUnitField.COVERAGE_REQUIREMENT: AuditCoverageRequirement.REQUIRED.value,
+        ScopeUnitField.COVERAGE_STATUS: AuditCoverageStatus.AUDITED.value,
+        ScopeUnitField.PRIOR_CONTEXT: {
+            PriorContextField.CHANGED_FILE_PARTITION: subject_path,
+            PriorContextField.CONCERN_PARTITION: concern.value,
+            PriorContextField.LANGUAGE_PARTITION: language,
         },
-        "expectedProducer": implementation_audit_producer_identity(
+        ScopeUnitField.EXPECTED_PRODUCER: implementation_audit_producer_identity(
             language,
             concern,
         ),
-        "recordedByRunDriver": implementation_audit_run_driver_identity(),
-        "producerProvenance": dict(producer_provenance),
+        ScopeUnitField.RECORDED_BY_RUN_DRIVER: implementation_audit_run_driver_identity(),
+        ScopeUnitField.PRODUCER_PROVENANCE: dict(producer_provenance),
+    }
+
+
+ACCOUNTING_RECORD_KIND: Final = "coverage-gap"
+# A unit key always carries a language segment; a record with no language
+# partition renders it as this literal.
+UNKNOWN_LANGUAGE_SEGMENT: Final = "unknown"
+
+
+def implementation_audit_accounting_unit_id(*, subject_path: str) -> str:
+    """Return the stable identity for one unclaimed path's accounting record."""
+    return (
+        f"{IMPLEMENTATION_AUDIT_CLASS}:{UNKNOWN_LANGUAGE_SEGMENT}:"
+        f"{ACCOUNTING_RECORD_KIND}:{subject_path}"
+    )
+
+
+def implementation_audit_accounting_payload(*, subject_path: str) -> dict[str, object]:
+    """Return the accounting record for a resolved path no language concern claimed.
+
+    The record states that the path was considered and left to its
+    artifact-type auditor: it claims no coverage, names no language, and never
+    rejects a run. No leaf skill is expected to cover it, so the run driver's
+    own identity stands as its expected producer, and no provenance is recorded.
+    """
+    subject_path = _require_subject_path(subject_path)
+    return {
+        ScopeUnitField.UNIT_ID: implementation_audit_accounting_unit_id(
+            subject_path=subject_path
+        ),
+        ScopeUnitField.AUDIT_CLASS: IMPLEMENTATION_AUDIT_CLASS,
+        ScopeUnitField.AUDIT_KIND: ACCOUNTING_RECORD_KIND,
+        ScopeUnitField.SUBJECT: subject_path,
+        ScopeUnitField.COVERAGE_REQUIREMENT: AuditCoverageRequirement.OPTIONAL.value,
+        ScopeUnitField.COVERAGE_STATUS: AuditCoverageStatus.SKIPPED.value,
+        ScopeUnitField.PRIOR_CONTEXT: {
+            PriorContextField.CHANGED_FILE_PARTITION: subject_path,
+            PriorContextField.CONCERN_PARTITION: ACCOUNTING_RECORD_KIND,
+        },
+        ScopeUnitField.EXPECTED_PRODUCER: implementation_audit_run_driver_identity(),
+        ScopeUnitField.RECORDED_BY_RUN_DRIVER: implementation_audit_run_driver_identity(),
     }
 
 
@@ -208,23 +280,6 @@ def implementation_audit_provenance(
         "skillOwningPluginVersion": language_plugin_version,
         "toolVersion": tool_version,
     }
-
-
-def expected_verification_projection(
-    run_token: str,
-    *,
-    finding_count: int,
-    terminal_status: AuditTerminalStatus,
-) -> tuple[object, ...]:
-    """Return expected sealed-projection fields for one verification run."""
-    return (
-        terminal_status.value,
-        True,
-        run_token,
-        finding_count,
-        True,
-        terminal_status.value,
-    )
 
 
 def _require_subject_path(subject_path: str) -> str:

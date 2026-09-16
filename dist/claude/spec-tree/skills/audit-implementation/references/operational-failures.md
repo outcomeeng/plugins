@@ -18,6 +18,9 @@ Observed implementation-audit failures and their causes and prevention.
 - `finding_before_standards`
 - `transcribed_inventory`
 - `vacuous_reconciliation`
+- `coverage_stated_as_findings`
+- `language_probe_by_invocation`
+- `empty_argument_taken_as_selector`
 
 </contents>
 
@@ -271,10 +274,88 @@ internal consistency, never correspondence to the changeset. A plan narrowed
 before enumeration reconciles perfectly, so the check that was meant to prevent
 a partial seal certified one instead.
 
-How to avoid: Reconcile at stage 7 against a fresh resolver invocation for the
-same selector, not against the plan. Every resolved path a discovered concern
-claimed carries a recorded unit, and every remaining resolved path is named with
-the ownership reason it carries none. A recorded subject set that accounts for
-fewer paths than the resolver returned is unreconciled and cannot seal.
+How to avoid: Reconcile at stage 7 with the bundled reconciler, whose referent
+is the run's own sealed start inventory rather than the plan. Its exit code is
+the verdict: exit 1 naming only unaccounted paths returns the run to
+inspection; exit 1 naming drift, an unexpected subject, or a non-final
+required unit returns the blocked diagnostic whatever else it names, because
+no inspection changes what the selector resolves to and the append-only run
+revises neither an accepted subject nor an accepted status; and only its zero
+exit reaches `finish`.
 
 </vacuous_reconciliation>
+
+<coverage_stated_as_findings>
+
+**A run recorded a unit only where it found something, then let the rejection end it**
+
+What happened: Claude started the run with the complete 48-path inventory
+piped in, loaded all three concern skills for the recognized language, and read
+fourteen subject bodies. It then recorded two scope units — both `code`, both
+for paths carrying its one finding — added that finding, and finished
+`rejected`. Twelve inspected paths, every `tests` unit, and every
+`architecture` unit went unrecorded. The stage 7 reconciliation never ran.
+
+Why it failed: Two failures compose. Scope rows were treated as anchors a
+finding needs rather than as the evidence that an inspection happened, so a path
+inspected and found clean produced no row at all. The early `rejected` verdict
+then read as settled — the run's outcome could not change — which made the
+remaining concerns look like work with no consequence. Both are invisible in the
+sealed projection unless a reader compares its subjects against its inventory,
+and the run driver comparing against its own recollection has nothing to
+contradict it.
+
+How to avoid: Persist a concern's complete claimed-path coverage before any of
+its findings, so a row exists for every inspected path whether or not it carries
+one. Treat `rejected` as a verdict about what was inspected, never as permission
+to stop: the remaining concerns and every unclaimed resolved path are recorded
+before `finish`. Then run the stage 7 reconciler, which fails on exactly this
+shape by naming the paths the run left unaccounted.
+
+</coverage_stated_as_findings>
+
+<language_probe_by_invocation>
+
+**Languages were discovered by invoking skills that did not exist**
+
+What happened: A run on a TypeScript changeset loaded the complete TypeScript
+trio, then invoked `python:audit-python-code` and `rust:audit-rust-code` "to
+probe whether the python and rust concern trios are loadable", received
+`Unknown skill` for both, and read the two errors as evidence that no other
+language was installed.
+
+Why it failed: The skill named installed `code-{lang}` skills as the discovery
+source but never said how to read that inventory, so the run driver fell back
+to trial invocation. A failed invocation is one step from a manufactured
+`missing-skill` unit: a run that records those errors as coverage seals
+`rejected` for two languages the changeset never touched, and the language set
+the run records becomes the driver's guess rather than the installed surface.
+The run avoided that outcome by prose judgment alone.
+
+How to avoid: Read the installed skill inventory this context already carries
+for `code-{lang}` names; a name absent from it is a language that is not
+installed. Invoke a concern skill only as dispatch to a discovered language.
+
+</language_probe_by_invocation>
+
+<empty_argument_taken_as_selector>
+
+**A preloaded skill's empty argument was read as the target**
+
+What happened: A request carried `HEAD` as its text while the harness had
+preloaded this skill with `$ARGUMENTS` substituted empty. The run bound the
+empty substitution, returned `BLOCKED` with `runToken: not-started` naming an
+absent selector, and never read the request text that carried it. Three runs
+on the identical input shape bound the request text and proceeded; nothing in
+the contract said which source was the selector.
+
+Why it failed: The request contract named `$ARGUMENTS` as the only selector
+source. A harness that preloads the skill renders that argument before any
+request exists, so it is empty there, and a driver that takes it literally
+reports its own launch mechanics as a request error.
+
+How to avoid: Bind the selector from `$ARGUMENTS` when it is non-empty and
+from the request text when it is empty; an empty substitution binds nothing,
+and only a request with no selector is the missing-input case.
+
+</empty_argument_taken_as_selector>
