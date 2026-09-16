@@ -141,8 +141,7 @@ home's `agents/` directory and leaves persistent plugin state unchanged.
 
 After merged distribution changes, `just install-marketplace` refreshes the
 project-scoped Claude Code marketplace, every project- or local-scope Claude Code
-`outcomeeng` install record on the machine for a cataloged plugin whose project path
-exists and whose project declares no noncanonical source, at that record's own scope
+`outcomeeng` install record on the machine for a cataloged plugin whose project path is an existing directory and whose project declares no noncanonical source, at that record's own scope
 and project path, and the selected `$CODEX_HOME`; a record outside project and local scope,
 outside the catalog, at a path that is no directory, in a project declaring a noncanonical source,
 or in a project whose settings cannot be read is reported and left unchanged.
