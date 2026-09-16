@@ -45,7 +45,7 @@ Agent definitions are placed beside their skills because an agent whose plugin m
 - ALWAYS: persistent selection uses Claude Code's inventory recorded for the invocation checkout at project or local scope and Codex's selected-home plugin declarations, including disabled entries, bounded and ordered by the corresponding committed catalog.
 - ALWAYS: trusted product `.codex/config.toml` may enable chosen skills over disabled home defaults, while persistent Codex inspection and execution remain independent of product overrides.
 - ALWAYS: empty persistent selection supplies only `spec-tree` with a warning, disabled where no activation is declared; an empty Codex home declares `spec-tree` disabled.
-- ALWAYS: refresh uses native operations that preserve the selected set and activation, including disabled plugins, and verifies both after execution; a mismatch is reported without restoring an older configuration snapshot.
+- ALWAYS: refresh uses native operations that preserve the selected set and activation, including disabled plugins, and verifies both after execution for the invocation checkout and the selected home; a mismatch is reported without restoring an older configuration snapshot. A recorded checkout elsewhere receives the native update alone, which writes no activation entry, so it carries no postcondition.
 - NEVER: refresh resets an existing explicitly enabled home entry to the disabled default.
 - NEVER: an existing noncanonical marketplace source reaches a state-changing operation; the diagnostic identifies the source and requires explicit repair.
 - ALWAYS: recovery of a missing registration, snapshot, or selected plugin cache preserves the declared selection and activation, including a retry after interrupted installation.
