@@ -650,7 +650,8 @@ class RecordingRunner:
     injected runner boundary. Failing one designated operation — narrowed to
     one agent when `failed_agent` is set — is the Stage 5 Failure simulation
     case, because a real CLI does not fail an arbitrary operation on demand.
-    It returns observations only.
+    Serving a version through `served_version` is the Stage 5 Combinatorial
+    cost case, documented on that field. It returns observations only.
     """
 
     failed_operation: Operation | None = None
@@ -686,10 +687,13 @@ class RecordingRunner:
     served_version: str | None = None
     """The version a native update writes into the record file, as the real CLI would.
 
-    Stage 5 Interaction protocols: the recording collaborator reproduces the
-    one effect of `plugin update` the run observes afterwards — the record's
-    version in the document — so the closing listing reflects the native
-    path beside the rewrite without a real marketplace.
+    Stage 5 Combinatorial cost: the real update needs a registered marketplace
+    and a network fetch for every generated case, so this configurable fake
+    reproduces the one effect of `plugin update` the run observes afterwards
+    — the record's version, commit, and install path in the document — and
+    preserves the runner boundary; the closing listing then reflects the
+    native path beside the rewrite, and the real CLI proves the native path
+    itself at `l3`.
     """
     calls: list[InstallationCommand] = field(default_factory=list)
 
@@ -1446,21 +1450,27 @@ class UnreadableSourceObservation:
 
     settings_path: Path
     bootstrap_error: str | None
-    """The rejection a bootstrapping run reports, when the checkout records nothing."""
-    refresh_commands: tuple[InstallationCommand, ...]
-    """The commands a run plans when the checkout already records a plugin."""
-    refresh_records: tuple[ClaudeInstallRecord, ...]
-    """The records that run rewrites in the install-record document."""
+    """The rejection a run reports when the registry lacks the marketplace too."""
+    other_checkout: Path
+    plan: InstallationPlan
+    """The plan for the registered case: an empty invocation inventory beside another checkout's record."""
+    warnings: tuple[InstallationWarning, ...]
+    attempted: tuple[InstallationCommand, ...]
+    """Every command the registered run issued, closing listing included."""
+    record_file_after: dict[str, object]
+    target_version: str
+    exit_code: int
 
 
 def observe_unreadable_source() -> UnreadableSourceObservation:
-    """Run persistent planning twice with the invocation checkout's settings malformed.
+    """Run persistent installation with the invocation checkout's settings malformed.
 
-    Once with an empty inventory, where bootstrap needs the checkout's
-    declared source; once with a record already present for the checkout and
-    another checkout, where nothing reads the settings. The bootstrap
-    rejection, and the second plan's commands and rewrite records, are the
-    observations.
+    First with no registry entry and an empty inventory, where bootstrap has
+    no source to register: the rejection is one observation. Then with the
+    marketplace registered, the invocation checkout recording nothing, and
+    another checkout recording `spec-tree` at an older version: the plan,
+    its warnings, every command the run issues, the install-record document
+    after the run, and the exit code are the observations.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -1472,7 +1482,10 @@ def observe_unreadable_source() -> UnreadableSourceObservation:
         settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         settings.parent.mkdir(parents=True, exist_ok=True)
         settings.write_text(MALFORMED_SETTINGS_CONTENT, encoding="utf-8")
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
         environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
         marketplace = preflight.roots.marketplace
         bootstrap_error: str | None = None
@@ -1490,26 +1503,38 @@ def observe_unreadable_source() -> UnreadableSourceObservation:
             )
         except ValueError as error:
             bootstrap_error = str(error)
-        listing = json.dumps(
-            [
+        cases = (
+            (
                 {
                     CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
                         SPEC_TREE_PLUGIN, marketplace
                     ),
-                    CLAUDE_PLUGIN_ENABLED_FIELD: True,
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                    CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(path),
+                    CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(other.resolve()),
                     CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
-                }
-                for path in (preflight.roots.checkout, other.resolve())
-            ]
+                },
+                RecordDisposition.FILE_REWRITE,
+            ),
+        )
+        target_version = served_version(len(cases))
+        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+        cache_root = (
+            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+        )
+        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+        record_file.parent.mkdir(parents=True, exist_ok=True)
+        record_file.write_text(
+            json.dumps(
+                _record_file_from_cases(cases, marketplace, cache_root), indent=2
+            )
         )
         plan = build_persistent_installation_plan(
             preflight,
             claude_marketplace_payload=claude_marketplace_listing_payload(
-                DECLARED_CLAUDE_SOURCE, marketplace, mirror
+                DECLARED_CLAUDE_SOURCE, marketplace, clone
             ),
-            claude_plugins_payload=listing,
+            claude_plugins_payload=json.dumps([entry for entry, _ in cases]),
             codex_marketplace_payload=codex_marketplace_listing_payload(
                 DECLARED_CODEX_SOURCE, marketplace
             ),
@@ -1517,11 +1542,27 @@ def observe_unreadable_source() -> UnreadableSourceObservation:
                 Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
             ),
         )
+        runner = RecordingRunner(
+            record_file=record_file, clone=clone, served_version=target_version
+        )
+        exit_code = main(
+            [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
+            base_environment=environment,
+            runner=runner,
+        )
+        record_file_after = cast(
+            "dict[str, object]", json.loads(record_file.read_text())
+        )
     return UnreadableSourceObservation(
         settings_path=settings,
         bootstrap_error=bootstrap_error,
-        refresh_commands=plan.commands,
-        refresh_records=plan.rewrite_records,
+        other_checkout=other.resolve(),
+        plan=plan,
+        warnings=plan.warnings,
+        attempted=tuple(runner.calls),
+        record_file_after=record_file_after,
+        target_version=target_version,
+        exit_code=exit_code,
     )
 
 
@@ -1533,14 +1574,19 @@ class PathlessListingObservation:
     exit_code: int
     warnings: tuple[str, ...]
     other_checkout: Path
+    attempted: tuple[InstallationCommand, ...]
+    """Every command the run issued, closing listing included."""
+    record_file_after: dict[str, object]
+    target_version: str
 
 
 def observe_pathless_record_listing() -> PathlessListingObservation:
     """Run a persistent refresh whose listing names one pathless project-scope entry.
 
     A second, well-formed record in another checkout is listed beside it, so
-    the plan's continuation past the defect is observable; the plan, the
-    warnings, and the exit code are the observations.
+    the run's continuation past the defect is observable; the plan, the
+    warnings, every command the run issues, the install-record document
+    after the run, and the exit code are the observations.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -1613,11 +1659,17 @@ def observe_pathless_record_listing() -> PathlessListingObservation:
             base_environment=environment,
             runner=runner,
         )
+        record_file_after = cast(
+            "dict[str, object]", json.loads(record_file.read_text())
+        )
     return PathlessListingObservation(
         plan=plan,
         exit_code=exit_code,
         warnings=tuple(warning.message for warning in plan.warnings),
         other_checkout=other.resolve(),
+        attempted=tuple(runner.calls),
+        record_file_after=record_file_after,
+        target_version=target_version,
     )
 
 

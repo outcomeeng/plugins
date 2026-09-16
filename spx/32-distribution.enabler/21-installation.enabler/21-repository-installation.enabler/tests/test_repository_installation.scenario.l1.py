@@ -21,6 +21,7 @@ from outcomeeng.distribution.installation import (
     ReportField,
     SPEC_TREE_PLUGIN,
     UNREADABLE_SETTINGS_DIAGNOSTIC,
+    marketplace_plugin_identifier,
     marketplace_plugin_name,
     report_document,
 )
@@ -367,6 +368,28 @@ def test_a_pathless_refresh_scope_entry_is_reported_and_the_run_continues() -> N
     assert [record.project_path for record in observation.plan.rewrite_records] == [
         observation.other_checkout
     ]
+    assert [
+        command.operation
+        for command in observation.attempted
+        if command.agent is Agent.CLAUDE
+    ] == [
+        Operation.MARKETPLACE_INSPECT,
+        Operation.PLUGIN_INSPECT,
+        Operation.MARKETPLACE_REFRESH,
+        Operation.PLUGIN_INSTALL,
+        Operation.PLUGIN_ENABLE,
+        Operation.MARKETPLACE_HEAD,
+        Operation.PLUGIN_LIST,
+    ]
+    assert (
+        _recorded_version(
+            observation.record_file_after,
+            SPEC_TREE_PLUGIN,
+            observation.plan.roots.marketplace,
+            observation.other_checkout,
+        )
+        == observation.target_version
+    )
     assert observation.exit_code != 0
 
 
@@ -376,16 +399,52 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
     assert observation.bootstrap_error is not None
     assert observation.bootstrap_error.startswith(UNREADABLE_SETTINGS_DIAGNOSTIC)
     assert str(observation.settings_path) in observation.bootstrap_error
+    settings_warnings = [
+        warning
+        for warning in observation.warnings
+        if warning.message.startswith(UNREADABLE_SETTINGS_DIAGNOSTIC)
+    ]
+    assert len(settings_warnings) == 1
+    assert str(observation.settings_path) in settings_warnings[0].message
+    assert settings_warnings[0].blocking
     assert [
         command.operation
-        for command in observation.refresh_commands
+        for command in observation.attempted
         if command.agent is Agent.CLAUDE
     ] == [
+        Operation.MARKETPLACE_INSPECT,
+        Operation.PLUGIN_INSPECT,
         Operation.MARKETPLACE_REFRESH,
-        Operation.PLUGIN_UPDATE,
         Operation.MARKETPLACE_HEAD,
+        Operation.PLUGIN_LIST,
     ]
-    assert len(observation.refresh_records) == 1
+    assert [record.project_path for record in observation.plan.rewrite_records] == [
+        observation.other_checkout
+    ]
+    assert (
+        _recorded_version(
+            observation.record_file_after,
+            SPEC_TREE_PLUGIN,
+            observation.plan.roots.marketplace,
+            observation.other_checkout,
+        )
+        == observation.target_version
+    )
+    assert observation.exit_code != 0
+
+
+def _recorded_version(
+    document: dict[str, object], plugin: str, marketplace: str, project_path: Path
+) -> object:
+    entries = cast(
+        "dict[str, list[dict[str, object]]]",
+        document[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )[marketplace_plugin_identifier(plugin, marketplace)]
+    return next(
+        item[CLAUDE_INSTALLED_RECORD_VERSION_FIELD]
+        for item in entries
+        if item.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD) == str(project_path)
+    )
 
 
 def test_a_record_written_between_the_listing_reads_is_reported_and_fails_the_run() -> (

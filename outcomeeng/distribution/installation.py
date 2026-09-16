@@ -165,11 +165,20 @@ UNCATALOGED_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}, but the "
     "committed catalog does not carry it; the record is left unchanged."
 )
+UNREGISTERED_TARGET_WARNING = (
+    "Claude Code records {plugin} at {scope} scope for {project_path} at version "
+    "{version}, but this run registers the marketplace itself, so no target "
+    "exists yet; the record is left unchanged and the next run refreshes it."
+)
 PATHLESS_LISTING_ENTRY_WARNING = (
     "Claude Code lists {plugin} at {scope} scope with no project path; the entry "
     "is a listing defect and is left unchanged."
 )
 UNREADABLE_SETTINGS_DIAGNOSTIC = "invalid Claude Code settings"
+UNREADABLE_SETTINGS_WARNING = (
+    "{diagnostic}; bootstrap of the invocation checkout is skipped and every "
+    "other install record is refreshed."
+)
 UNDECLARED_SOURCE_DIAGNOSTIC = "the invocation checkout declares no marketplace source"
 UNLOCATED_REGISTRY_DIAGNOSTIC = "the marketplace registry entry names no clone"
 OFF_TARGET_DIAGNOSTIC = "install records off the target after refresh"
@@ -593,8 +602,9 @@ class InstallationWarning:
     """One non-terminal warning produced while selecting plugins or records.
 
     A blocking warning names a record the run could not bring to the target
-    or could not judge — a listing defect, a plugin with no cached target —
-    and fails the run's exit code without stopping its other work.
+    or could not judge — a listing defect, a plugin with no cached target, a
+    bootstrap the invocation checkout's unreadable settings withhold — and
+    fails the run's exit code without stopping its other work.
     """
 
     agent: Agent
@@ -649,12 +659,13 @@ class InstallationReport:
     pending_publication: tuple[PendingPublication, ...] = ()
     agent_home: AgentHomeResult | None = None
     record_drift: RecordDrift | None = None
+    """The closing-listing comparison; None when the plan issued no closing listing."""
     rewrites: tuple[RecordRewrite, ...] = ()
     """The install-record entries the run rewrote to the target."""
     rewrite_warnings: tuple[InstallationWarning, ...] = ()
     """Records the run could not bring to the target, each named with its reason."""
     target: MarketplaceTarget | None = None
-    """The closing-listing comparison; None when the plan issued no closing listing."""
+    """The head commit and per-plugin versions every record moves to; None without a registered clone."""
 
     def pending_for(self, agent: Agent) -> frozenset[str]:
         """The plugins this agent could not install because they are unpublished."""
@@ -734,6 +745,7 @@ class AgentAdapter(Protocol):
         records: Sequence[ClaudeInstallRecord] = (),
         recorded: frozenset[str] = frozenset(),
         clone: Path | None = None,
+        bootstrap: bool = True,
     ) -> tuple[InstallationCommand, ...]: ...
 
     def closing(
@@ -765,6 +777,7 @@ class ClaudeInstallationAdapter:
         records: Sequence[ClaudeInstallRecord] = (),
         recorded: frozenset[str] = frozenset(),
         clone: Path | None = None,
+        bootstrap: bool = True,
     ) -> tuple[InstallationCommand, ...]:
         scope = (
             CLAUDE_PROJECT_SCOPE
@@ -780,7 +793,7 @@ class ClaudeInstallationAdapter:
             _claude_source_commands(source_action, source, scope, roots, environment)
         )
         for plugin in plugins:
-            if plugin in recorded:
+            if plugin in recorded or not bootstrap:
                 continue
             plugin_id = marketplace_plugin_identifier(plugin, roots.marketplace)
             commands.append(
@@ -894,10 +907,12 @@ class CodexInstallationAdapter:
         records: Sequence[ClaudeInstallRecord] = (),
         recorded: frozenset[str] = frozenset(),
         clone: Path | None = None,
+        bootstrap: bool = True,
     ) -> tuple[InstallationCommand, ...]:
-        # Codex keys no install record by project path, so the shared
-        # signature's Claude records and clone carry nothing for this adapter.
-        del records, recorded, clone
+        # Codex keys no install record by project path and reads no checkout
+        # settings, so the shared signature's Claude records, clone, and
+        # bootstrap switch carry nothing for this adapter.
+        del records, recorded, clone, bootstrap
         source = (
             declared_codex_source(roots.checkout, roots.marketplace)
             if mode is InstallationMode.PERSISTENT and source_action is SourceAction.ADD
@@ -1121,6 +1136,34 @@ def build_persistent_installation_plan(
         preflight.claude_plugins,
         preflight.roots.checkout,
     )
+    if claude_registered is None:
+        record_warnings = (
+            *record_warnings,
+            *(
+                InstallationWarning(
+                    agent=Agent.CLAUDE,
+                    message=UNREGISTERED_TARGET_WARNING.format(
+                        plugin=record.plugin,
+                        scope=record.scope,
+                        project_path=record.project_path,
+                        version=record.version,
+                    ),
+                    blocking=True,
+                )
+                for record in rewrite_records
+            ),
+        )
+        rewrite_records = ()
+    settings_error = invocation_settings_error(preflight.roots.checkout)
+    settings_warning = (
+        None
+        if settings_error is None
+        else InstallationWarning(
+            agent=Agent.CLAUDE,
+            message=UNREADABLE_SETTINGS_WARNING.format(diagnostic=settings_error),
+            blocking=any(plugin not in claude_installed for plugin in claude_selection),
+        )
+    )
     return _build_plan(
         InstallationMode.PERSISTENT,
         preflight.roots,
@@ -1134,11 +1177,17 @@ def build_persistent_installation_plan(
         ),
         warnings=tuple(
             warning
-            for warning in (claude_warning, codex_warning, *record_warnings)
+            for warning in (
+                claude_warning,
+                codex_warning,
+                settings_warning,
+                *record_warnings,
+            )
             if warning is not None
         ),
         claude_records=native_records,
         claude_recorded=claude_installed,
+        claude_bootstrap=settings_error is None,
         rewrite_records=rewrite_records,
         claude_clone=(
             None if claude_registered is None else claude_registered.install_location
@@ -1191,7 +1240,13 @@ def execute_persistent_installation(
         ],
     )
     settings = checkout / CLAUDE_PROJECT_SETTINGS_PATH
-    declared = _declared_plugin_selection(settings)
+    # Unreadable settings withhold the bootstrap install that would widen the
+    # selection, so there is nothing to re-apply for such a checkout.
+    declared = (
+        None
+        if invocation_settings_error(checkout) is not None
+        else _declared_plugin_selection(settings)
+    )
     try:
         return execute_installation(plan, runner, completed=tuple(inspection_results))
     finally:
@@ -1250,6 +1305,7 @@ def _build_plan(
     warnings: tuple[InstallationWarning, ...] = (),
     claude_records: tuple[ClaudeInstallRecord, ...] = (),
     claude_recorded: frozenset[str] = frozenset(),
+    claude_bootstrap: bool = True,
     rewrite_records: tuple[ClaudeInstallRecord, ...] = (),
     claude_clone: Path | None = None,
     claude_source: str | None = None,
@@ -1282,6 +1338,7 @@ def _build_plan(
             claude_records,
             claude_recorded,
             claude_clone,
+            claude_bootstrap,
         )
     )
     closing = tuple(
@@ -2248,7 +2305,8 @@ def _rewrite_records(
     The target is read from the registered clone at the head the run just
     read; the rewrite is planned as a pure function and written once at this
     edge. A plan with no clone — the bootstrap case, where nothing was
-    registered before this run — carries no target and rewrites nothing.
+    registered before this run — carries no target and no rewrite record;
+    the plan reported each such record as unrefreshed when it was built.
     """
     if plan.claude_clone is None or head is None:
         return None, (), ()
@@ -2585,6 +2643,22 @@ def render_claude_source(entry: Mapping[str, object]) -> str:
     )
 
 
+def invocation_settings_error(checkout: Path) -> str | None:
+    """The diagnostic for the first invocation-checkout settings document that cannot be read.
+
+    Only bootstrap reads those documents: a source to register and a selection
+    to re-apply after the install that widens it. Every other record on the
+    machine is refreshed without them, so an unreadable document is reported
+    and withholds the bootstrap alone.
+    """
+    for relative in CLAUDE_SETTINGS_PRECEDENCE:
+        try:
+            _settings_document(checkout / relative)
+        except ValueError as error:
+            return str(error)
+    return None
+
+
 def declared_claude_source(checkout: Path, marketplace: str) -> str:
     """The marketplace source the invocation checkout's own settings declare.
 
@@ -2604,12 +2678,31 @@ def declared_claude_source(checkout: Path, marketplace: str) -> str:
 def declared_codex_source(checkout: Path, marketplace: str) -> str:
     """The Codex form of the source the invocation checkout declares for Claude Code.
 
-    A GitHub `owner/repo` becomes its HTTPS URL; a directory or URL is used as is.
+    A GitHub `owner/repo` becomes its HTTPS URL; a directory or git URL is used as is.
     """
     source = declared_claude_source(checkout, marketplace)
-    if "/" in source and not source.startswith(("/", ".", "~", "http", "git@")):
+    if claude_source_type(source) == CLAUDE_GITHUB_SOURCE_TYPE:
         return f"https://github.com/{source}"
     return source
+
+
+GIT_URL_PREFIXES = ("http://", "https://", "ssh://", "git://", "git@")
+GIT_URL_SUFFIX = ".git"
+PATH_PREFIXES = ("/", ".", "~")
+
+
+def claude_source_type(source: str) -> str:
+    """Classify one `marketplace add` argument as the source type Claude Code records.
+
+    One grammar for every reader: a URL scheme, `git@` host, or `.git` suffix
+    is a git source; an `owner/repo` shorthand is a GitHub source; anything
+    else — a path, whatever its prefix — is a directory source.
+    """
+    if source.startswith(GIT_URL_PREFIXES) or source.endswith(GIT_URL_SUFFIX):
+        return CLAUDE_GIT_SOURCE_TYPE
+    if "/" in source and not source.startswith(PATH_PREFIXES):
+        return CLAUDE_GITHUB_SOURCE_TYPE
+    return CLAUDE_DIRECTORY_SOURCE_TYPE
 
 
 def marketplace_target(
@@ -2770,19 +2863,20 @@ def cached_plugin_versions(
     return observed
 
 
-def claude_marketplace_source(source: str) -> dict[str, str]:
-    """Build the Claude source object for one `marketplace add` argument.
+SOURCE_VALUE_FIELDS = {
+    CLAUDE_GITHUB_SOURCE_TYPE: CLAUDE_REPOSITORY_FIELD,
+    CLAUDE_GIT_SOURCE_TYPE: CLAUDE_URL_FIELD,
+    CLAUDE_DIRECTORY_SOURCE_TYPE: CLAUDE_DIRECTORY_FIELD,
+}
+"""The field each Claude source type carries its value in; the inverse of `render_claude_source`."""
 
-    An `owner/repo` shorthand is a GitHub source; a path is a directory source.
-    """
-    if "/" in source and not source.startswith(("/", ".", "~")):
-        return {
-            CLAUDE_SOURCE_FIELD: CLAUDE_GITHUB_SOURCE_TYPE,
-            CLAUDE_REPOSITORY_FIELD: source,
-        }
+
+def claude_marketplace_source(source: str) -> dict[str, str]:
+    """Build the Claude source object for one `marketplace add` argument."""
+    source_type = claude_source_type(source)
     return {
-        CLAUDE_SOURCE_FIELD: CLAUDE_DIRECTORY_SOURCE_TYPE,
-        CLAUDE_DIRECTORY_FIELD: source,
+        CLAUDE_SOURCE_FIELD: source_type,
+        SOURCE_VALUE_FIELDS[source_type]: source,
     }
 
 
@@ -2813,7 +2907,9 @@ def claude_marketplace_settings(source: str, marketplace: str) -> dict[str, obje
 def codex_marketplace_listing_payload(source: str, marketplace: str) -> str:
     """Build one Codex marketplace-listing payload at its public boundary."""
     source_type = (
-        CODEX_GIT_SOURCE_TYPE if source.startswith("http") else CODEX_LOCAL_SOURCE_TYPE
+        CODEX_LOCAL_SOURCE_TYPE
+        if claude_source_type(source) == CLAUDE_DIRECTORY_SOURCE_TYPE
+        else CODEX_GIT_SOURCE_TYPE
     )
     return json.dumps(
         {
@@ -3053,6 +3149,7 @@ __all__ = [
     "cached_plugin_versions",
     "catalog_marketplace_name",
     "claude_marketplace_source",
+    "claude_source_type",
     "claude_registered_marketplace",
     "codex_list_command",
     "codex_registered_marketplace",
@@ -3174,6 +3271,8 @@ __all__ = [
     "CLAUDE_LOCAL_SETTINGS_PATH",
     "CLAUDE_MANAGED_SCOPE",
     "UNREADABLE_SETTINGS_DIAGNOSTIC",
+    "UNREADABLE_SETTINGS_WARNING",
+    "UNREGISTERED_TARGET_WARNING",
     "marketplace_plugin_identifier",
     "marketplace_plugin_name",
     "CODEX_EXEC_SUBCOMMAND",
@@ -3185,6 +3284,7 @@ __all__ = [
     "execute_persistent_installation",
     "isolated_environment",
     "installed_plugin_names",
+    "invocation_settings_error",
     "main",
     "persistent_environment",
     "persistent_roots",
