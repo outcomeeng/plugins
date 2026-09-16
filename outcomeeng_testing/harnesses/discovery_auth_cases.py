@@ -32,7 +32,6 @@ from outcomeeng_testing.harnesses.discovery_auth import (
     AuthField,
     CI_ENVIRONMENT,
     NativeCommand,
-    SavedLoginCondition,
     AUTH_FILENAME,
     WORKSPACE_TOKEN_ENV,
     AuthenticationMode,
@@ -223,16 +222,13 @@ def lock_contention_case() -> Iterator[AuthenticationCase]:
 
 
 @contextmanager
-def invalid_saved_login(fault: SavedLoginCondition) -> Iterator[AuthenticationCase]:
+def saved_login_document(document: str | None) -> Iterator[AuthenticationCase]:
+    """Materialize supplied saved-login bytes or leave the selected file absent."""
     with authentication_case() as case:
-        if fault is SavedLoginCondition.MISSING:
+        if document is None:
             case.saved.unlink()
-        elif fault is SavedLoginCondition.MALFORMED:
-            case.saved.write_text(
-                case.initial[: len(case.initial) // 2], encoding="utf-8"
-            )
         else:
-            shutil.copyfile(API_FIXTURE_PATH, case.saved)
+            case.saved.write_text(document, encoding="utf-8")
         yield case
 
 
