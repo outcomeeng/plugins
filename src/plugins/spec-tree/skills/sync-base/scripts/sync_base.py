@@ -507,46 +507,12 @@ def _dependent_candidates(repo: _Repository, branch: str, head_oid: str) -> list
     ]
 
 
-def _refuse_unclassifiable_dependents(
-    repo: _Repository,
-    branch: str,
-    head_oid: str,
-    *,
-    base_ref: str,
-    target_ref: str,
-    default_name: str | None,
-) -> SyncBaseResult | None:
-    """Refuse a rewrite whose dependents cannot be told from an unresolved default.
-
-    The default branch never receives a stack record and a dependent always
-    does. With ``origin/HEAD`` unset the writer cannot tell the two apart, so a
-    rewrite that would record any local branch stops before movement rather
-    than recording the default branch or losing the stack relation. A rewrite
-    no other local branch contains has nothing to classify and proceeds.
-    """
-    if default_name is not None:
-        return None
-    candidates = _dependent_candidates(repo, branch, head_oid)
-    if not candidates:
-        return None
-    names = ", ".join(candidates)
-    return SyncBaseResult(
-        SyncStatus.GIT_FAILURE,
-        base_ref,
-        target_ref,
-        branch,
-        f"default branch does not resolve (origin/HEAD is unset), so {names} "
-        f"cannot be classified as stacked on {branch} or as the default branch; "
-        f"set origin/HEAD before syncing {branch} onto {target_ref}",
-    )
-
-
 def _write_dependent_records(
     repo: _Repository,
     branch: str,
     old_head_oid: str,
     *,
-    default_name: str | None,
+    default_name: str,
 ) -> None:
     """Record ``branch`` and its pre-rebase head on every local branch stacked on it.
 
@@ -554,10 +520,8 @@ def _write_dependent_records(
     branch is never a dependent: it contains a merged branch's head without
     sitting on it. A dependent that already records a different predecessor
     keeps that record: its own restack flows through that nearer predecessor
-    when that one is rewritten. The caller has refused the rewrite through
-    :func:`_refuse_unclassifiable_dependents` when the default is unresolved
-    and a candidate exists, so an unresolved default reaches this writer only
-    with nothing to record.
+    when that one is rewritten. ``default_name`` is always resolved here:
+    :func:`_sync` refuses every movement that needs it before the rebase runs.
     """
     for dependent in _dependent_candidates(repo, branch, old_head_oid):
         if dependent == default_name:
@@ -918,9 +882,30 @@ def _record_failure(
     )
 
 
+def _unresolved_default_failure(
+    unresolved: SyncBaseResult, base_ref: str, target_ref: str, branch: str
+) -> SyncBaseResult:
+    """Refuse a ``--base`` synchronization whose default branch does not resolve.
+
+    Every stack-record decision needs the default branch's name: whether the
+    named base is the default, whether the branch's own record is written or
+    cleared, and which local branch containing the head is the default rather
+    than a dependent. Without it the primitive moves nothing and touches no
+    record, so a record is never written, skipped, or kept from a guess.
+    """
+    return SyncBaseResult(
+        SyncStatus.GIT_FAILURE,
+        base_ref,
+        target_ref,
+        branch,
+        f"{unresolved.detail}; a --base synchronization of {branch} needs the "
+        f"default branch to classify its stack record, so nothing moved — set "
+        f"origin/HEAD before syncing {branch} onto {target_ref}",
+    )
+
+
 def _sync(repo: _Repository, *, base_ref: str | None, fetch: bool) -> SyncBaseResult:
     default = _resolve_default_base(repo)
-    default_name = default if isinstance(default, str) else None
 
     try:
         branch = detect_current_branch(repo.path, runner=repo.runner)
@@ -934,8 +919,11 @@ def _sync(repo: _Repository, *, base_ref: str | None, fetch: bool) -> SyncBaseRe
         )
 
     if base_ref is not None:
-        record = _read_stack_record(repo, branch)
         target_ref = remote_tracking_ref(base_ref)
+        if isinstance(default, SyncBaseResult):
+            return _unresolved_default_failure(default, base_ref, target_ref, branch)
+        default_name = default
+        record = _read_stack_record(repo, branch)
         result = _sync_explicit_base(
             repo, branch, base_ref, target_ref, record, default_name, fetch=fetch
         )
@@ -956,12 +944,7 @@ def _sync(repo: _Repository, *, base_ref: str | None, fetch: bool) -> SyncBaseRe
                 tip_before=record.tip,
                 tip_after=None,
             )
-        if (
-            clean
-            and default_name is not None
-            and base_ref != default_name
-            and new_base_oid is not None
-        ):
+        if clean and base_ref != default_name and new_base_oid is not None:
             try:
                 _write_stack_record(
                     repo, branch, StackRecord(predecessor=base_ref, tip=new_base_oid)
@@ -1004,7 +987,7 @@ def _sync_explicit_base(
     base_ref: str,
     target_ref: str,
     record: StackRecord | None,
-    default_name: str | None,
+    default_name: str,
     *,
     fetch: bool,
 ) -> SyncBaseResult:
@@ -1224,7 +1207,7 @@ def _restack(
     target_ref: str,
     target_oid: str,
     fork_oid: str,
-    default_name: str | None,
+    default_name: str,
 ) -> SyncBaseResult:
     """Replay only the commits above ``fork_oid`` onto ``target_ref``.
 
@@ -1293,17 +1276,6 @@ def _restack(
             f"commit them before restacking onto {target_ref}",
         )
 
-    refused = _refuse_unclassifiable_dependents(
-        repo,
-        branch,
-        old_head_oid,
-        base_ref=base_ref,
-        target_ref=target_ref,
-        default_name=default_name,
-    )
-    if refused is not None:
-        return refused
-
     rebased = _git(repo, "rebase", "--onto", target_ref, fork_oid)
     if rebased.returncode == 0:
         try:
@@ -1357,7 +1329,7 @@ def _sync_branch_onto(
     target_ref: str,
     *,
     fetch: bool,
-    default_name: str | None,
+    default_name: str,
 ) -> SyncBaseResult:
     """Bring ``branch`` current with ``target_ref`` by an ordinary rebase.
 
@@ -1442,18 +1414,6 @@ def _sync_branch_onto(
             f"working tree of {branch} has uncommitted changes to tracked files; "
             f"commit them before rebasing onto {target_ref}",
         )
-
-    if old_head_oid is not None:
-        refused = _refuse_unclassifiable_dependents(
-            repo,
-            branch,
-            old_head_oid,
-            base_ref=base_ref,
-            target_ref=target_ref,
-            default_name=default_name,
-        )
-        if refused is not None:
-            return refused
 
     rebased = _git(repo, "rebase", target_ref)
     if rebased.returncode == 0:
