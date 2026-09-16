@@ -1,5 +1,10 @@
 """Installation evidence grouped by its governing contract."""
 
+import pytest
+from outcomeeng.distribution.installation import (
+    CODEX_SOURCE_DIAGNOSTIC,
+    PROJECT_SOURCE_DIAGNOSTIC,
+)
 import json
 from outcomeeng.distribution.installation import (
     Agent,
@@ -74,7 +79,6 @@ def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
         if command.agent is Agent.CLAUDE
         and command.operation
         in {
-            Operation.MARKETPLACE_REMOVE,
             Operation.MARKETPLACE_ADD,
             Operation.MARKETPLACE_REFRESH,
         }
@@ -82,6 +86,14 @@ def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
     assert source_operations == [Operation.MARKETPLACE_ADD]
 
 
+@pytest.mark.parametrize(
+    ("agent", "diagnostic"),
+    [
+        (Agent.CLAUDE, PROJECT_SOURCE_DIAGNOSTIC),
+        (Agent.CODEX, CODEX_SOURCE_DIAGNOSTIC),
+    ],
+    ids=str,
+)
 def test_a_noncanonical_source_stops_either_agent_before_any_plan(
     agent: Agent, diagnostic: str
 ) -> None:
