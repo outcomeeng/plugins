@@ -15,6 +15,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_stacked_repo_unpublished_predecessor,
     build_stacked_repo_without_record,
     build_three_level_stack_behind_base,
+    build_unrecorded_three_level_stack_behind_base,
     commit_subjects_above,
     load_sync_base_module,
     repository_root,
@@ -54,6 +55,29 @@ def test_rebased_predecessor_leaves_a_farther_dependent_recording_its_nearer_one
     assert result.status is module.SyncStatus.REBASED
     # The middle branch sat on the rebased tip and records it; the top branch
     # already names the middle branch as its nearer predecessor and keeps it.
+    assert module.read_stack_record(
+        handle.repo, handle.stacked_branch
+    ) == module.StackRecord(
+        predecessor=handle.predecessor_branch, tip=handle.predecessor_tip
+    )
+    assert module.read_stack_record(
+        handle.repo, handle.third_branch
+    ) == module.StackRecord(predecessor=handle.stacked_branch, tip=handle.stacked_tip)
+
+
+def test_rebased_predecessor_records_nearest_predecessors_in_an_unrecorded_chain(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_unrecorded_three_level_stack_behind_base(repository_root(tmp_path))
+    assert handle.third_branch is not None
+    assert handle.stacked_tip is not None
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.REBASED
+    # Both branches contain the rebased tip, but the top branch sits on the
+    # middle branch's tip: it records that nearer branch, not the rebased one.
     assert module.read_stack_record(
         handle.repo, handle.stacked_branch
     ) == module.StackRecord(

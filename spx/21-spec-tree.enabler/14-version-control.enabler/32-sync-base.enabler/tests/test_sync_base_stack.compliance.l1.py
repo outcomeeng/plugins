@@ -17,6 +17,8 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_stacked_repo_merged_predecessor,
     build_stacked_repo_nearest_of_two,
     build_stacked_repo_open_predecessor_advanced,
+    build_stacked_repo_open_predecessor_behind_base,
+    build_stacked_repo_twin_candidates,
     build_stacked_repo_unordered_candidates,
     commit_subjects_above,
     head_oid,
@@ -218,6 +220,57 @@ def test_derivation_with_unordered_candidates_writes_no_record(
         module.stack_config_key(handle.stacked_branch, module.STACK_TIP_KEY)
         not in entries
     )
+
+
+def test_derivation_with_candidates_at_one_commit_writes_no_record(
+    tmp_path: pathlib.Path,
+) -> None:
+    # A branch and its local copy fork from the stacked branch at the same
+    # commit, so neither is the nearer one; the derivation refuses to choose a
+    # name, writes no record, and the sync lands on the default base.
+    module = load_sync_base_module()
+    handle = build_stacked_repo_twin_candidates(repository_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.ALREADY_CURRENT
+    assert result.remote_ref == handle.remote_ref
+    assert module.read_stack_record(handle.repo, handle.stacked_branch) is None
+    entries = branch_config_entries(handle.repo, handle.stacked_branch)
+    assert (
+        module.stack_config_key(handle.stacked_branch, module.STACK_PREDECESSOR_KEY)
+        not in entries
+    )
+    assert (
+        module.stack_config_key(handle.stacked_branch, module.STACK_TIP_KEY)
+        not in entries
+    )
+
+
+def test_explicit_default_base_is_the_target_while_the_predecessor_is_open(
+    tmp_path: pathlib.Path,
+) -> None:
+    # The predecessor is open on origin and contains the recorded tip, so a
+    # sync without --base would follow it. With --base naming the advanced
+    # default, the default is the target: only the branch's own commit replays
+    # above it, the predecessor's commit leaves the branch, and the record is
+    # cleared — which is why a caller names the default only for a branch it
+    # has classified as a peer.
+    module = load_sync_base_module()
+    handle = build_stacked_repo_open_predecessor_behind_base(repository_root(tmp_path))
+
+    result = module.sync_base(handle.repo, base_ref=handle.base_ref)
+
+    assert result.status is module.SyncStatus.REBASED
+    assert result.remote_ref == handle.remote_ref
+    assert commit_subjects_above(handle.repo, handle.remote_ref) == [
+        handle.stacked_message
+    ]
+    assert not (handle.repo / handle.predecessor_file).exists()
+    assert result.preservation is not None
+    assert result.preservation.old_base_oid == handle.predecessor_tip
+    assert result.preservation.stack_tip_after is None
+    assert module.read_stack_record(handle.repo, handle.stacked_branch) is None
 
 
 def test_failed_record_write_is_never_reported_as_a_clean_sync(

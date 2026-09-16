@@ -612,6 +612,20 @@ def build_detached_behind_base_repo(root: pathlib.Path) -> DetachedRepo:
     )
 
 
+def build_detached_behind_base_repo_with_unresolved_default(
+    root: pathlib.Path,
+) -> DetachedRepo:
+    """Build the clean detached behind-base worktree with no resolvable default.
+
+    ``refs/remotes/origin/HEAD`` is deleted from the clone, so only a
+    caller-supplied base can select the movement; a detached HEAD carries no
+    branch record for the synchronizer to decide, so it needs no default.
+    """
+    detached = build_detached_behind_base_repo(root)
+    _delete_default_branch_pointer(detached.repo)
+    return detached
+
+
 def build_detached_current_repo(root: pathlib.Path) -> DetachedRepo:
     """Build a clean detached worktree parked at the base tip (no base advance).
 
@@ -881,6 +895,22 @@ def build_stacked_repo_open_predecessor_advanced(root: pathlib.Path) -> StackedR
     )
 
 
+def build_stacked_repo_open_predecessor_behind_base(root: pathlib.Path) -> StackedRepo:
+    """Build a recorded stack whose predecessor is open while the base advanced.
+
+    ``origin/<predecessor>`` still holds the recorded tip and is not reachable
+    from the base, so the predecessor is open; the base then gains a pushed
+    commit the stack has not fetched. A sync that names the default as its
+    base therefore has a replay to perform, bounded by the recorded tip.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    _write_record(repo, data.stacked_branch, data.predecessor_branch, predecessor_tip)
+    pusher = root / "pusher"
+    _commit_file(pusher, data.base_file, data.base_content, data.base_message)
+    _git(pusher, "push", "-q", "origin", data.base_branch)
+    return _stacked_handle(repo, data, predecessor_tip, base_file=data.base_file)
+
+
 def build_stacked_repo_merged_predecessor(root: pathlib.Path) -> StackedRepo:
     """Build a recorded stack whose predecessor was rewritten, merged, and deleted.
 
@@ -1050,6 +1080,28 @@ def build_stacked_repo_unordered_candidates(root: pathlib.Path) -> StackedRepo:
     )
 
 
+def build_stacked_repo_twin_candidates(root: pathlib.Path) -> StackedRepo:
+    """Build an unrecorded branch above two candidates parked at one commit.
+
+    The predecessor forks from the base and is pushed; a second candidate (the
+    generated alternate name) is created at the predecessor's tip and pushed,
+    so the two candidates are a branch and its copy. The stacked branch forks
+    from that shared tip, so its merge-base with each candidate is the same
+    commit and neither candidate is nearer. ``second_candidate_branch`` names
+    the copy and ``second_candidate_tip`` the shared tip.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    _git(repo, "branch", data.alternate_branch, data.predecessor_branch)
+    _git(repo, "push", "-q", "-u", "origin", data.alternate_branch)
+    return _stacked_handle(
+        repo,
+        data,
+        predecessor_tip,
+        second_candidate_branch=data.alternate_branch,
+        second_candidate_tip=predecessor_tip,
+    )
+
+
 def build_stacked_repo_rewritten_published_predecessor(
     root: pathlib.Path,
 ) -> StackedRepo:
@@ -1150,6 +1202,38 @@ def build_three_level_stack_behind_base(root: pathlib.Path) -> StackedRepo:
         repo, data.alternate_file, data.alternate_content, data.alternate_message
     )
     _write_record(repo, data.alternate_branch, data.stacked_branch, stacked_tip)
+    pusher = root / "pusher"
+    _commit_file(pusher, data.base_file, data.base_content, data.base_message)
+    _git(pusher, "push", "-q", "origin", data.base_branch)
+    _git(repo, "switch", "-q", data.predecessor_branch)
+    return _stacked_handle(
+        repo,
+        data,
+        predecessor_tip,
+        base_file=data.base_file,
+        third_branch=data.alternate_branch,
+        stacked_tip=stacked_tip,
+    )
+
+
+def build_unrecorded_three_level_stack_behind_base(root: pathlib.Path) -> StackedRepo:
+    """Build a hand-made chain of three stacked branches with no stack records.
+
+    The topology is that of :func:`build_three_level_stack_behind_base` — the
+    predecessor forks from the base, the stacked branch sits on its tip, and a
+    third branch (the generated alternate name) sits on the stacked branch's
+    tip — but no record is written anywhere, as when the chain was cut without
+    the synchronizer. The base advances out of band and the clone is checked
+    out on the predecessor, so synchronizing it rewrites the predecessor while
+    both other branches contain the pre-rebase tip. ``third_branch`` names the
+    top of the chain and ``stacked_tip`` the stacked branch's tip it sits on.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    stacked_tip = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "switch", "-q", "-c", data.alternate_branch)
+    _commit_file(
+        repo, data.alternate_file, data.alternate_content, data.alternate_message
+    )
     pusher = root / "pusher"
     _commit_file(pusher, data.base_file, data.base_content, data.base_message)
     _git(pusher, "push", "-q", "origin", data.base_branch)

@@ -14,6 +14,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_conflicting_repo,
     build_current_repo,
     build_detached_behind_base_repo,
+    build_detached_behind_base_repo_with_unresolved_default,
     build_diverged_detached_repo,
     build_detached_current_repo,
     build_detached_dirty_behind_base_repo,
@@ -172,6 +173,24 @@ def test_clean_behind_detached_head_is_advanced_to_base_tip(
     # ...so the base advance the worktree was behind is now present.
     assert handle.base_file is not None
     assert (handle.repo / handle.base_file).exists()
+
+
+def test_detached_base_sync_advances_without_a_resolvable_default(
+    tmp_path: pathlib.Path,
+) -> None:
+    # A detached HEAD carries no branch record to decide, so the unresolved
+    # default that refuses an attached --base sync does not apply: the parked
+    # worktree is advanced onto the named base's remote-tracking ref.
+    module = load_sync_base_module()
+    handle = build_detached_behind_base_repo_with_unresolved_default(
+        repository_root(tmp_path)
+    )
+
+    result = module.sync_base(handle.repo, base_ref=handle.base_ref)
+
+    assert result.status is module.SyncStatus.REBASED
+    assert result.branch is None
+    assert head_oid(handle.repo) == resolve_ref(handle.repo, handle.remote_ref)
 
 
 def test_clean_detached_head_at_base_tip_is_already_current(
