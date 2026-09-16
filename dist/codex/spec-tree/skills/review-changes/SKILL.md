@@ -71,9 +71,9 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 - NEVER run validation, tests, evals, coverage, lint, typecheck, or any deterministic verification command. Deterministic verification has already passed before this review starts; this skill provides agentic judgment by reading the diff and loaded review context.
 - NEVER invoke `spx journal`, `git`, `mktemp`, `rm`, `date`, `printf`, `compute_diff.py`, `journal_emit.py`, or `review_result.py` directly. The runner is the only command boundary.
 - NEVER write review-result files, rendered Markdown artifacts, or durable state outside `spx journal`. The runner-owned diff bundle and state file are scratch input for the active invocation only.
-- The prompt lives only at `${SKILL_DIR}/references/review-prompt.md`.
+- NEVER load a review prompt other than `${SKILL_DIR}/references/review-prompt.md` — one prompt keeps every review run comparable.
 - NEVER read `REVIEW.md`, `REVIEW.example.md`, or another repository-root review prompt.
-- Findings only. No praise, acknowledgements, open questions, verdicts, or prose summaries belong in the review stream.
+- NEVER append praise, acknowledgements, open questions, verdicts, or prose summaries to the review stream — it carries findings only.
 - NEVER render, summarize, count, or restate findings for the caller. The sealed journal prefix is the review authority.
 
 </constraints>

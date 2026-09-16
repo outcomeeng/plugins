@@ -1,10 +1,10 @@
 """Canonical git-derived changeset primitives shipped with the spec-tree plugin.
 
-Single home for the deterministic git derivation shared by the audit,
-review-changes, and sync-base skills: branch identity, the on-disk
-addressing slug, base-ref resolution, the remote-tracking ref form, and
-merge-base diff scope. Consumers import these symbols (directly or through
-consumer imports); none re-implements them.
+Single home for the deterministic git derivation every scope consumer
+shares: branch identity, the on-disk addressing slug, base-ref resolution,
+the remote-tracking ref form, and merge-base diff scope. Consumers import
+these symbols (directly or through consumer imports); none re-implements
+them.
 
 Every changeset diff range over a git-derived base is composed against the
 remote-tracking ref ``origin/<base>`` through :func:`remote_tracking_ref`, so a
@@ -198,35 +198,39 @@ def require_current_base(
     repo: pathlib.Path,
     runner: Runner = subprocess.run,
 ) -> None:
-    """Refuse a head that does not descend from the fetched base tip.
+    """Refuse a head that does not descend from the fetched remote base tip.
 
-    A remote-tracking base is fetched first with an explicit refspec, so the
-    comparison reads the ref the fetch just wrote rather than whatever the
-    local remote-tracking ref last saw; the symbolic ``origin/HEAD`` resolves
-    to its configured branch first, because a bare ``git fetch origin HEAD``
-    writes only ``FETCH_HEAD``. The head is current when its merge base with
-    that tip is the tip itself; otherwise :class:`StaleBaseError` names the
-    tip, the merge base, and the base commits the head lacks. Git failures
-    propagate as ``subprocess.CalledProcessError`` for the caller to translate.
+    Only a remote-tracking base is checked: a local ref or commit named as the
+    base of an explicit range is the caller's exact endpoint, compared as
+    given with no fetch and no refusal. A remote-tracking base is fetched
+    first with an explicit refspec, so the comparison reads the ref the fetch
+    just wrote rather than whatever the local remote-tracking ref last saw;
+    the symbolic ``origin/HEAD`` resolves to its configured branch first,
+    because a bare ``git fetch origin HEAD`` writes only ``FETCH_HEAD``. The
+    head is current when its merge base with that tip is the tip itself;
+    otherwise :class:`StaleBaseError` names the tip, the merge base, and the
+    base commits the head lacks. Git failures propagate as
+    ``subprocess.CalledProcessError`` for the caller to translate.
     """
-    if base_ref.startswith(ORIGIN_REF_PREFIX):
-        bare_base = base_ref[len(ORIGIN_REF_PREFIX) :]
-        if bare_base == HEAD_REF:
-            bare_base = detect_base_ref(repo, runner=runner)
-            base_ref = remote_tracking_ref(bare_base)
-        runner(
-            [
-                "git",
-                "fetch",
-                "--quiet",
-                ORIGIN_REMOTE_NAME,
-                f"+refs/heads/{bare_base}:{ORIGIN_HEAD_REF_PREFIX}{bare_base}",
-            ],
-            cwd=repo,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+    if not base_ref.startswith(ORIGIN_REF_PREFIX):
+        return
+    bare_base = base_ref[len(ORIGIN_REF_PREFIX) :]
+    if bare_base == HEAD_REF:
+        bare_base = detect_base_ref(repo, runner=runner)
+        base_ref = remote_tracking_ref(bare_base)
+    runner(
+        [
+            "git",
+            "fetch",
+            "--quiet",
+            ORIGIN_REMOTE_NAME,
+            f"+refs/heads/{bare_base}:{ORIGIN_HEAD_REF_PREFIX}{bare_base}",
+        ],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     tip = commit_oid(base_ref, repo=repo, runner=runner)
     merge_base = runner(
         ["git", "merge-base", tip, head_ref],
@@ -290,14 +294,14 @@ def expand_diff_range(
 def remote_tracking_ref(base_ref: str) -> str:
     """Compose the remote-tracking ref ``origin/<base_ref>`` from a bare base.
 
-    The single source of the ``origin/`` composition. Both the audit
-    surface (:func:`branch_scope`) and the review surface
-    (``compute_diff``) route their git-derived base through this helper so
-    every changeset diff range is taken against the fetched remote-tracking
-    ref rather than a bare local branch. A bare local ref such as ``main``
-    can lag ``origin/<base>`` in a multi-worktree checkout where the local
-    branch is left unattached; the three-dot diff then recomputes its merge
-    base from the stale ref and re-includes already-merged commits.
+    The single source of the ``origin/`` composition. :func:`branch_scope`
+    and every consumer with its own diff operation route their git-derived
+    base through this helper, so every changeset diff range is taken against
+    the fetched remote-tracking ref rather than a bare local branch. A bare
+    local ref such as ``main`` can lag ``origin/<base>`` in a multi-worktree
+    checkout where the local branch is left unattached; the three-dot diff
+    then recomputes its merge base from the stale ref and re-includes
+    already-merged commits.
     """
     return f"{ORIGIN_REF_PREFIX}{base_ref}"
 

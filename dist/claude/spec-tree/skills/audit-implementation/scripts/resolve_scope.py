@@ -95,7 +95,12 @@ def _provider() -> ModuleType:
         raise ImportError(f"cannot load changeset_scope from {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        # A module that failed to execute never stays cached as if it loaded.
+        del sys.modules[spec.name]
+        raise
     return module
 
 

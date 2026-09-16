@@ -67,7 +67,7 @@ When scope resolution fails before an exact changeset exists, return only this J
   "schema_version": 1,
   "status": "BLOCKED",
   "reason": "scope-unresolved | stale-base",
-  "scope_input": "<caller-supplied scope or empty string>",
+  "scope_input": "<supplied scope selector or empty string>",
   "diagnostic": "<resolver stderr, verbatim, or empty string>"
 }
 ```

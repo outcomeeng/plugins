@@ -175,10 +175,19 @@ def load_coherence_scope_module() -> ModuleType:
 
 
 CHANGESET_SCOPE = load_changeset_scope_module()
-# Git's own name for the remote's default branch, resolved by git alone so an
-# expected base identity never composes through the production ref derivation.
-ORIGIN_HEAD_REF = "origin/HEAD"
 CHANGESET_SCOPE_CONTRACT = load_changeset_scope_contract_module()
+# Every remote-ref name the harness arranges composes from the contract's
+# remote name, so the remote it registers and the refs it points are one
+# vocabulary with the resolver's own.
+ORIGIN_REMOTE_NAME = str(CHANGESET_SCOPE_CONTRACT.ORIGIN_REMOTE_NAME)
+ORIGIN_BARE_DIRECTORY = f"{ORIGIN_REMOTE_NAME}.git"
+# The short ``origin/HEAD`` selector a caller passes, and the full symbolic ref
+# and remote-tracking prefix git resolves it through.
+ORIGIN_HEAD_REF = (
+    f"{CHANGESET_SCOPE_CONTRACT.ORIGIN_REF_PREFIX}{CHANGESET_SCOPE_CONTRACT.HEAD_REF}"
+)
+ORIGIN_HEAD_SYMBOLIC_REF = str(CHANGESET_SCOPE_CONTRACT.ORIGIN_HEAD_REF)
+ORIGIN_TRACKING_REF_PREFIX = str(CHANGESET_SCOPE_CONTRACT.ORIGIN_HEAD_REF_PREFIX)
 MERGE_CLASSIFIER = load_merge_classifier_module()
 MERGE_CONTRACT = load_merge_contract_module()
 COHERENCE_SCOPE = load_coherence_scope_module()
@@ -247,10 +256,6 @@ def _initialize_changeset_repo(
     return scenario
 
 
-ORIGIN_REMOTE_NAME = str(CHANGESET_SCOPE_CONTRACT.ORIGIN_REMOTE_NAME)
-ORIGIN_BARE_DIRECTORY = f"{ORIGIN_REMOTE_NAME}.git"
-
-
 def _origin_bare_path(repo: pathlib.Path) -> pathlib.Path:
     return repo.parent / ORIGIN_BARE_DIRECTORY
 
@@ -279,18 +284,9 @@ def _publish_origin_base(
         ORIGIN_REMOTE_NAME,
         f"{commit_oid}:refs/heads/{scenario.base_branch}",
     )
-    _git(
-        repo,
-        "update-ref",
-        f"refs/remotes/origin/{scenario.base_branch}",
-        commit_oid,
-    )
-    _git(
-        repo,
-        "symbolic-ref",
-        "refs/remotes/origin/HEAD",
-        f"refs/remotes/origin/{scenario.base_branch}",
-    )
+    tracking_ref = f"{ORIGIN_TRACKING_REF_PREFIX}{scenario.base_branch}"
+    _git(repo, "update-ref", tracking_ref, commit_oid)
+    _git(repo, "symbolic-ref", ORIGIN_HEAD_SYMBOLIC_REF, tracking_ref)
 
 
 @dataclass(frozen=True)
@@ -438,8 +434,11 @@ def build_lagging_remote_tracking_repo(
     the remote keeps A+M, and the checkout stays on the feature at A+F.
     """
     advanced = build_base_advanced_after_branch_repo(repo, scenario)
-    branch_point = _git(repo, "merge-base", "HEAD", f"origin/{advanced.base_ref}")
-    _git(repo, "update-ref", f"refs/remotes/origin/{advanced.base_ref}", branch_point)
+    tracking_ref = f"{ORIGIN_TRACKING_REF_PREFIX}{advanced.base_ref}"
+    branch_point = _git(
+        repo, "merge-base", CHANGESET_SCOPE_CONTRACT.HEAD_REF, tracking_ref
+    )
+    _git(repo, "update-ref", tracking_ref, branch_point)
     return LaggingRemoteTrackingRepo(
         repo=repo,
         base_ref=advanced.base_ref,

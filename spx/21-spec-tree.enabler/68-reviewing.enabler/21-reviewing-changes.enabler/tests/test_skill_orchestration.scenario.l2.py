@@ -29,7 +29,11 @@ import subprocess
 
 import pytest
 
-from outcomeeng_testing.harnesses.changeset_scope import build_stale_local_base_repo
+from outcomeeng_testing.harnesses.changeset_scope import (
+    ORIGIN_HEAD_SYMBOLIC_REF,
+    ORIGIN_TRACKING_REF_PREFIX,
+    build_stale_local_base_repo,
+)
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
     JOURNAL_EMIT_SCRIPT,
@@ -412,16 +416,12 @@ def _set_origin_head(repo: pathlib.Path, branch: str) -> None:
     ``refs/remotes/origin/HEAD`` directly at a local branch so
     ``compute_diff``'s strict origin-HEAD derivation has something to find.
     """
-    run_git(
-        "symbolic-ref",
-        "refs/remotes/origin/HEAD",
-        f"refs/remotes/origin/{branch}",
-        cwd=repo,
-    )
+    tracking_ref = f"{ORIGIN_TRACKING_REF_PREFIX}{branch}"
+    run_git("symbolic-ref", ORIGIN_HEAD_SYMBOLIC_REF, tracking_ref, cwd=repo)
     # The symbolic ref above only exists if the target ref exists too.
     # Mirror the local branch's tip into the remote-tracking namespace.
     rev = run_git("rev-parse", branch, cwd=repo).stdout.strip()
-    run_git("update-ref", f"refs/remotes/origin/{branch}", rev, cwd=repo)
+    run_git("update-ref", tracking_ref, rev, cwd=repo)
 
 
 @pytest.mark.skipif(

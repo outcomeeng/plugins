@@ -1,7 +1,9 @@
 """Scenario tests for the committed-scope resolver's stale-base refusal.
 
 Covers the Scenario assertions in ``../changeset-scope.md`` on a head behind
-the fetched base, a lagging local remote-tracking ref, and a current head.
+the fetched base, a lagging local remote-tracking ref, a current head, a
+symbolic ``origin/HEAD`` base, and an explicit local-ref base that is compared
+as given.
 
 ``l1``: the shipped resolver runs as a subprocess against a synthetic
 repository whose origin is a real bare repository beside it.
@@ -114,3 +116,28 @@ def test_an_explicit_local_ref_base_is_compared_as_given() -> None:
             assert result.returncode == 0
             resolved = json.loads(result.stdout)
             assert resolved[CHANGESET_SCOPE.ScopeField.BASE] == local_base
+
+
+def test_an_explicit_local_ref_base_the_head_is_behind_is_not_refused() -> None:
+    for scenario in generated_changeset_scope_cases():
+        with base_advanced_after_branch_repo(scenario) as advanced:
+            local_base = git_commit_oid(advanced.repo, advanced.base_ref)
+            assert (
+                git_merge_base(
+                    advanced.repo, CHANGESET_SCOPE_CONTRACT.HEAD_REF, local_base
+                )
+                != local_base
+            )
+            selector = (
+                f"{advanced.base_ref}{CHANGESET_SCOPE.RANGE_SEPARATOR}"
+                f"{CHANGESET_SCOPE_CONTRACT.HEAD_REF}"
+            )
+
+            result = run_changeset_scope(advanced.repo, selector)
+
+            assert result.returncode == 0
+            resolved = json.loads(result.stdout)
+            assert resolved[CHANGESET_SCOPE.ScopeField.BASE] == local_base
+            assert resolved[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS] == [
+                advanced.feature_file
+            ]

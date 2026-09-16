@@ -58,7 +58,12 @@ def _load_changeset_scope() -> ModuleType:
         raise ImportError(f"cannot load changeset_scope from {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules["changeset_scope"] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        # A module that failed to execute never stays cached as if it loaded.
+        del sys.modules["changeset_scope"]
+        raise
     return module
 
 
@@ -79,7 +84,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         scope = _load_changeset_scope()
-    except ImportError as exc:
+    except (ImportError, OSError) as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
         return 2
     try:

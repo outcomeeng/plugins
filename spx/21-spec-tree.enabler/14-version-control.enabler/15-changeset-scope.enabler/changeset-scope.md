@@ -20,6 +20,7 @@ CAN derive every changeset's branch, slug, base ref, head/base commit IDs, and c
 - Given a head that descends from the fetched `origin/<base>` tip, when the committed-scope command resolves `HEAD`, then it returns the scope whose base identity is that tip ([test](tests/test_stale_base.scenario.l1.py))
 - Given an explicit range whose base is the symbolic `origin/HEAD`, when the committed-scope command resolves it against a remote whose base has advanced, then it fetches the configured base branch by refspec and refuses with the remote's tip, because a bare `git fetch origin HEAD` writes only `FETCH_HEAD` ([test](tests/test_stale_base.scenario.l1.py))
 - Given an explicit range whose base names a local ref that lags `origin/<base>`, when the committed-scope command resolves it, then it returns the scope whose base identity is that local ref's commit, not the remote's tip, with no refusal, because an explicit range is the caller's exact endpoint pair ([test](tests/test_stale_base.scenario.l1.py))
+- Given an explicit range whose base names a local ref the head does not descend from, when the committed-scope command resolves it, then it returns the scope whose base identity is that local ref's commit and applies no stale-base refusal, because the refusal reads only a git-derived or `origin/` base ([test](tests/test_stale_base.scenario.l1.py))
 
 ### Compliance
 
