@@ -197,16 +197,28 @@ def require_current_base(
 ) -> None:
     """Refuse a head that does not descend from the fetched base tip.
 
-    A remote-tracking base is fetched first, so the comparison reads the
-    remote's tip rather than whatever the local remote-tracking ref last saw.
-    The head is current when its merge base with that tip is the tip itself;
-    otherwise :class:`StaleBaseError` names the tip, the merge base, and the
-    base commits the head lacks. Git failures propagate as
-    ``subprocess.CalledProcessError`` for the caller to translate.
+    A remote-tracking base is fetched first with an explicit refspec, so the
+    comparison reads the ref the fetch just wrote rather than whatever the
+    local remote-tracking ref last saw; the symbolic ``origin/HEAD`` resolves
+    to its configured branch first, because a bare ``git fetch origin HEAD``
+    writes only ``FETCH_HEAD``. The head is current when its merge base with
+    that tip is the tip itself; otherwise :class:`StaleBaseError` names the
+    tip, the merge base, and the base commits the head lacks. Git failures
+    propagate as ``subprocess.CalledProcessError`` for the caller to translate.
     """
     if base_ref.startswith(ORIGIN_REF_PREFIX):
+        bare_base = base_ref[len(ORIGIN_REF_PREFIX) :]
+        if bare_base == HEAD_REF:
+            bare_base = detect_base_ref(repo, runner=runner)
+            base_ref = remote_tracking_ref(bare_base)
         runner(
-            ["git", "fetch", "--quiet", "origin", base_ref[len(ORIGIN_REF_PREFIX) :]],
+            [
+                "git",
+                "fetch",
+                "--quiet",
+                "origin",
+                f"+refs/heads/{bare_base}:{ORIGIN_HEAD_REF_PREFIX}{bare_base}",
+            ],
             cwd=repo,
             capture_output=True,
             text=True,

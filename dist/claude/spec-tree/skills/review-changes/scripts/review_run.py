@@ -485,7 +485,10 @@ def _start(args: argparse.Namespace) -> int:
         sys.stderr.write("\n")
         return int(changeset_scope.EXIT_STALE_BASE)
     except subprocess.CalledProcessError as exc:
-        sys.stderr.write(f"{exc}: {(exc.stderr or '').strip()}\n")
+        detail = " | ".join(
+            line.strip() for line in (exc.stderr or "").splitlines() if line.strip()
+        )
+        sys.stderr.write(f"{exc}: {detail}\n")
         return 1
     except (OSError, RuntimeError, TypeError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")

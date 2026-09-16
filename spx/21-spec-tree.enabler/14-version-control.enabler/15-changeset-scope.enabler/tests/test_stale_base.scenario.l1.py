@@ -81,3 +81,19 @@ def test_a_head_descending_from_the_fetched_tip_resolves_with_that_base() -> Non
             assert resolved[CHANGESET_SCOPE.ScopeField.HEAD] == git_commit_oid(
                 stale.repo, CHANGESET_SCOPE_CONTRACT.HEAD_REF
             )
+
+
+def test_a_symbolic_origin_head_base_is_fetched_as_its_branch() -> None:
+    for scenario in generated_changeset_scope_cases():
+        with lagging_remote_tracking_repo(scenario) as lagging:
+            remote_tip = remote_base_oid(lagging.repo, lagging.base_ref)
+            selector = (
+                f"{CHANGESET_SCOPE.remote_tracking_ref(CHANGESET_SCOPE_CONTRACT.HEAD_REF)}"
+                f"{CHANGESET_SCOPE.RANGE_SEPARATOR}{CHANGESET_SCOPE_CONTRACT.HEAD_REF}"
+            )
+
+            result = run_changeset_scope(lagging.repo, selector)
+
+            assert result.returncode == CHANGESET_SCOPE.EXIT_STALE_BASE
+            diagnostic = json.loads(result.stderr.strip().splitlines()[-1])
+            assert diagnostic[CHANGESET_SCOPE.StaleBaseField.TIP] == remote_tip

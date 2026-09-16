@@ -13,6 +13,7 @@ import pathlib
 from outcomeeng_testing.harnesses.changeset_scope import (
     CHANGESET_SCOPE,
     base_advanced_after_branch_repo,
+    lagging_remote_tracking_repo,
     remote_base_oid,
     sever_origin_remote,
 )
@@ -72,6 +73,32 @@ def test_an_unfetchable_base_is_reported_as_a_diagnostic_line(
 
         assert started.returncode == 1
         assert not started.stdout
+        assert len(started.stderr.strip().splitlines()) == 1
         assert absent in started.stderr
         assert "Traceback (most recent call last):" not in started.stderr
+        assert not journal_path.exists()
+
+
+def test_a_symbolic_origin_head_base_is_refused_against_the_remote_tip(
+    tmp_path: pathlib.Path,
+) -> None:
+    """The base the wrapper agent exports resolves to the branch fetch updates.
+
+    Fetching the bare ``HEAD`` writes only ``FETCH_HEAD``, so a comparison
+    against the local symbolic ref would pass a head the remote has left
+    behind.
+    """
+    with lagging_remote_tracking_repo() as lagging:
+        remote_tip = remote_base_oid(lagging.repo, lagging.base_ref)
+        env, journal_path = runner_env(
+            tmp_path,
+            lagging.repo,
+            CHANGESET_SCOPE.remote_tracking_ref(CHANGESET_SCOPE.HEAD_REF),
+        )
+
+        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=lagging.repo)
+
+        assert started.returncode == CHANGESET_SCOPE.EXIT_STALE_BASE
+        diagnostic = json.loads(started.stderr.strip().splitlines()[-1])
+        assert diagnostic[CHANGESET_SCOPE.StaleBaseField.TIP] == remote_tip
         assert not journal_path.exists()
