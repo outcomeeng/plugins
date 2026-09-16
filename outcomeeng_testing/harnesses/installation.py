@@ -39,9 +39,6 @@ from outcomeeng.distribution.installation import (
     AGENT_OWNERSHIP_PLUGIN_FIELD,
     AGENT_OWNERSHIP_SCHEMA_FIELD,
     AGENT_OWNERSHIP_SCHEMA_VERSION,
-    AGENT_SKILL_NAME_FIELD,
-    AGENT_SKILLS_CONFIG_FIELD,
-    AGENT_SKILLS_FIELD,
     Agent,
     AgentHomeCollision,
     AgentHomeCollisionError,
@@ -1817,7 +1814,6 @@ def observe_verification_recipe() -> VerificationRecipeObservation:
     )
 
 
-@cache
 @dataclass(frozen=True)
 class RealRecordRefreshObservation:
     """A real persistent run over records in the invocation checkout and a second one.
