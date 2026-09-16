@@ -45,6 +45,7 @@ from outcomeeng.distribution.installation import (
     AgentHomeCollision,
     AgentHomeCollisionError,
     AgentHomeResult,
+    ClaudeInstallRecord,
     CANONICAL_CODEX_SOURCE,
     CANONICAL_MARKETPLACE_SOURCE,
     CATALOG_PLUGIN_NAME_FIELD,
@@ -89,6 +90,7 @@ from outcomeeng.distribution.installation import (
     InstallationReport,
     MARKETPLACE_NAME,
     Operation,
+    PathlessInstallRecord,
     PersistentPreflight,
     PLUGIN_OPERATIONS,
     ScopeSplitClassification,
@@ -100,6 +102,7 @@ from outcomeeng.distribution.installation import (
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
+    claude_install_records,
     claude_marketplace_listing_payload,
     claude_marketplace_settings,
     codex_marketplace_listing_payload,
@@ -2032,6 +2035,109 @@ def observe_real_first_install() -> RealFirstInstallObservation:
     )
 
 
+@dataclass(frozen=True)
+class RealRecordRefreshObservation:
+    """A real persistent run over records in the invocation checkout and a second one.
+
+    The second checkout records its plugin at local scope, so the run's native
+    update executes at that scope from that checkout's own path.
+    """
+
+    exit_code: int
+    stdout: str
+    stderr: str
+    invocation_checkout: Path
+    other_checkout: Path
+    records_before: tuple[ClaudeInstallRecord | PathlessInstallRecord, ...]
+    records_after: tuple[ClaudeInstallRecord | PathlessInstallRecord, ...]
+    invocation_activation_before: object
+    invocation_activation_after: object
+    other_activation_before: object
+    other_activation_after: object
+
+
+def observe_real_record_refresh() -> RealRecordRefreshObservation:
+    """Seed two checkouts' records with the real Claude Code CLI, then run the recipe.
+
+    The invocation checkout records `spec-tree` at project scope and a second
+    checkout records it at local scope with the canonical source declared in
+    its local settings; the persistent recipe then runs from the invocation
+    checkout against the same disposable agent state.
+    """
+    checkout = repository_root()
+    _require_binaries(REQUIRED_BINARIES)
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        invocation = temporary_root / "invocation-checkout"
+        other = temporary_root / "other-checkout"
+        mirror_installation_inputs(checkout, invocation)
+        mirror_installation_inputs(checkout, other)
+        environment = _persistent_environment(temporary_root / "agent-state")
+        _prepare_agent_state(environment)
+        _register_persistent_claude_marketplace(invocation, environment)
+        _register_persistent_codex_marketplace(invocation, environment)
+        _write_project_marketplace(other, CANONICAL_MARKETPLACE_SOURCE, local=True)
+        _install_claude_plugin(invocation, environment, CLAUDE_PROJECT_SCOPE)
+        _install_claude_plugin(other, environment, CLAUDE_LOCAL_SCOPE)
+        invocation_settings = invocation / CLAUDE_PROJECT_SETTINGS_PATH
+        other_settings = other / CLAUDE_LOCAL_SETTINGS_PATH
+        invocation_activation_before = _declared_activation(invocation_settings)
+        other_activation_before = _declared_activation(other_settings)
+        records_before = claude_install_records(
+            _run_listing(Agent.CLAUDE, invocation, environment).stdout
+        )
+        result = _run_persistent_recipe(checkout, invocation, environment)
+        records_after = claude_install_records(
+            _run_listing(Agent.CLAUDE, invocation, environment).stdout
+        )
+        invocation_activation_after = _declared_activation(invocation_settings)
+        other_activation_after = _declared_activation(other_settings)
+    return RealRecordRefreshObservation(
+        exit_code=result.returncode,
+        stdout=result.stdout,
+        stderr=result.stderr,
+        invocation_checkout=invocation,
+        other_checkout=other,
+        records_before=records_before,
+        records_after=records_after,
+        invocation_activation_before=invocation_activation_before,
+        invocation_activation_after=invocation_activation_after,
+        other_activation_before=other_activation_before,
+        other_activation_after=other_activation_after,
+    )
+
+
+def _install_claude_plugin(
+    checkout: Path, environment: Mapping[str, str], scope: str
+) -> None:
+    """Install `spec-tree` at one scope from one checkout through the real CLI."""
+    result = subprocess.run(
+        (
+            CLAUDE_EXECUTABLE,
+            "plugin",
+            "install",
+            marketplace_plugin_identifier(SPEC_TREE_PLUGIN),
+            CLAUDE_SCOPE_FLAG,
+            scope,
+        ),
+        cwd=checkout,
+        env=dict(environment),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Claude {scope}-scope install in {checkout} failed with exit "
+            f"{result.returncode}: {result.stderr}"
+        )
+
+
+def _declared_activation(settings: Path) -> object:
+    """Read the activation entries one settings document declares, as written."""
+    return _settings_json(settings).get(CLAUDE_ENABLED_PLUGINS_FIELD)
+
+
 @cache
 def observe_real_installation() -> RealInstallationObservation:
     """Run persistent and isolated installation with real agent CLIs.
@@ -2924,6 +3030,7 @@ __all__ = [
     "observe_planned_operations",
     "observe_real_first_install",
     "observe_real_installation",
+    "observe_real_record_refresh",
     "observe_repository_plan",
     "observe_scope_split",
     "racing_digest_reader",
