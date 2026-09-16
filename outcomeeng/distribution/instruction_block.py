@@ -266,6 +266,10 @@ WAIT_FOR_LOAD_READY_REQUIREMENT: Final = (
     "**ALWAYS** let the waiter's zero exit start the selected command unchanged; "
     "a lost or truncated result re-runs the same line."
 )
+WAIT_FOR_LOAD_CLASS_DEFINITION: Final = (
+    "A resource-intensive command is a test suite, an eval, a full gate, a "
+    "compiling build, or an install verification"
+)
 WAIT_FOR_LOAD_LIGHTWEIGHT_EXEMPTION: Final = (
     "a lightweight command — formatting, a single-file lint, a markdown or link "
     "validation, an instruction-block render, a status read — runs without the waiter"
@@ -274,6 +278,7 @@ WAIT_FOR_LOAD_SCOPE_REQUIREMENT: Final = "**NEVER** use host load to reduce scop
 WAIT_FOR_LOAD_POLICY_REQUIREMENTS: Final = (
     ("stop trigger", WAIT_FOR_LOAD_STOP_TRIGGER),
     ("ready command", WAIT_FOR_LOAD_READY_REQUIREMENT),
+    ("class definition", WAIT_FOR_LOAD_CLASS_DEFINITION),
     ("lightweight exemption", WAIT_FOR_LOAD_LIGHTWEIGHT_EXEMPTION),
     ("scope preservation", WAIT_FOR_LOAD_SCOPE_REQUIREMENT),
 )
