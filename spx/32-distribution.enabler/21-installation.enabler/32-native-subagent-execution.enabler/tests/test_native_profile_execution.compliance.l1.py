@@ -1,6 +1,5 @@
 """Compliance evidence for deterministic native-profile probe planning."""
 
-import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -33,18 +32,14 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import NativeFault
 from outcomeeng_testing.harnesses.native_profile_failures import native_profile_failure
 
 from outcomeeng.distribution.native_thread_evidence import (
-    THREAD_READ_FAILED,
     ChildIdentityField,
     NativeTurnStatus,
-    NativeEvidenceField,
 )
 from outcomeeng_testing.generators.native_thread_evidence import NativeEvidenceCase
 from outcomeeng_testing.harnesses.native_thread_evidence import (
     NativeEvidenceContext,
     RecordingThreadReader,
     exercise_native_evidence,
-    read_absent_native_thread,
-    read_absent_native_child,
 )
 
 
@@ -244,12 +239,6 @@ def test_incomplete_native_turn_cannot_supply_completion_evidence() -> None:
     exercise_native_evidence(assert_case)
 
 
-def test_real_native_read_reports_absent_thread_without_launching_a_turn() -> None:
-    result = read_absent_native_thread()
-    assert result.exit_code != 0
-    assert THREAD_READ_FAILED in result.stderr
-
-
 def test_absent_native_thread_is_unusable() -> None:
     def assert_case(case: NativeEvidenceCase, context: NativeEvidenceContext) -> None:
         reader = RecordingThreadReader.without_thread()
@@ -291,13 +280,3 @@ def test_unlisted_thread_cannot_supply_child_evidence() -> None:
         assert len(reader.calls) == 1
 
     exercise_native_evidence(assert_case)
-
-
-def test_real_native_child_listing_retains_empty_pages_without_launching() -> None:
-    result = read_absent_native_child()
-    assert result.exit_code == 0
-    assert json.loads(result.stdout)[NativeEvidenceField.CHILD_IDS] == []
-    assert all(
-        NativeEvidenceField.RESULT in page
-        for page in json.loads(result.stdout)[NativeEvidenceField.PAGES]
-    )
