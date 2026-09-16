@@ -241,6 +241,22 @@ evidence; do not publish a replacement verdict or write findings into the Change
 
 </verdict_format>
 
+<failure_modes>
+
+**A short record triggered a universal questionnaire.** Claude treated absent
+business-benefit sections as missing intent for a precise maintenance request.
+The template's optional headings became presumed requirements, so record length
+substituted for the completeness of the actual choices and maturity obligations.
+Judge applicable maturity and consequential choices through the shared rules.
+
+**Recorded coverage matched a shortened plan.** Claude inspected selected rules
+and sealed approval because each planned unit was recorded. The same narrowed
+plan defined both the work and its completeness check, leaving omitted rules
+invisible to reconciliation. Reconcile accepted units against every rule in
+the standards before finishing.
+
+</failure_modes>
+
 <success_criteria>
 
 - The run retains the complete local candidate and identifies exactly that file.
@@ -250,15 +266,3 @@ evidence; do not publish a replacement verdict or write findings into the Change
 - No candidate, Change store, claim, product artifact, or knowledge bundle was modified; only the SPX verification-run store received the required audit writes.
 
 </success_criteria>
-
-<failure_modes>
-
-**A short record triggered a universal questionnaire.** Claude treated absent
-business-benefit sections as missing intent for a precise maintenance request.
-Judge applicable maturity and consequential choices through the shared rules.
-
-**Recorded coverage matched a shortened plan.** Claude inspected selected rules
-and sealed approval because each planned unit was recorded. Reconcile accepted
-units against every rule in the standards before finishing.
-
-</failure_modes>
