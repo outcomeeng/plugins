@@ -24,3 +24,19 @@ so it extracts with them — port both, publish, advance the floor, and reduce t
 shipped skill to its instruction with no script. Preserve the caller-independent
 scope resolution across the move: the audit names no caller and stays invocable
 on its own. Revisit when the capability publishes.
+
+## The coherence eval's committed run history predates its producer
+
+`evals/coherence-verdict/history.jsonl` carries no run against the current
+`src/plugins/spec-tree/skills/audit-changeset-coherence/SKILL.md`, whose
+resolver relay and stale-base refusal changed the producer the eval scores. The
+`[eval]` assertions the suite backs therefore rest on a history recorded for an
+earlier producer.
+
+**Evidence.** Pull request outcomeeng/plugins#580 merged as
+`a24d145869614193a55ffae2c92f781a605802eb` with the eval run recorded as not
+established in its test plan.
+
+**Settlement condition**: one `just eval spx/21-spec-tree.enabler/68-audit.enabler/32-changeset-coherence.enabler/evals/coherence-verdict/eval.toml`
+run against the released producer, its `history.jsonl` committed beside the
+suite.
