@@ -2048,6 +2048,8 @@ def _claude_argv(operation: Operation, *words: str, scope: str) -> tuple[str, ..
     argv = (CLAUDE_EXECUTABLE, *words)
     if operation in CLAUDE_SCOPE_BEARING_OPERATIONS:
         return (*argv, CLAUDE_SCOPE_FLAG, scope)
+    if operation not in CLAUDE_SCOPELESS_OPERATIONS:
+        raise ValueError(f"{operation.value} has no Claude Code scope disposition")
     return argv
 
 
