@@ -15,3 +15,10 @@ CAN derive every changeset's branch, slug, base ref, head/base commit IDs, and c
 - Given a checkout on a named branch, when `detect_current_branch` runs, then it returns that branch name; on a detached HEAD it raises `DetachedHeadError` rather than returning the `HEAD` placeholder ([test](tests/test_changeset_scope.scenario.l1.py))
 - Given a git ref that resolves to a commit, when `commit_oid` runs, then it returns the full object ID of that commit so journal run-state identity is stamped with concrete commit IDs rather than symbolic refs ([test](tests/test_changeset_scope.scenario.l1.py))
 - Given a `state_dir` whose state file at the base-slug path records a different branch, when `branch_slug` runs, then it returns the base slug with the deterministic `--<sha8>` collision suffix; with no such state file it returns the bare base slug ([test](tests/test_changeset_scope.scenario.l1.py))
+- Given a branch whose head is behind the fetched `origin/<base>` tip, when the committed-scope command resolves `HEAD`, then it exits with the stale-base code, emits no scope, and its diagnostic names the fetched tip, the merge base, and the count of base commits the head lacks ([test](tests/test_stale_base.scenario.l1.py))
+- Given a checkout whose local `origin/<base>` remote-tracking ref lags the remote while the head sits at that local ref, when the committed-scope command resolves `HEAD`, then it fetches before comparing, so the refusal names the remote's tip rather than the local ref ([test](tests/test_stale_base.scenario.l1.py))
+- Given a head that descends from the fetched `origin/<base>` tip, when the committed-scope command resolves `HEAD`, then it returns the scope whose base identity is that tip ([test](tests/test_stale_base.scenario.l1.py))
+
+### Compliance
+
+- ALWAYS: the merge classifier resolves a branch behind the fetched `origin/<base>` tip to its changed paths without the stale-base refusal, because classification partitions paths rather than verifying them ([test](tests/test_stale_base.compliance.l1.py))
