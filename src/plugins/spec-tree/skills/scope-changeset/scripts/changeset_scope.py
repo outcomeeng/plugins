@@ -151,11 +151,13 @@ def resolve_committed_scope(
     repo: pathlib.Path,
     runner: Runner = subprocess.run,
 ) -> dict[str, object]:
-    """Resolve HEAD, a branch, or an explicit three-dot range without mutation.
+    """Resolve HEAD, a branch, or an explicit three-dot range against a fetched base.
 
-    Preserve explicit endpoints. A single ref uses the configured remote base;
-    the changed paths always follow Git's merge-base diff semantics. The base
-    identity is the selected endpoint, not the merge-base commit.
+    Preserve explicit endpoints. A single ref uses the configured remote base.
+    A remote-tracking base is fetched first, which updates that ref and never
+    the working tree, and a head behind the fetched tip is refused. The base
+    identity is the fetched tip, not the merge-base commit; the changed paths
+    always follow Git's merge-base diff semantics.
     """
     try:
         if RANGE_SEPARATOR in selector:

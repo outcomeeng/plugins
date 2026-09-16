@@ -1,14 +1,18 @@
-"""Compliance test: the merge classifier never carries the stale-base refusal.
+"""Compliance tests: neither the classifier nor sync-base carries the refusal.
 
-Covers the Compliance assertion in ``../changeset-scope.md``: a branch behind
+Covers the Compliance assertions in ``../changeset-scope.md``: a branch behind
 the fetched base still classifies to its changed paths, because
-classification partitions paths rather than verifying them.
+classification partitions paths rather than verifying them, and base
+synchronization rebases that same head, because it is the remedy.
 
-``l1``: the shipped classifier runs as a subprocess against a synthetic
-repository with a real bare origin.
+``l1``: the shipped classifier runs as a subprocess and the shipped
+synchronizer in-process, each against a synthetic repository with a real
+bare origin.
 """
 
 from __future__ import annotations
+
+import pathlib
 
 from outcomeeng_testing.harnesses.changeset_scope import (
     CHANGESET_SCOPE,
@@ -17,6 +21,11 @@ from outcomeeng_testing.harnesses.changeset_scope import (
     generated_changeset_scope_cases,
     git_three_dot_scope,
     run_merge_classifier,
+)
+from outcomeeng_testing.harnesses.sync_base import (
+    build_behind_base_repo,
+    load_sync_base_module,
+    repository_root,
 )
 
 
@@ -34,3 +43,20 @@ def test_the_classifier_resolves_a_behind_branch_without_refusing() -> None:
                     )
                 )
             )
+
+
+def test_base_synchronization_resolves_a_behind_branch_without_refusing(
+    tmp_path: pathlib.Path,
+) -> None:
+    """The remedy runs on the very head the resolver refuses.
+
+    Routing the synchronizer through the committed-scope resolver would
+    raise the refusal here instead of rebasing.
+    """
+    module = load_sync_base_module()
+    handle = build_behind_base_repo(repository_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.REBASED
+    assert result.remote_ref == handle.remote_ref

@@ -23,3 +23,4 @@ CAN derive every changeset's branch, slug, base ref, head/base commit IDs, and c
 ### Compliance
 
 - ALWAYS: the merge classifier resolves a branch behind the fetched `origin/<base>` tip to its changed paths without the stale-base refusal, because classification partitions paths rather than verifying them ([test](tests/test_stale_base.compliance.l1.py))
+- ALWAYS: base synchronization resolves a branch behind the fetched `origin/<base>` tip through the primitives without the stale-base refusal and rebases it, because it is the refusal's remedy ([test](tests/test_stale_base.compliance.l1.py))
