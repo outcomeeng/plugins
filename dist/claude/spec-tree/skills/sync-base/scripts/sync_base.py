@@ -498,6 +498,49 @@ def _local_branches(repo: _Repository) -> list[str]:
     return [name for name in listed.stdout.split() if name]
 
 
+def _dependent_candidates(repo: _Repository, branch: str, head_oid: str) -> list[str]:
+    """Return the local branches other than ``branch`` that contain ``head_oid``."""
+    return [
+        name
+        for name in _local_branches(repo)
+        if name != branch and _is_ancestor(repo, head_oid, name)
+    ]
+
+
+def _refuse_unclassifiable_dependents(
+    repo: _Repository,
+    branch: str,
+    head_oid: str,
+    *,
+    base_ref: str,
+    target_ref: str,
+    default_name: str | None,
+) -> SyncBaseResult | None:
+    """Refuse a rewrite whose dependents cannot be told from an unresolved default.
+
+    The default branch never receives a stack record and a dependent always
+    does. With ``origin/HEAD`` unset the writer cannot tell the two apart, so a
+    rewrite that would record any local branch stops before movement rather
+    than recording the default branch or losing the stack relation. A rewrite
+    no other local branch contains has nothing to classify and proceeds.
+    """
+    if default_name is not None:
+        return None
+    candidates = _dependent_candidates(repo, branch, head_oid)
+    if not candidates:
+        return None
+    names = ", ".join(candidates)
+    return SyncBaseResult(
+        SyncStatus.GIT_FAILURE,
+        base_ref,
+        target_ref,
+        branch,
+        f"default branch does not resolve (origin/HEAD is unset), so {names} "
+        f"cannot be classified as stacked on {branch} or as the default branch; "
+        f"set origin/HEAD before syncing {branch} onto {target_ref}",
+    )
+
+
 def _write_dependent_records(
     repo: _Repository,
     branch: str,
@@ -511,12 +554,13 @@ def _write_dependent_records(
     branch is never a dependent: it contains a merged branch's head without
     sitting on it. A dependent that already records a different predecessor
     keeps that record: its own restack flows through that nearer predecessor
-    when that one is rewritten.
+    when that one is rewritten. The caller has refused the rewrite through
+    :func:`_refuse_unclassifiable_dependents` when the default is unresolved
+    and a candidate exists, so an unresolved default reaches this writer only
+    with nothing to record.
     """
-    for dependent in _local_branches(repo):
-        if dependent in (branch, default_name) or not _is_ancestor(
-            repo, old_head_oid, dependent
-        ):
+    for dependent in _dependent_candidates(repo, branch, old_head_oid):
+        if dependent == default_name:
             continue
         existing = _read_stack_record(repo, dependent)
         if existing is not None and existing.predecessor != branch:
@@ -1249,6 +1293,17 @@ def _restack(
             f"commit them before restacking onto {target_ref}",
         )
 
+    refused = _refuse_unclassifiable_dependents(
+        repo,
+        branch,
+        old_head_oid,
+        base_ref=base_ref,
+        target_ref=target_ref,
+        default_name=default_name,
+    )
+    if refused is not None:
+        return refused
+
     rebased = _git(repo, "rebase", "--onto", target_ref, fork_oid)
     if rebased.returncode == 0:
         try:
@@ -1387,6 +1442,18 @@ def _sync_branch_onto(
             f"working tree of {branch} has uncommitted changes to tracked files; "
             f"commit them before rebasing onto {target_ref}",
         )
+
+    if old_head_oid is not None:
+        refused = _refuse_unclassifiable_dependents(
+            repo,
+            branch,
+            old_head_oid,
+            base_ref=base_ref,
+            target_ref=target_ref,
+            default_name=default_name,
+        )
+        if refused is not None:
+            return refused
 
     rebased = _git(repo, "rebase", target_ref)
     if rebased.returncode == 0:
