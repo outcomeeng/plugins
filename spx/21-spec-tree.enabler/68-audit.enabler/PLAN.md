@@ -13,8 +13,6 @@ skills only; they do not ship language-specific auditor agents.
 - Add executable agent/eval coverage for representative implementation-auditor
   runs over one-language, multi-language, and unsupported-file scopes once the
   agentic runner can be exercised deterministically.
-- Generalize the implementation-auditor partitioning and coverage inventory for
-  several files, several languages, and changesets containing unsupported files.
 - Move remaining audit run-set convergence onto SPX prior-context restoration
   once the plugin smoke path proves the single-run lifecycle.
 - Reconcile artifact-type auditors (`adr-auditor`, `pdr-auditor`,
