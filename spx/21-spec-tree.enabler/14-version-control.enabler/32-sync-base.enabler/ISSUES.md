@@ -50,28 +50,6 @@ states, topology derivation, and the `--onto` replay), and the
 untracked-collision gap above into the ported surface rather than leaving any
 behind. Revisit when the capability publishes.
 
-## The derivation rule's evidence is an identity probe with no violating case
-
-`spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md` declares
-`ALWAYS: the synchronization primitive resolves the base ref and its remote-tracking form through
-the shared changeset-scope primitives, never re-implementing base, remote-tracking, or branch
-derivation` as `[test]` evidence. The linked test proves the three re-exported names are the
-canonical objects; it exercises no violating case, so a private re-derivation added elsewhere in
-`src/plugins/spec-tree/skills/sync-base/scripts/sync_base.py` would leave the test green.
-
-**Impact.** The compliance test rejects one class of violation (replacing the re-exports) and not
-the other (a parallel derivation beside them). The re-implementation prohibition is also carried as
-`[audit]` evidence by
-`spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/13-changeset-derivation.adr.md`,
-so the gap narrows the deterministic half only.
-
-**Settlement condition.** An enforcement mechanism that scans the shipped script for base-ref,
-remote-tracking, or branch derivation outside the import seam, exercised against a violating
-source fixture, replaces or joins the identity probe. That mechanism is a separate detection
-concern with its own fixture design, not a bounded edit to the current evidence.
-
-Surfaced by the test-evidence audit on head `7fab40984c8e47aabb1e8f357746a1868bff1a90`.
-
 ## A missing sibling script fails the synchronizer with a traceback, not a JSON result
 
 `src/plugins/spec-tree/skills/sync-base/scripts/sync_base.py` loads the changeset-scope primitives

@@ -42,9 +42,13 @@ These assertions exercise the bundled synchronization primitive. The `/sync-base
 - Given a clean detached HEAD already at the base tip, when the synchronization primitive runs, then it emits a preservation proof reporting an empty base delta and an unchanged branch patch identity ([test](tests/test_sync_base_preservation.scenario.l1.py))
 - Given a clean rebase whose base advance renames a file, when the synchronization primitive runs, then the proof reports both the old and the new path in `base_delta_paths` — a base rename is not collapsed to the new name, so a base rename of a path the branch also changed surfaces as a path overlap rather than hiding ([test](tests/test_sync_base_preservation.scenario.l1.py))
 
+### Conformance
+
+- The synchronization primitive's base-ref, remote-tracking-ref, and current-branch derivation entry points are the canonical changeset-scope objects, so every derivation resolves through the shared primitives ([test](tests/test_sync_base.conformance.l1.py))
+
 ### Compliance
 
-- ALWAYS: the synchronization primitive resolves the base ref and its remote-tracking form `origin/<base>` through the shared changeset-scope primitives, never re-implementing base, remote-tracking, or branch derivation ([test](tests/test_sync_base.compliance.l1.py))
+- NEVER: the synchronization primitive re-implements base, remote-tracking, or branch derivation beside the shared changeset-scope primitives — the prohibition is judged over the script's source, per `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/13-changeset-derivation.adr.md` ([audit])
 - NEVER: the synchronization primitive brings a behind-base branch current with `git reset` in any mode — it rebases, preserving the branch's commits, per `spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/13-base-sync-mechanism.adr.md` ([test](tests/test_sync_base.compliance.l1.py))
 - NEVER: the synchronization primitive requests an operator decision for a routine behind-base rebase; it returns Git-state outcomes for the skill to act on ([test](tests/test_sync_base.compliance.l1.py))
 - NEVER: the synchronization primitive commits or stashes the working tree, aborts a conflicted rebase at operator handoff, or surfaces a dirty tree as a conflict — a dirty tree is a distinct precondition the skill resolves through the commit workflow, per `spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/13-base-sync-mechanism.adr.md` ([test](tests/test_sync_base.compliance.l1.py))
