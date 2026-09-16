@@ -12,6 +12,10 @@ naming its absent skill, an advisory live path beside the committed inventory, a
 scope identity, a run token the CLI cannot read, a CLI that cannot be launched,
 a run document shaped so the comparison cannot run, and a head behind the
 fetched base relayed as the stale-base refusal).
+
+The provider is reached by the installed tree's `__file__`-relative layout,
+the plugin build's contract for logic one provider skill owns and several
+consumers execute.
 """
 
 from __future__ import annotations

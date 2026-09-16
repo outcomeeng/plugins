@@ -22,7 +22,7 @@ When a selector is supplied, resolve it through this skill's own command:
 python3 "${CLAUDE_SKILL_DIR}/scripts/changeset_scope.py" "<selector>"
 ```
 
-Pass the supplied selector as one literal argument. The command fetches the base's remote-tracking ref, reads the current checkout, and emits one JSON object with `base`, `head`, and `changed_paths`. Exit `EXIT_STALE_BASE` is the stale-base refusal: the head does not descend from the fetched `origin/<base>` tip, stdout carries no scope, and stderr carries one JSON diagnostic with `status` `stale-base`, `tip`, `merge_base`, and `behind`. Report it as a `stale-base` block; the remedy is `/sync-base`, never a scope computed against an older base. Any other nonzero exit or malformed result is `blocked`: preserve its diagnostic and emit no marker. Never fabricate a base, endpoint identity, or path set.
+Pass the supplied selector as one literal argument. The command fetches the base's remote-tracking ref, reads the current checkout, and emits one JSON object with `base`, `head`, and `changed_paths`. Exit status 3 (`EXIT_STALE_BASE`) is the stale-base refusal: the head does not descend from the fetched `origin/<base>` tip, stdout carries no scope, and stderr carries one JSON diagnostic with `status` `stale-base`, `tip`, `merge_base`, and `behind`. Report it as a `stale-base` block and emit no marker; a scope computed against an older base is never a substitute. Any other nonzero exit or malformed result is `blocked`: preserve its diagnostic and emit no marker. Never fabricate a base, endpoint identity, or path set.
 
 After a successful command, emit `<COMMITTED_CHANGESET_SCOPE>` with the supplied selector, absolute checkout root, and all three returned fields verbatim. The invoking workflow consumes this marker without re-executing the derivation. The marker applies only to that checkout and selector at the recorded full head; discard it when the subject changes. The command fetches the base's remote-tracking ref and never rebases, commits, or modifies the working tree.
 
@@ -61,12 +61,12 @@ in that diagnostic. `ScopeField` owns the returned JSON field names.
 The base identity is the fetched `origin/<base>` tip, never the merge base.
 `require_current_base` fetches that ref, then refuses a head whose merge base
 with the tip is not the tip itself by raising `StaleBaseError`; the CLI maps
-it to `EXIT_STALE_BASE` and prints `StaleBaseError.diagnostic()` — the
-`StaleBaseField` names `status` (`STALE_BASE_STATUS`), `tip`, `merge_base`,
-and `behind` — on stderr in place of a scope. Every verification consumer
-relays that exit code and diagnostic unchanged as its first step; base
-synchronization and merge classification resolve through the primitives
-without the refusal, one as the remedy and the other as a path partition.
+it to `EXIT_STALE_BASE` (exit status 3) and prints
+`StaleBaseError.diagnostic()` — the `StaleBaseField` names `status`
+(`STALE_BASE_STATUS`), `tip`, `merge_base`, and `behind` — on stderr in place
+of a scope. `detect_base_ref`, `remote_tracking_ref`, and `branch_scope` carry
+no refusal, so an importer that partitions or synchronizes rather than
+verifies composes them directly.
 
 The focused scope suites exercise stale local bases, explicit ranges, a branch
 other than the checked-out branch, concrete endpoint identities, malformed
@@ -83,7 +83,9 @@ Every changeset diff range over a git-derived base is composed against the remot
 
 <success_criteria>
 
-- The base ref, branch slug, branch identity, concrete commit OID, and diff scope come from `changeset_scope.py` — no consumer re-implements them.
+- A `<COMMITTED_CHANGESET_SCOPE>` marker exists exactly when the command exited 0, and its `base`, `head`, and `changed_paths` are byte-equal to the command's JSON.
+- Exit status 3 leaves no marker and a `stale-base` diagnostic on stderr whose `tip` is the fetched `origin/<base>` commit; any other nonzero exit leaves no marker and its diagnostic preserved.
+- The base ref, branch slug, branch identity, concrete commit OID, and diff scope come from `changeset_scope.py`.
 - Git-derived diff ranges are composed against `origin/{base}` via `remote_tracking_ref`, never a bare local branch ref.
 - The module imports only the Python standard library.
 

@@ -55,6 +55,8 @@ ORIGIN_REF_PREFIX = cast(str, _CONTRACT["ORIGIN_REF_PREFIX"])
 HEAD_REF = cast(str, _CONTRACT["HEAD_REF"])
 BRANCH_SCOPE_RANGE_TEMPLATE = cast(str, _CONTRACT["BRANCH_SCOPE_RANGE_TEMPLATE"])
 FRONTMATTER_DELIMITER = cast(str, _CONTRACT["FRONTMATTER_DELIMITER"])
+STATE_FILE_BRANCH_KEY = cast(str, _CONTRACT["STATE_FILE_BRANCH_KEY"])
+STATE_FILE_SUFFIX = cast(str, _CONTRACT["STATE_FILE_SUFFIX"])
 COMMIT_PEEL_SUFFIX = cast(str, _CONTRACT["COMMIT_PEEL_SUFFIX"])
 BRANCH_SLUG_SUFFIX_SEPARATOR = cast(str, _CONTRACT["BRANCH_SLUG_SUFFIX_SEPARATOR"])
 RANGE_SEPARATOR = "..."
@@ -415,7 +417,7 @@ def _read_frontmatter_branch(path: pathlib.Path) -> str | None:
                 return None
             in_frontmatter = True
             continue
-        if in_frontmatter and line.startswith("branch:"):
+        if in_frontmatter and line.startswith(f"{STATE_FILE_BRANCH_KEY}:"):
             return line.partition(":")[2].strip()
     return None
 
@@ -473,7 +475,7 @@ def branch_slug(branch_name: str, state_dir: pathlib.Path | None = None) -> str:
 
     # Stage 4 (optional): state-collision disambiguation.
     if state_dir is not None:
-        existing = state_dir / f"{base_slug}.md"
+        existing = state_dir / f"{base_slug}{STATE_FILE_SUFFIX}"
         if existing.is_file():
             existing_branch = _read_frontmatter_branch(existing)
             if existing_branch is not None and existing_branch != branch_name:

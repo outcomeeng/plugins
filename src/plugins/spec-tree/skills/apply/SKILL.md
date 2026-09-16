@@ -87,7 +87,7 @@ Invoke `/merging-standards` and read its `merge-policy.md` reference before the 
 Before dispatching any persisted audit or review gate, bind its subject to an exact local commit:
 
 1. Invoke `/sync-base` before every deterministic verification command and before every dispatch, and record the result it returns — `already_current` or `rebased` — for the exact head, read from the command and never from memory. Only origin knows the base moved; a result established on a head behind the fetched base tip is a verdict on a tree that cannot merge, and every verifier's resolver refuses that head as a `stale-base` block. A `rebased` result reopens the deterministic results and Verifier verdicts its preservation proof does not cover.
-2. Changes may remain uncommitted until another agent session or human is expected or asked to read them. Before dispatching an audit or review, run the touched-scope deterministic verification required by the repository overlay when preparing a gate. Do not run an aggregate gate whose generated-output drift check requires committed `src/` and `dist/` files before creating the checkpoint.
+2. Changes may remain uncommitted until another agent session or human is expected or asked to read them. Before dispatching an audit or review, run the touched-scope deterministic verification required by the repository overlay when preparing a gate. Do not run an aggregate gate whose generated-output drift check requires committed generator sources and generated output before creating the checkpoint.
 3. When the relevant tracked or untracked files differ from `HEAD`, invoke `/commit-changes` before dispatch to commit the exact current version regardless of whether the latest verification state is `passing`, `failing`, or `not-run`; preserve that state in the checkpoint result. After any further change, commit the new version before another audit or review.
 4. Confirm the worktree is clean and record the checkpoint's full `HEAD` commit ID.
 5. Dispatch the gate only when the required deterministic verification is `passing`, against the committed `<base>..<head>` scope. A `failing` or `not-run` checkpoint remains valid local history for recovery and collaboration while withholding gate dispatch. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
@@ -150,6 +150,12 @@ Invoke the exact skill or agent surface shown. Never substitute, skip, or reorde
 </skill_map>
 
 <workflow>
+
+<step number="0" name="Select the slice" frequency="only for a plan or proposal">
+
+Invoke `/slice` when the work is described as a plan or proposal rather than a specific node or queue, per `<invocation_modes>`; its node set becomes the work queue. Skip this step for a specific node or an `spx/EXCLUDE` list.
+
+</step>
 
 <step number="1" name="Load methodology" frequency="once per session">
 
@@ -215,7 +221,7 @@ When the scope is cross-node (see `<scope_detection>`), enumerate every governed
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its verdict forward under `<result_carryover>`.
 
-**REJECTED -> fix the defect class -> re-dispatch this step.** Loop until APPROVED.
+**A rejection -> fix the defect class -> re-dispatch this step.** Loop until every dispatched auditor passes: `APPROVED` from the test-evidence auditor, and `overall: PASS` with no `FAIL` or `UNKNOWN` row from the eval-evidence auditor.
 
 </step>
 
@@ -314,7 +320,7 @@ If the full deterministic gate fails, fix the reported defect, run the focused t
 Steps 4, 6, 8, and applicable Step 8a are blocking audit gates. Steps 4, 6, and 8a emit verdicts from their auditor contracts. Step 8 returns an `spx verification run` token and rendered projection whose `terminalStatus` is authoritative; a `BLOCKED` result must relay a complete diagnostic from the implementation-auditor contract as described in Step 8. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work.
 
 - Before starting Step 5: require Step 4's workflow-local result to be `APPROVED`. If it is absent or differs, stop and invoke or repair Step 4.
-- Before starting Step 7: require Step 6's workflow-local result to be `APPROVED`. If it is absent or differs, stop and invoke or repair Step 6.
+- Before starting Step 7: require Step 6's workflow-local result to pass — `APPROVED` from the test-evidence auditor, `overall: PASS` with no `FAIL` or `UNKNOWN` row from the eval-evidence auditor. If it is absent or differs, stop and invoke or repair Step 6.
 - Before considering implementation complete: inspect the Step 8 rendered projection. If `terminalStatus` is absent or differs from `approved`, stop — invoke or repair Step 8.
 - Before Step 8 for Go, Rust, or TypeScript, require Step 7a's usable `simplified` or `unchanged` result for the implementation being verified, with every resulting edit inspected, verified, and committed.
 - Before starting Step 9, the terminal full deterministic gate, Step 10, or completion: if the diff touches a test or eval evidence surface named by `<evidence_auditor_gate>`, require a clean Step 8a verdict over the exact committed diff and invoke or repair Step 8a when that verdict is absent. When the diff touches no named evidence surface, skip Step 8a.

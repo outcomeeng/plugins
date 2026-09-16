@@ -684,6 +684,17 @@ def run_changeset_scope(
     )
 
 
+def sever_origin_remote(repo: pathlib.Path) -> str:
+    """Point ``origin`` at a path that holds no repository and return it.
+
+    The remote-tracking refs stay in place, so base detection succeeds while
+    the fetch the resolver performs fails with git's own message.
+    """
+    absent = repo.parent / "absent.git"
+    _git(repo, "remote", "set-url", ORIGIN_REMOTE_NAME, str(absent))
+    return str(absent)
+
+
 def detach_head(repo: pathlib.Path) -> None:
     """Put ``repo`` on a detached HEAD so ``detect_current_branch`` raises.
 
@@ -697,14 +708,18 @@ def detach_head(repo: pathlib.Path) -> None:
 def write_branch_state_file(
     state_dir: pathlib.Path, slug: str, branch: str
 ) -> pathlib.Path:
-    """Write a state file at ``state_dir/<slug>.md`` recording ``branch``.
+    """Write the state file ``branch_slug`` reads, recording ``branch``.
 
-    The file carries the YAML frontmatter ``branch_slug`` reads for
-    state-collision disambiguation: a ``branch:`` key fenced by
-    ``changeset_scope.FRONTMATTER_DELIMITER``. Returns the written path.
+    The filename suffix, the frontmatter delimiter, and the branch key all
+    come from the changeset-scope module that owns the state-file protocol.
+    Returns the written path.
     """
-    delimiter = load_changeset_scope_module().FRONTMATTER_DELIMITER
+    module = load_changeset_scope_module()
+    delimiter = module.FRONTMATTER_DELIMITER
     state_dir.mkdir(parents=True, exist_ok=True)
-    path = state_dir / f"{slug}.md"
-    path.write_text(f"{delimiter}\nbranch: {branch}\n{delimiter}\n", encoding="utf-8")
+    path = state_dir / f"{slug}{module.STATE_FILE_SUFFIX}"
+    path.write_text(
+        f"{delimiter}\n{module.STATE_FILE_BRANCH_KEY}: {branch}\n{delimiter}\n",
+        encoding="utf-8",
+    )
     return path

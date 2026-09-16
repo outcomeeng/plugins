@@ -150,3 +150,13 @@ Building that step needs a listing surface that spans both record kinds. Runs op
 **Why it is separate.** The confirmation is a capability question about the `spx` CLI across two command families, answered by a floor-version probe and new evidence, not by wording inside a merge-policy paragraph. Four integration-review rounds and one Author-side trace rejected successive attempts to state the mechanism without that evidence.
 
 **Revisit condition.** When a run left unsealed by a dead session is observed to reach a dispatch the owner-state rule cleared, or when the `spx` CLI documents a cross-family listing at or below the pinned floor.
+
+## The merge policy reference is an eager read in practice
+
+`/skill-standards` `<progressive_disclosure>` counts total eagerly loaded content as the cost. `merging-standards` is a 54-line loader, but its `<reference_index>` requires `references/merge-policy.md` before any lifecycle operation and every composing skill (`/merge`, `/apply`) states that the loader alone loads nothing it uses, so the 88,647-code-point reference is read on every invocation, in two reads because it exceeds the Read tool's single-call cap.
+
+**Resolution shape**: factor the sections every pass needs — `<authority_gates>`, `<verification_dispatch_readiness>`, `<review_classification>`, `<base_sync>` — into a bounded always-read reference and leave the phase-specific sections (topology, review inspection, closeout records, overlay topics) in separately named conditional files, or have each composing skill name the tagged section it needs and read only that range through the `<contents>` index.
+
+**Settlement condition**: a management pass loads only the sections its phase reads, and `instructions:skill-auditor` over `merging-standards` raises no eager-payload warning.
+
+**Evidence**: `instructions:skill-auditor` warning f-008 on `src/plugins/spec-tree/skills/merging-standards/SKILL.md` at head `604f62878c495e613e39570c1bd197c4f74c3641`.

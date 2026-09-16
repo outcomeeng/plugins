@@ -12,9 +12,18 @@ contract. Composing against `origin/<base>` keeps the merge base at the true
 branch point, so commits already merged into the base never re-enter the
 scope of a multi-worktree checkout.
 
+The provider is reached by the installed tree's `__file__`-relative layout,
+the plugin build's contract for logic one provider skill owns and several
+consumers execute.
+
 Portability: stdlib only — no third-party packages, no `uv`, no `outcomeeng_*`
 imports. This script ships into consumer plugin trees where only the standard
 library is available.
+
+Tested with: a lagging local base ref, a named branch resolved while another
+is checked out, the same endpoints as an explicit three-dot range, a missing
+remote base, a malformed range, a nonexistent `--repo` path, and a head behind
+the fetched base relayed as the stale-base refusal.
 """
 
 from __future__ import annotations
