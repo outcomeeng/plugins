@@ -7,8 +7,8 @@ pre-commit:
       priority: 0
     validate-skill-frontmatter:
       glob: "**/SKILL.md"
-      run: uv run python -m outcomeeng.validation.skill_frontmatter {staged_files}
-      priority: 5
+      run: just check-skills
+      priority: 110
     validate-plugins:
       glob: "*.json"
       run: uv run python -m outcomeeng.validation.plugins .
