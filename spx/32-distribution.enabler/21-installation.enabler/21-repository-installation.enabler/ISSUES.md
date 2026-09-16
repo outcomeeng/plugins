@@ -74,11 +74,11 @@ Claude Code: Failed to install plugin "contribute@outcomeeng": Plugin "contribut
 Codex:       Error: plugin `contribute` was not found in marketplace `outcomeeng`
 ```
 
-A constant that drifts from that captured wording now fails the linked tests. Neither **enable** message was ever observed: the Claude plan issues install then enable only when it bootstraps `spec-tree` into a checkout that records no plugin, and the first observation run stopped at the Codex install before any enable ran. The Claude **update** that refreshes every recorded install record was never observed against an unpublished plugin either. The fragment also carries no per-agent prefix, unlike `CLAUDE_ALREADY_INSTALLED_FRAGMENT`, so the enable wording remains unverified for both CLIs and the update wording for Claude Code.
+A constant that drifts from that captured wording now fails the linked tests. The Claude Code **enable** message was never observed: only the Claude plan issues an enable, and only when it bootstraps `spec-tree` into a checkout that records no plugin; the first observation run stopped at the Codex install before that enable ran. The Claude Code **update** that refreshes every recorded install record was never observed against an unpublished plugin either. The fragment also carries no per-agent prefix, unlike `CLAUDE_ALREADY_INSTALLED_FRAGMENT`, so the Claude Code enable and update wordings remain unverified.
 
-If either enable message, or the update message, words the absence differently, the carve-out silently never engages for that operation and the run fails where it should report pending.
+If the enable message or the update message words the absence differently, the carve-out silently never engages for that operation and the run fails where it should report pending.
 
-**Resolution shape**: build a disposable marketplace fixture that omits a plugin the built tree ships, register it as the source in the isolated homes the installation harness already provisions, and run the real `claude` and `codex` CLIs against it to record the install and enable wording for both, and the update wording for Claude Code. That is a new real-CLI evidence lane with its own fixture, not a change to an existing test, which is why it is not folded into the changeset that surfaced it.
+**Resolution shape**: build a disposable marketplace fixture that omits a plugin the built tree ships, register it as the source in the isolated homes the installation harness already provisions, and run the real `claude` and `codex` CLIs against it to record the install wording for both CLIs and the enable and update wording for Claude Code. That is a new real-CLI evidence lane with its own fixture, not a change to an existing test, which is why it is not folded into the changeset that surfaced it.
 
 **Evidence**: raised by changeset review `2026-08-09_10-14-46-352-325b0ceb84d5` against the changeset that introduced the carve-out.
 
