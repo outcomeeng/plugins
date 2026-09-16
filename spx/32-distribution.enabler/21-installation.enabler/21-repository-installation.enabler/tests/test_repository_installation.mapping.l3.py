@@ -5,7 +5,6 @@ from typing import cast
 
 from outcomeeng.distribution.installation import (
     ReportField,
-    SourceAction,
 )
 from outcomeeng_testing.generators.installation import (
     catalog_plugin_names_from_bytes,
@@ -60,8 +59,8 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
     assert (
         observation.persistent_settings_after == observation.persistent_settings_before
     )
-    assert observation.persistent_claude_source_action is SourceAction.REFRESH
-    assert observation.persistent_codex_source_action is SourceAction.REFRESH
+    assert observation.persistent_claude_registered
+    assert observation.persistent_codex_registered
     assert observation.claude_plugins_first.installed == claude_plugins
     assert observation.claude_plugins_first.enabled == claude_plugins
     assert observation.codex_plugins_first.installed == codex_plugins

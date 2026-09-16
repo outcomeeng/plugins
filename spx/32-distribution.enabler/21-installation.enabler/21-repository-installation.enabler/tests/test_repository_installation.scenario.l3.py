@@ -64,7 +64,9 @@ def test_real_agent_clis_place_home_agents_and_repeat_full_installation() -> Non
     assert observation.unowned_second == observation.unowned_initial
 
 
-def test_real_persistent_run_refreshes_a_second_checkout_at_local_scope() -> None:
+def test_real_persistent_run_moves_a_second_checkout_record_without_entering_it() -> (
+    None
+):
     observation = observe_real_record_refresh()
 
     expected = {
@@ -88,7 +90,23 @@ def test_real_persistent_run_refreshes_a_second_checkout_at_local_scope() -> Non
         for record in document[ReportField.CLAUDE_RECORDS]
     }
     assert {(plugin, scope, str(path)) for plugin, scope, path in expected} <= refreshed
-    assert observation.records_after == observation.records_before
+    assert {command[ReportField.CWD] for command in document[ReportField.COMMANDS]} == {
+        str(observation.invocation_checkout)
+    }
+    target = document[ReportField.TARGET][ReportField.VERSIONS][SPEC_TREE_PLUGIN]
+    after = {
+        (record.plugin, record.scope, record.project_path): record.version
+        for record in observation.records_after
+        if isinstance(record, ClaudeInstallRecord)
+    }
+    assert after[
+        (SPEC_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.other_checkout)
+    ] == (target)
+    assert set(after) == {
+        (record.plugin, record.scope, record.project_path)
+        for record in observation.records_before
+        if isinstance(record, ClaudeInstallRecord)
+    }
     assert (
         observation.invocation_activation_after
         == observation.invocation_activation_before
@@ -127,10 +145,12 @@ def test_real_persistent_run_moves_records_at_differing_versions_to_one_version(
     assert before[observation.seeded_record] == observation.seeded_record.version
     assert len(set(before.values())) > 1
     assert observation.exit_code == 0, observation.stderr
-    assert len(set(after.values())) == 1
-    assert after[observation.seeded_record] != observation.seeded_record.version
-
     document = json.loads(observation.stdout)
+    target = document[ReportField.TARGET][ReportField.VERSIONS][SPEC_TREE_PLUGIN]
+    assert set(after.values()) == {target}
+    assert after[observation.seeded_record] != observation.seeded_record.version
+    assert document[ReportField.OFF_TARGET_RECORDS] == []
+
     reported = {
         (
             record[ReportField.PLUGIN],
@@ -142,6 +162,32 @@ def test_real_persistent_run_moves_records_at_differing_versions_to_one_version(
     for record, version_after in after.items():
         key = (record.plugin, record.scope, str(record.project_path))
         assert reported[key] == (before[record], version_after), key
+
+
+def test_real_run_moves_a_record_whose_directory_is_gone_and_exits_zero() -> None:
+    observation = observe_real_record_refresh()
+
+    assert not observation.gone_checkout.exists()
+    assert observation.exit_code == 0, observation.stderr
+    document = json.loads(observation.stdout)
+    target = document[ReportField.TARGET][ReportField.VERSIONS][SPEC_TREE_PLUGIN]
+    gone = {
+        record: record.version
+        for record in observation.records_after
+        if isinstance(record, ClaudeInstallRecord)
+        and record.project_path == observation.gone_checkout
+    }
+    assert len(gone) == 1
+    assert set(gone.values()) == {target}
+    assert observation.seeded_record in {
+        record
+        for record in observation.records_after
+        if isinstance(record, ClaudeInstallRecord)
+    }
+    assert not any(
+        str(observation.gone_checkout) == command[ReportField.CWD]
+        for command in document[ReportField.COMMANDS]
+    )
 
 
 def test_real_second_run_reports_records_refreshed_at_unchanged_versions() -> None:

@@ -22,10 +22,17 @@ from outcomeeng.distribution.installation import (
     CODEX_CATALOG_PATH,
     CODEX_PLUGIN_ID_FIELD,
     CODEX_PLUGIN_MARKETPLACE_FIELD,
+    CLAUDE_DIRECTORY_FIELD,
+    CLAUDE_DIRECTORY_SOURCE_TYPE,
+    CLAUDE_GITHUB_SOURCE_TYPE,
+    CLAUDE_MARKETPLACE_INSTALL_LOCATION_FIELD,
+    CLAUDE_MARKETPLACE_NAME_FIELD,
+    CLAUDE_REPOSITORY_FIELD,
+    CLAUDE_SOURCE_FIELD,
     InstallationMode,
-    MARKETPLACE_NAME,
     Operation,
     SPEC_TREE_PLUGIN,
+    SourceAction,
     marketplace_plugin_identifier,
 )
 
@@ -139,6 +146,7 @@ def generated_persistent_catalog_selections(
 def generated_claude_listing_entries(
     catalog: Sequence[str],
     checkout: Path,
+    marketplace: str,
 ) -> tuple[tuple[dict[str, str], ...], frozenset[str]]:
     """Cycle Claude listing entries across scope cases, naming the in-scope set.
 
@@ -151,7 +159,7 @@ def generated_claude_listing_entries(
     in_scope: set[str] = set()
     for index, plugin in enumerate(catalog):
         entry = {
-            CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin),
+            CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin, marketplace),
             CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
             CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
             CLAUDE_PLUGIN_VERSION_FIELD: recorded_version(index),
@@ -175,21 +183,40 @@ def generated_claude_listing_entries(
 
 UNCATALOGED_PLUGIN = "retired-plugin"
 """A plugin name no committed catalog carries, used as the catalog bound's rejected member."""
-FOREIGN_MARKETPLACE_NAME = f"{MARKETPLACE_NAME}-other"
-"""A marketplace name other than the product's, whose records every reader skips."""
+FOREIGN_MARKETPLACE_SUFFIX = "-other"
+"""Appended to the marketplace name to form a name whose records every reader skips."""
+
+
+def foreign_marketplace_name(marketplace: str) -> str:
+    """A marketplace name other than the product's, whose records every reader skips."""
+    return f"{marketplace}{FOREIGN_MARKETPLACE_SUFFIX}"
 
 
 class RecordDisposition(StrEnum):
     """What one generated Claude Code install record should map to."""
 
-    UPDATE = "update"
-    NO_DIRECTORY_PATH = "no-directory-path"
+    INVOCATION_NATIVE = "invocation-native"
+    """A record of the invocation checkout: one native update there."""
+    FILE_REWRITE = "file-rewrite"
+    """A record of another existing checkout: its install-record entry is rewritten."""
+    MISSING_DIRECTORY = "missing-directory"
+    """A record whose project path is gone or not a directory: rewritten the same way."""
     OUT_OF_SCOPE = "out-of-scope"
     PATHLESS_OUT_OF_SCOPE = "pathless-out-of-scope"
+    PATHLESS_DEFECT = "pathless-defect"
+    """A refresh-scope entry naming no project path: a listing defect, reported."""
     UNCATALOGED = "uncataloged"
-    NONCANONICAL_SOURCE = "noncanonical-source"
-    UNREADABLE_SETTINGS = "unreadable-settings"
     EXCLUDED = "excluded"
+
+
+MOVED_DISPOSITIONS: frozenset[RecordDisposition] = frozenset(
+    {
+        RecordDisposition.INVOCATION_NATIVE,
+        RecordDisposition.FILE_REWRITE,
+        RecordDisposition.MISSING_DIRECTORY,
+    }
+)
+"""The dispositions whose record ends the run at the target."""
 
 
 def recorded_version(ordinal: int) -> str:
@@ -230,19 +257,20 @@ def generated_closing_listing(
     assumes the update moved it is caught. Every record the plan left
     unchanged is kept as listed. One record the preflight listing did not
     carry — the first cataloged plugin at project scope in a checkout no
-    preflight entry names — is appended, the record another agent session
-    writes between the two listing reads.
+    preflight entry names, at its own recorded version rather than the served
+    one — is appended, the record another agent session writes between the
+    two listing reads.
     """
     served = served_version(len(cases))
     updates = [
         index
         for index, (_, disposition) in enumerate(cases)
-        if disposition is RecordDisposition.UPDATE
+        if disposition in MOVED_DISPOSITIONS
     ]
     stale_index = updates[-1] if updates else None
     closing: list[tuple[dict[str, str], ClosingDisposition]] = []
     for index, (entry, disposition) in enumerate(cases):
-        if disposition is not RecordDisposition.UPDATE:
+        if disposition not in MOVED_DISPOSITIONS:
             closing.append((dict(entry), ClosingDisposition.KEPT))
         elif index == stale_index:
             closing.append((dict(entry), ClosingDisposition.STALE))
@@ -260,7 +288,7 @@ def generated_closing_listing(
                 CLAUDE_PLUGIN_ID_FIELD: first_update[CLAUDE_PLUGIN_ID_FIELD],
                 CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                 CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(appearing_checkout),
-                CLAUDE_PLUGIN_VERSION_FIELD: served,
+                CLAUDE_PLUGIN_VERSION_FIELD: recorded_version(len(cases)),
             },
             ClosingDisposition.APPEARED,
         )
@@ -270,40 +298,28 @@ def generated_closing_listing(
 
 def generated_claude_install_records(
     catalog: Sequence[str],
+    marketplace: str,
     checkout: Path,
     other_checkout: Path,
     absent_path: Path,
     file_path: Path,
-    forked_checkout: Path,
-    forked_local_checkout: Path,
-    local_forked_checkout: Path,
-    local_canonical_checkout: Path,
-    malformed_checkout: Path,
-    denied_checkout: Path,
 ) -> tuple[tuple[tuple[dict[str, str], RecordDisposition], ...], ...]:
     """Cycle every catalog plugin through each install-record disposition.
 
-    Each plugin yields one record per disposition: an update at project scope
-    in the invocation checkout, an update at project scope in another existing
-    checkout, an update at local scope in the invocation checkout, a record
-    whose project path is absent, a record whose project path is a regular
-    file, a user-scope record carrying no path,
-    managed-scope records at the invocation checkout and at the other existing
-    checkout, a record in a checkout whose project settings register the
-    marketplace from a noncanonical source, a record in a checkout whose local
-    settings alone do so, a record in a checkout whose local settings register
-    a noncanonical source over a canonical project declaration, a record in a
-    checkout whose local settings register the canonical source over a
-    noncanonical project declaration, a record in a checkout whose settings
-    cannot be parsed, a record in a checkout whose settings directory denies
-    reading, and an entry from another marketplace. The two
-    conflicting checkouts are the precedence boundary: Claude Code lets the
-    local document override the project document. One uncataloged plugin
-    record is appended so the catalog bound has a rejected member.
+    Each plugin yields one record per disposition: project and local scope in
+    the invocation checkout, which move natively; project scope in another
+    existing checkout, which the file rewrite moves; project scope at a path
+    that no longer exists and at a path that is a regular file, which the
+    rewrite moves the same way; a user-scope record carrying no path;
+    managed-scope records at both checkouts; and an entry from another
+    marketplace. The pathless refresh-scope entry, a listing defect, is
+    generated separately because it fails the run it appears in. One
+    uncataloged plugin record is appended so the catalog bound has a rejected
+    member. Every entry receives its own recorded version.
     """
     groups: list[tuple[tuple[dict[str, str], RecordDisposition], ...]] = []
     for plugin in catalog:
-        identifier = marketplace_plugin_identifier(plugin)
+        identifier = marketplace_plugin_identifier(plugin, marketplace)
         groups.append(
             (
                 (
@@ -312,15 +328,7 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
                     },
-                    RecordDisposition.UPDATE,
-                ),
-                (
-                    {
-                        CLAUDE_PLUGIN_ID_FIELD: identifier,
-                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(other_checkout),
-                    },
-                    RecordDisposition.UPDATE,
+                    RecordDisposition.INVOCATION_NATIVE,
                 ),
                 (
                     {
@@ -328,7 +336,23 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_LOCAL_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
                     },
-                    RecordDisposition.UPDATE,
+                    RecordDisposition.INVOCATION_NATIVE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(other_checkout),
+                    },
+                    RecordDisposition.FILE_REWRITE,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_LOCAL_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(other_checkout),
+                    },
+                    RecordDisposition.FILE_REWRITE,
                 ),
                 (
                     {
@@ -336,7 +360,7 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(absent_path),
                     },
-                    RecordDisposition.NO_DIRECTORY_PATH,
+                    RecordDisposition.MISSING_DIRECTORY,
                 ),
                 (
                     {
@@ -344,7 +368,7 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(file_path),
                     },
-                    RecordDisposition.NO_DIRECTORY_PATH,
+                    RecordDisposition.MISSING_DIRECTORY,
                 ),
                 (
                     {
@@ -371,56 +395,8 @@ def generated_claude_install_records(
                 ),
                 (
                     {
-                        CLAUDE_PLUGIN_ID_FIELD: identifier,
-                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(malformed_checkout),
-                    },
-                    RecordDisposition.UNREADABLE_SETTINGS,
-                ),
-                (
-                    {
-                        CLAUDE_PLUGIN_ID_FIELD: identifier,
-                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(denied_checkout),
-                    },
-                    RecordDisposition.UNREADABLE_SETTINGS,
-                ),
-                (
-                    {
-                        CLAUDE_PLUGIN_ID_FIELD: identifier,
-                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(forked_checkout),
-                    },
-                    RecordDisposition.NONCANONICAL_SOURCE,
-                ),
-                (
-                    {
-                        CLAUDE_PLUGIN_ID_FIELD: identifier,
-                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_LOCAL_SCOPE,
-                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(forked_local_checkout),
-                    },
-                    RecordDisposition.NONCANONICAL_SOURCE,
-                ),
-                (
-                    {
-                        CLAUDE_PLUGIN_ID_FIELD: identifier,
-                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(local_forked_checkout),
-                    },
-                    RecordDisposition.NONCANONICAL_SOURCE,
-                ),
-                (
-                    {
-                        CLAUDE_PLUGIN_ID_FIELD: identifier,
-                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(local_canonical_checkout),
-                    },
-                    RecordDisposition.UPDATE,
-                ),
-                (
-                    {
                         CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                            plugin, FOREIGN_MARKETPLACE_NAME
+                            plugin, foreign_marketplace_name(marketplace)
                         ),
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
@@ -434,7 +410,7 @@ def generated_claude_install_records(
             (
                 {
                     CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                        UNCATALOGED_PLUGIN
+                        UNCATALOGED_PLUGIN, marketplace
                     ),
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
@@ -459,8 +435,104 @@ def generated_claude_install_records(
     return tuple(versioned)
 
 
+class RegistryShape(StrEnum):
+    """The shapes a Claude Code marketplace registry entry takes for one name."""
+
+    GITHUB = "github"
+    DIRECTORY = "directory"
+    OTHER = "other"
+    ABSENT = "absent"
+
+
+def generated_marketplace_registry_entries(
+    marketplace: str, clone: Path, checkout: Path
+) -> tuple[tuple[str, RegistryShape, str | None, SourceAction], ...]:
+    """Every registry-entry shape with the source the run must use for it.
+
+    Each row carries the listing payload, its shape, the source rendering the
+    run must report — the `owner/repo` of a GitHub entry, the path of a
+    directory entry, the entry's own JSON for any other shape, and None when
+    no entry exists — and whether the plan refreshes or adds the marketplace.
+    The construction law is Claude Code's own `marketplace add` argument
+    grammar, independent of the installer.
+    """
+    github_repository = f"{marketplace}-org/{marketplace}-plugins"
+    other_entry = {
+        CLAUDE_MARKETPLACE_NAME_FIELD: marketplace,
+        CLAUDE_SOURCE_FIELD: "git",
+        "url": f"https://git.example/{marketplace}.git",
+        CLAUDE_MARKETPLACE_INSTALL_LOCATION_FIELD: str(clone),
+    }
+    return (
+        (
+            json.dumps(
+                [
+                    {
+                        CLAUDE_MARKETPLACE_NAME_FIELD: marketplace,
+                        CLAUDE_SOURCE_FIELD: CLAUDE_GITHUB_SOURCE_TYPE,
+                        CLAUDE_REPOSITORY_FIELD: github_repository,
+                        CLAUDE_MARKETPLACE_INSTALL_LOCATION_FIELD: str(clone),
+                    }
+                ]
+            ),
+            RegistryShape.GITHUB,
+            github_repository,
+            SourceAction.REFRESH,
+        ),
+        (
+            json.dumps(
+                [
+                    {
+                        CLAUDE_MARKETPLACE_NAME_FIELD: marketplace,
+                        CLAUDE_SOURCE_FIELD: CLAUDE_DIRECTORY_SOURCE_TYPE,
+                        CLAUDE_DIRECTORY_FIELD: str(checkout),
+                        CLAUDE_MARKETPLACE_INSTALL_LOCATION_FIELD: str(clone),
+                    }
+                ]
+            ),
+            RegistryShape.DIRECTORY,
+            str(checkout),
+            SourceAction.REFRESH,
+        ),
+        (
+            json.dumps([other_entry]),
+            RegistryShape.OTHER,
+            json.dumps(
+                {
+                    key: value
+                    for key, value in other_entry.items()
+                    if key
+                    not in (
+                        CLAUDE_MARKETPLACE_NAME_FIELD,
+                        CLAUDE_MARKETPLACE_INSTALL_LOCATION_FIELD,
+                    )
+                },
+                sort_keys=True,
+            ),
+            SourceAction.REFRESH,
+        ),
+        (
+            json.dumps(
+                [
+                    {
+                        CLAUDE_MARKETPLACE_NAME_FIELD: foreign_marketplace_name(
+                            marketplace
+                        ),
+                        CLAUDE_SOURCE_FIELD: CLAUDE_GITHUB_SOURCE_TYPE,
+                        CLAUDE_REPOSITORY_FIELD: github_repository,
+                    }
+                ]
+            ),
+            RegistryShape.ABSENT,
+            None,
+            SourceAction.ADD,
+        ),
+    )
+
+
 def generated_codex_listing_entries(
     catalog: Sequence[str],
+    marketplace: str,
 ) -> tuple[tuple[dict[str, str], ...], frozenset[str]]:
     """Alternate Codex listing entries across marketplaces, naming the in-scope set."""
     entries: list[dict[str, str]] = []
@@ -470,9 +542,13 @@ def generated_codex_listing_entries(
             in_scope.add(plugin)
         entries.append(
             {
-                CODEX_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin),
+                CODEX_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                    plugin, marketplace
+                ),
                 CODEX_PLUGIN_MARKETPLACE_FIELD: (
-                    MARKETPLACE_NAME if index % 2 == 0 else f"{MARKETPLACE_NAME}-other"
+                    marketplace
+                    if index % 2 == 0
+                    else foreign_marketplace_name(marketplace)
                 ),
             }
         )
@@ -506,7 +582,11 @@ __all__ = [
     "generated_catalog_subset",
     "generated_claude_install_records",
     "generated_claude_listing_entries",
+    "generated_marketplace_registry_entries",
+    "foreign_marketplace_name",
+    "MOVED_DISPOSITIONS",
     "RecordDisposition",
+    "RegistryShape",
     "UNCATALOGED_PLUGIN",
     "generated_codex_listing_entries",
     "generated_failure_classification_cases",
