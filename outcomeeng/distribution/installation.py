@@ -2147,11 +2147,16 @@ def _codex_source_commands(
 
 
 def _settings_document(path: Path) -> dict[str, object]:
-    if not path.exists():
-        return {}
+    """Read one settings document; a missing document is empty, any other failure unreadable."""
     try:
-        document = cast(object, json.loads(path.read_text(encoding="utf-8")))
-    except (OSError, json.JSONDecodeError) as error:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {}
+    except OSError as error:
+        raise ValueError(f"{UNREADABLE_SETTINGS_DIAGNOSTIC} {path}: {error}") from error
+    try:
+        document = cast(object, json.loads(text))
+    except json.JSONDecodeError as error:
         raise ValueError(f"{UNREADABLE_SETTINGS_DIAGNOSTIC} {path}: {error}") from error
     if not isinstance(document, dict):
         raise ValueError(

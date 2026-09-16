@@ -868,6 +868,7 @@ class RecordRefreshObservation:
     local_forked_checkout: Path
     local_canonical_checkout: Path
     malformed_checkout: Path
+    denied_checkout: Path
     cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
     plan: InstallationPlan
     catalog: tuple[str, ...]
@@ -911,6 +912,9 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
         malformed_settings = malformed / CLAUDE_PROJECT_SETTINGS_PATH
         malformed_settings.parent.mkdir(parents=True)
         malformed_settings.write_text(MALFORMED_SETTINGS_CONTENT, encoding="utf-8")
+        denied = temporary_root / "denied-checkout"
+        denied.mkdir()
+        _write_project_marketplace(denied, CANONICAL_MARKETPLACE_SOURCE)
         mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
@@ -927,23 +931,25 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             local_forked.resolve(),
             local_canonical.resolve(),
             malformed.resolve(),
+            denied.resolve(),
         )
         cases = tuple(case for group in groups for case in group)
-        plan = build_persistent_installation_plan(
-            preflight,
-            claude_marketplace_payload=claude_marketplace_listing_payload(
-                CANONICAL_MARKETPLACE_SOURCE
-            ),
-            claude_plugins_payload=json.dumps([entry for entry, _ in cases]),
-            codex_marketplace_payload=codex_marketplace_listing_payload(
-                CANONICAL_CODEX_SOURCE
-            ),
-            codex_plugins_payload=_plugin_listing_payload(
-                Agent.CODEX,
-                mirror,
-                frozenset(catalog),
-            ),
-        )
+        with _blocked_directory(denied / CLAUDE_PROJECT_SETTINGS_PATH.parent):
+            plan = build_persistent_installation_plan(
+                preflight,
+                claude_marketplace_payload=claude_marketplace_listing_payload(
+                    CANONICAL_MARKETPLACE_SOURCE
+                ),
+                claude_plugins_payload=json.dumps([entry for entry, _ in cases]),
+                codex_marketplace_payload=codex_marketplace_listing_payload(
+                    CANONICAL_CODEX_SOURCE
+                ),
+                codex_plugins_payload=_plugin_listing_payload(
+                    Agent.CODEX,
+                    mirror,
+                    frozenset(catalog),
+                ),
+            )
         runner = RecordingRunner()
         report = execute_installation(plan, runner)
         return RecordRefreshObservation(
@@ -956,6 +962,7 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             local_forked_checkout=local_forked.resolve(),
             local_canonical_checkout=local_canonical.resolve(),
             malformed_checkout=malformed.resolve(),
+            denied_checkout=denied.resolve(),
             cases=cases,
             plan=plan,
             catalog=catalog,

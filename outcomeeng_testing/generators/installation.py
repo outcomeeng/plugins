@@ -201,6 +201,7 @@ def generated_claude_install_records(
     local_forked_checkout: Path,
     local_canonical_checkout: Path,
     malformed_checkout: Path,
+    denied_checkout: Path,
 ) -> tuple[tuple[tuple[dict[str, str], RecordDisposition], ...], ...]:
     """Cycle every catalog plugin through each install-record disposition.
 
@@ -216,7 +217,8 @@ def generated_claude_install_records(
     a noncanonical source over a canonical project declaration, a record in a
     checkout whose local settings register the canonical source over a
     noncanonical project declaration, a record in a checkout whose settings
-    cannot be parsed, and an entry from another marketplace. The two
+    cannot be parsed, a record in a checkout whose settings directory denies
+    reading, and an entry from another marketplace. The two
     conflicting checkouts are the precedence boundary: Claude Code lets the
     local document override the project document. One uncataloged plugin
     record is appended so the catalog bound has a rejected member.
@@ -294,6 +296,14 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_ID_FIELD: identifier,
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(malformed_checkout),
+                    },
+                    RecordDisposition.UNREADABLE_SETTINGS,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(denied_checkout),
                     },
                     RecordDisposition.UNREADABLE_SETTINGS,
                 ),
