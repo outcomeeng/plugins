@@ -15,18 +15,29 @@ The {{! plugin_name !}} plugin's resolved version and agent-delivery state repor
 
 Read `$verb`, trim it, and match it against the table. One verb runs per invocation; `help` is the default when `$verb` is empty. Text matching no row is an error naming all five verbs.
 
-| Verb                          | Result                                                                                       |
-| ----------------------------- | -------------------------------------------------------------------------------------------- |
-| `help`                        | This plugin's verbs, mutation boundaries, reload requirement, and changelog locations        |
-| `version`                     | The version resolved by the running session                                                  |
-| {!% if target == 'claude' %!} | `init`                                                                                       |
-| `upgrade`                     | This plugin's manifest-based agent delivery reported without mutation                        |
-| `check`                       | This plugin's manifest-based agent delivery reported without mutation                        |
-| {!% else %!}                  | `init`                                                                                       |
-| `upgrade`                     | Plugin-owned Codex definitions reconciled to this version, including safe stale-file pruning |
-| `check`                       | Selected-home drift, collision, and checkout scope-split state reported without mutation     |
+{!% if target == 'claude' %!}
 
-`init`, `upgrade`, and `check` use the bundled reconciliation script. The script never writes into a checkout.{!% endif %!}
+| Verb      | Result                                                                                |
+| --------- | ------------------------------------------------------------------------------------- |
+| `help`    | This plugin's verbs, mutation boundaries, reload requirement, and changelog locations |
+| `version` | The version resolved by the running session                                           |
+| `init`    | This plugin's manifest-based agent delivery reported without mutation                 |
+| `upgrade` | This plugin's manifest-based agent delivery reported without mutation                 |
+| `check`   | This plugin's manifest-based agent delivery reported without mutation                 |
+
+{!% else %!}
+
+| Verb      | Result                                                                                       |
+| --------- | -------------------------------------------------------------------------------------------- |
+| `help`    | This plugin's verbs, mutation boundaries, reload requirement, and changelog locations        |
+| `version` | The version resolved by the running session                                                  |
+| `init`    | Plugin-owned Codex definitions reconciled to this version, including safe stale-file pruning |
+| `upgrade` | Plugin-owned Codex definitions reconciled to this version, including safe stale-file pruning |
+| `check`   | Selected-home drift, collision, and checkout scope-split state reported without mutation     |
+
+`init`, `upgrade`, and `check` use the bundled reconciliation script. The script never writes into a checkout.
+
+{!% endif %!}
 
 </verbs>
 

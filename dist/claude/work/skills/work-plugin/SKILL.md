@@ -19,11 +19,9 @@ Read `$verb`, trim it, and match it against the table. One verb runs per invocat
 | --------- | ------------------------------------------------------------------------------------- |
 | `help`    | This plugin's verbs, mutation boundaries, reload requirement, and changelog locations |
 | `version` | The version resolved by the running session                                           |
-|           | `init`                                                                                |
+| `init`    | This plugin's manifest-based agent delivery reported without mutation                 |
 | `upgrade` | This plugin's manifest-based agent delivery reported without mutation                 |
 | `check`   | This plugin's manifest-based agent delivery reported without mutation                 |
-
-|
 
 </verbs>
 

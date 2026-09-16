@@ -19,7 +19,7 @@ Read `$verb`, trim it, and match it against the table. One verb runs per invocat
 | --------- | -------------------------------------------------------------------------------------------- |
 | `help`    | This plugin's verbs, mutation boundaries, reload requirement, and changelog locations        |
 | `version` | The version resolved by the running session                                                  |
-|           | `init`                                                                                       |
+| `init`    | Plugin-owned Codex definitions reconciled to this version, including safe stale-file pruning |
 | `upgrade` | Plugin-owned Codex definitions reconciled to this version, including safe stale-file pruning |
 | `check`   | Selected-home drift, collision, and checkout scope-split state reported without mutation     |
 
