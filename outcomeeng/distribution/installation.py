@@ -725,6 +725,9 @@ class CodexInstallationAdapter:
         records: Sequence[ClaudeInstallRecord] = (),
         recorded: frozenset[str] = frozenset(),
     ) -> tuple[InstallationCommand, ...]:
+        # Codex keys no install record by project path, so the shared
+        # signature's Claude records carry nothing for this adapter.
+        del records, recorded
         source = (
             CANONICAL_MARKETPLACE_SOURCE
             if mode is InstallationMode.PERSISTENT
@@ -1143,39 +1146,43 @@ def claude_install_records(
         raise ValueError("claude plugin listing must contain an array")
     records: list[ClaudeInstallRecord | PathlessInstallRecord] = []
     for index, entry in enumerate(document):
-        if not isinstance(entry, dict):
-            raise ValueError(f"claude plugin listing entry {index} must be an object")
-        identifier = entry.get(CLAUDE_PLUGIN_ID_FIELD)
-        if not isinstance(identifier, str):
-            raise ValueError(
-                f"claude plugin listing entry {index} has no typed identity"
-            )
-        plugin = marketplace_plugin_name(identifier)
-        if plugin is None:
-            continue
-        scope = entry.get(CLAUDE_PLUGIN_SCOPE_FIELD)
-        if not isinstance(scope, str):
-            raise ValueError(f"claude plugin listing entry {index} has no typed scope")
-        project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
-        if project_path is not None and not isinstance(project_path, str):
-            raise ValueError(
-                f"claude plugin listing entry {index} has an untyped project path"
-            )
-        if project_path is None:
-            if scope in CLAUDE_REFRESH_SCOPES:
-                raise ValueError(
-                    PATHLESS_LISTING_ENTRY_DIAGNOSTIC.format(index=index, scope=scope)
-                )
-            records.append(PathlessInstallRecord(plugin=plugin, scope=scope))
-            continue
-        records.append(
-            ClaudeInstallRecord(
-                plugin=plugin,
-                scope=scope,
-                project_path=Path(project_path).expanduser().resolve(),
-            )
-        )
+        record = _claude_install_record(index, entry)
+        if record is not None:
+            records.append(record)
     return tuple(records)
+
+
+def _claude_install_record(
+    index: int, entry: object
+) -> ClaudeInstallRecord | PathlessInstallRecord | None:
+    """Parse one listing entry; None for an entry from another marketplace."""
+    if not isinstance(entry, dict):
+        raise ValueError(f"claude plugin listing entry {index} must be an object")
+    identifier = entry.get(CLAUDE_PLUGIN_ID_FIELD)
+    if not isinstance(identifier, str):
+        raise ValueError(f"claude plugin listing entry {index} has no typed identity")
+    plugin = marketplace_plugin_name(identifier)
+    if plugin is None:
+        return None
+    scope = entry.get(CLAUDE_PLUGIN_SCOPE_FIELD)
+    if not isinstance(scope, str):
+        raise ValueError(f"claude plugin listing entry {index} has no typed scope")
+    project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
+    if project_path is None:
+        if scope in CLAUDE_REFRESH_SCOPES:
+            raise ValueError(
+                PATHLESS_LISTING_ENTRY_DIAGNOSTIC.format(index=index, scope=scope)
+            )
+        return PathlessInstallRecord(plugin=plugin, scope=scope)
+    if not isinstance(project_path, str):
+        raise ValueError(
+            f"claude plugin listing entry {index} has an untyped project path"
+        )
+    return ClaudeInstallRecord(
+        plugin=plugin,
+        scope=scope,
+        project_path=Path(project_path).expanduser().resolve(),
+    )
 
 
 def claude_refresh_records(
