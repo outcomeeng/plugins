@@ -12,6 +12,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_behind_base_repo,
     build_behind_base_repo_with_default_at_feature_tip,
     build_behind_base_repo_with_default_at_feature_tip_and_unresolved_default,
+    build_behind_base_repo_with_unresolved_default,
     build_current_repo,
     build_stacked_repo_merged_predecessor,
     build_stacked_repo_nearest_of_two,
@@ -309,7 +310,7 @@ def test_rebased_branch_never_records_the_default_branch_as_a_dependent(
     )
 
 
-def test_unresolved_default_refuses_a_base_sync_that_would_classify_dependents(
+def test_unresolved_default_refuses_a_base_sync_with_a_dependent_before_movement(
     tmp_path: pathlib.Path,
 ) -> None:
     # With origin/HEAD unset the writer cannot tell the local default branch
@@ -333,3 +334,21 @@ def test_unresolved_default_refuses_a_base_sync_that_would_classify_dependents(
         not in entries
     )
     assert module.stack_config_key(handle.base_ref, module.STACK_TIP_KEY) not in entries
+
+
+def test_unresolved_default_refuses_a_base_sync_without_dependents_before_movement(
+    tmp_path: pathlib.Path,
+) -> None:
+    # No other local branch contains the head, so nothing could be misrecorded
+    # as a dependent; the feature's own record still cannot be decided without
+    # the default's name, and a silent skip would leave the branch unrecorded.
+    module = load_sync_base_module()
+    handle = build_behind_base_repo_with_unresolved_default(repository_root(tmp_path))
+    head_before = head_oid(handle.repo)
+
+    result = module.sync_base(handle.repo, base_ref=handle.base_ref)
+
+    assert result.status is module.SyncStatus.GIT_FAILURE
+    assert result.branch == handle.feature_branch
+    assert head_oid(handle.repo) == head_before
+    assert module.read_stack_record(handle.repo, handle.feature_branch) is None

@@ -339,6 +339,25 @@ def build_behind_base_repo_with_default_at_feature_tip(
     return behind
 
 
+def _delete_default_branch_pointer(repo: pathlib.Path) -> None:
+    """Delete ``refs/remotes/origin/HEAD`` so no default branch resolves in ``repo``."""
+    _git(repo, "symbolic-ref", "--delete", "refs/remotes/origin/HEAD")
+
+
+def build_behind_base_repo_with_unresolved_default(
+    root: pathlib.Path,
+) -> BehindBaseRepo:
+    """Build a behind-base clone whose default branch does not resolve.
+
+    No other local branch contains the feature head, so a caller-supplied base
+    is the only thing that could select a movement; the synchronizer still
+    needs the default branch's name to decide the feature's own stack record.
+    """
+    behind = build_behind_base_repo(root)
+    _delete_default_branch_pointer(behind.repo)
+    return behind
+
+
 def build_behind_base_repo_with_default_at_feature_tip_and_unresolved_default(
     root: pathlib.Path,
 ) -> BehindBaseRepo:
@@ -349,7 +368,7 @@ def build_behind_base_repo_with_default_at_feature_tip_and_unresolved_default(
     only a caller-supplied base can select the movement.
     """
     behind = build_behind_base_repo_with_default_at_feature_tip(root)
-    _git(behind.repo, "symbolic-ref", "--delete", "refs/remotes/origin/HEAD")
+    _delete_default_branch_pointer(behind.repo)
     return behind
 
 
