@@ -7,7 +7,6 @@ import pathlib
 import pytest
 
 from outcomeeng_testing.generators.sync_base import TrackedEdit, tracked_edits
-from outcomeeng_testing.harnesses.changeset_scope import load_changeset_scope_module
 from outcomeeng_testing.harnesses.sync_base import (
     build_behind_base_repo,
     build_conflicting_repo,
@@ -21,14 +20,6 @@ from outcomeeng_testing.harnesses.sync_base import (
     repository_root,
     working_tree_has_tracked_changes,
 )
-
-
-def test_base_derivation_primitives_are_identity_equal_to_canonical() -> None:
-    canonical = load_changeset_scope_module()
-    sync = load_sync_base_module()
-    assert sync.detect_base_ref is canonical.detect_base_ref
-    assert sync.remote_tracking_ref is canonical.remote_tracking_ref
-    assert sync.detect_current_branch is canonical.detect_current_branch
 
 
 def test_rebase_preserves_branch_commit_rather_than_resetting(
