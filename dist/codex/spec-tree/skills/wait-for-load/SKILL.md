@@ -17,11 +17,11 @@ One terminal host-readiness result gating the resource-intensive command it guar
 python3 "${SKILL_DIR}/scripts/wait_for_load.py" && <resource-intensive command>
 ```
 
-Give the call the longest foreground timeout the agent harness allows. A harness that moves a long call to the background when that timeout elapses re-invokes the session when the line exits, and that re-invocation is the only collection the line needs. The tool grant above covers a standalone run of the waiter, the diagnostic form for a high-load host with no command queued; the chained line takes its own approval path.
+Give the call the longest foreground timeout the agent harness allows. A harness that moves a long call to the background when that timeout elapses re-invokes the session when the line exits, and that re-invocation is the only collection the line needs. The chained line takes its own approval path.
 
 2. Collect that one line. Never re-read host load, compute an interval, schedule a timer, poll, or start another waiter while it runs. When the harness hands back a process handle for the line, collect that same handle until its exit code is observed.
 
-3. Read the result. The waiter writes exactly one JSON document to standard error immediately before it exits, and standard output stays empty, so the guarded command's own output and exit code follow the document untouched. Exit 0 means the guarded command started; every other exit means it did not, and `error_handling` names the action for each terminal status. A lost or truncated result, whether by compaction or by an output cap, means the guarded command ran only if the waiter exited zero, so re-run the same line. Never stop for the operator over a missing result.
+3. Read the result. The waiter writes exactly one JSON document to standard error immediately before it exits, and standard output stays empty, so the guarded command's own output and exit code follow the document untouched. Exit 0 means the guarded command started; every other exit means it did not, and `<error_handling>` names the action for each terminal status. A lost or truncated result, whether by compaction or by an output cap, means the guarded command ran only if the waiter exited zero, so re-run the same line. Never stop for the operator over a missing result.
 
 4. Classify a guarded command's failure only after reading the waiter's observation for that run. Sustained load above capacity starves short-budgeted operations and produces starvation, not flakiness, so no failure is called flaky, intermittent, or pre-existing before that reading.
 
@@ -34,7 +34,7 @@ Chain the waiter ahead of a resource-intensive command: a test suite, an eval, a
 <input_output>
 The waiter accepts no arguments. It reads the host's 1-, 5-, and 15-minute load averages and logical CPU count through Python's standard library.
 
-It emits nothing while waiting, and one invocation owns the whole attempt, bounded at four hours. A first observation with all three normalized averages at or below capacity starts the guarded command at once. Otherwise the waiter sleeps a load-derived interval of at least sixty seconds and rechecks; on its first ready observation it sleeps a settle delay equal to the elapsed wait modulo 180 seconds, observes once more, and starts only when that observation is still at or below capacity and its one-minute load has not risen past its five-minute load by more than half a core. A rising one-minute load means other work just started, so the waiter returns to its loop. Waiters that began waiting at different moments on one host therefore start at different moments, and a load dip does not release them together.
+It emits nothing while waiting, and one invocation owns the whole attempt, bounded at four hours. A first observation with all three normalized averages at or below capacity starts the guarded command at once. Otherwise the waiter sleeps a load-derived interval of at least sixty seconds and rechecks; on its first ready observation it sleeps a settle delay equal to the elapsed wait modulo 180 seconds, clamped to the time left before the four-hour bound, observes once more, and starts only when that observation is still at or below capacity and its one-minute load has not risen past its five-minute load by more than half a core. A rising one-minute load means other work just started, so the waiter returns to its loop. Waiters that began waiting at different moments on one host therefore start at different moments, and a load dip does not release them together.
 
 Immediately before exit it writes exactly one compact JSON document to standard error containing the initial and final observations, readiness, terminal status, wait-cycle count, and elapsed wait, plus an `error` object carrying the type and message on an `error`, `unsupported`, or `interrupted` result. It stores no intermediate observation history. A ready result after one wait and a settle delay reads, with its keys sorted:
 
@@ -54,13 +54,13 @@ Immediately before exit it writes exactly one compact JSON document to standard 
 
 <error_handling>
 
-| Terminal status | Exit | Meaning                                                | Action                                              |
-| --------------- | ---: | ------------------------------------------------------ | --------------------------------------------------- |
-| `ready`         |    0 | A confirmed observation is at or below capacity        | The guarded command starts on the same line         |
-| `not_ready`     |    3 | Load stayed above capacity through the four-hour bound | The attempt is over; report the terminal JSON       |
-| `unsupported`   |    2 | Load averages or CPU count are unavailable             | The guarded command does not start; report the JSON |
-| `interrupted`   |  130 | The foreground wait received an interruption           | The guarded command does not start; report the JSON |
-| `error`         |    1 | An internal operation failed                           | The guarded command does not start; report the JSON |
+| Terminal status | Exit | Meaning                                                   | Action                                                                                            |
+| --------------- | ---: | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `ready`         |    0 | A confirmed observation is at or below capacity           | The guarded command starts on the same line                                                       |
+| `not_ready`     |    3 | No confirmed ready observation within the four-hour bound | The attempt is over; report the terminal JSON and start no new attempt without operator direction |
+| `unsupported`   |    2 | Load averages or CPU count are unavailable                | The guarded command does not start; report the JSON                                               |
+| `interrupted`   |  130 | The foreground wait received an interruption              | The guarded command does not start; report the JSON                                               |
+| `error`         |    1 | An internal operation failed                              | The guarded command does not start; report the JSON                                               |
 
 </error_handling>
 
@@ -72,6 +72,7 @@ Release verification covers these controlled boundaries without wall-clock delay
 - a rising confirming observation returning the waiter to its loop before a later confirmation succeeds
 - load held above capacity through the four-hour bound, producing `not_ready`, exit 3, the last observation, and sleeps totalling exactly the bound
 - an interval longer than the time left clamped to the remainder
+- a settle delay longer than the time left clamped to the remainder, with a rising confirmation at the bound producing `not_ready`
 - unavailable CPU count producing `unsupported` and exit 2
 - interrupted sleep producing `interrupted` and exit 130
 - load-reader failure producing `error` and exit 1

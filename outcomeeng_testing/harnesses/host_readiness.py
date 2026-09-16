@@ -68,6 +68,10 @@ def load_host_readiness_module() -> ModuleType:
     return module
 
 
+class BoundDerivationError(RuntimeError):
+    """The waiter's bound and settle window no longer admit a derived boundary load."""
+
+
 class ClockExhaustedError(RuntimeError):
     """Raised when the controlled clock cannot advance any further.
 
@@ -217,6 +221,27 @@ def _load_demanding_more_than_the_deadline(
     return _load_at_ratio(module.CAPACITY_RATIO * math.exp(exponent))
 
 
+def _load_leaving_less_than_its_settle_delay(
+    module: ModuleType,
+) -> tuple[float, float, float]:
+    """Build an observation whose interval ends a quarter settle window before the deadline.
+
+    A first ready observation at that moment selects a settle delay of three
+    quarters of the window (the elapsed wait modulo the window, given a bound
+    that is a whole number of windows) while only a quarter of a window
+    remains, so the waiter must clamp the settle delay to the remainder. The
+    interval derives from `horizon * log(ratio)` over the longest horizon, so
+    the ratio is `exp(target / horizon)` for that target.
+    """
+    if module.MAXIMUM_WAIT_SECONDS % module.SETTLE_WINDOW_SECONDS:
+        raise BoundDerivationError(
+            "the maximum wait is no longer a whole number of settle windows"
+        )
+    longest_horizon = max(module.LOAD_HORIZONS_SECONDS)
+    target = module.MAXIMUM_WAIT_SECONDS - module.SETTLE_WINDOW_SECONDS / 4
+    return _load_at_ratio(module.CAPACITY_RATIO * math.exp(target / longest_horizon))
+
+
 def _run(
     observations: list[tuple[float, float, float]],
     *,
@@ -326,6 +351,24 @@ def run_interval_clamped_to_remaining() -> WaitRun:
     """Run one invocation whose computed interval outruns the time remaining."""
     module = load_host_readiness_module()
     return _run([_load_demanding_more_than_the_deadline(module)])
+
+
+def run_settle_clamped_at_the_deadline() -> WaitRun:
+    """Run one invocation whose settle delay outruns the time remaining.
+
+    The first interval ends a quarter settle window before the deadline, the
+    next observation is ready, and the confirming observation after the
+    clamped settle delay is rising, so the deadline arrives with no
+    confirmation.
+    """
+    module = load_host_readiness_module()
+    return _run(
+        [
+            _load_leaving_less_than_its_settle_delay(module),
+            _ready_load(module),
+            _ready_rising_load(module),
+        ]
+    )
 
 
 def run_unsupported_platform() -> WaitRun:

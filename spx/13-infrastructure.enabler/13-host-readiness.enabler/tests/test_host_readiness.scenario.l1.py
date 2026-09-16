@@ -9,6 +9,7 @@ from outcomeeng_testing.harnesses.host_readiness import (
     run_ready_before_deadline,
     run_ready_confirmed_after_wait,
     run_rising_confirmation_then_ready,
+    run_settle_clamped_at_the_deadline,
     run_unsupported_platform,
 )
 
@@ -50,6 +51,17 @@ def test_rising_confirmation_returns_to_the_wait_loop() -> None:
     assert run.result.wait_cycles == 2
     assert run.sequence.index == 5
     assert run.clock.sleeps[2] >= run.module.MINIMUM_WAIT_SECONDS
+
+
+def test_settle_delay_longer_than_the_remaining_time_sleeps_only_what_remains() -> None:
+    run = run_settle_clamped_at_the_deadline()
+
+    assert run.result.status is run.module.Status.NOT_READY
+    assert run.result.final is not None
+    assert run.result.final.load == run.sequence.observations[-1]
+    assert run.sequence.index == 3
+    assert run.clock.sleeps[-1] < run.clock.sleeps[0] % run.module.SETTLE_WINDOW_SECONDS
+    assert sum(run.clock.sleeps) == run.module.MAXIMUM_WAIT_SECONDS
 
 
 def test_load_remaining_high_returns_not_ready_at_the_deadline() -> None:
