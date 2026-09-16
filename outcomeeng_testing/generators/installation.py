@@ -14,6 +14,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PLUGIN_VERSION_FIELD,
     CLAUDE_LOCAL_SCOPE,
     CLAUDE_MANAGED_SCOPE,
     CLAUDE_PROJECT_SCOPE,
@@ -153,6 +154,7 @@ def generated_claude_listing_entries(
             CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin),
             CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
             CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
+            CLAUDE_PLUGIN_VERSION_FIELD: recorded_version(index),
         }
         case = index % 5
         if case == 1:
@@ -175,6 +177,82 @@ UNCATALOGED_PLUGIN = "retired-plugin"
 """A plugin name no committed catalog carries, used as the catalog bound's rejected member."""
 FOREIGN_MARKETPLACE_NAME = f"{MARKETPLACE_NAME}-other"
 """A marketplace name other than the product's, whose records every reader skips."""
+
+
+def recorded_version(ordinal: int) -> str:
+    """The version a generated preflight listing entry carries.
+
+    Every entry receives its own value, so two records of one plugin never
+    share a version before a refresh and a report that names the wrong
+    record's version is caught.
+    """
+    return f"0.{ordinal}.0"
+
+
+def served_version(entry_count: int) -> str:
+    """The version a generated closing listing serves to every moved record.
+
+    Derived from the listing size, so it differs from every recorded version.
+    """
+    return f"1.{entry_count}.0"
+
+
+class ClosingDisposition(StrEnum):
+    """What one closing-listing entry says happened to its record during the run."""
+
+    MOVED = "moved"
+    STALE = "stale"
+    KEPT = "kept"
+    APPEARED = "appeared"
+
+
+def generated_closing_listing(
+    cases: Sequence[tuple[dict[str, str], RecordDisposition]],
+    appearing_checkout: Path,
+) -> tuple[tuple[dict[str, str], ClosingDisposition], ...]:
+    """Derive the listing a run reads after execution from its preflight cases.
+
+    Every record the plan updates is listed at the served version, except the
+    last such record, which keeps its recorded version so a report that
+    assumes the update moved it is caught. Every record the plan left
+    unchanged is kept as listed. One record the preflight listing did not
+    carry — the first cataloged plugin at project scope in a checkout no
+    preflight entry names — is appended, the record another agent session
+    writes between the two listing reads.
+    """
+    served = served_version(len(cases))
+    updates = [
+        index
+        for index, (_, disposition) in enumerate(cases)
+        if disposition is RecordDisposition.UPDATE
+    ]
+    stale_index = updates[-1] if updates else None
+    closing: list[tuple[dict[str, str], ClosingDisposition]] = []
+    for index, (entry, disposition) in enumerate(cases):
+        if disposition is not RecordDisposition.UPDATE:
+            closing.append((dict(entry), ClosingDisposition.KEPT))
+        elif index == stale_index:
+            closing.append((dict(entry), ClosingDisposition.STALE))
+        else:
+            closing.append(
+                (
+                    {**entry, CLAUDE_PLUGIN_VERSION_FIELD: served},
+                    ClosingDisposition.MOVED,
+                )
+            )
+    first_update = cases[updates[0]][0] if updates else cases[0][0]
+    closing.append(
+        (
+            {
+                CLAUDE_PLUGIN_ID_FIELD: first_update[CLAUDE_PLUGIN_ID_FIELD],
+                CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(appearing_checkout),
+                CLAUDE_PLUGIN_VERSION_FIELD: served,
+            },
+            ClosingDisposition.APPEARED,
+        )
+    )
+    return tuple(closing)
 
 
 class RecordDisposition(StrEnum):
@@ -365,7 +443,20 @@ def generated_claude_install_records(
             ),
         )
     )
-    return tuple(groups)
+    ordinal = 0
+    versioned: list[tuple[tuple[dict[str, str], RecordDisposition], ...]] = []
+    for group in groups:
+        members: list[tuple[dict[str, str], RecordDisposition]] = []
+        for entry, disposition in group:
+            members.append(
+                (
+                    {**entry, CLAUDE_PLUGIN_VERSION_FIELD: recorded_version(ordinal)},
+                    disposition,
+                )
+            )
+            ordinal += 1
+        versioned.append(tuple(members))
+    return tuple(versioned)
 
 
 def generated_codex_listing_entries(

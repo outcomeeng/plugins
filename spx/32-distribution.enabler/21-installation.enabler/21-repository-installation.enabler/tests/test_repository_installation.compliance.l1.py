@@ -10,6 +10,12 @@ import pytest
 from outcomeeng.distribution.installation import (
     Agent,
     CLAUDE_LOCAL_SCOPE,
+    CLAUDE_PLUGIN_ID_FIELD,
+    CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
+    CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PLUGIN_VERSION_FIELD,
+    ReportField,
+    marketplace_plugin_name,
     CODEX_CONFIG_PATH,
     CODEX_EXEC_SUBCOMMAND,
     FIRST_INSTALL_WARNING,
@@ -44,6 +50,7 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
     lock_contention_case,
     missing_credential_environment,
 )
+from outcomeeng_testing.generators.installation import ClosingDisposition
 from outcomeeng_testing.harnesses.installation import (
     CONCURRENT_EDIT_CONTENT,
     EXTERNAL_DEFINITION_CONTENT,
@@ -56,6 +63,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_local_record_bootstrap_plan,
     observe_persistent_execution,
     observe_persistent_plan,
+    observe_record_refresh_plan,
     ScopeSplitClassification,
     racing_digest_reader,
     RENAMED_CHECKOUT_AGENT_NAME,
@@ -782,3 +790,70 @@ def test_a_local_scope_record_for_the_checkout_suppresses_the_bootstrap_install(
     assert FIRST_INSTALL_WARNING.format(agent=Agent.CLAUDE.value) not in [
         warning.message for warning in observation.plan.warnings
     ]
+
+
+def test_a_persistent_run_reads_the_listing_once_before_and_once_after_execution() -> (
+    None
+):
+    observation = observe_persistent_execution()
+    claude = [
+        command for command in observation.attempted if command.agent is Agent.CLAUDE
+    ]
+    operations = [command.operation for command in claude]
+    assert operations.count(Operation.PLUGIN_INSPECT) == 1
+    assert operations.count(Operation.PLUGIN_LIST) == 1
+    assert operations.index(Operation.PLUGIN_INSPECT) < min(
+        index
+        for index, operation in enumerate(operations)
+        if operation is Operation.PLUGIN_UPDATE
+    )
+    assert operations[-1] is Operation.PLUGIN_LIST
+
+    drifted = observe_record_refresh_plan()
+    trailing = [
+        command
+        for command in drifted.attempted[
+            next(
+                index
+                for index, command in enumerate(drifted.attempted)
+                if command.agent is Agent.CLAUDE
+                and command.operation is Operation.PLUGIN_LIST
+            )
+            + 1 :
+        ]
+        if command.agent is Agent.CLAUDE
+    ]
+    assert trailing == []
+    assert drifted.report.record_drift is not None
+    assert len(drifted.report.record_drift.unrefreshed) >= 1
+
+
+def test_a_record_the_closing_listing_leaves_stale_is_reported_at_its_listed_version() -> (
+    None
+):
+    observation = observe_record_refresh_plan()
+    stale = [
+        entry
+        for entry, disposition in observation.closing_cases
+        if disposition is ClosingDisposition.STALE
+    ]
+    assert len(stale) == 1
+    (entry,) = stale
+    plugin = marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD])
+    records = [
+        record
+        for record in observation.document[ReportField.CLAUDE_RECORDS]
+        if record[ReportField.PLUGIN] == plugin
+        and record[ReportField.SCOPE] == entry[CLAUDE_PLUGIN_SCOPE_FIELD]
+        and record[ReportField.PROJECT_PATH] == entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+    ]
+    assert len(records) == 1
+    (record,) = records
+    assert record[ReportField.VERSION_AFTER] == entry[CLAUDE_PLUGIN_VERSION_FIELD]
+    assert record[ReportField.VERSION_AFTER] == record[ReportField.VERSION_BEFORE]
+    moved_versions = {
+        moved[CLAUDE_PLUGIN_VERSION_FIELD]
+        for moved, disposition in observation.closing_cases
+        if disposition is ClosingDisposition.MOVED
+    }
+    assert record[ReportField.VERSION_AFTER] not in moved_versions

@@ -14,6 +14,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PLUGIN_VERSION_FIELD,
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_SCOPE_FLAG,
     REGISTRY_SOURCE_DIAGNOSTIC,
@@ -28,7 +29,10 @@ from outcomeeng.distribution.installation import (
 )
 from pathlib import Path
 
-from outcomeeng_testing.generators.installation import RecordDisposition
+from outcomeeng_testing.generators.installation import (
+    ClosingDisposition,
+    RecordDisposition,
+)
 from outcomeeng_testing.harnesses.installation import (
     NONCANONICAL_MARKETPLACE_SOURCE,
     absent_from_every_agent,
@@ -321,3 +325,32 @@ def test_a_noncanonical_registry_source_stops_before_any_plan() -> None:
     assert error.startswith(REGISTRY_SOURCE_DIAGNOSTIC)
     assert NONCANONICAL_MARKETPLACE_SOURCE in error
     assert CANONICAL_MARKETPLACE_SOURCE in error
+
+
+def test_a_record_written_between_the_listing_reads_is_reported_unrefreshed() -> None:
+    observation = observe_record_refresh_plan()
+    appeared = [
+        entry
+        for entry, disposition in observation.closing_cases
+        if disposition is ClosingDisposition.APPEARED
+    ]
+    assert len(appeared) == 1
+    (entry,) = appeared
+    plugin = marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD])
+
+    unrefreshed = cast(
+        "list[dict[str, str]]", observation.document[ReportField.UNREFRESHED_RECORDS]
+    )
+    assert {
+        ReportField.PLUGIN: plugin,
+        ReportField.SCOPE: entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+        ReportField.PROJECT_PATH: str(observation.appearing_checkout),
+        ReportField.VERSION: entry[CLAUDE_PLUGIN_VERSION_FIELD],
+    } in unrefreshed
+    updates_for_it = [
+        command
+        for command in observation.attempted
+        if command.operation is Operation.PLUGIN_UPDATE
+        and command.cwd == observation.appearing_checkout
+    ]
+    assert updates_for_it == []

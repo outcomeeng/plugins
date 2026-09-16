@@ -88,7 +88,7 @@ def test_real_persistent_run_refreshes_a_second_checkout_at_local_scope() -> Non
         for record in document[ReportField.CLAUDE_RECORDS]
     }
     assert {(plugin, scope, str(path)) for plugin, scope, path in expected} <= refreshed
-    assert observation.records_after == observation.records_before
+    assert set(observation.records_after) == set(observation.records_before)
     assert (
         observation.invocation_activation_after
         == observation.invocation_activation_before
@@ -108,3 +108,59 @@ def test_fresh_codex_session_discovers_every_placed_canonical_subagent() -> None
         observation.session_last_message
     )
     assert observation.placed_subagent_names <= observation.discovered_subagent_names
+
+
+def test_real_persistent_run_moves_records_at_differing_versions_to_one_version() -> (
+    None
+):
+    observation = observe_real_record_refresh()
+    before = {
+        record: record.version
+        for record in observation.records_before
+        if isinstance(record, ClaudeInstallRecord) and record.plugin == SPEC_TREE_PLUGIN
+    }
+    after = {
+        record: record.version
+        for record in observation.records_after
+        if isinstance(record, ClaudeInstallRecord) and record.plugin == SPEC_TREE_PLUGIN
+    }
+    assert before[observation.seeded_record] == observation.seeded_record.version
+    assert len(set(before.values())) > 1
+    assert observation.exit_code == 0, observation.stderr
+    assert len(set(after.values())) == 1
+    assert after[observation.seeded_record] != observation.seeded_record.version
+
+    document = json.loads(observation.stdout)
+    reported = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): (record[ReportField.VERSION_BEFORE], record[ReportField.VERSION_AFTER])
+        for record in document[ReportField.CLAUDE_RECORDS]
+    }
+    for record, version_after in after.items():
+        key = (record.plugin, record.scope, str(record.project_path))
+        assert reported[key] == (before[record], version_after), key
+
+
+def test_real_second_run_reports_records_refreshed_at_unchanged_versions() -> None:
+    observation = observe_real_record_refresh()
+    assert observation.second_exit_code == 0, observation.second_stderr
+    document = json.loads(observation.second_stdout)
+    records = document[ReportField.CLAUDE_RECORDS]
+    assert len(records) >= 1
+    assert all(
+        record[ReportField.VERSION_AFTER] == record[ReportField.VERSION_BEFORE]
+        for record in records
+    )
+    assert set(observation.records_after_second) == set(observation.records_after)
+    assert {
+        record.version
+        for record in observation.records_after_second
+        if isinstance(record, ClaudeInstallRecord)
+    } == {
+        record.version
+        for record in observation.records_after
+        if isinstance(record, ClaudeInstallRecord)
+    }

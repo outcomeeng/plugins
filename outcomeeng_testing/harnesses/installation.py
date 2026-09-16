@@ -62,6 +62,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PLUGIN_VERSION_FIELD,
     CLAUDE_PROJECT_SCOPE,
     CLAUDE_PROJECT_SETTINGS_PATH,
     CODEX_AGENTS_PATH,
@@ -120,7 +121,10 @@ from outcomeeng.distribution.installation import (
     marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import (
+    ClosingDisposition,
     RecordDisposition,
+    generated_closing_listing,
+    recorded_version,
     UNCATALOGED_PLUGIN,
     catalog_plugin_names_from_document,
     generated_agent_subsets,
@@ -628,6 +632,14 @@ class RecordingRunner:
     failed_operation: Operation | None = None
     installed: Mapping[Agent, frozenset[str]] | None = None
     failed_agent: Agent | None = None
+    closing_listing: str | None = None
+    """The Claude listing returned after execution; None repeats the inventory listing.
+
+    Stage 5 Time and concurrency: a record another session writes between
+    the two listing reads, or an update that leaves a record's version where
+    it was, cannot be produced by a real CLI on demand, so the closing
+    listing is supplied as an observation for the linked test to judge.
+    """
     calls: list[InstallationCommand] = field(default_factory=list)
 
     def __call__(self, command: InstallationCommand) -> CommandResult:
@@ -638,7 +650,14 @@ class RecordingRunner:
         exit_code = (
             1 if command.operation is self.failed_operation and designated_agent else 0
         )
-        stdout = _successful_command_payload(command, self.installed)
+        if (
+            self.closing_listing is not None
+            and command.agent is Agent.CLAUDE
+            and command.operation is Operation.PLUGIN_LIST
+        ):
+            stdout = self.closing_listing
+        else:
+            stdout = _successful_command_payload(command, self.installed)
         return CommandResult(
             argv=command.argv,
             exit_code=exit_code,
@@ -649,6 +668,22 @@ class RecordingRunner:
 
 BASE_REF_BRANCH = "main"
 BASE_REF = "origin/main"
+LISTED_VERSION = recorded_version(0)
+"""The one version every entry of a catalog-wide controlled listing carries."""
+CLAUDE_INSTALLED_PLUGINS_RELATIVE = Path("plugins") / "installed_plugins.json"
+"""Where Claude Code keeps its install records beneath its configuration directory."""
+INSTALLED_PLUGINS_FIELD = "plugins"
+"""The install-record map inside Claude Code's install-record document."""
+INSTALLED_RECORD_VERSION_FIELD = "version"
+"""The version an install-record document entry carries."""
+INSTALLED_RECORD_COMMIT_FIELD = "gitCommitSha"
+"""The marketplace commit an install-record document entry was installed from."""
+INSTALLED_RECORD_PATH_FIELD = "installPath"
+"""The cache directory an install-record document entry points at."""
+SEEDED_OLDER_COMMIT_DISTANCE = 100
+"""How many first-parent commits behind the checkout head the seeded record is placed."""
+SEEDED_OLDER_VERSION = recorded_version(0)
+"""The version a seeded stale install record is rewritten to before a real refresh."""
 
 
 def repository_root() -> Path:
@@ -698,6 +733,7 @@ def _plugin_listing_payload(
                     CLAUDE_PLUGIN_ENABLED_FIELD: index % 2 == 0,
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout.resolve()),
+                    CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
                 }
                 for index, plugin in enumerate(identifiers)
             ]
@@ -729,7 +765,7 @@ def _successful_command_payload(
 ) -> str:
     if command.operation is Operation.MARKETPLACE_INSPECT:
         return _marketplace_listing_payload(command.agent)
-    if command.operation is Operation.PLUGIN_INSPECT:
+    if command.operation in {Operation.PLUGIN_INSPECT, Operation.PLUGIN_LIST}:
         inventories = _installed_or_catalog_plugins(command.cwd, installed)
         return _plugin_listing_payload(
             command.agent,
@@ -870,6 +906,8 @@ class RecordRefreshObservation:
     malformed_checkout: Path
     denied_checkout: Path
     cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
+    closing_cases: tuple[tuple[dict[str, str], ClosingDisposition], ...]
+    appearing_checkout: Path
     plan: InstallationPlan
     catalog: tuple[str, ...]
     report: InstallationReport
@@ -915,6 +953,8 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
         denied = temporary_root / "denied-checkout"
         denied.mkdir()
         _write_project_marketplace(denied, CANONICAL_MARKETPLACE_SOURCE)
+        appearing = temporary_root / "appearing-checkout"
+        appearing.mkdir()
         mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
@@ -950,7 +990,10 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
                     frozenset(catalog),
                 ),
             )
-        runner = RecordingRunner()
+        closing_cases = generated_closing_listing(cases, appearing.resolve())
+        runner = RecordingRunner(
+            closing_listing=json.dumps([entry for entry, _ in closing_cases])
+        )
         report = execute_installation(plan, runner)
         return RecordRefreshObservation(
             checkout=preflight.roots.checkout,
@@ -964,6 +1007,8 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             malformed_checkout=malformed.resolve(),
             denied_checkout=denied.resolve(),
             cases=cases,
+            closing_cases=closing_cases,
+            appearing_checkout=appearing.resolve(),
             plan=plan,
             catalog=catalog,
             report=report,
@@ -1153,6 +1198,7 @@ def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
                     CLAUDE_PLUGIN_ENABLED_FIELD: True,
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_LOCAL_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(preflight.roots.checkout),
+                    CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
                 }
             ]
         )
@@ -2071,6 +2117,12 @@ class RealRecordRefreshObservation:
     invocation_activation_after: object
     other_activation_before: object
     other_activation_after: object
+    seeded_record: ClaudeInstallRecord
+    """The record rewritten to an older version in the agent state before the run."""
+    second_exit_code: int
+    second_stdout: str
+    second_stderr: str
+    records_after_second: tuple[ClaudeInstallRecord | PathlessInstallRecord, ...]
 
 
 def observe_real_record_refresh() -> RealRecordRefreshObservation:
@@ -2096,6 +2148,9 @@ def observe_real_record_refresh() -> RealRecordRefreshObservation:
         _write_project_marketplace(other, CANONICAL_MARKETPLACE_SOURCE, local=True)
         _install_claude_plugin(invocation, environment, CLAUDE_PROJECT_SCOPE)
         _install_claude_plugin(other, environment, CLAUDE_LOCAL_SCOPE)
+        seeded_record = _seed_older_record_version(
+            environment, SPEC_TREE_PLUGIN, invocation
+        )
         invocation_settings = invocation / CLAUDE_PROJECT_SETTINGS_PATH
         other_settings = other / CLAUDE_LOCAL_SETTINGS_PATH
         invocation_activation_before = _declared_activation(invocation_settings)
@@ -2109,6 +2164,10 @@ def observe_real_record_refresh() -> RealRecordRefreshObservation:
         )
         invocation_activation_after = _declared_activation(invocation_settings)
         other_activation_after = _declared_activation(other_settings)
+        second = _run_persistent_recipe(checkout, invocation, environment)
+        records_after_second = claude_install_records(
+            _run_listing(Agent.CLAUDE, invocation, environment).stdout
+        )
     return RealRecordRefreshObservation(
         exit_code=result.returncode,
         stdout=result.stdout,
@@ -2121,6 +2180,64 @@ def observe_real_record_refresh() -> RealRecordRefreshObservation:
         invocation_activation_after=invocation_activation_after,
         other_activation_before=other_activation_before,
         other_activation_after=other_activation_after,
+        seeded_record=seeded_record,
+        second_exit_code=second.returncode,
+        second_stdout=second.stdout,
+        second_stderr=second.stderr,
+        records_after_second=records_after_second,
+    )
+
+
+def _seed_older_record_version(
+    environment: Mapping[str, str], plugin: str, checkout: Path
+) -> ClaudeInstallRecord:
+    """Rewrite one project-scope record's version in the agent's own state.
+
+    A record installed at an earlier marketplace state carries an older
+    version, an older marketplace commit, and a cache directory named for
+    that older version; rewriting all three in the invocation checkout's
+    record of the disposable install-record document, with the current cache
+    copied to the older version's directory, is how the harness produces
+    that history without a second marketplace. The older commit is a real
+    ancestor of the checkout head, read through git.
+    """
+    older_commit = subprocess.run(
+        ("git", "rev-parse", f"HEAD~{SEEDED_OLDER_COMMIT_DISTANCE}"),
+        cwd=repository_root(),
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    document_path = (
+        Path(environment[CLAUDE_CONFIG_ENV]) / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+    )
+    document = cast("dict[str, object]", json.loads(document_path.read_text()))
+    records = cast(
+        "dict[str, list[dict[str, object]]]", document[INSTALLED_PLUGINS_FIELD]
+    )
+    resolved = checkout.resolve()
+    for entry in records[marketplace_plugin_identifier(plugin)]:
+        if (
+            entry.get(CLAUDE_PLUGIN_SCOPE_FIELD) == CLAUDE_PROJECT_SCOPE
+            and Path(cast("str", entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD])).resolve()
+            == resolved
+        ):
+            current_cache = Path(cast("str", entry[INSTALLED_RECORD_PATH_FIELD]))
+            older_cache = current_cache.with_name(SEEDED_OLDER_VERSION)
+            if not older_cache.exists():
+                shutil.copytree(current_cache, older_cache)
+            entry[INSTALLED_RECORD_VERSION_FIELD] = SEEDED_OLDER_VERSION
+            entry[INSTALLED_RECORD_COMMIT_FIELD] = older_commit
+            entry[INSTALLED_RECORD_PATH_FIELD] = str(older_cache)
+            document_path.write_text(json.dumps(document, indent=2) + "\n")
+            return ClaudeInstallRecord(
+                plugin=plugin,
+                scope=CLAUDE_PROJECT_SCOPE,
+                project_path=resolved,
+                version=SEEDED_OLDER_VERSION,
+            )
+    raise RuntimeError(
+        f"no project-scope {plugin} record for {resolved} in {document_path}"
     )
 
 
@@ -3066,6 +3183,20 @@ __all__ = [
 ]
 
 
+def _inspection_or_empty_payload(command: InstallationCommand) -> str:
+    """A marketplace listing for an inspection, an empty record listing for the closing read.
+
+    Runners that simulate one failure carry no install-record inventory, so
+    their closing listing reports no records at all — a valid listing the
+    run compares its plan against.
+    """
+    if command.operation is Operation.MARKETPLACE_INSPECT:
+        return _marketplace_listing_payload(command.agent)
+    if command.operation is Operation.PLUGIN_LIST:
+        return json.dumps([])
+    return ""
+
+
 @dataclass
 class UnpublishedPluginRunner:
     """Installation runner whose marketplace has not published a named plugin set.
@@ -3093,11 +3224,7 @@ class UnpublishedPluginRunner:
                     command.plugin,
                 ),
             )
-        stdout = (
-            _marketplace_listing_payload(command.agent)
-            if command.operation is Operation.MARKETPLACE_INSPECT
-            else ""
-        )
+        stdout = _inspection_or_empty_payload(command)
         return CommandResult(argv=command.argv, exit_code=0, stdout=stdout, stderr="")
 
 
@@ -3137,11 +3264,7 @@ class DesignatedFailureRunner:
             return CommandResult(
                 argv=command.argv, exit_code=1, stdout="", stderr=self.stderr
             )
-        stdout = (
-            _marketplace_listing_payload(command.agent)
-            if command.operation is Operation.MARKETPLACE_INSPECT
-            else ""
-        )
+        stdout = _inspection_or_empty_payload(command)
         return CommandResult(argv=command.argv, exit_code=0, stdout=stdout, stderr="")
 
 

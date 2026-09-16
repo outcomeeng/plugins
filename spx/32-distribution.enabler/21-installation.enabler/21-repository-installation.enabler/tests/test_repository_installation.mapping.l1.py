@@ -11,6 +11,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_ID_FIELD,
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
+    CLAUDE_PLUGIN_VERSION_FIELD,
     NONCANONICAL_SOURCE_WARNING,
     OUT_OF_SCOPE_RECORD_WARNING,
     PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
@@ -26,6 +27,7 @@ from outcomeeng.distribution.installation import (
     marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import (
+    ClosingDisposition,
     RecordDisposition,
     catalog_plugin_names_from_document,
     generated_claude_listing_entries,
@@ -197,3 +199,32 @@ def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None
     assert unmatched_warnings == []
     positions = [observation.catalog.index(command.plugin) for command in updates]
     assert positions == sorted(positions)
+
+    closing = {
+        (
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]),
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+            entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
+        ): entry[CLAUDE_PLUGIN_VERSION_FIELD]
+        for entry, disposition in observation.closing_cases
+        if disposition is not ClosingDisposition.APPEARED
+        and CLAUDE_PLUGIN_PROJECT_PATH_FIELD in entry
+    }
+    reported = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): (record[ReportField.VERSION_BEFORE], record[ReportField.VERSION_AFTER])
+        for record in observation.document[ReportField.CLAUDE_RECORDS]
+    }
+    for entry, disposition in observation.cases:
+        if disposition is not RecordDisposition.UPDATE:
+            continue
+        key = (
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]),
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+            entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
+        )
+        assert reported[key] == (entry[CLAUDE_PLUGIN_VERSION_FIELD], closing[key]), key
+    assert len(reported) == len(updates)
