@@ -144,7 +144,7 @@ project-scoped Claude Code marketplace, every project- or local-scope Claude Cod
 `outcomeeng` install record on the machine for a cataloged plugin whose project path
 exists and whose project declares no noncanonical source, at that record's own scope
 and project path, and the selected `$CODEX_HOME`; a record outside project and local scope,
-outside the catalog, at a vanished path, in a project declaring a noncanonical source,
+outside the catalog, at a path that is no directory, in a project declaring a noncanonical source,
 or in a project whose settings cannot be read is reported and left unchanged.
 A noncanonical source in the invocation checkout's own settings, or settings it
 cannot read, stops the run before any plan.
