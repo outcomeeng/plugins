@@ -1,8 +1,10 @@
 """Compliance evidence for pickup claim verification."""
 
 import __future__
+
 import json
 import sys
+from pathlib import Path
 
 from outcomeeng_testing.harnesses.verify_session_claims import (
     absent_node_status_observation,
@@ -11,6 +13,8 @@ from outcomeeng_testing.harnesses.verify_session_claims import (
     metadata_loading_observation,
     node_status_observations,
     read_only_verification_observation,
+    rejected_default_repository_observation,
+    rejected_repository_observations,
     script_import_roots,
     spec_entry_observation,
     subprocess_call_owners,
@@ -51,6 +55,28 @@ def test_default_runner_launch_failure_emits_unverifiable() -> None:
     assert len(observations) == 1
     assert observations[0].kind is module.ClaimKind.SESSION_METADATA
     assert observations[0].verdict is module.Verdict.UNVERIFIABLE
+
+
+def test_invalid_repository_root_is_rejected_before_observation(
+    tmp_path: Path,
+) -> None:
+    observations = rejected_repository_observations(tmp_path)
+
+    assert observations
+    for observation in observations:
+        assert observation.exit_code != 0
+        assert observation.stdout == ""
+        assert str(observation.path) in observation.stderr
+
+
+def test_default_repository_root_is_validated_before_observation(
+    tmp_path: Path,
+) -> None:
+    observation = rejected_default_repository_observation(tmp_path)
+
+    assert observation.exit_code != 0
+    assert observation.stdout == ""
+    assert str(observation.path) in observation.stderr
 
 
 def test_verification_is_read_only_and_uses_source_commands() -> None:

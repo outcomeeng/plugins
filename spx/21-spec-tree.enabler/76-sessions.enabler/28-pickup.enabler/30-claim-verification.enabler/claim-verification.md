@@ -2,7 +2,7 @@
 
 PROVIDES the read-only reconciliation of a session document's recorded claims against current repository and external state, resolving each claim to exactly one of `Confirmed`, `Discrepancy`, or `Unverifiable`
 SO THAT the resumption flow
-CAN present observed state in place of a recorded snapshot the base, the working tree, or an external system has since moved past
+CAN present observed state in place of a recorded snapshot that differs from it
 
 ## Assertions
 
@@ -15,6 +15,7 @@ CAN present observed state in place of a recorded snapshot the base, the working
 
 - ALWAYS: `/pickup` reconciles every recorded session claim against current repository and external state before the post-context checkpoint by running the pickup skill's `scripts/verify_session_claims.py <session-id>` (through the runtime's skill-directory variable), and presents one verdict per claim — `Confirmed`, `Discrepancy`, or `Unverifiable` — in place of the recorded snapshot ([audit])
 - ALWAYS: the verification script obtains session frontmatter from `spx session show --json`, resolves node status from `spx spec status`, reaches `spx`, `gh`, and `git` only through a dependency-injected runner, and emits `Unverifiable` for any check it cannot run ([test](tests/test_pickup_verification.compliance.l1.py))
+- ALWAYS: the verification CLI rejects a missing repository root, a non-directory path, or a directory without repository metadata before running any observation, with a nonzero exit and a diagnostic naming the rejected path ([test](tests/test_pickup_verification.compliance.l1.py))
 - ALWAYS: node-status claim evidence is the target node's own record from the `spx spec status --format json` node tree — located by the node's tree-relative id, carrying that record's scalar fields, and excluding its child subtree ([test](tests/test_pickup_verification.compliance.l1.py))
 - ALWAYS: a claimed node absent from the `spx spec status --format json` projection resolves to `Unverifiable` with evidence naming the absent node, never a synthesized status ([test](tests/test_pickup_verification.compliance.l1.py))
 - NEVER: `/pickup` presents a recorded session-file claim as current state without a verdict from the verification pass ([audit])

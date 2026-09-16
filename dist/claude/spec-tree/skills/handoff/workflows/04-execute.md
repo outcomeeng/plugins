@@ -71,7 +71,7 @@ Before processing partitions, require every thread record to have a resolved own
 </resolve_continuation_threads>
 
 <write_canonical_continuation>
-When `spx/local/coordination.md` exists, `${CLAUDE_SKILL_DIR}/workflows/05-change.md` replaces this section — see `SKILL.md` `<change_coordination>`.
+When `spx/local/coordination.md` exists, run `<resolve_changes>` and `<refine_before_handoff>` from `${CLAUDE_SKILL_DIR}/workflows/05-change.md` here, skip the session-file paths below, then continue to `<release_work_branch>` — see `SKILL.md` `<change_coordination>`.
 
 Every closure ends with **zero, one, or several** session files — one canonical continuation per resolved thread whose partition has a `fresh-session` disposition. Threads are independent of whether the claimed-session set is empty. Process each partition independently: execute its disposition, verify that thread's continuation state, then archive only that record's `archive_ids`. Complete one partition before processing the next. Zero sessions is correct when no continuation reader exists.
 
@@ -137,7 +137,7 @@ NEVER re-check-out the handed-off branch "to return to the prior spot." Re-occup
 </release_work_branch>
 
 <archive_claimed_sessions>
-When `spx/local/coordination.md` exists, `${CLAUDE_SKILL_DIR}/workflows/05-change.md` replaces this section for held Changes; legacy `<CLAIMED_SESSIONS>` ids still archive here — see `SKILL.md` `<change_coordination>`.
+When `spx/local/coordination.md` exists, run `<post_handoff_or_close>` and `<closeout_rows>` from `${CLAUDE_SKILL_DIR}/workflows/05-change.md` here for held Changes, after `<release_work_branch>` has completed; legacy `<CLAIMED_SESSIONS>` ids still archive through the steps below — see `SKILL.md` `<change_coordination>`.
 
 After each canonical continuation is written and verified, archive only that thread partition's `archive_ids`. Under Path A, archive that partition after zero-handoff is confirmed valid for its thread: no replacement reader remains, or the named existing owner carries that thread's continuation. Archive the resolved claimed-session set after every artifact partition has reached its verified disposition, so one failed partition leaves the remaining thread artifacts untouched.
 

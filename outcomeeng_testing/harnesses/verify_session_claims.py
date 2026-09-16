@@ -10,8 +10,10 @@ generated per invocation; production vocabulary comes from the loaded script.
 from __future__ import annotations
 
 import ast
+import contextlib
 import importlib.util
 import inspect
+import io
 import json
 import pathlib
 import subprocess
@@ -148,6 +150,16 @@ class MetadataLoadingObservation:
     actual: ClaimVerdictLike
 
 
+@dataclass(frozen=True)
+class RejectedRepositoryObservation:
+    """CLI result for one path that cannot serve as a repository root."""
+
+    path: pathlib.Path
+    exit_code: int
+    stdout: str
+    stderr: str
+
+
 @dataclass
 class RecordingRunner:
     """Run git for real, script unavailable dependencies, and record calls."""
@@ -163,7 +175,13 @@ class RecordingRunner:
             if command == prefix or command[: len(prefix)] == prefix:
                 return response
         if cmd and cmd[0] == "git":
-            proc = subprocess.run(cmd, cwd=self.repo, capture_output=True, text=True)
+            proc = subprocess.run(
+                cmd,
+                cwd=self.repo,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
             return proc.returncode, proc.stdout, proc.stderr
         return (1, "", f"unconfigured command: {' '.join(cmd)}")
 
@@ -433,7 +451,7 @@ def _node_status_arrangement(module: ModuleType, relation: object) -> ScriptMap:
 
 def projection_spec_path() -> str:
     """Return a spec path under a node the real projection carries."""
-    node_id = sorted(spec_status_records())[0]
+    node_id = min(spec_status_records())
     return f"{spec_tree_root_name()}/{node_id}/{generated_token()}.md"
 
 
@@ -726,6 +744,63 @@ def default_runner_failure_observations() -> tuple[ClaimVerdictLike, ...]:
         )
 
 
+def rejected_repository_observations(
+    tmp_path: pathlib.Path,
+) -> tuple[RejectedRepositoryObservation, ...]:
+    """Run the CLI against missing, non-directory, and non-repository paths."""
+    module = load_verify_session_claims_module()
+    missing = tmp_path / generated_relative_path()
+    regular_file = tmp_path / generated_token()
+    regular_file.write_text(generated_token())
+    plain_directory = tmp_path / generated_token()
+    plain_directory.mkdir()
+
+    observations: list[RejectedRepositoryObservation] = []
+    for path in (missing, regular_file, plain_directory):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = module.main([generated_token(), "--repo", str(path)])
+        except SystemExit as exc:
+            exit_code = exc.code if isinstance(exc.code, int) else 1
+        observations.append(
+            RejectedRepositoryObservation(
+                path=path,
+                exit_code=exit_code,
+                stdout=stdout.getvalue(),
+                stderr=stderr.getvalue(),
+            )
+        )
+    return tuple(observations)
+
+
+def rejected_default_repository_observation(
+    tmp_path: pathlib.Path,
+) -> RejectedRepositoryObservation:
+    """Run the CLI without ``--repo`` from a directory lacking repository metadata."""
+    module = load_verify_session_claims_module()
+    plain_directory = tmp_path / generated_token()
+    plain_directory.mkdir()
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    try:
+        with (
+            contextlib.chdir(plain_directory),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+        ):
+            exit_code = module.main([generated_token()])
+    except SystemExit as exc:
+        exit_code = exc.code if isinstance(exc.code, int) else 1
+    return RejectedRepositoryObservation(
+        path=plain_directory,
+        exit_code=exit_code,
+        stdout=stdout.getvalue(),
+        stderr=stderr.getvalue(),
+    )
+
+
 def read_only_verification_observation() -> ReadOnlyVerificationObservation:
     """Return runner calls and repository status around one verification pass."""
     module = load_verify_session_claims_module()
@@ -881,6 +956,7 @@ __all__ = [
     "ObservedStateObservation",
     "ReadOnlyVerificationObservation",
     "RecordingRunner",
+    "RejectedRepositoryObservation",
     "SpecEntryObservation",
     "UnloadableSessionObservation",
     "absent_node_status_observation",
@@ -894,6 +970,8 @@ __all__ = [
     "observed_state_observation",
     "projection_spec_path",
     "read_only_verification_observation",
+    "rejected_default_repository_observation",
+    "rejected_repository_observations",
     "script_import_roots",
     "spec_entry_observation",
     "spec_status_records",

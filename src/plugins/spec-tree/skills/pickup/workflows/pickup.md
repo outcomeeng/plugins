@@ -1,4 +1,8 @@
-<required_reading>none</required_reading>
+<required_reading>
+
+Read `${CLAUDE_SKILL_DIR}/references/verify-session-claims.md` before Step 5.
+
+</required_reading>
 
 <process>
 
@@ -203,7 +207,7 @@ After emitting the checkpoint marker, report the result and the current session 
 
 - Continue work under the claimed session(s).
 - Invoke `/handoff` if the user asks to close or hand off.
-- Invoke `/handoff --no-session` if the user asks to close without creating a handoff. It archives the claimed sessions; it does NOT put the claimed session back in the todo queue. If the user explicitly wants a claimed session returned to the shared queue, run `spx session release <id>` to move it from `doing/` back to `todo/`.
+- Invoke `/handoff --no-session` if the user asks to close without creating a handoff. It archives the claimed sessions; it does NOT put the claimed session back in the todo queue. If the user explicitly wants a claimed session returned to the shared queue, exit this pickup workflow; the operator's `spx session release <id>` request then runs as direct session management outside `/pickup` and moves it from `doing/` back to `todo/`.
 
 **Invalid next steps:**
 

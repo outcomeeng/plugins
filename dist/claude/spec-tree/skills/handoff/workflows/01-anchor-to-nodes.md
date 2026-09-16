@@ -10,7 +10,7 @@ Use the loaded `/understand` foundation and every active `<SPEC_TREE_CONTEXT>` m
 </required_reading>
 
 <process>
-List every spec-tree node touched in this session (any path matching `spx/**/*.enabler` or `spx/**/*.outcome`). For each, record:
+List every spec-tree node touched in this session: the root `spx/` product or any directory path under `spx/` ending in `.product`, `.substrate`, `.capability`, `.domain`, `.interface`, `.surface`, `.variant`, `.enabler`, or `.outcome`. For each, record:
 
 - Full path (e.g., `spx/55-example.enabler/21-bar.outcome`)
 - What was done (spec authored, tests written, code implemented, etc.)
