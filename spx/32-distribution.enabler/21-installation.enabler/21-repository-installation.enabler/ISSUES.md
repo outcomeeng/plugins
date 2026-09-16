@@ -34,6 +34,12 @@ The `<plugin>-plugin` skill's Claude Code rendering carries `scripts/place_agent
 
 **Evidence**: skill audit warnings `f-007` and `f-008` against `06b86db6b31704c58203929603bb2f2ceea237cb`, and `f-006` and `f-007` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
 
+## Lifecycle evidence cases are hand-authored in the harness
+
+The lifecycle tests in `tests/test_repository_installation.compliance.l1.py` take their agent-definition bytes, filenames, and slugs from `PluginLifecycleHarness` in `outcomeeng_testing/harnesses/installation.py`, and the foreign, external, concurrent-edit, malformed-digest, and malformed-settings payloads from constants the same module declares; every token the tests assert against is imported from the shipped placement script. Two verifier readings of that arrangement stand side by side. The isolated test-evidence audit on `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, finding `f-009`, names the payloads incidental harness-handle values, because the script treats definition bytes opaquely by digest and every asserted token is source-owned. Changeset review `2026-09-16_02-49-48-063-4c9876671778` holds that relocating hand-authored bytes into the harness settles no case provenance and asks for a generator under `outcomeeng_testing/generators/`.
+
+**Settlement condition.** A generator-sourced origin for the definition bytes and ownership documents, recorded in the assertion-design record, or an operator ruling that the audit's reading governs, recorded here.
+
 ## The marketplace-refresh clone bound leaves no margin over the source's real clone cost
 
 `test_real_agent_clis_map_full_and_generated_subsets` can fail at the `marketplace-refresh` operation. `codex plugin marketplace upgrade outcomeeng --json` then exits 1 with:
@@ -112,7 +118,7 @@ gate on macOS, or when a contributor reports the gate hanging with no output.
 `src/templates/plugin/scripts/place_agents.py` — rendered once per plugin as
 `skills/<plugin>-plugin/scripts/place_agents.py` — carries the ownership-record
 parser, the digest-bound collision detector, the atomic writer, and the
-scope-split classifier at roughly 250 lines. `spx/12-shipped-scripting.adr.md`
+scope-split classifier at 333 lines. `spx/12-shipped-scripting.adr.md`
 sets fifty lines as the point where a generic shipped script becomes debt
 awaiting extraction into the SPX CLI once proven, or removal when it is not,
 and exempts only runtime-specific adapter logic whose extraction would couple
