@@ -276,10 +276,12 @@ a partial seal certified one instead.
 
 How to avoid: Reconcile at stage 7 with the bundled reconciler, whose referent
 is the run's own sealed start inventory rather than the plan. Its exit code is
-the verdict: exit 1 names the unaccounted paths and returns the run to
-inspection — or, when it names drift, returns the blocked diagnostic whatever
-else it names, because no inspection changes what the selector resolves to —
-and only its zero exit reaches `finish`.
+the verdict: exit 1 naming only unaccounted paths returns the run to
+inspection; exit 1 naming drift, an unexpected subject, or a non-final
+required unit returns the blocked diagnostic whatever else it names, because
+no inspection changes what the selector resolves to and the append-only run
+revises neither an accepted subject nor an accepted status; and only its zero
+exit reaches `finish`.
 
 </vacuous_reconciliation>
 

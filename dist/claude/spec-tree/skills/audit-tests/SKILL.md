@@ -58,9 +58,9 @@ Classify bindings by what they choose. Observation aliases, actual-result bindin
 
 <audit_workflow>
 
-Use `$ARGUMENTS` as the spec-node path or evidence scope, preserving any supplied language partitions and completed composition results. Resolve evidence paths to their governing node or lowest common ancestor before context loading; never infer a target from adjacent conversation.
+Bind the spec-node path or evidence scope: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the target is the one the request text carries, and the empty substitution binds nothing. Preserve any supplied language partitions and completed composition results. Resolve evidence paths to their governing node or lowest common ancestor before context loading; never infer a target from adjacent conversation.
 
-If the supplied target is empty or whitespace-only, return `REJECTED` with only `gate-1-assertion` as `FAIL`: one finding with `id: "f-001"`, this skill's file as `file`, `line: null`, `assertion: "missing target"`, `property: "evidence-chain-completeness"`, `rule: "missing-target"`, `severity: "REJECT"`, a message naming the required node or evidence scope, and `remediation_target: "language-partition"`. Set `target` to the supplied string and both evidence inventory arrays to empty; set `metadata.branch` to JSON `null`. Gate 2 has no established language applicability and is omitted.
+If the request carries no target, return `REJECTED` with only `gate-1-assertion` as `FAIL`: one finding with `id: "f-001"`, this skill's file as `file`, `line: null`, `assertion: "missing target"`, `property: "evidence-chain-completeness"`, `rule: "missing-target"`, `severity: "REJECT"`, a message naming the required node or evidence scope, and `remediation_target: "language-partition"`. Set `target` to the supplied string and both evidence inventory arrays to empty; set `metadata.branch` to JSON `null`. Gate 2 has no established language applicability and is omitted.
 
 <step name="load_standards">
 

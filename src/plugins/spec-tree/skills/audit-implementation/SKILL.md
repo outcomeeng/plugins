@@ -45,9 +45,6 @@ Run these stages in order. Each names what holds before the next begins, and
    identities unchanged for the rest of the run.
 2. **Open the run.** Start the run per `<verification_run_contract>` before any
    project inspection or standards load, so every later stage belongs to it.
-   The resolver pipes the resolved scope — including its complete
-   `changed_paths` — into `run start --input stdin`, so the run's own first
-   event carries the expected path set before any narrowing can occur.
 3. **Load.** Read each discovered governing node's context, each concern's
    governing standards, and the audited repository's declared `spx/local/`
    overlays.
@@ -75,10 +72,12 @@ Run these stages in order. Each names what holds before the next begins, and
    unchanged. The reconciler reads the run's sealed start inventory — with an
    advisory run's `live_paths` beside it — and its recorded units, and emits
    `unaccounted`, `unexpected`, `drifted`, and `nonfinal`. Exit 0 reaches
-   `finish`. Exit 1 with a non-empty `drifted` returns the `<verdict_format>`
-   blocked diagnostic naming the drift, whatever else the verdict carries; a
-   new run addresses the new head. Exit 1 with `drifted` empty returns the run
-   to stage 5 or 6 for its remaining rows. Exit 2 is a command failure reported
+   `finish`. Exit 1 with a non-empty `drifted`, `unexpected`, or `nonfinal`
+   returns the `<verdict_format>` blocked diagnostic naming that field,
+   whatever else the verdict carries: no inspection repairs drift, an accepted
+   subject cannot be removed, and an accepted required status cannot be
+   revised, so a new run addresses the head. Exit 1 with only `unaccounted`
+   returns the run to stage 5 or 6 for its remaining rows. Exit 2 is a command failure reported
    under `<verdict_format>`. The referent is the sealed inventory, never the
    plan the run driver holds; `<vacuous_reconciliation>` in the failure
    reference carries the reasoning.
