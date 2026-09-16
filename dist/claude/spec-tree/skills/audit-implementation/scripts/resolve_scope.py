@@ -85,6 +85,9 @@ class ReconcileField(StrEnum):
 
 
 def _provider() -> ModuleType:
+    cached = sys.modules.get("changeset_scope")
+    if cached is not None:
+        return cached
     skills = pathlib.Path(__file__).resolve().parents[2]
     path = skills / "scope-changeset" / "scripts" / "changeset_scope.py"
     spec = importlib.util.spec_from_file_location("changeset_scope", path)

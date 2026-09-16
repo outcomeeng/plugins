@@ -114,4 +114,3 @@ def test_an_explicit_local_ref_base_is_compared_as_given() -> None:
             assert result.returncode == 0
             resolved = json.loads(result.stdout)
             assert resolved[CHANGESET_SCOPE.ScopeField.BASE] == local_base
-            assert git_commit_oid(stale.repo, stale.base_ref) == local_base

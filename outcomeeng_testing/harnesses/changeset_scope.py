@@ -247,8 +247,8 @@ def _initialize_changeset_repo(
     return scenario
 
 
-ORIGIN_REMOTE_NAME = "origin"
-ORIGIN_BARE_DIRECTORY = "origin.git"
+ORIGIN_REMOTE_NAME = str(CHANGESET_SCOPE_CONTRACT.ORIGIN_REMOTE_NAME)
+ORIGIN_BARE_DIRECTORY = f"{ORIGIN_REMOTE_NAME}.git"
 
 
 def _origin_bare_path(repo: pathlib.Path) -> pathlib.Path:

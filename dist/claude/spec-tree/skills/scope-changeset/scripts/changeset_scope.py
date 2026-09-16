@@ -49,6 +49,7 @@ BRANCH_REF_PATH_SEPARATOR = cast(str, _CONTRACT["BRANCH_REF_PATH_SEPARATOR"])
 BRANCH_SLUG_PATH_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_PATH_SUBSTITUTE"])
 BRANCH_SLUG_DOT_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_DOT_SUBSTITUTE"])
 BRANCH_SLUG_DOTDOT_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_DOTDOT_SUBSTITUTE"])
+ORIGIN_REMOTE_NAME = cast(str, _CONTRACT["ORIGIN_REMOTE_NAME"])
 ORIGIN_HEAD_REF_PREFIX = cast(str, _CONTRACT["ORIGIN_HEAD_REF_PREFIX"])
 ORIGIN_HEAD_REF = cast(str, _CONTRACT["ORIGIN_HEAD_REF"])
 ORIGIN_REF_PREFIX = cast(str, _CONTRACT["ORIGIN_REF_PREFIX"])
@@ -218,7 +219,7 @@ def require_current_base(
                 "git",
                 "fetch",
                 "--quiet",
-                "origin",
+                ORIGIN_REMOTE_NAME,
                 f"+refs/heads/{bare_base}:{ORIGIN_HEAD_REF_PREFIX}{bare_base}",
             ],
             cwd=repo,

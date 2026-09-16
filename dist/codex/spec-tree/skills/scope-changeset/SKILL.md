@@ -72,8 +72,10 @@ verifies composes them directly.
 
 The focused scope suites exercise stale local bases, explicit ranges, a branch
 other than the checked-out branch, concrete endpoint identities, malformed
-ranges, absent remote-base configuration, and a nonexistent `--repo` path
-through the shipped resolver CLI.
+ranges, absent remote-base configuration, a nonexistent `--repo` path, a head
+behind the fetched base, a lagging local remote-tracking ref the fetch
+corrects, a symbolic `origin/HEAD` range base, an explicit local-ref range
+base, and a current head through the shipped resolver CLI.
 
 </selector_resolution>
 

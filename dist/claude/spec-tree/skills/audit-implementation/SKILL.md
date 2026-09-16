@@ -437,8 +437,8 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 When the run completes, return the exact run token and rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
 
 Return BLOCKED for three causes: target preparation fails before `spx
-verification run start` — a missing selector or identity field named, a failed
-command, or the resolver's stale-base refusal — SPX rejects a command, or a
+verification run start` (a missing selector or identity field, a failed
+command, or the resolver's stale-base refusal), SPX rejects a command, or a
 required unit cannot reach a final status after the run started. Use the
 complete diagnostic below; preparation failures use `runToken: not-started`,
 `payloadSource: none`, and `payloadKey: none`.

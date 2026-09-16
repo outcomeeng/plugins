@@ -16,7 +16,7 @@ Rejected: keeping the derivation in the audit skill with re-exports — it leave
 
 ### Testing
 
-- ALWAYS: resolving a committed selector fetches the base's remote-tracking ref before comparing, so the refusal reads the remote's tip rather than a stale local remote-tracking ref ([compliance])
+- ALWAYS: resolving a committed selector whose base is git-derived or remote-tracking fetches that remote-tracking ref before comparing, so the refusal reads the remote's tip rather than a stale local remote-tracking ref ([compliance])
 - ALWAYS: a head whose merge base with the fetched base tip is not that tip is refused with a dedicated exit code and a diagnostic naming the tip, the merge base, and the count of base commits the head lacks, and no scope is emitted ([compliance])
 - ALWAYS: base synchronization and merge-transport classification resolve through the primitives without the refusal — one is the remedy, the other partitions paths rather than verifying them ([compliance])
 
