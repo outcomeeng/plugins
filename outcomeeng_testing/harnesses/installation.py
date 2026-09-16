@@ -27,6 +27,8 @@ from outcomeeng.distribution.agents import (
 from outcomeeng.distribution.build import render_text
 from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
+    CLAUDE_DIST_RELATIVE,
+    DIST_CODEX_PLUGINS_DIR,
     PLUGIN_NAME_VARIABLE,
     Target,
 )
@@ -50,6 +52,7 @@ from outcomeeng.distribution.installation import (
     CANONICAL_MARKETPLACE_SOURCE,
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
+    CHECKOUT_OPTION,
     CLAUDE_CATALOG_PATH,
     CLAUDE_MARKETPLACE_LIST_COMMAND,
     CLAUDE_CONFIG_ENV,
@@ -88,6 +91,7 @@ from outcomeeng.distribution.installation import (
     InstallationMode,
     InstallationPlan,
     InstallationReport,
+    JSON_OUTPUT_OPTION,
     MARKETPLACE_NAME,
     Operation,
     PathlessInstallRecord,
@@ -99,6 +103,7 @@ from outcomeeng.distribution.installation import (
     SourceAction,
     SPEC_TREE_PLUGIN,
     STATE_ENV_NAMES,
+    STATE_ROOT_OPTION,
     build_isolated_installation_plan,
     build_persistent_installation_plan,
     build_persistent_preflight,
@@ -1287,7 +1292,7 @@ def observe_first_persistent_cli() -> PersistentCliObservation:
         stderr = StringIO()
         with redirect_stdout(stdout), redirect_stderr(stderr):
             exit_code = main(
-                ("--checkout", str(mirror), "--json"),
+                (CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION),
                 base_environment=environment,
                 runner=runner,
             )
@@ -1842,7 +1847,7 @@ def observe_inspection_failure() -> FailureObservation:
         stderr = StringIO()
         with redirect_stdout(stdout), redirect_stderr(stderr):
             exit_code = main(
-                ("--checkout", str(mirror), "--json"),
+                (CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION),
                 base_environment=environment,
                 runner=runner,
             )
@@ -1875,11 +1880,11 @@ def observe_first_failure(
         )
         runner = RecordingRunner(failed_operation=operation, failed_agent=agent)
         environment = dict(plan.commands[0].environment)
-        arguments = ["--checkout", str(plan.roots.checkout), "--json"]
+        arguments = [CHECKOUT_OPTION, str(plan.roots.checkout), JSON_OUTPUT_OPTION]
         if plan.mode is InstallationMode.ISOLATED:
             if plan.roots.state is None:
                 raise RuntimeError("isolated plan must declare its state root")
-            arguments.extend(("--state-root", str(plan.roots.state)))
+            arguments.extend((STATE_ROOT_OPTION, str(plan.roots.state)))
             command_sequence = plan.commands
         else:
             preflight = build_persistent_preflight(plan.roots.checkout, environment)
@@ -2416,11 +2421,11 @@ def observe_codex_subagent_discovery(
             (
                 JUST_BINARY,
                 "install-marketplace",
-                "--checkout",
+                CHECKOUT_OPTION,
                 str(mirror),
-                "--state-root",
+                STATE_ROOT_OPTION,
                 str(state),
-                "--json",
+                JSON_OUTPUT_OPTION,
             ),
             cwd=checkout,
             env=child_environment,
@@ -2582,8 +2587,10 @@ def mirror_installation_inputs(source: Path, destination: Path) -> None:
         target = destination / relative_path
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source / relative_path, target)
-    shutil.copytree(source / "dist/codex", destination / "dist/codex")
-    shutil.copytree(source / "dist/claude", destination / "dist/claude")
+    shutil.copytree(
+        source / DIST_CODEX_PLUGINS_DIR, destination / DIST_CODEX_PLUGINS_DIR
+    )
+    shutil.copytree(source / CLAUDE_DIST_RELATIVE, destination / CLAUDE_DIST_RELATIVE)
 
 
 def _write_catalog_selection(path: Path, selected: frozenset[str]) -> None:
@@ -2697,11 +2704,11 @@ def _run_recipe(
         (
             JUST_BINARY,
             "install-marketplace",
-            "--checkout",
+            CHECKOUT_OPTION,
             str(mirror),
-            "--state-root",
+            STATE_ROOT_OPTION,
             str(state),
-            "--json",
+            JSON_OUTPUT_OPTION,
         ),
         cwd=source_checkout,
         env=dict(environment),
@@ -2720,9 +2727,9 @@ def _run_persistent_recipe(
         (
             JUST_BINARY,
             "install-marketplace",
-            "--checkout",
+            CHECKOUT_OPTION,
             str(mirror),
-            "--json",
+            JSON_OUTPUT_OPTION,
         ),
         cwd=source_checkout,
         env=dict(environment),
@@ -2916,7 +2923,7 @@ def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
     definition collection there cannot narrow the expectation with it.
     """
     shipped: dict[str, bytes] = {}
-    definitions = (checkout / "dist/codex").glob("*/skills/*/agents/*.toml")
+    definitions = (checkout / DIST_CODEX_PLUGINS_DIR).glob("*/skills/*/agents/*.toml")
     for definition in sorted(definitions):
         if definition.name in shipped:
             raise RuntimeError(

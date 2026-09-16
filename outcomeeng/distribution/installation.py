@@ -154,6 +154,12 @@ REGISTRY_SOURCE_DIAGNOSTIC = "Claude Code marketplace registry source mismatch"
 PROJECT_SOURCE_DIAGNOSTIC = "Claude Code project marketplace source mismatch"
 UNREADABLE_SETTINGS_DIAGNOSTIC = "invalid Claude Code settings"
 CODEX_SOURCE_DIAGNOSTIC = "Codex marketplace source mismatch"
+CHECKOUT_OPTION = "--checkout"
+"""The installer option naming the invocation checkout."""
+STATE_ROOT_OPTION = "--state-root"
+"""The installer option selecting isolated mode's disposable state root."""
+JSON_OUTPUT_OPTION = "--json"
+"""The installer option requesting the JSON report on stdout."""
 PATHLESS_LISTING_ENTRY_DIAGNOSTIC = (
     "claude plugin listing entry {index} at {scope} scope names no project path"
 )
@@ -1993,9 +1999,9 @@ def main(
 ) -> int:
     """Install persistently by default or verify in an explicit isolated root."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--checkout", type=Path, default=Path.cwd())
-    parser.add_argument("--state-root", type=Path)
-    parser.add_argument("--json", action="store_true", dest="json_output")
+    parser.add_argument(CHECKOUT_OPTION, type=Path, default=Path.cwd())
+    parser.add_argument(STATE_ROOT_OPTION, type=Path)
+    parser.add_argument(JSON_OUTPUT_OPTION, action="store_true", dest="json_output")
     arguments = parser.parse_args(argv)
     environment = os.environ if base_environment is None else base_environment
     command_runner = _real_runner if runner is None else runner
@@ -2522,6 +2528,9 @@ __all__ = [
     "EXTRA_MARKETPLACES_FIELD",
     "CLAUDE_PROJECT_SETTINGS_PATH",
     "USER_SCOPE_COLLISION_DIAGNOSTIC",
+    "CHECKOUT_OPTION",
+    "STATE_ROOT_OPTION",
+    "JSON_OUTPUT_OPTION",
     "CLAUDE_SOURCE_FIELD",
     "CODEX_AGENTS_PATH",
     "CODEX_CATALOG_PATH",
