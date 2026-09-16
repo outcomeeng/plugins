@@ -106,6 +106,18 @@ CLAUDE_PLUGIN_ENABLED_FIELD = "enabled"
 CLAUDE_PLUGIN_SCOPE_FIELD = "scope"
 CLAUDE_PLUGIN_PROJECT_PATH_FIELD = "projectPath"
 CLAUDE_PLUGIN_VERSION_FIELD = "version"
+CLAUDE_INSTALLED_PLUGINS_RELATIVE = Path("plugins") / "installed_plugins.json"
+"""Where Claude Code keeps its install-record document beneath its configuration directory.
+
+The installer reads records only through the agent's listing and never writes
+this document; the path and the field names below are the agent's own
+vocabulary for the state the listing reports, owned here so no other module
+spells them.
+"""
+CLAUDE_INSTALLED_PLUGINS_FIELD = "plugins"
+CLAUDE_INSTALLED_RECORD_VERSION_FIELD = "version"
+CLAUDE_INSTALLED_RECORD_COMMIT_FIELD = "gitCommitSha"
+CLAUDE_INSTALLED_RECORD_PATH_FIELD = "installPath"
 CLAUDE_PROJECT_SCOPE = "project"
 CLAUDE_LOCAL_SCOPE = "local"
 CLAUDE_USER_SCOPE = "user"
@@ -1238,36 +1250,38 @@ def _claude_install_record(
 
 
 def compare_install_listings(
-    planned: Sequence[ClaudeInstallRecord],
+    refreshed: Sequence[ClaudeInstallRecord],
     after: Sequence[ClaudeInstallRecord | PathlessInstallRecord],
 ) -> RecordDrift:
-    """Pair every planned record with its closing version and list the rest.
+    """Pair every refreshed record with its closing version and list the rest.
 
-    A pure comparison over typed records: each planned record's version before
-    is the one its preflight listing entry carried, its version after is the
-    one the closing listing carries for the same plugin, scope, and project
-    path, and every project- or local-scope record the closing listing reports
-    outside the planned set is unrefreshed. The comparison reads nothing but
-    its arguments.
+    A pure comparison over typed records: each refreshed record's version
+    before is the one its preflight listing entry carried, its version after
+    is the one the closing listing carries for the same plugin, scope, and
+    project path, and every project- or local-scope record the closing listing
+    reports outside the refreshed set is unrefreshed — a record the plan
+    warned about, one whose plugin turned out pending publication, or one
+    another agent session wrote between the two reads. The comparison reads
+    nothing but its arguments.
     """
     closing = {
         record: record for record in after if isinstance(record, ClaudeInstallRecord)
     }
-    refreshed = tuple(
+    refreshes = tuple(
         RecordRefresh(
             record=record,
             version_before=record.version,
             version_after=(closing[record].version if record in closing else None),
         )
-        for record in planned
+        for record in refreshed
     )
-    planned_identities = frozenset(planned)
+    refreshed_identities = frozenset(refreshed)
     unrefreshed = tuple(
         record
         for record in closing
-        if record.scope in CLAUDE_REFRESH_SCOPES and record not in planned_identities
+        if record.scope in CLAUDE_REFRESH_SCOPES and record not in refreshed_identities
     )
-    return RecordDrift(refreshed=refreshed, unrefreshed=unrefreshed)
+    return RecordDrift(refreshed=refreshes, unrefreshed=unrefreshed)
 
 
 def claude_refresh_records(
@@ -2068,7 +2082,9 @@ def execute_installation(
         results=tuple(results),
         pending_publication=tuple(pending),
         agent_home=agent_home,
-        record_drift=_record_drift(plan, tuple(results), len(completed)),
+        record_drift=_record_drift(
+            plan, tuple(results), len(completed), tuple(pending)
+        ),
     )
 
 
@@ -2076,17 +2092,30 @@ def _record_drift(
     plan: InstallationPlan,
     results: tuple[CommandResult, ...],
     completed: int,
+    pending: tuple[PendingPublication, ...],
 ) -> RecordDrift | None:
-    """Compare the plan against the Claude closing listing, when one ran.
+    """Compare a persistent plan against the Claude closing listing.
 
-    The closing listing is the plan's own trailing Claude listing command; its
-    result sits at the same offset among the results as the command among the
-    plan's commands, after the inspection results the caller completed first.
+    The closing listing is the persistent machine-wide refresh's postcondition
+    read, so an isolated plan carries no drift. The listing is the plan's own
+    trailing Claude listing command; its result sits at the same offset among
+    the results as the command among the plan's commands, after the
+    inspection results the caller completed first. A planned record whose
+    plugin is pending publication received no refresh and is compared as
+    unrefreshed.
     """
+    if plan.mode is not InstallationMode.PERSISTENT:
+        return None
+    unpublished = frozenset(
+        entry.plugin for entry in pending if entry.agent is Agent.CLAUDE
+    )
+    refreshed = tuple(
+        record for record in plan.claude_records if record.plugin not in unpublished
+    )
     for offset, command in enumerate(plan.commands):
         if command.agent is Agent.CLAUDE and command.operation is Operation.PLUGIN_LIST:
             return compare_install_listings(
-                plan.claude_records,
+                refreshed,
                 claude_install_records(results[completed + offset].stdout),
             )
     return None
@@ -2558,7 +2587,7 @@ def report_document(report: InstallationReport) -> dict[str, object]:
                 ReportField.PLUGIN: record.plugin,
                 ReportField.SCOPE: record.scope,
                 ReportField.PROJECT_PATH: str(record.project_path),
-                ReportField.VERSION_BEFORE: _version_before(report, record),
+                ReportField.VERSION_BEFORE: record.version,
                 ReportField.VERSION_AFTER: _version_after(report, record),
             }
             for record in report.refreshed_claude_records()
@@ -2620,10 +2649,6 @@ def _refresh_of(
         if refresh.record == record:
             return refresh
     return None
-
-
-def _version_before(report: InstallationReport, record: ClaudeInstallRecord) -> str:
-    return record.version
 
 
 def _version_after(
@@ -2715,6 +2740,11 @@ __all__ = [
     "OUT_OF_SCOPE_RECORD_WARNING",
     "PATHLESS_OUT_OF_SCOPE_RECORD_WARNING",
     "UNCATALOGED_RECORD_WARNING",
+    "CLAUDE_INSTALLED_PLUGINS_FIELD",
+    "CLAUDE_INSTALLED_PLUGINS_RELATIVE",
+    "CLAUDE_INSTALLED_RECORD_COMMIT_FIELD",
+    "CLAUDE_INSTALLED_RECORD_PATH_FIELD",
+    "CLAUDE_INSTALLED_RECORD_VERSION_FIELD",
     "CLAUDE_PLUGIN_VERSION_FIELD",
     "ClaudeInstallRecord",
     "PathlessInstallRecord",

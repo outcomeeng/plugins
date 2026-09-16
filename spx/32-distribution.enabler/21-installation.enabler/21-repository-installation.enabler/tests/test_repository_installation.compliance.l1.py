@@ -824,8 +824,6 @@ def test_a_persistent_run_reads_the_listing_once_before_and_once_after_execution
         if command.agent is Agent.CLAUDE
     ]
     assert trailing == []
-    assert drifted.report.record_drift is not None
-    assert len(drifted.report.record_drift.unrefreshed) >= 1
 
 
 def test_a_record_the_closing_listing_leaves_stale_is_reported_at_its_listed_version() -> (

@@ -56,6 +56,11 @@ from outcomeeng.distribution.installation import (
     CLAUDE_CATALOG_PATH,
     CLAUDE_MARKETPLACE_LIST_COMMAND,
     CLAUDE_CONFIG_ENV,
+    CLAUDE_INSTALLED_PLUGINS_FIELD,
+    CLAUDE_INSTALLED_PLUGINS_RELATIVE,
+    CLAUDE_INSTALLED_RECORD_COMMIT_FIELD,
+    CLAUDE_INSTALLED_RECORD_PATH_FIELD,
+    CLAUDE_INSTALLED_RECORD_VERSION_FIELD,
     CLAUDE_ENABLED_PLUGINS_FIELD,
     CLAUDE_LOCAL_SCOPE,
     CLAUDE_PLUGIN_ENABLED_FIELD,
@@ -632,6 +637,12 @@ class RecordingRunner:
     failed_operation: Operation | None = None
     installed: Mapping[Agent, frozenset[str]] | None = None
     failed_agent: Agent | None = None
+    unpublished: frozenset[str] = frozenset()
+    """Plugins whose plugin operations fail with the captured unpublished wording.
+
+    Stage 5 Failure simulation: a canonical marketplace lacks a plugin only
+    while it is unpublished, a state that cannot be produced on demand.
+    """
     closing_listing: str | None = None
     """The Claude listing returned after execution; None repeats the inventory listing.
 
@@ -650,6 +661,18 @@ class RecordingRunner:
         exit_code = (
             1 if command.operation is self.failed_operation and designated_agent else 0
         )
+        if (
+            command.operation in PLUGIN_OPERATIONS
+            and command.plugin in self.unpublished
+        ):
+            return CommandResult(
+                argv=command.argv,
+                exit_code=1,
+                stdout="",
+                stderr=captured_unpublished_plugin_stderr(
+                    command.agent, command.plugin
+                ),
+            )
         if (
             self.closing_listing is not None
             and command.agent is Agent.CLAUDE
@@ -670,16 +693,6 @@ BASE_REF_BRANCH = "main"
 BASE_REF = "origin/main"
 LISTED_VERSION = recorded_version(0)
 """The one version every entry of a catalog-wide controlled listing carries."""
-CLAUDE_INSTALLED_PLUGINS_RELATIVE = Path("plugins") / "installed_plugins.json"
-"""Where Claude Code keeps its install records beneath its configuration directory."""
-INSTALLED_PLUGINS_FIELD = "plugins"
-"""The install-record map inside Claude Code's install-record document."""
-INSTALLED_RECORD_VERSION_FIELD = "version"
-"""The version an install-record document entry carries."""
-INSTALLED_RECORD_COMMIT_FIELD = "gitCommitSha"
-"""The marketplace commit an install-record document entry was installed from."""
-INSTALLED_RECORD_PATH_FIELD = "installPath"
-"""The cache directory an install-record document entry points at."""
 SEEDED_OLDER_COMMIT_DISTANCE = 100
 """How many first-parent commits behind the checkout head the seeded record is placed."""
 SEEDED_OLDER_VERSION = recorded_version(0)
@@ -915,8 +928,14 @@ class RecordRefreshObservation:
     attempted: tuple[InstallationCommand, ...]
 
 
-def observe_record_refresh_plan() -> RecordRefreshObservation:
-    """Plan a persistent run against records spread across scopes and paths."""
+def observe_record_refresh_plan(
+    unpublished: frozenset[str] = frozenset(),
+) -> RecordRefreshObservation:
+    """Plan a persistent run against records spread across scopes and paths.
+
+    `unpublished` names plugins whose native update fails with the captured
+    unpublished wording, so their records are planned and pending.
+    """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
@@ -992,7 +1011,8 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             )
         closing_cases = generated_closing_listing(cases, appearing.resolve())
         runner = RecordingRunner(
-            closing_listing=json.dumps([entry for entry, _ in closing_cases])
+            unpublished=unpublished,
+            closing_listing=json.dumps([entry for entry, _ in closing_cases]),
         )
         report = execute_installation(plan, runner)
         return RecordRefreshObservation(
@@ -2213,7 +2233,7 @@ def _seed_older_record_version(
     )
     document = cast("dict[str, object]", json.loads(document_path.read_text()))
     records = cast(
-        "dict[str, list[dict[str, object]]]", document[INSTALLED_PLUGINS_FIELD]
+        "dict[str, list[dict[str, object]]]", document[CLAUDE_INSTALLED_PLUGINS_FIELD]
     )
     resolved = checkout.resolve()
     for entry in records[marketplace_plugin_identifier(plugin)]:
@@ -2222,13 +2242,13 @@ def _seed_older_record_version(
             and Path(cast("str", entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD])).resolve()
             == resolved
         ):
-            current_cache = Path(cast("str", entry[INSTALLED_RECORD_PATH_FIELD]))
+            current_cache = Path(cast("str", entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD]))
             older_cache = current_cache.with_name(SEEDED_OLDER_VERSION)
             if not older_cache.exists():
                 shutil.copytree(current_cache, older_cache)
-            entry[INSTALLED_RECORD_VERSION_FIELD] = SEEDED_OLDER_VERSION
-            entry[INSTALLED_RECORD_COMMIT_FIELD] = older_commit
-            entry[INSTALLED_RECORD_PATH_FIELD] = str(older_cache)
+            entry[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = SEEDED_OLDER_VERSION
+            entry[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] = older_commit
+            entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(older_cache)
             document_path.write_text(json.dumps(document, indent=2) + "\n")
             return ClaudeInstallRecord(
                 plugin=plugin,

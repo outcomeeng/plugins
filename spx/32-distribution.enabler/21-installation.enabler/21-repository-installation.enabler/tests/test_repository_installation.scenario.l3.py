@@ -88,7 +88,7 @@ def test_real_persistent_run_refreshes_a_second_checkout_at_local_scope() -> Non
         for record in document[ReportField.CLAUDE_RECORDS]
     }
     assert {(plugin, scope, str(path)) for plugin, scope, path in expected} <= refreshed
-    assert set(observation.records_after) == set(observation.records_before)
+    assert observation.records_after == observation.records_before
     assert (
         observation.invocation_activation_after
         == observation.invocation_activation_before

@@ -12,6 +12,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
     CLAUDE_PLUGIN_VERSION_FIELD,
+    CLAUDE_REFRESH_SCOPES,
     NONCANONICAL_SOURCE_WARNING,
     OUT_OF_SCOPE_RECORD_WARNING,
     PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
@@ -144,8 +145,15 @@ def test_absent_plugin_wording_is_pending_only_for_persistent_plugin_operations(
         assert observation.failure.command.operation is operation
 
 
-def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None:
-    observation = observe_record_refresh_plan()
+@pytest.mark.parametrize(
+    "unpublished",
+    [frozenset(), frozenset({sorted(committed_catalog_plugin_names())[0]})],
+    ids=["all-published", "one-pending"],
+)
+def test_every_claude_install_record_maps_to_one_update_or_one_warning(
+    unpublished: frozenset[str],
+) -> None:
+    observation = observe_record_refresh_plan(unpublished)
     updates = [
         command
         for command in observation.plan.commands
@@ -226,5 +234,35 @@ def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None
             entry[CLAUDE_PLUGIN_SCOPE_FIELD],
             entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
         )
+        if key[0] in unpublished:
+            assert key not in reported, key
+            continue
         assert reported[key] == (entry[CLAUDE_PLUGIN_VERSION_FIELD], closing[key]), key
-    assert len(reported) == len(updates)
+    assert len(reported) == len(updates) - sum(
+        1 for command in updates if command.plugin in unpublished
+    )
+
+    unrefreshed = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): record[ReportField.VERSION]
+        for record in observation.document[ReportField.UNREFRESHED_RECORDS]
+    }
+    expected_unrefreshed = {
+        (
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]),
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+            entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
+        ): entry[CLAUDE_PLUGIN_VERSION_FIELD]
+        for entry, disposition in observation.closing_cases
+        if CLAUDE_PLUGIN_PROJECT_PATH_FIELD in entry
+        and entry[CLAUDE_PLUGIN_SCOPE_FIELD] in CLAUDE_REFRESH_SCOPES
+        and marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]) is not None
+        and (
+            disposition in {ClosingDisposition.KEPT, ClosingDisposition.APPEARED}
+            or marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]) in unpublished
+        )
+    }
+    assert unrefreshed == expected_unrefreshed
