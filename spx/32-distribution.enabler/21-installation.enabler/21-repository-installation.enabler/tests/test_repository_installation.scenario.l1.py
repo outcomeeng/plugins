@@ -5,6 +5,7 @@ from typing import cast
 
 from outcomeeng.distribution.installation import (
     Agent,
+    CLAUDE_INSTALLED_PLUGINS_FIELD,
     CLAUDE_INSTALLED_RECORD_COMMIT_FIELD,
     CLAUDE_INSTALLED_RECORD_PATH_FIELD,
     CLAUDE_INSTALLED_RECORD_VERSION_FIELD,
@@ -19,7 +20,6 @@ from outcomeeng.distribution.installation import (
     PATHLESS_LISTING_ENTRY_WARNING,
     ReportField,
     SPEC_TREE_PLUGIN,
-    UNDECLARED_SOURCE_DIAGNOSTIC,
     UNREADABLE_SETTINGS_DIAGNOSTIC,
     marketplace_plugin_name,
     report_document,
@@ -337,7 +337,7 @@ def test_a_record_whose_directory_is_gone_is_rewritten_and_never_named_by_a_comm
             item
             for item in cast(
                 "dict[str, list[dict[str, object]]]",
-                observation.record_file_after["plugins"],
+                observation.record_file_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
             )[entry[CLAUDE_PLUGIN_ID_FIELD]]
             if item.get(CLAUDE_PLUGIN_SCOPE_FIELD) == entry[CLAUDE_PLUGIN_SCOPE_FIELD]
             and item.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
@@ -374,12 +374,8 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
     observation = observe_unreadable_source()
 
     assert observation.bootstrap_error is not None
-    assert observation.bootstrap_error.startswith(UNREADABLE_SETTINGS_DIAGNOSTIC) or (
-        observation.bootstrap_error.startswith(UNDECLARED_SOURCE_DIAGNOSTIC)
-    )
-    assert str(observation.settings_path) in observation.bootstrap_error or (
-        observation.bootstrap_error.startswith(UNDECLARED_SOURCE_DIAGNOSTIC)
-    )
+    assert observation.bootstrap_error.startswith(UNREADABLE_SETTINGS_DIAGNOSTIC)
+    assert str(observation.settings_path) in observation.bootstrap_error
     assert [
         command.operation
         for command in observation.refresh_commands
@@ -424,4 +420,11 @@ def test_a_record_written_between_the_listing_reads_is_reported_and_fails_the_ru
         for command in observation.attempted
         for argument in (*command.argv, str(command.cwd))
     )
+    claude_operations = [
+        command.operation
+        for command in observation.attempted
+        if command.agent is Agent.CLAUDE
+    ]
+    assert claude_operations.count(Operation.PLUGIN_LIST) == 1
+    assert claude_operations[-1] is Operation.PLUGIN_LIST
     assert observation.exit_code != 0

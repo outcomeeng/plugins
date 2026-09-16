@@ -12,6 +12,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_PROJECT_PATH_FIELD,
     CLAUDE_PLUGIN_SCOPE_FIELD,
     CLAUDE_PLUGIN_VERSION_FIELD,
+    CLAUDE_REFRESH_SCOPES,
     CODEX_CATALOG_PATH,
     CODEX_PLUGIN_ENTRIES_FIELD,
     InstallationMode,
@@ -261,6 +262,34 @@ def test_every_claude_install_record_maps_to_one_update_one_rewrite_or_one_warni
             observation.target_version,
         ), key
     assert len(reported) == expected_reported
+    unrefreshed = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): record[ReportField.VERSION]
+        for record in cast(
+            "list[dict[str, str]]",
+            observation.document[ReportField.UNREFRESHED_RECORDS],
+        )
+    }
+    assert unrefreshed == {
+        (
+            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], marketplace),
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+            entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
+        ): entry[CLAUDE_PLUGIN_VERSION_FIELD]
+        for entry, disposition in observation.cases
+        if CLAUDE_PLUGIN_PROJECT_PATH_FIELD in entry
+        and entry[CLAUDE_PLUGIN_SCOPE_FIELD] in CLAUDE_REFRESH_SCOPES
+        and marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], marketplace)
+        is not None
+        and (
+            disposition not in MOVED_DISPOSITIONS
+            or marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD], marketplace)
+            in unpublished
+        )
+    }
 
     off_target = {
         (
@@ -292,6 +321,11 @@ def test_each_registry_entry_shape_maps_to_the_source_the_run_refreshes_from() -
     for payload, shape, expected_source, expected_action in observation.rows:
         registered = claude_registered_marketplace(payload, observation.marketplace)
         plan = observation.plans[shape]
+        document = observation.documents[shape]
+        assert document[ReportField.SOURCE] == (
+            observation.declared_source if expected_source is None else expected_source
+        ), shape
+        assert document[ReportField.MARKETPLACE] == observation.marketplace
         source_operations = [
             command
             for command in plan.commands

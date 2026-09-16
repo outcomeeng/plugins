@@ -25,6 +25,8 @@ from outcomeeng.distribution.installation import (
     CLAUDE_DIRECTORY_FIELD,
     CLAUDE_DIRECTORY_SOURCE_TYPE,
     CLAUDE_GITHUB_SOURCE_TYPE,
+    CLAUDE_GIT_SOURCE_TYPE,
+    CLAUDE_URL_FIELD,
     CLAUDE_MARKETPLACE_INSTALL_LOCATION_FIELD,
     CLAUDE_MARKETPLACE_NAME_FIELD,
     CLAUDE_REPOSITORY_FIELD,
@@ -439,8 +441,8 @@ class RegistryShape(StrEnum):
     """The shapes a Claude Code marketplace registry entry takes for one name."""
 
     GITHUB = "github"
+    GIT = "git"
     DIRECTORY = "directory"
-    OTHER = "other"
     ABSENT = "absent"
 
 
@@ -450,19 +452,14 @@ def generated_marketplace_registry_entries(
     """Every registry-entry shape with the source the run must use for it.
 
     Each row carries the listing payload, its shape, the source rendering the
-    run must report — the `owner/repo` of a GitHub entry, the path of a
-    directory entry, the entry's own JSON for any other shape, and None when
-    no entry exists — and whether the plan refreshes or adds the marketplace.
-    The construction law is Claude Code's own `marketplace add` argument
-    grammar, independent of the installer.
+    run must report — the `owner/repo` of a GitHub entry, the URL of a git
+    entry, the path of a directory entry, and None when no entry exists — and
+    whether the plan refreshes or adds the marketplace. The construction law
+    is Claude Code's own `marketplace add` argument grammar, which takes
+    exactly those three forms, independent of the installer.
     """
     github_repository = f"{marketplace}-org/{marketplace}-plugins"
-    other_entry = {
-        CLAUDE_MARKETPLACE_NAME_FIELD: marketplace,
-        CLAUDE_SOURCE_FIELD: "git",
-        "url": f"https://git.example/{marketplace}.git",
-        CLAUDE_MARKETPLACE_INSTALL_LOCATION_FIELD: str(clone),
-    }
+    git_url = f"https://git.example/{marketplace}.git"
     return (
         (
             json.dumps(
@@ -495,20 +492,18 @@ def generated_marketplace_registry_entries(
             SourceAction.REFRESH,
         ),
         (
-            json.dumps([other_entry]),
-            RegistryShape.OTHER,
             json.dumps(
-                {
-                    key: value
-                    for key, value in other_entry.items()
-                    if key
-                    not in (
-                        CLAUDE_MARKETPLACE_NAME_FIELD,
-                        CLAUDE_MARKETPLACE_INSTALL_LOCATION_FIELD,
-                    )
-                },
-                sort_keys=True,
+                [
+                    {
+                        CLAUDE_MARKETPLACE_NAME_FIELD: marketplace,
+                        CLAUDE_SOURCE_FIELD: CLAUDE_GIT_SOURCE_TYPE,
+                        CLAUDE_URL_FIELD: git_url,
+                        CLAUDE_MARKETPLACE_INSTALL_LOCATION_FIELD: str(clone),
+                    }
+                ]
             ),
+            RegistryShape.GIT,
+            git_url,
             SourceAction.REFRESH,
         ),
         (

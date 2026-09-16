@@ -296,15 +296,6 @@ class FailureObservation:
 
 
 @dataclass(frozen=True)
-class CollisionObservation:
-    """A user-scope collision, absent when the run was not rejected."""
-
-    settings_path: Path
-    error: str | None
-    attempted: tuple[InstallationCommand, ...]
-
-
-@dataclass(frozen=True)
 class SelectionRejectionObservation:
     """An invalid selection rejection and any read-only commands attempted."""
 
@@ -935,31 +926,46 @@ def _record_file_from_cases(
 ) -> dict[str, object]:
     """Build one install-record document whose entries are the generated cases.
 
-    Each entry points at the cache directory its recorded version names and
-    carries the fields Claude Code writes, so a rewrite that drops a field
-    is visible in the document afterwards.
+    The document's shape — its top-level fields and the fields Claude Code
+    writes beside the ones production names — is taken from the captured
+    real document, so no key outside production's vocabulary is declared
+    here; each entry then receives the case's scope, project path, recorded
+    version, the cache directory that version names, and a commit.
     """
     del marketplace
+    captured = cast(
+        "dict[str, object]",
+        json.loads(install_record_fixture_path().read_text(encoding="utf-8")),
+    )
+    captured_plugins = cast(
+        "dict[str, list[dict[str, object]]]", captured[CLAUDE_INSTALLED_PLUGINS_FIELD]
+    )
+    template = next(item for items in captured_plugins.values() for item in items)
     plugins: dict[str, list[dict[str, object]]] = {}
     for entry, _ in cases:
-        item: dict[str, object] = {
-            CLAUDE_PLUGIN_SCOPE_FIELD: entry[CLAUDE_PLUGIN_SCOPE_FIELD],
-            CLAUDE_INSTALLED_RECORD_PATH_FIELD: str(
-                cache_root
-                / entry[CLAUDE_PLUGIN_ID_FIELD].split(MARKETPLACE_IDENTIFIER_JOINER)[0]
-                / entry[CLAUDE_PLUGIN_VERSION_FIELD]
-            ),
-            CLAUDE_INSTALLED_RECORD_VERSION_FIELD: entry[CLAUDE_PLUGIN_VERSION_FIELD],
-            "installedAt": "2026-01-01T00:00:00.000Z",
-            "lastUpdated": "2026-01-01T00:00:00.000Z",
-            CLAUDE_INSTALLED_RECORD_COMMIT_FIELD: "1" * 40,
-        }
+        item = dict(template)
+        item.pop(CLAUDE_PLUGIN_PROJECT_PATH_FIELD, None)
+        item[CLAUDE_PLUGIN_SCOPE_FIELD] = entry[CLAUDE_PLUGIN_SCOPE_FIELD]
+        item[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(
+            cache_root
+            / entry[CLAUDE_PLUGIN_ID_FIELD].split(MARKETPLACE_IDENTIFIER_JOINER)[0]
+            / entry[CLAUDE_PLUGIN_VERSION_FIELD]
+        )
+        item[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = entry[CLAUDE_PLUGIN_VERSION_FIELD]
+        item[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] = "1" * 40
         if CLAUDE_PLUGIN_PROJECT_PATH_FIELD in entry:
             item[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] = entry[
                 CLAUDE_PLUGIN_PROJECT_PATH_FIELD
             ]
         plugins.setdefault(entry[CLAUDE_PLUGIN_ID_FIELD], []).append(item)
-    return {"version": 2, CLAUDE_INSTALLED_PLUGINS_FIELD: plugins}
+    return {
+        **{
+            key: value
+            for key, value in captured.items()
+            if key != CLAUDE_INSTALLED_PLUGINS_FIELD
+        },
+        CLAUDE_INSTALLED_PLUGINS_FIELD: plugins,
+    }
 
 
 def _serve_clone_versions(clone: Path, catalog: Sequence[str], version: str) -> None:
@@ -1280,6 +1286,8 @@ class RegistryShapeObservation:
 
     rows: tuple[tuple[str, RegistryShape, str | None, SourceAction], ...]
     plans: Mapping[RegistryShape, InstallationPlan]
+    documents: Mapping[RegistryShape, dict[str, object]]
+    """Each plan's report document after execution through the recording runner."""
     marketplace: str
     declared_source: str
     clone: Path
@@ -1294,12 +1302,14 @@ def observe_registry_shape_plan() -> RegistryShapeObservation:
         mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         clone = temporary_root / "clone"
-        clone.mkdir()
+        mirror_installation_inputs(checkout, clone)
         environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
         marketplace = preflight.roots.marketplace
         rows = generated_marketplace_registry_entries(marketplace, clone, mirror)
         plans: dict[RegistryShape, InstallationPlan] = {}
+        documents: dict[RegistryShape, dict[str, object]] = {}
         for payload, shape, _, _ in rows:
             plans[shape] = build_persistent_installation_plan(
                 preflight,
@@ -1314,9 +1324,22 @@ def observe_registry_shape_plan() -> RegistryShapeObservation:
                     Agent.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
                 ),
             )
+            documents[shape] = report_document(
+                execute_installation(
+                    plans[shape],
+                    RecordingRunner(
+                        installed={
+                            Agent.CLAUDE: frozenset({SPEC_TREE_PLUGIN}),
+                            Agent.CODEX: frozenset({SPEC_TREE_PLUGIN}),
+                        },
+                        clone=clone,
+                    ),
+                )
+            )
     return RegistryShapeObservation(
         rows=rows,
         plans=plans,
+        documents=documents,
         marketplace=marketplace,
         declared_source=DECLARED_CLAUDE_SOURCE,
         clone=clone,
@@ -1354,7 +1377,11 @@ class RecordRewriteObservation:
     warnings: tuple[InstallationWarning, ...]
     marketplace: str
     target: MarketplaceTarget
+    cache_root: Path
     sibling_files: tuple[str, ...]
+    inode_before: int
+    inode_after: int
+    """The document's inode before and after: a replace yields a new inode, an in-place write keeps it."""
 
 
 def observe_install_record_rewrite(
@@ -1371,6 +1398,7 @@ def observe_install_record_rewrite(
     document_path.parent.mkdir(parents=True)
     shutil.copy2(fixture, document_path)
     text_before = document_path.read_text(encoding="utf-8")
+    inode_before = document_path.stat().st_ino
     document_before = cast("dict[str, object]", json.loads(text_before))
     records = tuple(
         record
@@ -1393,6 +1421,7 @@ def observe_install_record_rewrite(
     )
     rewrite_install_records(document_path, rewrites, MARKETPLACE)
     text_after = document_path.read_text(encoding="utf-8")
+    inode_after = document_path.stat().st_ino
     return RecordRewriteObservation(
         document_before=document_before,
         document_after=cast("dict[str, object]", json.loads(text_after)),
@@ -1402,6 +1431,9 @@ def observe_install_record_rewrite(
         warnings=warnings,
         marketplace=MARKETPLACE,
         target=target,
+        cache_root=cache_root,
+        inode_before=inode_before,
+        inode_after=inode_after,
         sibling_files=tuple(
             sorted(entry.name for entry in document_path.parent.iterdir())
         ),
@@ -1967,36 +1999,6 @@ def observe_scope_split() -> ScopeSplitObservation:
         home_before=home_before,
         home_after=home_after,
     )
-
-
-def observe_claude_user_collision() -> CollisionObservation:
-    """Expose user-scope collision rejection before command execution."""
-    checkout = repository_root()
-    with TemporaryDirectory() as temporary_directory:
-        temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
-        mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
-        environment = _persistent_environment(temporary_root)
-        settings_path = temporary_root / "claude" / "settings.json"
-        settings_path.parent.mkdir(parents=True, exist_ok=True)
-        settings_path.write_text(
-            json.dumps(
-                claude_marketplace_settings(DECLARED_CLAUDE_SOURCE, MARKETPLACE)
-            ),
-            encoding="utf-8",
-        )
-        runner = RecordingRunner()
-        rejection: str | None = None
-        try:
-            execute_persistent_installation(mirror, environment, runner)
-        except ValueError as error:
-            rejection = str(error)
-        return CollisionObservation(
-            settings_path=settings_path,
-            error=rejection,
-            attempted=tuple(runner.calls),
-        )
 
 
 def observe_invalid_persistent_selection() -> SelectionRejectionObservation:
@@ -3538,7 +3540,6 @@ __all__ = [
     "InterruptedReconciliationObservation",
     "AgentHomeReconciliationObservation",
     "CodexSubagentDiscoveryObservation",
-    "CollisionObservation",
     "ConfigObservation",
     "FailureObservation",
     "PersistentExecutionObservation",
@@ -3560,7 +3561,6 @@ __all__ = [
     "observe_agent_home_collision",
     "observe_interrupted_reconciliation",
     "observe_agent_home_reconciliation",
-    "observe_claude_user_collision",
     "observe_codex_config_independence",
     "observe_codex_subagent_discovery",
     "observe_designated_failure",

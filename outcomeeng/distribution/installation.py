@@ -97,6 +97,8 @@ CLAUDE_REPOSITORY_FIELD = "repo"
 CLAUDE_DIRECTORY_FIELD = "path"
 CLAUDE_GITHUB_SOURCE_TYPE = "github"
 CLAUDE_DIRECTORY_SOURCE_TYPE = "directory"
+CLAUDE_GIT_SOURCE_TYPE = "git"
+CLAUDE_URL_FIELD = "url"
 CODEX_MARKETPLACES_FIELD = "marketplaces"
 CODEX_MARKETPLACE_NAME_FIELD = "name"
 CODEX_MARKETPLACE_SOURCE_FIELD = "marketplaceSource"
@@ -133,7 +135,7 @@ CLAUDE_MANAGED_SCOPE = "managed"
 CLAUDE_REFRESH_SCOPES: frozenset[str] = frozenset(
     {CLAUDE_PROJECT_SCOPE, CLAUDE_LOCAL_SCOPE}
 )
-"""Claude Code scopes whose install records persistent refresh updates natively."""
+"""Claude Code scopes whose install records persistent refresh brings to the target."""
 CLAUDE_ENABLED_PLUGINS_FIELD = "enabledPlugins"
 CODEX_PLUGIN_ENTRIES_FIELD = "installed"
 CODEX_PLUGIN_ID_FIELD = "pluginId"
@@ -278,6 +280,7 @@ class ReportField(StrEnum):
     COMMIT = "commit"
     VERSIONS = "versions"
     MARKETPLACE = "marketplace"
+    SOURCE = "source"
     COMMANDS = "commands"
     CWD = "cwd"
 
@@ -361,9 +364,11 @@ class InstallationRoots:
 class ClaudeInstallRecord:
     """One Claude Code install record: a plugin at one scope for one project path.
 
-    Claude Code keys its install records by scope and project path and moves a
-    record only through its native plugin update, so persistent refresh reaches
-    every record on the machine rather than the invocation checkout alone.
+    Claude Code keys its install records by scope and project path. Persistent
+    refresh moves the invocation checkout's own records through the native
+    plugin update and every other project- or local-scope record of a cataloged
+    plugin by rewriting its entry in the install-record document, so every
+    record on the machine reaches the target without a command in its checkout.
     """
 
     plugin: str
@@ -616,6 +621,10 @@ class InstallationPlan:
     """The listing commands executed after every mutation, the run's postcondition read."""
     claude_clone: Path | None = None
     """The registered marketplace clone Claude Code keeps, where the target is read."""
+    claude_source: str | None = None
+    """The Claude marketplace source the run refreshes from or registers, as reported."""
+    claude_catalog: tuple[str, ...] = ()
+    """Every plugin the committed Claude catalog carries; the rewrite's target ranges over it."""
 
 
 @dataclass(frozen=True, order=True)
@@ -1070,6 +1079,11 @@ def build_persistent_installation_plan(
     claude_action = (
         SourceAction.ADD if claude_registered is None else SourceAction.REFRESH
     )
+    claude_source = (
+        declared_claude_source(preflight.roots.checkout, marketplace)
+        if claude_registered is None
+        else claude_registered.source
+    )
     if claude_registered is not None and claude_registered.install_location is None:
         raise ValueError(
             f"{UNLOCATED_REGISTRY_DIAGNOSTIC}: Claude Code registers `{marketplace}` "
@@ -1129,6 +1143,8 @@ def build_persistent_installation_plan(
         claude_clone=(
             None if claude_registered is None else claude_registered.install_location
         ),
+        claude_source=claude_source,
+        claude_catalog=preflight.claude_plugins,
     )
 
 
@@ -1236,6 +1252,8 @@ def _build_plan(
     claude_recorded: frozenset[str] = frozenset(),
     rewrite_records: tuple[ClaudeInstallRecord, ...] = (),
     claude_clone: Path | None = None,
+    claude_source: str | None = None,
+    claude_catalog: tuple[str, ...] = (),
 ) -> InstallationPlan:
     selected_codex_agents = (
         generated_codex_agent_definitions(
@@ -1289,6 +1307,8 @@ def _build_plan(
         rewrite_records=rewrite_records,
         closing=closing,
         claude_clone=claude_clone,
+        claude_source=claude_source,
+        claude_catalog=claude_catalog,
     )
 
 
@@ -2235,7 +2255,7 @@ def _rewrite_records(
     unpublished = frozenset(
         entry.plugin for entry in pending if entry.agent is Agent.CLAUDE
     )
-    target = marketplace_target(plan.claude_clone, head, plan.claude_plugins)
+    target = marketplace_target(plan.claude_clone, head, plan.claude_catalog)
     cache_root = (
         plan.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / plan.roots.marketplace
     )
@@ -2246,7 +2266,7 @@ def _rewrite_records(
         candidates,
         target,
         cache_root,
-        cached_plugin_versions(cache_root, plan.claude_plugins),
+        cached_plugin_versions(cache_root, plan.claude_catalog),
     )
     rewrite_install_records(
         plan.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE,
@@ -2536,15 +2556,19 @@ def claude_registered_marketplace(
 def render_claude_source(entry: Mapping[str, object]) -> str:
     """Render a Claude marketplace source as the CLI's `marketplace add` argument.
 
-    A GitHub source is its `owner/repo`, a directory source its path, and any
-    other shape its JSON, so the report names the source in the form the
-    registry carries.
+    A GitHub source is its `owner/repo`, a git source its URL, a directory
+    source its path — the three forms `claude plugin marketplace add` takes —
+    and any other shape its JSON, so the report names the source in the form
+    the registry carries.
     """
     source_type = entry.get(CLAUDE_SOURCE_FIELD)
     repository = entry.get(CLAUDE_REPOSITORY_FIELD)
+    url = entry.get(CLAUDE_URL_FIELD)
     directory = entry.get(CLAUDE_DIRECTORY_FIELD)
     if source_type == CLAUDE_GITHUB_SOURCE_TYPE and isinstance(repository, str):
         return repository
+    if source_type == CLAUDE_GIT_SOURCE_TYPE and isinstance(url, str):
+        return url
     if source_type == CLAUDE_DIRECTORY_SOURCE_TYPE and isinstance(directory, str):
         return directory
     return json.dumps(
@@ -2728,12 +2752,7 @@ def rewrite_install_records(
     rendered = json.dumps(document, indent=indent)
     if text.endswith("\n"):
         rendered += "\n"
-    with tempfile.NamedTemporaryFile(
-        "w", encoding="utf-8", dir=document_path.parent, delete=False
-    ) as handle:
-        handle.write(rendered)
-        temporary = Path(handle.name)
-    os.replace(temporary, document_path)
+    _atomic_write(document_path, rendered.encode("utf-8"))
 
 
 def cached_plugin_versions(
@@ -2948,6 +2967,7 @@ def report_document(report: InstallationReport) -> dict[str, object]:
             }
         ),
         ReportField.MARKETPLACE: report.plan.roots.marketplace,
+        ReportField.SOURCE: report.plan.claude_source,
         ReportField.COMMANDS: [
             {
                 ReportField.AGENT: command.agent.value,
@@ -3065,6 +3085,8 @@ __all__ = [
     "CLAUDE_CONFIG_ENV",
     "CLAUDE_DIRECTORY_FIELD",
     "CLAUDE_DIRECTORY_SOURCE_TYPE",
+    "CLAUDE_GIT_SOURCE_TYPE",
+    "CLAUDE_URL_FIELD",
     "CLAUDE_GITHUB_SOURCE_TYPE",
     "CLAUDE_PLUGIN_ENABLED_FIELD",
     "CLAUDE_PLUGIN_ID_FIELD",

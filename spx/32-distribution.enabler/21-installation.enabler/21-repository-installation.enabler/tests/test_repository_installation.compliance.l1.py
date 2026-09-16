@@ -16,6 +16,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PLUGIN_SCOPE_FIELD,
     CLAUDE_PLUGIN_VERSION_FIELD,
     CLAUDE_INSTALLED_PLUGINS_FIELD,
+    CLAUDE_INSTALLED_PLUGINS_RELATIVE,
     CLAUDE_INSTALLED_RECORD_COMMIT_FIELD,
     CLAUDE_INSTALLED_RECORD_PATH_FIELD,
     CLAUDE_INSTALLED_RECORD_VERSION_FIELD,
@@ -890,13 +891,18 @@ def test_the_install_record_rewrite_is_atomic_and_preserves_every_other_field(
         install_record_fixture_path(), tmp_path
     )
     rewritten = {
-        (rewrite.record.plugin, rewrite.record.scope, str(rewrite.record.project_path))
+        (
+            rewrite.record.plugin,
+            rewrite.record.scope,
+            str(rewrite.record.project_path),
+        ): rewrite
         for rewrite in observation.rewrites
     }
 
     assert observation.warnings == ()
     assert rewritten
-    assert observation.sibling_files == ("installed_plugins.json",)
+    assert observation.inode_after != observation.inode_before
+    assert observation.sibling_files == (CLAUDE_INSTALLED_PLUGINS_RELATIVE.name,)
     before = cast(
         "dict[str, list[dict[str, str]]]",
         observation.document_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
@@ -939,6 +945,7 @@ def test_the_install_record_rewrite_is_atomic_and_preserves_every_other_field(
             assert untouched_before == untouched_after, key
             if key in rewritten:
                 seen += 1
+                planned = rewritten[key]
                 assert (
                     item_after[CLAUDE_INSTALLED_RECORD_VERSION_FIELD]
                     == (observation.target.versions[plugin])
@@ -946,8 +953,13 @@ def test_the_install_record_rewrite_is_atomic_and_preserves_every_other_field(
                 assert item_after[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] == (
                     observation.target.commit
                 )
-                assert item_after[CLAUDE_INSTALLED_RECORD_PATH_FIELD].endswith(
-                    f"/{plugin}/{observation.target.versions[plugin]}"
+                assert item_after[CLAUDE_INSTALLED_RECORD_PATH_FIELD] == str(
+                    planned.install_path
+                )
+                assert planned.install_path == (
+                    observation.cache_root
+                    / plugin
+                    / observation.target.versions[plugin]
                 )
             else:
                 assert {k: v for k, v in item_before.items() if k in moved} == {
