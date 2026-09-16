@@ -339,6 +339,20 @@ def build_behind_base_repo_with_default_at_feature_tip(
     return behind
 
 
+def build_behind_base_repo_with_default_at_feature_tip_and_unresolved_default(
+    root: pathlib.Path,
+) -> BehindBaseRepo:
+    """Build the default-at-feature-tip clone with no resolvable default branch.
+
+    ``refs/remotes/origin/HEAD`` is deleted from the clone, so the synchronizer
+    cannot tell the local default branch from a branch stacked on the feature;
+    only a caller-supplied base can select the movement.
+    """
+    behind = build_behind_base_repo_with_default_at_feature_tip(root)
+    _git(behind.repo, "symbolic-ref", "--delete", "refs/remotes/origin/HEAD")
+    return behind
+
+
 def build_untracked_only_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
     """Build a behind-base clone whose only working-tree change is an untracked file.
 

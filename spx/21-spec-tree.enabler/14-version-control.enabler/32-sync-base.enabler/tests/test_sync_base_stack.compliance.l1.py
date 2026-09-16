@@ -11,12 +11,14 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_alternate_base_repo,
     build_behind_base_repo,
     build_behind_base_repo_with_default_at_feature_tip,
+    build_behind_base_repo_with_default_at_feature_tip_and_unresolved_default,
     build_current_repo,
     build_stacked_repo_merged_predecessor,
     build_stacked_repo_nearest_of_two,
     build_stacked_repo_open_predecessor_advanced,
     build_stacked_repo_unordered_candidates,
     commit_subjects_above,
+    head_oid,
     is_ancestor,
     load_sync_base_module,
     repository_root,
@@ -305,3 +307,29 @@ def test_rebased_branch_never_records_the_default_branch_as_a_dependent(
         module.stack_config_key(handle.base_ref, module.STACK_PREDECESSOR_KEY)
         not in entries
     )
+
+
+def test_unresolved_default_refuses_a_base_sync_that_would_classify_dependents(
+    tmp_path: pathlib.Path,
+) -> None:
+    # With origin/HEAD unset the writer cannot tell the local default branch
+    # from a branch stacked on the feature; a --base rewrite must stop before
+    # movement rather than record the default or lose the pre-rebase head.
+    module = load_sync_base_module()
+    handle = build_behind_base_repo_with_default_at_feature_tip_and_unresolved_default(
+        repository_root(tmp_path)
+    )
+    head_before = head_oid(handle.repo)
+
+    result = module.sync_base(handle.repo, base_ref=handle.base_ref)
+
+    assert result.status is module.SyncStatus.GIT_FAILURE
+    assert result.branch == handle.feature_branch
+    assert head_oid(handle.repo) == head_before
+    assert module.read_stack_record(handle.repo, handle.base_ref) is None
+    entries = branch_config_entries(handle.repo, handle.base_ref)
+    assert (
+        module.stack_config_key(handle.base_ref, module.STACK_PREDECESSOR_KEY)
+        not in entries
+    )
+    assert module.stack_config_key(handle.base_ref, module.STACK_TIP_KEY) not in entries
