@@ -343,7 +343,7 @@ def runner_env(
     journal_path = tmp_path / "journal.json"
     write_fake_spx(bin_dir, journal_path)
     env = isolated_git_env(repo)
-    env["SPX_VERIFY_BASE_REF"] = base_ref
+    env[str(load_compute_diff_module().ENV_BASE_REF)] = base_ref
     env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
     env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
     env["SPX_FAKE_NAMESPACE_KEYS"] = json.dumps(review_run_journal_env_keys())

@@ -12,9 +12,18 @@ contract. Composing against `origin/<base>` keeps the merge base at the true
 branch point, so commits already merged into the base never re-enter the
 scope of a multi-worktree checkout.
 
+The provider is reached by the installed tree's `__file__`-relative layout,
+the plugin build's contract for logic one provider skill owns and several
+consumers execute.
+
 Portability: stdlib only — no third-party packages, no `uv`, no `outcomeeng_*`
 imports. This script ships into consumer plugin trees where only the standard
 library is available.
+
+Tested with: a lagging local base ref, a named branch resolved while another
+is checked out, the same endpoints as an explicit three-dot range, a missing
+remote base, a malformed range, a nonexistent `--repo` path, and a head behind
+the fetched base relayed as the stale-base refusal.
 """
 
 from __future__ import annotations
@@ -49,7 +58,12 @@ def _load_changeset_scope() -> ModuleType:
         raise ImportError(f"cannot load changeset_scope from {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules["changeset_scope"] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        # A module that failed to execute never stays cached as if it loaded.
+        del sys.modules["changeset_scope"]
+        raise
     return module
 
 
@@ -70,13 +84,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         scope = _load_changeset_scope()
-    except ImportError as exc:
+    except (ImportError, OSError) as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
         return 2
     try:
         resolved = scope.resolve_committed_scope(
             args.scope, repo=args.repo, runner=subprocess.run
         )
+    except scope.StaleBaseError as exc:
+        print(json.dumps(exc.diagnostic(), sort_keys=True), file=sys.stderr)
+        return int(scope.EXIT_STALE_BASE)
     except scope.ScopeResolutionError as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
         return 2

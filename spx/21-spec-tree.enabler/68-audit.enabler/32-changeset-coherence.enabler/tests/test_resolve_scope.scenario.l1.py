@@ -9,6 +9,7 @@ from outcomeeng_testing.harnesses.changeset_scope import (
     COHERENCE_SCOPE,
     checkout_branch,
     git_commit_oid,
+    remote_base_oid,
     repo_without_origin,
     run_coherence_scope,
     stale_local_base_repo,
@@ -43,8 +44,8 @@ def test_resolved_identities_are_full_commit_object_ids() -> None:
             run_coherence_scope(stale.repo, CHANGESET_SCOPE.HEAD_REF).stdout
         )
 
-        assert resolved[CHANGESET_SCOPE.ScopeField.BASE] == git_commit_oid(
-            stale.repo, CHANGESET_SCOPE.remote_tracking_ref(stale.base_ref)
+        assert resolved[CHANGESET_SCOPE.ScopeField.BASE] == remote_base_oid(
+            stale.repo, stale.base_ref
         )
         assert resolved[CHANGESET_SCOPE.ScopeField.HEAD] == git_commit_oid(
             stale.repo, stale.feature_branch

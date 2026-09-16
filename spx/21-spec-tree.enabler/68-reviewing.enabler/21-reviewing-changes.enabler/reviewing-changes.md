@@ -40,6 +40,8 @@ CAN project the sealed journal into the surface they own without duplicating rev
 
 ### Compliance
 
+- ALWAYS: `review_run.py start` relays the shared resolver's stale-base refusal for a head behind the fetched `origin/<base>` tip — the dedicated exit code and the diagnostic, with no run state — before it opens a journal, so no review run records a tree that cannot merge ([test](tests/test_stale_base_relay.compliance.l1.py))
+- ALWAYS: `review_run.py start` reports a base it cannot fetch or resolve as one stderr diagnostic line carrying git's own message and a nonzero exit, with no run state and no traceback ([test](tests/test_stale_base_relay.compliance.l1.py))
 - ALWAYS: the `review_result.py` policy module declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, and the `Severity` and `Concern` enums — the canonical legacy review-result schema lives in one Python module ([audit])
 - NEVER: the review-result schema carries a `summary`, acknowledgement, `decision`, or verdict field — a review produces findings only; each consumer applies its own policy by validity and phase per `spx/15-merging.pdr.md`, never by severity ([audit])
 - ALWAYS: the review prompt instructs the reviewer to review the whole diff and to treat any caller-supplied scope, severity pre-filter, or emphasis as non-authoritative ([audit])

@@ -175,10 +175,19 @@ def load_coherence_scope_module() -> ModuleType:
 
 
 CHANGESET_SCOPE = load_changeset_scope_module()
-# Git's own name for the remote's default branch, resolved by git alone so an
-# expected base identity never composes through the production ref derivation.
-ORIGIN_HEAD_REF = "origin/HEAD"
 CHANGESET_SCOPE_CONTRACT = load_changeset_scope_contract_module()
+# Every remote-ref name the harness arranges composes from the contract's
+# remote name, so the remote it registers and the refs it points are one
+# vocabulary with the resolver's own.
+ORIGIN_REMOTE_NAME = str(CHANGESET_SCOPE_CONTRACT.ORIGIN_REMOTE_NAME)
+ORIGIN_BARE_DIRECTORY = f"{ORIGIN_REMOTE_NAME}.git"
+# The short ``origin/HEAD`` selector a caller passes, and the full symbolic ref
+# and remote-tracking prefix git resolves it through.
+ORIGIN_HEAD_REF = (
+    f"{CHANGESET_SCOPE_CONTRACT.ORIGIN_REF_PREFIX}{CHANGESET_SCOPE_CONTRACT.HEAD_REF}"
+)
+ORIGIN_HEAD_SYMBOLIC_REF = str(CHANGESET_SCOPE_CONTRACT.ORIGIN_HEAD_REF)
+ORIGIN_TRACKING_REF_PREFIX = str(CHANGESET_SCOPE_CONTRACT.ORIGIN_HEAD_REF_PREFIX)
 MERGE_CLASSIFIER = load_merge_classifier_module()
 MERGE_CONTRACT = load_merge_contract_module()
 COHERENCE_SCOPE = load_coherence_scope_module()
@@ -247,24 +256,37 @@ def _initialize_changeset_repo(
     return scenario
 
 
+def _origin_bare_path(repo: pathlib.Path) -> pathlib.Path:
+    return repo.parent / ORIGIN_BARE_DIRECTORY
+
+
 def _publish_origin_base(
     repo: pathlib.Path,
     scenario: ChangesetScopeCase,
     commit_oid: str,
 ) -> None:
-    """Point the synthetic origin base and origin/HEAD refs at a commit."""
+    """Publish a commit as the origin base on a real bare remote.
+
+    Creates the bare remote beside ``repo`` on first use and registers it as
+    ``origin``, pushes ``commit_oid`` to the remote's base branch, then points
+    the local remote-tracking ref and ``origin/HEAD`` at it — the state a
+    fetch would leave behind, so a resolver that fetches sees the same tip.
+    """
+    bare = _origin_bare_path(repo)
+    if not bare.exists():
+        _git(repo, "init", "-q", "--bare", str(bare), cwd=pathlib.Path.cwd())
+        _git(repo, "remote", "add", ORIGIN_REMOTE_NAME, str(bare))
     _git(
         repo,
-        "update-ref",
-        f"refs/remotes/origin/{scenario.base_branch}",
-        commit_oid,
+        "push",
+        "-q",
+        "--force",
+        ORIGIN_REMOTE_NAME,
+        f"{commit_oid}:refs/heads/{scenario.base_branch}",
     )
-    _git(
-        repo,
-        "symbolic-ref",
-        "refs/remotes/origin/HEAD",
-        f"refs/remotes/origin/{scenario.base_branch}",
-    )
+    tracking_ref = f"{ORIGIN_TRACKING_REF_PREFIX}{scenario.base_branch}"
+    _git(repo, "update-ref", tracking_ref, commit_oid)
+    _git(repo, "symbolic-ref", ORIGIN_HEAD_SYMBOLIC_REF, tracking_ref)
 
 
 @dataclass(frozen=True)
@@ -385,6 +407,47 @@ def build_base_advanced_after_branch_repo(
     )
 
 
+@dataclass(frozen=True)
+class LaggingRemoteTrackingRepo:
+    """A repo whose local ``origin/<base>`` ref lags the remote's base tip.
+
+    The remote's base holds ``base_file`` past the branch point; the local
+    remote-tracking ref still names the branch point, so only a fetch reveals
+    that the feature head is behind the remote.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    feature_branch: str
+    base_file: str
+    feature_file: str
+
+
+def build_lagging_remote_tracking_repo(
+    repo: pathlib.Path,
+    scenario: ChangesetScopeCase | None = None,
+) -> LaggingRemoteTrackingRepo:
+    """Build the base-advanced topology, then let the local remote ref lag.
+
+    Sequence: the base-advanced topology publishes A+M to the remote; the local
+    ``refs/remotes/origin/<base>`` is then reset to the branch point A while
+    the remote keeps A+M, and the checkout stays on the feature at A+F.
+    """
+    advanced = build_base_advanced_after_branch_repo(repo, scenario)
+    tracking_ref = f"{ORIGIN_TRACKING_REF_PREFIX}{advanced.base_ref}"
+    branch_point = _git(
+        repo, "merge-base", CHANGESET_SCOPE_CONTRACT.HEAD_REF, tracking_ref
+    )
+    _git(repo, "update-ref", tracking_ref, branch_point)
+    return LaggingRemoteTrackingRepo(
+        repo=repo,
+        base_ref=advanced.base_ref,
+        feature_branch=advanced.feature_branch,
+        base_file=advanced.base_file,
+        feature_file=advanced.feature_file,
+    )
+
+
 def build_repo_without_origin(
     repo: pathlib.Path,
     scenario: ChangesetScopeCase | None = None,
@@ -456,6 +519,15 @@ def base_advanced_after_branch_repo(
 
 
 @contextmanager
+def lagging_remote_tracking_repo(
+    scenario: ChangesetScopeCase | None = None,
+) -> Iterator[LaggingRemoteTrackingRepo]:
+    """Yield a repository whose local remote-tracking ref lags its remote."""
+    with temporary_changeset_scope() as paths:
+        yield build_lagging_remote_tracking_repo(paths.repo, scenario)
+
+
+@contextmanager
 def repo_without_origin(
     scenario: ChangesetScopeCase | None = None,
 ) -> Iterator[pathlib.Path]:
@@ -524,6 +596,27 @@ def git_commit_oid(repo: pathlib.Path, ref: str) -> str:
     )
 
 
+def remote_base_oid(repo: pathlib.Path, base_ref: str) -> str:
+    """Read the bare remote's own base tip — an oracle no local ref can shadow."""
+    return _git(
+        _origin_bare_path(repo),
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        f"refs/heads/{base_ref}",
+    )
+
+
+def git_merge_base(repo: pathlib.Path, left: str, right: str) -> str:
+    """Resolve the merge base of two refs through real Git."""
+    return _git(repo, "merge-base", left, right)
+
+
+def git_commits_between(repo: pathlib.Path, ancestor: str, descendant: str) -> int:
+    """Count the commits reachable from ``descendant`` but not ``ancestor``."""
+    return int(_git(repo, "rev-list", "--count", f"{ancestor}..{descendant}"))
+
+
 def checkout_branch(repo: pathlib.Path, branch: str) -> None:
     """Switch ``repo`` to an existing branch.
 
@@ -590,6 +683,17 @@ def run_changeset_scope(
     )
 
 
+def sever_origin_remote(repo: pathlib.Path) -> str:
+    """Point ``origin`` at a path that holds no repository and return it.
+
+    The remote-tracking refs stay in place, so base detection succeeds while
+    the fetch the resolver performs fails with git's own message.
+    """
+    absent = repo.parent / "absent.git"
+    _git(repo, "remote", "set-url", ORIGIN_REMOTE_NAME, str(absent))
+    return str(absent)
+
+
 def detach_head(repo: pathlib.Path) -> None:
     """Put ``repo`` on a detached HEAD so ``detect_current_branch`` raises.
 
@@ -603,14 +707,18 @@ def detach_head(repo: pathlib.Path) -> None:
 def write_branch_state_file(
     state_dir: pathlib.Path, slug: str, branch: str
 ) -> pathlib.Path:
-    """Write a state file at ``state_dir/<slug>.md`` recording ``branch``.
+    """Write the state file ``branch_slug`` reads, recording ``branch``.
 
-    The file carries the YAML frontmatter ``branch_slug`` reads for
-    state-collision disambiguation: a ``branch:`` key fenced by
-    ``changeset_scope.FRONTMATTER_DELIMITER``. Returns the written path.
+    The filename suffix, the frontmatter delimiter, and the branch key all
+    come from the changeset-scope module that owns the state-file protocol.
+    Returns the written path.
     """
-    delimiter = load_changeset_scope_module().FRONTMATTER_DELIMITER
+    module = load_changeset_scope_module()
+    delimiter = module.FRONTMATTER_DELIMITER
     state_dir.mkdir(parents=True, exist_ok=True)
-    path = state_dir / f"{slug}.md"
-    path.write_text(f"{delimiter}\nbranch: {branch}\n{delimiter}\n", encoding="utf-8")
+    path = state_dir / f"{slug}{module.STATE_FILE_SUFFIX}"
+    path.write_text(
+        f"{delimiter}\n{module.STATE_FILE_BRANCH_KEY}: {branch}\n{delimiter}\n",
+        encoding="utf-8",
+    )
     return path

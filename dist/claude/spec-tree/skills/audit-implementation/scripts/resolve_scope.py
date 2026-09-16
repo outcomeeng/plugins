@@ -10,7 +10,12 @@ an optional unit carrying the same status, exact inventory agreement, drift in
 both directions, a recorded subject outside the inventory, a missing-skill unit
 naming its absent skill, an advisory live path beside the committed inventory, a reconcile request carrying no sealed
 scope identity, a run token the CLI cannot read, a CLI that cannot be launched,
-and a run document shaped so the comparison cannot run).
+a run document shaped so the comparison cannot run, and a head behind the
+fetched base relayed as the stale-base refusal).
+
+The provider is reached by the installed tree's `__file__`-relative layout,
+the plugin build's contract for logic one provider skill owns and several
+consumers execute.
 """
 
 from __future__ import annotations
@@ -80,6 +85,9 @@ class ReconcileField(StrEnum):
 
 
 def _provider() -> ModuleType:
+    cached = sys.modules.get("changeset_scope")
+    if cached is not None:
+        return cached
     skills = pathlib.Path(__file__).resolve().parents[2]
     path = skills / "scope-changeset" / "scripts" / "changeset_scope.py"
     spec = importlib.util.spec_from_file_location("changeset_scope", path)
@@ -87,7 +95,12 @@ def _provider() -> ModuleType:
         raise ImportError(f"cannot load changeset_scope from {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        # A module that failed to execute never stays cached as if it loaded.
+        del sys.modules[spec.name]
+        raise
     return module
 
 
@@ -246,6 +259,11 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
         resolved = scope.resolve_committed_scope(
             args.scope, repo=args.repo, runner=runner
         )
+    except scope.StaleBaseError as exc:
+        # The refusal is the verdict, not a command failure: the selector
+        # resolved, and the head is not the tree that would merge.
+        print(json.dumps(exc.diagnostic(), sort_keys=True), file=sys.stderr)
+        return int(scope.EXIT_STALE_BASE)
     except scope.ScopeResolutionError as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
         return EXIT_COMMAND_FAILURE

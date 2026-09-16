@@ -15,6 +15,7 @@ CAN reject accumulated programs of work before expensive implementation audits a
 
 ### Compliance
 
+- ALWAYS: the coherence scope resolver relays the shared resolver's stale-base refusal for a head behind the fetched `origin/<base>` tip — the dedicated exit code and the diagnostic, with no scope payload — so the audit returns the `stale-base` block before it reads a subject ([test](tests/test_resolve_scope.compliance.l1.py))
 - ALWAYS: an exact committed changeset receives `APPROVED` only when its authored artifacts realize one behavioral outcome or inseparable semantic clusters with one verification story and one rollback story ([eval](evals/coherence-verdict/eval.toml))
 - ALWAYS: an exact committed changeset receives `REJECTED` when two or more semantic clusters are independently mergeable, and the verdict returns a dependency-ordered review-unit sequence that covers every semantic cluster exactly once ([eval](evals/coherence-verdict/eval.toml))
 - ALWAYS: every authored artifact in scope belongs to exactly one semantic cluster, and each generated artifact shares the cluster of its producing authored artifact ([eval](evals/coherence-verdict/eval.toml))

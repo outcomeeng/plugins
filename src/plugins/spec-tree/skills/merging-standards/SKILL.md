@@ -45,7 +45,7 @@ The composing skill names the tagged section or operation it needs. Read the mat
 
 <success_criteria>
 
-- Every composing workflow applies `<shared_contract>` and reads the detailed policy before using its tagged lifecycle sections.
+- Every gate decision a transport reports names the `<authority_gates>` predicates in `references/merge-policy.md` it read and the observable state each predicate held.
 - Repository-specific behavior comes only from the optional local overlay.
 - Publication, merge, deployment, and release actions occur only under their matching authority gates.
 - Every valid in-scope finding is fixed, and every separate larger concern has an owning-node record.

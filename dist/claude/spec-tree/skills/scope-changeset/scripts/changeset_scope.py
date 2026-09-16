@@ -1,10 +1,10 @@
 """Canonical git-derived changeset primitives shipped with the spec-tree plugin.
 
-Single home for the deterministic git derivation shared by the audit,
-review-changes, and sync-base skills: branch identity, the on-disk
-addressing slug, base-ref resolution, the remote-tracking ref form, and
-merge-base diff scope. Consumers import these symbols (directly or through
-consumer imports); none re-implements them.
+Single home for the deterministic git derivation every scope consumer
+shares: branch identity, the on-disk addressing slug, base-ref resolution,
+the remote-tracking ref form, and merge-base diff scope. Consumers import
+these symbols (directly or through consumer imports); none re-implements
+them.
 
 Every changeset diff range over a git-derived base is composed against the
 remote-tracking ref ``origin/<base>`` through :func:`remote_tracking_ref`, so a
@@ -19,8 +19,10 @@ verification-run suites exercise origin/HEAD base detection, missing-origin
 rejection, named-branch detection, detached-HEAD refusal, branch slug collision
 suffixes, diff-range expansion with and without pathspec filters, empty diff
 matches, staged and unstaged changes, remote-tracking three-dot branch scope,
-arbitrary base refs, base-advanced-after-branch-off exclusion, and git failure
-propagation before this script is bundled.
+arbitrary base refs, base-advanced-after-branch-off exclusion, git failure
+propagation, and the stale-base refusal — a head behind the fetched base tip,
+a lagging local remote-tracking ref the fetch corrects, and a current head —
+before this script is bundled.
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ import json
 import pathlib
 import runpy
 import subprocess
+import sys
 from collections.abc import Sequence
 from enum import StrEnum
 from typing import Literal, Protocol, cast
@@ -46,15 +49,22 @@ BRANCH_REF_PATH_SEPARATOR = cast(str, _CONTRACT["BRANCH_REF_PATH_SEPARATOR"])
 BRANCH_SLUG_PATH_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_PATH_SUBSTITUTE"])
 BRANCH_SLUG_DOT_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_DOT_SUBSTITUTE"])
 BRANCH_SLUG_DOTDOT_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_DOTDOT_SUBSTITUTE"])
+ORIGIN_REMOTE_NAME = cast(str, _CONTRACT["ORIGIN_REMOTE_NAME"])
 ORIGIN_HEAD_REF_PREFIX = cast(str, _CONTRACT["ORIGIN_HEAD_REF_PREFIX"])
 ORIGIN_HEAD_REF = cast(str, _CONTRACT["ORIGIN_HEAD_REF"])
 ORIGIN_REF_PREFIX = cast(str, _CONTRACT["ORIGIN_REF_PREFIX"])
 HEAD_REF = cast(str, _CONTRACT["HEAD_REF"])
 BRANCH_SCOPE_RANGE_TEMPLATE = cast(str, _CONTRACT["BRANCH_SCOPE_RANGE_TEMPLATE"])
 FRONTMATTER_DELIMITER = cast(str, _CONTRACT["FRONTMATTER_DELIMITER"])
+STATE_FILE_BRANCH_KEY = cast(str, _CONTRACT["STATE_FILE_BRANCH_KEY"])
+STATE_FILE_SUFFIX = cast(str, _CONTRACT["STATE_FILE_SUFFIX"])
 COMMIT_PEEL_SUFFIX = cast(str, _CONTRACT["COMMIT_PEEL_SUFFIX"])
 BRANCH_SLUG_SUFFIX_SEPARATOR = cast(str, _CONTRACT["BRANCH_SLUG_SUFFIX_SEPARATOR"])
 RANGE_SEPARATOR = "..."
+# A head behind the fetched base is refused with its own exit code so a caller
+# never mistakes it for a selector the resolver could not read (argparse's 2).
+EXIT_STALE_BASE = 3
+STALE_BASE_STATUS = "stale-base"
 
 
 class ScopeField(StrEnum):
@@ -63,6 +73,15 @@ class ScopeField(StrEnum):
     BASE = "base"
     HEAD = "head"
     CHANGED_PATHS = "changed_paths"
+
+
+class StaleBaseField(StrEnum):
+    """Fields of the diagnostic a stale-base refusal emits in place of a scope."""
+
+    STATUS = "status"
+    TIP = "tip"
+    MERGE_BASE = "merge_base"
+    BEHIND = "behind"
 
 
 class Runner(Protocol):
@@ -101,17 +120,45 @@ class ScopeResolutionError(RuntimeError):
     """A selector cannot resolve to an exact committed changeset."""
 
 
+class StaleBaseError(RuntimeError):
+    """The head is behind the fetched base tip, so no verification may start.
+
+    Distinct from :class:`ScopeResolutionError`: the selector resolved, and the
+    refusal is the verdict — the tree is not the one that would merge.
+    """
+
+    def __init__(self, *, tip: str, merge_base: str, behind: int) -> None:
+        super().__init__(
+            f"head is {behind} commit(s) behind the fetched base tip {tip} "
+            f"(merge base {merge_base}); bring the branch current first"
+        )
+        self.tip = tip
+        self.merge_base = merge_base
+        self.behind = behind
+
+    def diagnostic(self) -> dict[str, object]:
+        """Return the machine-readable refusal a caller relays verbatim."""
+        return {
+            StaleBaseField.STATUS: STALE_BASE_STATUS,
+            StaleBaseField.TIP: self.tip,
+            StaleBaseField.MERGE_BASE: self.merge_base,
+            StaleBaseField.BEHIND: self.behind,
+        }
+
+
 def resolve_committed_scope(
     selector: str,
     *,
     repo: pathlib.Path,
     runner: Runner = subprocess.run,
 ) -> dict[str, object]:
-    """Resolve HEAD, a branch, or an explicit three-dot range without mutation.
+    """Resolve HEAD, a branch, or an explicit three-dot range against a fetched base.
 
-    Preserve explicit endpoints. A single ref uses the configured remote base;
-    the changed paths always follow Git's merge-base diff semantics. The base
-    identity is the selected endpoint, not the merge-base commit.
+    Preserve explicit endpoints. A single ref uses the configured remote base.
+    A remote-tracking base is fetched first, which updates that ref and never
+    the working tree, and a head behind the fetched tip is refused. The base
+    identity is the fetched tip, not the merge-base commit; the changed paths
+    always follow Git's merge-base diff semantics.
     """
     try:
         if RANGE_SEPARATOR in selector:
@@ -124,6 +171,7 @@ def resolve_committed_scope(
         else:
             base_ref = remote_tracking_ref(detect_base_ref(repo, runner=runner))
             head_ref = selector
+        require_current_base(base_ref, head_ref, repo=repo, runner=runner)
         return {
             ScopeField.BASE: commit_oid(base_ref, repo=repo, runner=runner),
             ScopeField.HEAD: commit_oid(head_ref, repo=repo, runner=runner),
@@ -141,6 +189,66 @@ def resolve_committed_scope(
         raise ScopeResolutionError(
             f"cannot execute git for {selector!r} at {repo}: {exc}"
         ) from exc
+
+
+def require_current_base(
+    base_ref: str,
+    head_ref: str,
+    *,
+    repo: pathlib.Path,
+    runner: Runner = subprocess.run,
+) -> None:
+    """Refuse a head that does not descend from the fetched remote base tip.
+
+    Only a remote-tracking base is checked: a local ref or commit named as the
+    base of an explicit range is the caller's exact endpoint, compared as
+    given with no fetch and no refusal. A remote-tracking base is fetched
+    first with an explicit refspec, so the comparison reads the ref the fetch
+    just wrote rather than whatever the local remote-tracking ref last saw;
+    the symbolic ``origin/HEAD`` resolves to its configured branch first,
+    because a bare ``git fetch origin HEAD`` writes only ``FETCH_HEAD``. The
+    head is current when its merge base with that tip is the tip itself;
+    otherwise :class:`StaleBaseError` names the tip, the merge base, and the
+    base commits the head lacks. Git failures propagate as
+    ``subprocess.CalledProcessError`` for the caller to translate.
+    """
+    if not base_ref.startswith(ORIGIN_REF_PREFIX):
+        return
+    bare_base = base_ref[len(ORIGIN_REF_PREFIX) :]
+    if bare_base == HEAD_REF:
+        bare_base = detect_base_ref(repo, runner=runner)
+        base_ref = remote_tracking_ref(bare_base)
+    runner(
+        [
+            "git",
+            "fetch",
+            "--quiet",
+            ORIGIN_REMOTE_NAME,
+            f"+refs/heads/{bare_base}:{ORIGIN_HEAD_REF_PREFIX}{bare_base}",
+        ],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    tip = commit_oid(base_ref, repo=repo, runner=runner)
+    merge_base = runner(
+        ["git", "merge-base", tip, head_ref],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    if merge_base == tip:
+        return
+    behind = runner(
+        ["git", "rev-list", "--count", f"{merge_base}..{tip}"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    raise StaleBaseError(tip=tip, merge_base=merge_base, behind=int(behind))
 
 
 def expand_diff_range(
@@ -186,14 +294,14 @@ def expand_diff_range(
 def remote_tracking_ref(base_ref: str) -> str:
     """Compose the remote-tracking ref ``origin/<base_ref>`` from a bare base.
 
-    The single source of the ``origin/`` composition. Both the audit
-    surface (:func:`branch_scope`) and the review surface
-    (``compute_diff``) route their git-derived base through this helper so
-    every changeset diff range is taken against the fetched remote-tracking
-    ref rather than a bare local branch. A bare local ref such as ``main``
-    can lag ``origin/<base>`` in a multi-worktree checkout where the local
-    branch is left unattached; the three-dot diff then recomputes its merge
-    base from the stale ref and re-includes already-merged commits.
+    The single source of the ``origin/`` composition. :func:`branch_scope`
+    and every consumer with its own diff operation route their git-derived
+    base through this helper, so every changeset diff range is taken against
+    the fetched remote-tracking ref rather than a bare local branch. A bare
+    local ref such as ``main`` can lag ``origin/<base>`` in a multi-worktree
+    checkout where the local branch is left unattached; the three-dot diff
+    then recomputes its merge base from the stale ref and re-includes
+    already-merged commits.
     """
     return f"{ORIGIN_REF_PREFIX}{base_ref}"
 
@@ -328,7 +436,7 @@ def _read_frontmatter_branch(path: pathlib.Path) -> str | None:
                 return None
             in_frontmatter = True
             continue
-        if in_frontmatter and line.startswith("branch:"):
+        if in_frontmatter and line.startswith(f"{STATE_FILE_BRANCH_KEY}:"):
             return line.partition(":")[2].strip()
     return None
 
@@ -386,7 +494,7 @@ def branch_slug(branch_name: str, state_dir: pathlib.Path | None = None) -> str:
 
     # Stage 4 (optional): state-collision disambiguation.
     if state_dir is not None:
-        existing = state_dir / f"{base_slug}.md"
+        existing = state_dir / f"{base_slug}{STATE_FILE_SUFFIX}"
         if existing.is_file():
             existing_branch = _read_frontmatter_branch(existing)
             if existing_branch is not None and existing_branch != branch_name:
@@ -413,6 +521,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         resolved = resolve_committed_scope(
             args.selector, repo=args.repo, runner=subprocess.run
         )
+    except StaleBaseError as exc:
+        print(json.dumps(exc.diagnostic(), sort_keys=True), file=sys.stderr)
+        return EXIT_STALE_BASE
     except ScopeResolutionError as exc:
         parser.error(str(exc))
     print(json.dumps(resolved, sort_keys=True))

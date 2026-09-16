@@ -17,9 +17,9 @@ An authoritative SPX projection and raw run token for the requested implementati
 
 <constraints>
 
-- NEVER edit source, tests, specs, commits, branches, or pull requests — this orchestration is read-only over the audited project tree.
+- NEVER edit source, tests, specs, commits, branches, or pull requests — the audit is read-only over the audited project tree.
 - ALWAYS persist audit state through `spx verification run`; NEVER use legacy journal commands, plugin-side verdict scripts, markdown comments, `.spx/audits/`, or tracked files as audit state.
-- NEVER run deterministic verification — this orchestration composes agentic concern audits only.
+- NEVER run deterministic verification — the audit composes agentic concern audits only.
 - NEVER include language-specific file extensions, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
 - ALWAYS treat the `spx verification run` command exit code as payload validity; NEVER hand-validate emitted payload JSON after SPX accepts it.
 - NEVER end a run because work remains, time has passed, context is tight, or reading is unfinished — a stop names the failed command with its exit code and stderr, or the absent prerequisite.
@@ -27,7 +27,7 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER derive a subject body from a single commit's patch, or leave a truncated read unrecovered — a partial read is re-issued, never converted into coverage evidence.
 - NEVER hand-transcribe the resolved changed-path set into a payload — the resolver's own output reaches the run through a pipe, because a retyped inventory drops and substitutes paths without any later step noticing.
 - NEVER invoke a skill to discover whether a language is installed — the installed skill inventory this context carries is the discovery source, and a failed invocation is not discovery evidence.
-- ALWAYS record coverage as `<coverage_model>` states — the complete set to every concern, one row per returned path, every row before any finding — a run that narrows a set or records a unit only where it found something states its findings as its coverage.
+- ALWAYS record coverage as `<coverage_model>` states; a run that narrows a set or records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
 - ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading language concern standards — every substantive project inspection and concern result belongs to the open run.
 
@@ -57,8 +57,7 @@ Run these stages in order. Each names what holds before the next begins, and
    `base..head` scope, re-issuing a truncated or partial read in bounded
    ranges until the body is complete, per the subject-body constraint.
 6. **Record.** Hold each unit planned until its concern returns a final result,
-   then persist per `<coverage_model>`: complete claimed coverage before any
-   finding, one row per returned path. NEVER accept a finding raised before
+   then persist per `<coverage_model>`. NEVER accept a finding raised before
    stage 3 loaded that concern's standards and overlays — withdraw it.
 7. **Reconcile, then finish.** Run the bundled reconciler; `finish` is
    reachable only from its zero exit:
@@ -137,7 +136,10 @@ Before reading project file bodies:
 
 A missing selector or identity, failed repository discovery, or failed scope
 resolution returns `BLOCKED` with `runToken: not-started` and the exact missing
-input or command failure. Make no replacement scope selection or retry.
+input or command failure; the resolver's stale-base refusal — a dedicated exit
+code and a `stale-base` diagnostic on stderr for a head behind the fetched base
+— returns the same way before any subject is read. Make no replacement scope
+selection, synchronization, or retry.
 
 Start the run after this metadata preparation. Then discover governing nodes
 from the resolved paths through the spec-tree evidence links and declared audit
@@ -188,8 +190,8 @@ preserves its result. NEVER place two journal mutations in a parallel tool
 group, multi-call batch, shell background group, or concurrently executing
 concern — parallel writes race sequence assignment and produce a sealed
 projection whose event prefix is neither strictly increasing nor contiguous.
-Parallel concern analysis emits no SPX commands; the driver queues its completed
-results and persists them one at a time. Render only after `finish` exits
+Parallel concern analysis emits no SPX commands; queue each concern's completed
+results and persist them one at a time. Render only after `finish` exits
 successfully.
 
 Every scope payload uses the published SPX field names below. Emit one scope
@@ -231,18 +233,20 @@ required.
 
 The `coverageStatus` values above are the required-unit set. An optional unit
 may additionally carry `skipped`; no unit carries `incomplete`. The accounting
-record for a resolved path no concern claimed is the same shape with these
-values, the six run-driver identity fields repeated as `expectedProducer` and
-`producerProvenance` omitted:
+record for a resolved path no concern claimed is this complete payload — every
+field shown is required, and `producerProvenance` is omitted:
 
 ```json
 {
   "unitId": "implementation:unknown:coverage-gap:<the exact resolved path>",
+  "auditClass": "implementation",
   "auditKind": "coverage-gap",
   "subject": "<the exact resolved path>",
   "coverageRequirement": "optional",
   "coverageStatus": "skipped",
-  "priorContext": { "changedFilePartition": "<the exact resolved path>", "concernPartition": "coverage-gap" }
+  "priorContext": { "changedFilePartition": "<the exact resolved path>", "concernPartition": "coverage-gap" },
+  "expectedProducer": "<the six producer fields of the run-driver identity>",
+  "recordedByRunDriver": "<the six producer fields of the run-driver identity>"
 }
 ```
 
@@ -250,9 +254,7 @@ values, the six run-driver identity fields repeated as `expectedProducer` and
 language is unknown; never replace `priorContext` with top-level partition
 fields. Use `coverage-gap` with `producerProvenance` omitted, because no leaf
 skill executed, for a missing producer, an unsupported subject, and the
-accounting record `<coverage_model>` requires for an unclaimed resolved path;
-the accounting record also carries `concernPartition` `coverage-gap` and
-repeats the run-driver identity as `expectedProducer`.
+accounting record `<coverage_model>` requires for an unclaimed resolved path.
 
 Every finding payload uses the exact published SPX field names below. Its
 `unitId` references a scope unit already accepted by the run, its
@@ -360,11 +362,11 @@ Leaving a path to another auditor is not leaving it unaccounted for. Record ever
 
 Give every complete trio the **complete** resolved three-dot changed-path set,
 the resolved endpoint identities, discovered governing context, and the advisory
-live file list when requested. The driver never pre-filters that set by
-extension, directory, or its own guess at applicability: each concern skill owns
-its language's applicability and answers for the paths it claims, and a set the
-driver narrowed before dispatch produces a run whose coverage silently matches
-the driver's guess rather than the changeset. Require inspection of the selected committed bodies for committed
+live file list when requested. Never pre-filter that set by extension,
+directory, or a guess at applicability: each concern skill owns its language's
+applicability and answers for the paths it claims, and a set narrowed before
+dispatch produces a run whose coverage silently matches that guess rather than
+the changeset. Require inspection of the selected committed bodies for committed
 audits. Each read-only concern skill owns language-specific applicability and
 identifies the subject paths it audited or returns `NOT_APPLICABLE`; the
 orchestration never substitutes its own file-pattern table. Build the
@@ -392,7 +394,7 @@ Each expected unit carries the scope payload in `<verification_run_contract>`: o
 - Persist queued units one `spx verification run scope add` command at a time, ordered by language discovery order then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation.
 - Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
 - A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite. When it names neither, drive the concern to a final result rather than recording a non-audited status.
-- NEVER manufacture a completed result from the orchestration's own inspection.
+- NEVER manufacture a completed result from Claude's own inspection in place of a concern result.
 
 A missing required concern skill or an unsupported path already claimed by a recognized implementation-language partition rejects the run through accepted coverage status and the evidence-derived terminal rollup. A required unit that receives no concern result reaches no admissible status, so the run returns BLOCKED under `<verdict_format>` naming the failed operation or absent prerequisite rather than sealing. Do not continue concern dispatch after detecting an absent required skill for a recognized language partition; queue the complete final gap inventory, persist it serially, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
@@ -435,10 +437,10 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 When the run completes, return the exact run token and rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
 
 Return BLOCKED for three causes: target preparation fails before `spx
-verification run start`, SPX rejects a command, or a required unit cannot reach
-a final status after the run started. For missing input, name the selector or
-identity field that is absent. For command failures, include the complete
-diagnostic below; preparation failures use `runToken: not-started`,
+verification run start` (a missing selector or identity field, a failed
+command, or the resolver's stale-base refusal), SPX rejects a command, or a
+required unit cannot reach a final status after the run started. Use the
+complete diagnostic below; preparation failures use `runToken: not-started`,
 `payloadSource: none`, and `payloadKey: none`.
 
 A required unit that cannot reach a final status is not a command rejection, so
@@ -451,8 +453,7 @@ identifiable. After a run starts, record a missing required concern skill
 as `missing-skill`, finish with terminal status `rejected`, render, and return
 the run token plus projection.
 
-Use this complete blocked diagnostic after any SPX command failure; preserve
-each value verbatim from the invocation and command result:
+Preserve each value verbatim from the invocation and command result:
 
 ```text
 BLOCKED
@@ -465,8 +466,8 @@ stderr: <exact-stderr>
 ```
 
 Never return the command alone: the run token locates durable state, the payload
-source and key identify the rejected boundary, and the exit code and stderr
-carry the failure evidence.
+source and key identify the rejected boundary, and the exit code and stderr carry
+the failure evidence — a stale-base refusal is read from its exit code and stderr.
 
 Each finding row names every field of the finding payload shape in `<verification_run_contract>`, so a reader sees the producer, unit, rule, severity, location, message, and observed-versus-expected evidence without opening the journal.
 
@@ -476,10 +477,9 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 <failure_modes>
 
-For a failed preparation, concern invocation, payload submission, or projection,
-read [operational failure records](${CLAUDE_SKILL_DIR}/references/operational-failures.md)
-to diagnose the observed boundary. Preserve the exact diagnostic and apply the
-existing no-retry rule; these records authorize no replacement invocation.
+For a failed preparation, concern invocation, payload submission, or projection, read
+`${CLAUDE_SKILL_DIR}/references/operational-failures.md` to diagnose the observed
+boundary; preserve the exact diagnostic and apply the no-retry rule, since these records authorize no replacement invocation.
 
 </failure_modes>
 
@@ -492,7 +492,7 @@ existing no-retry rule; these records authorize no replacement invocation.
 - The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
 - The sealed run is self-describing: its recorded subject set equals the inventory its own start input carries, no recorded subject lies outside that inventory, every required unit carries a final status and every unclaimed path its accounting record, and every finding references an accepted unit of its own concern — so a reader establishes the inspection's completeness from the run without the run driver's account of it.
-- A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
+- A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection; a head behind the fetched base returns the resolver's stale-base refusal before any subject is read.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>

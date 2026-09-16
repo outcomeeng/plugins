@@ -14,7 +14,9 @@ from outcomeeng_testing.harnesses.audit_verification_run_contract import (
 from outcomeeng_testing.harnesses.changeset_scope import (
     ORIGIN_HEAD_REF,
     CHANGESET_SCOPE,
+    base_advanced_after_branch_repo,
     git_commit_oid,
+    remote_base_oid,
     stale_local_base_repo,
 )
 from outcomeeng_testing.generators.changeset_scope import distinct_subject_paths
@@ -384,3 +386,23 @@ def test_a_missing_skill_unit_names_its_absent_skill_and_is_never_unexpected() -
     assert verdict[RECONCILE_FIELD.UNEXPECTED] == []
     assert verdict[RECONCILE_FIELD.NONFINAL] == []
     assert verdict[RECONCILE_FIELD.RECONCILED] is True
+
+
+def test_a_head_behind_the_fetched_base_is_relayed_as_the_stale_base_refusal() -> None:
+    """The resolver relays the shared refusal instead of resolving a scope.
+
+    Removing the relay makes the shared resolver's error escape as a
+    traceback with a different exit code and no diagnostic line.
+    """
+    with base_advanced_after_branch_repo() as advanced:
+        tip = remote_base_oid(advanced.repo, advanced.base_ref)
+
+        completed = run_implementation_scope(advanced.repo, CHANGESET_SCOPE.HEAD_REF)
+
+        assert completed.returncode == CHANGESET_SCOPE.EXIT_STALE_BASE
+        assert not completed.stdout
+        diagnostic = json.loads(completed.stderr.strip().splitlines()[-1])
+        assert diagnostic[CHANGESET_SCOPE.StaleBaseField.STATUS] == (
+            CHANGESET_SCOPE.STALE_BASE_STATUS
+        )
+        assert diagnostic[CHANGESET_SCOPE.StaleBaseField.TIP] == tip

@@ -2,7 +2,17 @@
 
 The skill invokes only this runner. The runner owns diff-bundle scratch
 storage, journal command invocation, state passing between verbs, and sealing
-the journal run.
+the journal run. The sibling-skill modules it imports — the run-journal
+projection and the changeset-scope provider — are reached by the installed
+tree's `__file__`-relative layout, the plugin build's contract for logic one
+provider skill owns and several consumers execute.
+
+Tested with: the stale-base refusal before any journal opens, an unfetchable
+base reported as a diagnostic line rather than a traceback, the
+start/append-scope/append-finding/finish round trip, a finish before every
+changed file has a scope-advanced event, a rename's source and destination
+scope, a nonzero `spx journal` exit propagated with its stderr, and scratch
+cleanup on every failure path.
 """
 
 from __future__ import annotations
@@ -461,11 +471,33 @@ def _cleanup_state(state_path: pathlib.Path) -> None:
 
 def _start(args: argparse.Namespace) -> int:
     started_at = _utc_now()
+    # A head behind the fetched base is refused before any journal exists, so
+    # no run records a review of a tree that cannot merge. Every other
+    # resolution failure reports through the runner's diagnostic line.
+    try:
+        base_ref = compute_diff.resolve_base_ref()
+        head_ref = compute_diff.resolve_head_ref()
+        changeset_scope.require_current_base(
+            base_ref, head_ref, repo=pathlib.Path.cwd()
+        )
+    except changeset_scope.StaleBaseError as exc:
+        json.dump(exc.diagnostic(), sys.stderr, sort_keys=True)
+        sys.stderr.write("\n")
+        return int(changeset_scope.EXIT_STALE_BASE)
+    except subprocess.CalledProcessError as exc:
+        detail = " | ".join(
+            line.strip() for line in (exc.stderr or "").splitlines() if line.strip()
+        )
+        sys.stderr.write(f"{exc}: {detail}\n")
+        return 1
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        return 1
     scratch_dir = pathlib.Path(tempfile.mkdtemp(prefix="review-changes-"))
     try:
         summary = compute_diff.write_bundle(
-            base_ref=compute_diff.resolve_base_ref(),
-            head_ref=compute_diff.resolve_head_ref(),
+            base_ref=base_ref,
+            head_ref=head_ref,
             bundle_dir=scratch_dir,
         )
         manifest_path = pathlib.Path(str(summary["manifest_path"]))

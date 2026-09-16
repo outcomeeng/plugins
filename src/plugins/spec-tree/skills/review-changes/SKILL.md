@@ -14,7 +14,7 @@ A sealed `spx journal --type review` run whose terminal event records review sta
 
 <inputs>
 
-The skill self-discovers the review scope from the current worktree. Reusable gate evidence requires the exact current version to be committed and the worktree to be clean. Explicit advisory feedback may include staged, unstaged, or untracked work, and the resulting review supplies no reusable gate evidence. Export `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` to select a non-default range. Branch and target identity variables may also be exported.
+Review scope is discovered from the current worktree. Reusable gate evidence requires the exact current version to be committed and the worktree to be clean. Explicit advisory feedback may include staged, unstaged, or untracked work, and the resulting review supplies no reusable gate evidence. Export `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` to select a non-default range. Branch and target identity variables may also be exported.
 
 </inputs>
 
@@ -29,15 +29,15 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py" append-finding --state "<sta
 python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>"
 ```
 
-`start` computes the diff bundle, opens the review journal, appends the scope-entered event, and returns JSON containing `statePath`, `runToken`, `diffPath`, `manifestPath`, and `changedFiles`.
+`start` fetches a git-derived or `origin/` base and refuses a head behind the fetched `origin/<base>` tip before any journal exists — the dedicated stale-base exit code with a `stale-base` JSON diagnostic on stderr and no run state; an exported local ref or commit is compared as given — and otherwise computes the diff bundle, opens the review journal, appends the scope-entered event, and returns JSON containing `statePath`, `runToken`, `diffPath`, `manifestPath`, and `changedFiles`. Report the refusal as a `stale-base` block carrying the diagnostic verbatim and stop.
 
 `append-scope` appends one scope-advanced event for a changed file after Claude has examined that file.
 
-`append-finding` reads one finding JSON object from stdin, wraps it in the journal event envelope, and appends it. The runner does not perform the full review finding schema or citation validation; `spx journal append` is the authoritative event boundary for this stop-gap implementation.
+`append-finding` reads one finding JSON object from stdin, wraps it in the journal event envelope, and appends it. The runner does not perform the full review finding schema or citation validation; `spx journal append` is the authoritative event boundary.
 
 `finish` reads the journal prefix, appends the terminal run-completed event with review status and finding counts, seals the run, removes runner-owned scratch storage, and prints the raw run token.
 
-When any runner verb exits non-zero, stop and surface its stderr. Do not repair journal state by calling `spx journal`, `git`, `mktemp`, `rm`, `date`, or helper scripts directly.
+When any runner verb exits non-zero, stop and surface its stderr; the command boundary in `<constraints>` admits no repair outside the runner.
 
 </api_surface>
 
@@ -71,9 +71,9 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 - NEVER run validation, tests, evals, coverage, lint, typecheck, or any deterministic verification command. Deterministic verification has already passed before this review starts; this skill provides agentic judgment by reading the diff and loaded review context.
 - NEVER invoke `spx journal`, `git`, `mktemp`, `rm`, `date`, `printf`, `compute_diff.py`, `journal_emit.py`, or `review_result.py` directly. The runner is the only command boundary.
 - NEVER write review-result files, rendered Markdown artifacts, or durable state outside `spx journal`. The runner-owned diff bundle and state file are scratch input for the active invocation only.
-- The prompt lives only at `${CLAUDE_SKILL_DIR}/references/review-prompt.md`; rotating the prompt MUST NOT require changing code.
+- NEVER load a review prompt other than `${CLAUDE_SKILL_DIR}/references/review-prompt.md` — one prompt keeps every review run comparable.
 - NEVER read `REVIEW.md`, `REVIEW.example.md`, or another repository-root review prompt.
-- Findings only. No praise, acknowledgements, open questions, verdicts, or prose summaries belong in the review stream.
+- NEVER append praise, acknowledgements, open questions, verdicts, or prose summaries to the review stream — it carries findings only.
 - NEVER render, summarize, count, or restate findings for the caller. The sealed journal prefix is the review authority.
 
 </constraints>

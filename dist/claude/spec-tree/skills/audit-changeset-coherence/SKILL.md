@@ -29,8 +29,8 @@ A verdict on whether one exact committed changeset forms one coherent review uni
 <audit_workflow>
 
 1. Bind the scope selector: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the selector is the one the request text carries, and the empty substitution binds nothing. Require it to identify a branch, `HEAD`, or a committed `<base>...<head>` scope. When the request carries no selector, or no exact committed scope can be resolved, return the `BLOCKED` JSON object in `<verdict_format>`; scope failure occurs before a coherence verdict and never fabricates commit identities.
-2. Resolve the exact committed scope by running `python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" "<scope>"`, which routes base-ref resolution, remote-tracking-ref composition, commit identity, and three-dot diff scope through the canonical changeset-scope primitives. Preserve its `base`, `head`, and `changed_paths` verbatim. NEVER derive base-ref, commit identity, or diff scope from raw git; a bare local branch ref lags `origin/<base>` in a multi-worktree checkout and re-admits already-merged commits. A nonzero exit returns the `BLOCKED` JSON object. Read changed content only within the resolved scope.
-3. Enumerate every changed path and classify its role: decision/specification, test/eval evidence, implementation, generated artifact, workflow/configuration, documentation, migration, deployment, or release.
+2. Resolve the exact committed scope by running `python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" "<scope>"`, which routes base-ref resolution, remote-tracking-ref composition, commit identity, and three-dot diff scope through the canonical changeset-scope primitives. Preserve its `base`, `head`, and `changed_paths` verbatim. NEVER derive base-ref, commit identity, or diff scope from raw git; a bare local branch ref lags `origin/<base>` in a multi-worktree checkout and re-admits already-merged commits. The resolver fetches the base and refuses a head behind its tip with a dedicated exit code and a `stale-base` diagnostic on stderr; return the `BLOCKED` JSON object with `reason` `stale-base` and that diagnostic verbatim, before reading any subject. Any other nonzero exit returns the `BLOCKED` JSON object with `reason` `scope-unresolved`. Read changed content only within the resolved scope.
+3. Read any evidence packet the request text carries beside the selector — a JSON object of already-collected claims, artifact roles, `generated_from` provenance, dependency evidence, and review-load signals. The resolved scope from step 2 is authoritative for `base`, `head`, and the changed-path set; the packet supplies only the per-artifact evidence the later steps name for paths inside that scope, and a packet entry naming a path outside it carries no evidence for this verdict. Enumerate every changed path and classify its role: decision/specification, test/eval evidence, implementation, generated artifact, workflow/configuration, documentation, migration, deployment, or release.
 4. Resolve every generated artifact to its producing authored artifact from repository-declared build relationships. In an already-collected evidence packet, `role: generated` classifies the artifact kind only; it never establishes provenance. Require `generated_from`, a declared relationship record, or equivalent explicit evidence. When `generated_relationship_evidence.status` is `missing`, return `UNKNOWN` with `missing-generated-source-evidence` before clustering the unresolved artifact. Exclude resolved generated fanout from authored breadth while retaining it in each producer cluster's `generated_fanout`.
 5. Extract behavioral claims from the changed declarations and observable implementation/evidence. Use commit messages only as supporting evidence; they never override changed artifacts.
 6. Build the smallest semantic clusters whose artifacts realize one claim. Record each cluster's authored artifacts, generated fanout, verification story, rollback story, dependencies, and independent-mergeability judgment.
@@ -60,14 +60,15 @@ Use deterministic identities: `cluster-1`, `cluster-2`, and so on in dependency 
 
 <verdict_format>
 
-When scope resolution fails before an exact changeset exists, return only this JSON object:
+When scope resolution fails before an exact changeset exists, return only this JSON object; `reason` is `stale-base` when the resolver refused a head behind the fetched base, carrying the resolver's stderr diagnostic verbatim under `diagnostic`, and `scope-unresolved` for every other failure:
 
 ```json
 {
   "schema_version": 1,
   "status": "BLOCKED",
-  "reason": "scope-unresolved",
-  "scope_input": "<caller-supplied scope or empty string>"
+  "reason": "scope-unresolved | stale-base",
+  "scope_input": "<supplied scope selector or empty string>",
+  "diagnostic": "<resolver stderr, verbatim, or empty string>"
 }
 ```
 
