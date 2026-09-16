@@ -179,6 +179,19 @@ FOREIGN_MARKETPLACE_NAME = f"{MARKETPLACE_NAME}-other"
 """A marketplace name other than the product's, whose records every reader skips."""
 
 
+class RecordDisposition(StrEnum):
+    """What one generated Claude Code install record should map to."""
+
+    UPDATE = "update"
+    NO_DIRECTORY_PATH = "no-directory-path"
+    OUT_OF_SCOPE = "out-of-scope"
+    PATHLESS_OUT_OF_SCOPE = "pathless-out-of-scope"
+    UNCATALOGED = "uncataloged"
+    NONCANONICAL_SOURCE = "noncanonical-source"
+    UNREADABLE_SETTINGS = "unreadable-settings"
+    EXCLUDED = "excluded"
+
+
 def recorded_version(ordinal: int) -> str:
     """The version a generated preflight listing entry carries.
 
@@ -253,19 +266,6 @@ def generated_closing_listing(
         )
     )
     return tuple(closing)
-
-
-class RecordDisposition(StrEnum):
-    """What one generated Claude Code install record should map to."""
-
-    UPDATE = "update"
-    NO_DIRECTORY_PATH = "no-directory-path"
-    OUT_OF_SCOPE = "out-of-scope"
-    PATHLESS_OUT_OF_SCOPE = "pathless-out-of-scope"
-    UNCATALOGED = "uncataloged"
-    NONCANONICAL_SOURCE = "noncanonical-source"
-    UNREADABLE_SETTINGS = "unreadable-settings"
-    EXCLUDED = "excluded"
 
 
 def generated_claude_install_records(
