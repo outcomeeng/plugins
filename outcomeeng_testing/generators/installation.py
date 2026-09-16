@@ -1,6 +1,8 @@
 """Generated finite plugin selections for installation evidence."""
 
 import json
+import errno
+import os
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from itertools import combinations
@@ -374,6 +376,11 @@ def generated_codex_listing_entries(
     return tuple(entries), frozenset(in_scope)
 
 
+def generated_command_failure_stderr() -> tuple[str, ...]:
+    """Enumerate OS error diagnostics independently of CLI failure classification."""
+    return tuple(dict.fromkeys(os.strerror(code) for code in errno.errorcode))
+
+
 def generated_failure_classification_cases(
     operation_domains: Sequence[
         tuple[InstallationMode, str | None, Sequence[Operation]]
@@ -405,6 +412,7 @@ __all__ = [
     "UNCATALOGED_PLUGIN",
     "generated_codex_listing_entries",
     "generated_failure_classification_cases",
+    "generated_command_failure_stderr",
     "generated_invalid_catalog_subsets",
     "generated_persistent_catalog_selections",
     "generated_valid_catalog_subsets",

@@ -1,5 +1,7 @@
 """Installation evidence grouped by its governing contract."""
 
+import pytest
+
 from outcomeeng.distribution.installation import (
     CODEX_CONFIG_PATH,
     Agent,
@@ -8,6 +10,7 @@ from outcomeeng.distribution.installation import (
     SPEC_TREE_PLUGIN,
     Operation,
 )
+from outcomeeng_testing.generators.installation import generated_command_failure_stderr
 from outcomeeng_testing.harnesses.installation import (
     observe_codex_config_independence,
     observe_designated_failure,
@@ -53,12 +56,6 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
         for command in claude_commands
         if command.operation is Operation.PLUGIN_UPDATE
     ]
-    failure = observe_designated_failure(
-        isolated=False,
-        operation=Operation.PLUGIN_UPDATE,
-        stderr="update failed for a reason the marketplace did not name",
-    )
-
     assert execution.report.plan.claude_plugins
     assert not any(
         command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE}
@@ -93,6 +90,16 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
     assert registering_operations.index(Operation.MARKETPLACE_ADD) < (
         registering_operations.index(Operation.PLUGIN_UPDATE)
     )
+
+
+@pytest.mark.parametrize("stderr", generated_command_failure_stderr())
+def test_native_update_failure_stops_before_later_operations(stderr: str) -> None:
+    failure = observe_designated_failure(
+        isolated=False,
+        operation=Operation.PLUGIN_UPDATE,
+        stderr=stderr,
+    )
+
     assert failure.report is None
     assert failure.failure is not None
     assert failure.failure.command.operation is Operation.PLUGIN_UPDATE
