@@ -8,6 +8,8 @@ CAN inspect definition loading, child execution, and process cleanup against dis
 
 ### Scenarios
 
+- Given empty disposable native state, when the installed Codex CLI lists spawned children and reads an absent thread without starting a model turn, then the listing retains complete empty child pages and the thread read returns a structured failure. ([test](tests/test_native_thread_read.scenario.l2.py))
+
 - Given a native probe command whose parent emits a byte sequence that is invalid UTF-8 and exits while a descendant keeps the captured output stream open, when the runner collects the result, then it returns the parent's completed result promptly, replaces undecodable bytes, and terminates the descendant before returning. ([test](tests/test_native_profile_process.scenario.l1.py))
 
 - Given a native probe command whose parent and descendant remain running, when the execution timeout expires, then the runner reports the timeout promptly and terminates the descendant before returning. ([test](tests/test_native_profile_process.scenario.l1.py))
