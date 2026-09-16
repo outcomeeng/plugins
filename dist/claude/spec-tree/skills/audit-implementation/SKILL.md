@@ -234,18 +234,20 @@ required.
 
 The `coverageStatus` values above are the required-unit set. An optional unit
 may additionally carry `skipped`; no unit carries `incomplete`. The accounting
-record for a resolved path no concern claimed is the same shape with these
-values, the six run-driver identity fields repeated as `expectedProducer` and
-`producerProvenance` omitted:
+record for a resolved path no concern claimed is this complete payload — every
+field shown is required, and `producerProvenance` is omitted:
 
 ```json
 {
   "unitId": "implementation:unknown:coverage-gap:<the exact resolved path>",
+  "auditClass": "implementation",
   "auditKind": "coverage-gap",
   "subject": "<the exact resolved path>",
   "coverageRequirement": "optional",
   "coverageStatus": "skipped",
-  "priorContext": { "changedFilePartition": "<the exact resolved path>", "concernPartition": "coverage-gap" }
+  "priorContext": { "changedFilePartition": "<the exact resolved path>", "concernPartition": "coverage-gap" },
+  "expectedProducer": "<the six producer fields of the run-driver identity>",
+  "recordedByRunDriver": "<the six producer fields of the run-driver identity>"
 }
 ```
 
@@ -253,9 +255,7 @@ values, the six run-driver identity fields repeated as `expectedProducer` and
 language is unknown; never replace `priorContext` with top-level partition
 fields. Use `coverage-gap` with `producerProvenance` omitted, because no leaf
 skill executed, for a missing producer, an unsupported subject, and the
-accounting record `<coverage_model>` requires for an unclaimed resolved path;
-the accounting record also carries `concernPartition` `coverage-gap` and
-repeats the run-driver identity as `expectedProducer`.
+accounting record `<coverage_model>` requires for an unclaimed resolved path.
 
 Every finding payload uses the exact published SPX field names below. Its
 `unitId` references a scope unit already accepted by the run, its
