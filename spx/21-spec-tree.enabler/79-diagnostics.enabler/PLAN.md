@@ -17,8 +17,9 @@ node's `[test]` evidence trails the aligned assertion until the cutover below re
 
 Pending implementation — BLOCKING dependency: a published `@outcomeeng/spx` release must first
 provide the revised diagnose manifest schema and the marketplace-install classification that reads
-each agent's selection authority described above. The dependency must include home-selection parsing
-and native inspection outside product configuration discovery. The currently published `spx diagnose` reads
+each agent's selection authority described above. The dependency must include home-selection parsing,
+the reading of Claude Code install records for the invocation checkout at project and local
+scope, and native inspection outside product configuration discovery. The currently published `spx diagnose` reads
 `expected_plugins` from the manifest, so removing it before the CLI reads each agent's selection authority
 breaks diagnosis. When the release is published, land these together so the test and the shipped
 artifact rejoin the already-aligned decision and spec:
