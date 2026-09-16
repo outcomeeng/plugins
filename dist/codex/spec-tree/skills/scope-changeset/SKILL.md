@@ -22,7 +22,7 @@ When a selector is supplied, resolve it through this skill's own command:
 python3 "${SKILL_DIR}/scripts/changeset_scope.py" "<selector>"
 ```
 
-Pass the supplied selector as one literal argument. The command fetches the base's remote-tracking ref, reads the current checkout, and emits one JSON object with `base`, `head`, and `changed_paths`. Exit status 3 (`EXIT_STALE_BASE`) is the stale-base refusal: the head does not descend from the fetched `origin/<base>` tip, stdout carries no scope, and stderr carries one JSON diagnostic with `status` `stale-base`, `tip`, `merge_base`, and `behind`. Report it as a `stale-base` block and emit no marker; a scope computed against an older base is never a substitute. Any other nonzero exit or malformed result is `blocked`: preserve its diagnostic and emit no marker. Never fabricate a base, endpoint identity, or path set.
+Pass the supplied selector as one literal argument. For a git-derived or `origin/` base the command fetches the base's remote-tracking ref, reads the current checkout, and emits one JSON object with `base`, `head`, and `changed_paths`; an explicit range whose base names a local ref or a commit is compared as given, with no fetch. Exit status 3 (`EXIT_STALE_BASE`) is the stale-base refusal: the head does not descend from the fetched `origin/<base>` tip, stdout carries no scope, and stderr carries one JSON diagnostic with `status` `stale-base`, `tip`, `merge_base`, and `behind`. Report it as a `stale-base` block and emit no marker; a scope computed against an older base is never a substitute. Any other nonzero exit or malformed result is `blocked`: preserve its diagnostic and emit no marker. Never fabricate a base, endpoint identity, or path set.
 
 After a successful command, emit `<COMMITTED_CHANGESET_SCOPE>` with the supplied selector, absolute checkout root, and all three returned fields verbatim. The invoking workflow consumes this marker without re-executing the derivation. The marker applies only to that checkout and selector at the recorded full head; discard it when the subject changes. The command fetches the base's remote-tracking ref and never rebases, commits, or modifies the working tree.
 
@@ -58,9 +58,11 @@ and Git execution failures raise `ScopeResolutionError` without changing the
 checkout. Invalid repository paths retain the path and operating-system error
 in that diagnostic. `ScopeField` owns the returned JSON field names.
 
-The base identity is the fetched `origin/<base>` tip, never the merge base.
-`require_current_base` fetches that ref, then refuses a head whose merge base
-with the tip is not the tip itself by raising `StaleBaseError`; the CLI maps
+For a git-derived or `origin/` base the base identity is the fetched
+`origin/<base>` tip, never the merge base. `require_current_base` fetches that
+ref, then refuses a head whose merge base with the tip is not the tip itself
+by raising `StaleBaseError`; a local-ref or commit base in an explicit range
+is the caller's exact endpoint and is compared without a fetch. The CLI maps
 it to `EXIT_STALE_BASE` (exit status 3) and prints
 `StaleBaseError.diagnostic()` — the `StaleBaseField` names `status`
 (`STALE_BASE_STATUS`), `tip`, `merge_base`, and `behind` — on stderr in place

@@ -97,3 +97,21 @@ def test_a_symbolic_origin_head_base_is_fetched_as_its_branch() -> None:
             assert result.returncode == CHANGESET_SCOPE.EXIT_STALE_BASE
             diagnostic = json.loads(result.stderr.strip().splitlines()[-1])
             assert diagnostic[CHANGESET_SCOPE.StaleBaseField.TIP] == remote_tip
+
+
+def test_an_explicit_local_ref_base_is_compared_as_given() -> None:
+    for scenario in generated_changeset_scope_cases():
+        with stale_local_base_repo(scenario) as stale:
+            local_base = git_commit_oid(stale.repo, stale.base_ref)
+            assert local_base != remote_base_oid(stale.repo, stale.base_ref)
+            selector = (
+                f"{stale.base_ref}{CHANGESET_SCOPE.RANGE_SEPARATOR}"
+                f"{CHANGESET_SCOPE_CONTRACT.HEAD_REF}"
+            )
+
+            result = run_changeset_scope(stale.repo, selector)
+
+            assert result.returncode == 0
+            resolved = json.loads(result.stdout)
+            assert resolved[CHANGESET_SCOPE.ScopeField.BASE] == local_base
+            assert git_commit_oid(stale.repo, stale.base_ref) == local_base
