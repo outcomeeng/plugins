@@ -181,7 +181,7 @@ class RecordDisposition(StrEnum):
     """What one generated Claude Code install record should map to."""
 
     UPDATE = "update"
-    ABSENT_PATH = "absent-path"
+    NO_DIRECTORY_PATH = "no-directory-path"
     OUT_OF_SCOPE = "out-of-scope"
     PATHLESS_OUT_OF_SCOPE = "pathless-out-of-scope"
     UNCATALOGED = "uncataloged"
@@ -195,6 +195,7 @@ def generated_claude_install_records(
     checkout: Path,
     other_checkout: Path,
     absent_path: Path,
+    file_path: Path,
     forked_checkout: Path,
     forked_local_checkout: Path,
     local_forked_checkout: Path,
@@ -206,7 +207,8 @@ def generated_claude_install_records(
     Each plugin yields one record per disposition: an update at project scope
     in the invocation checkout, an update at project scope in another existing
     checkout, an update at local scope in the invocation checkout, a record
-    whose project path does not exist, a user-scope record carrying no path,
+    whose project path is absent, a record whose project path is a regular
+    file, a user-scope record carrying no path,
     managed-scope records at the invocation checkout and at the other existing
     checkout, a record in a checkout whose project settings register the
     marketplace from a noncanonical source, a record in a checkout whose local
@@ -254,7 +256,15 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(absent_path),
                     },
-                    RecordDisposition.ABSENT_PATH,
+                    RecordDisposition.NO_DIRECTORY_PATH,
+                ),
+                (
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: identifier,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(file_path),
+                    },
+                    RecordDisposition.NO_DIRECTORY_PATH,
                 ),
                 (
                     {

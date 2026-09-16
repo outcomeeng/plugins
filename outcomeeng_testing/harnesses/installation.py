@@ -862,6 +862,7 @@ class RecordRefreshObservation:
     checkout: Path
     other_checkout: Path
     absent_path: Path
+    file_path: Path
     forked_checkout: Path
     forked_local_checkout: Path
     local_forked_checkout: Path
@@ -904,6 +905,8 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
         _write_project_marketplace(
             local_canonical, CANONICAL_MARKETPLACE_SOURCE, local=True
         )
+        regular_file = temporary_root / "regular-file"
+        regular_file.write_text("", encoding="utf-8")
         malformed = temporary_root / "malformed-checkout"
         malformed_settings = malformed / CLAUDE_PROJECT_SETTINGS_PATH
         malformed_settings.parent.mkdir(parents=True)
@@ -918,6 +921,7 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             preflight.roots.checkout,
             other.resolve(),
             absent.resolve(),
+            regular_file.resolve(),
             forked.resolve(),
             forked_local.resolve(),
             local_forked.resolve(),
@@ -946,6 +950,7 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
             checkout=preflight.roots.checkout,
             other_checkout=other.resolve(),
             absent_path=absent.resolve(),
+            file_path=regular_file.resolve(),
             forked_checkout=forked.resolve(),
             forked_local_checkout=forked_local.resolve(),
             local_forked_checkout=local_forked.resolve(),

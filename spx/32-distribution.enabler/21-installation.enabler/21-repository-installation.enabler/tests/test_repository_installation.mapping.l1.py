@@ -5,7 +5,7 @@ import json
 import pytest
 
 from outcomeeng.distribution.installation import (
-    ABSENT_PROJECT_PATH_WARNING,
+    NO_DIRECTORY_PATH_WARNING,
     Agent,
     CLAUDE_CATALOG_PATH,
     CLAUDE_PLUGIN_ID_FIELD,
@@ -158,7 +158,7 @@ def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None
     unmatched_updates = list(updates)
     unmatched_warnings = list(warnings)
     templates = {
-        RecordDisposition.ABSENT_PATH: ABSENT_PROJECT_PATH_WARNING,
+        RecordDisposition.NO_DIRECTORY_PATH: NO_DIRECTORY_PATH_WARNING,
         RecordDisposition.OUT_OF_SCOPE: OUT_OF_SCOPE_RECORD_WARNING,
         RecordDisposition.PATHLESS_OUT_OF_SCOPE: PATHLESS_OUT_OF_SCOPE_RECORD_WARNING,
         RecordDisposition.UNCATALOGED: UNCATALOGED_RECORD_WARNING,

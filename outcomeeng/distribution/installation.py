@@ -123,9 +123,9 @@ FIRST_INSTALL_WARNING = (
     "No outcomeeng plugins are installed for {agent}; installing only spec-tree. "
     "You probably want to install more plugins."
 )
-ABSENT_PROJECT_PATH_WARNING = (
-    "Claude Code records {plugin} at {scope} scope for {project_path}, which does "
-    "not exist; the record is left unchanged."
+NO_DIRECTORY_PATH_WARNING = (
+    "Claude Code records {plugin} at {scope} scope for {project_path}, which is "
+    "not an existing directory; the record is left unchanged."
 )
 OUT_OF_SCOPE_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}; persistent "
@@ -1223,7 +1223,7 @@ def claude_refresh_records(
                 project_path=record.project_path,
             )
         elif not record.project_path.is_dir():
-            message = ABSENT_PROJECT_PATH_WARNING.format(
+            message = NO_DIRECTORY_PATH_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
                 project_path=record.project_path,
@@ -2565,7 +2565,7 @@ __all__ = [
     "InstallationRoots",
     "InstallationWarning",
     "FIRST_INSTALL_WARNING",
-    "ABSENT_PROJECT_PATH_WARNING",
+    "NO_DIRECTORY_PATH_WARNING",
     "OUT_OF_SCOPE_RECORD_WARNING",
     "PATHLESS_OUT_OF_SCOPE_RECORD_WARNING",
     "UNCATALOGED_RECORD_WARNING",
