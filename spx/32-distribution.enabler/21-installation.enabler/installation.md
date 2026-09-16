@@ -17,4 +17,4 @@ CAN refresh selected Claude Code and Codex plugins without widening either insta
 
 ### Compliance
 
-- ALWAYS: persistent installation targets Claude Code project scope in the invocation checkout for marketplace, inspection, and bootstrap operations, each recorded plugin's own project or local scope and project path for its native update, and the selected `CODEX_HOME`, while isolated verification targets only caller-selected disposable homes. ([test](tests/test_installation.compliance.l1.py))
+- ALWAYS: persistent installation targets Claude Code project scope in the invocation checkout for marketplace, inspection, and bootstrap operations, the invocation checkout's own records at their own project or local scope for the native update with the invocation checkout as working directory, every other project- or local-scope record of a cataloged plugin through the install-record rewrite with no command at all, and the selected `CODEX_HOME`, while isolated verification targets only caller-selected disposable homes. ([test](tests/test_installation.compliance.l1.py))
