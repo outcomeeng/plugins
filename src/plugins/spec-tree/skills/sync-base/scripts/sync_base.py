@@ -514,24 +514,74 @@ def _write_dependent_records(
     *,
     default_name: str,
 ) -> None:
-    """Record ``branch`` and its pre-rebase head on every local branch stacked on it.
+    """Record the nearest predecessor on every local branch stacked on ``branch``.
 
     A local branch that contains the pre-rebase head sat on it. The default
     branch is never a dependent: it contains a merged branch's head without
     sitting on it. A dependent that already records a different predecessor
     keeps that record: its own restack flows through that nearer predecessor
-    when that one is rewritten. ``default_name`` is always resolved here:
-    :func:`_sync` refuses every movement that needs it before the rebase runs.
+    when that one is rewritten. An unrecorded dependent that contains another
+    dependent's tip sits on that nearer dependent, not on ``branch``, so it
+    records the nearest such dependent and its tip; a chain built by hand
+    therefore records nearest predecessors, and two dependents at one commit
+    each record ``branch`` because neither sits on the other. ``default_name``
+    is always resolved here: :func:`_sync` refuses every movement that needs it
+    before the rebase runs.
     """
-    for dependent in _dependent_candidates(repo, branch, old_head_oid):
-        if dependent == default_name:
-            continue
+    dependents = [
+        name
+        for name in _dependent_candidates(repo, branch, old_head_oid)
+        if name != default_name
+    ]
+    tips: dict[str, str] = {}
+    for name in dependents:
+        tip = _rev(repo, name)
+        if tip is not None:
+            tips[name] = tip
+    for dependent in dependents:
         existing = _read_stack_record(repo, dependent)
-        if existing is not None and existing.predecessor != branch:
+        if existing is not None:
+            if existing.predecessor == branch:
+                _write_stack_record(
+                    repo, dependent, StackRecord(predecessor=branch, tip=old_head_oid)
+                )
             continue
-        _write_stack_record(
-            repo, dependent, StackRecord(predecessor=branch, tip=old_head_oid)
+        nearest = _nearest_dependents_beneath(repo, dependent, tips)
+        if len(nearest) > 1:
+            continue
+        if nearest:
+            record = StackRecord(predecessor=nearest[0], tip=tips[nearest[0]])
+        else:
+            record = StackRecord(predecessor=branch, tip=old_head_oid)
+        _write_stack_record(repo, dependent, record)
+
+
+def _nearest_dependents_beneath(
+    repo: _Repository, dependent: str, tips: dict[str, str]
+) -> list[str]:
+    """Return the dependents ``dependent`` sits on that no other contained one reaches.
+
+    A dependent sits on another when it contains that one's tip and the two
+    tips differ. The nearest is the one whose tip every other contained tip
+    reaches, so the list is empty when ``dependent`` sits on no other
+    dependent, one name when the nearest is unique, and several when the
+    contained tips are unordered and no single nearest one exists.
+    """
+    own_tip = tips.get(dependent)
+    beneath = [
+        other
+        for other, tip in tips.items()
+        if other != dependent and tip != own_tip and _is_ancestor(repo, tip, dependent)
+    ]
+    return [
+        candidate
+        for candidate in beneath
+        if all(
+            _is_ancestor(repo, tips[other], tips[candidate])
+            for other in beneath
+            if other != candidate
         )
+    ]
 
 
 def _diff_paths(repo: _Repository, spec: str) -> list[str] | None:

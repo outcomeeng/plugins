@@ -132,16 +132,16 @@ The fresh output must identify the assigned root exactly, show the current sessi
 
 Conditions that must hold before every push (initial or follow-up). A branch-state failure is resolved in place per `<assigned_cwd_worktree_discipline>` — branch in the assigned worktree and continue, never switch to another worktree and never stash; the remaining conditions stop the calling flow until resolved.
 
-| Condition (must hold)                                        | Failure response                                                                                                                   |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Current branch is not `main`, `master`, or detached HEAD     | Create a fresh task branch in the assigned worktree from the resolved base and continue, per `<assigned_cwd_worktree_discipline>`. |
-| Working tree is clean (no uncommitted changes)               | Checkpoint only authorized paths as described below, then recheck cleanliness; never stash.                                        |
-| Branch is at least one commit ahead of the resolved base     | STOP. Confirm the base branch — there is nothing to PR.                                                                            |
-| Branch is not behind the resolved base (no upstream commits) | Rebase onto `origin/<base>` per `<base_sync>`, then re-run this gate.                                                              |
-| Branch topology is classified as peer or stacked             | STOP. Apply `<branch_topology>` before continuing.                                                                                 |
-| Work branch is not tracking the default branch               | STOP. Replace the upstream before pushing.                                                                                         |
-| No PR already exists for this branch (initial push only)     | STOP. Surface the existing PR URL via `gh pr view --json url`.                                                                     |
-| `gh auth status` reports an authenticated token              | STOP. Resolve auth before continuing.                                                                                              |
+| Condition (must hold)                                      | Failure response                                                                                                                                                                                                      |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Current branch is not `main`, `master`, or detached HEAD   | Create a fresh task branch in the assigned worktree from the resolved base and continue, per `<assigned_cwd_worktree_discipline>`.                                                                                    |
+| Working tree is clean (no uncommitted changes)             | Checkpoint only authorized paths as described below, then recheck cleanliness; never stash.                                                                                                                           |
+| Branch topology is classified as peer or stacked           | STOP. Apply `<branch_topology>`; it fixes `${base}` — the default for a peer, the recorded predecessor for a stacked branch — and its currency predicates are re-checked when this gate re-runs after the sync below. |
+| Branch is at least one commit ahead of its classified base | STOP. Confirm the base branch — there is nothing to PR.                                                                                                                                                               |
+| Branch is not behind its classified base                   | Sync per `<base_sync>` — no `--base` before a PR exists, the PR's `baseRefName` once one does — then re-run this gate.                                                                                                |
+| Work branch is not tracking the default branch             | STOP. Replace the upstream before pushing.                                                                                                                                                                            |
+| No PR already exists for this branch (initial push only)   | STOP. Surface the existing PR URL via `gh pr view --json url`.                                                                                                                                                        |
+| `gh auth status` reports an authenticated token            | STOP. Resolve auth before continuing.                                                                                                                                                                                 |
 
 Use `/commit-changes` only for paths the session is authorized to mutate. Preserve all other paths and their index state, and resolve any missing authority before changing them. A successful checkpoint alone does not establish the clean-tree predicate.
 
@@ -152,6 +152,9 @@ gh auth status
 git branch --show-current
 git status --porcelain
 base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+# a stacked branch measures against its predecessor, the record /sync-base wrote
+predecessor=$(git config --get "branch.$(git branch --show-current).stackPredecessor" || true)
+[ -n "${predecessor}" ] && base="${predecessor}"
 git fetch origin "${base}"
 git log --oneline "origin/${base}..HEAD"
 git diff "origin/${base}...HEAD" --stat
@@ -195,7 +198,7 @@ git diff --name-only "origin/${base}...HEAD"
 
 **Stacked-gate** (all must hold): the PR base is the previous stack branch (named in the PR body's `Stack` or `Merge order` note); the branch remains draft while the base is unmerged; after the base merges, the branch is rebased onto the updated default branch before final merge.
 
-Identify the previous stack branch from context: the PR description's `Stack` / `Merge order` note, the branch-naming convention, or an explicit user instruction. If none of those yields a ref, the consuming workflow asks the operator through its own structured-question tool grant rather than guessing.
+Identify the previous stack branch from the branch's stack record first — `git config --get branch.<name>.stackPredecessor`, the same name the `/sync-base` proof reports as `stack_predecessor`; a branch carrying a record is stacked on that predecessor. Without a record, take the PR description's `Stack` / `Merge order` note, the branch-naming convention, or an explicit user instruction. If none of those yields a ref, the consuming workflow asks the operator through its own structured-question tool grant rather than guessing.
 
 ```bash
 base_branch="<previous-stack-branch>"
@@ -205,7 +208,7 @@ git log --oneline "origin/${base_branch}..HEAD"
 git diff --name-only "origin/${base_branch}...HEAD"
 ```
 
-**Post-merge reconstruction.** Once the stack base merges, re-enter the opening flow to re-target the PR at the default branch, re-classify as peer, and open it ready. GitHub auto-retargets the PR base on the API side, but the local branch must still be rebased onto the updated default and the manifest version re-evaluated against the new base.
+**Post-merge reconstruction.** Once the stack base merges, re-enter the opening flow to re-target the PR at the default branch, re-classify as peer, and open it ready. GitHub auto-retargets the PR base on the API side; the local branch is then restacked by `/sync-base` with `--base <default>` per `<base_sync>` — only the commits above the recorded predecessor tip replay onto `origin/<default>` and the record is cleared, so the merged predecessor's commits are never replayed — and the manifest version is re-evaluated against the new base.
 
 </branch_topology>
 
@@ -238,7 +241,7 @@ Continue dependent work only after `/sync-base` completes with `already_current`
 
 Rebase on drift, not at merge time. A branch behind base is superseded by a rebase before it can merge, so every check run and every review posted against the un-rebased head is wasted effort. Rebasing the moment drift appears aims CI and reviewers at the head that will actually merge, and surfaces a conflicted ("nasty") rebase early during review/check convergence instead of at merge time, where an unexpected conflict or an integration regression costs a full extra review round on the critical path.
 
-Invoke `/sync-base` with the active flow's base passed as `--base ${base}` rather than letting it re-derive one. The managing flow captures `${base}` from `gh pr view --json baseRefName`, which returns the PR's actual base for both peer and stacked topologies; the opening flow's `<branch_hygiene>` sets it from `gh repo view --json defaultBranchRef` before any PR exists. The block runs identically in both contexts.
+Once a pull request exists, invoke `/sync-base` with that PR's base passed as `--base ${base}`, captured from `gh pr view --json baseRefName`: it names the predecessor for a stacked PR, and the default once GitHub has retargeted the PR after that predecessor merged — in which case the primitive restacks the branch, replaying only the commits above its recorded predecessor tip onto `origin/${base}` and clearing the record. Before a PR exists, the opening flow's `<branch_hygiene>` invokes `/sync-base` with no `--base`: the primitive follows the branch's stack record, derives a predecessor from local topology when it carries none, or rebases onto the default when the branch is unstacked, and its proof's `stack_predecessor` is what `<branch_topology>` classifies from. Never pass the default as `--base` to a branch not yet classified as a peer. A caller-supplied `--base` is always the primitive's target, so `--base <default>` on a recorded branch whose predecessor is still open replays only the commits above the recorded tip onto the default and clears the record: the stack collapses and nothing remains to restack from.
 
 When `/sync-base` reports `rebased`, the rebased tree is a fresh integration — this branch replayed on newly merged work — and the consuming flow re-establishes all `VERIFICATION_READINESS` predicates on it before the `--force-with-lease` push from `<push_semantics>`, fixing any failure or unaddressed valid finding in the same pass. The `preservation` proof in the `/sync-base` result scopes how much of that work the base movement actually invalidated, so a rebase that moved an unrelated part of the tree does not force a full re-run:
 
