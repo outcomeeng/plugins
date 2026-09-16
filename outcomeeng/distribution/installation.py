@@ -1198,11 +1198,12 @@ def claude_refresh_records(
     """Split Claude install records into native-update targets and warnings.
 
     A record refreshes when its plugin is in the committed catalog, its scope
-    is one the project boundary admits, its project path exists to host the
-    native command, and that project's own settings register no noncanonical
+    is one the project boundary admits, its project path is an existing
+    directory the native command can run from, and that project's own
+    settings register no noncanonical
     marketplace source the update would resolve against. Every other record
     is reported and left unchanged: a record outside the catalog, outside
-    project or local scope, whose project path is gone, whose project
+    project or local scope, whose project path is no existing directory, whose project
     declares a noncanonical source, or whose project settings cannot be read.
     The invocation checkout needs no special case: preflight has already
     stopped the run on its own noncanonical or unreadable declaration.
