@@ -10,6 +10,16 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.96.0
+
+### Changed
+
+- **`/wait-for-load` is one shell line chained ahead of the command it guards.** The waiter runs as `python3 "${CLAUDE_SKILL_DIR}/scripts/wait_for_load.py" && <command>`, on Claude Code and Codex alike, so its zero exit is the only thing that starts the command and a not-ready result skips it by construction. One invocation owns the whole readiness attempt for up to four hours: it observes, sleeps, rechecks, and after its first ready observation sleeps a settle delay of the elapsed wait modulo 180 seconds, clamped to the time left before the bound, then confirms against a second observation that must sit at or below capacity with a one-minute load not risen past the five-minute load by more than half a core. Waiters that arrived at different moments on one host therefore start at different moments, and a waiter that sees other work just starting returns to its loop instead of joining the herd. A `not_ready` result is terminal for the attempt; the agent-side retry of up to ten invocations is gone.
+- **The waiter's terminal JSON document goes to standard error.** Standard output stays empty, so a pipe or redirect the agent attaches to the guarded command never swallows the readiness result, and no parser stage stands between the waiter's exit code and the `&&`.
+- **A lost or truncated readiness result re-runs the line.** The command ran only if the waiter exited zero, so a result compaction removed is recovered by running the same line again; the workflow no longer stops for the operator.
+- **The router requires the waiter only before a resource-intensive command.** A test suite, an eval, a full gate, a compiling build, or an install verification is chained behind the waiter; formatting, a single-file lint, a markdown or link validation, an instruction-block render, and a status read run directly. The Codex router keeps its process-handle lifecycle rules and drops both the requirement to run the waiter and the command in separate `functions.exec` calls and the inspection of `ready: true`, because the command's own output proves the waiter exited zero. The router template advances to 0.39.0.
+- **No failure of a guarded command is called flaky before the waiter's observation is consulted.** Sustained load above capacity starves short-budgeted operations; the skill names that as starvation, not flakiness.
+
 ## 0.95.2
 
 ### Requires

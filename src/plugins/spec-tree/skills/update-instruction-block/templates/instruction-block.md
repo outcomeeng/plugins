@@ -1,5 +1,5 @@
 ---
-template_version: "0.38.0"
+template_version: "0.39.0"
 template_source: spec-tree
 ---
 
@@ -116,17 +116,16 @@ Move nodes, re-scope assertions, extract shared enablers, consolidate duplicates
 
 Review, audit, or quality check specs. Find contradictions or gaps.
 
-### Before tests, evals, builds, or validation -> `/wait-for-load`
+### Before a resource-intensive command -> `/wait-for-load`
 
-🛑 **STOP TRIGGER — Before any test, eval, build, or validation command, ALWAYS invoke `/wait-for-load`.**
-**ALWAYS** wait for `ready: true`, then run the selected command unchanged.
+🛑 **STOP TRIGGER — Before any resource-intensive command, ALWAYS invoke `/wait-for-load` and run its waiter chained ahead of that command on the same shell line.**
+A resource-intensive command is a test suite, an eval, a full gate, a compiling build, or an install verification; a lightweight command — formatting, a single-file lint, a markdown or link validation, an instruction-block render, a status read — runs without the waiter.
+**ALWAYS** let the waiter's zero exit start the selected command unchanged; a lost or truncated result re-runs the same line.
 **NEVER** use host load to reduce scope, workers, limits, deadlines, or verification.
 
 <!-- harness:codex -->
 
-**Codex execution boundary.** Invoke `/wait-for-load` in its own top-level `functions.exec` call. Inside that call, set a nested `exec_command` yield below the outer call's yield window so the nested call returns either terminal JSON or a `session_id` before the outer call can yield. When it returns a `session_id`, preserve that exact id and collect the same waiter with `write_stdin` in later top-level calls whose outer yield window exceeds the nested `write_stdin` yield. Treat readiness as established only when a top-level call visibly returns the terminal JSON with `ready: true`; an internal exit-code branch, a successfully completed outer cell, or an empty terminal payload is insufficient. Start the selected command in a separate top-level `functions.exec` call. **NEVER** place the waiter and selected command in the same `functions.exec` script or use `functions.wait` as the planned collector for a nested waiter or selected command.
-
-**Codex process lifecycle.** Every nested `exec_command` that returns a `session_id` creates an owned process handle. Record it immediately, collect it with `write_stdin` until an `exit_code` is observed, and reconcile every known handle before another process sequence, an operator question, merge or publication, or turn end. If the work is abandoned, interrupt that process and collect its terminal result. Error output or sufficient-looking partial output never closes the handle and never permits leaving its background terminal dangling.
+**Codex process lifecycle.** The chained line is one `functions.exec` call. Every nested `exec_command` that returns a `session_id` creates an owned process handle. Record it immediately, collect it with `write_stdin` until an `exit_code` is observed, and reconcile every known handle before another process sequence, an operator question, merge or publication, or turn end. If the work is abandoned, interrupt that process and collect its terminal result. Error output or sufficient-looking partial output never closes the handle and never permits leaving its background terminal dangling.
 
 <!-- /harness:codex -->
 

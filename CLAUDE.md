@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.38.0 langs:python -->
+<!-- SPEC-TREE v0.39.0 langs:python -->
 
 <operator_question_interrupt>
 **OPERATOR QUESTION - IMMEDIATE PRIVILEGE REVOCATION:** When the operator asks a question, immediately relinquish all privileges to modify the current product or any external file, service, or resource. Answer the question immediately.
@@ -91,10 +91,11 @@ Move nodes, re-scope assertions, extract shared enablers, consolidate duplicates
 
 Review, audit, or quality check specs. Find contradictions or gaps.
 
-### Before tests, evals, builds, or validation -> `/wait-for-load`
+### Before a resource-intensive command -> `/wait-for-load`
 
-🛑 **STOP TRIGGER — Before any test, eval, build, or validation command, ALWAYS invoke `/wait-for-load`.**
-**ALWAYS** wait for `ready: true`, then run the selected command unchanged.
+🛑 **STOP TRIGGER — Before any resource-intensive command, ALWAYS invoke `/wait-for-load` and run its waiter chained ahead of that command on the same shell line.**
+A resource-intensive command is a test suite, an eval, a full gate, a compiling build, or an install verification; a lightweight command — formatting, a single-file lint, a markdown or link validation, an instruction-block render, a status read — runs without the waiter.
+**ALWAYS** let the waiter's zero exit start the selected command unchanged; a lost or truncated result re-runs the same line.
 **NEVER** use host load to reduce scope, workers, limits, deadlines, or verification.
 
 ### When shipping work to the default branch -> `/merge` (transport dispatcher)
@@ -296,7 +297,7 @@ Spec-tree methodology rules (node types, states, assertion types, ordering) live
   - Markdown formatting: `just fmt <changed-markdown-file>...`. Pass every changed Markdown file that dprint formats, for example `just fmt AGENTS.md spx/local/open-pr.md`.
   - Python formatting: `just fmt-python <changed-python-file>...`. Pass every changed Python file that ruff formats.
   - Skill or plugin Markdown under `src/plugins/` or generated `dist/`: `just check-skills` and `just docs-check`. These commands take no changed-file list; they check the committed skill/catalog surfaces.
-  - Selected local deterministic gate: `just check`. This automatically selects the gate steps that cover the changed paths and prints the selected steps with reasons before running them through the recipe runner.
+  - Selected local deterministic gate: `just check`. This automatically selects the gate steps that cover the changed paths and prints the selected steps with reasons before running them through the recipe runner. It can select the test suite, so it is a resource-intensive command chained behind the `/wait-for-load` waiter, as are `just check-full`, `just test`, the `just eval*` recipes, and `just verify-marketplace-installation`; `just build-skills`, `just build-instructions`, `just check-skills`, `just docs-check`, and the formatting recipes are lightweight and run without it.
   - Full deterministic gate: `just check-full`. CI invokes this full gate on `pull_request` and push to `main`; run it locally only when the active skill, `spx/local/merging.md`, the governing node, risk evidence, or the user explicitly requires the full gate.
   - Generated plugin trees after `src/plugins/` edits: `just build-skills`. Do not hand-edit `dist/`.
   - Plugin version bumps: `just bump` (run before `just build-skills` so `dist/` carries the bumped version). NEVER hand-edit a manifest `version` field — `just bump` classifies the segment and writes both manifests in lockstep; `spx/local/commit-changes.md` carries the full bump policy.

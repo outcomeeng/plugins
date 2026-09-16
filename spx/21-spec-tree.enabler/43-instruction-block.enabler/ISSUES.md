@@ -23,6 +23,18 @@ boundaries. The mapping test is outside that changeset's diff. The auditor-verdi
 rule in `spx/15-merging.pdr.md` requires this finding to be recorded here and keeps
 it from blocking that corrective merge; its rejected verdict remains recorded.
 
+## Existing evidence re-declares production vocabulary and author-chosen expectations
+
+The isolated test-evidence audit of this node on head `df87dc4ffbe8f209a10f75aa86874b7503ef60a0` rejected five artifacts the router-narrowing changeset did not touch, beside the topology-table finding recorded above:
+
+- `tests/test_instruction_block.scenario.l1.py` hand-writes the status tokens `absent`, `stale`, and `current` that `InstructionStatus` in the shipped generator owns, and passes the harness keys `claude` and `codex` as literals where the generator's `AGENT_HARNESS_INSTRUCTION_FILENAMES` mapping and the harness constants already own them.
+- `tests/test_instruction_block.compliance.l1.py` copies the module invocation, the lefthook path, the pre-commit build command, and the two retired direct-template arguments that `outcomeeng/distribution/instruction_block.py` declares as named constants, and its refresh-workflow tests choose their shell tokens and the digest width themselves, so no production behavior exists whose mutation fails them.
+- `outcomeeng_testing/fixtures/instruction_block/near-identical-shared.md` stores the author's own computation of the expected common span over the two near-identical inputs and is consumed as a mapping expectation; the node's property harness already carries the independent oracle for that span.
+
+**Evidence.** Findings `f-002` through `f-006` of that audit; each subject lies outside the changeset's diff, so the merging decision routes them here rather than to the merge.
+
+**Settlement condition.** The scenario and compliance tests import every status token, harness key, and build constant from its owning module; the refresh-workflow assertions read their expected tokens from a source-owned workflow contract or reclassify; the near-identical expectation derives from the property harness's oracle instead of a stored answer; and a test-evidence audit of the node approves.
+
 ## `/update-instruction-block` Step 5 reads as one paragraph over six topologies
 
 Step 5 of `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md` verifies six distinct first-encounter topologies — an established surface with a valid region, the bootstrap span mapping, one file missing, both files missing, a delegating body adopted, and tracked-versus-untracked recoverability — in one unbroken paragraph. An operator scanning it after a run parses the whole block to find the branch matching their topology. Step 3's ambiguity reports already use the per-branch bullet shape this section wants.

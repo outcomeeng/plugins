@@ -17,17 +17,13 @@ Three sections need no action: `<recording>`, `<no_origin_distinction>`, and `<t
 
 That first row is applied. The deletion left both root files citing a rule that existed nowhere and the ban itself unenforced, so it was fixed by the changeset that observed it rather than deferred. The three remaining rows are cited by nothing, so their absence is quiet — they are simply unenforced until their own pass runs.
 
-### Into `/wait-for-load`
-
-`<check_load_before_flake_classification>` belongs beside the load reading it depends on rather than in the router: no failure is classified flaky, intermittent, or pre-existing before consulting the waiter's observation, because sustained load above capacity starves short-budgeted operations and produces starvation rather than flakiness.
-
 ### Dropped
 
 `<no_until_polling>`, `<no_gh_run_watch>`, `<memory_scope>`, the `<closing_protocol>` three-option template, and `<why_perfection_matters>`. The closing-protocol template is dropped because the foundation already governs closing and its touched-file-debt rule is stricter than that template's track-and-proceed option allowed, so carrying both would ship a contradiction.
 
 ### Sequencing
 
-The four router additions total roughly thirteen lines. The render model declares the 32768-byte project-doc ceiling and the gate measures every render against it, so these additions land against a measured budget; the remaining router-reduction units below own the room they spend into.
+The three router additions total roughly ten lines. The render model declares the 32768-byte project-doc ceiling and the gate measures every render against it, so these additions land against a measured budget; the remaining router-reduction units below own the room they spend into.
 
 ## Codex project-doc budget: remaining units of Change #7
 

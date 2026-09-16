@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Wait silently until all normalized host load averages are at or below capacity."""
+"""Wait silently until all normalized host load averages are at or below capacity.
+
+One invocation owns the whole readiness attempt: it observes, sleeps, rechecks,
+confirms readiness after a settle delay, and writes exactly one terminal JSON
+document to standard error so a command chained after it with ``&&`` starts
+only on a zero exit.
+"""
 
 from __future__ import annotations
 
@@ -8,16 +14,18 @@ import math
 import os
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from enum import Enum, IntEnum
-from typing import Final
+from enum import Enum, IntEnum, StrEnum
+from typing import Final, TextIO
 
 LoadAverages = tuple[float, float, float]
 
 CAPACITY_RATIO: Final = 1.0
 MINIMUM_WAIT_SECONDS: Final = 60
-MAXIMUM_WAIT_SECONDS: Final = 600
+MAXIMUM_WAIT_SECONDS: Final = 14400
+SETTLE_WINDOW_SECONDS: Final = 180
+TREND_TOLERANCE_LOAD: Final = 0.5
 LOAD_HORIZONS_SECONDS: Final[LoadAverages] = (60.0, 300.0, 900.0)
 
 
@@ -51,6 +59,33 @@ STATUS_EXIT_CODES: Final = {
 STATUS_READINESS: Final = {status: status is Status.READY for status in Status}
 
 
+class ObservationField(StrEnum):
+    """Field names of one observation inside the terminal document."""
+
+    LOAD = "load"
+    CPU_COUNT = "cpu_count"
+    NORMALIZED = "normalized"
+
+
+class ErrorField(StrEnum):
+    """Field names of the error object inside the terminal document."""
+
+    TYPE = "type"
+    MESSAGE = "message"
+
+
+class ResultField(StrEnum):
+    """Top-level field names of the terminal document."""
+
+    STATUS = "status"
+    READY = "ready"
+    INITIAL = "initial"
+    FINAL = "final"
+    WAIT_CYCLES = "wait_cycles"
+    WAITED_SECONDS = "waited_seconds"
+    ERROR = "error"
+
+
 class UnsupportedPlatformError(RuntimeError):
     """Raised when the host cannot provide a valid load observation."""
 
@@ -66,9 +101,9 @@ class Observation:
     def as_dict(self) -> dict[str, object]:
         """Return the stable JSON representation of this observation."""
         return {
-            "load": list(self.load),
-            "cpu_count": self.cpu_count,
-            "normalized": list(self.normalized),
+            ObservationField.LOAD: list(self.load),
+            ObservationField.CPU_COUNT: self.cpu_count,
+            ObservationField.NORMALIZED: list(self.normalized),
         }
 
 
@@ -103,17 +138,19 @@ class Result:
     def as_dict(self) -> dict[str, object]:
         """Return the stable terminal JSON document."""
         payload: dict[str, object] = {
-            "status": self.status,
-            "ready": self.ready,
-            "initial": self.initial.as_dict() if self.initial is not None else None,
-            "final": self.final.as_dict() if self.final is not None else None,
-            "wait_cycles": self.wait_cycles,
-            "waited_seconds": self.waited_seconds,
+            ResultField.STATUS: self.status,
+            ResultField.READY: self.ready,
+            ResultField.INITIAL: (
+                self.initial.as_dict() if self.initial is not None else None
+            ),
+            ResultField.FINAL: self.final.as_dict() if self.final is not None else None,
+            ResultField.WAIT_CYCLES: self.wait_cycles,
+            ResultField.WAITED_SECONDS: self.waited_seconds,
         }
         if self.error_type is not None:
-            payload["error"] = {
-                "type": self.error_type,
-                "message": self.error_message,
+            payload[ResultField.ERROR] = {
+                ErrorField.TYPE: self.error_type,
+                ErrorField.MESSAGE: self.error_message,
             }
         return payload
 
@@ -156,6 +193,17 @@ def is_ready(observation: Observation) -> bool:
     return all(value <= CAPACITY_RATIO for value in observation.normalized)
 
 
+def is_rising(observation: Observation) -> bool:
+    """Return whether the one-minute load exceeds the five-minute load by more than the tolerance."""
+    one_minute, five_minute, _ = observation.load
+    return one_minute > five_minute + TREND_TOLERANCE_LOAD
+
+
+def settle_seconds(elapsed: float) -> float:
+    """Return the settle delay the elapsed wait selects: elapsed modulo the settle window."""
+    return elapsed % SETTLE_WINDOW_SECONDS
+
+
 def wait_seconds(observation: Observation) -> int:
     """Calculate the next load-aware wait from all over-capacity averages."""
     estimates = tuple(
@@ -167,7 +215,7 @@ def wait_seconds(observation: Observation) -> int:
         if value > CAPACITY_RATIO
     )
     if not estimates:
-        return 0
+        return MINIMUM_WAIT_SECONDS
     return max(MINIMUM_WAIT_SECONDS, math.ceil(max(estimates)))
 
 
@@ -199,8 +247,29 @@ def terminal_result(
     )
 
 
+def confirm_after_settling(
+    dependencies: Dependencies,
+    started_at: float,
+) -> tuple[Observation, bool]:
+    """Settle, observe once more, and report whether that observation confirms readiness.
+
+    The settle delay is the elapsed wait modulo the settle window, clamped to
+    the time remaining, so waiters that arrived at different moments start at
+    different moments. The confirming observation must sit at or below capacity
+    with a one-minute load that has not risen past the five-minute load by more
+    than the trend tolerance; a rising trend means other work just started, and
+    the caller returns to its wait loop.
+    """
+    elapsed = elapsed_seconds(dependencies, started_at)
+    delay = min(settle_seconds(elapsed), MAXIMUM_WAIT_SECONDS - elapsed)
+    if delay > 0:
+        dependencies.sleep(delay)
+    observation = observe(dependencies)
+    return observation, is_ready(observation) and not is_rising(observation)
+
+
 def wait_until_ready(dependencies: Dependencies) -> Result:
-    """Own observation, sleeping, and rechecking until a terminal result exists."""
+    """Own observation, sleeping, settling, and confirming until a terminal result exists."""
     started_at = dependencies.monotonic()
     initial: Observation | None = None
     final: Observation | None = None
@@ -209,7 +278,13 @@ def wait_until_ready(dependencies: Dependencies) -> Result:
     try:
         final = observe(dependencies)
         initial = final
-        while not is_ready(final):
+        while True:
+            if is_ready(final):
+                if wait_cycles == 0:
+                    break
+                final, confirmed = confirm_after_settling(dependencies, started_at)
+                if confirmed:
+                    break
             remaining = MAXIMUM_WAIT_SECONDS - elapsed_seconds(dependencies, started_at)
             if remaining <= 0:
                 return terminal_result(
@@ -274,19 +349,18 @@ def encode_result(result: Result) -> str:
     )
 
 
-def main() -> int:
-    """Run the system waiter and emit its sole terminal output."""
-    dependencies = Dependencies(
-        read_load_averages=read_system_load_averages,
-        read_cpu_count=os.cpu_count,
-        monotonic=time.monotonic,
-        sleep=time.sleep,
-    )
-    if sys.argv[1:]:
+def run(
+    arguments: Sequence[str],
+    dependencies: Dependencies,
+    stdout: TextIO,
+    stderr: TextIO,
+) -> int:
+    """Run one readiness attempt and write its sole terminal document to stderr."""
+    if arguments:
         started_at = dependencies.monotonic()
         error = ValueError(
             "wait_for_load.py accepts no arguments; received "
-            f"{json.dumps(sys.argv[1:])}"
+            f"{json.dumps(list(arguments))}"
         )
         result = terminal_result(
             status=Status.ERROR,
@@ -299,9 +373,21 @@ def main() -> int:
         )
     else:
         result = wait_until_ready(dependencies)
-    sys.stdout.write(f"{encode_result(result)}\n")
-    sys.stdout.flush()
+    stderr.write(f"{encode_result(result)}\n")
+    stderr.flush()
+    stdout.flush()
     return int(result.exit_code)
+
+
+def main() -> int:
+    """Bind the real host, clock, and streams and run the waiter."""
+    dependencies = Dependencies(
+        read_load_averages=read_system_load_averages,
+        read_cpu_count=os.cpu_count,
+        monotonic=time.monotonic,
+        sleep=time.sleep,
+    )
+    return run(sys.argv[1:], dependencies, sys.stdout, sys.stderr)
 
 
 if __name__ == "__main__":

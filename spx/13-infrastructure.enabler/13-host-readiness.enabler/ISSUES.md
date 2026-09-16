@@ -3,8 +3,9 @@
 ## Waiter extraction awaits a published SPX CLI capability
 
 `src/plugins/spec-tree/skills/wait-for-load/scripts/wait_for_load.py` runs to
-308 lines — five terminal statuses, two lookup tables, normalized load
-observation, load-aware interval arithmetic, and a bounded-deadline loop. Past
+394 lines — five terminal statuses, two lookup tables, the document's field
+names, normalized load observation, load-aware interval arithmetic, a settle
+delay with a trend-checked confirmation, and a bounded-deadline loop. Past
 fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose
 logic moves into the SPX CLI once the script proves its value. The waiter has
 proven its value in use, so extraction is what it owes.
