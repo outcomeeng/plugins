@@ -16,7 +16,7 @@ The mapping assertion's identifier and disposable-state-root derivation is unfal
 
 **Resolution shape**: publish the listing-artifact field names from `outcomeeng/distribution/native_thread_evidence.py` beside `NativeChildLookupPayload`, import every key the test and the recording reader index from that module, add predicates over the recorded child environment that reject an ambient override or a second credential, and assert that every row's identifier and state root derive from its registry entry and differ from every other row's.
 
-**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b31704c58203929603bb2f2ceea237cb`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, `f-001` through `f-005` with `f-008` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, and `f-001` through `f-007` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, the last three rounds naming the execution-level mismatch and the last naming the environment literals; the cited test and harness files lie outside every changeset's diff.
+**Evidence**: test-evidence audit findings `f-001` and `f-002` against `06b86db6b31704c58203929603bb2f2ceea237cb`, `f-001` through `f-004` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-001` through `f-003` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-001` through `f-003` against `d84b4d2cb433059d995e6271d33551e30deb306d`, `f-001` through `f-005` with `f-008` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-001` through `f-007` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, and `f-001` through `f-005` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, the last four rounds naming the execution-level mismatch and the last two naming the environment literals; the cited test and harness files lie outside every changeset's diff.
 
 ## Pending plugins' prior owned definitions have no reconciliation evidence
 
@@ -24,7 +24,7 @@ The reconciliation assertion states that a pending plugin's prior owned definiti
 
 **Resolution shape**: add a harness scenario that installs, then re-runs with one plugin unpublished, and assert that the pending plugin's recorded definitions are neither pruned nor rewritten; if the scenario shows the plan copying definitions for a pending plugin, defer agent-home plan composition until the pending set is known. That is a new reconciliation capability with its own harness and a likely production change, independent of the machine-wide Claude Code refresh.
 
-**Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-004` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-006` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, and `f-008` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`.
+**Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-004` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-006` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-008` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, and `f-006` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`. The recording runner's `unpublished` set now makes a pending plugin cheap to drive through the reconciliation observer, which lowers the cost of the harness scenario the resolution shape names.
 
 ## Claude Code renderings ship the Codex-only placement script and paraphrase its output
 
