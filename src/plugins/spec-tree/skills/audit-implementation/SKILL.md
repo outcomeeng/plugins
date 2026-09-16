@@ -137,7 +137,10 @@ Before reading project file bodies:
 
 A missing selector or identity, failed repository discovery, or failed scope
 resolution returns `BLOCKED` with `runToken: not-started` and the exact missing
-input or command failure. Make no replacement scope selection or retry.
+input or command failure; the resolver's stale-base refusal — a dedicated exit
+code and a `stale-base` diagnostic on stderr for a head behind the fetched base
+— returns the same way before any subject is read, and the Author synchronizes
+and re-dispatches. Make no replacement scope selection, synchronization, or retry.
 
 Start the run after this metadata preparation. Then discover governing nodes
 from the resolved paths through the spec-tree evidence links and declared audit
@@ -435,10 +438,10 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 When the run completes, return the exact run token and rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
 
 Return BLOCKED for three causes: target preparation fails before `spx
-verification run start`, SPX rejects a command, or a required unit cannot reach
-a final status after the run started. For missing input, name the selector or
-identity field that is absent. For command failures, include the complete
-diagnostic below; preparation failures use `runToken: not-started`,
+verification run start` — a missing selector or identity field named, a failed
+command, or the resolver's stale-base refusal — SPX rejects a command, or a
+required unit cannot reach a final status after the run started. Use the
+complete diagnostic below; preparation failures use `runToken: not-started`,
 `payloadSource: none`, and `payloadKey: none`.
 
 A required unit that cannot reach a final status is not a command rejection, so
@@ -451,8 +454,7 @@ identifiable. After a run starts, record a missing required concern skill
 as `missing-skill`, finish with terminal status `rejected`, render, and return
 the run token plus projection.
 
-Use this complete blocked diagnostic after any SPX command failure; preserve
-each value verbatim from the invocation and command result:
+Preserve each value verbatim from the invocation and command result:
 
 ```text
 BLOCKED
@@ -465,8 +467,8 @@ stderr: <exact-stderr>
 ```
 
 Never return the command alone: the run token locates durable state, the payload
-source and key identify the rejected boundary, and the exit code and stderr
-carry the failure evidence.
+source and key identify the rejected boundary, and the exit code and stderr carry
+the failure evidence — a stale-base refusal is read from its exit code and stderr.
 
 Each finding row names every field of the finding payload shape in `<verification_run_contract>`, so a reader sees the producer, unit, rule, severity, location, message, and observed-versus-expected evidence without opening the journal.
 
@@ -476,10 +478,9 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 <failure_modes>
 
-For a failed preparation, concern invocation, payload submission, or projection,
-read [operational failure records](${CLAUDE_SKILL_DIR}/references/operational-failures.md)
-to diagnose the observed boundary. Preserve the exact diagnostic and apply the
-existing no-retry rule; these records authorize no replacement invocation.
+For a failed preparation, concern invocation, payload submission, or projection, read
+[operational failure records](${CLAUDE_SKILL_DIR}/references/operational-failures.md) to diagnose
+the observed boundary; preserve the exact diagnostic and apply the no-retry rule, since these records authorize no replacement invocation.
 
 </failure_modes>
 
@@ -492,7 +493,7 @@ existing no-retry rule; these records authorize no replacement invocation.
 - The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
 - The sealed run is self-describing: its recorded subject set equals the inventory its own start input carries, no recorded subject lies outside that inventory, every required unit carries a final status and every unclaimed path its accounting record, and every finding references an accepted unit of its own concern — so a reader establishes the inspection's completeness from the run without the run driver's account of it.
-- A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection.
+- A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection; a head behind the fetched base returns the resolver's stale-base refusal before any subject is read.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>

@@ -77,6 +77,9 @@ def main(argv: list[str] | None = None) -> int:
         resolved = scope.resolve_committed_scope(
             args.scope, repo=args.repo, runner=subprocess.run
         )
+    except scope.StaleBaseError as exc:
+        print(json.dumps(exc.diagnostic(), sort_keys=True), file=sys.stderr)
+        return int(scope.EXIT_STALE_BASE)
     except scope.ScopeResolutionError as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
         return 2

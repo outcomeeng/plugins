@@ -10,7 +10,8 @@ an optional unit carrying the same status, exact inventory agreement, drift in
 both directions, a recorded subject outside the inventory, a missing-skill unit
 naming its absent skill, an advisory live path beside the committed inventory, a reconcile request carrying no sealed
 scope identity, a run token the CLI cannot read, a CLI that cannot be launched,
-and a run document shaped so the comparison cannot run).
+a run document shaped so the comparison cannot run, and a head behind the
+fetched base relayed as the stale-base refusal).
 """
 
 from __future__ import annotations
@@ -246,6 +247,11 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
         resolved = scope.resolve_committed_scope(
             args.scope, repo=args.repo, runner=runner
         )
+    except scope.StaleBaseError as exc:
+        # The refusal is the verdict, not a command failure: the selector
+        # resolved, and the head is not the tree that would merge.
+        print(json.dumps(exc.diagnostic(), sort_keys=True), file=sys.stderr)
+        return int(scope.EXIT_STALE_BASE)
     except scope.ScopeResolutionError as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
         return EXIT_COMMAND_FAILURE

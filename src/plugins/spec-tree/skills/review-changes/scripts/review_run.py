@@ -461,11 +461,23 @@ def _cleanup_state(state_path: pathlib.Path) -> None:
 
 def _start(args: argparse.Namespace) -> int:
     started_at = _utc_now()
+    base_ref = compute_diff.resolve_base_ref()
+    head_ref = compute_diff.resolve_head_ref()
+    # A head behind the fetched base is refused before any journal exists, so
+    # no run records a review of a tree that cannot merge.
+    try:
+        changeset_scope.require_current_base(
+            base_ref, head_ref, repo=pathlib.Path.cwd()
+        )
+    except changeset_scope.StaleBaseError as exc:
+        json.dump(exc.diagnostic(), sys.stderr, sort_keys=True)
+        sys.stderr.write("\n")
+        return int(changeset_scope.EXIT_STALE_BASE)
     scratch_dir = pathlib.Path(tempfile.mkdtemp(prefix="review-changes-"))
     try:
         summary = compute_diff.write_bundle(
-            base_ref=compute_diff.resolve_base_ref(),
-            head_ref=compute_diff.resolve_head_ref(),
+            base_ref=base_ref,
+            head_ref=head_ref,
             bundle_dir=scratch_dir,
         )
         manifest_path = pathlib.Path(str(summary["manifest_path"]))

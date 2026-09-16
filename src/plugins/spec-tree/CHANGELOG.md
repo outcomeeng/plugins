@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.96.1
+
+### Fixed
+
+- **A verifier refuses a head behind the fetched base before it reads anything.** `scope-changeset`'s `resolve_committed_scope` now fetches the base's remote-tracking ref and refuses a head whose merge base with the fetched `origin/<base>` tip is not that tip, exiting `EXIT_STALE_BASE` (3) with a `stale-base` JSON diagnostic — `tip`, `merge_base`, `behind` — on stderr and no scope on stdout. `audit-implementation`, `audit-changeset-coherence`, and `review-changes` relay that exit code and diagnostic unchanged as their first step, so an implementation audit returns `BLOCKED` with `runToken: not-started`, a coherence audit returns `BLOCKED` with `reason: stale-base`, and `review_run.py start` exits before any journal opens; each names `/sync-base` as the remedy. `sync-base` and `merge`'s classifier resolve through the primitives without the refusal. A verification result is a claim about the tree that ships, and only origin knows the base moved: an observed apply cycle ran its audits and review on a head that had fallen behind `origin/main`, and nothing in the flow refused it.
+- **The apply flow synchronizes the base before every deterministic command and every dispatch.** `apply`'s verification checkpoint now begins with `/sync-base` and records its `already_current` or `rebased` result for the exact head; the `merging-standards` readiness record carries it as `baseCurrency`, filled from the command and never from memory, and a `stale-base` block from a Verifier is no verdict — synchronize, re-establish the deterministic results on the rebased head, and dispatch again.
+
 ## 0.96.0
 
 ### Changed

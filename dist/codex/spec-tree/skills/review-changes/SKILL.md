@@ -29,7 +29,7 @@ python3 "${SKILL_DIR}/scripts/review_run.py" append-finding --state "<statePath>
 python3 "${SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>"
 ```
 
-`start` computes the diff bundle, opens the review journal, appends the scope-entered event, and returns JSON containing `statePath`, `runToken`, `diffPath`, `manifestPath`, and `changedFiles`.
+`start` fetches the base, refuses a head behind the fetched `origin/<base>` tip before any journal exists — the dedicated stale-base exit code with a `stale-base` JSON diagnostic on stderr and no run state — and otherwise computes the diff bundle, opens the review journal, appends the scope-entered event, and returns JSON containing `statePath`, `runToken`, `diffPath`, `manifestPath`, and `changedFiles`. Report the refusal as a `stale-base` block carrying the diagnostic verbatim; the Author synchronizes the base and re-dispatches, and no review proceeds on that head.
 
 `append-scope` appends one scope-advanced event for a changed file after Claude has examined that file.
 

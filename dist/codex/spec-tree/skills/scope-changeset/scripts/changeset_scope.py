@@ -19,8 +19,10 @@ verification-run suites exercise origin/HEAD base detection, missing-origin
 rejection, named-branch detection, detached-HEAD refusal, branch slug collision
 suffixes, diff-range expansion with and without pathspec filters, empty diff
 matches, staged and unstaged changes, remote-tracking three-dot branch scope,
-arbitrary base refs, base-advanced-after-branch-off exclusion, and git failure
-propagation before this script is bundled.
+arbitrary base refs, base-advanced-after-branch-off exclusion, git failure
+propagation, and the stale-base refusal — a head behind the fetched base tip,
+a lagging local remote-tracking ref the fetch corrects, and a current head —
+before this script is bundled.
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ import json
 import pathlib
 import runpy
 import subprocess
+import sys
 from collections.abc import Sequence
 from enum import StrEnum
 from typing import Literal, Protocol, cast
@@ -55,6 +58,10 @@ FRONTMATTER_DELIMITER = cast(str, _CONTRACT["FRONTMATTER_DELIMITER"])
 COMMIT_PEEL_SUFFIX = cast(str, _CONTRACT["COMMIT_PEEL_SUFFIX"])
 BRANCH_SLUG_SUFFIX_SEPARATOR = cast(str, _CONTRACT["BRANCH_SLUG_SUFFIX_SEPARATOR"])
 RANGE_SEPARATOR = "..."
+# A head behind the fetched base is refused with its own exit code so a caller
+# never mistakes it for a selector the resolver could not read (argparse's 2).
+EXIT_STALE_BASE = 3
+STALE_BASE_STATUS = "stale-base"
 
 
 class ScopeField(StrEnum):
@@ -63,6 +70,15 @@ class ScopeField(StrEnum):
     BASE = "base"
     HEAD = "head"
     CHANGED_PATHS = "changed_paths"
+
+
+class StaleBaseField(StrEnum):
+    """Fields of the diagnostic a stale-base refusal emits in place of a scope."""
+
+    STATUS = "status"
+    TIP = "tip"
+    MERGE_BASE = "merge_base"
+    BEHIND = "behind"
 
 
 class Runner(Protocol):
@@ -101,6 +117,32 @@ class ScopeResolutionError(RuntimeError):
     """A selector cannot resolve to an exact committed changeset."""
 
 
+class StaleBaseError(RuntimeError):
+    """The head is behind the fetched base tip, so no verification may start.
+
+    Distinct from :class:`ScopeResolutionError`: the selector resolved, and the
+    refusal is the verdict — the tree is not the one that would merge.
+    """
+
+    def __init__(self, *, tip: str, merge_base: str, behind: int) -> None:
+        super().__init__(
+            f"head is {behind} commit(s) behind the fetched base tip {tip} "
+            f"(merge base {merge_base}); bring the branch current first"
+        )
+        self.tip = tip
+        self.merge_base = merge_base
+        self.behind = behind
+
+    def diagnostic(self) -> dict[str, object]:
+        """Return the machine-readable refusal a caller relays verbatim."""
+        return {
+            StaleBaseField.STATUS: STALE_BASE_STATUS,
+            StaleBaseField.TIP: self.tip,
+            StaleBaseField.MERGE_BASE: self.merge_base,
+            StaleBaseField.BEHIND: self.behind,
+        }
+
+
 def resolve_committed_scope(
     selector: str,
     *,
@@ -124,6 +166,7 @@ def resolve_committed_scope(
         else:
             base_ref = remote_tracking_ref(detect_base_ref(repo, runner=runner))
             head_ref = selector
+        require_current_base(base_ref, head_ref, repo=repo, runner=runner)
         return {
             ScopeField.BASE: commit_oid(base_ref, repo=repo, runner=runner),
             ScopeField.HEAD: commit_oid(head_ref, repo=repo, runner=runner),
@@ -141,6 +184,50 @@ def resolve_committed_scope(
         raise ScopeResolutionError(
             f"cannot execute git for {selector!r} at {repo}: {exc}"
         ) from exc
+
+
+def require_current_base(
+    base_ref: str,
+    head_ref: str,
+    *,
+    repo: pathlib.Path,
+    runner: Runner = subprocess.run,
+) -> None:
+    """Refuse a head that does not descend from the fetched base tip.
+
+    A remote-tracking base is fetched first, so the comparison reads the
+    remote's tip rather than whatever the local remote-tracking ref last saw.
+    The head is current when its merge base with that tip is the tip itself;
+    otherwise :class:`StaleBaseError` names the tip, the merge base, and the
+    base commits the head lacks. Git failures propagate as
+    ``subprocess.CalledProcessError`` for the caller to translate.
+    """
+    if base_ref.startswith(ORIGIN_REF_PREFIX):
+        runner(
+            ["git", "fetch", "--quiet", "origin", base_ref[len(ORIGIN_REF_PREFIX) :]],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    tip = commit_oid(base_ref, repo=repo, runner=runner)
+    merge_base = runner(
+        ["git", "merge-base", tip, head_ref],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    if merge_base == tip:
+        return
+    behind = runner(
+        ["git", "rev-list", "--count", f"{merge_base}..{tip}"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    raise StaleBaseError(tip=tip, merge_base=merge_base, behind=int(behind))
 
 
 def expand_diff_range(
@@ -413,6 +500,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         resolved = resolve_committed_scope(
             args.selector, repo=args.repo, runner=subprocess.run
         )
+    except StaleBaseError as exc:
+        print(json.dumps(exc.diagnostic(), sort_keys=True), file=sys.stderr)
+        return EXIT_STALE_BASE
     except ScopeResolutionError as exc:
         parser.error(str(exc))
     print(json.dumps(resolved, sort_keys=True))

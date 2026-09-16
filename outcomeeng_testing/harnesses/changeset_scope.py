@@ -247,12 +247,38 @@ def _initialize_changeset_repo(
     return scenario
 
 
+ORIGIN_REMOTE_NAME = "origin"
+ORIGIN_BARE_DIRECTORY = "origin.git"
+
+
+def _origin_bare_path(repo: pathlib.Path) -> pathlib.Path:
+    return repo.parent / ORIGIN_BARE_DIRECTORY
+
+
 def _publish_origin_base(
     repo: pathlib.Path,
     scenario: ChangesetScopeCase,
     commit_oid: str,
 ) -> None:
-    """Point the synthetic origin base and origin/HEAD refs at a commit."""
+    """Publish a commit as the origin base on a real bare remote.
+
+    Creates the bare remote beside ``repo`` on first use and registers it as
+    ``origin``, pushes ``commit_oid`` to the remote's base branch, then points
+    the local remote-tracking ref and ``origin/HEAD`` at it — the state a
+    fetch would leave behind, so a resolver that fetches sees the same tip.
+    """
+    bare = _origin_bare_path(repo)
+    if not bare.exists():
+        _git(repo, "init", "-q", "--bare", str(bare), cwd=pathlib.Path.cwd())
+        _git(repo, "remote", "add", ORIGIN_REMOTE_NAME, str(bare))
+    _git(
+        repo,
+        "push",
+        "-q",
+        "--force",
+        ORIGIN_REMOTE_NAME,
+        f"{commit_oid}:refs/heads/{scenario.base_branch}",
+    )
     _git(
         repo,
         "update-ref",
@@ -385,6 +411,44 @@ def build_base_advanced_after_branch_repo(
     )
 
 
+@dataclass(frozen=True)
+class LaggingRemoteTrackingRepo:
+    """A repo whose local ``origin/<base>`` ref lags the remote's base tip.
+
+    The remote's base holds ``base_file`` past the branch point; the local
+    remote-tracking ref still names the branch point, so only a fetch reveals
+    that the feature head is behind the remote.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    feature_branch: str
+    base_file: str
+    feature_file: str
+
+
+def build_lagging_remote_tracking_repo(
+    repo: pathlib.Path,
+    scenario: ChangesetScopeCase | None = None,
+) -> LaggingRemoteTrackingRepo:
+    """Build the base-advanced topology, then let the local remote ref lag.
+
+    Sequence: the base-advanced topology publishes A+M to the remote; the local
+    ``refs/remotes/origin/<base>`` is then reset to the branch point A while
+    the remote keeps A+M, and the checkout stays on the feature at A+F.
+    """
+    advanced = build_base_advanced_after_branch_repo(repo, scenario)
+    branch_point = _git(repo, "merge-base", "HEAD", f"origin/{advanced.base_ref}")
+    _git(repo, "update-ref", f"refs/remotes/origin/{advanced.base_ref}", branch_point)
+    return LaggingRemoteTrackingRepo(
+        repo=repo,
+        base_ref=advanced.base_ref,
+        feature_branch=advanced.feature_branch,
+        base_file=advanced.base_file,
+        feature_file=advanced.feature_file,
+    )
+
+
 def build_repo_without_origin(
     repo: pathlib.Path,
     scenario: ChangesetScopeCase | None = None,
@@ -456,6 +520,15 @@ def base_advanced_after_branch_repo(
 
 
 @contextmanager
+def lagging_remote_tracking_repo(
+    scenario: ChangesetScopeCase | None = None,
+) -> Iterator[LaggingRemoteTrackingRepo]:
+    """Yield a repository whose local remote-tracking ref lags its remote."""
+    with temporary_changeset_scope() as paths:
+        yield build_lagging_remote_tracking_repo(paths.repo, scenario)
+
+
+@contextmanager
 def repo_without_origin(
     scenario: ChangesetScopeCase | None = None,
 ) -> Iterator[pathlib.Path]:
@@ -522,6 +595,27 @@ def git_commit_oid(repo: pathlib.Path, ref: str) -> str:
         "--quiet",
         f"{ref}{contract.COMMIT_PEEL_SUFFIX}",
     )
+
+
+def remote_base_oid(repo: pathlib.Path, base_ref: str) -> str:
+    """Read the bare remote's own base tip — an oracle no local ref can shadow."""
+    return _git(
+        _origin_bare_path(repo),
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        f"refs/heads/{base_ref}",
+    )
+
+
+def git_merge_base(repo: pathlib.Path, left: str, right: str) -> str:
+    """Resolve the merge base of two refs through real Git."""
+    return _git(repo, "merge-base", left, right)
+
+
+def git_commits_between(repo: pathlib.Path, ancestor: str, descendant: str) -> int:
+    """Count the commits reachable from ``descendant`` but not ``ancestor``."""
+    return int(_git(repo, "rev-list", "--count", f"{ancestor}..{descendant}"))
 
 
 def checkout_branch(repo: pathlib.Path, branch: str) -> None:
