@@ -1,7 +1,7 @@
 ---
 name: {{! plugin_name !}}-plugin
 description: >-
-  ALWAYS invoke this skill to operate the {{! plugin_name !}} plugin's own lifecycle — report its version and check or reconcile its agent-delivery footprint. Invoke it when this plugin's agents are missing from a session. NEVER commit marketplace-delivered agent definitions into a checkout.
+  ALWAYS invoke this skill to operate the {{! plugin_name !}} plugin's own lifecycle — report its version and {!% if target == 'claude' %!}manifest-based agent delivery{!% else %!}check or reconcile its agent-delivery footprint{!% endif %!}. Invoke it when this plugin's agents are missing from a session. NEVER commit marketplace-delivered agent definitions into a checkout.
 argument-hint: "[help|version|init|upgrade|check]"
 arguments: verb
 allowed-tools: Read{!% if target == 'codex' %!}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py":*){!% endif %!}
@@ -15,15 +15,18 @@ The {{! plugin_name !}} plugin's resolved version and agent-delivery state repor
 
 Read `$verb`, trim it, and match it against the table. One verb runs per invocation; `help` is the default when `$verb` is empty. Text matching no row is an error naming all five verbs.
 
-| Verb      | Result                                                                                       |
-| --------- | -------------------------------------------------------------------------------------------- |
-| `help`    | This plugin's verbs, mutation boundaries, reload requirement, and changelog locations        |
-| `version` | The version resolved by the running session                                                  |
-| `init`    | Missing plugin-owned Codex definitions established in the selected agent home                |
-| `upgrade` | Plugin-owned Codex definitions reconciled to this version, including safe stale-file pruning |
-| `check`   | Selected-home drift, collision, and checkout scope-split state reported without mutation     |
+| Verb                          | Result                                                                                       |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| `help`                        | This plugin's verbs, mutation boundaries, reload requirement, and changelog locations        |
+| `version`                     | The version resolved by the running session                                                  |
+| {!% if target == 'claude' %!} | `init`                                                                                       |
+| `upgrade`                     | This plugin's manifest-based agent delivery reported without mutation                        |
+| `check`                       | This plugin's manifest-based agent delivery reported without mutation                        |
+| {!% else %!}                  | `init`                                                                                       |
+| `upgrade`                     | Plugin-owned Codex definitions reconciled to this version, including safe stale-file pruning |
+| `check`                       | Selected-home drift, collision, and checkout scope-split state reported without mutation     |
 
-{!% if target == 'claude' %!}`init`, `upgrade`, and `check` report that Claude Code receives this plugin's agents through the plugin manifest and change nothing.{!% else %!}`init`, `upgrade`, and `check` use the bundled reconciliation script. The script never writes into a checkout.{!% endif %!}
+`init`, `upgrade`, and `check` use the bundled reconciliation script. The script never writes into a checkout.{!% endif %!}
 
 </verbs>
 
@@ -62,9 +65,9 @@ Report the version from the plugin copy backing this running session. Never sear
 
 <agent_delivery>
 
-{!% if target == 'claude' %!}The plugin manifest delivers this plugin's agents. Every footprint verb reports that fact and writes nothing. The bundled `scripts/place_agents.py` serves only the Codex rendering of this skill and is never invoked here.{!% else %!}The plugin ships generated TOML definitions inside this skill. They belong in the selected `CODEX_HOME/agents/` directory beside the installed skill content they invoke.
+{!% if target == 'claude' %!}The plugin manifest delivers this plugin's agents. For `init`, `upgrade`, or `check`, print the line under `<examples>` and write nothing. Shared lifecycle resources ship in both runtime trees, so this bundle includes `scripts/place_agents.py`; only the Codex rendering grants and invokes that command. Never invoke it here.{!% else %!}The plugin ships generated TOML definitions inside this skill. They belong in the selected `CODEX_HOME/agents/` directory beside the installed skill content they invoke.
 
-Before every verb, resolve the selected home from `CODEX_HOME`. When it is absent, require an explicit absolute `--home` value; never guess another account or fall back to a checkout. Resolve the invocation checkout root and pass it with `--checkout` so the read-only scope-split preflight can report shadowing plugin copies.
+For `init`, `upgrade`, or `check`, resolve the selected home from `CODEX_HOME`. When it is absent, require an explicit absolute `--home` value; never guess another account or fall back to a checkout. Resolve the invocation checkout root and pass it with `--checkout` so the read-only scope-split preflight can report shadowing plugin copies.
 
 Run the check form first:
 
@@ -86,7 +89,7 @@ Run the check form again afterward. Success requires zero remaining drift, colli
 
 <ownership_boundary>
 
-{!% if target == 'claude' %!}This plugin claims no standalone agent file because its manifest delivers the agents.{!% else %!}The shared agent home is reconciled through `.outcomeeng-marketplace-ownership.json`. This plugin may create, replace, or prune only entries that record `{{! plugin_name !}}` as owner and whose on-disk digest still matches the record. An unrecorded destination, a modified owned file, malformed ownership data, or a destination owned by another plugin is a collision: report it and change nothing.
+{!% if target == 'claude' %!}This plugin claims no standalone agent file because its manifest delivers the agents.{!% else %!}The shared agent home is reconciled through `.outcomeeng-marketplace-ownership.json`. This plugin may replace or prune only entries that record `{{! plugin_name !}}` as owner and whose on-disk digest still matches the record. It may create a missing destination or adopt an unrecorded destination whose bytes equal its current shipped definition. An unrecorded destination with different bytes, a modified owned file, malformed ownership data, or a destination owned by another plugin is a collision: report it and change nothing.
 
 A checkout definition byte-identical to a shipped definition is a scope split with directed removal. A changed checkout definition, or one that claims this plugin by filename prefix or by enabling one of its skills, is a scope-split collision requiring inspection. Either state stops home mutation; never refresh the home skills underneath a shadowing checkout definition.{!% endif %!}
 
@@ -94,7 +97,13 @@ A checkout definition byte-identical to a shipped definition is a scope split wi
 
 <examples>
 
-{!% if target == 'claude' %!}`check`, `init`, and `upgrade` each print one line: manifest delivery is in effect and nothing was written.{!% else %!}A `--check` run against a home carrying one stale owned definition, one recorded definition the plugin no longer ships, and one developer file the ownership record does not know prints its plan and exits `2` on any collision or scope split, `1` when writes or prunes are pending, and `0` when the home already matches:
+{!% if target == 'claude' %!}`check`, `init`, and `upgrade` each print:
+
+```text
+Manifest delivery is in effect; no files were written.
+```
+
+{!% else %!}A `--check` run against a home carrying one stale owned definition, one recorded definition the plugin no longer ships, and one developer file the ownership record does not know prints its plan and exits `2` on any collision or scope split, `1` when writes or prunes are pending, and `0` when the home already matches:
 
 ```text
 write: /Users/dev/.codex/agents/{{! plugin_name !}}_reviewer.toml
@@ -120,13 +129,15 @@ Agent registries are loaded at session start. After a successful `init` or `upgr
 
 <failure_modes>
 
-**Claude repaired a missing role by copying its TOML into the checkout.**
+{!% if target == 'codex' %!}**Claude repaired a missing role by copying its TOML into the checkout.**
 
 The checkout copy shadows the selected-home definition while the home plugin can advance independently. Remove a byte-identical generated copy; inspect a changed or unrecognized copy. Reconcile the selected home, then reload the harness.
 
 **Claude treated a plugin-looking filename as ownership proof.**
 
 Filename prefixes collide with developer-authored files. Only the digest-bound ownership record authorizes replacement or pruning; preserve and report every other file.
+
+{!% endif %!}
 
 **Claude reported a version from another plugin copy.**
 

@@ -1,7 +1,7 @@
 ---
 name: rust-plugin
 description: >-
-  ALWAYS invoke this skill to operate the rust plugin's own lifecycle — report its version and check or reconcile its agent-delivery footprint. Invoke it when this plugin's agents are missing from a session. NEVER commit marketplace-delivered agent definitions into a checkout.
+  ALWAYS invoke this skill to operate the rust plugin's own lifecycle — report its version and manifest-based agent delivery. Invoke it when this plugin's agents are missing from a session. NEVER commit marketplace-delivered agent definitions into a checkout.
 argument-hint: "[help|version|init|upgrade|check]"
 arguments: verb
 allowed-tools: Read
@@ -15,15 +15,15 @@ The rust plugin's resolved version and agent-delivery state reported or reconcil
 
 Read `$verb`, trim it, and match it against the table. One verb runs per invocation; `help` is the default when `$verb` is empty. Text matching no row is an error naming all five verbs.
 
-| Verb      | Result                                                                                       |
-| --------- | -------------------------------------------------------------------------------------------- |
-| `help`    | This plugin's verbs, mutation boundaries, reload requirement, and changelog locations        |
-| `version` | The version resolved by the running session                                                  |
-| `init`    | Missing plugin-owned Codex definitions established in the selected agent home                |
-| `upgrade` | Plugin-owned Codex definitions reconciled to this version, including safe stale-file pruning |
-| `check`   | Selected-home drift, collision, and checkout scope-split state reported without mutation     |
+| Verb      | Result                                                                                |
+| --------- | ------------------------------------------------------------------------------------- |
+| `help`    | This plugin's verbs, mutation boundaries, reload requirement, and changelog locations |
+| `version` | The version resolved by the running session                                           |
+|           | `init`                                                                                |
+| `upgrade` | This plugin's manifest-based agent delivery reported without mutation                 |
+| `check`   | This plugin's manifest-based agent delivery reported without mutation                 |
 
-`init`, `upgrade`, and `check` report that Claude Code receives this plugin's agents through the plugin manifest and change nothing.
+|
 
 </verbs>
 
@@ -55,7 +55,7 @@ Report the version from the plugin copy backing this running session. Never sear
 
 <agent_delivery>
 
-The plugin manifest delivers this plugin's agents. Every footprint verb reports that fact and writes nothing. The bundled `scripts/place_agents.py` serves only the Codex rendering of this skill and is never invoked here.
+The plugin manifest delivers this plugin's agents. For `init`, `upgrade`, or `check`, print the line under `<examples>` and write nothing. Shared lifecycle resources ship in both runtime trees, so this bundle includes `scripts/place_agents.py`; only the Codex rendering grants and invokes that command. Never invoke it here.
 
 </agent_delivery>
 
@@ -67,7 +67,11 @@ This plugin claims no standalone agent file because its manifest delivers the ag
 
 <examples>
 
-`check`, `init`, and `upgrade` each print one line: manifest delivery is in effect and nothing was written.
+`check`, `init`, and `upgrade` each print:
+
+```text
+Manifest delivery is in effect; no files were written.
+```
 
 </examples>
 
@@ -78,14 +82,6 @@ Agent registries are loaded at session start. After a successful `init` or `upgr
 </reload>
 
 <failure_modes>
-
-**Claude repaired a missing role by copying its TOML into the checkout.**
-
-The checkout copy shadows the selected-home definition while the home plugin can advance independently. Remove a byte-identical generated copy; inspect a changed or unrecognized copy. Reconcile the selected home, then reload the harness.
-
-**Claude treated a plugin-looking filename as ownership proof.**
-
-Filename prefixes collide with developer-authored files. Only the digest-bound ownership record authorizes replacement or pruning; preserve and report every other file.
 
 **Claude reported a version from another plugin copy.**
 

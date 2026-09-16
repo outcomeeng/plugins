@@ -19,7 +19,7 @@ Read `$verb`, trim it, and match it against the table. One verb runs per invocat
 | --------- | -------------------------------------------------------------------------------------------- |
 | `help`    | This plugin's verbs, mutation boundaries, reload requirement, and changelog locations        |
 | `version` | The version resolved by the running session                                                  |
-| `init`    | Missing plugin-owned Codex definitions established in the selected agent home                |
+|           | `init`                                                                                       |
 | `upgrade` | Plugin-owned Codex definitions reconciled to this version, including safe stale-file pruning |
 | `check`   | Selected-home drift, collision, and checkout scope-split state reported without mutation     |
 
@@ -57,7 +57,7 @@ Report the version from the plugin copy backing this running session. Never sear
 
 The plugin ships generated TOML definitions inside this skill. They belong in the selected `CODEX_HOME/agents/` directory beside the installed skill content they invoke.
 
-Before every verb, resolve the selected home from `CODEX_HOME`. When it is absent, require an explicit absolute `--home` value; never guess another account or fall back to a checkout. Resolve the invocation checkout root and pass it with `--checkout` so the read-only scope-split preflight can report shadowing plugin copies.
+For `init`, `upgrade`, or `check`, resolve the selected home from `CODEX_HOME`. When it is absent, require an explicit absolute `--home` value; never guess another account or fall back to a checkout. Resolve the invocation checkout root and pass it with `--checkout` so the read-only scope-split preflight can report shadowing plugin copies.
 
 Run the check form first:
 
@@ -79,7 +79,7 @@ Run the check form again afterward. Success requires zero remaining drift, colli
 
 <ownership_boundary>
 
-The shared agent home is reconciled through `.outcomeeng-marketplace-ownership.json`. This plugin may create, replace, or prune only entries that record `coding-agents` as owner and whose on-disk digest still matches the record. An unrecorded destination, a modified owned file, malformed ownership data, or a destination owned by another plugin is a collision: report it and change nothing.
+The shared agent home is reconciled through `.outcomeeng-marketplace-ownership.json`. This plugin may replace or prune only entries that record `coding-agents` as owner and whose on-disk digest still matches the record. It may create a missing destination or adopt an unrecorded destination whose bytes equal its current shipped definition. An unrecorded destination with different bytes, a modified owned file, malformed ownership data, or a destination owned by another plugin is a collision: report it and change nothing.
 
 A checkout definition byte-identical to a shipped definition is a scope split with directed removal. A changed checkout definition, or one that claims this plugin by filename prefix or by enabling one of its skills, is a scope-split collision requiring inspection. Either state stops home mutation; never refresh the home skills underneath a shadowing checkout definition.
 
