@@ -25,7 +25,7 @@ description: >-
   ALWAYS invoke this skill when selecting or establishing evidence for spec
   assertions, decision verification rules, or a spec-tree scope.
 argument-hint: <full-spx-node-or-decision-path|spx/>
-allowed-tools: Read, Glob, Grep, Edit, Skill
+allowed-tools: Read, Glob, Grep, Edit, {{! tool('use_skill') !}}
 ---
 
 <objective>
@@ -297,7 +297,7 @@ description: >-
   ALWAYS invoke this skill when selecting or establishing evidence for spec
   assertions, decision verification rules, or a spec-tree scope.
 argument-hint: <full-spx-node-or-decision-path|spx/>
-allowed-tools: Read, Glob, Grep, Edit, Skill
+allowed-tools: Read, Glob, Grep, Edit
 ---
 
 <objective>
