@@ -58,11 +58,13 @@ The retained failure proves installation and generated-definition placement.
 It supplies no observation of skill composition or the child result contract,
 and it predates the current generated implementation-auditor definition.
 
-**Required handling**: define a credential-safe probe boundary that keeps the
-plugin and session state disposable while making the already-authorized account
-login available without copying credential contents into retained artifacts.
-Run the probe once against the exact committed subject and scrub every retained
-artifact before committing it.
+**Required handling**: run the probe through the existing repository-installation
+harness boundary. Resolve the selected persistent login before redirecting the
+child environment, link only its `auth.json` into the disposable Codex home,
+force the file credential store, route captured output through the credential
+redactor, and read the sole child through the parent-filtered native app-server
+reader. Run the probe once against the exact committed subject and retain only
+the scrubbed artifacts.
 
 **Evidence**:
 `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/probes/codex-skill-composition/2026-09-17-parent.jsonl`

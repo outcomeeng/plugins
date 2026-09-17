@@ -8,31 +8,24 @@ The operator expects a generated Codex implementation auditor to compose the ins
 
 - The exact committed subject has passed the focused deterministic build tests.
 - `just build-skills` has generated the Codex marketplace from that subject.
-- The Codex CLI is installed and its selected saved login is available to the repository's isolated installer.
-- `$PROBE_ROOT` names a new disposable directory and `$RUN_DIR` names the ignored `runs/<run-id>/` directory beneath this probe.
+- The Codex CLI is installed and the selected persistent `CODEX_HOME` contains a file-backed ChatGPT login.
+- `$RUN_DIR` names a new ignored `runs/<run-id>/` directory beneath this probe.
 
 ## Protocol
 
-1. Run the repository's isolated installer against the committed checkout and retain its JSON report:
+1. Run the repository's composition-probe adapter against the committed checkout:
 
    ```bash
-   uv run python -m outcomeeng.distribution.installation --checkout "$PWD" --state-root "$PROBE_ROOT" --json
+   uv run python -m outcomeeng_testing.harnesses.codex_skill_composition "$RUN_DIR" --checkout "$PWD"
    ```
 
-2. Copy the installed `spec-tree_implementation-auditor` definition into `$RUN_DIR` before the session starts.
-3. Launch one Codex parent session with the isolated roots bound explicitly:
-
-   ```bash
-   printf '%s\n' 'Launch spec-tree_implementation-auditor exactly once with target HEAD. Return its terminal result.' | env HOME="$PROBE_ROOT/home" CLAUDE_CONFIG_DIR="$PROBE_ROOT/claude" CODEX_HOME="$PROBE_ROOT/codex" CODEX_SQLITE_HOME="$PROBE_ROOT/codex-sqlite" codex exec --json -C "$PWD" -o "$RUN_DIR/terminal.txt" - | tee "$RUN_DIR/parent.jsonl"
-   ```
-
-4. Identify the one spawned child from the parent JSONL and retain that child's rollout in `$RUN_DIR`.
-5. Inspect the definition, parent JSONL, child rollout, and terminal result for these observations:
+   The adapter selects authentication before constructing the disposable environment, installs the checkout into disposable state, links only the selected `auth.json` for the bounded authentication interval, forces the file credential store, launches the parent once, and scrubs captured output. It uses the parent thread identity from `parent.jsonl` to list active and archived subagent children and retain the sole child's native thread record.
+2. Inspect `installed-definition.toml`, `parent.jsonl`, `child.json`, `terminal.txt`, and `summary.json` for these observations:
    - the definition enables `spec-tree:audit-implementation` and carries no `Skill` tool grant or manual-review entry;
    - the child loads `spec-tree:audit-implementation` and every concern skill selected for the changed files;
    - the child completes the audit and returns the implementation-audit terminal result contract;
    - neither session searches for a tool named `Skill`, reports its absence, retries through another launch mechanism, or substitutes another auditor.
-6. Scrub credentials and copy the installer report, installed definition, parent JSONL, child rollout, and terminal result from the successful run beside this protocol. Add the attested run, artifact links, and verdict to this file.
+3. Copy the adapter's already-scrubbed installer report, installed definition, parent stream, native child record, terminal result, and summary from the successful run beside this protocol. Add the attested run, artifact links, and verdict to this file.
 
 ## Attested runs
 
