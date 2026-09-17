@@ -47,6 +47,18 @@ Step 5 of `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md` verif
 
 **Evidence**: surfaced by `instructions:audit-skills` on the changeset that added delegating-root-file adoption, as `worth-improving` findings on an otherwise approved surface. The same audit's two other findings are resolved in that changeset: the three stop conditions carry explicit `GATE` labels, and the two success criteria that asked for a confirmation now name the diff that decides them.
 
+## `/update-instruction-block` carries three unresolved prose findings
+
+`instructions:skill-auditor`, run on the artifact-registry changeset (which touched only the skill's script and its rendered data file), approved `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md` with three `worth-improving` findings beside the Step 5 restructure recorded above:
+
+- Step 2 states that a budget breach is resolved by shrinking the surface and never by raising a consumer's harness budget, but no step names who shrinks it, what content is eligible, or whether the run stops on a breach; the only action is to relay the line in the closing report.
+- The staleness and ambiguity catalogue — diverged, one-sided, malformed fence, unresolved delegation candidate — is restated near-verbatim in `<context>`, the argument section, and Step 2, and the "writes both files, bootstraps a shared region, removes retired `spx/` files" sentence repeats Step 4 and the constraints.
+- Success criterion 4 opens by requiring an empty diff outside the router and `shared` bounds between Step 1 and Step 5, while Step 5 describes topologies — an adopt answer, a seeded missing file — where that diff is non-empty by design.
+
+**Resolution shape**: state the breach disposition explicitly (report-only, or a named remediation step and its owner); state each catalogue definition once in `<context>` and reference it from the workflow; make criterion 4 conditional per topology or state the invariant that holds in every case. One editorial pass with the Step 5 restructure above, gated by `skill-auditor`.
+
+**Why separate**: each finding is in prose the changeset did not touch, and the merging decision routes a Verifier finding whose subject lies outside the diff here rather than to the merge.
+
 ## Root instruction terminology decision
 
 The node concept is "instruction block" across this node, its decision, the generator, the skill and template, the recipes, the workflow, the root instruction-file prose, and `spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`. The broader term "guide" remains internally consistent for these distinct surfaces:

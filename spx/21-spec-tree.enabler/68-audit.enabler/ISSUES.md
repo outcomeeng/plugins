@@ -202,6 +202,17 @@ two payload shapes during the completion-contract repair; the extraction was
 withdrawn and the payloads stay inline in `SKILL.md`. The ceiling pressure was
 surfaced by `instructions:skill-auditor` on the coverage-accounting repair.
 
+The same ceiling pressure has a second source: the start-before-inspection,
+serial-persistence, and never-retype-paths rules are each stated in two to four
+sections of `SKILL.md` (constraints, the numbered stages, the request contract,
+the run contract, and the coverage model). Stating each once in its owning
+section and cross-referencing it by tag elsewhere recovers line budget and
+removes the risk that a later edit updates one restatement and not the others.
+Surfaced as a `worth-improving` finding by `instructions:skill-auditor` on the
+artifact-registry changeset, which touched the coverage model alone; the
+consolidation is an editorial pass over the whole body and carries its own
+`skill-auditor` gate.
+
 ## The run driver reports inconsistent provenance for its own plugin version
 
 Two sealed implementation-audit runs recorded minutes apart, from the same agent
