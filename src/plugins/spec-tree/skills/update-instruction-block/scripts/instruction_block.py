@@ -294,10 +294,15 @@ def _language_by_extension(registry: Mapping[str, object]) -> dict[str, str]:
     return mapping
 
 
-# Test-file extension -> the kind the rendered registry declares for it. The enabled-language
-# set is read from the product's own test files, the in-use ground truth, rather than from
-# agent judgment.
-LANGUAGE_BY_EXTENSION = _language_by_extension(_load_artifact_registry())
+def language_by_extension() -> dict[str, str]:
+    """Read the rendered registry beside this script and map each declared extension to its kind.
+
+    Edge helper: the one filesystem read the enabled-language derivation needs. The pure
+    functions below take the map it returns, so they stay importable and testable without the
+    rendered data file present.
+    """
+    return _language_by_extension(_load_artifact_registry())
+
 
 _BLANK_RUN = re.compile(r"\n{3,}")
 
@@ -592,21 +597,27 @@ def filter_harness(body: str, harness: str) -> str:
     return _filter_conditional_blocks(body, "harness", {harness})
 
 
-def language_for_extension(extension: str) -> str | None:
-    """Map a test-file extension (with or without a leading dot) to its language, or None."""
-    return LANGUAGE_BY_EXTENSION.get(extension.lstrip("."))
+def language_for_extension(
+    extension: str, kind_by_extension: Mapping[str, str]
+) -> str | None:
+    """Map a test-file extension (with or without a leading dot) to its kind, or None."""
+    return kind_by_extension.get(extension.lstrip("."))
 
 
-def detect_languages(extensions: Iterable[str]) -> tuple[str, ...]:
-    """Map a set of test-file extensions to the sorted languages they denote.
+def detect_languages(
+    extensions: Iterable[str], kind_by_extension: Mapping[str, str]
+) -> tuple[str, ...]:
+    """Map a set of test-file extensions to the sorted kinds they denote.
 
-    Pure: the enabled-language set is the languages the product's own test extensions map
-    to, computed without agent judgment or filesystem access. The caller globs the extensions.
+    Pure: the enabled-language set is the kinds the product's own test extensions map to
+    under the supplied registry map, computed without agent judgment or filesystem access.
+    The caller globs the extensions and reads the map at the edge.
     """
     languages = (
         language
         for extension in extensions
-        if (language := language_for_extension(extension)) is not None
+        if (language := language_for_extension(extension, kind_by_extension))
+        is not None
     )
     return normalize_languages(languages)
 
@@ -1220,7 +1231,7 @@ def detect_languages_from_tree(spx_dir: pathlib.Path) -> tuple[str, ...]:
     extensions = {
         path.suffix.lstrip(".") for path in spx_dir.glob("**/tests/*") if path.is_file()
     }
-    return detect_languages(extensions)
+    return detect_languages(extensions, language_by_extension())
 
 
 def instruction_status(

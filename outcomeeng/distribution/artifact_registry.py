@@ -181,6 +181,11 @@ ARTIFACT_KINDS: Final = (
 )
 
 
+SCRIPTS_DIR_NAME: Final = "scripts"
+ARTIFACT_REGISTRY_FILENAME: Final = "artifact-registry.json"
+ARTIFACT_REGISTRY_VARIABLE: Final = "artifact_registry_json"
+
+
 @dataclass(frozen=True)
 class ArtifactRegistryConsumer:
     """One shipped skill whose script reads the rendered registry beside itself."""
@@ -200,9 +205,6 @@ class ArtifactRegistryConsumer:
         )
 
 
-SCRIPTS_DIR_NAME: Final = "scripts"
-ARTIFACT_REGISTRY_FILENAME: Final = "artifact-registry.json"
-ARTIFACT_REGISTRY_VARIABLE: Final = "artifact_registry_json"
 ARTIFACT_REGISTRY_CONSUMERS: Final = (
     ArtifactRegistryConsumer(plugin="spec-tree", skill="audit-implementation"),
     ArtifactRegistryConsumer(plugin="spec-tree", skill="update-instruction-block"),

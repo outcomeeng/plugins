@@ -9,7 +9,6 @@ import contextlib
 import io
 import json
 import pathlib
-import runpy
 import subprocess
 import sys
 from collections.abc import Callable, Iterator, Mapping, Sequence
@@ -47,15 +46,15 @@ SCRIPT_PATH = (
         IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
     )
 )
-_MODULE = runpy.run_path(str(SCRIPT_PATH))
 _RESOLVE_SCOPE_MODULE_NAME = "implementation_resolve_scope"
 
 
 def load_resolve_scope_module() -> ModuleType:
-    """Load the shipped scope resolver as a module to reach its pure selection seam."""
+    """Load the shipped scope resolver once as a module; every accessor reads that copy."""
     return load_shipped_module(_RESOLVE_SCOPE_MODULE_NAME, SCRIPT_PATH)
 
 
+_MODULE = vars(load_resolve_scope_module())
 ERROR_PREFIX = cast(str, _MODULE["ERROR_PREFIX"])
 RECONCILE_PREFIX = cast(str, _MODULE["RECONCILE_PREFIX"])
 SCOPE_IDENTITY_OPTION = cast(str, _MODULE["SCOPE_IDENTITY_OPTION"])

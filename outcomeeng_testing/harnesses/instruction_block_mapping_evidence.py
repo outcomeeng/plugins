@@ -59,9 +59,10 @@ def observe_duplicate_cli_flag(option: str) -> DuplicateFlagObservation:
 
 def observe_extension_language(extension: str) -> tuple[str | None, str | None]:
     """Report the language the bare and dotted spellings of ``extension`` each denote."""
+    rendered = MODULE.language_by_extension()
     return (
-        MODULE.language_for_extension(extension),
-        MODULE.language_for_extension(f".{extension}"),
+        MODULE.language_for_extension(extension, rendered),
+        MODULE.language_for_extension(f".{extension}", rendered),
     )
 
 

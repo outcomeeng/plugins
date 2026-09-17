@@ -589,7 +589,6 @@ class InstructionBlockModule(Protocol):
 
     AGENT_HARNESS_INSTRUCTION_FILENAMES: dict[str, str]
     BOOTSTRAP_SHARED_REGION_NAME: str
-    LANGUAGE_BY_EXTENSION: dict[str, str]
     OBSOLETE_SPX_INSTRUCTION_FILENAMES: tuple[str, ...]
     ROUTER_BLOCK_END: str
     ROUTER_MARKER_PREFIX: str
