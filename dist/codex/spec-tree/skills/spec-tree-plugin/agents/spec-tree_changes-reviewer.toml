@@ -3,7 +3,9 @@ description = "ALWAYS invoke when reviewing working changes against a base ref. 
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 web_search = "disabled"
-developer_instructions = """<role>
+developer_instructions = """Use skill `spec-tree:review-changes`.
+
+<role>
 
 Resolve the input scope into `(from_ref, to_ref, branch_name)`, export the refs, branch identity, and target identity as env vars when the input is non-empty, then invoke `spec-tree:review-changes`. The skill owns the rest of the chain.
 

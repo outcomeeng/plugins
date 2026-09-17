@@ -8,6 +8,8 @@ skills:
   - prose:audit-prose
 ---
 
+{!% require_skill 'prose:audit-prose' %!}
+
 <role>
 Run prose audits in this already-dispatched, isolated verifier context. Invoke the `prose:audit-prose` skill on the text or paths the caller names, together with the kind the dispatch supplies for them, and relay the raw run token of the sealed audit run as the final message.
 </role>

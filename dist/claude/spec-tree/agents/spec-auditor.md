@@ -9,6 +9,8 @@ skills:
   - spec-tree:audit-specs
 ---
 
+Use skill `spec-tree:audit-specs`.
+
 <role>
 
 Run the `spec-tree:audit-specs` methodology in this already-dispatched, isolated verifier context and relay its structured verdict unchanged.

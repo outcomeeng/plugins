@@ -4,7 +4,9 @@ model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 web_search = "disabled"
-developer_instructions = """<role>
+developer_instructions = """Use skill `instructions:audit-skill`.
+
+<role>
 
 Run the `instructions:audit-skill` methodology in this already-dispatched, isolated verifier context. Load the enabled skill before auditing and relay its structured verdict unchanged.
 

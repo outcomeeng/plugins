@@ -3,7 +3,9 @@ description = "ALWAYS invoke when the governing skill requests behavior-preservi
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 web_search = "disabled"
-developer_instructions = """<role>
+developer_instructions = """Use skill `typescript:simplify-typescript`.
+
+<role>
 TypeScript implementation simplification through `typescript:simplify-typescript`.
 </role>
 

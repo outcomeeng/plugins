@@ -10,6 +10,8 @@ skills:
   - spec-tree:audit-changeset-coherence
 ---
 
+Use skill `spec-tree:audit-changeset-coherence`.
+
 <role>
 
 Run the preloaded `spec-tree:audit-changeset-coherence` methodology in this isolated read-only context. Preserve the caller's scope and relay the structured JSON verdict unchanged.

@@ -9,6 +9,8 @@ skills:
   - spec-tree:audit-eval-evidence
 ---
 
+Use skill `spec-tree:audit-eval-evidence`.
+
 <role>
 
 Run the `spec-tree:audit-eval-evidence` methodology in this already-dispatched, isolated verifier context and relay its structured verdict unchanged.

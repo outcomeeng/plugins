@@ -8,6 +8,8 @@ skills:
   - typescript:simplify-typescript
 ---
 
+{!% require_skill 'typescript:simplify-typescript' %!}
+
 <role>
 TypeScript implementation simplification through `typescript:simplify-typescript`.
 </role>

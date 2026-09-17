@@ -12,6 +12,8 @@ skills:
   - instructions:audit-skill
 ---
 
+{!% require_skill 'instructions:audit-skill' %!}
+
 <role>
 {!% if target == 'codex' %!}
 Run the `instructions:audit-skill` methodology in this already-dispatched, isolated verifier context. Load the enabled skill before auditing and relay its structured verdict unchanged.

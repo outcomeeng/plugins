@@ -13,6 +13,8 @@ skills:
   - instructions:audit-subagent
 ---
 
+{!% require_skill 'instructions:audit-subagent' %!}
+
 <role>
 {!% if target == 'codex' %!}
 Run the `instructions:audit-subagent` methodology in this already-dispatched, isolated verifier context. Load the enabled skill before auditing and relay its structured verdict unchanged.

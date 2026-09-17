@@ -77,8 +77,13 @@ def test_manual_guidance_uses_only_the_rendered_source_tool_set(
     )
     instructions = toml_string(parsed, "developer_instructions")
     rendered_tools = tuple(tool for tool in source_tools if tool != token)
+    manual_guidance = instructions.split(MANUAL_REVIEW_GUIDANCE_OPEN, 1)[1].split(
+        MANUAL_REVIEW_GUIDANCE_CLOSE,
+        1,
+    )[0]
 
     assert token in source_tools
+    assert "Use skill `spec-tree:audit-implementation`." in instructions
     assert all(tool in instructions for tool in rendered_tools)
     assert token not in instructions
-    assert RUNTIME_TOKEN_USE_SKILL_NAMES[Target.CLAUDE.value] not in instructions
+    assert RUNTIME_TOKEN_USE_SKILL_NAMES[Target.CLAUDE.value] not in manual_guidance

@@ -4,7 +4,9 @@ model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 web_search = "disabled"
-developer_instructions = """<role>
+developer_instructions = """Use skill `spec-tree:audit-changeset-coherence`.
+
+<role>
 
 Run `spec-tree:audit-changeset-coherence` in this isolated read-only context after loading the enabled skill. Preserve the caller's scope and relay the structured JSON verdict unchanged.
 

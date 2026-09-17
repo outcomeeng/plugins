@@ -11,6 +11,8 @@ skills:
   - spec-tree:audit-pdr
 ---
 
+{!% require_skill 'spec-tree:audit-pdr' %!}
+
 <role>
 {!% if target == 'codex' %!}
 Run the `spec-tree:audit-pdr` methodology in this already-dispatched, isolated verifier context. Load the enabled skill before auditing and relay its structured verdict unchanged.

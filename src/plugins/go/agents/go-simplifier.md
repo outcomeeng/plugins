@@ -8,6 +8,8 @@ skills:
   - go:simplify-go
 ---
 
+{!% require_skill 'go:simplify-go' %!}
+
 <role>
 Go implementation simplification through `go:simplify-go`.
 </role>

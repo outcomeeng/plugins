@@ -8,6 +8,8 @@ skills:
   - spec-tree:review-changes
 ---
 
+{!% require_skill 'spec-tree:review-changes' %!}
+
 <role>
 
 Resolve the input scope into `(from_ref, to_ref, branch_name)`, export the refs, branch identity, and target identity as env vars when the input is non-empty, then invoke `spec-tree:review-changes`. The skill owns the rest of the chain.

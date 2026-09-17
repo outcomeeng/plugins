@@ -10,6 +10,8 @@ skills:
   - instructions:audit-skill
 ---
 
+Use skill `instructions:audit-skill`.
+
 <role>
 
 Run the `instructions:audit-skill` methodology in this already-dispatched, isolated verifier context and relay its structured verdict unchanged.

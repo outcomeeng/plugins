@@ -9,6 +9,8 @@ skills:
   - spec-tree:audit-adr
 ---
 
+Use skill `spec-tree:audit-adr`.
+
 <role>
 
 Run the `spec-tree:audit-adr` methodology in this already-dispatched, isolated verifier context and relay its structured verdict unchanged.

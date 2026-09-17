@@ -11,6 +11,8 @@ skills:
   - spec-tree:audit-specs
 ---
 
+{!% require_skill 'spec-tree:audit-specs' %!}
+
 <role>
 {!% if target == 'codex' %!}
 Run the `spec-tree:audit-specs` methodology in this already-dispatched, isolated verifier context. Load the enabled skill before auditing and relay its structured verdict unchanged.

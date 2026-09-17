@@ -8,6 +8,8 @@ skills:
   - rust:simplify-rust
 ---
 
+{!% require_skill 'rust:simplify-rust' %!}
+
 <role>
 Rust implementation simplification through `rust:simplify-rust`.
 </role>

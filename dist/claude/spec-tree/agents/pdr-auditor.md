@@ -9,6 +9,8 @@ skills:
   - spec-tree:audit-pdr
 ---
 
+Use skill `spec-tree:audit-pdr`.
+
 <role>
 
 Run the `spec-tree:audit-pdr` methodology in this already-dispatched, isolated verifier context and relay its structured verdict unchanged.

@@ -11,6 +11,8 @@ skills:
   - instructions:audit-subagent
 ---
 
+Use skill `instructions:audit-subagent`.
+
 <role>
 
 Run the `instructions:audit-subagent` methodology in this already-dispatched, isolated verifier context and relay its structured verdict unchanged.

@@ -12,6 +12,8 @@ skills:
   - spec-tree:audit-changeset-coherence
 ---
 
+{!% require_skill 'spec-tree:audit-changeset-coherence' %!}
+
 <role>
 {!% if target == 'codex' %!}
 Run `spec-tree:audit-changeset-coherence` in this isolated read-only context after loading the enabled skill. Preserve the caller's scope and relay the structured JSON verdict unchanged.

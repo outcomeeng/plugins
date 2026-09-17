@@ -11,6 +11,8 @@ skills:
   - spec-tree:audit-eval-evidence
 ---
 
+{!% require_skill 'spec-tree:audit-eval-evidence' %!}
+
 <role>
 {!% if target == 'codex' %!}
 Run the `spec-tree:audit-eval-evidence` methodology in this already-dispatched, isolated verifier context. Load the enabled skill before auditing and relay its structured verdict unchanged.
