@@ -69,6 +69,7 @@ from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_FIELD_KIND,
     RUNTIME_TOKEN_FILE_KIND,
     RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT,
+    RUNTIME_TOKEN_OPTIONAL_NAMES,
     RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY,
     RUNTIME_TOKEN_ROOT_GUIDE_NAMES,
     RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
@@ -77,9 +78,6 @@ from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
     RUNTIME_TOKEN_TERM_KIND,
     RUNTIME_TOKEN_TOOL_KIND,
-    RUNTIME_TOKEN_UNAVAILABLE_RUNTIME_KEYS,
-    RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
-    RUNTIME_TOKEN_USE_SKILL_NAMES,
     RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY,
     RUNTIME_TOKEN_WAIT_AGENT_NAMES,
     SKILL_FILENAME,
@@ -311,7 +309,6 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
         lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_TOOL_KIND],
         names={
             RUNTIME_TOKEN_ASK_USER_CAPABILITY: RUNTIME_TOKEN_ASK_USER_NAMES,
-            RUNTIME_TOKEN_USE_SKILL_CAPABILITY: RUNTIME_TOKEN_USE_SKILL_NAMES,
             RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
             RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: RUNTIME_TOKEN_WAIT_AGENT_NAMES,
             RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: (
@@ -1188,8 +1185,12 @@ def _make_kind_global(
             raise RuntimeTokenError(
                 f"{kind} token {capability!r} rendered with no target in context"
             )
-        if (kind, capability, resolved) in RUNTIME_TOKEN_UNAVAILABLE_RUNTIME_KEYS:
-            return _unavailable_runtime_token(kind, capability)
+        optional_names = RUNTIME_TOKEN_OPTIONAL_NAMES.get((kind, capability))
+        if optional_names is not None:
+            return optional_names.get(
+                resolved,
+                _unavailable_runtime_token(kind, capability),
+            )
         return resolve_runtime_token(
             kind,
             capability,
