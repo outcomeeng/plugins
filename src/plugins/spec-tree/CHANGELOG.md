@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.97.0
+
+### Changed
+
+- **The implementation audit dispatches the audit skills the artifact registry selects for each changed path.** The build renders one registry of every artifact kind the marketplace ships — python, typescript, rust, and go, each with its implementation, tests, and architecture artifacts, the extension and path pattern that detect each, and the architect, author, and audit skills and shared standard that govern it — into `scripts/artifact-registry.json` beside `audit-implementation`'s scope resolver and `update-instruction-block`'s generator. `resolve_scope.py` now emits, per resolved path, the registered artifacts whose detection matches it and the audit skill each names under `artifact_selection` in the piped run input: the most specific match of a kind wins, so a test file under `spx/**/tests/` selects `audit-{lang}-tests` rather than `audit-{lang}-code`; a kind with a match adds its detection-less architecture artifact; a path matching nothing selects nothing. `audit-implementation` reads that selection back from the sealed start input and dispatches exactly what it names. The installed skill inventory no longer selects: a selected skill absent from the inventory is a required `missing-skill` unit, so a `.rs` change in a repository without the rust plugin rejects the audit instead of sealing approved with the file unread, and an installed plugin no longer draws an audit of files it does not govern. An unmatched path stays an accounting record for its artifact-type auditor and the whole-changeset review.
+- **The instruction-block generator's extension map comes from the rendered registry.** `instruction_block.py` derives its test-file-extension-to-kind mapping from the sibling `artifact-registry.json` instead of a literal in the script, so the enabled-language set the router records follows the kinds the marketplace declares.
+
 ## 0.96.1
 
 ### Fixed

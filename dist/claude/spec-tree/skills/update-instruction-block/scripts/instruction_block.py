@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import json
 import pathlib
 import re
 import subprocess
@@ -251,9 +252,52 @@ class UnresolvedInstructionTemplateError(ValueError):
     """Raised when instruction generation receives an authored build template."""
 
 
-# Test-file extension -> the language it denotes. The enabled-language set is read from the
-# product's own test files, the in-use ground truth, rather than from agent judgment.
-LANGUAGE_BY_EXTENSION = {"py": "python", "ts": "typescript", "rs": "rust", "go": "go"}
+# The artifact registry the build renders beside this script declares every kind the
+# marketplace ships and the extensions that detect its artifacts.
+ARTIFACT_REGISTRY_FILENAME = "artifact-registry.json"
+_REGISTRY_KINDS_FIELD = "kinds"
+_REGISTRY_NAME_FIELD = "name"
+_REGISTRY_ARTIFACTS_FIELD = "artifacts"
+_REGISTRY_DETECTION_FIELD = "detection"
+_REGISTRY_EXTENSIONS_FIELD = "extensions"
+
+
+def _load_artifact_registry() -> Mapping[str, object]:
+    """Read the rendered artifact registry beside this script."""
+    path = pathlib.Path(__file__).resolve().parent / ARTIFACT_REGISTRY_FILENAME
+    with path.open(encoding="utf-8") as handle:
+        registry = json.load(handle)
+    if not isinstance(registry, dict):
+        raise ValueError(f"{path} is not a rendered artifact registry")
+    return registry
+
+
+def _language_by_extension(registry: Mapping[str, object]) -> dict[str, str]:
+    """Map each extension a registered artifact's detection declares to its kind.
+
+    The first kind declaring an extension owns it; the registry declares each
+    extension under one kind.
+    """
+    mapping: dict[str, str] = {}
+    kinds = registry.get(_REGISTRY_KINDS_FIELD)
+    for kind in kinds if isinstance(kinds, list) else ():
+        artifacts = (
+            kind.get(_REGISTRY_ARTIFACTS_FIELD) if isinstance(kind, dict) else None
+        )
+        for artifact in artifacts if isinstance(artifacts, list) else ():
+            detection = artifact.get(_REGISTRY_DETECTION_FIELD)
+            if not isinstance(detection, dict):
+                continue
+            extensions = detection.get(_REGISTRY_EXTENSIONS_FIELD)
+            for extension in extensions if isinstance(extensions, list) else ():
+                mapping.setdefault(str(extension), str(kind[_REGISTRY_NAME_FIELD]))
+    return mapping
+
+
+# Test-file extension -> the kind the rendered registry declares for it. The enabled-language
+# set is read from the product's own test files, the in-use ground truth, rather than from
+# agent judgment.
+LANGUAGE_BY_EXTENSION = _language_by_extension(_load_artifact_registry())
 
 _BLANK_RUN = re.compile(r"\n{3,}")
 

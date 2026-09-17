@@ -18,6 +18,8 @@
     "**/semgrep_*.yaml",
     "outcomeeng/vendor/**",
     "pyproject.toml",
+    // Authored registry data files carry one build token and are rendered into JSON under dist/.
+    "src/plugins/*/skills/*/scripts/artifact-registry.json",
   ],
   "dockerfile": {},
   "json": {
