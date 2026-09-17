@@ -14,4 +14,6 @@ CAN preserve enforceable restrictions while surfacing unsupported source semanti
 
 ### Compliance
 
-- ALWAYS: converted agents keep manual-review guidance for source fields whose Codex semantics remain prompt guidance rather than hard execution boundaries — `disallowedTools` and command-level meanings inside `tools` do not restrict commands executed through allowed shell tools, and `skills.config` enables named skills without proving spawn-time preload behavior ([test](tests/test_execution_policy.compliance.l1.py))
+- ALWAYS: converted agents keep manual-review guidance for rendered source fields whose Codex semantics remain prompt guidance rather than hard execution boundaries — `disallowedTools` and command-level meanings inside rendered `tools` do not restrict commands executed through allowed shell tools, and `skills.config` enables named skills without proving spawn-time preload behavior ([test](tests/test_execution_policy.compliance.l1.py))
+- Converted-agent manual-review guidance contains only capabilities present in the rendered source-tool set; a target-absent capability never reappears as guidance.
+- A generated Codex implementation auditor composes every installed concern skill selected for its changed files without searching for a dedicated tool named `Skill`.
