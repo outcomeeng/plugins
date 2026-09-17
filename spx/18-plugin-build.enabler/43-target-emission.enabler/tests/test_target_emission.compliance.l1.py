@@ -27,6 +27,8 @@ from outcomeeng.distribution.build import (
     contains_execution_time_skill_content_injection,
 )
 from outcomeeng.distribution.contracts import SKILLS_SUBDIR_NAME, Target
+from outcomeeng.distribution.contracts import RUNTIME_TOKEN_USE_SKILL_NAMES
+from outcomeeng.distribution.agents import READ_ONLY_TOOLS
 from outcomeeng.validation.skill_frontmatter import (
     ALLOWED_TOOLS_FIELD,
     ARGUMENT_HINT_FIELD,
@@ -38,6 +40,7 @@ from outcomeeng_testing.harnesses.target_emission import (
     projected_sources,
     text_emissions,
     emitted_texts,
+    optional_tool_emissions,
     repeated_include_observations,
     scoped_include_observations,
     source_emission_counts,
@@ -356,3 +359,17 @@ def test_no_agent_artifact_carries_another_targets_skill_dir_token() -> None:
         )
         for path, text in agent_artifact_texts(target).items():
             assert foreign_token not in text, (target, path)
+
+
+def test_target_absent_tool_item_is_removed_without_reordering() -> None:
+    stable_tools = tuple(sorted(READ_ONLY_TOOLS))
+    for observation in optional_tool_emissions():
+        target_name = RUNTIME_TOKEN_USE_SKILL_NAMES[observation.target.value]
+        expected = (
+            (stable_tools[0], target_name, *stable_tools[1:])
+            if target_name is not None
+            else stable_tools
+        )
+        assert observation.tools == expected
+        assert ", ," not in observation.text
+        assert ",\n---" not in observation.text

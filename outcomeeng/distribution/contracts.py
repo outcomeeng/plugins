@@ -102,6 +102,7 @@ RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT: Final[dict[str, bool]] = {
 }
 
 RUNTIME_TOKEN_ASK_USER_CAPABILITY: Final = "ask_user"
+RUNTIME_TOKEN_USE_SKILL_CAPABILITY: Final = "use_skill"
 RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: Final = "spawn_agent"
 RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: Final = "wait_agent"
 RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: Final = "schedule_wakeup"
@@ -112,6 +113,10 @@ RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: Final = "root_guide"
 RUNTIME_TOKEN_ASK_USER_NAMES: Final[dict[str, str]] = {
     Target.CLAUDE.value: "AskUserQuestion",
     Target.CODEX.value: "request_user_input",
+}
+RUNTIME_TOKEN_USE_SKILL_NAMES: Final[dict[str, str | None]] = {
+    Target.CLAUDE.value: "Skill",
+    Target.CODEX.value: None,
 }
 RUNTIME_TOKEN_SPAWN_AGENT_NAMES: Final[dict[str, str]] = {
     Target.CODEX.value: "collaboration.spawn_agent",
@@ -126,9 +131,14 @@ RUNTIME_TOKEN_ROOT_GUIDE_NAMES: Final[dict[str, str]] = {
     Target.CLAUDE.value: "CLAUDE.md",
     Target.CODEX.value: "AGENTS.md",
 }
-RUNTIME_TOKEN_REQUIRED_NAMES: Final[dict[tuple[str, str], dict[str, str]]] = {
+RUNTIME_TOKEN_REQUIRED_NAMES: Final[
+    dict[tuple[str, str], dict[str, str | None]]
+] = {
     (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_ASK_USER_CAPABILITY): (
         RUNTIME_TOKEN_ASK_USER_NAMES
+    ),
+    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_USE_SKILL_CAPABILITY): (
+        RUNTIME_TOKEN_USE_SKILL_NAMES
     ),
     (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY): (
         RUNTIME_TOKEN_SPAWN_AGENT_NAMES

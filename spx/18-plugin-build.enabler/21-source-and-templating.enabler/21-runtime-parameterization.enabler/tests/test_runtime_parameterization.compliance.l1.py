@@ -2,6 +2,20 @@
 
 from __future__ import annotations
 
+import pytest
+
+from outcomeeng.distribution.agents import AGENT_TOOLS_FIELD, READ_ONLY_TOOLS
+from outcomeeng.distribution.build import RuntimeTokenError, render_text
+from outcomeeng.distribution.contracts import (
+    RUNTIME_TOKEN_TOOL_KIND,
+    RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
+    RUNTIME_TOKEN_USE_SKILL_NAMES,
+    Target,
+    format_runtime_token,
+)
+from outcomeeng.distribution.profiles import PROFILE_FIELD
+from outcomeeng.validation.skill_frontmatter import ALLOWED_TOOLS_FIELD
+
 from outcomeeng_testing.harnesses.runtime_parameterization import (
     build_fails_on_unknown_kind_capability_or_runtime,
     conditional_renders_absent_capability_only_where_present,
@@ -15,6 +29,7 @@ from outcomeeng_testing.harnesses.runtime_parameterization import (
     runtime_explicit_token_rejects_unavailable_or_missing_runtime,
     runtime_explicit_token_renders_named_runtime_on_every_target,
     term_kind_renders_live_registry_name_per_target,
+    optional_tool_frontmatter_observations,
 )
 
 
@@ -64,3 +79,34 @@ def test_registry_keyed_by_kind_with_explicit_guard_enforcement() -> None:
 
 def test_registry_guard_contract_rejects_mismatched_enforcement() -> None:
     assert registry_guard_contract_rejects_mismatched_enforcement()
+
+
+@pytest.mark.parametrize("field", (ALLOWED_TOOLS_FIELD, AGENT_TOOLS_FIELD))
+def test_target_absent_tool_is_omitted_from_list_valued_frontmatter(
+    field: str,
+) -> None:
+    stable_tools = tuple(sorted(READ_ONLY_TOOLS))
+    for observation in optional_tool_frontmatter_observations(field):
+        target_name = RUNTIME_TOKEN_USE_SKILL_NAMES[observation.target.value]
+        expected = (
+            (stable_tools[0], target_name, *stable_tools[1:])
+            if target_name is not None
+            else stable_tools
+        )
+        assert observation.tools == expected
+        assert ", ," not in observation.rendered
+        assert ",\n---" not in observation.rendered
+
+
+def test_target_absent_tool_fails_outside_recognized_frontmatter_item() -> None:
+    token = format_runtime_token(
+        RUNTIME_TOKEN_TOOL_KIND,
+        RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
+    )
+    with pytest.raises(RuntimeTokenError):
+        render_text(token, variables={"target": Target.CODEX.value})
+    with pytest.raises(RuntimeTokenError):
+        render_text(
+            f"---\n{PROFILE_FIELD}: {token}\n---\n",
+            variables={"target": Target.CODEX.value},
+        )

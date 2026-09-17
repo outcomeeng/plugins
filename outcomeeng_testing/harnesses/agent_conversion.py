@@ -23,6 +23,7 @@ from outcomeeng.distribution.agents import (
     iter_agent_files,
 )
 from outcomeeng.distribution.build import build
+from outcomeeng.distribution.build import EmissionAction, project_emissions
 from outcomeeng.distribution.contracts import (
     DIST_CODEX_PLUGINS_DIR,
     PLUGINS_DIR_NAME,
@@ -117,6 +118,28 @@ def build_repository_agents(root: Path) -> RepositoryAgentBuild:
     dist_root = root / "dist"
     build(source_root, dist_root)
     return RepositoryAgentBuild(sources=sources, dist_root=dist_root)
+
+
+def built_repository_agent_toml(
+    root: Path,
+    *,
+    agent_name: str,
+) -> tuple[AgentDocumentOracle, dict[str, object]]:
+    """Build and independently parse one repository Codex agent artifact."""
+    built = build_repository_agents(root)
+    source = next(path for path in built.sources if path.stem == agent_name)
+    projection = project_emissions(REPOSITORY_ROOT / SOURCE_ROOT_NAME)
+    emission = next(
+        candidate
+        for candidate in projection.emissions
+        if candidate.source == source
+        and candidate.target.value == "codex"
+        and candidate.action is EmissionAction.CONVERT_AGENT
+    )
+    generated = built.dist_root / emission.target.value / emission.relative_path
+    return agent_document_oracle(source), tomllib.loads(
+        generated.read_text(encoding="utf-8")
+    )
 
 
 def agent_document_oracle(path: Path) -> AgentDocumentOracle:

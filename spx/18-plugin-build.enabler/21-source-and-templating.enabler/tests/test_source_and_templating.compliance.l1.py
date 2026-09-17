@@ -12,7 +12,7 @@ from outcomeeng.distribution.build import (
     plugin_names,
     template_source_files,
 )
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import REQUIRE_SKILL_GUIDANCE_TEMPLATE, Target
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
     source_scenarios,
@@ -72,6 +72,7 @@ def test_jinja_environment_uses_custom_delimiters() -> None:
 
 
 def test_require_skill_expands_to_neutral_guidance() -> None:
+    assert REQUIRE_SKILL_GUIDANCE_TEMPLATE == "Use skill `{skill_ref}`."
     assert require_skill_expands_to_neutral_guidance()
 
 
