@@ -56,6 +56,16 @@ INSTALLED_DEFINITION_FILENAME: Final = "installed-definition.toml"
 PARENT_STREAM_FILENAME: Final = "parent.jsonl"
 PARENT_STDERR_FILENAME: Final = "parent.stderr.txt"
 CHILD_RECORD_FILENAME: Final = "child.json"
+CHILD_ROLLOUT_FILENAME: Final = "child-rollout.jsonl"
+REPLICATED_SHELL_FILENAME: Final = "replicated-shell.json"
+REPLICATED_SHELL_LABEL: Final = "replicated-shell"
+REPLICATED_SHELL_COMMAND: Final = (
+    "/bin/zsh",
+    "-lc",
+    "printf 'PATH=%s\\n' \"$PATH\"; "
+    "printf 'COMMAND_V_PYTHON3='; command -v python3; "
+    "printf 'PYTHON3_VERSION='; python3 --version",
+)
 TERMINAL_RESULT_FILENAME: Final = "terminal.txt"
 SUMMARY_FILENAME: Final = "summary.json"
 
@@ -68,6 +78,7 @@ class CodexSkillCompositionObservation:
     parent_exit_code: int | None
     parent_thread_id: str | None
     child_terminal_condition: str | None
+    replicated_shell_exit_code: int | None
     failure: str | None
 
 
@@ -103,10 +114,58 @@ def _parent_command(checkout: Path, terminal_path: Path) -> tuple[str, ...]:
     )
 
 
-def _retain_child_record(artifact_root: Path, evidence: NativeChildEvidence) -> None:
+def _retain_child_evidence(
+    artifact_root: Path,
+    codex_home: Path,
+    evidence: NativeChildEvidence,
+    interval: NativeProfileInterval,
+) -> None:
     if evidence.thread_read is None:
         return
-    _write_text(artifact_root / CHILD_RECORD_FILENAME, evidence.thread_read.stdout)
+    _write_text(
+        artifact_root / CHILD_RECORD_FILENAME,
+        interval.sanitize(evidence.thread_read.stdout),
+    )
+    if evidence.thread is None:
+        return
+    rollout_value = evidence.thread.get("path")
+    if not isinstance(rollout_value, str) or not rollout_value:
+        raise ValueError("native child rollout path is absent")
+    rollout_path = Path(rollout_value)
+    if not rollout_path.is_absolute():
+        rollout_path = codex_home / rollout_path
+    resolved_home = codex_home.resolve(strict=True)
+    resolved_rollout = rollout_path.resolve(strict=True)
+    try:
+        resolved_rollout.relative_to(resolved_home)
+    except ValueError:
+        raise ValueError("native child rollout path is outside CODEX_HOME") from None
+    _write_text(
+        artifact_root / CHILD_ROLLOUT_FILENAME,
+        interval.sanitize(resolved_rollout.read_text(encoding="utf-8")),
+    )
+
+
+def _retain_replicated_shell(
+    artifact_root: Path,
+    checkout: Path,
+    environment: Mapping[str, str],
+    interval: NativeProfileInterval,
+) -> int:
+    result = interval.run(REPLICATED_SHELL_COMMAND, checkout, environment)
+    _write_json(
+        artifact_root / REPLICATED_SHELL_FILENAME,
+        {
+            "label": REPLICATED_SHELL_LABEL,
+            "command": list(REPLICATED_SHELL_COMMAND),
+            "cwd": str(checkout),
+            "environment_path": interval.sanitize(environment.get("PATH", "")),
+            "exit_code": result.returncode,
+            "stdout": interval.sanitize(result.stdout),
+            "stderr": interval.sanitize(result.stderr),
+        },
+    )
+    return result.returncode
 
 
 def run_codex_skill_composition_probe(
@@ -125,6 +184,7 @@ def run_codex_skill_composition_probe(
     parent_exit_code: int | None = None
     parent_thread_id: str | None = None
     child_terminal_condition: str | None = None
+    replicated_shell_exit_code: int | None = None
     failure: str | None = None
 
     try:
@@ -152,6 +212,12 @@ def run_codex_skill_composition_probe(
                 cwd=resolved_checkout,
                 env=child_environment,
             ):
+                replicated_shell_exit_code = _retain_replicated_shell(
+                    resolved_artifacts,
+                    resolved_checkout,
+                    child_environment,
+                    interval,
+                )
                 parent = interval.parent(
                     _parent_command(resolved_checkout, terminal_path),
                     resolved_checkout,
@@ -184,9 +250,16 @@ def run_codex_skill_composition_probe(
                     )
                     parent_thread_id = evidence.parent_id
                     child_terminal_condition = evidence.terminal_condition
-                    _retain_child_record(resolved_artifacts, evidence)
+                    _retain_child_evidence(
+                        resolved_artifacts,
+                        codex_home,
+                        evidence,
+                        interval,
+                    )
                     if evidence.terminal_condition is not None:
                         failure = evidence.terminal_condition
+                if failure is None and replicated_shell_exit_code != 0:
+                    failure = f"replicated shell exited {replicated_shell_exit_code}"
     except (
         OSError,
         ValueError,
@@ -202,6 +275,7 @@ def run_codex_skill_composition_probe(
         parent_exit_code=parent_exit_code,
         parent_thread_id=parent_thread_id,
         child_terminal_condition=child_terminal_condition,
+        replicated_shell_exit_code=replicated_shell_exit_code,
         failure=failure,
     )
     _write_json(
@@ -211,6 +285,7 @@ def run_codex_skill_composition_probe(
             "parent_exit_code": observation.parent_exit_code,
             "parent_thread_id": observation.parent_thread_id,
             "child_terminal_condition": observation.child_terminal_condition,
+            "replicated_shell_exit_code": (observation.replicated_shell_exit_code),
             "failure": observation.failure,
         },
     )
@@ -235,6 +310,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "parent_exit_code": observation.parent_exit_code,
                 "parent_thread_id": observation.parent_thread_id,
                 "child_terminal_condition": observation.child_terminal_condition,
+                "replicated_shell_exit_code": (observation.replicated_shell_exit_code),
                 "failure": observation.failure,
             },
             sort_keys=True,
