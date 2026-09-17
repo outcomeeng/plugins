@@ -1,8 +1,8 @@
 """Loading a shipped script as a module.
 
 A script the plugin ships under ``dist/`` is loaded through its file boundary
-so a test or gate reaches its pure seams directly. The generated tree carries
-no bytecode cache, so the load never writes one beside the script.
+so a test or gate reaches its pure seams directly. The load writes no bytecode
+cache beside the script, so the generated tree stays free of one.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ def load_shipped_module(name: str, path: Path) -> ModuleType:
     module = importlib.util.module_from_spec(spec)
     # Register before exec so dataclass type introspection can resolve the module by name.
     sys.modules[name] = module
-    write_bytecode = sys.dont_write_bytecode
+    dont_write_bytecode = sys.dont_write_bytecode
     sys.dont_write_bytecode = True
     try:
         spec.loader.exec_module(module)
@@ -33,5 +33,5 @@ def load_shipped_module(name: str, path: Path) -> ModuleType:
         del sys.modules[name]
         raise
     finally:
-        sys.dont_write_bytecode = write_bytecode
+        sys.dont_write_bytecode = dont_write_bytecode
     return module

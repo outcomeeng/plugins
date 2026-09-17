@@ -8,11 +8,12 @@ it through the marketplace skill-co-located ``__file__``-relative import and
 carry no reader or field vocabulary of their own.
 
 Tested before this script is bundled by the artifact-registry node's
-``test_artifact_registry.mapping.l1.py`` (every rendered consumer file equals
-the declaration; one path per registered artifact selecting it and its kind's
-detection-less artifacts; the most specific of two matches; every unregistered
-suffix selecting nothing) and, through the implementation-audit resolver, by
-the audit node's ``test_implementation_scope.compliance.l1.py``.
+``test_artifact_registry.mapping.l1.py`` (the rendered data file equals the
+declaration and each shipped copy equals a fresh render; one path per
+registered artifact selecting it and its kind's detection-less artifacts; the
+most specific of two matches; every unregistered suffix selecting nothing)
+and, through the implementation-audit resolver, by the audit node's
+``test_implementation_scope.compliance.l1.py``.
 """
 
 from __future__ import annotations
@@ -27,6 +28,10 @@ from pathlib import PurePosixPath
 
 ARTIFACT_REGISTRY_FILENAME = "artifact-registry.json"
 ERROR_PREFIX = "error: artifact selection failed"
+REPAIR_HINT = (
+    "reinstall or update the spec-tree plugin so the rendered registry ships "
+    "beside this script"
+)
 EXIT_COMMAND_FAILURE = 2
 
 
@@ -109,9 +114,10 @@ def _specificity(detection: Mapping[str, object]) -> int:
 def select_artifacts(path: str, registry: Mapping[str, object]) -> list[dict[str, str]]:
     """Return the registered artifacts ``path`` selects, most specific first.
 
-    Within one kind the most specific matching detection wins; a kind with a
-    match then selects each of its detection-less artifacts in declaration
-    order. A path matching no detection selects nothing.
+    Within one kind the most specific matching detection wins, and of two
+    matches of equal specificity the earlier-declared artifact wins; a kind
+    with a match then selects each of its detection-less artifacts in
+    declaration order. A path matching no detection selects nothing.
     """
     selection: list[dict[str, str]] = []
     for kind in _records(registry, RegistryField.KINDS):
@@ -124,6 +130,8 @@ def select_artifacts(path: str, registry: Mapping[str, object]) -> list[dict[str
         ]
         if not matched:
             continue
+        # ``max`` keeps the first of equally specific matches, so a tie
+        # resolves to declaration order.
         winner = max(matched, key=lambda match: _specificity(match[0]))[1]
         selected = [winner, *(a for a in artifacts if _detection(a) is None)]
         selection.extend(
@@ -183,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         registry = load_artifact_registry()
     except (OSError, ValueError) as exc:
-        print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
+        print(f"{ERROR_PREFIX}: {exc}; {REPAIR_HINT}", file=sys.stderr)
         return EXIT_COMMAND_FAILURE
     print(json.dumps(selection_for_paths(args.paths, registry), sort_keys=True))
     return 0

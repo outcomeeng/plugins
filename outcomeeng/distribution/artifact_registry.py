@@ -3,8 +3,8 @@
 One declaration names, for every kind, the artifacts that kind produces, the
 features that detect each artifact in a changed path, and the architect,
 author, and audit skills and the shared standard that govern it. The build
-renders the declaration into a data file beside every shipped script that
-reads it, so a shipped consumer knows every artifact the marketplace ships
+renders the declaration into one data file beside the shipped reader that
+owns it, so a shipped consumer knows every artifact the marketplace ships
 without importing this package and without keeping its own copy.
 """
 
@@ -271,10 +271,10 @@ def kind_by_extension() -> dict[str, str]:
     return dict(EXTENSION_OWNERS)
 
 
-def kinds_with_role(role: ArtifactRole) -> tuple[str, ...]:
-    """Return the names of every kind producing an artifact of ``role``."""
+def kinds_with_role(role: ArtifactRole) -> tuple[ArtifactKind, ...]:
+    """Return every kind producing an artifact of ``role``, in declaration order."""
     return tuple(
-        kind.name
+        kind
         for kind in ARTIFACT_KINDS
         if any(artifact.role is role for artifact in kind.artifacts)
     )

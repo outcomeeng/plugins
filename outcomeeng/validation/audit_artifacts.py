@@ -7,6 +7,7 @@ from typing import Final
 
 from outcomeeng.distribution.artifact_registry import (
     ARTIFACT_KINDS,
+    ArtifactKind,
     ArtifactRole,
     kinds_with_role,
 )
@@ -234,16 +235,21 @@ def check_retired_language_audit_skills(surface: Path) -> list[str]:
     concern skills.
     """
     errors: list[str] = []
-    for language in implementation_languages():
-        retired_skill = (
-            surface
-            / language
-            / SKILLS_DIR_NAME
-            / RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE.format(language=language)
-        )
+    for kind in kinds_with_role(ArtifactRole.IMPLEMENTATION):
+        retired_skill = retired_language_audit_skill_path(surface, kind)
         if retired_skill.exists():
             errors.append(f"{retired_skill}: retired aggregate audit skill exists")
     return errors
+
+
+def retired_language_audit_skill_path(surface: Path, kind: ArtifactKind) -> Path:
+    """Return where ``kind``'s plugin would ship its retired aggregate audit skill."""
+    return (
+        surface
+        / kind.plugin
+        / SKILLS_DIR_NAME
+        / RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE.format(language=kind.name)
+    )
 
 
 def implementation_audit_runtime_directory(surface: Path) -> Path:
@@ -273,15 +279,22 @@ def audit_skill_runtime_directories(surface: Path) -> tuple[Path, ...]:
         for kind in ARTIFACT_KINDS
         for artifact in kind.artifacts
         if (
-            skill_dir := surface / kind.plugin / SKILLS_DIR_NAME / artifact.audit
+            skill_dir := registered_skill_path(surface, kind, artifact.audit).parent
         ).is_dir()
     )
     return tuple(sorted(runtime_directories))
 
 
+def registered_skill_path(surface: Path, kind: ArtifactKind, skill: str) -> Path:
+    """Return where ``kind``'s plugin ships ``skill`` on one plugin surface."""
+    return surface / kind.plugin / SKILLS_DIR_NAME / skill / SKILL_FILENAME
+
+
 def implementation_languages() -> tuple[str, ...]:
-    """Return the registered kinds that produce an implementation artifact."""
-    return tuple(sorted(kinds_with_role(ArtifactRole.IMPLEMENTATION)))
+    """Return the names of the registered kinds that produce an implementation artifact."""
+    return tuple(
+        sorted(kind.name for kind in kinds_with_role(ArtifactRole.IMPLEMENTATION))
+    )
 
 
 def check_registry_skill_surface(surface: Path) -> list[str]:
@@ -294,9 +307,7 @@ def check_registry_skill_surface(surface: Path) -> list[str]:
     for kind in ARTIFACT_KINDS:
         for artifact in kind.artifacts:
             for skill in artifact.skill_names():
-                skill_path = (
-                    surface / kind.plugin / SKILLS_DIR_NAME / skill / SKILL_FILENAME
-                )
+                skill_path = registered_skill_path(surface, kind, skill)
                 if not skill_path.is_file():
                     errors.append(
                         f"{skill_path}: registered artifact {kind.name}/{artifact.role} "

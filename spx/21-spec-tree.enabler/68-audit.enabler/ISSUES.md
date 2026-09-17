@@ -75,7 +75,7 @@ reconcile evidence.
 ## `check_wrapper_surface` acceptance boundary has no fixture evidence
 
 `outcomeeng/validation/audit_artifacts.py` `check_wrapper_surface` scopes its
-`language_names` predicate to `implementation_languages(surface)` so that an
+`language_names` predicate to `implementation_languages()` so that an
 artifact-type auditor sharing its owning plugin's name — a craft plugin's
 `{plugin}-auditor`, such as `prose-auditor` — passes while every
 per-programming-language wrapper filename stays rejected. The rejection side is
@@ -248,6 +248,31 @@ consolidation is an editorial pass over the whole body and carries its own
 inline under `<failure_modes>`, one line each, so a run driver recognises a
 failure by name before opening the file — roughly eighteen lines the ceiling
 lacks today.
+
+## The audit skill names the run driver and the driver as its subject
+
+`src/plugins/spec-tree/skills/audit-implementation/references/operational-failures.md`
+(the `<language_probe_by_invocation>` entry and the `<vacuous_reconciliation>`
+citation) and `SKILL.md` line 82 write "the run driver" and "a driver" as the
+subject of a behavior, where `spx/15-agent-terminology.pdr.md` keeps the run
+driver as SPX payload vocabulary and names who acts by Role or as Claude. Two
+success-criteria bullets (the gate-eligible-run bullet and the
+blocked-diagnostic bullet) restate workflow steps rather than state an
+observable outcome.
+
+**Resolution shape**: one editorial pass over the skill body naming Claude or
+the Role as the subject and reducing each criterion to its observable, taken
+with the ceiling consolidation recorded above and gated by
+`instructions:skill-auditor`.
+
+**Why separate**: the lines sit in prose the artifact-registry changeset did
+not change or changed only to swap the selection source, and the operator held
+the approved skill audit on head
+`26f033c28c6c8a612ec34718950faba6c239725d` rather than reopen it for a
+wording pass.
+
+**Evidence.** `worth-improving` warnings of `instructions:skill-auditor` on
+that head, beside its approval.
 
 ## The run driver reports inconsistent provenance for its own plugin version
 

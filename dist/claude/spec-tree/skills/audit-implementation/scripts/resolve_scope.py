@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     # The provider skill publishes the process-boundary Protocol every consumer
-    # accepts; `_provider()` loads the same module by path at run time.
+    # accepts; `_scope_provider()` loads the same module by path at run time.
     from changeset_scope import Runner
 
 ERROR_PREFIX = "error: implementation scope resolution failed"
@@ -113,7 +113,7 @@ def _sibling_provider(skill: str, module_name: str) -> ModuleType:
     return module
 
 
-def _provider() -> ModuleType:
+def _scope_provider() -> ModuleType:
     return _sibling_provider("scope-changeset", "changeset_scope")
 
 
@@ -268,7 +268,7 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
         )
         return EXIT_COMMAND_FAILURE
     try:
-        scope = _provider()
+        scope = _scope_provider()
     except (ImportError, OSError) as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
         return EXIT_COMMAND_FAILURE
@@ -299,7 +299,7 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
     try:
         selection = _selection_provider()
         registry = selection.load_artifact_registry()
-    except (ImportError, OSError, ValueError, json.JSONDecodeError) as exc:
+    except (ImportError, OSError, ValueError) as exc:
         print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
         return EXIT_COMMAND_FAILURE
     resolved[SELECTION_KEY] = selection.selection_for_paths(

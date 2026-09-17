@@ -10,6 +10,9 @@ from typing import cast
 
 from outcomeeng.distribution.artifact_registry import (
     ARTIFACT_REGISTRY_PROVIDER,
+    Artifact,
+    ArtifactKind,
+    Detection,
     RegistryField,
     artifact_registry_render_variables,
 )
@@ -76,6 +79,45 @@ def kind_entries(document: Mapping[str, object]) -> Mapping[str, object]:
         typed = cast(dict[str, object], entry)
         entries[str(typed[RegistryField.NAME])] = typed
     return entries
+
+
+def declared_kind_document(kind: ArtifactKind) -> dict[str, object]:
+    """Read the document one kind declares, field by field through the registry fields.
+
+    Each registry field is read from the dataclass field it names, so the
+    expected document follows the declaration and the field contract rather
+    than the serializer that renders the data file.
+    """
+    return {
+        RegistryField.NAME: kind.name,
+        RegistryField.PLUGIN: kind.plugin,
+        RegistryField.ARTIFACTS: [
+            _declared_artifact_document(artifact) for artifact in kind.artifacts
+        ],
+    }
+
+
+def _declared_artifact_document(artifact: Artifact) -> dict[str, object]:
+    return {
+        RegistryField.ROLE: artifact.role,
+        RegistryField.DETECTION: (
+            None
+            if artifact.detection is None
+            else _declared_detection_document(artifact.detection)
+        ),
+        RegistryField.ARCHITECT: artifact.architect,
+        RegistryField.AUTHOR: artifact.author,
+        RegistryField.AUDIT: artifact.audit,
+        RegistryField.STANDARD: artifact.standard,
+    }
+
+
+def _declared_detection_document(detection: Detection) -> dict[str, object]:
+    return {
+        RegistryField.EXTENSIONS: list(detection.extensions),
+        RegistryField.PATH_GLOBS: list(detection.path_globs),
+        RegistryField.FILENAMES: list(detection.filenames),
+    }
 
 
 def _document(raw: object, path: Path) -> Mapping[str, object]:

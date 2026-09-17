@@ -22,7 +22,7 @@ When one or more paths are supplied, select for them through this skill's own co
 python3 "${SKILL_DIR}/scripts/select_artifacts.py" "<path>" ["<path>" ...]
 ```
 
-Pass each repository-relative path as one literal argument. The command reads the rendered `artifact-registry.json` beside the script and prints one JSON array with one record per path in the supplied order: `path`, and `artifacts` as the ordered selection of `{kind, role, audit}` records. A path matching no registered artifact yields an empty `artifacts` list. A missing, unrendered, or malformed registry exits 2 with `error: artifact selection failed` on stderr and no selection; report it as `blocked` and never fabricate a selection.
+Pass each repository-relative path as one literal argument. The command reads the rendered `artifact-registry.json` beside the script and prints one JSON array with one record per path in the supplied order: `path`, and `artifacts` as the ordered selection of `{kind, role, audit}` records. A path matching no registered artifact yields an empty `artifacts` list. A missing, unrendered, or malformed registry exits 2 with no selection and, on stderr, `error: artifact selection failed`, the cause, and the repair — reinstall or update the spec-tree plugin so the rendered registry ships beside the script; report it as `blocked` with that line and never fabricate a selection.
 
 </invocation>
 
@@ -43,7 +43,7 @@ The reader lives in `${SKILL_DIR}/scripts/select_artifacts.py`, imported by sibl
 
 <selection_rule>
 
-A path matches an artifact when its extension or filename is declared by that artifact's detection and every path pattern the detection carries matches the whole path. When two artifacts of one kind match, the one carrying a path pattern wins over an extension-only match. A kind with a match also selects each of its artifacts that carries no detection; the architecture artifact is selected that way. Selection reads the rendered registry alone: no installed skill inventory, path list, or caller-supplied hint plays a part in it.
+A path matches an artifact when its extension or filename is declared by that artifact's detection and every path pattern the detection carries matches the whole path. When two artifacts of one kind match, the one carrying more path patterns wins, so a path-pattern match beats an extension-only match; two matches carrying the same number of path patterns resolve to the earlier-declared artifact. A kind with a match also selects each of its artifacts that carries no detection; the architecture artifact is selected that way. Selection reads the rendered registry alone: no installed skill inventory, path list, or caller-supplied hint plays a part in it.
 
 </selection_rule>
 

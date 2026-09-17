@@ -25,7 +25,6 @@ from outcomeeng.validation.audit_artifacts import (
     PLUGIN_SURFACE_PATHS,
     RETIRED_AUDIT_RUNTIME_FILENAMES,
     RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES,
-    RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE,
     SKILL_FILENAME,
     SKILLS_DIR_NAME,
     SPEC_TREE_PLUGIN_NAME,
@@ -37,6 +36,8 @@ from outcomeeng.validation.audit_artifacts import (
     implementation_audit_runtime_directory,
     implementation_languages,
     language_specific_auditor_filenames,
+    registered_skill_path,
+    retired_language_audit_skill_path,
 )
 from outcomeeng.validation.implementation_audit_contract import (
     RUN_FINDING_COUNT_FIELD,
@@ -376,7 +377,7 @@ def implementation_audit_unit_ids_are_subject_specific() -> bool:
     language = source_language()
     provenance = implementation_audit_provenance(
         agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
-        language_plugin_version=_plugin_version(language),
+        language_plugin_version=_plugin_version(source_kind().plugin),
         tool_version=REQUIRED_SPX_VERSION,
     )
     probes = implementation_audit_verification_probes(language)
@@ -421,7 +422,7 @@ def implementation_audit_payloads_reject_empty_subject() -> bool:
     concern = ImplementationAuditConcern.CODE
     provenance = implementation_audit_provenance(
         agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
-        language_plugin_version=_plugin_version(language),
+        language_plugin_version=_plugin_version(source_kind().plugin),
         tool_version=REQUIRED_SPX_VERSION,
     )
     try:
@@ -484,7 +485,7 @@ def observe_incomplete_language_trio() -> RemovedSkillObservation:
     with _valid_surface() as surface:
         kind = source_kind()
         artifact = kind.artifacts[-1]
-        _registered_skill_path(surface, kind, artifact.audit).unlink()
+        registered_skill_path(surface, kind, artifact.audit).unlink()
         return RemovedSkillObservation(
             kind=kind.name,
             role=artifact.role,
@@ -496,13 +497,7 @@ def observe_incomplete_language_trio() -> RemovedSkillObservation:
 def audit_contract_rejects_retired_language_audit_skill() -> bool:
     """Return whether validation rejects a retired aggregate language audit skill."""
     with _valid_surface() as surface:
-        language = source_language()
-        retired_skill = (
-            surface
-            / language
-            / SKILLS_DIR_NAME
-            / RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE.format(language=language)
-        )
+        retired_skill = retired_language_audit_skill_path(surface, source_kind())
         _touch(retired_skill / SKILL_FILENAME)
         return bool(check_retired_language_audit_skills(surface))
 
@@ -534,11 +529,11 @@ def audit_contract_rejects_missing_single_surface_audit_host() -> bool:
 def audit_contract_rejects_missing_generated_language() -> bool:
     """Reject a generated surface missing an expected language plugin."""
     with _valid_repository_surfaces() as root:
-        rmtree(root / PLUGIN_SURFACE_PATHS[-1] / source_language())
+        rmtree(root / PLUGIN_SURFACE_PATHS[-1] / source_kind().plugin)
         return bool(check_audit_artifact_contract(root))
 
 
-def observe_missing_single_surface_language() -> RemovedSkillObservation:
+def observe_incomplete_single_surface_trio() -> RemovedSkillObservation:
     """Remove one audit skill from a lone source surface and observe the whole contract."""
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
@@ -546,7 +541,7 @@ def observe_missing_single_surface_language() -> RemovedSkillObservation:
         kind = source_kind()
         artifact = kind.artifacts[-1]
         _populate_valid_surface(surface)
-        _registered_skill_path(surface, kind, artifact.audit).unlink()
+        registered_skill_path(surface, kind, artifact.audit).unlink()
         return RemovedSkillObservation(
             kind=kind.name,
             role=artifact.role,
@@ -600,7 +595,7 @@ def runtime_errors_with_retired_artifact_in_language_skill() -> list[str]:
     """Observe validation with a retired file in a language concern skill."""
     with _valid_surface() as surface:
         kind = source_kind()
-        runtime_dir = _registered_skill_path(
+        runtime_dir = registered_skill_path(
             surface, kind, kind.artifacts[0].audit
         ).parent
         _touch(runtime_dir / "scripts" / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
@@ -622,7 +617,7 @@ def registry_skill_surface_errors_on_live_surfaces() -> tuple[list[str], ...]:
 def observe_registry_skill_removal(kind: ArtifactKind, skill: str) -> list[str]:
     """Observe the registry skill check on a valid surface missing one named skill."""
     with _valid_surface() as surface:
-        rmtree(surface / kind.plugin / SKILLS_DIR_NAME / skill)
+        rmtree(registered_skill_path(surface, kind, skill).parent)
         return audit_artifacts.check_registry_skill_surface(surface)
 
 
@@ -646,7 +641,7 @@ def _valid_repository_surfaces() -> Iterator[Path]:
 def _populate_valid_surface(surface: Path) -> None:
     for kind in ARTIFACT_KINDS:
         for skill in kind.skill_names():
-            _touch(surface / kind.plugin / SKILLS_DIR_NAME / skill / SKILL_FILENAME)
+            _touch(registered_skill_path(surface, kind, skill))
     _touch(
         surface
         / SPEC_TREE_PLUGIN_NAME
@@ -655,10 +650,6 @@ def _populate_valid_surface(surface: Path) -> None:
     )
     for artifact in IMPLEMENTATION_AUDIT_ARTIFACTS:
         _touch(implementation_audit_runtime_directory(surface) / artifact)
-
-
-def _registered_skill_path(surface: Path, kind: ArtifactKind, skill: str) -> Path:
-    return surface / kind.plugin / SKILLS_DIR_NAME / skill / SKILL_FILENAME
 
 
 def _retired_implementation_wrapper_is_rejected(filename: str) -> bool:
@@ -716,7 +707,7 @@ def _start_implementation_audit_run(
     probes = implementation_audit_verification_probes(language)
     provenance = implementation_audit_provenance(
         agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
-        language_plugin_version=_plugin_version(language),
+        language_plugin_version=_plugin_version(source_kind().plugin),
         tool_version=_spx_version(spx_command),
     )
     changed_paths = (

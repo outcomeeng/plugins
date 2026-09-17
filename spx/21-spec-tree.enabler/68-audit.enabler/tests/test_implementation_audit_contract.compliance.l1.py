@@ -16,7 +16,7 @@ from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     implementation_audit_unit_ids_are_subject_specific,
     language_concern_skill_trios_exist,
     observe_incomplete_language_trio,
-    observe_missing_single_surface_language,
+    observe_incomplete_single_surface_trio,
 )
 
 
@@ -80,8 +80,8 @@ def test_missing_generated_language_is_rejected() -> None:
     assert audit_contract_rejects_missing_generated_language()
 
 
-def test_missing_single_surface_language_is_rejected() -> None:
-    observed = observe_missing_single_surface_language()
+def test_incomplete_single_surface_trio_is_rejected() -> None:
+    observed = observe_incomplete_single_surface_trio()
     assert any(
         observed.kind in error and observed.role in error and observed.skill in error
         for error in observed.errors

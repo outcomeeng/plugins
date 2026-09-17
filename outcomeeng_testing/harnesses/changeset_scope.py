@@ -133,36 +133,31 @@ def temporary_changeset_scope() -> Iterator[TemporaryChangesetScope]:
         )
 
 
-def _load_source_module(name: str, path: pathlib.Path) -> ModuleType:
-    """Load one shipped source module through its file boundary and cache it."""
-    return load_shipped_module(name, path)
-
-
 def load_changeset_scope_module() -> ModuleType:
     """Load the ``changeset_scope`` implementation through its shipped file."""
-    return _load_source_module("changeset_scope", CHANGESET_SCOPE_MODULE_PATH)
+    return load_shipped_module("changeset_scope", CHANGESET_SCOPE_MODULE_PATH)
 
 
 def load_changeset_scope_contract_module() -> ModuleType:
     """Load the source-owned changeset contract independently of its implementation."""
-    return _load_source_module(
+    return load_shipped_module(
         "changeset_scope_contract", CHANGESET_SCOPE_CONTRACT_MODULE_PATH
     )
 
 
 def load_merge_classifier_module() -> ModuleType:
     """Load the merge changeset classifier through its shipped file boundary."""
-    return _load_source_module("classify_changeset", MERGE_CLASSIFIER_MODULE_PATH)
+    return load_shipped_module("classify_changeset", MERGE_CLASSIFIER_MODULE_PATH)
 
 
 def load_merge_contract_module() -> ModuleType:
     """Load the source-owned merge contract independently of its classifier."""
-    return _load_source_module("merge_contract", MERGE_CONTRACT_MODULE_PATH)
+    return load_shipped_module("merge_contract", MERGE_CONTRACT_MODULE_PATH)
 
 
 def load_coherence_scope_module() -> ModuleType:
     """Load the coherence-audit scope resolver through its shipped file boundary."""
-    return _load_source_module("resolve_scope", COHERENCE_SCOPE_MODULE_PATH)
+    return load_shipped_module("resolve_scope", COHERENCE_SCOPE_MODULE_PATH)
 
 
 CHANGESET_SCOPE = load_changeset_scope_module()
