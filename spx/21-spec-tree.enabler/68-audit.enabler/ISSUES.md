@@ -16,7 +16,7 @@ and `observe_mismatched_terminal_status_finish` expose observations, and
 `tests/test_implementation_audit_contract.scenario.l3.py` owns every predicate.
 The compliance lane still carries the rejected shape:
 
-- `spx/21-spec-tree.enabler/68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py` — 16 functions
+- `spx/21-spec-tree.enabler/68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py` — 13 functions; the incomplete-trio, single-surface-trio, and retired-aggregate-skill cases read observations since the artifact-registry changeset touched their helpers
 - `spx/21-spec-tree.enabler/68-audit.enabler/21-state-surface.enabler/tests/test_implementation_audit_runtime.compliance.l1.py`
 - `spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler/tests/test_verification_run_payload_contract.compliance.l1.py`
 

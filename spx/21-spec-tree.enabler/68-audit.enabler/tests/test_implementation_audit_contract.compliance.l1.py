@@ -7,7 +7,6 @@ from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     audit_contract_rejects_missing_single_surface_audit_host,
     audit_contract_rejects_language_specific_wrapper,
     audit_contract_rejects_language_wrapper_under_spec_tree,
-    audit_contract_rejects_retired_language_audit_skill,
     audit_contract_rejects_retired_implementation_wrappers,
     audit_contract_rejects_retired_wrappers_in_every_plugin,
     audit_contract_rejects_unrecognized_language_specific_wrapper,
@@ -16,6 +15,7 @@ from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     implementation_audit_unit_ids_are_subject_specific,
     language_concern_skill_trios_exist,
     observe_incomplete_language_trio,
+    observe_retired_language_audit_skill,
     observe_incomplete_single_surface_trio,
 )
 
@@ -89,4 +89,7 @@ def test_incomplete_single_surface_trio_is_rejected() -> None:
 
 
 def test_retired_language_audit_skill_is_rejected() -> None:
-    assert audit_contract_rejects_retired_language_audit_skill()
+    observed = observe_retired_language_audit_skill()
+    assert any(str(observed.retired_skill) in error for error in observed.errors), (
+        observed
+    )

@@ -502,6 +502,16 @@ def test_unresolved_build_macro_is_rejected() -> None:
         raise AssertionError("unresolved build macro was accepted")
 
 
+def test_an_unrendered_registry_stops_the_writer_with_the_build_remedy(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = harness.materialize_refresh_repository(tmp_path)
+    completed = harness.run_build_instructions_over_unrendered_registry(repo)
+    assert completed.returncode == 1, completed.stderr
+    assert "Traceback" not in completed.stderr, completed.stderr
+    assert "just build-skills" in completed.stderr, completed.stderr
+
+
 def test_obsolete_spx_instruction_files_are_removed(tmp_path: pathlib.Path) -> None:
     for path in evidence.removed_obsolete_paths(tmp_path):
         assert not path.exists()

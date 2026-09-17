@@ -19,6 +19,7 @@ from outcomeeng.distribution.artifact_registry import (
 from outcomeeng.validation import audit_artifacts
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
+    SCRIPTS_SUBDIR_NAME,
     SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
 )
@@ -58,6 +59,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     implementation_audit_provenance,
     implementation_audit_scope_payload,
 )
+from outcomeeng.validation.plugins import CLAUDE_PLUGIN_MANIFEST_PATH
 from outcomeeng.validation.spx_version import (
     BUNX_COMMAND_PREFIX,
     BUNX_EXECUTABLE,
@@ -496,12 +498,23 @@ def observe_incomplete_language_trio() -> RemovedSkillObservation:
         )
 
 
-def audit_contract_rejects_retired_language_audit_skill() -> bool:
-    """Return whether validation rejects a retired aggregate language audit skill."""
+@dataclass(frozen=True)
+class RetiredSkillObservation:
+    """What the retired-skill check reported after one retired aggregate skill was added."""
+
+    retired_skill: Path
+    errors: tuple[str, ...]
+
+
+def observe_retired_language_audit_skill() -> RetiredSkillObservation:
+    """Add the source kind's retired aggregate audit skill to a valid surface and observe the check."""
     with _valid_surface() as surface:
         retired_skill = retired_language_audit_skill_path(surface, source_kind())
         _touch(retired_skill / SKILL_FILENAME)
-        return bool(check_retired_language_audit_skills(surface))
+        return RetiredSkillObservation(
+            retired_skill=retired_skill,
+            errors=tuple(check_retired_language_audit_skills(surface)),
+        )
 
 
 def audit_contract_rejects_missing_generated_surface() -> bool:
@@ -591,7 +604,7 @@ def runtime_errors_with_retired_artifact_in_other_skill() -> list[str]:
             surface / SPEC_TREE_PLUGIN_NAME / SKILLS_SUBDIR_NAME / "audit-tests"
         )
         _touch(runtime_dir / SKILL_FILENAME)
-        _touch(runtime_dir / "scripts" / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
+        _touch(runtime_dir / SCRIPTS_SUBDIR_NAME / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
         return check_audit_runtime_surface(surface)
 
 
@@ -602,7 +615,7 @@ def runtime_errors_with_retired_artifact_in_language_skill() -> list[str]:
         runtime_dir = registered_skill_path(
             surface, kind, kind.artifacts[0].audit
         ).parent
-        _touch(runtime_dir / "scripts" / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
+        _touch(runtime_dir / SCRIPTS_SUBDIR_NAME / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
         return check_audit_runtime_surface(surface)
 
 
@@ -912,11 +925,7 @@ def _run_spx(
 
 def _plugin_version(plugin_name: str) -> str:
     manifest_path = (
-        REPO_ROOT
-        / PLUGIN_SURFACE_PATHS[0]
-        / plugin_name
-        / ".claude-plugin"
-        / "plugin.json"
+        REPO_ROOT / PLUGIN_SURFACE_PATHS[0] / plugin_name / CLAUDE_PLUGIN_MANIFEST_PATH
     )
     manifest = cast(object, json.loads(manifest_path.read_text(encoding="utf-8")))
     if not isinstance(manifest, dict):

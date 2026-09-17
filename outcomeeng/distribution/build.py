@@ -48,7 +48,6 @@ from outcomeeng.distribution.profiles import (
 )
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
-    MARKDOWN_FILE_SUFFIX,
     BUILD_BLOCK_DELIMITER_END,
     BUILD_BLOCK_DELIMITER_START,
     BUILD_COMMENT_DELIMITER_END,
@@ -56,8 +55,10 @@ from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     BUILD_VARIABLE_DELIMITER_END,
     BUILD_VARIABLE_DELIMITER_START,
-    PLUGIN_NAME_VARIABLE,
+    DIST_DIR_NAME,
+    MARKDOWN_FILE_SUFFIX,
     PLUGINS_DIR_NAME,
+    PLUGIN_NAME_VARIABLE,
     PLUGIN_SUBDIRS,
     REFERENCES_SUBDIR_NAME,
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
@@ -78,8 +79,8 @@ from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_TOOL_KIND,
     RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY,
     RUNTIME_TOKEN_WAIT_AGENT_NAMES,
-    SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
+    SKILL_FILENAME,
     SOURCE_ROOT_NAME,
     SPX_FLOOR_VARIABLE,
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
@@ -1047,7 +1048,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "src_root", type=Path, nargs="?", default=Path(SOURCE_ROOT_NAME)
     )
-    parser.add_argument("dist_root", type=Path, nargs="?", default=Path("dist"))
+    parser.add_argument("dist_root", type=Path, nargs="?", default=Path(DIST_DIR_NAME))
     args = parser.parse_args(argv)
     try:
         build(args.src_root, args.dist_root)
@@ -1523,7 +1524,7 @@ AGENT_CAPABILITY_REGISTRY: Final[dict[str, AgentCapability]] = {
     "claude": AgentCapability(
         manifest_declares_agents=True,
         namespaced=True,
-        suffix=".md",
+        suffix=MARKDOWN_FILE_SUFFIX,
     ),
     "codex": AgentCapability(
         manifest_declares_agents=False,

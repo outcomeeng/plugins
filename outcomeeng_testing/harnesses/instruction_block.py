@@ -40,6 +40,8 @@ from typing import Final, cast
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution import instruction_block as distribution
+from outcomeeng.distribution.artifact_registry import ARTIFACT_REGISTRY_PROVIDER
+from outcomeeng.distribution.contracts import DIST_DIR_NAME, Target
 from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng_testing.generators.instruction_block import (
     DelegationCandidateCase,
@@ -53,6 +55,7 @@ from outcomeeng_testing.generators.instruction_block import (
     instruction_block_cases,
     unsupported_language_tokens,
 )
+from outcomeeng_testing.harnesses.artifact_registry import authored_registry_path
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
@@ -1243,6 +1246,38 @@ def run_refresh_regeneration_step(repo_root: pathlib.Path) -> str:
     )
     result.check_returncode()
     return result.stdout
+
+
+def run_build_instructions_over_unrendered_registry(
+    repo_root: pathlib.Path,
+) -> subprocess.CompletedProcess[str]:
+    """Run the instruction-block writer in a clone whose shipped registry is unrendered.
+
+    The clone's ``dist/claude`` copy of the select-artifacts registry is
+    replaced by the authored one-token template — the real artifact a checkout
+    carries before ``just build-skills`` renders it — and the product gate's
+    own CLI runs against that clone, so the observation is the gate's exit
+    code and diagnostics over a registry the shipped generator cannot read.
+    """
+    unrendered = (
+        repo_root
+        / DIST_DIR_NAME
+        / Target.CLAUDE.value
+        / ARTIFACT_REGISTRY_PROVIDER.relative_path
+    )
+    unrendered.write_text(
+        authored_registry_path().read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+    return subprocess.run(
+        [sys.executable, "-m", distribution.MODULE_INVOCATION, distribution.WRITE_FLAG],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
 
 
 def advance_authored_template_version(repo_root: pathlib.Path) -> tuple[str, str]:

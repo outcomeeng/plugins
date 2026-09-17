@@ -18,6 +18,7 @@ from typing import Final, cast
 import pytest
 from hypothesis import given, seed, settings
 
+from outcomeeng.distribution.contracts import CLAUDE_PLUGIN_SUBDIR_NAME
 from outcomeeng.distribution.orchestration import (
     CLAUDE_DIST_PLUGINS_DIR,
     SOURCE_PLUGINS_DIR,
@@ -425,15 +426,15 @@ def _sample_plugin_names(count: int) -> tuple[str, ...]:
         for plugin_dir in sorted((REPO_ROOT / SOURCE_PLUGINS_DIR).iterdir())
         if plugin_dir.is_dir()
         and plugin_dir.name != SPEC_TREE_PLUGIN_NAME
-        and (plugin_dir / ".claude-plugin" / "plugin.json").is_file()
+        and (plugin_dir / CLAUDE_PLUGIN_MANIFEST_PATH).is_file()
     )[:count]
 
 
 def _copy_plugin(root: Path, relative_plugins_dir: Path, plugin_name: str) -> Path:
     plugin_path = root / relative_plugins_dir / plugin_name
     copytree(
-        REPO_ROOT / SOURCE_PLUGINS_DIR / plugin_name / ".claude-plugin",
-        plugin_path / ".claude-plugin",
+        REPO_ROOT / SOURCE_PLUGINS_DIR / plugin_name / CLAUDE_PLUGIN_SUBDIR_NAME,
+        plugin_path / CLAUDE_PLUGIN_SUBDIR_NAME,
     )
     return plugin_path
 
@@ -443,7 +444,7 @@ def _layout_plugin_paths(relative_plugins_dir: Path) -> tuple[Path, ...]:
         plugin_path
         for plugin_path in sorted((REPO_ROOT / relative_plugins_dir).iterdir())
         if plugin_path.is_dir()
-        and (plugin_path / ".claude-plugin" / "plugin.json").is_file()
+        and (plugin_path / CLAUDE_PLUGIN_MANIFEST_PATH).is_file()
     )
 
 
@@ -514,7 +515,7 @@ def _write_manifest(path: Path, plugin_name: str, version: str | None) -> None:
 def _version_pair() -> tuple[str, str]:
     (plugin_name,) = _sample_plugin_names(1)
     manifest_path = (
-        REPO_ROOT / SOURCE_PLUGINS_DIR / plugin_name / ".claude-plugin" / "plugin.json"
+        REPO_ROOT / SOURCE_PLUGINS_DIR / plugin_name / CLAUDE_PLUGIN_MANIFEST_PATH
     )
     manifest = cast(object, json.loads(manifest_path.read_text(encoding="utf-8")))
     if not isinstance(manifest, dict):

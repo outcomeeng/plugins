@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Final
 
 from outcomeeng.distribution.contracts import SCRIPTS_SUBDIR_NAME, SKILLS_SUBDIR_NAME
+from outcomeeng.validation.implementation_audit_contract import SPEC_TREE_PLUGIN_NAME
 
 
 class RegistryField(StrEnum):
@@ -242,7 +243,7 @@ class ArtifactRegistryProvider:
 
 
 ARTIFACT_REGISTRY_PROVIDER: Final = ArtifactRegistryProvider(
-    plugin="spec-tree", skill="select-artifacts"
+    plugin=SPEC_TREE_PLUGIN_NAME, skill="select-artifacts"
 )
 
 

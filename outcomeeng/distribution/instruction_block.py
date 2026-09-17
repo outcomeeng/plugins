@@ -548,6 +548,10 @@ class UnresolvedInstructionTemplateError(InstructionBlockRenderError):
     """Raised when a rendered harness template still contains build macros."""
 
 
+class LanguageDetectionError(InstructionBlockRenderError):
+    """Raised when the shipped generator cannot read the registry it detects languages from."""
+
+
 class FoundationAccessPolicyError(InstructionBlockRenderError):
     """Raised when a rendered router omits part of its foundation access policy."""
 
@@ -808,6 +812,26 @@ def assert_no_unresolved_build_macros(text: str, *, path: Path | str) -> None:
     except ValueError as exc:
         raise UnresolvedInstructionTemplateError(
             f"{path}: {exc}; run `just build-skills` before regenerating instruction blocks"
+        ) from exc
+
+
+def detect_enabled_languages(
+    module: InstructionBlockModule, spx_dir: Path
+) -> tuple[str, ...]:
+    """Detect the enabled languages through the shipped generator's registry read.
+
+    The generator reaches the artifact registry through the select-artifacts
+    provider beside it under ``dist/``; a missing provider or a missing,
+    unrendered, or malformed registry is reported with the build remedy rather
+    than left as the provider's own exception.
+    """
+    try:
+        return module.detect_languages_from_tree(spx_dir)
+    except (ImportError, OSError, ValueError) as exc:
+        raise LanguageDetectionError(
+            f"{spx_dir}: language detection cannot read the rendered artifact "
+            f"registry ({exc}); run `just build-skills` before regenerating "
+            "instruction blocks"
         ) from exc
 
 
@@ -1267,7 +1291,7 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     rendered = render_instruction_blocks_from_harness_templates(
         module,
         templates,
-        module.detect_languages_from_tree(spx_dir),
+        detect_enabled_languages(module, spx_dir),
         template_paths=paths,
     )
     for validation in OPERATIVE_POLICY_VALIDATIONS:

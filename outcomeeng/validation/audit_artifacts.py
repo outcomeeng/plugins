@@ -338,9 +338,9 @@ def language_specific_auditor_filenames(language: str) -> frozenset[str]:
 
 def is_language_specific_auditor_filename(filename: str) -> bool:
     """Return whether ``filename`` structurally names a concern wrapper."""
-    if not filename.endswith(".md"):
+    if not filename.endswith(MARKDOWN_FILE_SUFFIX):
         return False
-    stem = filename.removesuffix(".md")
+    stem = filename.removesuffix(MARKDOWN_FILE_SUFFIX)
     concerns = (*LANGUAGE_AUDIT_CONCERNS, "test")
     return any(
         (stem.endswith(f"-{concern}-auditor") and stem != f"{concern}-auditor")

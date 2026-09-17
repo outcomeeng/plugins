@@ -38,46 +38,39 @@ from itertools import islice
 from tempfile import TemporaryDirectory
 from types import ModuleType
 
+from outcomeeng.distribution.contracts import SCRIPTS_SUBDIR_NAME, SKILLS_SUBDIR_NAME
+from outcomeeng.distribution.orchestration import SOURCE_PLUGINS_DIR
 from outcomeeng.distribution.shipped_scripts import load_shipped_module
+from outcomeeng.validation.implementation_audit_contract import SPEC_TREE_PLUGIN_NAME
 from outcomeeng_testing.generators.changeset_scope import (
     ChangesetScopeCase,
     changeset_scope_cases,
 )
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-CHANGESET_SCOPE_SCRIPTS_DIR = (
-    REPO_ROOT
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "scope-changeset"
-    / "scripts"
-)
+
+
+def _skill_scripts_dir(skill: str) -> pathlib.Path:
+    """Return the authored scripts directory of one spec-tree skill."""
+    return (
+        REPO_ROOT
+        / SOURCE_PLUGINS_DIR
+        / SPEC_TREE_PLUGIN_NAME
+        / SKILLS_SUBDIR_NAME
+        / skill
+        / SCRIPTS_SUBDIR_NAME
+    )
+
+
+CHANGESET_SCOPE_SCRIPTS_DIR = _skill_scripts_dir("scope-changeset")
 CHANGESET_SCOPE_MODULE_PATH = CHANGESET_SCOPE_SCRIPTS_DIR / "changeset_scope.py"
 CHANGESET_SCOPE_CONTRACT_MODULE_PATH = (
     CHANGESET_SCOPE_SCRIPTS_DIR / "changeset_scope_contract.py"
 )
-MERGE_CLASSIFIER_MODULE_PATH = (
-    REPO_ROOT
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "merge"
-    / "scripts"
-    / "classify_changeset.py"
-)
+MERGE_CLASSIFIER_MODULE_PATH = _skill_scripts_dir("merge") / "classify_changeset.py"
 MERGE_CONTRACT_MODULE_PATH = MERGE_CLASSIFIER_MODULE_PATH.with_name("merge_contract.py")
 COHERENCE_SCOPE_MODULE_PATH = (
-    REPO_ROOT
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "audit-changeset-coherence"
-    / "scripts"
-    / "resolve_scope.py"
+    _skill_scripts_dir("audit-changeset-coherence") / "resolve_scope.py"
 )
 CHANGESET_SCOPE_FIXTURES_DIR = (
     pathlib.Path(__file__).resolve().parents[1] / "fixtures" / "changeset_scope"
