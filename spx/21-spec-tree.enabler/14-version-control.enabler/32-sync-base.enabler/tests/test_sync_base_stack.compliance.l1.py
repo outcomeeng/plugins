@@ -273,6 +273,35 @@ def test_explicit_default_base_is_the_target_while_the_predecessor_is_open(
     assert module.read_stack_record(handle.repo, handle.stacked_branch) is None
 
 
+def test_explicit_default_base_sheds_the_open_predecessor_when_the_default_is_unadvanced(
+    tmp_path: pathlib.Path,
+) -> None:
+    # The default has not advanced since the branch forked, so the branch
+    # already contains origin/<default>; the predecessor is open on origin and
+    # its recorded tip is not on the default. Being current with the default is
+    # not the same as sitting on it: the predecessor's commit must still leave
+    # the branch, so the sync replays only the branch's own commit above the
+    # default and clears the record rather than reporting the branch current.
+    # The builder's push of a further predecessor commit to origin is
+    # incidental; a --base <default> sync never reads origin/<predecessor>.
+    module = load_sync_base_module()
+    handle = build_stacked_repo_open_predecessor_advanced(repository_root(tmp_path))
+    assert is_ancestor(handle.repo, resolve_ref(handle.repo, handle.remote_ref), "HEAD")
+
+    result = module.sync_base(handle.repo, base_ref=handle.base_ref)
+
+    assert result.status is module.SyncStatus.REBASED
+    assert result.remote_ref == handle.remote_ref
+    assert commit_subjects_above(handle.repo, handle.remote_ref) == [
+        handle.stacked_message
+    ]
+    assert not (handle.repo / handle.predecessor_file).exists()
+    assert result.preservation is not None
+    assert result.preservation.old_base_oid == handle.predecessor_tip
+    assert result.preservation.stack_tip_after is None
+    assert module.read_stack_record(handle.repo, handle.stacked_branch) is None
+
+
 def test_failed_record_write_is_never_reported_as_a_clean_sync(
     tmp_path: pathlib.Path,
 ) -> None:
