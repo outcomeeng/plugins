@@ -6,17 +6,12 @@ description: >-
   record standards at its declared maturity and records the complete judgment
   through SPX file-scoped verification.
 argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Glob, Grep, Skill, Bash(git rev-parse:*), Bash(spx --version), Bash(spx verification run:*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Skill, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx verification run:*), Bash(printf:*)
 ---
 
 <objective>
 
-A verdict on one complete local Change against `change-standards` at its
-declared maturity: `approved`, or `rejected` with each finding naming the
-artifact, violated rule, and observed-versus-expected evidence. Findings are
-classified as `blocking` or `debt` and attributed to their shared record rule.
-The SPX run token and rendered projection carry that verdict. A concrete
-prerequisite or command failure returns its complete `BLOCKED` diagnostic.
+A verdict on one complete local Change against `change-standards` at its declared maturity, carried by the SPX run token and rendered projection as `approved`, `rejected` with rule-attributed findings, or a complete `BLOCKED` diagnostic.
 
 </objective>
 
@@ -46,16 +41,25 @@ composed execution. Never read identity from hidden invocation context, detect
 who invoked the skill, or choose behavior by that identity. Missing input
 returns `BLOCKED`, `runToken: not-started`, and the exact absent field.
 
-Resolve the repository root with `git rev-parse --show-toplevel`. Require the
-selected file inside that root; reject an absolute path, parent traversal,
-ambiguous target, or a symbolic link that escapes it. A draft may be untracked
-or ignored. Treat the supplied identity as provenance data, never authorization
-or a suggested verdict.
+Resolve the repository root with `git rev-parse --show-toplevel`. Reject an
+absolute path, parent traversal, or ambiguous target. Run `realpath` separately
+on the repository root and selected file; require the resolved file beneath the
+resolved root by path-component boundary. A failed resolution or a symbolic
+link that escapes the root returns the exact `BLOCKED` diagnostic before a run
+starts. A draft may be untracked or ignored. Treat the supplied identity as
+provenance data, never authorization or a suggested verdict.
 
-Resolve the agent-owning and skill-owning plugin versions from their installed
-manifests. An unavailable required provenance value is a named prerequisite
-failure; never guess a version. Do metadata preparation before inspecting the
-candidate body. Start the run before loading standards or substantive evidence.
+Require `runDriver` to equal the configured wrapper identity exactly:
+`producerKind: agent`, `agentName: change-auditor`,
+`agentOwningPluginName: spec-tree`, `skillName: audit-change`,
+`skillOwningPluginName: spec-tree`, and `invocationRole: run-driver`. Read the
+installed plugin manifests at
+`${CLAUDE_SKILL_DIR}/../../.claude-plugin/plugin.json` and
+`${CLAUDE_SKILL_DIR}/../../.codex-plugin/plugin.json`; require their non-empty
+versions to match, then use that version for both provenance fields. A missing,
+invalid, or divergent manifest version is a named prerequisite failure; never
+guess a version. Do metadata preparation before inspecting the candidate body.
+Start the run before loading standards or substantive evidence.
 
 </request_contract>
 
@@ -86,12 +90,15 @@ candidate body. Start the run before loading standards or substantive evidence.
    Conditional maturity requirements still receive an explicit applicability
    judgment; never shorten the inventory because a record is small.
 4. **Judge.** Read the retained candidate completely and inspect the necessary
-   governing references. Assess every inventory rule at the declared maturity.
-   Distinguish intended paths and explicit prototype exceptions from broken
-   existing references. Record each defect with its violated rule and concrete
-   observed-versus-expected evidence. A concise maintenance record can satisfy
-   every applicable requirement. Do not manufacture missing business benefits,
-   questionnaires, or research artifacts as findings.
+   governing references. Inventory every front-matter key before judging the
+   body; apply the standards' closed schema, including rejection of every unknown
+   key, and judge the declared malleability with the Frame and Activities. Assess
+   every inventory rule at the declared maturity. Distinguish intended paths and
+   explicit prototype exceptions from broken existing references. Record each
+   defect with its violated rule and concrete observed-versus-expected evidence.
+   A concise maintenance record can satisfy every applicable requirement. Do not
+   manufacture missing business benefits, questionnaires, or research artifacts
+   as findings.
 5. **Record.** Once the complete root inspection has finished, append the root
    scope unit, then the child units, then findings referencing accepted units.
    Use `<persistence_contract>` for every write. A judged rule uses `audited`
@@ -254,6 +261,11 @@ and sealed approval because each planned unit was recorded. The same narrowed
 plan defined both the work and its completeness check, leaving omitted rules
 invisible to reconciliation. Reconcile accepted units against every rule in
 the standards before finishing.
+
+**Front matter was treated as transport metadata.** Claude judged the Markdown
+body and ignored extra YAML keys, so a candidate carrying store-specific fields
+passed despite the closed schema. Inventory every front-matter key before body
+inspection and record unknown keys against the shared identity rule.
 
 </failure_modes>
 

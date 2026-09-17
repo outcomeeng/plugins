@@ -3,9 +3,10 @@ title: "[Title naming the Output]"
 product: "[Exactly one configured Product]"
 maturity: Proposed
 lifecycle: Available
+malleability: implementation
 ---
 
-<!-- Local authoring guidance: apply /change-standards after triaging the request. This template records the result; its headings are not interview questions. For revision, add change_ref with the canonical reference and use confirmed Lifecycle and holder metadata from the store. Maturity names the level being authored and audited. Replace placeholders and remove these comments before audit. Publication maps metadata to native store fields and sends only the body below. Omit sections whose maturity requirements do not yet apply; expose unresolved questions instead of inventing answers. -->
+<!-- Local authoring guidance: apply /change-standards after triaging the request. This template records the result; its headings are not interview questions. The closed front-matter schema permits only title, product, maturity, lifecycle, optional malleability, and change_ref when revising. Omit malleability to select its implementation default. For revision, add change_ref with the canonical reference and use confirmed Lifecycle and holder metadata from the store. Maturity names the level being authored and audited. Replace placeholders and remove these comments before audit. Publication maps title and native project fields, removes change_ref, retains malleability in the Change record, and sends the body below. Omit sections whose maturity requirements do not yet apply; expose unresolved questions instead of inventing answers. -->
 
 # Output
 
@@ -37,7 +38,7 @@ lifecycle: Available
 
 ## Nodes
 
-[Full existing or intended node paths and target malleability. At Executable maturity, include required node states. Identify Product and repository where needed for disambiguation.]
+[Full existing or intended node paths, each carrying the same target malleability as the Change metadata. At Executable maturity, include required node states. Identify Product and repository where needed for disambiguation.]
 
 ## Assertions
 
@@ -50,6 +51,6 @@ lifecycle: Available
 # Activities
 
 - [ ] [Meaningful next result, with its exact target and dependencies.]
-- [ ] [Subsequent result in execution order.]
+- [ ] [At Executable maturity, the complete gate required by the target malleability, followed by any subsequent result in execution order.]
 
 <!-- Verification records are excluded. Transient branch/changeset state, blockers, and hazards needed for takeover belong in the existing Handoff workflow. -->
