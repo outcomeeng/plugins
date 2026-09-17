@@ -15,7 +15,7 @@ from outcomeeng_testing.generators.artifact_registry import (
     detected_artifacts,
     path_matching,
     two_match_cases,
-    unregistered_path,
+    unregistered_paths,
 )
 from outcomeeng_testing.harnesses.artifact_registry import (
     kind_entries,
@@ -87,5 +87,6 @@ def test_a_path_matching_two_artifacts_of_one_kind_selects_the_most_specific(
     assert detected_roles == [case.artifact.role]
 
 
-def test_a_path_matching_no_registered_artifact_selects_nothing() -> None:
-    assert _selected(unregistered_path()) == []
+@pytest.mark.parametrize("path", unregistered_paths())
+def test_a_path_matching_no_registered_artifact_selects_nothing(path: str) -> None:
+    assert _selected(path) == []

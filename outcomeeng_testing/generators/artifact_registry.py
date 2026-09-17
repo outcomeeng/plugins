@@ -63,12 +63,16 @@ def path_matching(detected: DetectedArtifact) -> str:
     return "/".join([*directories, filename])
 
 
-def unregistered_path() -> str:
-    """Return one path whose extension no registered artifact declares."""
+def unregistered_paths() -> tuple[str, ...]:
+    """Return one path per suffix the build distributes that no registered artifact declares.
+
+    The domain is the complete finite complement: every text-file suffix the
+    build distributes minus every extension the registry declares.
+    """
     unregistered = sorted(
         TEXT_FILE_SUFFIXES - {f".{ext}" for ext in registry_extensions()}
     )
-    return f"{_SUBJECT_STEM}{unregistered[0]}"
+    return tuple(f"{_SUBJECT_STEM}{suffix}" for suffix in unregistered)
 
 
 def two_match_cases() -> tuple[DetectedArtifact, ...]:

@@ -22,7 +22,7 @@ from outcomeeng_testing.harnesses.changeset_scope import (
 from outcomeeng_testing.generators.artifact_registry import (
     detected_artifacts,
     path_matching,
-    unregistered_path,
+    unregistered_paths,
 )
 from outcomeeng_testing.generators.changeset_scope import distinct_subject_paths
 from outcomeeng_testing.harnesses.implementation_scope import (
@@ -419,7 +419,8 @@ def test_the_resolver_emits_the_registry_selection_for_every_resolved_path() -> 
     resolver = load_resolve_scope_module()
     field = resolver.SelectionField
     cases = detected_artifacts()
-    paths = [*(path_matching(detected) for detected in cases), unregistered_path()]
+    unregistered = unregistered_paths()
+    paths = [*(path_matching(detected) for detected in cases), *unregistered]
     with feature_paths_repo(paths) as stale:
         completed = run_implementation_scope(stale.repo, CHANGESET_SCOPE.HEAD_REF)
 
@@ -437,4 +438,5 @@ def test_the_resolver_emits_the_registry_selection_for_every_resolved_path() -> 
             detected.artifact.role,
             detected.artifact.audit,
         )
-    assert selection[unregistered_path()] == []
+    for path in unregistered:
+        assert selection[path] == [], path
