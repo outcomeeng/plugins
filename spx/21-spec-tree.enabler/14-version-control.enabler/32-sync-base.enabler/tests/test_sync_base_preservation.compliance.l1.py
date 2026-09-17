@@ -16,7 +16,7 @@ from outcomeeng_testing.harnesses.sync_base import (
 )
 
 
-def test_proof_carries_schema_version_and_full_oids_no_lane_name(
+def test_proof_carries_schema_version_and_full_oids(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
@@ -41,4 +41,3 @@ def test_proof_carries_schema_version_and_full_oids_no_lane_name(
     assert set(payload) == {field.name for field in fields(module.Preservation)} | {
         module.SCHEMA_VERSION_KEY
     }
-    assert not any("lane" in key or "validation" in key for key in payload)

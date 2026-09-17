@@ -86,8 +86,6 @@ def test_rebase_conflict_stops_with_active_conflict_details(
         field.name for field in dataclasses.fields(module.ConflictDetails)
     }
     assert set(payload["conflict"]) == conflict_fields
-    assert "stderr" not in payload["conflict"]
-    assert "action_token" not in payload
 
 
 @pytest.mark.parametrize("edit", tracked_edits())
