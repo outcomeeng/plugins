@@ -5,6 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
+from outcomeeng.distribution.artifact_registry import (
+    ARTIFACT_KINDS,
+    ARTIFACT_REGISTRY_FILENAME,
+    ArtifactRole,
+    kinds_with_role,
+)
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
     LIFECYCLE_TEMPLATE_NAME,
@@ -28,11 +34,13 @@ AGENTS_DIR_NAME: Final = "agents"
 SKILL_FILENAME: Final = "SKILL.md"
 IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
 IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT: Final = "scripts/resolve_scope.py"
+IMPLEMENTATION_AUDIT_REGISTRY_DATA: Final = f"scripts/{ARTIFACT_REGISTRY_FILENAME}"
 IMPLEMENTATION_AUDIT_FAILURE_REFERENCE: Final = "references/operational-failures.md"
 IMPLEMENTATION_AUDIT_ARTIFACTS: Final = frozenset(
     {
         SKILL_FILENAME,
         IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
+        IMPLEMENTATION_AUDIT_REGISTRY_DATA,
         IMPLEMENTATION_AUDIT_FAILURE_REFERENCE,
     }
 )
@@ -43,7 +51,6 @@ RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
     "auditor.md",
     "audit-orchestrator.md",
 )
-LANGUAGE_CODE_SKILL_TEMPLATE: Final = "code-{language}"
 LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}-{concern}"
 RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}"
 LANGUAGE_AUDIT_CONCERNS: Final = ("code", "tests", "architecture")
@@ -59,25 +66,11 @@ RETIRED_AUDIT_RUNTIME_FILENAMES: Final = (
 def check_audit_artifact_contract(root: Path) -> list[str]:
     """Return implementation-audit contract violations under ``root``."""
     errors: list[str] = []
-    surfaces = audit_contract_surfaces(root)
-    expected_languages = tuple(
-        sorted(
-            {
-                language
-                for surface in surfaces
-                for language in implementation_languages(surface)
-            }
-        )
-    )
-    for surface in surfaces:
+    for surface in audit_contract_surfaces(root):
         errors.extend(check_audit_runtime_surface(surface))
         errors.extend(check_wrapper_surface(surface))
-        errors.extend(
-            check_language_concern_surface(
-                surface,
-                expected_languages=expected_languages,
-            )
-        )
+        errors.extend(check_language_concern_surface(surface))
+        errors.extend(check_registry_skill_surface(surface))
     return errors
 
 
@@ -213,7 +206,7 @@ def check_wrapper_surface(surface: Path) -> list[str]:
     # plugin name alone is not a language: an artifact-type auditor may share
     # its owning plugin's name, and only per-programming-language wrappers are
     # forbidden.
-    language_names = frozenset(implementation_languages(surface))
+    language_names = frozenset(implementation_languages())
     errors.extend(
         f"{path}: language-specific auditor exists"
         for path, (_plugin, stem) in owners.items()
@@ -227,19 +220,10 @@ def check_wrapper_surface(surface: Path) -> list[str]:
     return errors
 
 
-def check_language_concern_surface(
-    surface: Path,
-    *,
-    expected_languages: tuple[str, ...] | None = None,
-) -> list[str]:
+def check_language_concern_surface(surface: Path) -> list[str]:
     """Return language concern-trio violations for one plugin surface."""
     errors: list[str] = []
-    languages = (
-        implementation_languages(surface)
-        if expected_languages is None
-        else expected_languages
-    )
-    for language in languages:
+    for language in implementation_languages():
         retired_skill = (
             surface
             / language
@@ -288,7 +272,7 @@ def audit_skill_runtime_directories(surface: Path) -> tuple[Path, ...]:
     )
     runtime_directories.update(
         skill_dir
-        for language in implementation_languages(surface)
+        for language in implementation_languages()
         for concern in LANGUAGE_AUDIT_CONCERNS
         if (
             skill_dir := (
@@ -305,23 +289,30 @@ def audit_skill_runtime_directories(surface: Path) -> tuple[Path, ...]:
     return tuple(sorted(runtime_directories))
 
 
-def implementation_languages(surface: Path) -> tuple[str, ...]:
-    """Return languages identified by their implementation skill surface."""
-    if not surface.is_dir():
-        return ()
-    return tuple(
-        sorted(
-            plugin_dir.name
-            for plugin_dir in surface.iterdir()
-            if plugin_dir.is_dir()
-            and (
-                plugin_dir
-                / SKILLS_DIR_NAME
-                / LANGUAGE_CODE_SKILL_TEMPLATE.format(language=plugin_dir.name)
-                / SKILL_FILENAME
-            ).is_file()
-        )
-    )
+def implementation_languages() -> tuple[str, ...]:
+    """Return the registered kinds that produce an implementation artifact."""
+    return tuple(sorted(kinds_with_role(ArtifactRole.IMPLEMENTATION)))
+
+
+def check_registry_skill_surface(surface: Path) -> list[str]:
+    """Return every registered artifact naming a skill ``surface`` does not ship.
+
+    Each error names the artifact by kind and role and the missing skill, so
+    the failure points at the declaration that a plugin surface fails to honor.
+    """
+    errors: list[str] = []
+    for kind in ARTIFACT_KINDS:
+        for artifact in kind.artifacts:
+            for skill in artifact.skill_names():
+                skill_path = (
+                    surface / kind.plugin / SKILLS_DIR_NAME / skill / SKILL_FILENAME
+                )
+                if not skill_path.is_file():
+                    errors.append(
+                        f"{skill_path}: registered artifact {kind.name}/{artifact.role} "
+                        f"names skill {skill} the {kind.plugin} surface does not ship"
+                    )
+    return errors
 
 
 def language_specific_auditor_filenames(language: str) -> frozenset[str]:

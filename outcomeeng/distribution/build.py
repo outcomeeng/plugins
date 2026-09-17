@@ -85,6 +85,9 @@ from outcomeeng.distribution.contracts import (
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
     Target as _Target,
 )
+from outcomeeng.distribution.artifact_registry import (
+    artifact_registry_render_variables,
+)
 from outcomeeng.distribution.diagnose_manifest import (
     diagnose_manifest_render_variables,
 )
@@ -610,15 +613,16 @@ def _render_variables(
 ) -> dict[str, object]:
     """Return the Jinja render variables for a build target.
 
-    Carries the build target name and the spx version floor. The floor is
-    sourced from the single source of truth in
-    ``outcomeeng.validation.spx_version`` so the value the build renders into
-    shipped content cannot drift from the floor the product enforces.
+    Carries the build target name, the spx version floor, the diagnose
+    manifest values, and the artifact registry document. Each is sourced from
+    its single source of truth so the value the build renders into shipped
+    content cannot drift from the value the product enforces.
     """
     variables = {
         BUILD_TARGET_VARIABLE: target.value,
         SPX_FLOOR_VARIABLE: REQUIRED_SPX_VERSION,
         **diagnose_manifest_render_variables(),
+        **artifact_registry_render_variables(),
     }
     if plugin_name is not None:
         variables[PLUGIN_NAME_VARIABLE] = plugin_name

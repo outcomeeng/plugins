@@ -514,7 +514,7 @@ def audit_contract_rejects_missing_single_surface_audit_host() -> bool:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         surface = root / PLUGIN_SURFACE_PATHS[0]
-        _populate_valid_surface(surface, source_language())
+        _populate_valid_surface(surface)
         rmtree(surface / SPEC_TREE_PLUGIN_NAME)
         return bool(check_audit_artifact_contract(root))
 
@@ -532,7 +532,7 @@ def audit_contract_rejects_missing_single_surface_language() -> bool:
         root = Path(temporary_directory)
         surface = root / PLUGIN_SURFACE_PATHS[0]
         language = source_language()
-        _populate_valid_surface(surface, language)
+        _populate_valid_surface(surface)
         _language_concern_path(
             surface,
             language,

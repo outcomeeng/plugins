@@ -31,8 +31,11 @@ from outcomeeng.distribution.contracts import (
 )
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
+# The rendered copy is the read authority: the generator reads the artifact
+# registry from a rendered sibling data file, which only the shipped tree
+# carries as a JSON document.
 GENERATOR_RELATIVE_PATH: Final = Path(
-    "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py"
+    "dist/claude/spec-tree/skills/update-instruction-block/scripts/instruction_block.py"
 )
 GENERATOR_PATH: Final = REPO_ROOT / GENERATOR_RELATIVE_PATH
 AUTHORED_TEMPLATE_RELATIVE_PATH: Final = Path(
