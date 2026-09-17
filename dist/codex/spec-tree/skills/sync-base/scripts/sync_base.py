@@ -564,8 +564,9 @@ def _nearest_dependents_beneath(
     A dependent sits on another when it contains that one's tip and the two
     tips differ. The nearest is the one whose tip every other contained tip
     reaches, so the list is empty when ``dependent`` sits on no other
-    dependent, one name when the nearest is unique, and several when the
-    contained tips are unordered and no single nearest one exists.
+    dependent, one name when the nearest is unique, and the whole contained
+    set when the contained tips are unordered and no single nearest one
+    exists — two unordered tips reach neither each other nor a third.
     """
     own_tip = tips.get(dependent)
     beneath = [
@@ -573,7 +574,7 @@ def _nearest_dependents_beneath(
         for other, tip in tips.items()
         if other != dependent and tip != own_tip and _is_ancestor(repo, tip, dependent)
     ]
-    return [
+    nearest = [
         candidate
         for candidate in beneath
         if all(
@@ -582,6 +583,9 @@ def _nearest_dependents_beneath(
             if other != candidate
         )
     ]
+    if len(nearest) == 1:
+        return nearest
+    return beneath
 
 
 def _diff_paths(repo: _Repository, spec: str) -> list[str] | None:
@@ -1015,10 +1019,14 @@ def _sync(repo: _Repository, *, base_ref: str | None, fetch: bool) -> SyncBaseRe
         return default
     record = _read_stack_record(repo, branch)
     if record is None:
-        try:
-            record = _derive_predecessor(repo, branch, default)
-        except StackRecordError as error:
-            return _record_failure(default, remote_tracking_ref(default), branch, error)
+        record = _derive_predecessor(repo, branch, default)
+        if record is not None:
+            try:
+                _write_stack_record(repo, branch, record)
+            except StackRecordError as error:
+                return _record_failure(
+                    default, remote_tracking_ref(default), branch, error
+                )
     if record is not None:
         return _sync_stacked(repo, branch, record, default, fetch=fetch)
     return _sync_branch_onto(
@@ -1093,14 +1101,15 @@ def _sync_explicit_base(
 def _derive_predecessor(
     repo: _Repository, branch: str, default_name: str
 ) -> StackRecord | None:
-    """Derive and record ``branch``'s predecessor from local topology, or ``None``.
+    """Derive ``branch``'s predecessor record from local topology, or ``None``.
 
     A candidate is a local branch other than ``branch`` and the default branch
     that does not contain HEAD and whose merge-base with HEAD lies strictly
     above HEAD's merge-base with ``origin/<default>``: ``branch`` forked from it
     after it forked from the default. The candidate whose merge-base descends
-    from every other candidate's is the predecessor; unordered candidates yield
-    none, and no record is written.
+    from every other candidate's is the predecessor, returned as the record
+    naming it and that merge-base; unordered candidates yield none. The caller
+    writes the record: this function reads git and mutates nothing.
     """
     head = _rev(repo, "HEAD")
     default_fork = _merge_base(repo, "HEAD", remote_tracking_ref(default_name))
@@ -1128,9 +1137,7 @@ def _derive_predecessor(
     if len(winners) != 1:
         return None
     name, fork = winners[0]
-    record = StackRecord(predecessor=name, tip=fork)
-    _write_stack_record(repo, branch, record)
-    return record
+    return StackRecord(predecessor=name, tip=fork)
 
 
 def _sync_stacked(
