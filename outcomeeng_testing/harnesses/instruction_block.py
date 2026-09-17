@@ -24,7 +24,6 @@ only invocation-owned temporary repositories and clean them on exit.
 
 from __future__ import annotations
 
-import importlib.util
 import io
 import itertools
 import os
@@ -41,6 +40,7 @@ from typing import Final, cast
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution import instruction_block as distribution
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng_testing.generators.instruction_block import (
     DelegationCandidateCase,
     InstructionBlockCases,
@@ -409,21 +409,8 @@ def observe_root_instruction_topology_seeds(
 
 
 def load_instruction_block_module() -> ModuleType:
-    """Load the ``instruction_block`` module via importlib and cache it."""
-    cached = sys.modules.get("instruction_block")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "instruction_block", INSTRUCTION_BLOCK_MODULE_PATH
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load instruction_block from {INSTRUCTION_BLOCK_MODULE_PATH}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["instruction_block"] = module
-    spec.loader.exec_module(module)
-    return module
+    """Load the shipped ``instruction_block`` generator and cache it."""
+    return load_shipped_module("instruction_block", INSTRUCTION_BLOCK_MODULE_PATH)
 
 
 def canonical_template_path(agent_harness: str | None = None) -> pathlib.Path:

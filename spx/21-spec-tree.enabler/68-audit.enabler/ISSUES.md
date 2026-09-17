@@ -41,6 +41,36 @@ file. Raised again as four `REJECT` findings (predicate-ownership, eleven
 functions across the trio, wrapper, and retired-name assertions) on the
 coverage-accounting changeset, which touches neither the compliance file nor
 its harness; deferred there for the reason above.
+Raised a third time as four `REJECT` findings (`f-001` to `f-004`, every
+subject in `tests/test_implementation_audit_contract.compliance.l1.py`) by the
+isolated test-evidence audit of this node on head
+`2d1dc4179cc047d0b0404e4b16ac90f3f941406e` during the artifact-registry
+changeset, whose diff adds one compliance test to
+`tests/test_implementation_scope.compliance.l1.py` and the registry members of
+the harness while leaving the compliance file and its verdict functions
+untouched; deferred again for the reason above, with the rejected verdict
+recorded.
+
+## The reconciler evidence builds SPX replies from the resolver's own field enum
+
+The recorded-run runner and `audit_scope_unit` in
+`outcomeeng_testing/harnesses/implementation_scope.py` compose the
+`spx verification run input` and `render` replies the in-process reconcile
+tests read from the resolver's own `AuditField` enum, so renaming a member such
+as `AuditField.SUBJECT` or `AuditField.SCOPE_UNITS` leaves every reconcile
+test passing while the shipped reconciler misreads real SPX documents. The l3
+lifecycle scenario exercises the scope-unit and input-content fields against the
+pinned CLI but never runs `--reconcile-run` against a real sealed run.
+
+**Settlement condition**: the reconcile evidence reads its field names from an
+oracle independent of the resolver — the pinned CLI's own documents, as the l3
+lifecycle already does for `start` and `input` — or one l3 case runs
+`--reconcile-run` against a real sealed run.
+
+**Evidence.** `WARNING` finding `f-006` (falsifiability) of the isolated
+test-evidence audit on head `2d1dc4179cc047d0b0404e4b16ac90f3f941406e`; the
+artifact-registry changeset added the loader to that harness and changed no
+reconcile evidence.
 
 ## `check_wrapper_surface` acceptance boundary has no fixture evidence
 

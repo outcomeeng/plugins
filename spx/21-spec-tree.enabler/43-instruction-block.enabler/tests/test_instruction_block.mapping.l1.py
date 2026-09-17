@@ -2,6 +2,7 @@ import pathlib
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from outcomeeng.distribution.artifact_registry import kind_by_extension
 from outcomeeng_testing.harnesses import instruction_block as harness
 from outcomeeng_testing.harnesses import instruction_block_mapping_evidence as evidence
 
@@ -88,10 +89,8 @@ def test_repeated_cli_flag_maps_to_its_rejection() -> None:
 
 
 def test_test_file_extension_maps_to_its_language() -> None:
-    for extension, language in sorted(MODULE.LANGUAGE_BY_EXTENSION.items()):
-        assert evidence.observe_extension_language(extension) == (language, language), (
-            extension
-        )
+    for extension, kind in sorted(kind_by_extension().items()):
+        assert evidence.observe_extension_language(extension) == (kind, kind), extension
 
 
 def test_detected_language_set_is_the_mapped_extensions(

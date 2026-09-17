@@ -234,6 +234,17 @@ def registry_extensions() -> frozenset[str]:
     )
 
 
+def kind_by_extension() -> dict[str, str]:
+    """Return each declared extension mapped to the name of the kind declaring it."""
+    return {
+        extension: kind.name
+        for kind in ARTIFACT_KINDS
+        for artifact in kind.artifacts
+        if artifact.detection is not None
+        for extension in artifact.detection.extensions
+    }
+
+
 def kinds_with_role(role: ArtifactRole) -> tuple[str, ...]:
     """Return the names of every kind producing an artifact of ``role``."""
     return tuple(

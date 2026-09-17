@@ -13,6 +13,7 @@ from contextlib import redirect_stderr
 from dataclasses import dataclass
 from io import StringIO
 
+from outcomeeng.distribution.artifact_registry import kind_by_extension
 from outcomeeng_testing.harnesses import instruction_block as harness
 
 MODULE = harness.load_instruction_block_module()
@@ -67,12 +68,17 @@ def observe_extension_language(extension: str) -> tuple[str | None, str | None]:
 def observe_detected_language_set(
     spx_dir: pathlib.Path,
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Write one test file per known extension, then report the detected and mapped sets."""
-    extensions = tuple(MODULE.LANGUAGE_BY_EXTENSION)
-    harness.write_spx_tree_with_tests(spx_dir, extensions)
+    """Write one test file per registry-declared extension, then report the detected set.
+
+    The second element is the registry's own kind set — the authored declaration,
+    independent of the rendered data file the generator reads — normalized only
+    for ordering.
+    """
+    declared = kind_by_extension()
+    harness.write_spx_tree_with_tests(spx_dir, tuple(declared))
     return (
         MODULE.detect_languages_from_tree(spx_dir),
-        MODULE.normalize_languages(MODULE.LANGUAGE_BY_EXTENSION.values()),
+        MODULE.normalize_languages(declared.values()),
     )
 
 

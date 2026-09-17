@@ -17,7 +17,6 @@ leaving the freshly written files uncommitted.
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import re
 import subprocess
 import sys
@@ -26,6 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Protocol, cast
 
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng.distribution.contracts import (
     DIST_DIR_NAME,
 )
@@ -658,24 +658,9 @@ def _run(
 
 def load_instruction_block_module() -> InstructionBlockModule:
     """Load the shipped instruction-block generator to reuse its pure render contract."""
-    cached = sys.modules.get("instruction_block")
-    if cached is not None:
-        return cast(InstructionBlockModule, cached)
-    spec = importlib.util.spec_from_file_location("instruction_block", GENERATOR_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load instruction_block from {GENERATOR_PATH}")
-    module = importlib.util.module_from_spec(spec)
-    # Register before exec so dataclass type introspection can resolve the module by name.
-    sys.modules["instruction_block"] = module
-    # The generator is a shipped file under dist/; executing it never writes a
-    # bytecode cache beside it, which the generated tree does not carry.
-    write_bytecode = sys.dont_write_bytecode
-    sys.dont_write_bytecode = True
-    try:
-        spec.loader.exec_module(module)
-    finally:
-        sys.dont_write_bytecode = write_bytecode
-    return cast(InstructionBlockModule, module)
+    return cast(
+        InstructionBlockModule, load_shipped_module("instruction_block", GENERATOR_PATH)
+    )
 
 
 def budget_regression(

@@ -35,6 +35,14 @@ The isolated test-evidence audit of this node on head `df87dc4ffbe8f209a10f75aa8
 
 **Settlement condition.** The scenario and compliance tests import every status token, harness key, and build constant from its owning module; the refresh-workflow assertions read their expected tokens from a source-owned workflow contract or reclassify; the near-identical expectation derives from the property harness's oracle instead of a stored answer; and a test-evidence audit of the node approves.
 
+The isolated test-evidence audit on head `2d1dc4179cc047d0b0404e4b16ac90f3f941406e` (artifact-registry changeset, whose diff touched only the extension-mapping test and its harness in this node) re-raised the topology table, the near-identical fixture, and the scenario and compliance vocabulary as `REJECT` findings `f-001` to `f-004`, and added three subjects outside that diff:
+
+- `tests/test_instruction_block.property.l1.py` copies the reconcile winner tokens `a` and `b`, which the generator spells only inline in `main()`; no source contract exports the winner domain.
+- `tests/test_instruction_block.scenario.l1.py::test_symlinked_root_file_becomes_regular_file` asserts that `CLAUDE.md` is a regular file and both files open with the router marker, but never that the shared root body survives — a write that drops the body leaves the linked test passing while the assertion's `then` clause is unfulfilled.
+- `tests/test_budget_gate.compliance.l1.py::test_budget_baseline_prefers_the_default_branch_merge_base` hand-rolls the git remote and branch topology inside the test body; that setup policy belongs to the harness that owns `init_git_identity` and `git_commit_at`.
+
+**Settlement condition (extended).** The generator exports the winner domain and the property test imports it; the symlink scenario asserts the shared root body in both files; the budget-gate topology setup moves into the harness. Each rejected verdict is recorded; the merging decision routes a Verifier finding whose subject lies outside the diff here rather than to the merge.
+
 ## `/update-instruction-block` Step 5 reads as one paragraph over six topologies
 
 Step 5 of `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md` verifies six distinct first-encounter topologies — an established surface with a valid region, the bootstrap span mapping, one file missing, both files missing, a delegating body adopted, and tracked-versus-untracked recoverability — in one unbroken paragraph. An operator scanning it after a run parses the whole block to find the branch matching their topology. Step 3's ambiguity reports already use the per-branch bullet shape this section wants.

@@ -6,10 +6,8 @@ sibling data file, which only the shipped tree carries as a JSON document.
 """
 
 import contextlib
-import importlib.util
 import io
 import json
-import os
 import pathlib
 import runpy
 import subprocess
@@ -20,6 +18,7 @@ from types import ModuleType
 from typing import Any, Literal, cast
 
 from outcomeeng.distribution.contracts import DIST_DIR_NAME, SKILLS_SUBDIR_NAME, Target
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng.validation.audit_artifacts import (
     IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
     IMPLEMENTATION_AUDIT_SKILL_NAME,
@@ -31,6 +30,7 @@ from outcomeeng.validation.implementation_audit_contract import (
 )
 from outcomeeng_testing.harnesses.changeset_scope import (
     StaleBaseRepo,
+    isolated_git,
     stale_local_base_repo,
 )
 
@@ -53,30 +53,7 @@ _RESOLVE_SCOPE_MODULE_NAME = "implementation_resolve_scope"
 
 def load_resolve_scope_module() -> ModuleType:
     """Load the shipped scope resolver as a module to reach its pure selection seam."""
-    cached = sys.modules.get(_RESOLVE_SCOPE_MODULE_NAME)
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        _RESOLVE_SCOPE_MODULE_NAME, SCRIPT_PATH
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"cannot load {_RESOLVE_SCOPE_MODULE_NAME} from {SCRIPT_PATH}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[_RESOLVE_SCOPE_MODULE_NAME] = module
-    # The resolver is a shipped file under dist/; executing it never writes a
-    # bytecode cache beside it, which the generated tree does not carry.
-    write_bytecode = sys.dont_write_bytecode
-    sys.dont_write_bytecode = True
-    try:
-        spec.loader.exec_module(module)
-    except Exception:
-        del sys.modules[_RESOLVE_SCOPE_MODULE_NAME]
-        raise
-    finally:
-        sys.dont_write_bytecode = write_bytecode
-    return module
+    return load_shipped_module(_RESOLVE_SCOPE_MODULE_NAME, SCRIPT_PATH)
 
 
 ERROR_PREFIX = cast(str, _MODULE["ERROR_PREFIX"])
@@ -338,26 +315,6 @@ def feature_paths_repo(paths: Sequence[str]) -> Iterator[StaleBaseRepo]:
             file = stale.repo / name
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text(name, encoding="utf-8")
-            _git(stale.repo, "add", name)
-            _git(stale.repo, "commit", "-q", "-m", name)
+            isolated_git(stale.repo, "add", name)
+            isolated_git(stale.repo, "commit", "-q", "-m", name)
         yield stale
-
-
-def _git(repo: pathlib.Path, *args: str) -> None:
-    env = {
-        **os.environ,
-        "GIT_CONFIG_GLOBAL": "/dev/null",
-        "GIT_CONFIG_SYSTEM": "/dev/null",
-        "GIT_AUTHOR_NAME": "test",
-        "GIT_AUTHOR_EMAIL": "test@example.invalid",
-        "GIT_COMMITTER_NAME": "test",
-        "GIT_COMMITTER_EMAIL": "test@example.invalid",
-    }
-    subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
-        ["git", *args],
-        cwd=repo,
-        env=env,
-        capture_output=True,
-        text=True,
-        check=True,
-    )

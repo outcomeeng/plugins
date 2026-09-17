@@ -27,7 +27,6 @@ outcome assertion.
 
 from __future__ import annotations
 
-import importlib.util
 import os
 import pathlib
 import subprocess
@@ -39,6 +38,7 @@ from itertools import islice
 from tempfile import TemporaryDirectory
 from types import ModuleType
 
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng_testing.generators.changeset_scope import (
     ChangesetScopeCase,
     changeset_scope_cases,
@@ -135,16 +135,7 @@ def temporary_changeset_scope() -> Iterator[TemporaryChangesetScope]:
 
 def _load_source_module(name: str, path: pathlib.Path) -> ModuleType:
     """Load one shipped source module through its file boundary and cache it."""
-    cached = sys.modules.get(name)
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load {name} from {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_shipped_module(name, path)
 
 
 def load_changeset_scope_module() -> ModuleType:
@@ -193,7 +184,9 @@ MERGE_CONTRACT = load_merge_contract_module()
 COHERENCE_SCOPE = load_coherence_scope_module()
 
 
-def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str:
+def isolated_git(
+    repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None
+) -> str:
     """Run a git command with isolated config, returning stripped stdout.
 
     Global and system config are suppressed and a fixed identity is injected so
@@ -223,8 +216,8 @@ def _commit_file(repo: pathlib.Path, name: str, content: str, message: str) -> N
     path = repo / name
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
-    _git(repo, "add", name)
-    _git(repo, "commit", "-q", "-m", message)
+    isolated_git(repo, "add", name)
+    isolated_git(repo, "commit", "-q", "-m", message)
 
 
 def _fixture_text(scenario: pathlib.Path, role: str) -> str:
@@ -237,7 +230,7 @@ def _initialize_changeset_repo(
 ) -> ChangesetScopeCase:
     """Create the shared initial commit for a changeset-scope scenario."""
     scenario = scenario or _first_changeset_scope_case()
-    _git(
+    isolated_git(
         repo,
         "init",
         "-q",
@@ -246,7 +239,7 @@ def _initialize_changeset_repo(
         str(repo),
         cwd=pathlib.Path.cwd(),
     )
-    _git(repo, "config", "commit.gpgsign", "false")
+    isolated_git(repo, "config", "commit.gpgsign", "false")
     _commit_file(
         repo,
         scenario.initial_file,
@@ -274,9 +267,9 @@ def _publish_origin_base(
     """
     bare = _origin_bare_path(repo)
     if not bare.exists():
-        _git(repo, "init", "-q", "--bare", str(bare), cwd=pathlib.Path.cwd())
-        _git(repo, "remote", "add", ORIGIN_REMOTE_NAME, str(bare))
-    _git(
+        isolated_git(repo, "init", "-q", "--bare", str(bare), cwd=pathlib.Path.cwd())
+        isolated_git(repo, "remote", "add", ORIGIN_REMOTE_NAME, str(bare))
+    isolated_git(
         repo,
         "push",
         "-q",
@@ -285,8 +278,8 @@ def _publish_origin_base(
         f"{commit_oid}:refs/heads/{scenario.base_branch}",
     )
     tracking_ref = f"{ORIGIN_TRACKING_REF_PREFIX}{scenario.base_branch}"
-    _git(repo, "update-ref", tracking_ref, commit_oid)
-    _git(repo, "symbolic-ref", ORIGIN_HEAD_SYMBOLIC_REF, tracking_ref)
+    isolated_git(repo, "update-ref", tracking_ref, commit_oid)
+    isolated_git(repo, "symbolic-ref", ORIGIN_HEAD_SYMBOLIC_REF, tracking_ref)
 
 
 @dataclass(frozen=True)
@@ -332,7 +325,7 @@ def build_stale_local_base_repo(
     it lags ``origin/main`` by the merged commit.
     """
     scenario = _initialize_changeset_repo(repo, scenario)
-    initial_sha = _git(repo, "rev-parse", "HEAD")
+    initial_sha = isolated_git(repo, "rev-parse", "HEAD")
 
     _commit_file(
         repo,
@@ -340,13 +333,13 @@ def build_stale_local_base_repo(
         scenario.merged_file,
         scenario.merged_file,
     )
-    advanced_sha = _git(repo, "rev-parse", "HEAD")
+    advanced_sha = isolated_git(repo, "rev-parse", "HEAD")
 
     # origin/main (and origin/HEAD) point at the advanced base A+M.
     _publish_origin_base(repo, scenario, advanced_sha)
 
     # Feature branches off A+M (so it contains the merged commit) and adds F.
-    _git(repo, "switch", "-q", "-c", scenario.feature_branch)
+    isolated_git(repo, "switch", "-q", "-c", scenario.feature_branch)
     _commit_file(
         repo,
         scenario.feature_file,
@@ -355,7 +348,7 @@ def build_stale_local_base_repo(
     )
 
     # The local base ref lags origin by the merged commit.
-    _git(repo, "update-ref", f"refs/heads/{scenario.base_branch}", initial_sha)
+    isolated_git(repo, "update-ref", f"refs/heads/{scenario.base_branch}", initial_sha)
 
     return StaleBaseRepo(
         repo=repo,
@@ -380,7 +373,7 @@ def build_base_advanced_after_branch_repo(
     """
     scenario = _initialize_changeset_repo(repo, scenario)
 
-    _git(repo, "switch", "-q", "-c", scenario.feature_branch)
+    isolated_git(repo, "switch", "-q", "-c", scenario.feature_branch)
     _commit_file(
         repo,
         scenario.feature_file,
@@ -388,15 +381,15 @@ def build_base_advanced_after_branch_repo(
         scenario.feature_file,
     )
 
-    _git(repo, "switch", "-q", scenario.base_branch)
+    isolated_git(repo, "switch", "-q", scenario.base_branch)
     _commit_file(
         repo,
         scenario.merged_file,
         scenario.merged_file,
         scenario.merged_file,
     )
-    _publish_origin_base(repo, scenario, _git(repo, "rev-parse", "HEAD"))
-    _git(repo, "switch", "-q", scenario.feature_branch)
+    _publish_origin_base(repo, scenario, isolated_git(repo, "rev-parse", "HEAD"))
+    isolated_git(repo, "switch", "-q", scenario.feature_branch)
 
     return BaseAdvancedRepo(
         repo=repo,
@@ -435,10 +428,10 @@ def build_lagging_remote_tracking_repo(
     """
     advanced = build_base_advanced_after_branch_repo(repo, scenario)
     tracking_ref = f"{ORIGIN_TRACKING_REF_PREFIX}{advanced.base_ref}"
-    branch_point = _git(
+    branch_point = isolated_git(
         repo, "merge-base", CHANGESET_SCOPE_CONTRACT.HEAD_REF, tracking_ref
     )
-    _git(repo, "update-ref", tracking_ref, branch_point)
+    isolated_git(repo, "update-ref", tracking_ref, branch_point)
     return LaggingRemoteTrackingRepo(
         repo=repo,
         base_ref=advanced.base_ref,
@@ -587,7 +580,7 @@ def branch_collision_state(
 def git_commit_oid(repo: pathlib.Path, ref: str) -> str:
     """Resolve a ref through real Git for an independent commit-OID oracle."""
     contract = load_changeset_scope_contract_module()
-    return _git(
+    return isolated_git(
         repo,
         "rev-parse",
         "--verify",
@@ -598,7 +591,7 @@ def git_commit_oid(repo: pathlib.Path, ref: str) -> str:
 
 def remote_base_oid(repo: pathlib.Path, base_ref: str) -> str:
     """Read the bare remote's own base tip — an oracle no local ref can shadow."""
-    return _git(
+    return isolated_git(
         _origin_bare_path(repo),
         "rev-parse",
         "--verify",
@@ -609,12 +602,12 @@ def remote_base_oid(repo: pathlib.Path, base_ref: str) -> str:
 
 def git_merge_base(repo: pathlib.Path, left: str, right: str) -> str:
     """Resolve the merge base of two refs through real Git."""
-    return _git(repo, "merge-base", left, right)
+    return isolated_git(repo, "merge-base", left, right)
 
 
 def git_commits_between(repo: pathlib.Path, ancestor: str, descendant: str) -> int:
     """Count the commits reachable from ``descendant`` but not ``ancestor``."""
-    return int(_git(repo, "rev-list", "--count", f"{ancestor}..{descendant}"))
+    return int(isolated_git(repo, "rev-list", "--count", f"{ancestor}..{descendant}"))
 
 
 def checkout_branch(repo: pathlib.Path, branch: str) -> None:
@@ -624,13 +617,13 @@ def checkout_branch(repo: pathlib.Path, branch: str) -> None:
     distinguishes a range composed against the named ref from one composed
     against ``HEAD``.
     """
-    _git(repo, "switch", "-q", branch)
+    isolated_git(repo, "switch", "-q", branch)
 
 
 def git_three_dot_scope(repo: pathlib.Path, ref: str) -> tuple[str, ...]:
     """Return Git's merge-base scope for a caller-supplied ref."""
     contract = load_changeset_scope_contract_module()
-    output = _git(repo, "diff", "--name-only", f"{ref}...{contract.HEAD_REF}")
+    output = isolated_git(repo, "diff", "--name-only", f"{ref}...{contract.HEAD_REF}")
     return tuple(output.splitlines())
 
 
@@ -690,7 +683,7 @@ def sever_origin_remote(repo: pathlib.Path) -> str:
     the fetch the resolver performs fails with git's own message.
     """
     absent = repo.parent / "absent.git"
-    _git(repo, "remote", "set-url", ORIGIN_REMOTE_NAME, str(absent))
+    isolated_git(repo, "remote", "set-url", ORIGIN_REMOTE_NAME, str(absent))
     return str(absent)
 
 
@@ -700,8 +693,8 @@ def detach_head(repo: pathlib.Path) -> None:
     Resolves the current commit and checks it out by SHA, detaching HEAD
     from the branch ref.
     """
-    sha = _git(repo, "rev-parse", "HEAD")
-    _git(repo, "checkout", "-q", "--detach", sha)
+    sha = isolated_git(repo, "rev-parse", "HEAD")
+    isolated_git(repo, "checkout", "-q", "--detach", sha)
 
 
 def write_branch_state_file(
