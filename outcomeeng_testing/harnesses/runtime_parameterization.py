@@ -2,15 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import cast
-
-import yaml
-
-from outcomeeng.distribution.agents import AGENT_TOOLS_FIELD, READ_ONLY_TOOLS
 
 from outcomeeng.distribution.build import (
     BuildError,
@@ -35,11 +29,8 @@ from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
     RUNTIME_TOKEN_TERM_KIND,
     RUNTIME_TOKEN_TOOL_KIND,
-    RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
     Target,
-    format_runtime_token,
 )
-from outcomeeng.validation.skill_frontmatter import ALLOWED_TOOLS_FIELD
 from outcomeeng.validation.runtime_tokens import forbidden_names
 from outcomeeng_testing.generators.source_and_templating import (
     InvalidRuntimeTokenCase,
@@ -50,57 +41,6 @@ from outcomeeng_testing.generators.source_and_templating import (
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 SKILL_NAME = "example-skill"
-
-
-@dataclass(frozen=True)
-class OptionalToolFrontmatterObservation:
-    """One target's independently parsed list-valued frontmatter field."""
-
-    target: Target
-    field: str
-    tools: tuple[str, ...]
-    rendered: str
-
-
-def optional_tool_frontmatter_observations(
-    field: str,
-) -> tuple[OptionalToolFrontmatterObservation, ...]:
-    """Render one optional capability among stable tools for every target."""
-    if field not in {ALLOWED_TOOLS_FIELD, AGENT_TOOLS_FIELD}:
-        raise ValueError(f"unsupported list-valued tool field: {field}")
-    stable_tools = tuple(sorted(READ_ONLY_TOOLS))
-    token = format_runtime_token(
-        RUNTIME_TOKEN_TOOL_KIND,
-        RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
-    )
-    source_items = (stable_tools[0], token, *stable_tools[1:])
-    template = f"---\n{field}: {', '.join(source_items)}\n---\n"
-    observations: list[OptionalToolFrontmatterObservation] = []
-    for target in Target:
-        rendered = render_text(template, variables={"target": target.value})
-        frontmatter = _yaml_frontmatter(rendered)
-        value = frontmatter[field]
-        if not isinstance(value, str):
-            raise TypeError(f"{field}: expected comma-delimited string")
-        observations.append(
-            OptionalToolFrontmatterObservation(
-                target=target,
-                field=field,
-                tools=tuple(item.strip() for item in value.split(",")),
-                rendered=rendered,
-            )
-        )
-    return tuple(observations)
-
-
-def _yaml_frontmatter(text: str) -> Mapping[str, object]:
-    frontmatter, separator, _body = text.removeprefix("---\n").partition("\n---")
-    if not separator:
-        raise ValueError("rendered text has no closing frontmatter fence")
-    loaded = yaml.safe_load(frontmatter)
-    if not isinstance(loaded, Mapping):
-        raise TypeError("rendered frontmatter is not a mapping")
-    return cast("Mapping[str, object]", loaded)
 
 
 def implementation_is_ready() -> bool:
@@ -125,7 +65,6 @@ def registry_token_renders_each_target_name() -> bool:
         )
         for (kind, capability), names in RUNTIME_TOKEN_REQUIRED_NAMES.items()
         for runtime_name, expected in names.items()
-        if expected is not None
         for runtime in (Target(runtime_name),)
     )
 
@@ -414,7 +353,6 @@ def _registry_contract_holds(registry: dict[str, RuntimeTokenKind]) -> bool:
                 if RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[kind]
                 for entry in kind_entry.names.values()
                 for name in entry.values()
-                if name is not None
             },
             key=len,
             reverse=True,

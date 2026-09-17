@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import cast
-
-import yaml
 
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
@@ -39,12 +35,8 @@ from outcomeeng.distribution.contracts import (
     REFERENCES_SUBDIR_NAME,
     SKILLS_SUBDIR_NAME,
     TEXT_FILE_SUFFIXES,
-    RUNTIME_TOKEN_TOOL_KIND,
-    RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
     Target,
-    format_runtime_token,
 )
-from outcomeeng.distribution.agents import READ_ONLY_TOOLS
 from outcomeeng.validation.skill_frontmatter import (
     ALLOWED_TOOLS_FIELD,
     ARGUMENT_HINT_FIELD,
@@ -273,65 +265,6 @@ class EmittedText:
     target: Target
     path: Path
     text: str
-
-
-@dataclass(frozen=True)
-class OptionalToolEmission:
-    """One built target's independently parsed optional-tool list."""
-
-    target: Target
-    tools: tuple[str, ...]
-    text: str
-
-
-def optional_tool_emissions() -> tuple[OptionalToolEmission, ...]:
-    """Build an optional tool between stable list items for every target."""
-    case = min(source_scenarios(), key=lambda scenario: scenario.skill_ref)
-    stable_tools = tuple(sorted(READ_ONLY_TOOLS))
-    token = format_runtime_token(
-        RUNTIME_TOKEN_TOOL_KIND,
-        RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
-    )
-    items = (stable_tools[0], token, *stable_tools[1:])
-    source = f"---\n{ALLOWED_TOOLS_FIELD}: {', '.join(items)}\n---\n"
-    with TemporaryDirectory() as temporary_directory:
-        root = Path(temporary_directory)
-        builder = SrcTreeBuilder(root)
-        builder.add_plugin(case.plugin, skills={case.skill: source})
-        dist_root = root / DIST_DIR_NAME
-        build(builder.src_root, dist_root)
-        observations: list[OptionalToolEmission] = []
-        for target in Target:
-            text = (
-                dist_root
-                / target.value
-                / case.plugin
-                / SKILLS_SUBDIR_NAME
-                / case.skill
-                / "SKILL.md"
-            ).read_text(encoding="utf-8")
-            frontmatter = _yaml_frontmatter(text)
-            value = frontmatter[ALLOWED_TOOLS_FIELD]
-            if not isinstance(value, str):
-                raise TypeError("allowed-tools: expected comma-delimited string")
-            observations.append(
-                OptionalToolEmission(
-                    target=target,
-                    tools=tuple(item.strip() for item in value.split(",")),
-                    text=text,
-                )
-            )
-    return tuple(observations)
-
-
-def _yaml_frontmatter(text: str) -> Mapping[str, object]:
-    frontmatter, separator, _body = text.removeprefix("---\n").partition("\n---")
-    if not separator:
-        raise ValueError("emitted text has no closing frontmatter fence")
-    loaded = yaml.safe_load(frontmatter)
-    if not isinstance(loaded, Mapping):
-        raise TypeError("emitted frontmatter is not a mapping")
-    return cast("Mapping[str, object]", loaded)
 
 
 def emitted_texts() -> tuple[EmittedText, ...]:

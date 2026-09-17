@@ -18,10 +18,6 @@ from outcomeeng.distribution.agents import (
     map_permission_mode,
     map_web_search,
 )
-from outcomeeng.distribution.contracts import (
-    RUNTIME_TOKEN_USE_SKILL_NAMES,
-    Target,
-)
 from outcomeeng_testing.harnesses.agent_conversion import (
     EXPECTED_PERMISSION_MODE_CORRESPONDENCE,
     EXPECTED_TOOL_CLASSIFICATION,
@@ -166,10 +162,3 @@ def test_tool_classification_matches_the_hand_authored_correspondence() -> None:
     assert {tool for tool, _ in EXPECTED_TOOL_CLASSIFICATION} == (
         READ_ONLY_TOOLS | SCRIPT_CAPABLE_TOOLS | WEB_CAPABLE_TOOLS | WRITE_CAPABLE_TOOLS
     )
-
-
-def test_skill_invocation_is_classified_only_when_the_target_renders_it() -> None:
-    claude_name = RUNTIME_TOKEN_USE_SKILL_NAMES[Target.CLAUDE.value]
-    assert claude_name is not None
-    assert claude_name in SCRIPT_CAPABLE_TOOLS
-    assert RUNTIME_TOKEN_USE_SKILL_NAMES[Target.CODEX.value] is None
