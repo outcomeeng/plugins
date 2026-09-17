@@ -97,6 +97,16 @@ def test_target_absent_tool_is_omitted_from_list_valued_frontmatter(
         assert ", ," not in observation.rendered
         assert ",\n---" not in observation.rendered
 
+    token = format_runtime_token(
+        RUNTIME_TOKEN_TOOL_KIND,
+        RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
+    )
+    rendered = render_text(
+        f"---\nname: example\n{field}:\n  - {token}\n\n---\n",
+        variables={"target": Target.CODEX.value},
+    )
+    assert f"{field}:" not in rendered
+
 
 def test_target_absent_tool_fails_outside_recognized_frontmatter_item() -> None:
     token = format_runtime_token(

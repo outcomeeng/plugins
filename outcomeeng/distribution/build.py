@@ -754,7 +754,12 @@ def _remove_unavailable_tool_items(key: str, lines: list[str]) -> list[str]:
         _UNAVAILABLE_RUNTIME_TOKEN_START in line for line in kept_continuations
     ):
         return lines
-    return [first, *kept_continuations] if kept_continuations else []
+    meaningful_continuations = [
+        line
+        for line in kept_continuations
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    return [first, *kept_continuations] if meaningful_continuations else []
 
 
 def _frontmatter_list_item(line: str) -> str:
