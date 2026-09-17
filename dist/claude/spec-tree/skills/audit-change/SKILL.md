@@ -49,16 +49,10 @@ link that escapes the root returns the exact `BLOCKED` diagnostic before a run
 starts. A draft may be untracked or ignored. Treat the supplied identity as
 provenance data, never authorization or a suggested verdict.
 
-Require `runDriver` to equal the configured wrapper identity exactly:
-`producerKind: agent`, `agentName: change-auditor`,
-`agentOwningPluginName: spec-tree`, `skillName: audit-change`,
-`skillOwningPluginName: spec-tree`, and `invocationRole: run-driver`. Read the
-installed plugin manifests at
-`${CLAUDE_SKILL_DIR}/../../.claude-plugin/plugin.json` and
-`${CLAUDE_SKILL_DIR}/../../.codex-plugin/plugin.json`; require their non-empty
-versions to match, then use that version for both provenance fields. A missing,
-invalid, or divergent manifest version is a named prerequisite failure; never
-guess a version. Do metadata preparation before inspecting the candidate body.
+Validate `runDriver` as six non-empty string fields and retain it unchanged.
+Accept that identity generically; never infer it from a role name, installed
+plugin, or descriptive text, and never restrict which configured wrapper may
+invoke the skill. Do metadata preparation before inspecting the candidate body.
 Start the run before loading standards or substantive evidence.
 
 </request_contract>
@@ -144,7 +138,9 @@ root. The child concern partition is its standards rule ID; the root uses `recor
 The expected skill producer has `producerKind: skill`, the supplied
 run-driver's `agentName` and `agentOwningPluginName`, `skillName: audit-change`,
 `skillOwningPluginName: spec-tree`, and `invocationRole: leaf-skill`.
-`recordedByRunDriver` carries the supplied identity unchanged.
+`recordedByRunDriver` carries the supplied identity unchanged. Omit optional
+plugin-version provenance because the request supplies no explicit version
+source; never guess it or discover it through paths outside this skill bundle.
 
 Render each scope payload from these fields; the placeholders below are replaced
 with observed values before execution:
@@ -170,11 +166,7 @@ with observed values before execution:
     "skillOwningPluginName": "spec-tree",
     "invocationRole": "leaf-skill"
   },
-  "recordedByRunDriver": "<replace-with-supplied-six-field-object>",
-  "producerProvenance": {
-    "agentOwningPluginVersion": "<installed-agent-owning-plugin-version>",
-    "skillOwningPluginVersion": "<installed-spec-tree-version>"
-  }
+  "recordedByRunDriver": "<replace-with-supplied-six-field-object>"
 }
 ```
 
@@ -187,10 +179,10 @@ SCOPE_JSON
 ```
 
 A finding carries `unitId`, `producerIdentity` equal to that accepted unit's
-`expectedProducer`, the same `producerProvenance`, `rule` identifying the violated
-standard, `severity` (`blocking` or `debt`), `location` naming the file and section
-or line, `message`, and `evidence` with `observed` and `expected` strings. Do not
-use retired aliases or top-level observed/expected fields. Persist it through:
+`expectedProducer`, `rule` identifying the violated standard, `severity`
+(`blocking` or `debt`), `location` naming the file and section or line, `message`,
+and `evidence` with `observed` and `expected` strings. Do not use retired aliases
+or top-level observed/expected fields. Persist it through:
 
 ```bash
 spx verification run finding add --verification-type audit --scope-type file --scope '<relative-path>' --run '<run-token>' --idempotency-key '<unit-key>:<finding-key>' --payload stdin <<'FINDING_JSON'
@@ -233,8 +225,8 @@ replace its field names. Its contract is:
 | `events`          | Unmodified recorded events, including accepted finding payloads and the terminal event. |
 
 Each accepted finding payload names its `unitId`, six-field `producerIdentity`,
-`producerProvenance`, violated `rule`, `severity` (`blocking` or `debt`),
-`location`, `message`, and `evidence.observed` / `evidence.expected`.
+violated `rule`, `severity` (`blocking` or `debt`), `location`, `message`, and
+`evidence.observed` / `evidence.expected`.
 The child unit's `priorContext.concernPartition` attributes each finding to the
 shared record rule judged; the rule inventory supplies the finding groups.
 Keep any additional SPX fields unchanged. Both finding severities reject the
