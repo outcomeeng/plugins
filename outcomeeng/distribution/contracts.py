@@ -110,9 +110,8 @@ RUNTIME_TOKEN_ASK_USER_NAMES: Final[dict[str, str]] = {
     Target.CLAUDE.value: "AskUserQuestion",
     Target.CODEX.value: "request_user_input",
 }
-RUNTIME_TOKEN_USE_SKILL_NAMES: Final[dict[str, str | None]] = {
+RUNTIME_TOKEN_USE_SKILL_NAMES: Final[dict[str, str]] = {
     Target.CLAUDE.value: "Skill",
-    Target.CODEX.value: None,
 }
 RUNTIME_TOKEN_SPAWN_AGENT_NAMES: Final[dict[str, str]] = {
     Target.CODEX.value: "collaboration.spawn_agent",
@@ -127,14 +126,9 @@ RUNTIME_TOKEN_ROOT_GUIDE_NAMES: Final[dict[str, str]] = {
     Target.CLAUDE.value: "CLAUDE.md",
     Target.CODEX.value: "AGENTS.md",
 }
-RUNTIME_TOKEN_REQUIRED_NAMES: Final[
-    dict[tuple[str, str], dict[str, str | None]]
-] = {
+RUNTIME_TOKEN_REQUIRED_NAMES: Final[dict[tuple[str, str], dict[str, str]]] = {
     (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_ASK_USER_CAPABILITY): (
         RUNTIME_TOKEN_ASK_USER_NAMES
-    ),
-    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_USE_SKILL_CAPABILITY): (
-        RUNTIME_TOKEN_USE_SKILL_NAMES
     ),
     (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY): (
         RUNTIME_TOKEN_SPAWN_AGENT_NAMES
@@ -149,6 +143,17 @@ RUNTIME_TOKEN_REQUIRED_NAMES: Final[
         RUNTIME_TOKEN_ROOT_GUIDE_NAMES
     ),
 }
+RUNTIME_TOKEN_UNAVAILABLE_RUNTIME_KEYS: Final[
+    frozenset[tuple[str, str, str]]
+] = frozenset(
+    {
+        (
+            RUNTIME_TOKEN_TOOL_KIND,
+            RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
+            Target.CODEX.value,
+        )
+    }
+)
 
 
 def format_target_branches(

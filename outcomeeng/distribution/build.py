@@ -77,6 +77,7 @@ from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
     RUNTIME_TOKEN_TERM_KIND,
     RUNTIME_TOKEN_TOOL_KIND,
+    RUNTIME_TOKEN_UNAVAILABLE_RUNTIME_KEYS,
     RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
     RUNTIME_TOKEN_USE_SKILL_NAMES,
     RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY,
@@ -251,7 +252,7 @@ class RuntimeTokenKind:
     """
 
     lint_enforced: bool
-    names: dict[str, dict[str, str | None]]
+    names: dict[str, dict[str, str]]
 
 
 @dataclass(frozen=True)
@@ -351,8 +352,7 @@ def runtime_token_resolver_cases(
         )
         for kind, kind_entry in registry.items()
         for capability, runtime_names in kind_entry.names.items()
-        for runtime, name in runtime_names.items()
-        if name is not None
+        for runtime in runtime_names
     )
 
 
@@ -379,6 +379,8 @@ def resolve_runtime_token(
     if entry is None:
         raise RuntimeTokenError(f"unknown {kind} capability {capability!r}")
     if runtime not in entry:
+        if (kind, capability, runtime) in RUNTIME_TOKEN_UNAVAILABLE_RUNTIME_KEYS:
+            return None
         raise RuntimeTokenError(
             f"{kind} capability {capability!r} has no name for runtime {runtime!r}; "
             "wrap the token in a per-runtime conditional"
