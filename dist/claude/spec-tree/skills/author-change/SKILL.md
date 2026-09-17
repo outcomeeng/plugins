@@ -25,7 +25,7 @@ Handle missing store configuration or ambiguous target identity before any exter
 
 <local_draft>
 
-Run from the selected Product repository. For a new working file, send the complete candidate as literal text to `spx change draft create --input stdin`. Consume the returned `draftId`, absolute `path`, and normalized `relativePath`; never construct a storage path or identifier. Edit the returned file directly for every refinement round. SPX owns storage and treats the document as opaque text; the shared standards own its metadata and Markdown format.
+Run from the selected Product repository. For a new working file, send the complete candidate as literal text to `spx change draft create --input stdin`. Consume the returned `draftId`, absolute `path`, and normalized `relativePath`; never construct a storage path or identifier. Resolve the selected Product repository and returned absolute path before editing, and require path-component containment of the returned path inside that repository. When the returned path resolves outside the selected repository, obtain destination-specific confirmation naming that exact absolute path before writing it. Edit the confirmed returned file directly for every refinement round. SPX owns storage and treats the document as opaque text; the shared standards own its metadata and Markdown format.
 
 For resumption without an exact path, use `spx change draft list` to locate existing draft descriptors. Inspect only candidates needed to resolve identity. An ambiguous match requires one plain-text question; never overwrite or create a competing draft by assumption. Keep a selected file through audit, publication, interruption, and handoff. Do not automatically delete local work after publication.
 

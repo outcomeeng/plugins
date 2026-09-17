@@ -6,6 +6,8 @@ from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     AGENT_SKILL_ENABLED_FIELD,
     AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD,
+    APPROVAL_POLICY_FIELD,
+    SANDBOX_MODE_FIELD,
     SKILL_ENABLEMENT_LIMITATION,
     convert_agent,
 )
@@ -46,3 +48,18 @@ def test_skills_are_preserved_as_codex_config_and_guidance() -> None:
         assert skills[AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD] is True
         assert all(skill in instructions for skill in source.skills)
         assert SKILL_ENABLEMENT_LIMITATION in instructions
+
+
+def test_declared_native_execution_boundaries_reach_converted_agents() -> None:
+    sources = tuple(
+        source
+        for source in repository_wrapper_agents()
+        if source.approval_policy is not None
+    )
+
+    assert sources
+    for source in sources:
+        assert source.sandbox_mode is not None
+        converted = convert_agent(source)
+        assert converted.values[APPROVAL_POLICY_FIELD] == source.approval_policy
+        assert converted.values[SANDBOX_MODE_FIELD] == source.sandbox_mode

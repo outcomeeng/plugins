@@ -5,6 +5,10 @@ description: >-
   before publication or after refinement.
 tools: Bash, Read, Glob, Grep, Skill
 profile: standard
+{!% if target == 'codex' %!}
+sandbox_mode: workspace-write
+approval_policy: never
+{!% endif %!}
 skills:
   - spec-tree:audit-change
 ---

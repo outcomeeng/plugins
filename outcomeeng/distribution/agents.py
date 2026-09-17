@@ -30,12 +30,15 @@ AGENT_NAME_FIELD: Final = "name"
 AGENT_SKILL_ENABLED_FIELD: Final = "enabled"
 AGENT_TOOLS_FIELD: Final = "tools"
 AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD: Final = "include_instructions"
+APPROVAL_POLICY_FIELD: Final = "approval_policy"
+SANDBOX_MODE_FIELD: Final = "sandbox_mode"
 SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
     {
         AGENT_NAME_FIELD,
         "description",
         PROFILE_FIELD,
-        "sandbox_mode",
+        APPROVAL_POLICY_FIELD,
+        SANDBOX_MODE_FIELD,
         "nickname_candidates",
         "mcp_servers",
         "permissionMode",
@@ -118,6 +121,7 @@ class SourceAgent:
     body: str
     profile: str | None = None
     sandbox_mode: str | None = None
+    approval_policy: str | None = None
     nickname_candidates: tuple[str, ...] = ()
     mcp_servers: Mapping[str, object] | None = None
     permission_mode: str | None = None
@@ -202,7 +206,8 @@ def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
         description=description,
         body=body,
         profile=profile if isinstance(profile, str) else None,
-        sandbox_mode=_optional_string(frontmatter, "sandbox_mode"),
+        sandbox_mode=_optional_string(frontmatter, SANDBOX_MODE_FIELD),
+        approval_policy=_optional_string(frontmatter, APPROVAL_POLICY_FIELD),
         nickname_candidates=_string_tuple(frontmatter, "nickname_candidates"),
         mcp_servers=_optional_mapping(frontmatter, "mcp_servers"),
         permission_mode=_optional_string(frontmatter, "permissionMode"),
@@ -251,7 +256,9 @@ def convert_agent(
             tools_declared=agent.tools_declared,
         )
     if sandbox_mode is not None:
-        values["sandbox_mode"] = sandbox_mode
+        values[SANDBOX_MODE_FIELD] = sandbox_mode
+    if agent.approval_policy is not None:
+        values[APPROVAL_POLICY_FIELD] = agent.approval_policy
     web_search = map_web_search(agent.tools, tools_declared=agent.tools_declared)
     if web_search is not None:
         values["web_search"] = web_search
@@ -916,6 +923,7 @@ __all__ = [
     "AGENT_NAME_FIELD",
     "AGENT_SKILL_ENABLED_FIELD",
     "AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD",
+    "APPROVAL_POLICY_FIELD",
     "AGENT_SOURCE_DIRECTORY_NAME",
     "ALL_TOOLS_SENTINEL",
     "CODEX_AGENT_ENV_VAR",
@@ -924,6 +932,7 @@ __all__ = [
     "PERMISSION_MODE_MAPPINGS",
     "READ_ONLY_SANDBOX_MODE",
     "READ_ONLY_TOOLS",
+    "SANDBOX_MODE_FIELD",
     "SCRIPT_CAPABLE_TOOLS",
     "WEB_CAPABLE_TOOLS",
     "WEB_SEARCH_DISABLED",
