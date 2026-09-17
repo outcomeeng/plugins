@@ -362,7 +362,7 @@ def resolve_runtime_token(
     runtime: str,
     *,
     registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
-) -> str | None:
+) -> str:
     """Return the runtime-divergent name for ``(kind, capability, runtime)``.
 
     The kind selects the sub-registry; capability and runtime select the name. The
@@ -379,8 +379,6 @@ def resolve_runtime_token(
     if entry is None:
         raise RuntimeTokenError(f"unknown {kind} capability {capability!r}")
     if runtime not in entry:
-        if (kind, capability, runtime) in RUNTIME_TOKEN_UNAVAILABLE_RUNTIME_KEYS:
-            return None
         raise RuntimeTokenError(
             f"{kind} capability {capability!r} has no name for runtime {runtime!r}; "
             "wrap the token in a per-runtime conditional"
@@ -1190,14 +1188,13 @@ def _make_kind_global(
             raise RuntimeTokenError(
                 f"{kind} token {capability!r} rendered with no target in context"
             )
-        name = resolve_runtime_token(
+        if (kind, capability, resolved) in RUNTIME_TOKEN_UNAVAILABLE_RUNTIME_KEYS:
+            return _unavailable_runtime_token(kind, capability)
+        return resolve_runtime_token(
             kind,
             capability,
             resolved,
             registry=runtime_token_registry,
-        )
-        return (
-            name if name is not None else _unavailable_runtime_token(kind, capability)
         )
 
     return render
