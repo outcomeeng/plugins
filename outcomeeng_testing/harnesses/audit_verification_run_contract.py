@@ -12,6 +12,12 @@ from shutil import rmtree
 from tempfile import TemporaryDirectory
 from typing import Final, cast
 
+from outcomeeng.distribution.artifact_registry import (
+    ARTIFACT_KINDS,
+    Artifact,
+    ArtifactKind,
+)
+from outcomeeng.validation import audit_artifacts
 from outcomeeng.validation.audit_artifacts import (
     AGENTS_DIR_NAME,
     IMPLEMENTATION_AUDIT_ARTIFACTS,
@@ -19,7 +25,6 @@ from outcomeeng.validation.audit_artifacts import (
     IMPLEMENTATION_AUDITOR_FILENAME,
     LANGUAGE_AUDIT_CONCERNS,
     LANGUAGE_AUDIT_SKILL_TEMPLATE,
-    LANGUAGE_CODE_SKILL_TEMPLATE,
     PLUGIN_SURFACE_PATHS,
     RETIRED_AUDIT_RUNTIME_FILENAMES,
     RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES,
@@ -594,11 +599,26 @@ def _all_live_surfaces_pass(check: Callable[[Path], list[str]]) -> bool:
     return all(not check(REPO_ROOT / relative) for relative in PLUGIN_SURFACE_PATHS)
 
 
+def registry_skill_surface_errors_on_live_surfaces() -> tuple[list[str], ...]:
+    """Observe the registry skill check over every committed plugin surface."""
+    return tuple(
+        audit_artifacts.check_registry_skill_surface(REPO_ROOT / relative)
+        for relative in PLUGIN_SURFACE_PATHS
+    )
+
+
+def observe_registry_skill_removal(kind: ArtifactKind, artifact: Artifact) -> list[str]:
+    """Observe the registry skill check on a valid surface missing one audit skill."""
+    with _valid_surface() as surface:
+        rmtree(surface / kind.plugin / SKILLS_DIR_NAME / artifact.audit)
+        return audit_artifacts.check_registry_skill_surface(surface)
+
+
 @contextmanager
 def _valid_surface() -> Iterator[Path]:
     with TemporaryDirectory() as temporary_directory:
         surface = Path(temporary_directory)
-        _populate_valid_surface(surface, source_language())
+        _populate_valid_surface(surface)
         yield surface
 
 
@@ -606,22 +626,15 @@ def _valid_surface() -> Iterator[Path]:
 def _valid_repository_surfaces() -> Iterator[Path]:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
-        language = source_language()
         for relative_surface in PLUGIN_SURFACE_PATHS:
-            _populate_valid_surface(root / relative_surface, language)
+            _populate_valid_surface(root / relative_surface)
         yield root
 
 
-def _populate_valid_surface(surface: Path, language: str) -> None:
-    _touch(
-        surface
-        / language
-        / SKILLS_DIR_NAME
-        / LANGUAGE_CODE_SKILL_TEMPLATE.format(language=language)
-        / SKILL_FILENAME
-    )
-    for concern in LANGUAGE_AUDIT_CONCERNS:
-        _touch(_language_concern_path(surface, language, concern))
+def _populate_valid_surface(surface: Path) -> None:
+    for kind in ARTIFACT_KINDS:
+        for skill in kind.skill_names():
+            _touch(surface / kind.plugin / SKILLS_DIR_NAME / skill / SKILL_FILENAME)
     _touch(
         surface
         / SPEC_TREE_PLUGIN_NAME
@@ -658,8 +671,8 @@ def _language_wrapper_filename_is_rejected(
 
 
 def source_language() -> str:
-    """Return the first programming language the source plugin surface ships."""
-    return implementation_languages(REPO_ROOT / PLUGIN_SURFACE_PATHS[0])[0]
+    """Return the first programming language the registry declares."""
+    return implementation_languages()[0]
 
 
 def _source_plugin_names() -> tuple[str, ...]:

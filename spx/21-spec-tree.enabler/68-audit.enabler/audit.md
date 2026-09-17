@@ -6,8 +6,6 @@ CAN contribute code, test, and architecture audit intelligence without shipping 
 
 ## Assertions
 
-- ALWAYS: the scope resolver emits, per resolved path, the registry-selected artifacts and audit skills into the run input, most specific match first
-
 ### Scenarios
 
 - Given a feature branch whose local base lags its remote-tracking base, when implementation-audit scope discovery receives `HEAD`, then it returns the full remote-base and feature commit identities and only the feature's changed paths ([test](tests/test_implementation_scope.scenario.l1.py))
@@ -36,6 +34,7 @@ CAN contribute code, test, and architecture audit intelligence without shipping 
 - ALWAYS: the implementation-audit scope resolver relays the shared resolver's stale-base refusal for a head behind the fetched `origin/<base>` tip — the dedicated exit code and the diagnostic, with no scope payload — so the run driver returns the `stale-base` block before a run starts ([test](tests/test_implementation_scope.compliance.l1.py))
 - NEVER: a key supplied to the implementation-audit scope resolver's run-input option displaces the git-resolved base, head, or changed-path values ([test](tests/test_implementation_scope.compliance.l1.py))
 - NEVER: the implementation-audit scope resolver accepts a run-input value that is not a JSON object — it exits nonzero naming the failure and emits no payload ([test](tests/test_implementation_scope.compliance.l1.py))
+- ALWAYS: the scope resolver emits, per resolved path, the registry-selected artifacts and audit skills into the run input, most specific match first ([test](tests/test_implementation_scope.compliance.l1.py))
 - ALWAYS: the implementation-audit reconciler reports a run unreconciled and names every path of the run's sealed inventory that carries no recorded scope unit ([test](tests/test_implementation_scope.compliance.l1.py))
 - ALWAYS: the implementation-audit reconciler reports a run unreconciled and names every required scope unit whose coverage status is not one of the final statuses ([test](tests/test_implementation_scope.compliance.l1.py))
 - ALWAYS: the implementation-audit reconciler reports a run reconciled only when every sealed-inventory path carries a recorded subject, no recorded subject lies outside that inventory, and the sealed inventory matches a fresh resolution of the same selector ([test](tests/test_implementation_scope.compliance.l1.py))

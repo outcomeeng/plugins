@@ -8,11 +8,13 @@ The registry is one source-owned declaration. Each registered kind names the art
 
 ## Assertions
 
-- ALWAYS: the build renders the registry into every shipped consumer's sibling data file, and each rendered file equals the declaration it renders
-- NEVER: the `manifests` validation step accepts a registered artifact naming a skill its kind's plugin surface does not ship — the failure names the artifact and the missing skill
-- For every registered artifact, one path matching its detection selects that artifact and its audit skill; a path matching two artifacts of one kind selects the most specific; a kind with a match selects its detection-less architecture artifact; a path matching nothing selects nothing
+### Mappings
+
+- ALWAYS: the build renders the registry into every shipped consumer's sibling data file, and each rendered file equals the declaration it renders ([test](tests/test_artifact_registry.mapping.l1.py))
+- For every registered artifact, one path matching its detection selects that artifact and its audit skill; a path matching two artifacts of one kind selects the most specific; a kind with a match selects its detection-less architecture artifact; a path matching nothing selects nothing ([test](tests/test_artifact_registry.mapping.l1.py))
 
 ### Compliance
 
+- NEVER: the `manifests` validation step accepts a registered artifact naming a skill its kind's plugin surface does not ship — the failure names the artifact and the missing skill ([test](tests/test_artifact_registry.compliance.l1.py))
 - ALWAYS: the registry is one source-owned declaration in which every registered kind names each artifact it produces, its detection features or its selecting artifact, and the architect, author, and audit skills and shared standard that govern it, with one architect per artifact that needs one ([audit])
 - NEVER: the implementation audit's orchestration, its wrapper agent, or the instruction-block generator carries its own list of kinds, artifacts, or extensions — each reads the rendered registry ([audit])

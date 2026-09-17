@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Final
 
 from outcomeeng import distribution, validation
+from outcomeeng.distribution.artifact_registry import registry_extensions
 from outcomeeng.distribution.contracts import TEXT_FILE_SUFFIXES
-from outcomeeng.distribution.instruction_block import load_instruction_block_module
 from outcomeeng.validation.implementation_audit_contract import (
     ImplementationAuditConcern,
     implementation_audit_unit_id,
@@ -47,19 +47,15 @@ def implementation_audit_verification_probes(
 
 
 def implementation_audit_unclaimed_paths() -> tuple[str, ...]:
-    """Return one changed path per artifact class no language concern claims.
+    """Return one changed path per artifact class no registered artifact matches.
 
     The domain is derived from two source owners: the text-file suffixes the
-    build distributes, minus every suffix the instruction-block language
-    registry maps to a language. Each remaining suffix names an artifact class
-    outside every ``code-{lang}`` skill's ownership, so a lifecycle that
-    changes such a path records the accounting record rather than a language
-    unit.
+    build distributes, minus every extension the artifact registry declares.
+    Each remaining suffix names an artifact class outside implementation-audit
+    ownership, so a lifecycle that changes such a path records the accounting
+    record rather than a registered unit.
     """
-    language_suffixes = {
-        f".{extension}"
-        for extension in load_instruction_block_module().LANGUAGE_BY_EXTENSION
-    }
+    language_suffixes = {f".{extension}" for extension in registry_extensions()}
     return tuple(
         f"unclaimed{suffix}"
         for suffix in sorted(TEXT_FILE_SUFFIXES - language_suffixes)

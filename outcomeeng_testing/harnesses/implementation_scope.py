@@ -1,19 +1,37 @@
-"""Process boundary for the implementation audit's shipped scope entrypoint."""
+"""Process boundary for the implementation audit's shipped scope entrypoint.
+
+The entrypoint under test is the rendered copy the build ships under
+``dist/claude/``: the resolver reads the artifact registry from a rendered
+sibling data file, which only the shipped tree carries as a JSON document.
+"""
 
 import contextlib
+import importlib.util
 import io
 import json
+import os
 import pathlib
 import runpy
 import subprocess
 import sys
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
+from types import ModuleType
 from typing import Any, Literal, cast
 
+from outcomeeng.distribution.contracts import DIST_DIR_NAME, SKILLS_SUBDIR_NAME, Target
+from outcomeeng.validation.audit_artifacts import (
+    IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
+    IMPLEMENTATION_AUDIT_SKILL_NAME,
+    SPEC_TREE_PLUGIN_NAME,
+)
 from outcomeeng.validation.implementation_audit_contract import (
     ImplementationAuditConcern,
     implementation_audit_unit_id,
+)
+from outcomeeng_testing.harnesses.changeset_scope import (
+    StaleBaseRepo,
+    stale_local_base_repo,
 )
 
 SCRIPT_PATH = (
@@ -21,16 +39,40 @@ SCRIPT_PATH = (
     .resolve()
     .parents[2]
     .joinpath(
-        "src",
-        "plugins",
-        "spec-tree",
-        "skills",
-        "audit-implementation",
-        "scripts",
-        "resolve_scope.py",
+        DIST_DIR_NAME,
+        Target.CLAUDE.value,
+        SPEC_TREE_PLUGIN_NAME,
+        SKILLS_SUBDIR_NAME,
+        IMPLEMENTATION_AUDIT_SKILL_NAME,
+        IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
     )
 )
 _MODULE = runpy.run_path(str(SCRIPT_PATH))
+_RESOLVE_SCOPE_MODULE_NAME = "resolve_scope"
+
+
+def load_resolve_scope_module() -> ModuleType:
+    """Load the shipped scope resolver as a module to reach its pure selection seam."""
+    cached = sys.modules.get(_RESOLVE_SCOPE_MODULE_NAME)
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location(
+        _RESOLVE_SCOPE_MODULE_NAME, SCRIPT_PATH
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"cannot load {_RESOLVE_SCOPE_MODULE_NAME} from {SCRIPT_PATH}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[_RESOLVE_SCOPE_MODULE_NAME] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        del sys.modules[_RESOLVE_SCOPE_MODULE_NAME]
+        raise
+    return module
+
+
 ERROR_PREFIX = cast(str, _MODULE["ERROR_PREFIX"])
 RECONCILE_PREFIX = cast(str, _MODULE["RECONCILE_PREFIX"])
 SCOPE_IDENTITY_OPTION = cast(str, _MODULE["SCOPE_IDENTITY_OPTION"])
@@ -274,4 +316,42 @@ def run_implementation_scope(
         text=True,
         capture_output=True,
         check=False,
+    )
+
+
+@contextlib.contextmanager
+def feature_paths_repo(paths: Sequence[str]) -> Iterator[StaleBaseRepo]:
+    """Yield a stale-base repository whose feature branch also changes ``paths``.
+
+    Each path is committed on the feature branch after the generated feature
+    file, so the changeset scoped against the remote base carries the generated
+    feature file and every supplied path.
+    """
+    with stale_local_base_repo() as stale:
+        for name in paths:
+            file = stale.repo / name
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_text(name, encoding="utf-8")
+            _git(stale.repo, "add", name)
+            _git(stale.repo, "commit", "-q", "-m", name)
+        yield stale
+
+
+def _git(repo: pathlib.Path, *args: str) -> None:
+    env = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+        "GIT_AUTHOR_NAME": "test",
+        "GIT_AUTHOR_EMAIL": "test@example.invalid",
+        "GIT_COMMITTER_NAME": "test",
+        "GIT_COMMITTER_EMAIL": "test@example.invalid",
+    }
+    subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
+        ["git", *args],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
     )
