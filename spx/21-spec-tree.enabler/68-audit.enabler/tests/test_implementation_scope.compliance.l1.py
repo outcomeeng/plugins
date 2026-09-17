@@ -422,8 +422,30 @@ def test_the_resolver_emits_the_registry_selection_for_every_resolved_path() -> 
     cases = detected_artifacts()
     unregistered = unregistered_paths()
     paths = [*(path_matching(detected) for detected in cases), *unregistered]
+    # The violating input: a caller-supplied selection under the resolver's own
+    # key, naming a skill no registered artifact names for any of these paths.
+    (forged_skill,) = distinct_subject_paths(1)
+    forged = json.dumps(
+        {
+            resolver.SELECTION_KEY: [
+                {
+                    field.PATH: path,
+                    field.ARTIFACTS: [
+                        {
+                            field.KIND: forged_skill,
+                            field.ROLE: forged_skill,
+                            field.AUDIT: forged_skill,
+                        }
+                    ],
+                }
+                for path in paths
+            ]
+        }
+    )
     with feature_paths_repo(paths) as stale:
-        completed = run_implementation_scope(stale.repo, CHANGESET_SCOPE.HEAD_REF)
+        completed = run_implementation_scope(
+            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input=forged
+        )
 
     assert completed.returncode == 0, completed.stderr
     document = json.loads(completed.stdout)
@@ -432,6 +454,7 @@ def test_the_resolver_emits_the_registry_selection_for_every_resolved_path() -> 
         for entry in document[resolver.SELECTION_KEY]
     }
     assert list(selection) == document[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS]
+    assert forged_skill not in json.dumps(document[resolver.SELECTION_KEY])
     for detected, path in zip(cases, paths, strict=False):
         first = selection[path][0]
         assert (first[field.KIND], first[field.ROLE], first[field.AUDIT]) == (

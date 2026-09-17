@@ -17,11 +17,22 @@ from outcomeeng.distribution.build import (
     LIFECYCLE_TEMPLATE_NAME,
     agent_slug,
 )
-from outcomeeng.distribution.contracts import MARKDOWN_FILE_SUFFIX
+from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
+    MARKDOWN_FILE_SUFFIX,
+    SKILL_FILENAME,
+    SKILLS_SUBDIR_NAME,
+)
 from outcomeeng.distribution.orchestration import (
     CLAUDE_DIST_PLUGINS_DIR,
     CODEX_DIST_PLUGINS_DIR,
     SOURCE_PLUGINS_DIR,
+)
+from outcomeeng.validation.implementation_audit_contract import (
+    IMPLEMENTATION_AUDIT_SKILL_NAME,
+    IMPLEMENTATION_AUDITOR_AGENT_NAME,
+    LANGUAGE_AUDIT_CONCERNS,
+    SPEC_TREE_PLUGIN_NAME,
 )
 
 PLUGIN_SURFACE_PATHS: Final = (
@@ -29,11 +40,6 @@ PLUGIN_SURFACE_PATHS: Final = (
     CLAUDE_DIST_PLUGINS_DIR,
     CODEX_DIST_PLUGINS_DIR,
 )
-SPEC_TREE_PLUGIN_NAME: Final = "spec-tree"
-SKILLS_DIR_NAME: Final = "skills"
-AGENTS_DIR_NAME: Final = "agents"
-SKILL_FILENAME: Final = "SKILL.md"
-IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
 IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT: Final = "scripts/resolve_scope.py"
 IMPLEMENTATION_AUDIT_FAILURE_REFERENCE: Final = "references/operational-failures.md"
 IMPLEMENTATION_AUDIT_ARTIFACTS: Final = frozenset(
@@ -44,16 +50,14 @@ IMPLEMENTATION_AUDIT_ARTIFACTS: Final = frozenset(
     }
 )
 AUDIT_SKILL_PREFIX: Final = "audit-"
-IMPLEMENTATION_AUDITOR_STEM: Final = "implementation-auditor"
-IMPLEMENTATION_AUDITOR_FILENAME: Final = f"{IMPLEMENTATION_AUDITOR_STEM}.md"
+IMPLEMENTATION_AUDITOR_FILENAME: Final = (
+    f"{IMPLEMENTATION_AUDITOR_AGENT_NAME}{MARKDOWN_FILE_SUFFIX}"
+)
 RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
     "auditor.md",
     "audit-orchestrator.md",
 )
 RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}"
-# The concerns a language-specific wrapper filename may carry; the skills a
-# language ships are the registry's declaration, never composed from these.
-LANGUAGE_AUDIT_CONCERNS: Final = ("code", "tests", "architecture")
 RETIRED_AUDIT_RUNTIME_FILENAMES: Final = (
     "verdict.py",
     "aggregate_verdicts.py",
@@ -99,9 +103,11 @@ def agent_surface_paths(surface: Path) -> tuple[Path, ...]:
     """
     capability = AGENT_CAPABILITY_REGISTRY.get(surface.name)
     if capability is None or capability.manifest_declares_agents:
-        return tuple(surface.glob(f"*/{AGENTS_DIR_NAME}/*.md"))
+        return tuple(surface.glob(f"*/{AGENTS_SUBDIR_NAME}/*.md"))
     return tuple(
-        surface.glob(f"*/{SKILLS_DIR_NAME}/*/{AGENTS_DIR_NAME}/*{capability.suffix}")
+        surface.glob(
+            f"*/{SKILLS_SUBDIR_NAME}/*/{AGENTS_SUBDIR_NAME}/*{capability.suffix}"
+        )
     )
 
 
@@ -118,13 +124,13 @@ def agent_artifact_path(surface: Path, plugin: str, agent_stem: str) -> Path:
     capability = AGENT_CAPABILITY_REGISTRY.get(surface.name)
     filename = agent_artifact_name(surface, plugin, agent_stem)
     if capability is None or capability.manifest_declares_agents:
-        return surface / plugin / AGENTS_DIR_NAME / filename
+        return surface / plugin / AGENTS_SUBDIR_NAME / filename
     return (
         surface
         / plugin
-        / SKILLS_DIR_NAME
+        / SKILLS_SUBDIR_NAME
         / f"{plugin}-{LIFECYCLE_TEMPLATE_NAME}"
-        / AGENTS_DIR_NAME
+        / AGENTS_SUBDIR_NAME
         / filename
     )
 
@@ -192,7 +198,7 @@ def check_wrapper_surface(surface: Path) -> list[str]:
     """Return implementation-wrapper violations for one plugin surface."""
     errors: list[str] = []
     wrapper_path = agent_artifact_path(
-        surface, SPEC_TREE_PLUGIN_NAME, IMPLEMENTATION_AUDITOR_STEM
+        surface, SPEC_TREE_PLUGIN_NAME, IMPLEMENTATION_AUDITOR_AGENT_NAME
     )
     if not wrapper_path.is_file():
         errors.append(f"{wrapper_path}: wrapper missing")
@@ -247,7 +253,7 @@ def retired_language_audit_skill_path(surface: Path, kind: ArtifactKind) -> Path
     return (
         surface
         / kind.plugin
-        / SKILLS_DIR_NAME
+        / SKILLS_SUBDIR_NAME
         / RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE.format(language=kind.name)
     )
 
@@ -257,14 +263,14 @@ def implementation_audit_runtime_directory(surface: Path) -> Path:
     return (
         surface
         / SPEC_TREE_PLUGIN_NAME
-        / SKILLS_DIR_NAME
+        / SKILLS_SUBDIR_NAME
         / IMPLEMENTATION_AUDIT_SKILL_NAME
     )
 
 
 def audit_skill_runtime_directories(surface: Path) -> tuple[Path, ...]:
     """Return generic and language audit skill runtime directories."""
-    skills_dir = surface / SPEC_TREE_PLUGIN_NAME / SKILLS_DIR_NAME
+    skills_dir = surface / SPEC_TREE_PLUGIN_NAME / SKILLS_SUBDIR_NAME
     runtime_directories = (
         {
             path
@@ -287,7 +293,7 @@ def audit_skill_runtime_directories(surface: Path) -> tuple[Path, ...]:
 
 def registered_skill_path(surface: Path, kind: ArtifactKind, skill: str) -> Path:
     """Return where ``kind``'s plugin ships ``skill`` on one plugin surface."""
-    return surface / kind.plugin / SKILLS_DIR_NAME / skill / SKILL_FILENAME
+    return surface / kind.plugin / SKILLS_SUBDIR_NAME / skill / SKILL_FILENAME
 
 
 def implementation_languages() -> tuple[str, ...]:

@@ -17,17 +17,18 @@ from outcomeeng.distribution.artifact_registry import (
     ArtifactKind,
 )
 from outcomeeng.validation import audit_artifacts
+from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
+    SKILL_FILENAME,
+    SKILLS_SUBDIR_NAME,
+)
 from outcomeeng.validation.audit_artifacts import (
-    AGENTS_DIR_NAME,
     IMPLEMENTATION_AUDIT_ARTIFACTS,
     IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
     IMPLEMENTATION_AUDITOR_FILENAME,
     PLUGIN_SURFACE_PATHS,
     RETIRED_AUDIT_RUNTIME_FILENAMES,
     RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES,
-    SKILL_FILENAME,
-    SKILLS_DIR_NAME,
-    SPEC_TREE_PLUGIN_NAME,
     check_audit_artifact_contract,
     check_audit_runtime_surface,
     check_retired_language_audit_skills,
@@ -40,6 +41,7 @@ from outcomeeng.validation.audit_artifacts import (
     retired_language_audit_skill_path,
 )
 from outcomeeng.validation.implementation_audit_contract import (
+    SPEC_TREE_PLUGIN_NAME,
     RUN_FINDING_COUNT_FIELD,
     RUN_SEALED_FIELD,
     RUN_SEQUENCE_FIELD,
@@ -333,7 +335,7 @@ def audit_contract_rejects_unrecognized_language_specific_wrapper() -> bool:
     """Reject a language-specific wrapper without a matching code skill."""
     with _valid_surface() as surface:
         filename = f"java-{ImplementationAuditConcern.CODE.value}-auditor.md"
-        _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
+        _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_SUBDIR_NAME / filename)
         return bool(check_wrapper_surface(surface))
 
 
@@ -585,7 +587,9 @@ def runtime_errors_with_extra_directory() -> list[str]:
 def runtime_errors_with_retired_artifact_in_other_skill() -> list[str]:
     """Observe validation with a retired file in another audit skill."""
     with _valid_surface() as surface:
-        runtime_dir = surface / SPEC_TREE_PLUGIN_NAME / SKILLS_DIR_NAME / "audit-tests"
+        runtime_dir = (
+            surface / SPEC_TREE_PLUGIN_NAME / SKILLS_SUBDIR_NAME / "audit-tests"
+        )
         _touch(runtime_dir / SKILL_FILENAME)
         _touch(runtime_dir / "scripts" / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
         return check_audit_runtime_surface(surface)
@@ -645,7 +649,7 @@ def _populate_valid_surface(surface: Path) -> None:
     _touch(
         surface
         / SPEC_TREE_PLUGIN_NAME
-        / AGENTS_DIR_NAME
+        / AGENTS_SUBDIR_NAME
         / IMPLEMENTATION_AUDITOR_FILENAME
     )
     for artifact in IMPLEMENTATION_AUDIT_ARTIFACTS:
@@ -654,7 +658,7 @@ def _populate_valid_surface(surface: Path) -> None:
 
 def _retired_implementation_wrapper_is_rejected(filename: str) -> bool:
     with _valid_surface() as surface:
-        _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
+        _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_SUBDIR_NAME / filename)
         return bool(check_wrapper_surface(surface))
 
 
@@ -663,7 +667,7 @@ def _language_wrapper_filename_is_rejected(
     filename: str,
 ) -> bool:
     with _valid_surface() as surface:
-        _touch(surface / plugin_name / AGENTS_DIR_NAME / filename)
+        _touch(surface / plugin_name / AGENTS_SUBDIR_NAME / filename)
         return bool(check_wrapper_surface(surface))
 
 

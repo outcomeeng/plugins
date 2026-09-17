@@ -18,12 +18,10 @@ from typing import Any, Literal, cast
 
 from outcomeeng.distribution.contracts import DIST_DIR_NAME, SKILLS_SUBDIR_NAME, Target
 from outcomeeng.distribution.shipped_scripts import load_shipped_module
-from outcomeeng.validation.audit_artifacts import (
-    IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
+from outcomeeng.validation.audit_artifacts import IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT
+from outcomeeng.validation.implementation_audit_contract import (
     IMPLEMENTATION_AUDIT_SKILL_NAME,
     SPEC_TREE_PLUGIN_NAME,
-)
-from outcomeeng.validation.implementation_audit_contract import (
     ImplementationAuditConcern,
     implementation_audit_unit_id,
 )

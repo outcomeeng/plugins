@@ -22,7 +22,7 @@ from outcomeeng.distribution.orchestration import (
     CLAUDE_DIST_PLUGINS_DIR,
     SOURCE_PLUGINS_DIR,
 )
-from outcomeeng.validation.audit_artifacts import SPEC_TREE_PLUGIN_NAME
+from outcomeeng.validation.implementation_audit_contract import SPEC_TREE_PLUGIN_NAME
 from outcomeeng.validation.plugins import (
     CATALOGS,
     CATALOG_PLUGINS_FIELD,

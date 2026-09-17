@@ -16,7 +16,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.distribution.contracts import SKILLS_SUBDIR_NAME
+from outcomeeng.distribution.contracts import SCRIPTS_SUBDIR_NAME, SKILLS_SUBDIR_NAME
 
 
 class RegistryField(StrEnum):
@@ -208,7 +208,6 @@ def _extension_owners(kinds: tuple[ArtifactKind, ...]) -> dict[str, str]:
 EXTENSION_OWNERS: Final = _extension_owners(ARTIFACT_KINDS)
 
 
-SCRIPTS_DIR_NAME: Final = "scripts"
 ARTIFACT_REGISTRY_FILENAME: Final = "artifact-registry.json"
 ARTIFACT_REGISTRY_VARIABLE: Final = "artifact_registry_json"
 SELECT_ARTIFACTS_SCRIPT_FILENAME: Final = "select_artifacts.py"
@@ -229,7 +228,7 @@ class ArtifactRegistryProvider:
     @property
     def scripts_path(self) -> Path:
         """Return the skill's scripts directory relative to a plugin surface root."""
-        return Path(self.plugin) / SKILLS_SUBDIR_NAME / self.skill / SCRIPTS_DIR_NAME
+        return Path(self.plugin) / SKILLS_SUBDIR_NAME / self.skill / SCRIPTS_SUBDIR_NAME
 
     @property
     def relative_path(self) -> Path:
