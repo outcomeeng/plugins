@@ -209,7 +209,10 @@ the run contract, and the coverage model). Stating each once in its owning
 section and cross-referencing it by tag elsewhere recovers line budget and
 removes the risk that a later edit updates one restatement and not the others.
 Surfaced as a `worth-improving` finding by `instructions:skill-auditor` on the
-artifact-registry changeset, which touched the coverage model alone; the
+artifact-registry changeset, which touched the coverage model alone, together
+with a finding that the coverage model's first paragraph — the read-back
+command, the selection rule, and the containment rule in one block — reads as
+three paragraphs; the split adds the lines only the consolidation frees. The
 consolidation is an editorial pass over the whole body and carries its own
 `skill-auditor` gate.
 

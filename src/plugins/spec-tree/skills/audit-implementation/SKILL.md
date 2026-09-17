@@ -20,7 +20,7 @@ An authoritative SPX projection and raw run token for the requested implementati
 - NEVER edit source, tests, specs, commits, branches, or pull requests — the audit is read-only over the audited project tree.
 - ALWAYS persist audit state through `spx verification run`; NEVER use legacy journal commands, plugin-side verdict scripts, markdown comments, `.spx/audits/`, or tracked files as audit state.
 - NEVER run deterministic verification — the audit composes agentic concern audits only.
-- NEVER include language-specific file extensions outside the rendered artifact registry, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
+- NEVER carry a language-specific file extension, command, example, or evidence pattern in this skill; the rendered artifact registry owns every extension, and `audit-{lang}-{code|tests|architecture}` is the only language-shaped form this skill states.
 - ALWAYS treat the `spx verification run` command exit code as payload validity; NEVER hand-validate emitted payload JSON after SPX accepts it.
 - NEVER end a run because work remains, time has passed, context is tight, or reading is unfinished — a stop names the failed command with its exit code and stderr, or the absent prerequisite.
 - NEVER assign `incomplete` or `skipped` to a required coverage unit; neither describes an admissible terminal state for required coverage.
@@ -479,7 +479,7 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 For a failed preparation, concern invocation, payload submission, or projection, and before sealing a run whose inventory was narrowed, whose coverage rows appeared only where a finding landed, or whose inventory was retyped, read
 `${CLAUDE_SKILL_DIR}/references/operational-failures.md` to diagnose the observed
-boundary; preserve the exact diagnostic and apply the no-retry rule, since these records authorize no replacement invocation.
+boundary; preserve the exact diagnostic and apply the no-retry rule, since these records authorize no replacement invocation. The constraints and the coverage model above are the preventive surface for the errors the reference records; the reference is read to diagnose, never to learn the procedure.
 
 </failure_modes>
 
