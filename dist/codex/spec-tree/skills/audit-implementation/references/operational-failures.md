@@ -42,11 +42,11 @@ without a retry or substitute scope.
 
 **A missing concern skill appeared after one concern already ran**
 
-What happened: Claude invoked one concern skill before validating that the complete `audit-{lang}-{code|tests|architecture}` trio existed for every language partition.
+What happened: Claude invoked one concern skill before validating that every audit skill the sealed start input's `artifact_selection` names was installed.
 
 Why it failed: The coverage inventory belongs before concern dispatch, so a late missing-skill discovery can leave other concern results without a complete expected-unit classification.
 
-How to avoid: Validate and record the complete concern-skill trio for every language partition before invoking any concern skill. Record an absent required skill as `missing-skill`, then finish and render the rejected run.
+How to avoid: Read the selection back from the sealed start input, validate every selected audit skill against the installed inventory, and record the complete inventory before invoking any concern skill. Record a selected skill absent from the inventory as `missing-skill`, then finish and render the rejected run.
 
 </concern_inventory>
 
@@ -56,9 +56,9 @@ How to avoid: Validate and record the complete concern-skill trio for every lang
 
 What happened: Claude treated documentation and manifest suffixes as programming languages, required concern skills that do not exist, rejected the run before dispatch, and skipped an installed implementation-language concern trio.
 
-Why it failed: Implementation-audit ownership comes from installed `code-{lang}` skill surfaces and their scope guidance, not from the set of suffixes present in a changeset. Artifact-specific auditors and whole-changeset review own files outside those programming-language surfaces.
+Why it failed: Implementation-audit ownership comes from the artifact registry the scope resolver reads — a path selects only the registered artifacts whose detection matches it — not from the set of suffixes present in a changeset. Artifact-type auditors and whole-changeset review own paths no registered artifact matches.
 
-How to avoid: Discover languages from installed `code-{lang}` skills, validate the required concern trio for every discovered language before dispatch, then let each complete concern trio claim applicable paths or return `NOT_APPLICABLE`; omit non-implementation artifacts from the coverage inventory.
+How to avoid: Dispatch exactly the audit skills the sealed start input's `artifact_selection` names for each path, then let each selected skill claim applicable paths or return `NOT_APPLICABLE`; record a path the selection left empty as an accounting record, never as a required unit.
 
 </language_ownership>
 
@@ -324,17 +324,19 @@ probe whether the python and rust concern trios are loadable", received
 `Unknown skill` for both, and read the two errors as evidence that no other
 language was installed.
 
-Why it failed: The skill named installed `code-{lang}` skills as the discovery
-source but never said how to read that inventory, so the run driver fell back
-to trial invocation. A failed invocation is one step from a manufactured
+Why it failed: The skill named the installed inventory as the discovery source
+but never said how to read it, so the run driver fell back to trial
+invocation. A failed invocation is one step from a manufactured
 `missing-skill` unit: a run that records those errors as coverage seals
-`rejected` for two languages the changeset never touched, and the language set
-the run records becomes the driver's guess rather than the installed surface.
-The run avoided that outcome by prose judgment alone.
+`rejected` for two kinds the changeset never touched, and the kind set the run
+records becomes the driver's guess rather than a selection. The run avoided
+that outcome by prose judgment alone.
 
-How to avoid: Read the installed skill inventory this context already carries
-for `code-{lang}` names; a name absent from it is a language that is not
-installed. Invoke a concern skill only as dispatch to a discovered language.
+How to avoid: Dispatch only the audit skills the sealed start input's
+`artifact_selection` names; the installed skill inventory this context already
+carries decides whether a selected skill runs or is recorded as
+`missing-skill`. Invoking a skill is dispatch to a selected artifact, never a
+probe for whether a kind is installed.
 
 </language_probe_by_invocation>
 

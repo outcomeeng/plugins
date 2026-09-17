@@ -477,7 +477,7 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 <failure_modes>
 
-For a failed preparation, concern invocation, payload submission, or projection, read
+For a failed preparation, concern invocation, payload submission, or projection, and before sealing a run whose inventory was narrowed, whose coverage rows appeared only where a finding landed, or whose inventory was retyped, read
 `${SKILL_DIR}/references/operational-failures.md` to diagnose the observed
 boundary; preserve the exact diagnostic and apply the no-retry rule, since these records authorize no replacement invocation.
 
