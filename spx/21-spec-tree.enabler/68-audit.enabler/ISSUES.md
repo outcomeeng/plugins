@@ -214,7 +214,10 @@ with a finding that the coverage model's first paragraph — the read-back
 command, the selection rule, and the containment rule in one block — reads as
 three paragraphs; the split adds the lines only the consolidation frees. The
 consolidation is an editorial pass over the whole body and carries its own
-`skill-auditor` gate.
+`skill-auditor` gate. The same pass lists the failure reference's entry anchors
+inline under `<failure_modes>`, one line each, so a run driver recognises a
+failure by name before opening the file — roughly eighteen lines the ceiling
+lacks today.
 
 ## The run driver reports inconsistent provenance for its own plugin version
 
