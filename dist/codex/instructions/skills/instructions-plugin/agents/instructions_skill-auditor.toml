@@ -53,6 +53,7 @@ Source `tools` allowlists can map only to Codex configuration boundaries with ma
 """
 
 [skills]
+include_instructions = true
 
 [[skills.config]]
 name = "instructions:audit-skill"

@@ -39,7 +39,9 @@ persistence, and rendering.
    The caller supplies only the file target to this wrapper; this wrapper owns
    the explicit producer data. Include no authoring history or suggested verdict.
 3. Relay its exact run token and rendered projection, or its complete blocked
-   diagnostic. The audit completes in this context without nested delegation.
+   diagnostic. A blocked diagnostic includes `judgmentStatus` and the complete
+   `judgedFindings` JSON array; preserve every finding payload verbatim. The
+   audit completes in this context without nested delegation.
 
 </workflow>
 
@@ -48,7 +50,8 @@ persistence, and rendering.
 Return only the owning skill's run token and rendered SPX projection, its
 complete blocked diagnostic, or the pre-run loading diagnostic above. Preserve
 the run token or `not-started`, command, payload source, payload key, exit code,
-and stderr for a command failure. Add no prose verdict or summary.
+stderr, judgment status, and every complete judged finding for a command
+failure. Add no prose verdict or summary.
 
 </output_format>
 

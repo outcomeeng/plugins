@@ -6,7 +6,7 @@ description: >-
   record standards at its declared maturity and records the complete judgment
   through SPX file-scoped verification.
 argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Glob, Grep, Skill, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx verification run:*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Skill, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run:*), Bash(printf:*)
 ---
 
 <objective>
@@ -52,8 +52,19 @@ provenance data, never authorization or a suggested verdict.
 Validate `runDriver` as six non-empty string fields and retain it unchanged.
 Accept that identity generically; never infer it from a role name, installed
 plugin, or descriptive text, and never restrict which configured wrapper may
-invoke the skill. Do metadata preparation before inspecting the candidate body.
-Start the run before loading standards or substantive evidence.
+invoke the skill. Resolve the loaded skill's absolute directory from the active
+skill metadata: use `CLAUDE_SKILL_DIR` when the harness exposes it, otherwise use
+the absolute `SKILL.md` location in the injected skill instructions. From that
+directory, read the owning plugin's `.claude-plugin/plugin.json` exactly two
+levels above it and retain its non-empty `version` as both the agent-owning and
+skill-owning plugin version. Run `spx --version` and retain its non-empty version
+as the tool version. A missing location, manifest, version, or command result is
+a pre-run absent prerequisite and returns the exact blocked diagnostic. These
+declared metadata reads are the sanctioned provenance source; never inspect an
+installed CLI bundle, generated source, package cache, or undocumented runtime
+path to infer a payload schema or version. Do metadata preparation before
+inspecting the candidate body. Start the run before loading standards or
+substantive evidence.
 
 </request_contract>
 
@@ -138,9 +149,19 @@ root. The child concern partition is its standards rule ID; the root uses `recor
 The expected skill producer has `producerKind: skill`, the supplied
 run-driver's `agentName` and `agentOwningPluginName`, `skillName: audit-change`,
 `skillOwningPluginName: spec-tree`, and `invocationRole: leaf-skill`.
-`recordedByRunDriver` carries the supplied identity unchanged. Omit optional
-plugin-version provenance because the request supplies no explicit version
-source; never guess it or discover it through paths outside this skill bundle.
+`recordedByRunDriver` carries the supplied identity unchanged. This producer
+split is intentional: `expectedProducer` identifies the leaf skill whose rules
+produce the judgment, while `recordedByRunDriver` identifies the configured
+agent that serially appends the skill's units, findings, and terminal event.
+They therefore differ in `producerKind` and `invocationRole` while sharing the
+same agent and owning-plugin identity. Every unit carries `producerProvenance`
+with the owning plugin version resolved from this active bundle in both plugin
+version fields and the exact `spx --version` result as `toolVersion`.
+
+The JSON objects in this persistence contract are the sanctioned SPX audit
+payload schema for this auditor. Use these fields exactly. Never derive a
+replacement schema from command help, inspect the CLI implementation, or alter
+a rejected payload by guesswork.
 
 Render each scope payload from these fields; the placeholders below are replaced
 with observed values before execution:
@@ -166,7 +187,12 @@ with observed values before execution:
     "skillOwningPluginName": "spec-tree",
     "invocationRole": "leaf-skill"
   },
-  "recordedByRunDriver": "<replace-with-supplied-six-field-object>"
+  "recordedByRunDriver": "<replace-with-supplied-six-field-object>",
+  "producerProvenance": {
+    "agentOwningPluginVersion": "<active-spec-tree-plugin-version>",
+    "skillOwningPluginVersion": "<active-spec-tree-plugin-version>",
+    "toolVersion": "<exact-spx-version>"
+  }
 }
 ```
 
@@ -179,10 +205,27 @@ SCOPE_JSON
 ```
 
 A finding carries `unitId`, `producerIdentity` equal to that accepted unit's
-`expectedProducer`, `rule` identifying the violated standard, `severity`
+`expectedProducer`, `producerProvenance` equal to that accepted unit's complete
+provenance object, `rule` identifying the violated standard, `severity`
 (`blocking` or `debt`), `location` naming the file and section or line, `message`,
 and `evidence` with `observed` and `expected` strings. Do not use retired aliases
 or top-level observed/expected fields. Persist it through:
+
+```json
+{
+  "unitId": "<accepted-unit-key>",
+  "producerIdentity": "<accepted-unit-expectedProducer-object>",
+  "producerProvenance": "<accepted-unit-producerProvenance-object>",
+  "rule": "<violated-rule-id>",
+  "severity": "<blocking-or-debt>",
+  "location": "<file-and-section-or-line>",
+  "message": "<finding-message>",
+  "evidence": {
+    "observed": "<observed-state>",
+    "expected": "<required-state>"
+  }
+}
+```
 
 ```bash
 spx verification run finding add --verification-type audit --scope-type file --scope '<relative-path>' --run '<run-token>' --idempotency-key '<unit-key>:<finding-key>' --payload stdin <<'FINDING_JSON'
@@ -225,8 +268,9 @@ replace its field names. Its contract is:
 | `events`          | Unmodified recorded events, including accepted finding payloads and the terminal event. |
 
 Each accepted finding payload names its `unitId`, six-field `producerIdentity`,
-violated `rule`, `severity` (`blocking` or `debt`), `location`, `message`, and
-`evidence.observed` / `evidence.expected`.
+three-field `producerProvenance`, violated `rule`, `severity` (`blocking` or
+`debt`), `location`, `message`, and `evidence.observed` /
+`evidence.expected`.
 The child unit's `priorContext.concernPartition` attributes each finding to the
 shared record rule judged; the rule inventory supplies the finding groups.
 Keep any additional SPX fields unchanged. Both finding severities reject the
@@ -237,6 +281,25 @@ If blocked before a completed verdict, return `BLOCKED`, the run token or
 failed preparation or SPX command, include the exact command, payload source,
 payload key (or `none`), exit code, and stderr. Preserve already-recorded
 evidence; do not publish a replacement verdict or write findings into the Change.
+Every blocked result also carries `judgmentStatus: complete` when the complete
+rule inventory was judged before the failure, otherwise `judgmentStatus:
+incomplete`, followed by `judgedFindings` as one JSON array containing every
+finding judged before the stop in the complete finding-payload shape above.
+Use an empty array when none were judged. Never shorten an item to its
+idempotency key, rule, or summary. This hand-back preserves the judgment when a
+run remains unsealed and distinguishes a blocked audit from an abandoned run.
+
+```text
+BLOCKED
+runToken: <exact-token-if-start-succeeded-or-not-started>
+command: <exact-failed-operation>
+payloadSource: <stdin|none>
+payloadKey: <unitId-or-finding-idempotency-key-or-none>
+exitCode: <exact-exit-code-or-none>
+stderr: <exact-stderr-or-none>
+judgmentStatus: <complete|incomplete>
+judgedFindings: <complete-JSON-array>
+```
 
 </verdict_format>
 

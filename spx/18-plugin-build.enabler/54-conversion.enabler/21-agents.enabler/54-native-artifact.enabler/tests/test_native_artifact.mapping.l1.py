@@ -5,6 +5,7 @@ from __future__ import annotations
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     AGENT_SKILL_ENABLED_FIELD,
+    AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD,
     SKILL_ENABLEMENT_LIMITATION,
     convert_agent,
 )
@@ -40,5 +41,8 @@ def test_skills_are_preserved_as_codex_config_and_guidance() -> None:
             {AGENT_NAME_FIELD: skill, AGENT_SKILL_ENABLED_FIELD: True}
             for skill in source.skills
         )
+        skills = converted.values["skills"]
+        assert isinstance(skills, dict)
+        assert skills[AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD] is True
         assert all(skill in instructions for skill in source.skills)
         assert SKILL_ENABLEMENT_LIMITATION in instructions

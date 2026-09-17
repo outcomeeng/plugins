@@ -29,6 +29,7 @@ from outcomeeng.distribution.profiles import (
 AGENT_NAME_FIELD: Final = "name"
 AGENT_SKILL_ENABLED_FIELD: Final = "enabled"
 AGENT_TOOLS_FIELD: Final = "tools"
+AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD: Final = "include_instructions"
 SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
     {
         AGENT_NAME_FIELD,
@@ -260,6 +261,7 @@ def convert_agent(
         values["mcp_servers"] = agent.mcp_servers
     if agent.skills:
         values["skills"] = {
+            AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD: True,
             "config": TomlArrayTable(
                 tuple(
                     {AGENT_NAME_FIELD: skill, AGENT_SKILL_ENABLED_FIELD: True}
@@ -913,6 +915,7 @@ def _format_toml_multiline(value: str) -> str:
 __all__ = [
     "AGENT_NAME_FIELD",
     "AGENT_SKILL_ENABLED_FIELD",
+    "AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD",
     "AGENT_SOURCE_DIRECTORY_NAME",
     "ALL_TOOLS_SENTINEL",
     "CODEX_AGENT_ENV_VAR",
