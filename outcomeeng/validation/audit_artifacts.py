@@ -35,6 +35,7 @@ SKILL_FILENAME: Final = "SKILL.md"
 IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
 IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT: Final = "scripts/resolve_scope.py"
 IMPLEMENTATION_AUDIT_REGISTRY_DATA: Final = f"scripts/{ARTIFACT_REGISTRY_FILENAME}"
+PYTHON_BYTECODE_CACHE_DIR_NAME: Final = "__pycache__"
 IMPLEMENTATION_AUDIT_FAILURE_REFERENCE: Final = "references/operational-failures.md"
 IMPLEMENTATION_AUDIT_ARTIFACTS: Final = frozenset(
     {
@@ -149,8 +150,12 @@ def check_runtime_surface(surface: Path) -> list[str]:
     runtime_dir = implementation_audit_runtime_directory(surface)
     if not runtime_dir.is_dir():
         return [f"{runtime_dir}: runtime directory missing"]
+    # A loader that executes the shipped script writes bytecode beside it; the
+    # cache is never shipped content, so it never enters the inventory.
     entries = {
-        entry.relative_to(runtime_dir).as_posix() for entry in runtime_dir.rglob("*")
+        entry.relative_to(runtime_dir).as_posix()
+        for entry in runtime_dir.rglob("*")
+        if PYTHON_BYTECODE_CACHE_DIR_NAME not in entry.relative_to(runtime_dir).parts
     }
     expected = IMPLEMENTATION_AUDIT_ARTIFACTS | {
         Path(artifact).parent.as_posix()

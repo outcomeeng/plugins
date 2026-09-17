@@ -48,7 +48,7 @@ SCRIPT_PATH = (
     )
 )
 _MODULE = runpy.run_path(str(SCRIPT_PATH))
-_RESOLVE_SCOPE_MODULE_NAME = "resolve_scope"
+_RESOLVE_SCOPE_MODULE_NAME = "implementation_resolve_scope"
 
 
 def load_resolve_scope_module() -> ModuleType:
