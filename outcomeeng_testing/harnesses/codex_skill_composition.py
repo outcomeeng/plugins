@@ -46,6 +46,7 @@ from outcomeeng_testing.harnesses.native_profile_execution import (
 
 IMPLEMENTATION_AUDITOR_ROLE: Final = "spec-tree_implementation-auditor"
 IMPLEMENTATION_AUDITOR_DEFINITION: Final = f"{IMPLEMENTATION_AUDITOR_ROLE}.toml"
+PROBE_SANDBOX_MODE: Final = "danger-full-access"
 PARENT_PROMPT: Final = (
     f"Launch {IMPLEMENTATION_AUDITOR_ROLE} exactly once with target HEAD. "
     'Return its terminal result. Explicitly set fork_turns to "none".'
@@ -92,6 +93,8 @@ def _parent_command(checkout: Path, terminal_path: Path) -> tuple[str, ...]:
         "--json",
         "--strict-config",
         "--skip-git-repo-check",
+        "--sandbox",
+        PROBE_SANDBOX_MODE,
         "-C",
         str(checkout),
         "--output-last-message",
