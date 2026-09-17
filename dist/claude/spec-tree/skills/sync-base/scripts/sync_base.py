@@ -1267,7 +1267,11 @@ def _restack(
     that is no longer an ancestor of the branch — an operator completed a
     conflicted restack by hand and the record was not rewritten — does not
     describe the branch's fork, so the fork is re-derived as the branch's
-    merge-base with the target: a branch already above the target is current.
+    merge-base with the target. A branch is current only when its own commits
+    already sit on the target: the target is an ancestor of HEAD and the fork
+    is an ancestor of the target. A branch that contains the target while its
+    fork lies outside it — a stacked branch whose default has not advanced —
+    still carries the stale predecessor commits between the two and replays.
     """
     old_head_oid = _rev(repo, "HEAD")
     if old_head_oid is None:
@@ -1291,7 +1295,9 @@ def _restack(
             )
         fork_oid = derived_fork
 
-    if _is_ancestor(repo, target_oid, old_head_oid):
+    if _is_ancestor(repo, target_oid, old_head_oid) and _is_ancestor(
+        repo, fork_oid, target_oid
+    ):
         return SyncBaseResult(
             SyncStatus.ALREADY_CURRENT,
             base_ref,
