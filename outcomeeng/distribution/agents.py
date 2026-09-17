@@ -267,7 +267,7 @@ def convert_agent(
                     {AGENT_NAME_FIELD: skill, AGENT_SKILL_ENABLED_FIELD: True}
                     for skill in agent.skills
                 )
-            )
+            ),
         }
     values["shell_environment_policy"] = {
         "set": {
