@@ -43,7 +43,7 @@ The reader lives in `${CLAUDE_SKILL_DIR}/scripts/select_artifacts.py`, imported 
 
 <selection_rule>
 
-A path matches an artifact when its extension or filename is declared by that artifact's detection and every path pattern the detection carries matches the whole path. When two artifacts of one kind match, the one carrying a path pattern wins over an extension-only match. A kind with a match also selects each of its artifacts that carries no detection; the architecture artifact is selected that way. The installed skill inventory plays no part in selection — a consumer decides only whether a selected skill runs or is recorded as missing.
+A path matches an artifact when its extension or filename is declared by that artifact's detection and every path pattern the detection carries matches the whole path. When two artifacts of one kind match, the one carrying a path pattern wins over an extension-only match. A kind with a match also selects each of its artifacts that carries no detection; the architecture artifact is selected that way. Selection reads the rendered registry alone: no installed skill inventory, path list, or caller-supplied hint plays a part in it.
 
 </selection_rule>
 

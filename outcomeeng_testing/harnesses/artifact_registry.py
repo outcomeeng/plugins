@@ -10,7 +10,6 @@ from typing import cast
 
 from outcomeeng.distribution.artifact_registry import (
     ARTIFACT_REGISTRY_PROVIDER,
-    ArtifactRegistryConsumer,
     RegistryField,
     artifact_registry_render_variables,
 )
@@ -28,27 +27,31 @@ from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def authored_registry_path(consumer: ArtifactRegistryConsumer) -> Path:
-    """Return the authored data file one consumer ships."""
-    return REPO_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME / consumer.relative_path
+def authored_registry_path() -> Path:
+    """Return the authored data file the provider ships."""
+    return (
+        REPO_ROOT
+        / SOURCE_ROOT_NAME
+        / PLUGINS_DIR_NAME
+        / ARTIFACT_REGISTRY_PROVIDER.relative_path
+    )
 
 
-def rendered_registry_document(
-    consumer: ArtifactRegistryConsumer,
-) -> Mapping[str, object]:
-    """Render one consumer's authored data file through the build's template pass."""
+def rendered_registry_document() -> Mapping[str, object]:
+    """Render the provider's authored data file through the build's template pass."""
     rendered = render_text(
-        authored_registry_path(consumer).read_text(encoding="utf-8"),
+        authored_registry_path().read_text(encoding="utf-8"),
         variables=artifact_registry_render_variables(),
     )
-    return _document(json.loads(rendered), authored_registry_path(consumer))
+    return _document(json.loads(rendered), authored_registry_path())
 
 
-def shipped_registry_document(
-    consumer: ArtifactRegistryConsumer, target: Target
-) -> Mapping[str, object]:
-    """Parse the committed data file one target's tree carries for a consumer."""
-    path = DistTreeReader(REPO_ROOT).target_root(target) / consumer.relative_path
+def shipped_registry_document(target: Target) -> Mapping[str, object]:
+    """Parse the committed data file one target's tree carries beside the provider."""
+    path = (
+        DistTreeReader(REPO_ROOT).target_root(target)
+        / ARTIFACT_REGISTRY_PROVIDER.relative_path
+    )
     return _document(json.loads(path.read_text(encoding="utf-8")), path)
 
 

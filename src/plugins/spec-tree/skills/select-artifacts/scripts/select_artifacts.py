@@ -57,8 +57,11 @@ class SelectionField(StrEnum):
 def load_artifact_registry() -> Mapping[str, object]:
     """Read the rendered artifact registry beside this script."""
     path = pathlib.Path(__file__).resolve().parent / ARTIFACT_REGISTRY_FILENAME
-    with path.open(encoding="utf-8") as handle:
-        registry = json.load(handle)
+    try:
+        with path.open(encoding="utf-8") as handle:
+            registry = json.load(handle)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{path} is not a rendered artifact registry: {exc}") from exc
     if not isinstance(registry, dict) or not isinstance(
         registry.get(RegistryField.KINDS), list
     ):

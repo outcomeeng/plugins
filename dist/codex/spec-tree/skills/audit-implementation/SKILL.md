@@ -91,19 +91,18 @@ unfinished reading are never such a cause.
 
 <request_contract>
 
-Bind the target scope selector before discovery. `$ARGUMENTS` supplies it when
-that argument is non-empty; when it is empty, the selector is the one the
-request text carries, and the empty substitution binds nothing. Only a request
-that carries no selector is the missing-input case. The target is one scope
-selector: `HEAD`, a branch, or an explicit three-dot range. `worktree:` before
-a selector explicitly requests an advisory audit of that committed scope plus
-the complete modified and untracked file set. Preserve the selector verbatim.
-Never infer advisory intent from a dirty checkout.
+Bind the target scope selector before discovery. `$ARGUMENTS` supplies it when that
+argument is non-empty; when it is empty, the selector is the one the request text
+carries, and the empty substitution binds nothing. Only a request that carries no
+selector is the missing-input case. The target is one scope selector: `HEAD`, a branch,
+or an explicit three-dot range. `worktree:` before a selector explicitly requests an
+advisory audit of that committed scope plus the complete modified and untracked file
+set. Preserve the selector verbatim. Never infer advisory intent from a dirty checkout.
 
-Run-driver identity uses the six published producer fields (the
-`expectedProducer` shape in `<verification_run_contract>`) in the invocation
-context, separate from `$ARGUMENTS`. Accept that identity generically; never
-infer it from a role name, installed plugin, or descriptive text.
+Run-driver identity uses the six published producer fields (the `expectedProducer` shape
+in `<verification_run_contract>`) in the invocation context, separate from `$ARGUMENTS`.
+Accept that identity generically; never infer it from a role name, installed plugin, or
+descriptive text.
 
 Before reading project file bodies:
 
@@ -135,12 +134,15 @@ Before reading project file bodies:
    available context. When evidence is unavailable, record it as unestablished;
    never infer passing checks from a clean checkout or run them inside the audit.
 
-A missing selector or identity, failed repository discovery, or failed scope
-resolution returns `BLOCKED` with `runToken: not-started` and the exact missing
-input or command failure; the resolver's stale-base refusal — a dedicated exit
-code and a `stale-base` diagnostic on stderr for a head behind the fetched base
-— returns the same way before any subject is read. Make no replacement scope
-selection, synchronization, or retry.
+The resolver imports the same-plugin `scope-changeset` and `select-artifacts` providers
+by their installed layout; a `cannot load` import failure names an absent sibling
+bundle, a broken installation rather than a request failure. A missing selector or
+identity, failed repository discovery, an absent sibling provider, or failed scope
+resolution returns `BLOCKED` with `runToken: not-started` and the exact missing input or
+command failure; the resolver's stale-base refusal — a dedicated exit code and a
+`stale-base` diagnostic on stderr for a head behind the fetched base — returns the same
+way before any subject is read. Make no replacement scope selection, synchronization, or
+retry.
 
 Start the run after this metadata preparation. Then discover governing nodes
 from the resolved paths through the spec-tree evidence links and declared audit
@@ -168,14 +170,13 @@ git produced them:
 python3 "${SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}' --audit-input '<rendered-context-json-on-one-line>' | spx verification run start --verification-type audit --scope-type changeset --scope <base>..<head> --input stdin
 ```
 
-The `--audit-input` object carries only the short values the invocation supplies:
-the original selector, the resolved repository root, the discovered live file
-list under `live_paths` for an advisory audit, available deterministic
-verification facts, generic run-driver identity, and advisory status. Render it as one single-quoted argument, applying
-the apostrophe splice below. The resolver merges it beneath the resolved scope,
-so a key that collides with `base`, `head`, or `changed_paths` is discarded
-rather than honored — the resolved scope is authoritative and unforgeable at
-this boundary.
+The `--audit-input` object carries only the short values the invocation supplies: the
+original selector, the resolved repository root, the discovered live file list under
+`live_paths` for an advisory audit, available deterministic verification facts, generic
+run-driver identity, and advisory status. Render it as one single-quoted argument,
+applying the apostrophe splice below. The resolver merges it beneath the resolved scope,
+so a key that collides with `base`, `head`, or `changed_paths` is discarded rather than
+honored — the resolved scope is authoritative and unforgeable at this boundary.
 
 Governing nodes are discovered after start and accompany the concern inputs and
 coverage evidence. The command returns a JSON locator; extract its `runToken`
@@ -357,7 +358,7 @@ The final response relays the rendered SPX projection and run token. Do not summ
 
 <coverage_model>
 
-Build the expected coverage inventory from the selection the scope resolver recorded in the run's sealed start input, before invoking any concern skill. Read the `artifact_selection` array back from that input — `spx verification run input --verification-type audit --scope-type changeset --scope <base>..<head> --run '{run-token}'`, field `content` — never from a re-run of the resolver and never from a reading of the paths. For each resolved path the resolver selected, from the artifact registry the build rendered beside the `select-artifacts` provider it imports, the registered artifacts whose detection matches the path — most specific first, a kind with a match adding its detection-less architecture artifact — and the `audit` skill each names. Dispatch exactly the skills that selection names, validating each against the installed skill inventory this context carries before invoking any concern. The inventory never selects: it decides only whether a selected skill is invoked or recorded as a required `missing-skill` unit, and invoking a skill is dispatch to a selected artifact, never a probe for whether a kind is installed. Never load a write-capable `code-{lang}` skill inside the audit — the `Skill` grant cannot be narrowed to names selected at run time, so this rule is the containment — and never create a partition from a file extension, filename, or artifact class the registry did not select.
+Build the expected coverage inventory from the selection the scope resolver recorded in the run's sealed start input, before invoking any concern skill. Read the `artifact_selection` array back from that input — `spx verification run input --verification-type audit --scope-type changeset --scope <base>..<head> --run '{run-token}'`, field `content` — never from a re-run of the resolver and never from a reading of the paths. Read, for each resolved path, the artifacts the resolver selected from the artifact registry the build rendered beside the `select-artifacts` provider it imports — the registered artifacts whose detection matches the path, most specific first, a kind with a match adding its detection-less architecture artifact — and the `audit` skill each names. Dispatch exactly the skills that selection names, validating each against the installed skill inventory this context carries before invoking any concern. The inventory never selects: it decides only whether a selected skill is invoked or recorded as a required `missing-skill` unit, and invoking a skill is dispatch to a selected artifact, never a probe for whether a kind is installed. Never load a write-capable `code-{lang}` skill inside the audit — the `Skill` grant cannot be narrowed to names selected at run time, so this rule is the containment — and never create a partition from a file extension, filename, or artifact class the registry did not select.
 
 Only paths the resolver selected an artifact for belong to implementation-audit coverage. A path matching no registered artifact, and a matched path whose selected skill returns `NOT_APPLICABLE`, stays with its artifact-type auditor and the whole-changeset review; never manufacture a kind, a missing skill, or an unsupported unit for such a path.
 

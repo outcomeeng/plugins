@@ -4,9 +4,7 @@ import pytest
 
 from outcomeeng.distribution.artifact_registry import (
     ARTIFACT_KINDS,
-    ARTIFACT_REGISTRY_CONSUMERS,
     ArtifactKind,
-    ArtifactRegistryConsumer,
     artifact_registry_document,
 )
 from outcomeeng.distribution.contracts import Target
@@ -36,24 +34,14 @@ def _selected(path: str) -> list[tuple[str, str, str]]:
     ]
 
 
-@pytest.mark.parametrize("consumer", ARTIFACT_REGISTRY_CONSUMERS, ids=lambda c: c.skill)
 @pytest.mark.parametrize("kind", ARTIFACT_KINDS, ids=lambda k: k.name)
-def test_each_kind_renders_into_every_consumer_data_file(
-    kind: ArtifactKind, consumer: ArtifactRegistryConsumer
-) -> None:
-    assert (
-        kind_entries(rendered_registry_document(consumer))[kind.name] == kind.as_json()
-    )
+def test_each_kind_renders_into_the_provider_data_file(kind: ArtifactKind) -> None:
+    assert kind_entries(rendered_registry_document())[kind.name] == kind.as_json()
 
 
 @pytest.mark.parametrize("target", tuple(Target), ids=lambda t: t.value)
-@pytest.mark.parametrize("consumer", ARTIFACT_REGISTRY_CONSUMERS, ids=lambda c: c.skill)
-def test_each_shipped_data_file_equals_a_fresh_render(
-    consumer: ArtifactRegistryConsumer, target: Target
-) -> None:
-    assert shipped_registry_document(consumer, target) == rendered_registry_document(
-        consumer
-    )
+def test_each_shipped_data_file_equals_a_fresh_render(target: Target) -> None:
+    assert shipped_registry_document(target) == rendered_registry_document()
 
 
 @pytest.mark.parametrize("detected", detected_artifacts(), ids=lambda d: d.case_id)

@@ -215,11 +215,12 @@ SELECT_ARTIFACTS_SCRIPT_FILENAME: Final = "select_artifacts.py"
 
 
 @dataclass(frozen=True)
-class ArtifactRegistryConsumer:
-    """One shipped skill whose script reads the rendered registry beside itself.
+class ArtifactRegistryProvider:
+    """The shipped skill whose script owns the rendered registry and its reader.
 
-    The provider skill is the sole consumer: sibling skills' scripts reach its
-    reader by import and carry no copy of the document or its vocabulary.
+    The build renders the one data file beside this reader; sibling skills'
+    scripts reach the reader by import and carry no copy of the document or
+    its vocabulary.
     """
 
     plugin: str
@@ -241,10 +242,9 @@ class ArtifactRegistryConsumer:
         return self.scripts_path / SELECT_ARTIFACTS_SCRIPT_FILENAME
 
 
-ARTIFACT_REGISTRY_PROVIDER: Final = ArtifactRegistryConsumer(
+ARTIFACT_REGISTRY_PROVIDER: Final = ArtifactRegistryProvider(
     plugin="spec-tree", skill="select-artifacts"
 )
-ARTIFACT_REGISTRY_CONSUMERS: Final = (ARTIFACT_REGISTRY_PROVIDER,)
 
 
 def artifact_registry_document() -> dict[str, object]:
