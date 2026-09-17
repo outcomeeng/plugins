@@ -52,8 +52,9 @@ RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
     "auditor.md",
     "audit-orchestrator.md",
 )
-LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}-{concern}"
 RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}"
+# The concerns a language-specific wrapper filename may carry; the skills a
+# language ships are the registry's declaration, never composed from these.
 LANGUAGE_AUDIT_CONCERNS: Final = ("code", "tests", "architecture")
 RETIRED_AUDIT_RUNTIME_FILENAMES: Final = (
     "verdict.py",
@@ -226,7 +227,13 @@ def check_wrapper_surface(surface: Path) -> list[str]:
 
 
 def check_language_concern_surface(surface: Path) -> list[str]:
-    """Return language concern-trio violations for one plugin surface."""
+    """Return the retired aggregate audit skills one plugin surface still ships.
+
+    The presence of every skill a registered artifact names is
+    ``check_registry_skill_surface``'s check; this one keeps only the rule the
+    registry cannot express — a retired ``audit-{lang}`` aggregate beside the
+    concern skills.
+    """
     errors: list[str] = []
     for language in implementation_languages():
         retired_skill = (
@@ -237,19 +244,6 @@ def check_language_concern_surface(surface: Path) -> list[str]:
         )
         if retired_skill.exists():
             errors.append(f"{retired_skill}: retired aggregate audit skill exists")
-        for concern in LANGUAGE_AUDIT_CONCERNS:
-            skill_path = (
-                surface
-                / language
-                / SKILLS_DIR_NAME
-                / LANGUAGE_AUDIT_SKILL_TEMPLATE.format(
-                    language=language,
-                    concern=concern,
-                )
-                / SKILL_FILENAME
-            )
-            if not skill_path.is_file():
-                errors.append(f"{skill_path}: language concern skill missing")
     return errors
 
 
@@ -277,18 +271,10 @@ def audit_skill_runtime_directories(surface: Path) -> tuple[Path, ...]:
     )
     runtime_directories.update(
         skill_dir
-        for language in implementation_languages()
-        for concern in LANGUAGE_AUDIT_CONCERNS
+        for kind in ARTIFACT_KINDS
+        for artifact in kind.artifacts
         if (
-            skill_dir := (
-                surface
-                / language
-                / SKILLS_DIR_NAME
-                / LANGUAGE_AUDIT_SKILL_TEMPLATE.format(
-                    language=language,
-                    concern=concern,
-                )
-            )
+            skill_dir := surface / kind.plugin / SKILLS_DIR_NAME / artifact.audit
         ).is_dir()
     )
     return tuple(sorted(runtime_directories))

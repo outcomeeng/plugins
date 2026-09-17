@@ -91,3 +91,26 @@ def two_match_cases() -> tuple[DetectedArtifact, ...]:
             if sibling is not detected.artifact
         )
     )
+
+
+@dataclass(frozen=True)
+class RegisteredSkill:
+    """One skill a registered artifact names, with its owning kind and artifact."""
+
+    kind: ArtifactKind
+    artifact: Artifact
+    skill: str
+
+    @property
+    def case_id(self) -> str:
+        return f"{self.kind.name}-{self.artifact.role}-{self.skill}"
+
+
+def registered_skills() -> tuple[RegisteredSkill, ...]:
+    """Return every skill every registered artifact names — the complete finite domain."""
+    return tuple(
+        RegisteredSkill(kind=kind, artifact=artifact, skill=skill)
+        for kind in ARTIFACT_KINDS
+        for artifact in kind.artifacts
+        for skill in artifact.skill_names()
+    )

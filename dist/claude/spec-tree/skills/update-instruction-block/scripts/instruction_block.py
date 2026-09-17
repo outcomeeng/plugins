@@ -1716,7 +1716,9 @@ def main(argv: list[str] | None = None) -> int:
     elif repo_root is not None:
         try:
             languages = detect_languages_from_tree(_spx_dir(repo_root))
-        except CliInputError as exc:
+        except (CliInputError, OSError, json.JSONDecodeError, ValueError) as exc:
+            # A missing, unrendered, or malformed sibling registry is an edge
+            # failure reported like every other CLI-input failure.
             print(f"error: {exc}", file=sys.stderr)
             return 2
     else:

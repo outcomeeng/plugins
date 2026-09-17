@@ -14,7 +14,6 @@ from typing import Final, cast
 
 from outcomeeng.distribution.artifact_registry import (
     ARTIFACT_KINDS,
-    Artifact,
     ArtifactKind,
 )
 from outcomeeng.validation import audit_artifacts
@@ -23,8 +22,6 @@ from outcomeeng.validation.audit_artifacts import (
     IMPLEMENTATION_AUDIT_ARTIFACTS,
     IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
     IMPLEMENTATION_AUDITOR_FILENAME,
-    LANGUAGE_AUDIT_CONCERNS,
-    LANGUAGE_AUDIT_SKILL_TEMPLATE,
     PLUGIN_SURFACE_PATHS,
     RETIRED_AUDIT_RUNTIME_FILENAMES,
     RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES,
@@ -475,10 +472,9 @@ def audit_contract_rejects_retired_wrappers_in_every_plugin() -> bool:
 def audit_contract_rejects_incomplete_language_trio() -> bool:
     """Return whether validation rejects a missing language concern skill."""
     with _valid_surface() as surface:
-        language = source_language()
-        concern = LANGUAGE_AUDIT_CONCERNS[-1]
-        _language_concern_path(surface, language, concern).unlink()
-        return bool(check_language_concern_surface(surface))
+        kind = source_kind()
+        _registered_skill_path(surface, kind, kind.artifacts[-1].audit).unlink()
+        return bool(audit_artifacts.check_registry_skill_surface(surface))
 
 
 def audit_contract_rejects_retired_language_audit_skill() -> bool:
@@ -531,13 +527,9 @@ def audit_contract_rejects_missing_single_surface_language() -> bool:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         surface = root / PLUGIN_SURFACE_PATHS[0]
-        language = source_language()
+        kind = source_kind()
         _populate_valid_surface(surface)
-        _language_concern_path(
-            surface,
-            language,
-            LANGUAGE_AUDIT_CONCERNS[-1],
-        ).unlink()
+        _registered_skill_path(surface, kind, kind.artifacts[-1].audit).unlink()
         return bool(check_audit_artifact_contract(root))
 
 
@@ -585,11 +577,9 @@ def runtime_errors_with_retired_artifact_in_other_skill() -> list[str]:
 def runtime_errors_with_retired_artifact_in_language_skill() -> list[str]:
     """Observe validation with a retired file in a language concern skill."""
     with _valid_surface() as surface:
-        language = source_language()
-        runtime_dir = _language_concern_path(
-            surface,
-            language,
-            LANGUAGE_AUDIT_CONCERNS[0],
+        kind = source_kind()
+        runtime_dir = _registered_skill_path(
+            surface, kind, kind.artifacts[0].audit
         ).parent
         _touch(runtime_dir / "scripts" / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
         return check_audit_runtime_surface(surface)
@@ -607,10 +597,10 @@ def registry_skill_surface_errors_on_live_surfaces() -> tuple[list[str], ...]:
     )
 
 
-def observe_registry_skill_removal(kind: ArtifactKind, artifact: Artifact) -> list[str]:
-    """Observe the registry skill check on a valid surface missing one audit skill."""
+def observe_registry_skill_removal(kind: ArtifactKind, skill: str) -> list[str]:
+    """Observe the registry skill check on a valid surface missing one named skill."""
     with _valid_surface() as surface:
-        rmtree(surface / kind.plugin / SKILLS_DIR_NAME / artifact.audit)
+        rmtree(surface / kind.plugin / SKILLS_DIR_NAME / skill)
         return audit_artifacts.check_registry_skill_surface(surface)
 
 
@@ -645,14 +635,8 @@ def _populate_valid_surface(surface: Path) -> None:
         _touch(implementation_audit_runtime_directory(surface) / artifact)
 
 
-def _language_concern_path(surface: Path, language: str, concern: str) -> Path:
-    return (
-        surface
-        / language
-        / SKILLS_DIR_NAME
-        / LANGUAGE_AUDIT_SKILL_TEMPLATE.format(language=language, concern=concern)
-        / SKILL_FILENAME
-    )
+def _registered_skill_path(surface: Path, kind: ArtifactKind, skill: str) -> Path:
+    return surface / kind.plugin / SKILLS_DIR_NAME / skill / SKILL_FILENAME
 
 
 def _retired_implementation_wrapper_is_rejected(filename: str) -> bool:
@@ -673,6 +657,11 @@ def _language_wrapper_filename_is_rejected(
 def source_language() -> str:
     """Return the first programming language the registry declares."""
     return implementation_languages()[0]
+
+
+def source_kind() -> ArtifactKind:
+    """Return the registered kind named by ``source_language``."""
+    return next(kind for kind in ARTIFACT_KINDS if kind.name == source_language())
 
 
 def _source_plugin_names() -> tuple[str, ...]:
