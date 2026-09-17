@@ -46,6 +46,16 @@ The operator expects a generated Codex implementation auditor to compose the ins
 - Artifacts: [installer report](2026-09-17-6c64464ab-installer-report.json), [installed definition](2026-09-17-6c64464ab-installed-definition.toml), [parent transcript](2026-09-17-6c64464ab-parent.jsonl), [terminal result](2026-09-17-6c64464ab-terminal.txt), and [summary](2026-09-17-6c64464ab-summary.json). The SPX run token identifies the durable native child result without committing its 5 MB thread capture.
 - Verdict: **Failed** — skill loading and the absence of a dedicated `Skill` dependency were observed, while the required concern-audit and terminal-result observations were not.
 
+### 2026-09-17 — Failed: configured auditor selected unsupported Python
+
+- Subject: `759e3abccc5f90b0cbc18a284557caeb9d07766e`
+- Probe adapter: Change #86 commit `04ef3aa632ba7e4b6ce450c013a00de0cc916347`.
+- Environment: Codex CLI 0.154.0; isolated installation and saved-login authentication succeeded; parent thread `01a0b0de-44d4-78e2-b0ac-8716d8e56100` launched sole child `01a0b0de-610b-7ac0-9abe-787c3a565ca0` as `spec-tree_implementation-auditor` with history disabled.
+- Composition observation: the installed definition enabled `spec-tree:audit-implementation` without a `Skill` tool grant or manual-review entry, and the child read the installed `spec-tree:audit-implementation` skill. Neither session searched for a tool named `Skill`, retried through another launch mechanism, or substituted another auditor.
+- Failure observation: the child invoked the skill's `resolve_scope.py` through `python3`; that command resolved to Xcode Python 3.9 and failed before starting an SPX run because `enum.StrEnum` was unavailable. No concern skill was selected or read, and no implementation-audit terminal projection was produced. The one-shot protocol was not retried.
+- Artifacts: [installer report](2026-09-17-759e3abcc/installer-report.json), [installed definition](2026-09-17-759e3abcc/installed-definition.toml), [parent transcript](2026-09-17-759e3abcc/parent.jsonl), [native child record](2026-09-17-759e3abcc/child.json), [terminal result](2026-09-17-759e3abcc/terminal.txt), and [summary](2026-09-17-759e3abcc/summary.json).
+- Verdict: **Failed** — the repaired composition instruction was observed, while the required concern-skill composition and completed audit observations were unreachable because the configured child selected an unsupported interpreter.
+
 ## Limitations
 
 The protocol exercises Codex skill composition through the generated implementation-auditor definition. It does not establish Claude Code behavior, other configured subagents, or unrelated Codex tool conversion.
