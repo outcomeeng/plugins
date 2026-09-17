@@ -65,11 +65,17 @@ def load_resolve_scope_module() -> ModuleType:
         )
     module = importlib.util.module_from_spec(spec)
     sys.modules[_RESOLVE_SCOPE_MODULE_NAME] = module
+    # The resolver is a shipped file under dist/; executing it never writes a
+    # bytecode cache beside it, which the generated tree does not carry.
+    write_bytecode = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
     try:
         spec.loader.exec_module(module)
     except Exception:
         del sys.modules[_RESOLVE_SCOPE_MODULE_NAME]
         raise
+    finally:
+        sys.dont_write_bytecode = write_bytecode
     return module
 
 

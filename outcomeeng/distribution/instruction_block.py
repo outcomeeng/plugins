@@ -667,7 +667,14 @@ def load_instruction_block_module() -> InstructionBlockModule:
     module = importlib.util.module_from_spec(spec)
     # Register before exec so dataclass type introspection can resolve the module by name.
     sys.modules["instruction_block"] = module
-    spec.loader.exec_module(module)
+    # The generator is a shipped file under dist/; executing it never writes a
+    # bytecode cache beside it, which the generated tree does not carry.
+    write_bytecode = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = write_bytecode
     return cast(InstructionBlockModule, module)
 
 

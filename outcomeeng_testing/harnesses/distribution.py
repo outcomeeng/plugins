@@ -44,6 +44,10 @@ from outcomeeng.distribution.contracts import (
     WORKFLOW_STEPS_FIELD,
     WORKFLOW_WITH_FIELD,
 )
+from outcomeeng.distribution.build import (
+    IGNORED_SOURCE_DIRECTORY_NAMES,
+    IGNORED_SOURCE_FILE_SUFFIXES,
+)
 from outcomeeng.distribution.distribute import (
     clean_description,
     clear_repo_contents,
@@ -84,6 +88,10 @@ def snapshot_files(root: Path) -> FileSnapshot:
             (str(path.relative_to(root)), path.read_bytes())
             for path in root.rglob("*")
             if path.is_file()
+            and not IGNORED_SOURCE_DIRECTORY_NAMES.intersection(
+                path.relative_to(root).parts
+            )
+            and path.suffix not in IGNORED_SOURCE_FILE_SUFFIXES
         )
     )
 
