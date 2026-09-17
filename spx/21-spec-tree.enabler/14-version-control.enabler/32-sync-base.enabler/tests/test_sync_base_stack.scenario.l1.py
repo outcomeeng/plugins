@@ -5,6 +5,7 @@ from __future__ import annotations
 import pathlib
 
 from outcomeeng_testing.harnesses.sync_base import (
+    branch_config_entries,
     build_alternate_base_repo,
     build_conflicting_repo,
     build_stacked_repo_behind_base,
@@ -15,6 +16,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_stacked_repo_unpublished_predecessor,
     build_stacked_repo_without_record,
     build_three_level_stack_behind_base,
+    build_unrecorded_dependent_above_unordered_dependents_behind_base,
     build_unrecorded_three_level_stack_behind_base,
     commit_subjects_above,
     load_sync_base_module,
@@ -86,6 +88,42 @@ def test_rebased_predecessor_records_nearest_predecessors_in_an_unrecorded_chain
     assert module.read_stack_record(
         handle.repo, handle.third_branch
     ) == module.StackRecord(predecessor=handle.stacked_branch, tip=handle.stacked_tip)
+
+
+def test_rebased_predecessor_leaves_a_dependent_above_two_unordered_dependents_unrecorded(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_unrecorded_dependent_above_unordered_dependents_behind_base(
+        repository_root(tmp_path)
+    )
+    assert handle.second_candidate_branch is not None
+    assert handle.third_branch is not None
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.REBASED
+    # Each dependent forked from the rebased tip sits on it directly and records
+    # it; the branch merging both contains two dependents' tips, neither nearer
+    # than the other, so no nearest predecessor exists and it records nothing.
+    expected = module.StackRecord(
+        predecessor=handle.predecessor_branch, tip=handle.predecessor_tip
+    )
+    assert module.read_stack_record(handle.repo, handle.stacked_branch) == expected
+    assert (
+        module.read_stack_record(handle.repo, handle.second_candidate_branch)
+        == expected
+    )
+    assert module.read_stack_record(handle.repo, handle.third_branch) is None
+    entries = branch_config_entries(handle.repo, handle.third_branch)
+    assert (
+        module.stack_config_key(handle.third_branch, module.STACK_PREDECESSOR_KEY)
+        not in entries
+    )
+    assert (
+        module.stack_config_key(handle.third_branch, module.STACK_TIP_KEY)
+        not in entries
+    )
 
 
 def test_explicit_base_sync_writes_the_record_on_the_synced_branch(

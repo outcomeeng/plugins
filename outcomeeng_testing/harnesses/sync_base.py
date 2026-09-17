@@ -1246,3 +1246,46 @@ def build_unrecorded_three_level_stack_behind_base(root: pathlib.Path) -> Stacke
         third_branch=data.alternate_branch,
         stacked_tip=stacked_tip,
     )
+
+
+def build_unrecorded_dependent_above_unordered_dependents_behind_base(
+    root: pathlib.Path,
+) -> StackedRepo:
+    """Build a behind-base branch with two unordered dependents and a branch above both.
+
+    The predecessor forks from the base and is pushed; the stacked branch and a
+    second dependent (the generated alternate name) each fork from the
+    predecessor's tip with one commit of their own, so neither tip descends
+    from the other. A fourth branch (the generated feature name) forks from
+    the stacked branch's tip and merges the second dependent, so it contains
+    the predecessor's tip and both dependents' tips. No record is written
+    anywhere. The base advances out of band and the clone is checked out on
+    the predecessor, so synchronizing it rewrites the predecessor while all
+    three other branches contain the pre-rebase tip. ``second_candidate_branch``
+    names the second dependent and ``second_candidate_tip`` its tip;
+    ``third_branch`` names the merging branch and ``stacked_tip`` the stacked
+    branch's tip.
+    """
+    repo, data, predecessor_tip = _build_stack(root)
+    stacked_tip = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "switch", "-q", "-c", data.alternate_branch, predecessor_tip)
+    _commit_file(
+        repo, data.alternate_file, data.alternate_content, data.alternate_message
+    )
+    second_tip = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "switch", "-q", "-c", data.feature_branch, data.stacked_branch)
+    _git(repo, "merge", "-q", "--no-edit", "--no-ff", data.alternate_branch)
+    pusher = root / "pusher"
+    _commit_file(pusher, data.base_file, data.base_content, data.base_message)
+    _git(pusher, "push", "-q", "origin", data.base_branch)
+    _git(repo, "switch", "-q", data.predecessor_branch)
+    return _stacked_handle(
+        repo,
+        data,
+        predecessor_tip,
+        base_file=data.base_file,
+        third_branch=data.feature_branch,
+        stacked_tip=stacked_tip,
+        second_candidate_branch=data.alternate_branch,
+        second_candidate_tip=second_tip,
+    )
