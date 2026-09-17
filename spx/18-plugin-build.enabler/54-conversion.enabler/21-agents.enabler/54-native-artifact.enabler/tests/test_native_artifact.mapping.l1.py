@@ -15,8 +15,8 @@ from outcomeeng.distribution.profiles import AGENT_PROFILES, AgentProfile
 from outcomeeng_testing.harnesses.agent_conversion import (
     converted_instruction_value,
     converted_skill_config,
+    repository_wrapper_agents,
     source_agent,
-    spec_tree_wrapper_agents,
 )
 
 
@@ -30,7 +30,7 @@ def test_complete_native_profile_reaches_converted_agent() -> None:
 
 
 def test_skills_are_preserved_as_codex_config_and_guidance() -> None:
-    wrappers = spec_tree_wrapper_agents()
+    wrappers = repository_wrapper_agents()
 
     assert wrappers
     for source in wrappers:
