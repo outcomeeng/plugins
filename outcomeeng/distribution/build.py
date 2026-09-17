@@ -752,9 +752,7 @@ def _remove_unavailable_tool_items(key: str, lines: list[str]) -> list[str]:
         for line in lines[1:]
         if not _is_unavailable_tool_item(_frontmatter_list_item(line))
     ]
-    if any(
-        _UNAVAILABLE_RUNTIME_TOKEN_START in line for line in kept_continuations
-    ):
+    if any(_UNAVAILABLE_RUNTIME_TOKEN_START in line for line in kept_continuations):
         return lines
     meaningful_continuations = [
         line
@@ -771,11 +769,7 @@ def _frontmatter_list_item(line: str) -> str:
 
 def _is_unavailable_tool_item(item: str) -> bool:
     stripped = item.strip()
-    if (
-        len(stripped) >= 2
-        and stripped[0] == stripped[-1]
-        and stripped[0] in {"'", '"'}
-    ):
+    if len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {"'", '"'}:
         stripped = stripped[1:-1]
     match = _UNAVAILABLE_RUNTIME_TOKEN_PATTERN.fullmatch(stripped)
     return match is not None and match.group("kind") == RUNTIME_TOKEN_TOOL_KIND
@@ -1203,9 +1197,7 @@ def _make_kind_global(
             registry=runtime_token_registry,
         )
         return (
-            name
-            if name is not None
-            else _unavailable_runtime_token(kind, capability)
+            name if name is not None else _unavailable_runtime_token(kind, capability)
         )
 
     return render
