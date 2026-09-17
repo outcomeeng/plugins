@@ -40,3 +40,27 @@ established in its test plan.
 **Settlement condition**: one `just eval spx/21-spec-tree.enabler/68-audit.enabler/32-changeset-coherence.enabler/evals/coherence-verdict/eval.toml`
 run against the released producer, its `history.jsonl` committed beside the
 suite.
+
+## The configured coherence auditor has no authorized caller or execution record
+
+The configured-agent audit of
+`src/plugins/spec-tree/agents/changeset-coherence-auditor.md` during Change #76
+found no owning skill that explicitly launches the exact role with a target-only
+prompt and no retained native-loading plus minimal isolated invocation result.
+The node currently says `/audit-changeset-coherence` names no caller and stays
+invocable on its own, while the root invocation policy requires an active skill
+to select a configured role. That conflict leaves the agent definition without
+an authorized launch path even though its capability boundary and thin wrapper
+shape audit cleanly.
+
+**Required handling**: decide whether the Author's governing workflow names and
+launches this role or whether the configured agent is removed and the audit is
+reached through another declared surface. Update the node, caller, and wrapper
+together, then retain the emitted native definition and one target-only isolated
+result.
+
+**Evidence**: final `instructions:subagent-auditor` findings `f-001` and
+`f-002` against
+`src/plugins/spec-tree/agents/changeset-coherence-auditor.md` on Change #76
+head `843ddd709b058970d414ec755cc10121ff6bb5ff`. The same audit approved the
+corrected least-privilege tool and profile configuration.

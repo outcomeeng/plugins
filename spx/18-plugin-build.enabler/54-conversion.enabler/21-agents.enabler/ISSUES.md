@@ -43,3 +43,28 @@ projection.
 **Evidence**: raised by the skill-authoring audit of the canonical
 agent-registry changeset as a size/hygiene warning, not a correctness
 defect.
+
+## The isolated Codex composition probe discards the available account login
+
+The Change #76 probe binds `CODEX_HOME` to a fresh disposable directory before
+launching `codex exec`. The plugin installer populates that directory with the
+generated plugins and configured agents, while no authentication file is made
+available there. The parent process therefore receives HTTP 401 from both the
+WebSocket and HTTPS transports and exits before launching
+`spec-tree_implementation-auditor`. Normal configured-agent launches in the
+current session succeed because they use the authenticated account home.
+
+The retained failure proves installation and generated-definition placement.
+It supplies no observation of skill composition or the child result contract,
+and it predates the current generated implementation-auditor definition.
+
+**Required handling**: define a credential-safe probe boundary that keeps the
+plugin and session state disposable while making the already-authorized account
+login available without copying credential contents into retained artifacts.
+Run the probe once against the exact committed subject and scrub every retained
+artifact before committing it.
+
+**Evidence**:
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/probes/codex-skill-composition/2026-09-17-parent.jsonl`
+and the adjacent installer report, installed definition, and `probe.md` failed
+attestation.

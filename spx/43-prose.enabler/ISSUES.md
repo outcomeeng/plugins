@@ -28,6 +28,28 @@ entry changes no model assignment. Revisit when the comparative audit evidence
 is available, or when the operator explicitly decides the quality-versus-cost
 trade-off; reconcile the general auditor policy in the same change.
 
+The Change #76 configured-agent audit reconfirmed this gap as blocking under the
+current central-profile standard: `instructions:subagent-auditor` finding
+`f-002` found no governing selection or comparative evidence for `profile:
+strong` on head `843ddd709b058970d414ec755cc10121ff6bb5ff`.
+
+## The prose auditor has no enforced read-only runtime boundary
+
+`src/plugins/prose/agents/prose-auditor.md` grants unrestricted `Bash` while
+its prompt promises a read-only audit. The generated Codex definition omits
+`sandbox_mode`, and the generated Claude definition retains the unrestricted
+shell grant. A prompt prohibition therefore supplies no enforced mutation
+boundary in either emitted configuration.
+
+**Required handling**: identify the shell operations `prose:audit-prose`
+actually requires, restrict the Claude grant to those operations, and declare
+the corresponding read-only native boundary for Codex. Retain a minimal
+isolated audit result for the exact emitted role.
+
+**Evidence**: `instructions:subagent-auditor` finding `f-001` against
+`src/plugins/prose/agents/prose-auditor.md` on Change #76 head
+`843ddd709b058970d414ec755cc10121ff6bb5ff`.
+
 ## Eval evidence for the prose surface stays deferred
 
 The style-adherence and structure-conformance evals for the prose surface remain unwritten by operator decision: the eval harness is under repair in a separate concurrent effort, and no spec node names that effort yet, so this entry is the owning record rather than a pointer. Revisit when the eval surface is operational.
