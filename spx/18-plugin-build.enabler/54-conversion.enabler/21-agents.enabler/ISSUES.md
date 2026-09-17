@@ -44,29 +44,34 @@ projection.
 agent-registry changeset as a size/hygiene warning, not a correctness
 defect.
 
-## The isolated Codex composition probe discards the available account login
+## Codex composition probe returns no usable implementation-audit verdict
 
-The Change #76 probe binds `CODEX_HOME` to a fresh disposable directory before
-launching `codex exec`. The plugin installer populates that directory with the
-generated plugins and configured agents, while no authentication file is made
-available there. The parent process therefore receives HTTP 401 from both the
-WebSocket and HTTPS transports and exits before launching
-`spec-tree_implementation-auditor`. Normal configured-agent launches in the
-current session succeed because they use the authenticated account home.
+The Change #76 probe on subject
+`6c64464abf07a2e384dabea0d3d0bc19a1b12956` completed installation,
+authenticated through the repository-installation harness, launched exactly
+one generated `spec-tree_implementation-auditor`, and observed the child read
+`spec-tree:audit-implementation` plus the installed Go and Python concern
+skills without searching for a dedicated tool named `Skill`.
 
-The retained failure proves installation and generated-definition placement.
-It supplies no observation of skill composition or the child result contract,
-and it predates the current generated implementation-auditor definition.
+The child then recorded every one of the changeset's 319 paths as an optional,
+skipped `coverage-gap` unit. That set includes changed Python implementation
+and test files. SPX run `2026-09-17_15-12-34-814-1080e7adf6da` consequently
+sealed `approved` with zero findings without any path receiving an audited
+concern result. The child's final answer, relayed unchanged by the parent,
+contained only the run token; the generated implementation-auditor contract
+requires the token and rendered projection.
 
-**Required handling**: run the probe through the existing repository-installation
-harness boundary. Resolve the selected persistent login before redirecting the
-child environment, link only its `auth.json` into the disposable Codex home,
-force the file credential store, route captured output through the credential
-redactor, and read the sole child through the parent-filtered native app-server
-reader. Run the probe once against the exact committed subject and retain only
-the scrubbed artifacts.
+This leaves two Change #76 probe observations unsatisfied: the child did not
+produce concern-audit coverage for changed implementation files, and it did not
+return the implementation-audit terminal-result contract. Retrying the same
+probe result is prohibited by the Change.
 
-**Evidence**:
-`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/probes/codex-skill-composition/2026-09-17-parent.jsonl`
-and the adjacent installer report, installed definition, and `probe.md` failed
-attestation.
+**Required handling**: decide whether Change #76 expands to correct and
+re-attest the implementation-audit orchestration, or whether its acceptance is
+narrowed to the observed cross-harness skill-loading behavior and the audit
+execution defect becomes a separate Change owned by implementation-audit
+orchestration.
+
+**Evidence**: the second failed attestation and adjacent retained artifacts in
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/probes/codex-skill-composition/probe.md`, plus SPX run
+`2026-09-17_15-12-34-814-1080e7adf6da`.
