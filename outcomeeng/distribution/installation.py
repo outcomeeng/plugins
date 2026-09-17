@@ -48,6 +48,7 @@ AGENT_SKILL_NAME_FIELD = "name"
 CATALOG_PLUGINS_FIELD = "plugins"
 CATALOG_PLUGIN_NAME_FIELD = "name"
 HOME_ENV = "HOME"
+ZDOTDIR_ENV = "ZDOTDIR"
 CLAUDE_CONFIG_ENV = "CLAUDE_CONFIG_DIR"
 CODEX_HOME_ENV = "CODEX_HOME"
 CODEX_SQLITE_HOME_ENV = "CODEX_SQLITE_HOME"
@@ -1908,6 +1909,8 @@ def isolated_environment(
         for name, value in base_environment.items()
         if name not in STATE_ENV_NAMES
     }
+    if ZDOTDIR_ENV not in environment and HOME_ENV in base_environment:
+        environment[ZDOTDIR_ENV] = base_environment[HOME_ENV]
     environment.update(
         {
             HOME_ENV: str(roots.home),
@@ -2589,6 +2592,7 @@ __all__ = [
     "ScopeSplitError",
     "SourceAction",
     "STATE_ENV_NAMES",
+    "ZDOTDIR_ENV",
     "SPEC_TREE_PLUGIN",
     "apply_agent_home_plan",
     "build_agent_home_plan",

@@ -193,6 +193,7 @@ class PlanObservation:
     plan: InstallationPlan
     claude_catalog: bytes
     codex_catalog: bytes
+    caller_home: Path
     ambient_state_values: tuple[str, ...]
 
 
@@ -787,6 +788,7 @@ def observe_repository_plan() -> PlanObservation:
             temporary_root / "isolated-state",
             ambient_environment,
         )
+        caller_home = Path(ambient_environment[HOME_ENV])
         ambient_state_values = tuple(
             ambient_environment[name] for name in STATE_ENV_NAMES
         )
@@ -794,6 +796,7 @@ def observe_repository_plan() -> PlanObservation:
         plan=plan,
         claude_catalog=claude_catalog,
         codex_catalog=codex_catalog,
+        caller_home=caller_home,
         ambient_state_values=ambient_state_values,
     )
 

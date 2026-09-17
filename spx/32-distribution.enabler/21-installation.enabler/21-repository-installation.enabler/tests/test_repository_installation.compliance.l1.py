@@ -14,6 +14,7 @@ from outcomeeng.distribution.installation import (
     CODEX_EXEC_SUBCOMMAND,
     FIRST_INSTALL_WARNING,
     SPEC_TREE_PLUGIN,
+    ZDOTDIR_ENV,
     Operation,
     SourceAction,
 )
@@ -56,6 +57,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_local_record_bootstrap_plan,
     observe_persistent_execution,
     observe_persistent_plan,
+    observe_repository_plan,
     ScopeSplitClassification,
     racing_digest_reader,
     RENAMED_CHECKOUT_AGENT_NAME,
@@ -69,6 +71,15 @@ from outcomeeng_testing.harnesses.installation import (
     observe_scope_split,
     skill_enabling_definition,
 )
+
+
+def test_isolated_commands_load_shell_initialization_from_caller_home() -> None:
+    observation = observe_repository_plan()
+
+    assert all(
+        dict(command.environment)[ZDOTDIR_ENV] == str(observation.caller_home)
+        for command in observation.plan.commands
+    )
 
 
 def test_plugin_lifecycle_places_owned_definitions_and_is_idempotent(
