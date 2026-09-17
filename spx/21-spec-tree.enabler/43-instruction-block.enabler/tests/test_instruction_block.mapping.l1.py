@@ -96,8 +96,9 @@ def test_test_file_extension_maps_to_its_language() -> None:
 def test_detected_language_set_is_the_mapped_extensions(
     tmp_path: pathlib.Path,
 ) -> None:
-    detected, mapped = evidence.observe_detected_language_set(tmp_path / "spx")
-    assert detected == mapped
+    detected, declared = evidence.observe_detected_language_set(tmp_path / "spx")
+    assert set(detected) == declared
+    assert detected == tuple(sorted(detected))
 
 
 def test_language_block_appears_exactly_when_the_language_is_enabled() -> None:

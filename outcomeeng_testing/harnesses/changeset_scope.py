@@ -212,7 +212,8 @@ def isolated_git(
     return result.stdout.strip()
 
 
-def _commit_file(repo: pathlib.Path, name: str, content: str, message: str) -> None:
+def commit_file(repo: pathlib.Path, name: str, content: str, message: str) -> None:
+    """Write ``content`` to ``name`` under ``repo`` and commit it with ``message``."""
     path = repo / name
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
@@ -240,7 +241,7 @@ def _initialize_changeset_repo(
         cwd=pathlib.Path.cwd(),
     )
     isolated_git(repo, "config", "commit.gpgsign", "false")
-    _commit_file(
+    commit_file(
         repo,
         scenario.initial_file,
         scenario.initial_file,
@@ -327,7 +328,7 @@ def build_stale_local_base_repo(
     scenario = _initialize_changeset_repo(repo, scenario)
     initial_sha = isolated_git(repo, "rev-parse", "HEAD")
 
-    _commit_file(
+    commit_file(
         repo,
         scenario.merged_file,
         scenario.merged_file,
@@ -340,7 +341,7 @@ def build_stale_local_base_repo(
 
     # Feature branches off A+M (so it contains the merged commit) and adds F.
     isolated_git(repo, "switch", "-q", "-c", scenario.feature_branch)
-    _commit_file(
+    commit_file(
         repo,
         scenario.feature_file,
         scenario.feature_file,
@@ -374,7 +375,7 @@ def build_base_advanced_after_branch_repo(
     scenario = _initialize_changeset_repo(repo, scenario)
 
     isolated_git(repo, "switch", "-q", "-c", scenario.feature_branch)
-    _commit_file(
+    commit_file(
         repo,
         scenario.feature_file,
         scenario.feature_file,
@@ -382,7 +383,7 @@ def build_base_advanced_after_branch_repo(
     )
 
     isolated_git(repo, "switch", "-q", scenario.base_branch)
-    _commit_file(
+    commit_file(
         repo,
         scenario.merged_file,
         scenario.merged_file,
@@ -480,7 +481,7 @@ def build_repo_with_modified_spaced_note(repo: pathlib.Path) -> SpacedNoteRepo:
     """
     build_repo_without_origin(repo)
     (repo / "spx dir").mkdir()
-    _commit_file(
+    commit_file(
         repo,
         SPACED_NOTE_PATH,
         _fixture_text(SPACED_NOTE_FIXTURE_DIR, "committed"),

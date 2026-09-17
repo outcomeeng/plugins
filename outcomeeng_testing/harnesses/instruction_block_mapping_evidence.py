@@ -68,19 +68,15 @@ def observe_extension_language(extension: str) -> tuple[str | None, str | None]:
 
 def observe_detected_language_set(
     spx_dir: pathlib.Path,
-) -> tuple[tuple[str, ...], tuple[str, ...]]:
+) -> tuple[tuple[str, ...], frozenset[str]]:
     """Write one test file per registry-declared extension, then report the detected set.
 
     The second element is the registry's own kind set — the authored declaration,
-    independent of the rendered data file the generator reads — normalized only
-    for ordering.
+    independent of the rendered data file the generator reads.
     """
     declared = kind_by_extension()
     harness.write_spx_tree_with_tests(spx_dir, tuple(declared))
-    return (
-        MODULE.detect_languages_from_tree(spx_dir),
-        MODULE.normalize_languages(declared.values()),
-    )
+    return (MODULE.detect_languages_from_tree(spx_dir), frozenset(declared.values()))
 
 
 def observe_language_block(language: str) -> LanguageBlockObservation:

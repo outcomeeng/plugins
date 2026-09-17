@@ -29,7 +29,7 @@ from outcomeeng.validation.implementation_audit_contract import (
 )
 from outcomeeng_testing.harnesses.changeset_scope import (
     StaleBaseRepo,
-    isolated_git,
+    commit_file,
     stale_local_base_repo,
 )
 
@@ -311,9 +311,5 @@ def feature_paths_repo(paths: Sequence[str]) -> Iterator[StaleBaseRepo]:
     """
     with stale_local_base_repo() as stale:
         for name in paths:
-            file = stale.repo / name
-            file.parent.mkdir(parents=True, exist_ok=True)
-            file.write_text(name, encoding="utf-8")
-            isolated_git(stale.repo, "add", name)
-            isolated_git(stale.repo, "commit", "-q", "-m", name)
+            commit_file(stale.repo, name, name, name)
         yield stale

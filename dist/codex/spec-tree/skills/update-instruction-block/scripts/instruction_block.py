@@ -275,8 +275,9 @@ def _load_artifact_registry() -> Mapping[str, object]:
 def _language_by_extension(registry: Mapping[str, object]) -> dict[str, str]:
     """Map each extension a registered artifact's detection declares to its kind.
 
-    The first kind declaring an extension owns it; the registry declares each
-    extension under one kind.
+    The registry declares each extension under exactly one kind; a rendered
+    registry declaring one under two kinds is malformed and is rejected rather
+    than tie-broken.
     """
     mapping: dict[str, str] = {}
     kinds = registry.get(_REGISTRY_KINDS_FIELD)
@@ -290,7 +291,14 @@ def _language_by_extension(registry: Mapping[str, object]) -> dict[str, str]:
                 continue
             extensions = detection.get(_REGISTRY_EXTENSIONS_FIELD)
             for extension in extensions if isinstance(extensions, list) else ():
-                mapping.setdefault(str(extension), str(kind[_REGISTRY_NAME_FIELD]))
+                owner = mapping.setdefault(
+                    str(extension), str(kind[_REGISTRY_NAME_FIELD])
+                )
+                if owner != str(kind[_REGISTRY_NAME_FIELD]):
+                    raise ValueError(
+                        f"extension {extension!r} is declared under kinds "
+                        f"{owner!r} and {kind[_REGISTRY_NAME_FIELD]!r}"
+                    )
     return mapping
 
 

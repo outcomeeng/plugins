@@ -181,6 +181,33 @@ ARTIFACT_KINDS: Final = (
 )
 
 
+def _extension_owners(kinds: tuple[ArtifactKind, ...]) -> dict[str, str]:
+    """Map each declared extension to the one kind declaring it.
+
+    An extension declared under two kinds is a malformed declaration: every
+    reader of the registry resolves an extension to exactly one kind, so the
+    declaration is rejected at construction rather than tie-broken by a reader.
+    """
+    owners: dict[str, str] = {}
+    for kind in kinds:
+        for artifact in kind.artifacts:
+            if artifact.detection is None:
+                continue
+            for extension in artifact.detection.extensions:
+                owner = owners.setdefault(extension, kind.name)
+                if owner != kind.name:
+                    raise ValueError(
+                        f"extension {extension!r} is declared under kinds "
+                        f"{owner!r} and {kind.name!r}"
+                    )
+    return owners
+
+
+# Extension -> owning kind name; constructing it enforces that each declared
+# extension belongs to exactly one kind.
+EXTENSION_OWNERS: Final = _extension_owners(ARTIFACT_KINDS)
+
+
 SCRIPTS_DIR_NAME: Final = "scripts"
 ARTIFACT_REGISTRY_FILENAME: Final = "artifact-registry.json"
 ARTIFACT_REGISTRY_VARIABLE: Final = "artifact_registry_json"
@@ -227,24 +254,12 @@ def artifact_registry_render_variables() -> dict[str, object]:
 
 def registry_extensions() -> frozenset[str]:
     """Return every file extension a registered artifact's detection declares."""
-    return frozenset(
-        extension
-        for kind in ARTIFACT_KINDS
-        for artifact in kind.artifacts
-        if artifact.detection is not None
-        for extension in artifact.detection.extensions
-    )
+    return frozenset(EXTENSION_OWNERS)
 
 
 def kind_by_extension() -> dict[str, str]:
     """Return each declared extension mapped to the name of the kind declaring it."""
-    return {
-        extension: kind.name
-        for kind in ARTIFACT_KINDS
-        for artifact in kind.artifacts
-        if artifact.detection is not None
-        for extension in artifact.detection.extensions
-    }
+    return dict(EXTENSION_OWNERS)
 
 
 def kinds_with_role(role: ArtifactRole) -> tuple[str, ...]:

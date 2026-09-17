@@ -13,6 +13,7 @@ from outcomeeng.distribution.artifact_registry import (
 )
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
+    IGNORED_SOURCE_DIRECTORY_NAMES,
     LIFECYCLE_TEMPLATE_NAME,
     agent_slug,
 )
@@ -35,7 +36,6 @@ SKILL_FILENAME: Final = "SKILL.md"
 IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
 IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT: Final = "scripts/resolve_scope.py"
 IMPLEMENTATION_AUDIT_REGISTRY_DATA: Final = f"scripts/{ARTIFACT_REGISTRY_FILENAME}"
-PYTHON_BYTECODE_CACHE_DIR_NAME: Final = "__pycache__"
 IMPLEMENTATION_AUDIT_FAILURE_REFERENCE: Final = "references/operational-failures.md"
 IMPLEMENTATION_AUDIT_ARTIFACTS: Final = frozenset(
     {
@@ -71,7 +71,7 @@ def check_audit_artifact_contract(root: Path) -> list[str]:
     for surface in audit_contract_surfaces(root):
         errors.extend(check_audit_runtime_surface(surface))
         errors.extend(check_wrapper_surface(surface))
-        errors.extend(check_language_concern_surface(surface))
+        errors.extend(check_retired_language_audit_skills(surface))
         errors.extend(check_registry_skill_surface(surface))
     return errors
 
@@ -151,12 +151,14 @@ def check_runtime_surface(surface: Path) -> list[str]:
     runtime_dir = implementation_audit_runtime_directory(surface)
     if not runtime_dir.is_dir():
         return [f"{runtime_dir}: runtime directory missing"]
-    # A loader that executes the shipped script writes bytecode beside it; the
-    # cache is never shipped content, so it never enters the inventory.
+    # A bytecode cache beside a shipped script is never shipped content; the
+    # build's ignored directories bound the inventory the same way.
     entries = {
         entry.relative_to(runtime_dir).as_posix()
         for entry in runtime_dir.rglob("*")
-        if PYTHON_BYTECODE_CACHE_DIR_NAME not in entry.relative_to(runtime_dir).parts
+        if not IGNORED_SOURCE_DIRECTORY_NAMES.intersection(
+            entry.relative_to(runtime_dir).parts
+        )
     }
     expected = IMPLEMENTATION_AUDIT_ARTIFACTS | {
         Path(artifact).parent.as_posix()
@@ -226,7 +228,7 @@ def check_wrapper_surface(surface: Path) -> list[str]:
     return errors
 
 
-def check_language_concern_surface(surface: Path) -> list[str]:
+def check_retired_language_audit_skills(surface: Path) -> list[str]:
     """Return the retired aggregate audit skills one plugin surface still ships.
 
     The presence of every skill a registered artifact names is

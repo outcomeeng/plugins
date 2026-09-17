@@ -31,7 +31,7 @@ from outcomeeng.validation.audit_artifacts import (
     SPEC_TREE_PLUGIN_NAME,
     check_audit_artifact_contract,
     check_audit_runtime_surface,
-    check_language_concern_surface,
+    check_retired_language_audit_skills,
     check_runtime_surface,
     check_wrapper_surface,
     implementation_audit_runtime_directory,
@@ -488,7 +488,7 @@ def audit_contract_rejects_retired_language_audit_skill() -> bool:
             / RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE.format(language=language)
         )
         _touch(retired_skill / SKILL_FILENAME)
-        return bool(check_language_concern_surface(surface))
+        return bool(check_retired_language_audit_skills(surface))
 
 
 def audit_contract_rejects_missing_generated_surface() -> bool:
