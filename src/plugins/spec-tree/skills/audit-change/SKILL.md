@@ -97,7 +97,8 @@ substantive evidence.
 4. **Judge.** Read the retained candidate completely and inspect the necessary
    governing references. Inventory every front-matter key before judging the
    body; apply the standards' closed schema, including rejection of every unknown
-   key, and judge the declared malleability with the Frame and Activities. Assess
+   key, and judge immutable lineage, per-node target malleability, required node
+   states, Intent attestation, and Activities together. Assess
    every inventory rule at the declared maturity. Distinguish intended paths and
    explicit prototype exceptions from broken existing references. Record each
    defect with its violated rule and concrete observed-versus-expected evidence.
@@ -233,8 +234,17 @@ spx verification run finding add --verification-type audit --scope-type file --s
 FINDING_JSON
 ```
 
-Choose a stable, distinct, colon-free finding key for each finding within its
-unit. Idempotency keys are command arguments, never payload fields. Quote every
+Construct each finding key deterministically from the complete judged-finding
+inventory: `finding-<zero-padded-three-digit-ordinal>-<rule-id>`, where the
+ordinal is the finding's one-based position in inventory order and `rule-id` is
+the exact lowercase standards rule identifier. The final idempotency key is
+`<complete-unit-id>:<finding-key>`. Before execution, require the final key to
+start with the complete unit ID followed by one literal colon and require the
+suffix to match `finding-[0-9][0-9][0-9]-[a-z0-9-]+`; a mismatch is a blocked
+pre-persistence defect, never a key to repair inline. This constructor preserves
+the subject, separator, ordinal, and rule identifier and prevents a hand-spliced
+key from dropping characters. Idempotency keys are command arguments, never
+payload fields. Quote every
 path, token, and key as a single shell argument; splice literal apostrophes as
 `'"'"'`. Use quoted heredoc delimiters absent from the payload, or literal stdin
 supported by the runner. A single-line runner can use `printf '%s\n'` with one

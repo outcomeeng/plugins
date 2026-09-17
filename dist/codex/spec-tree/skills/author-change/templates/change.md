@@ -3,10 +3,10 @@ title: "[Title naming the Output]"
 product: "[Exactly one configured Product]"
 maturity: Proposed
 lifecycle: Available
-malleability: implementation
+refined_from: []
 ---
 
-<!-- Local authoring guidance: apply /change-standards after triaging the request. This template records the result; its headings are not interview questions. The closed front-matter schema permits only title, product, maturity, lifecycle, optional malleability, and change_ref when revising. Omit malleability to select its implementation default. For revision, add change_ref with the canonical reference and use confirmed Lifecycle and holder metadata from the store. Maturity names the level being authored and audited. Replace placeholders and remove these comments before audit. Publication maps title and native project fields, removes change_ref, retains malleability in the Change record, and sends the body below. Omit sections whose maturity requirements do not yet apply; expose unresolved questions instead of inventing answers. -->
+<!-- Local authoring guidance: apply /change-standards after triaging the request. This template records the result; its headings are not interview questions. The closed front-matter schema permits only title, product, maturity, lifecycle, refined_from, and change_ref when revising. Use refined_from: [] for a root; a successor carries immutable canonical predecessor references. For revision, add change_ref with the canonical reference and use confirmed Lifecycle and holder metadata from the store. Maturity names the level being authored and audited. Replace placeholders and remove these comments before audit. Publication maps title and native project fields, removes change_ref, retains refined_from in the Change record, and sends the body below. Omit sections whose maturity requirements do not yet apply; expose unresolved questions instead of inventing answers. -->
 
 # Output
 
@@ -32,13 +32,13 @@ malleability: implementation
 
 # Relationships
 
-[For a successor, the existing immutable refined_from references. Record unresolved blockers by exact Change reference. Omit when absent; do not add authoritative successor or reverse changeset lists.]
+[Record unresolved blockers by exact Change reference. Omit when absent. Lineage lives only in front-matter refined_from; do not restate it here or add authoritative successor or reverse changeset lists.]
 
 # Frame
 
 ## Nodes
 
-[Full existing or intended node paths, each carrying the same target malleability as the Change metadata. At Executable maturity, include required node states. Identify Product and repository where needed for disambiguation.]
+[Full existing or intended node paths, each carrying its own target malleability. At Executable maturity, include required node states and evidence obligations. Identify Product and repository where needed for disambiguation.]
 
 ## Assertions
 
@@ -48,9 +48,11 @@ malleability: implementation
 
 [Exact governing references and settled choices. Identify intended Decision changes and the Activities that author them.]
 
+<!-- From Framed maturity onward, the operator conversation adds this only after approving the complete Frame: Intent attestation: attested by the operator on YYYY-MM-DD. Proposed Changes omit it. -->
+
 # Activities
 
 - [ ] [Meaningful next result, with its exact target and dependencies.]
-- [ ] [At Executable maturity, the complete gate required by the target malleability, followed by any subsequent result in execution order.]
+- [ ] [At Executable maturity, the complete merge composition required by the least malleable affected node after the Change, followed by any subsequent result in execution order.]
 
 <!-- Verification records are excluded. Transient branch/changeset state, blockers, and hazards needed for takeover belong in the existing Handoff workflow. -->

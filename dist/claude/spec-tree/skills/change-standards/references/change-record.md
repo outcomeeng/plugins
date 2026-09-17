@@ -30,34 +30,40 @@ Judge the record's completeness at its declared maturity from its content and go
 
 ALWAYS use the closed front-matter schema below. Any unknown key rejects the candidate.
 
-| Key            | Presence                                                                 | Value                                                                      | Publication                                                |
-| -------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `title`        | Required                                                                 | Non-empty string naming the same Output as `# Output`                      | Store title                                                |
-| `product`      | Required                                                                 | Exactly one configured Product                                             | Native Product field                                       |
-| `maturity`     | Required                                                                 | `Proposed`, `Framed`, `Sliced`, or `Executable`                            | Native Maturity field                                      |
-| `lifecycle`    | Required                                                                 | `Available`, `Claimed`, `Applied`, `Refined`, or `Abandoned`               | Native Status field                                        |
-| `malleability` | Optional                                                                 | `spec`, `verification`, or `implementation`; absent means `implementation` | Retained in the Change record; no native project field     |
-| `change_ref`   | Required only when revising an existing Change; forbidden on a new draft | Canonical reference of that Change                                         | Selects the existing store record; no native project field |
+| Key            | Presence                                                                 | Value                                                               | Publication                                                |
+| -------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `title`        | Required                                                                 | Non-empty string naming the same Output as `# Output`               | Store title                                                |
+| `product`      | Required                                                                 | Exactly one configured Product                                      | Native Product field                                       |
+| `maturity`     | Required                                                                 | `Proposed`, `Framed`, `Sliced`, or `Executable`                     | Native Maturity field                                      |
+| `lifecycle`    | Required                                                                 | `Available`, `Claimed`, `Applied`, `Refined`, or `Abandoned`        | Native Status field                                        |
+| `refined_from` | Required                                                                 | Immutable list of canonical predecessor references; `[]` for a root | Retained in the Change record; no native project field     |
+| `change_ref`   | Required only when revising an existing Change; forbidden on a new draft | Canonical reference of that Change                                  | Selects the existing store record; no native project field |
 
 The local working file carries this metadata above the body so the complete candidate can be inspected and audited locally. An existing Change's Lifecycle and holder come from the configured store's confirmed state. A new local draft grants no claim or integration authority. Store and project coordinates are configuration, never candidate keys.
 
-Publication maps the approved native metadata and publishes the body without duplicating those mapped fields. It retains `malleability` as record metadata because no native project field owns it, and removes `change_ref` after using it to select the existing record. The local candidate and published record are successive versions of the same Change; the workflow checks for intervening remote edits before publishing.
+Publication maps the approved native metadata and publishes the body without duplicating those mapped fields. It retains `refined_from` as immutable record metadata because no native project field owns it, and removes `change_ref` after using it to select the existing record. The local candidate and published record are successive versions of the same Change; the workflow checks for intervening remote edits before publishing.
 
 At Proposed maturity, the received input remains available through the Change infrastructure; an Input section may present it. From Framed maturity onward, NEVER include an Input section, reproduced prompt, or conversation transcript in the Change body. The Change infrastructure owns preservation of the original input and edit history. NEVER manufacture a local history file or audit comment to replace that responsibility.
 
 </rule>
 
-<rule id="malleability">
+<rule id="node-malleability-and-state">
 
-`malleability` names the target malleability of every node the Change touches. The allowed values and absent default match node front matter: `spec`, `verification`, or `implementation`, with absence meaning `implementation`. At Framed maturity or later, every entry under `## Nodes` carries the same target malleability as the Change metadata. A mismatch, an omitted node target, or more than one target malleability rejects the candidate.
+At Framed maturity or later, every entry under `## Nodes` names that node's target malleability: `spec`, `verification`, or `implementation`. Targets are per-node Frame facts and may differ within one Change. When a target is lower than the node's declared malleability, the Change hardens that node. An omitted target rejects the candidate from Framed onward.
 
-At Executable maturity, `# Activities` names the complete gate for the target:
+At Executable maturity, every node entry also names its required state and evidence obligations. `# Activities` names the complete merge composition selected by the least malleable affected node after the Change:
 
 - `spec`: deterministic Validate, reachability tests, and every tagged assertion result required by the affected nodes.
 - `verification`: deterministic Validate and every tagged assertion result, followed by the converged Review.
 - `implementation`: deterministic validation and tests, every applicable audit, and the converged Review.
 
 The Activities may name repository commands and verifier roles that realize these types, while the required verification types remain explicit. NEVER store run tokens, verdicts, findings, or verification history in the Change.
+
+</rule>
+
+<rule id="intent-attestation">
+
+From Framed maturity onward, the Frame carries `Intent attestation: attested by the operator on <date>.` The operator conversation writes this line only after the operator approves the complete Frame. Proposed Changes omit it. NEVER infer attestation from polished prose, an execution request, an audit result, or an agent's reconstruction.
 
 </rule>
 
@@ -82,7 +88,7 @@ Maturity can move backward when its requirements become false. A Claimed holder 
 
 ALWAYS organize the Frame under `## Nodes`, `## Assertions`, and `## Decisions`.
 
-- Nodes: identify each existing or intended node by its full product-relative path, Product and repository when ambiguous, the target malleability matching the Change metadata, and required node state at Executable maturity.
+- Nodes: identify each existing or intended node by its full product-relative path, Product and repository when ambiguous, its own target malleability, and required node state at Executable maturity.
 - Assertions: identify the affected node and exact assertion heading or identifier; state each addition, amendment, or removal and its intended declaration. At Executable maturity, include the evidence obligations needed to produce the required node state.
 - Decisions: identify each governing Decision by its exact repository reference and capture the choice that must remain settled. Mark intended Decision changes explicitly. A reference whose contents leave a consequential choice open does not settle it.
 
@@ -112,7 +118,7 @@ Execution requires an Executable, Claimed lineage leaf with no unresolved blocke
 
 <rule id="relationships">
 
-ALWAYS author lineage only through the successor's immutable `refined_from` set. A root has no predecessors. Successors, roots, leaves, and reverse changeset views are derived; NEVER maintain authoritative successor or changeset lists in the Change.
+ALWAYS author lineage only through the successor's immutable front-matter `refined_from` list. A root uses `refined_from: []`. Successors, roots, leaves, and reverse changeset views are derived; NEVER restate lineage in the body or maintain authoritative successor or changeset lists in the Change.
 
 Record mutable blockers by exact Change reference. A cycle prevents Sliced or Executable maturity. Follow a Refined blocker's successors: Applied leaves satisfy the dependency; active leaves remain blockers; an Abandoned leaf requires renewed refinement.
 
