@@ -51,7 +51,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
-import json
+import importlib.util
 import pathlib
 import re
 import subprocess
@@ -61,6 +61,7 @@ from collections.abc import Mapping
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from types import ModuleType
 from typing import Protocol
 
 FRONTMATTER_DELIMITER = "---"
@@ -252,64 +253,43 @@ class UnresolvedInstructionTemplateError(ValueError):
     """Raised when instruction generation receives an authored build template."""
 
 
-# The artifact registry the build renders beside this script declares every kind the
-# marketplace ships and the extensions that detect its artifacts.
-ARTIFACT_REGISTRY_FILENAME = "artifact-registry.json"
-_REGISTRY_KINDS_FIELD = "kinds"
-_REGISTRY_NAME_FIELD = "name"
-_REGISTRY_ARTIFACTS_FIELD = "artifacts"
-_REGISTRY_DETECTION_FIELD = "detection"
-_REGISTRY_EXTENSIONS_FIELD = "extensions"
+def _selection_provider() -> ModuleType:
+    """Load the select-artifacts provider's script by the installed tree's layout.
 
-
-def _load_artifact_registry() -> Mapping[str, object]:
-    """Read the rendered artifact registry beside this script."""
-    path = pathlib.Path(__file__).resolve().parent / ARTIFACT_REGISTRY_FILENAME
-    with path.open(encoding="utf-8") as handle:
-        registry = json.load(handle)
-    if not isinstance(registry, dict):
-        raise ValueError(f"{path} is not a rendered artifact registry")
-    return registry
-
-
-def _language_by_extension(registry: Mapping[str, object]) -> dict[str, str]:
-    """Map each extension a registered artifact's detection declares to its kind.
-
-    The registry declares each extension under exactly one kind; a rendered
-    registry declaring one under two kinds is malformed and is rejected rather
-    than tie-broken.
+    The provider owns the rendered artifact registry, its field vocabulary, and
+    the extension-to-kind derivation; this script carries none of its own.
     """
-    mapping: dict[str, str] = {}
-    kinds = registry.get(_REGISTRY_KINDS_FIELD)
-    for kind in kinds if isinstance(kinds, list) else ():
-        artifacts = (
-            kind.get(_REGISTRY_ARTIFACTS_FIELD) if isinstance(kind, dict) else None
-        )
-        for artifact in artifacts if isinstance(artifacts, list) else ():
-            detection = artifact.get(_REGISTRY_DETECTION_FIELD)
-            if not isinstance(detection, dict):
-                continue
-            extensions = detection.get(_REGISTRY_EXTENSIONS_FIELD)
-            for extension in extensions if isinstance(extensions, list) else ():
-                owner = mapping.setdefault(
-                    str(extension), str(kind[_REGISTRY_NAME_FIELD])
-                )
-                if owner != str(kind[_REGISTRY_NAME_FIELD]):
-                    raise ValueError(
-                        f"extension {extension!r} is declared under kinds "
-                        f"{owner!r} and {kind[_REGISTRY_NAME_FIELD]!r}"
-                    )
-    return mapping
+    module_name = "select_artifacts"
+    cached = sys.modules.get(module_name)
+    if cached is not None:
+        return cached
+    skills = pathlib.Path(__file__).resolve().parents[2]
+    path = skills / "select-artifacts" / "scripts" / f"{module_name}.py"
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load {module_name} from {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        del sys.modules[spec.name]
+        raise
+    return module
 
 
 def language_by_extension() -> dict[str, str]:
-    """Read the rendered registry beside this script and map each declared extension to its kind.
+    """Map each registry-declared extension to its kind through the select-artifacts provider.
 
-    Edge helper: the one filesystem read the enabled-language derivation needs. The pure
-    functions below take the map it returns, so they stay importable and testable without the
-    rendered data file present.
+    Edge helper: the one provider load and registry read the enabled-language derivation
+    needs. The pure functions below take the map it returns, so they stay importable and
+    testable without the provider present.
     """
-    return _language_by_extension(_load_artifact_registry())
+    provider = _selection_provider()
+    mapping: dict[str, str] = provider.kind_by_extension(
+        provider.load_artifact_registry()
+    )
+    return mapping
 
 
 _BLANK_RUN = re.compile(r"\n{3,}")
@@ -1724,9 +1704,9 @@ def main(argv: list[str] | None = None) -> int:
     elif repo_root is not None:
         try:
             languages = detect_languages_from_tree(_spx_dir(repo_root))
-        except (CliInputError, OSError, json.JSONDecodeError, ValueError) as exc:
-            # A missing, unrendered, or malformed sibling registry is an edge
-            # failure reported like every other CLI-input failure.
+        except (CliInputError, ImportError, OSError, ValueError) as exc:
+            # A missing provider, or a missing, unrendered, or malformed registry,
+            # is an edge failure reported like every other CLI-input failure.
             print(f"error: {exc}", file=sys.stderr)
             return 2
     else:

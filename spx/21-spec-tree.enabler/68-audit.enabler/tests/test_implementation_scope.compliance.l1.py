@@ -25,6 +25,7 @@ from outcomeeng_testing.generators.artifact_registry import (
     unregistered_paths,
 )
 from outcomeeng_testing.generators.changeset_scope import distinct_subject_paths
+from outcomeeng_testing.harnesses.artifact_registry import load_select_artifacts_module
 from outcomeeng_testing.harnesses.implementation_scope import (
     ABSENT_RUN_TOKEN,
     AUDIT_FIELD,
@@ -417,7 +418,7 @@ def test_a_head_behind_the_fetched_base_is_relayed_as_the_stale_base_refusal() -
 
 def test_the_resolver_emits_the_registry_selection_for_every_resolved_path() -> None:
     resolver = load_resolve_scope_module()
-    field = resolver.SelectionField
+    field = load_select_artifacts_module().SelectionField
     cases = detected_artifacts()
     unregistered = unregistered_paths()
     paths = [*(path_matching(detected) for detected in cases), *unregistered]

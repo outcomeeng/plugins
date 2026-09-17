@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from outcomeeng_testing.harnesses.audit_verification_run_contract import (
-    audit_contract_rejects_incomplete_language_trio,
     audit_contract_rejects_missing_generated_audit_host,
     audit_contract_rejects_missing_generated_language,
     audit_contract_rejects_missing_generated_surface,
     audit_contract_rejects_missing_single_surface_audit_host,
-    audit_contract_rejects_missing_single_surface_language,
     audit_contract_rejects_language_specific_wrapper,
     audit_contract_rejects_language_wrapper_under_spec_tree,
     audit_contract_rejects_retired_language_audit_skill,
@@ -17,6 +15,8 @@ from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     implementation_audit_payloads_reject_empty_subject,
     implementation_audit_unit_ids_are_subject_specific,
     language_concern_skill_trios_exist,
+    observe_incomplete_language_trio,
+    observe_missing_single_surface_language,
 )
 
 
@@ -57,7 +57,11 @@ def test_retired_wrappers_in_every_plugin_are_rejected() -> None:
 
 
 def test_incomplete_language_concern_trio_is_rejected() -> None:
-    assert audit_contract_rejects_incomplete_language_trio()
+    observed = observe_incomplete_language_trio()
+    assert any(
+        observed.kind in error and observed.role in error and observed.skill in error
+        for error in observed.errors
+    ), observed
 
 
 def test_missing_generated_surface_is_rejected() -> None:
@@ -77,7 +81,11 @@ def test_missing_generated_language_is_rejected() -> None:
 
 
 def test_missing_single_surface_language_is_rejected() -> None:
-    assert audit_contract_rejects_missing_single_surface_language()
+    observed = observe_missing_single_surface_language()
+    assert any(
+        observed.kind in error and observed.role in error and observed.skill in error
+        for error in observed.errors
+    ), observed
 
 
 def test_retired_language_audit_skill_is_rejected() -> None:

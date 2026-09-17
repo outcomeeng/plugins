@@ -19,22 +19,20 @@ from outcomeeng_testing.generators.artifact_registry import (
 )
 from outcomeeng_testing.harnesses.artifact_registry import (
     kind_entries,
+    load_select_artifacts_module,
     rendered_registry_document,
     shipped_registry_document,
 )
-from outcomeeng_testing.harnesses.implementation_scope import (
-    load_resolve_scope_module,
-)
 
-RESOLVER = load_resolve_scope_module()
-FIELD = RESOLVER.SelectionField
+PROVIDER = load_select_artifacts_module()
+FIELD = PROVIDER.SelectionField
 
 
 def _selected(path: str) -> list[tuple[str, str, str]]:
-    """Project the resolver's selection for one path to (kind, role, audit) tuples."""
+    """Project the provider's selection for one path to (kind, role, audit) tuples."""
     return [
         (entry[FIELD.KIND], entry[FIELD.ROLE], entry[FIELD.AUDIT])
-        for entry in RESOLVER.select_artifacts(path, artifact_registry_document())
+        for entry in PROVIDER.select_artifacts(path, artifact_registry_document())
     ]
 
 

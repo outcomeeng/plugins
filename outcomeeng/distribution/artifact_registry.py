@@ -211,31 +211,40 @@ EXTENSION_OWNERS: Final = _extension_owners(ARTIFACT_KINDS)
 SCRIPTS_DIR_NAME: Final = "scripts"
 ARTIFACT_REGISTRY_FILENAME: Final = "artifact-registry.json"
 ARTIFACT_REGISTRY_VARIABLE: Final = "artifact_registry_json"
+SELECT_ARTIFACTS_SCRIPT_FILENAME: Final = "select_artifacts.py"
 
 
 @dataclass(frozen=True)
 class ArtifactRegistryConsumer:
-    """One shipped skill whose script reads the rendered registry beside itself."""
+    """One shipped skill whose script reads the rendered registry beside itself.
+
+    The provider skill is the sole consumer: sibling skills' scripts reach its
+    reader by import and carry no copy of the document or its vocabulary.
+    """
 
     plugin: str
     skill: str
 
     @property
+    def scripts_path(self) -> Path:
+        """Return the skill's scripts directory relative to a plugin surface root."""
+        return Path(self.plugin) / SKILLS_SUBDIR_NAME / self.skill / SCRIPTS_DIR_NAME
+
+    @property
     def relative_path(self) -> Path:
         """Return the data file's path relative to a plugin surface root."""
-        return (
-            Path(self.plugin)
-            / SKILLS_SUBDIR_NAME
-            / self.skill
-            / SCRIPTS_DIR_NAME
-            / ARTIFACT_REGISTRY_FILENAME
-        )
+        return self.scripts_path / ARTIFACT_REGISTRY_FILENAME
+
+    @property
+    def script_relative_path(self) -> Path:
+        """Return the reader script's path relative to a plugin surface root."""
+        return self.scripts_path / SELECT_ARTIFACTS_SCRIPT_FILENAME
 
 
-ARTIFACT_REGISTRY_CONSUMERS: Final = (
-    ArtifactRegistryConsumer(plugin="spec-tree", skill="audit-implementation"),
-    ArtifactRegistryConsumer(plugin="spec-tree", skill="update-instruction-block"),
+ARTIFACT_REGISTRY_PROVIDER: Final = ArtifactRegistryConsumer(
+    plugin="spec-tree", skill="select-artifacts"
 )
+ARTIFACT_REGISTRY_CONSUMERS: Final = (ARTIFACT_REGISTRY_PROVIDER,)
 
 
 def artifact_registry_document() -> dict[str, object]:

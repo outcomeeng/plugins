@@ -5,14 +5,17 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from pathlib import Path
+from types import ModuleType
 from typing import cast
 
 from outcomeeng.distribution.artifact_registry import (
+    ARTIFACT_REGISTRY_PROVIDER,
     ArtifactRegistryConsumer,
     RegistryField,
     artifact_registry_render_variables,
 )
 from outcomeeng.distribution.build import render_text
+from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng.distribution.contracts import (
     PLUGINS_DIR_NAME,
     SOURCE_ROOT_NAME,
@@ -47,6 +50,15 @@ def shipped_registry_document(
     """Parse the committed data file one target's tree carries for a consumer."""
     path = DistTreeReader(REPO_ROOT).target_root(target) / consumer.relative_path
     return _document(json.loads(path.read_text(encoding="utf-8")), path)
+
+
+def load_select_artifacts_module() -> ModuleType:
+    """Load the provider's shipped reader to reach its pure selection seam."""
+    path = (
+        DistTreeReader(REPO_ROOT).target_root(Target.CLAUDE)
+        / ARTIFACT_REGISTRY_PROVIDER.script_relative_path
+    )
+    return load_shipped_module("select_artifacts", path)
 
 
 def kind_entries(document: Mapping[str, object]) -> Mapping[str, object]:

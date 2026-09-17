@@ -7,7 +7,6 @@ from typing import Final
 
 from outcomeeng.distribution.artifact_registry import (
     ARTIFACT_KINDS,
-    ARTIFACT_REGISTRY_FILENAME,
     ArtifactRole,
     kinds_with_role,
 )
@@ -35,13 +34,11 @@ AGENTS_DIR_NAME: Final = "agents"
 SKILL_FILENAME: Final = "SKILL.md"
 IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
 IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT: Final = "scripts/resolve_scope.py"
-IMPLEMENTATION_AUDIT_REGISTRY_DATA: Final = f"scripts/{ARTIFACT_REGISTRY_FILENAME}"
 IMPLEMENTATION_AUDIT_FAILURE_REFERENCE: Final = "references/operational-failures.md"
 IMPLEMENTATION_AUDIT_ARTIFACTS: Final = frozenset(
     {
         SKILL_FILENAME,
         IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
-        IMPLEMENTATION_AUDIT_REGISTRY_DATA,
         IMPLEMENTATION_AUDIT_FAILURE_REFERENCE,
     }
 )

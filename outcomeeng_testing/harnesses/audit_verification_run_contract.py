@@ -469,12 +469,28 @@ def audit_contract_rejects_retired_wrappers_in_every_plugin() -> bool:
     )
 
 
-def audit_contract_rejects_incomplete_language_trio() -> bool:
-    """Return whether validation rejects a missing language concern skill."""
+@dataclass(frozen=True)
+class RemovedSkillObservation:
+    """What the registry skill check reported after one registered skill was removed."""
+
+    kind: str
+    role: str
+    skill: str
+    errors: tuple[str, ...]
+
+
+def observe_incomplete_language_trio() -> RemovedSkillObservation:
+    """Remove the source kind's last audit skill from a valid surface and observe the check."""
     with _valid_surface() as surface:
         kind = source_kind()
-        _registered_skill_path(surface, kind, kind.artifacts[-1].audit).unlink()
-        return bool(audit_artifacts.check_registry_skill_surface(surface))
+        artifact = kind.artifacts[-1]
+        _registered_skill_path(surface, kind, artifact.audit).unlink()
+        return RemovedSkillObservation(
+            kind=kind.name,
+            role=artifact.role,
+            skill=artifact.audit,
+            errors=tuple(audit_artifacts.check_registry_skill_surface(surface)),
+        )
 
 
 def audit_contract_rejects_retired_language_audit_skill() -> bool:
@@ -522,15 +538,21 @@ def audit_contract_rejects_missing_generated_language() -> bool:
         return bool(check_audit_artifact_contract(root))
 
 
-def audit_contract_rejects_missing_single_surface_language() -> bool:
-    """Reject a lone source surface missing one language concern skill."""
+def observe_missing_single_surface_language() -> RemovedSkillObservation:
+    """Remove one audit skill from a lone source surface and observe the whole contract."""
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         surface = root / PLUGIN_SURFACE_PATHS[0]
         kind = source_kind()
+        artifact = kind.artifacts[-1]
         _populate_valid_surface(surface)
-        _registered_skill_path(surface, kind, kind.artifacts[-1].audit).unlink()
-        return bool(check_audit_artifact_contract(root))
+        _registered_skill_path(surface, kind, artifact.audit).unlink()
+        return RemovedSkillObservation(
+            kind=kind.name,
+            role=artifact.role,
+            skill=artifact.audit,
+            errors=tuple(check_audit_artifact_contract(root)),
+        )
 
 
 def runtime_errors_with_extra_artifact() -> list[str]:
