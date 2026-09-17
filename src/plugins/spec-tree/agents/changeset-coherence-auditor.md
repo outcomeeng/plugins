@@ -3,7 +3,7 @@ name: changeset-coherence-auditor
 description: >-
   ALWAYS invoke when deciding whether an exact committed changeset is one
   coherent review unit or requires a dependency-ordered split.
-tools: Bash, Read, Glob, Grep, {{! tool('use_skill') !}}
+tools: Read, Glob, Grep, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git diff:*), Bash(git show:*), {{! tool('use_skill') !}}
 profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only

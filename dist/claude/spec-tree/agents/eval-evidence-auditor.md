@@ -4,7 +4,7 @@ effort: "medium"
 name: eval-evidence-auditor
 description: >-
   ALWAYS invoke when auditing eval evidence quality against spec assertions after writing evals for a spec node or before relying on eval evidence.
-tools: Read, Grep, Glob, Bash, Skill
+tools: Read, Grep, Glob, Skill, Bash(git merge-base --is-ancestor:*), Bash(git diff:*)
 skills:
   - spec-tree:audit-eval-evidence
 ---

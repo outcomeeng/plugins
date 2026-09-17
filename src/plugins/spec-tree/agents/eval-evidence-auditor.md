@@ -2,7 +2,7 @@
 name: eval-evidence-auditor
 description: >-
   ALWAYS invoke when auditing eval evidence quality against spec assertions after writing evals for a spec node or before relying on eval evidence.
-tools: Read, Grep, Glob, Bash, {{! tool('use_skill') !}}
+tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git merge-base --is-ancestor:*), Bash(git diff:*)
 profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only

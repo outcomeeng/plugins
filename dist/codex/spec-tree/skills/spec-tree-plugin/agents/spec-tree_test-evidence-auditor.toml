@@ -47,7 +47,7 @@ Return only the JSON verdict produced by `spec-tree:audit-tests`. Do not add pro
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `spec-tree:audit-tests`.
 
-Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Bash`, `Read`, `Grep`, `Glob`.
+Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Grep`, `Glob`.
 </manual_review_guidance>
 """
 
