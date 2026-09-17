@@ -6,7 +6,7 @@ description: >-
 tools: Bash, Read, Glob, Grep, Skill
 profile: standard
 {!% if target == 'codex' %!}
-sandbox_mode: workspace-write
+sandbox_mode: danger-full-access
 approval_policy: never
 {!% endif %!}
 skills:
