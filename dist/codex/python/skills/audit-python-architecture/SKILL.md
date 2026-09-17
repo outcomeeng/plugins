@@ -4,10 +4,10 @@ description: >-
   Python-specific architecture audit — judges the Python architecture target in
   scope for dependency injection, mocking prohibition, execution-level accuracy,
   Python anti-patterns, and test-double exception cases.
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob
 ---
 
-Invoke the `python:python-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `python:python-architecture-standards`.
 
 <objective>
 A JSON verdict on a Python architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, Python anti-patterns, ancestor consistency, and test-double exception cases.

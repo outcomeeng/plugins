@@ -5,7 +5,7 @@ description: >-
   node-spec form, covering section structure, atemporal voice, and per-assertion
   tag fitness.
 argument-hint: "<node-spec-file-path>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git branch --show-current:*)
 ---
 
 <objective>

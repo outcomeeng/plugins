@@ -6,7 +6,7 @@ description: >-
   frontmatter, role framing, constraints, and output contract.
 argument-hint: <configured-agent-path>
 arguments: configured_agent_path
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}
 ---
 
 {!% require_skill 'instructions:agent-prompt-standards' %!}

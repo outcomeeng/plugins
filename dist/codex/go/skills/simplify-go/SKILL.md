@@ -3,10 +3,10 @@ name: simplify-go
 description: >-
   ALWAYS invoke this skill when simplifying Go implementation while preserving behavior.
 argument-hint: "<HEAD|base...head>"
-allowed-tools: Read, Glob, Grep, Edit, Skill, Bash(git status:*), Bash(git rev-parse:*), Bash(git diff:*)
+allowed-tools: Read, Glob, Grep, Edit, Bash(git status:*), Bash(git rev-parse:*), Bash(git diff:*)
 ---
 
-Invoke the `go:go-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-test-standards`.
 
 <objective>
 Simpler Go implementation with unchanged behavior and concurrency ownership, accompanied by a scope and verification report.

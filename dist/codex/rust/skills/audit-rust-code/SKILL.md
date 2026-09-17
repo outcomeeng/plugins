@@ -4,12 +4,12 @@ description: >-
   Rust implementation-code audit methodology — judges the Rust code files in
   scope for design flaws, architecture-decision compliance, and unsafe/FFI
   soundness.
-allowed-tools: Read, Grep, Glob, Bash(grep:*), Skill
+allowed-tools: Read, Grep, Glob, Bash(grep:*)
 ---
 
-Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `rust:rust-standards`.
 
-Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `rust:rust-test-standards`.
 
 <objective>
 A verdict on Rust implementation code — `APPROVED`, or `REJECTED` with each finding naming the design flaw, boundary violation, ADR/PDR drift, or unsafe/FFI soundness issue; the violated rule; and the evidence.

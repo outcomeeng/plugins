@@ -125,6 +125,7 @@ def registry_token_renders_each_target_name() -> bool:
         )
         for (kind, capability), names in RUNTIME_TOKEN_REQUIRED_NAMES.items()
         for runtime_name, expected in names.items()
+        if expected is not None
         for runtime in (Target(runtime_name),)
     )
 
@@ -413,6 +414,7 @@ def _registry_contract_holds(registry: dict[str, RuntimeTokenKind]) -> bool:
                 if RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[kind]
                 for entry in kind_entry.names.values()
                 for name in entry.values()
+                if name is not None
             },
             key=len,
             reverse=True,

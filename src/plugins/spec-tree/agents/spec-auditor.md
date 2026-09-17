@@ -2,7 +2,7 @@
 name: spec-auditor
 description: >-
   ALWAYS invoke when auditing a spec node's assertion quality after writing an enabler or outcome node spec or before closing it.
-tools: Read, Grep, Glob, Bash, Skill
+tools: Read, Grep, Glob, Bash, {{! tool('use_skill') !}}
 profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only

@@ -3,7 +3,7 @@ name: rust-simplifier
 description: >-
   ALWAYS invoke when the governing skill requests behavior-preserving simplification of changed Rust implementation.
 profile: standard
-tools: Read, Grep, Glob, Bash, Edit, Skill
+tools: Read, Grep, Glob, Bash, Edit, {{! tool('use_skill') !}}
 skills:
   - rust:simplify-rust
 ---

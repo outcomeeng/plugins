@@ -5,7 +5,7 @@ description: >-
   NEVER create {{! term('configured_agents') !}} without this skill.
 argument-hint: "<configuration-path-or-role>"
 arguments: configuration_target
-allowed-tools: Read, Glob, Write, Edit, Skill, Bash(just build-skills:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(git add:*), Bash(git commit:*)
+allowed-tools: Read, Glob, Write, Edit, {{! tool('use_skill') !}}, Bash(just build-skills:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 {!% require_skill 'instructions:subagent-standards' %!}

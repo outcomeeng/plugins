@@ -3,14 +3,14 @@ name: architect-python
 description: >-
   ALWAYS invoke this skill when writing ADRs for Python.
   NEVER author a Python ADR without this skill.
-allowed-tools: Read, Write, Glob, Grep, Skill
+allowed-tools: Read, Write, Glob, Grep
 ---
 
-Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `python:python-standards`.
 
-Invoke the `python:python-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `python:python-architecture-standards`.
 
-Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `python:python-test-standards`.
 
 <objective>
 A binding Python ADR whose testability constraints live as ALWAYS/NEVER rules under the `## Verification` section's `### Audit` subsection.

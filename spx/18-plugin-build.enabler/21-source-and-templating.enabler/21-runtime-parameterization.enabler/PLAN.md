@@ -11,9 +11,11 @@ validation lint (`outcomeeng/validation/runtime_tokens.py`, governed by
 `spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`) enforces every authored
 file under `src/plugins/` and `src/_shared/`, except the explicit files named in
 `RUNTIME_TOKEN_IGNORE` because they must name harness guide filenames as data.
-The registry is seeded with `ask_user` (`AskUserQuestion`/`request_user_input`) and the
-no-Codex-equivalent `ScheduleWakeup`; the ignore-list mechanism remains as the tracked exemption
-surface for any future not-yet-converted plugin.
+The registry is seeded with `ask_user` (`AskUserQuestion`/`request_user_input`),
+`use_skill` (`Skill`/unavailable), and the no-Codex-equivalent `ScheduleWakeup`.
+An unavailable capability is removed only when its token occupies one complete item in
+`allowed-tools` or agent `tools`; every other placement fails the build. The ignore-list
+mechanism remains as the tracked exemption surface for any future not-yet-converted plugin.
 
 ## Phase 2
 

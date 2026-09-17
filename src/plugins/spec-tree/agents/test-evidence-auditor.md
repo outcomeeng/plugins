@@ -2,7 +2,7 @@
 name: test-evidence-auditor
 description: >-
   ALWAYS invoke when auditing test evidence quality against spec assertions after writing tests for a spec node or before closing an outcome.
-tools: Bash, Read, Grep, Glob, Skill
+tools: Bash, Read, Grep, Glob, {{! tool('use_skill') !}}
 profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only

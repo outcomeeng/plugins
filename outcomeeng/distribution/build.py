@@ -33,6 +33,7 @@ from jinja2 import (
 from jinja2.runtime import Context
 
 from outcomeeng.distribution.agents import (
+    AGENT_TOOLS_FIELD,
     convert_agent_markdown,
     parse_agent_text,
 )
@@ -76,6 +77,8 @@ from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
     RUNTIME_TOKEN_TERM_KIND,
     RUNTIME_TOKEN_TOOL_KIND,
+    RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
+    RUNTIME_TOKEN_USE_SKILL_NAMES,
     RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY,
     RUNTIME_TOKEN_WAIT_AGENT_NAMES,
     SKILL_FILENAME,
@@ -248,7 +251,7 @@ class RuntimeTokenKind:
     """
 
     lint_enforced: bool
-    names: dict[str, dict[str, str]]
+    names: dict[str, dict[str, str | None]]
 
 
 @dataclass(frozen=True)
@@ -307,6 +310,7 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
         lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_TOOL_KIND],
         names={
             RUNTIME_TOKEN_ASK_USER_CAPABILITY: RUNTIME_TOKEN_ASK_USER_NAMES,
+            RUNTIME_TOKEN_USE_SKILL_CAPABILITY: RUNTIME_TOKEN_USE_SKILL_NAMES,
             RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
             RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: RUNTIME_TOKEN_WAIT_AGENT_NAMES,
             RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: (
@@ -347,7 +351,8 @@ def runtime_token_resolver_cases(
         )
         for kind, kind_entry in registry.items()
         for capability, runtime_names in kind_entry.names.items()
-        for runtime in runtime_names
+        for runtime, name in runtime_names.items()
+        if name is not None
     )
 
 
@@ -357,7 +362,7 @@ def resolve_runtime_token(
     runtime: str,
     *,
     registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
-) -> str:
+) -> str | None:
     """Return the runtime-divergent name for ``(kind, capability, runtime)``.
 
     The kind selects the sub-registry; capability and runtime select the name. The
@@ -373,13 +378,12 @@ def resolve_runtime_token(
     entry = kind_entry.names.get(capability)
     if entry is None:
         raise RuntimeTokenError(f"unknown {kind} capability {capability!r}")
-    name = entry.get(runtime)
-    if name is None:
+    if runtime not in entry:
         raise RuntimeTokenError(
             f"{kind} capability {capability!r} has no name for runtime {runtime!r}; "
             "wrap the token in a per-runtime conditional"
         )
-    return name
+    return entry[runtime]
 
 
 _DIRECTIVE_RE: Final = re.compile(
@@ -393,6 +397,16 @@ _DIRECTIVE_BODY_RE: Final = re.compile(
 )
 _PLANNING_DIRECTIVE_PLACEHOLDER_START: Final = "\ue000outcomeeng-directive:"
 _PLANNING_DIRECTIVE_PLACEHOLDER_END: Final = "\ue001"
+_UNAVAILABLE_RUNTIME_TOKEN_START: Final = "\ue002outcomeeng-unavailable-runtime-token:"
+_UNAVAILABLE_RUNTIME_TOKEN_END: Final = "\ue003"
+_UNAVAILABLE_RUNTIME_TOKEN_PATTERN: Final = re.compile(
+    re.escape(_UNAVAILABLE_RUNTIME_TOKEN_START)
+    + r"(?P<kind>[a-z_]+):(?P<capability>[a-z_]+)"
+    + re.escape(_UNAVAILABLE_RUNTIME_TOKEN_END)
+)
+_OPTIONAL_TOOL_FRONTMATTER_FIELDS: Final = frozenset(
+    {AGENT_TOOLS_FIELD, "allowed-tools"}
+)
 
 # Jinja control statements share the `{!% %!}` block delimiter with the build's
 # directives. The build owns this vocabulary; validators and evidence import it
@@ -649,7 +663,7 @@ def render_text(
         runtime_token_registry=runtime_token_registry,
         raw_literals=raw_literals,
     )
-    return _restore_literals(
+    restored = _restore_literals(
         _render_jinja(
             rendered,
             shared_root=shared_root,
@@ -658,6 +672,106 @@ def render_text(
         ),
         tuple(raw_literals),
     )
+    return _remove_unavailable_frontmatter_items(restored)
+
+
+def _unavailable_runtime_token(kind: str, capability: str) -> str:
+    return (
+        f"{_UNAVAILABLE_RUNTIME_TOKEN_START}{kind}:{capability}"
+        f"{_UNAVAILABLE_RUNTIME_TOKEN_END}"
+    )
+
+
+def _remove_unavailable_frontmatter_items(text: str) -> str:
+    """Remove unavailable tool tokens only as complete frontmatter-list items."""
+    if _UNAVAILABLE_RUNTIME_TOKEN_START not in text:
+        return text
+    if not text.startswith("---\n"):
+        raise RuntimeTokenError(
+            "an unavailable runtime capability was used outside frontmatter"
+        )
+
+    closing_index = text.find("\n---", len("---\n"))
+    if closing_index == -1:
+        raise FrontmatterError("frontmatter starts with --- but has no closing fence")
+    fence_end = closing_index + len("\n---")
+    if len(text) > fence_end and text[fence_end] not in {"\n", "\r"}:
+        raise FrontmatterError("frontmatter closing fence is malformed")
+
+    lines = text[len("---\n") : closing_index].splitlines()
+    kept_lines: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        key = _frontmatter_key(line)
+        if key not in _OPTIONAL_TOOL_FRONTMATTER_FIELDS:
+            kept_lines.append(line)
+            index += 1
+            continue
+
+        field_lines = [line]
+        index += 1
+        while index < len(lines) and _is_continuation_line(lines[index]):
+            field_lines.append(lines[index])
+            index += 1
+        kept_lines.extend(_remove_unavailable_tool_items(key, field_lines))
+
+    suffix = text[fence_end:]
+    result = (
+        "---\n" + "\n".join(kept_lines) + "\n---" + suffix
+        if kept_lines
+        else suffix.lstrip("\r\n")
+    )
+    match = _UNAVAILABLE_RUNTIME_TOKEN_PATTERN.search(result)
+    if match is not None:
+        raise RuntimeTokenError(
+            f"{match.group('kind')} capability {match.group('capability')!r} "
+            "is unavailable for this runtime and may appear only as a complete "
+            "item in allowed-tools or tools frontmatter"
+        )
+    return result
+
+
+def _remove_unavailable_tool_items(key: str, lines: list[str]) -> list[str]:
+    """Return one tool field with complete unavailable items removed."""
+    first = lines[0]
+    _field, separator, raw_value = first.partition(":")
+    if raw_value.strip():
+        items = raw_value.split(",")
+        kept_items = [item for item in items if not _is_unavailable_tool_item(item)]
+        if any(_UNAVAILABLE_RUNTIME_TOKEN_START in item for item in kept_items):
+            return lines
+        if not kept_items:
+            return []
+        return [f"{key}{separator}{','.join(kept_items)}"]
+
+    kept_continuations = [
+        line
+        for line in lines[1:]
+        if not _is_unavailable_tool_item(_frontmatter_list_item(line))
+    ]
+    if any(
+        _UNAVAILABLE_RUNTIME_TOKEN_START in line for line in kept_continuations
+    ):
+        return lines
+    return [first, *kept_continuations] if kept_continuations else []
+
+
+def _frontmatter_list_item(line: str) -> str:
+    stripped = line.strip()
+    return stripped[1:].strip() if stripped.startswith("-") else stripped
+
+
+def _is_unavailable_tool_item(item: str) -> bool:
+    stripped = item.strip()
+    if (
+        len(stripped) >= 2
+        and stripped[0] == stripped[-1]
+        and stripped[0] in {"'", '"'}
+    ):
+        stripped = stripped[1:-1]
+    match = _UNAVAILABLE_RUNTIME_TOKEN_PATTERN.fullmatch(stripped)
+    return match is not None and match.group("kind") == RUNTIME_TOKEN_TOOL_KIND
 
 
 def _render_jinja(
@@ -1075,11 +1189,16 @@ def _make_kind_global(
             raise RuntimeTokenError(
                 f"{kind} token {capability!r} rendered with no target in context"
             )
-        return resolve_runtime_token(
+        name = resolve_runtime_token(
             kind,
             capability,
             resolved,
             registry=runtime_token_registry,
+        )
+        return (
+            name
+            if name is not None
+            else _unavailable_runtime_token(kind, capability)
         )
 
     return render

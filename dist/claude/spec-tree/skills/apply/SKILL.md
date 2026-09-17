@@ -125,21 +125,21 @@ Before dispatching an applicable evidence auditor, apply `<verification_checkpoi
 
 Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
 
-| Step | Purpose                  | TypeScript                                                                  | Python                      | Rust                      | Go                      |
-| ---- | ------------------------ | --------------------------------------------------------------------------- | --------------------------- | ------------------------- | ----------------------- |
-| 0 §  | Select the slice         | `Skill("spec-tree:slice")`                                                  | same                        | same                      | same                    |
-| 1    | Load methodology         | `Skill("spec-tree:understand")`                                             | same                        | same                      | same                    |
-| 2    | Load context             | `Skill("spec-tree:contextualize", args: "{full-spx-node-path}")`            | same                        | same                      | same                    |
-| 3    | Architect                | `Skill("architect-typescript")`                                             | `Skill("architect-python")` | `Skill("architect-rust")` | `Skill("architect-go")` |
-| 4    | Architecture audit       | `spec-tree:adr-auditor` agent                                               | same                        | same                      | same                    |
-| 5    | Establish evidence       | `Skill("spec-tree:verify")`                                                 | same                        | same                      | same                    |
-| 6    | Evidence audit           | `spec-tree:test-evidence-auditor`, `spec-tree:eval-evidence-auditor` agents | same                        | same                      | same                    |
-| 7    | Implement                | `Skill("code-typescript")`                                                  | `Skill("code-python")`      | `Skill("code-rust")`      | `Skill("code-go")`      |
-| 7a   | Simplify implementation  | `typescript:typescript-simplifier`                                          | no declared simplifier      | `rust:rust-simplifier`    | `go:go-simplifier`      |
-| 8    | Implementation audit     | `spec-tree:implementation-auditor` agent                                    | same                        | same                      | same                    |
-| 8a   | Evidence-auditor gates   | `spec-tree:test-evidence-auditor`, `spec-tree:eval-evidence-auditor` agents | same                        | same                      | same                    |
-| 9    | Whole-changeset review † | `spec-tree:changes-reviewer` agent                                          | same                        | same                      | same                    |
-| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                                                  | same                        | same                      | same                    |
+| Step | Purpose                  | TypeScript                                                                  | Python                               | Rust                             | Go                           |
+| ---- | ------------------------ | --------------------------------------------------------------------------- | ------------------------------------ | -------------------------------- | ---------------------------- |
+| 0 §  | Select the slice         | Use skill `spec-tree:slice`.                                                | same                                 | same                             | same                         |
+| 1    | Load methodology         | Use skill `spec-tree:understand`.                                           | same                                 | same                             | same                         |
+| 2    | Load context             | Use skill `spec-tree:contextualize` for `{full-spx-node-path}`.             | same                                 | same                             | same                         |
+| 3    | Architect                | Use skill `typescript:architect-typescript`.                                | Use skill `python:architect-python`. | Use skill `rust:architect-rust`. | Use skill `go:architect-go`. |
+| 4    | Architecture audit       | `spec-tree:adr-auditor` agent                                               | same                                 | same                             | same                         |
+| 5    | Establish evidence       | Use skill `spec-tree:verify`.                                               | same                                 | same                             | same                         |
+| 6    | Evidence audit           | `spec-tree:test-evidence-auditor`, `spec-tree:eval-evidence-auditor` agents | same                                 | same                             | same                         |
+| 7    | Implement                | Use skill `typescript:code-typescript`.                                     | Use skill `python:code-python`.      | Use skill `rust:code-rust`.      | Use skill `go:code-go`.      |
+| 7a   | Simplify implementation  | `typescript:typescript-simplifier`                                          | no declared simplifier               | `rust:rust-simplifier`           | `go:go-simplifier`           |
+| 8    | Implementation audit     | `spec-tree:implementation-auditor` agent                                    | same                                 | same                             | same                         |
+| 8a   | Evidence-auditor gates   | `spec-tree:test-evidence-auditor`, `spec-tree:eval-evidence-auditor` agents | same                                 | same                             | same                         |
+| 9    | Whole-changeset review † | `spec-tree:changes-reviewer` agent                                          | same                                 | same                             | same                         |
+| 10   | Merge ‡                  | Use skill `spec-tree:merge`.                                                | same                                 | same                             | same                         |
 
 § Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue; it selects the observable slice whose node set becomes the work queue (see `<invocation_modes>`).
 † Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).

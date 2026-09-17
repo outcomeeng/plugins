@@ -57,11 +57,7 @@ PLUGIN_SUBDIRS: Final = frozenset(
         CODEX_PLUGIN_SUBDIR_NAME,
     }
 )
-REQUIRE_SKILL_GUIDANCE_TEMPLATE: Final = (
-    "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
-    "unavailable, report the missing skill and continue with the closest "
-    "available workflow."
-)
+REQUIRE_SKILL_GUIDANCE_TEMPLATE: Final = "Use skill `{skill_ref}`."
 
 
 def build_variable_token(variable: str) -> str:

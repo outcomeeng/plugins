@@ -7,7 +7,7 @@ user-invocable: false
 allowed-tools: Read, Skill
 ---
 
-Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `instructions:agent-prompt-standards`.
 
 <objective>
 One set of authoring rules for subagents whose native configuration,

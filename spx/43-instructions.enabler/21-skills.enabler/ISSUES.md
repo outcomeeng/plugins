@@ -19,7 +19,7 @@ Source: skill-auditor finding `f-003`, rule `overbroad_allowed_tools`, severity
 ## Reconcile the auditor Bash capability contract
 
 `src/plugins/instructions/skills/create-skill/templates/auditor-skill.md:5` now uses
-`allowed-tools: Read, Grep, Glob, Skill`. The post-merge audit requires `Bash` for
+`allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}`. The post-merge audit requires `Bash` for
 auditor command-based verification, while an earlier audit rejected bare `Bash` as
 overbroad. `/skill-standards`'s command-capability rules also require command-specific
 `Bash(<command>:*)` grants. A generic auditor template cannot select those commands

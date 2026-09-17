@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when filing an issue in a repository the operator does not control — a fork's upstream, or any base whose permission is READ, TRIAGE, or NONE.
   NEVER open an issue against such a repository without this skill.
 argument-hint: "[what was observed]"
-allowed-tools: Read, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(gh issue create:*), Bash(gh search issues:*), Bash(printf:*)
+allowed-tools: Read, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(gh issue create:*), Bash(gh search issues:*), Bash(printf:*)
 ---
 
 <objective>

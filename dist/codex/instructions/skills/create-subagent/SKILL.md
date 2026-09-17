@@ -5,12 +5,12 @@ description: >-
   NEVER create custom agents without this skill.
 argument-hint: "<configuration-path-or-role>"
 arguments: configuration_target
-allowed-tools: Read, Glob, Write, Edit, Skill, Bash(just build-skills:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(git add:*), Bash(git commit:*)
+allowed-tools: Read, Glob, Write, Edit, Bash(just build-skills:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(git add:*), Bash(git commit:*)
 ---
 
-Invoke the `instructions:subagent-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `instructions:subagent-standards`.
 
-Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `instructions:skill-standards`.
 
 <objective>
 A custom agent definition and its calling-skill integration,

@@ -81,6 +81,7 @@ def forbidden_names(
                 if kind.lint_enforced
                 for entry in kind.names.values()
                 for name in entry.values()
+                if name is not None
             },
             key=len,
             reverse=True,

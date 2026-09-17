@@ -6,9 +6,9 @@ description: >-
 allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(gofmt:*), Bash(go vet:*), Bash(go test:*), Bash(staticcheck:*), Bash(golangci-lint:*)
 ---
 
-Invoke the `go:go-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-standards`.
 
-Invoke the `go:go-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-test-standards`.
 
 <objective>
 Go implementation code with spec-driven behavior, explicit seams, and full validation passing.

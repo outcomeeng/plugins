@@ -4,7 +4,7 @@ description: >-
   Rust implementation-code audit methodology — judges the Rust code files in
   scope for design flaws, architecture-decision compliance, and unsafe/FFI
   soundness.
-allowed-tools: Read, Grep, Glob, Bash(grep:*), Skill
+allowed-tools: Read, Grep, Glob, Bash(grep:*), {{! tool('use_skill') !}}
 ---
 
 {!% require_skill 'rust:rust-standards' %!}

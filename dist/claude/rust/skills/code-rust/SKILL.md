@@ -6,9 +6,9 @@ description: >-
 allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(cargo fmt --check:*), Bash(cargo clippy:*), Bash(cargo test:*)
 ---
 
-Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `rust:rust-standards`.
 
-Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `rust:rust-test-standards`.
 
 <objective>
 Rust implementation code with spec-driven behavior, explicit seams, and full validation passing.

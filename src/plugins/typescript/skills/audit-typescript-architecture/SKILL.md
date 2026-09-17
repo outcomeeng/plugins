@@ -4,7 +4,7 @@ description: >-
   TypeScript-specific architecture audit — judges the TypeScript architecture
   target in scope for dependency injection, mocking prohibition, execution-level
   accuracy, TypeScript anti-patterns, and ancestor consistency.
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}
 ---
 
 {!% require_skill 'typescript:typescript-architecture-standards' %!}

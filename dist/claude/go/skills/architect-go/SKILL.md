@@ -6,9 +6,9 @@ description: >-
 allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 
-Invoke the `go:go-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-standards`.
 
-Invoke the `go:go-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-architecture-standards`.
 
 <objective>
 A Go ADR authored to the decision template the `/understand` foundation provides, that preserves spec-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.

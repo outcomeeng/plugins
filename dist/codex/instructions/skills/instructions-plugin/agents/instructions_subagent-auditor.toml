@@ -24,7 +24,7 @@ Run the `instructions:audit-subagent` methodology in this already-dispatched, is
 <workflow>
 
 1. Read the caller's custom agent configuration path.
-2. Load `instructions:audit-subagent` and follow its methodology with that value.
+2. Use skill `instructions:audit-subagent`. Follow its methodology with that value.
 3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>
@@ -46,7 +46,7 @@ Return only the JSON verdict produced by `instructions:audit-subagent`. Do not a
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `instructions:audit-subagent`.
 
-Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Grep`, `Glob`, `Skill`.
+Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Grep`, `Glob`.
 </manual_review_guidance>
 """
 

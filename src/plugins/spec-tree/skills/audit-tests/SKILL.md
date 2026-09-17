@@ -5,7 +5,7 @@ description: >-
   behavior-coupled evidence its assertions are fulfilled, covering predicate
   ownership, source ownership, coupling, falsifiability, and full-chain coverage.
 argument-hint: "<spec-node-path-or-evidence-scope>"
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}
 ---
 
 <objective>

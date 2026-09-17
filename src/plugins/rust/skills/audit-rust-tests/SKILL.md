@@ -3,7 +3,7 @@ name: audit-rust-tests
 description: >-
   Rust test-evidence audit methodology — judges the Rust tests in scope against
   the spec-tree and Rust-specific evidence properties.
-allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), {{! tool('use_skill') !}}
 ---
 
 <objective>

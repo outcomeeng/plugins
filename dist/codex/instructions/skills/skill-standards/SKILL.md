@@ -44,6 +44,8 @@ For language-specific skill prose that references a foundation, use the unqualif
 
 Context placement, agent selection, and dispatch policy belong to the caller. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or caller check to the invoked skill.
 
+**Composed skill dependencies.** Every composing SKILL.md names each statically known dependency with a `require_skill` build directive and includes the build's `use_skill` runtime tool token as a complete `allowed-tools` item. Generated guidance says `Use skill \`{plugin}:{skill}\`.` Shared authored source never spells a harness-specific skill tool name; the build emits the target's available tool set and removes an unavailable capability as one complete list item.
+
 </skill_organization>
 
 <frontmatter>

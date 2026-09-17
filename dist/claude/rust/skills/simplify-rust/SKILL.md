@@ -6,7 +6,7 @@ argument-hint: "<HEAD|base...head>"
 allowed-tools: Read, Glob, Grep, Edit, Skill, Bash(git status:*), Bash(git rev-parse:*), Bash(git diff:*)
 ---
 
-Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `rust:rust-test-standards`.
 
 <objective>
 Simpler Rust implementation with unchanged behavior and ownership semantics, accompanied by a scope and verification report.

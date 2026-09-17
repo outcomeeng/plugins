@@ -4,7 +4,7 @@ description: >-
   Go implementation-code audit methodology — judges the Go code files in
   scope for design flaws, architecture-decision compliance, concurrency
   soundness, and unsafe/cgo soundness.
-allowed-tools: Read, Grep, Glob, Bash(grep:*), Skill
+allowed-tools: Read, Grep, Glob, Bash(grep:*), {{! tool('use_skill') !}}
 ---
 
 {!% require_skill 'go:go-standards' %!}

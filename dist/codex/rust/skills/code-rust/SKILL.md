@@ -3,12 +3,12 @@ name: code-rust
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for Rust.
   NEVER write or fix Rust implementation without this skill.
-allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(cargo fmt --check:*), Bash(cargo clippy:*), Bash(cargo test:*)
+allowed-tools: Read, Write, Glob, Grep, Edit, Bash(cargo fmt --check:*), Bash(cargo clippy:*), Bash(cargo test:*)
 ---
 
-Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `rust:rust-standards`.
 
-Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `rust:rust-test-standards`.
 
 <objective>
 Rust implementation code with spec-driven behavior, explicit seams, and full validation passing.

@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when continuing an open issue in a repository the operator does not control — answering a maintainer, adding evidence, or reporting the thread's current state.
   NEVER comment on or close an issue in such a repository without this skill.
 argument-hint: "[issue number or URL]"
-allowed-tools: Read, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api user:*), Bash(printf:*)
+allowed-tools: Read, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api user:*), Bash(printf:*)
 ---
 
 <objective>

@@ -8,11 +8,13 @@ import pytest
 from outcomeeng.distribution.build import (
     COMMENT_DELIMITER_START,
     EmissionAction,
+    RequireSkillDirective,
+    expand_require_skill,
     project_emissions,
     plugin_names,
     template_source_files,
 )
-from outcomeeng.distribution.contracts import REQUIRE_SKILL_GUIDANCE_TEMPLATE, Target
+from outcomeeng.distribution.contracts import Target
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
     source_scenarios,
@@ -27,7 +29,6 @@ from outcomeeng_testing.harnesses.source_and_templating import (
     malformed_source_tree_is_rejected,
     ordinary_plugin_root_file_is_accepted,
     require_skill_emits_identically_across_targets,
-    require_skill_expands_to_neutral_guidance,
     require_skill_locality_oracle_rejects_inlined_content,
     require_skill_neutrality_oracle_rejects_runtime_specific_guidance,
     require_skill_renders_inline,
@@ -71,9 +72,10 @@ def test_jinja_environment_uses_custom_delimiters() -> None:
     assert jinja_environment_uses_custom_delimiters()
 
 
-def test_require_skill_expands_to_neutral_guidance() -> None:
-    assert REQUIRE_SKILL_GUIDANCE_TEMPLATE == "Use skill `{skill_ref}`."
-    assert require_skill_expands_to_neutral_guidance()
+@pytest.mark.parametrize("case", source_scenarios(), ids=lambda c: c.skill)
+def test_require_skill_expands_to_neutral_guidance(case: SourceScenario) -> None:
+    rendered = expand_require_skill(RequireSkillDirective(case.skill_ref))
+    assert rendered == f"Use skill `{case.skill_ref}`."
 
 
 def test_neutral_guidance_oracle_rejects_runtime_specific_wording() -> None:

@@ -7,9 +7,9 @@ description: >-
 allowed-tools: Read, Grep, Glob, Skill
 ---
 
-Invoke the `go:go-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-standards`.
 
-Invoke the `go:go-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-architecture-standards`.
 
 <objective>
 A JSON verdict on a Go architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, Go anti-patterns, and ancestor consistency.

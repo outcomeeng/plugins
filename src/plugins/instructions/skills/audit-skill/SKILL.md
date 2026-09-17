@@ -5,7 +5,7 @@ description: >-
   operational effectiveness, portability, voice, and structure.
 argument-hint: <skill-path>
 arguments: skill_path
-allowed-tools: Read, Grep, Glob, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Skill
+allowed-tools: Read, Grep, Glob, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), {{! tool('use_skill') !}}
 ---
 
 {!% require_skill 'instructions:skill-standards' %!}

@@ -5,7 +5,7 @@ description: >-
   covering content classification, property quality, per-rule tag validity,
   atemporal voice, and consistency with ancestor decisions.
 argument-hint: "<pdr-file-path>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git branch --show-current:*)
 ---
 
 <objective>

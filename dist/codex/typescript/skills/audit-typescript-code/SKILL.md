@@ -3,10 +3,10 @@ name: audit-typescript-code
 description: >-
   TypeScript implementation-code audit methodology — judges the TypeScript code
   files in scope for design flaws and architecture-decision compliance.
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob
 ---
 
-Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `typescript:typescript-standards`.
 
 <objective>
 

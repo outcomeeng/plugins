@@ -5,7 +5,7 @@ description: >-
   provides evidence its `[eval]` assertions are fulfilled, covering case
   quality, verdict schema fit, and producer coupling.
 argument-hint: "<spec-node-path>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(git merge-base --is-ancestor:*), Bash(git diff:*)
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git merge-base --is-ancestor:*), Bash(git diff:*)
 ---
 
 <objective>

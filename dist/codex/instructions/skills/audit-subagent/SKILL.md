@@ -6,12 +6,12 @@ description: >-
   frontmatter, role framing, constraints, and output contract.
 argument-hint: <configured-agent-path>
 arguments: configured_agent_path
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob
 ---
 
-Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `instructions:agent-prompt-standards`.
 
-Invoke the `instructions:subagent-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `instructions:subagent-standards`.
 
 <objective>
 An `APPROVED` or `REJECTED` verdict on one custom agent configuration file against `/subagent-standards` and `/agent-prompt-standards`, with findings grouped as critical-issues, recommendations, strengths, and quick-fixes, each naming its location, violated convention, evidence, and consequence.

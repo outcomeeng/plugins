@@ -3,7 +3,7 @@ name: architect-typescript
 description: >-
   ALWAYS invoke this skill when writing ADRs for TypeScript.
   NEVER author a TypeScript ADR without this skill.
-allowed-tools: Read, Write, Glob, Grep, Skill
+allowed-tools: Read, Write, Glob, Grep, {{! tool('use_skill') !}}
 ---
 
 {!% require_skill 'typescript:typescript-architecture-standards' %!}

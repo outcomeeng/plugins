@@ -3,7 +3,7 @@ name: code-go
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for Go.
   NEVER write or fix Go implementation without this skill.
-allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(gofmt:*), Bash(go vet:*), Bash(go test:*), Bash(staticcheck:*), Bash(golangci-lint:*)
+allowed-tools: Read, Write, Glob, Grep, Edit, {{! tool('use_skill') !}}, Bash(gofmt:*), Bash(go vet:*), Bash(go test:*), Bash(staticcheck:*), Bash(golangci-lint:*)
 ---
 
 {!% require_skill 'go:go-standards' %!}

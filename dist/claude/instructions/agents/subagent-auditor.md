@@ -31,7 +31,7 @@ Run the `instructions:audit-subagent` methodology in this already-dispatched, is
 <workflow>
 
 1. Read the caller's subagent configuration path.
-2. Confirm the injected `instructions:audit-subagent` content is present in this context; when it is absent, load `instructions:audit-subagent` through the Skill tool. Follow that methodology with that value.
+2. Use skill `instructions:audit-subagent`. Follow its methodology with that value.
 3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>

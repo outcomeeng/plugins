@@ -3,12 +3,12 @@ name: code-typescript
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for TypeScript.
   NEVER write or fix TypeScript implementation without this skill.
-allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)
+allowed-tools: Read, Write, Glob, Grep, Edit, Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)
 ---
 
-Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `typescript:typescript-standards`.
 
-Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `typescript:typescript-test-standards`.
 
 <objective>
 TypeScript implementation code that satisfies its node's established evidence and passes every selected deterministic check.
