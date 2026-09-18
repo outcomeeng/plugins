@@ -88,8 +88,9 @@ authored source and generated output but not a wrong-but-stable rendering.
 
 Commit `560a6e0ac4d13c680aedb73d5f797632baf32e20` added compliance tests and harness
 changes for it; commit `4d2019250b17e8009649d127188bac24272f2550` withdrew them because
-Change #76 declares `malleability: spec` for these nodes, adds no test file or
-test infrastructure, and assigns the fixtures, property generator, observation
+Change #76 treats these nodes as prototype scope — the three spec files carry no
+`malleability` field, so the projector reads them as implementation-malleable —
+adds no test file or test infrastructure, and assigns the fixtures, property generator, observation
 harness, and linked tests to Change #85, whose assertion-design records #76
 carries.
 
