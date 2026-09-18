@@ -10,12 +10,23 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.98.0
+
+### Breaking
+
+- **`/pickup`, `/handoff`, and `/issue` no longer exist.** A Change's Lifecycle moves through one skill per operation: `/claim-change` moves `Available` to `Claimed` and records this session as holder; `/release-change` writes the Handoff, removes the holder, and returns `Claimed` to `Available`; `/close-change <Applied|Refined|Abandoned>` writes the terminal record and closes the Change. None of the three writes Maturity or any body section other than the Handoff or the terminal record. The `.spx/sessions/todo` entry path and session files are gone; a follow-up is a Proposed Change created through `/author-change`. The merge lifecycle's `CLOSE` phase produces its closeout from live state and disposes of the held Change instead of invoking `/handoff`.
+
+### Added
+
+- **`change-standards` takes `Lifecycle`.** The selection loads `references/lifecycle.md`, the store-binding, ordered-write, complete-readback, write-inspection, inert-stdin, and Claim, Handoff, and terminal-record rules the three Lifecycle skills share.
+
 ## 0.97.2
 
 ### Requires
 
 - **`@outcomeeng/spx` 0.7.0 or newer.** `/diagnose` judges the installed spx against a 0.7.0 floor: the release whose `spx diagnose --format json` `worktree-pool` record carries `mainCheckoutPath`, the reading the coding-agents plugin's agent-mail capability maps the mail project key from.
 
+||||||| parent of bd806188e (refactor(spec-tree): retire pickup, handoff, and issue)
 ## 0.96.1
 
 ### Fixed

@@ -86,7 +86,7 @@ Require a live `<SPEC_TREE_FOUNDATION>` marker before directly reading, searchin
 
 `spx session` operations — including inspection, archive, and release — plus `spx worktree status`, `spx diagnose`, no-patch Git status, history, and topology, and a skill's read of the `spx/local/` overlay or exclusion mechanism it declares are exempt. Never follow paths from their output into repository content without the marker.
 
-A compacted summary, session file, statement that `/understand` ran, or read of the skill file does not prove the foundation is live. After every compaction, invoke `/understand` again before the next product-content access.
+A compacted summary, Handoff, statement that `/understand` ran, or read of the skill file does not prove the foundation is live. After every compaction, invoke `/understand` again before the next product-content access.
 
 The methodology a repository follows is declared in `spx.config.yaml` at the repository root, under `methodology.source` and `methodology.version`. **ALWAYS** read that declaration before applying methodology rules, and read it again whenever `/understand` runs. When the file is absent, the `methodology` block is missing, or `methodology.version` is the sentinel `installed`, the repository declares no methodology version; never infer one from a plugin's distribution version, a changelog, or prose.
 
@@ -272,7 +272,9 @@ The table routes tasks to skills. Only an active skill's explicit invocation ins
 | "Audit eval evidence"                                   | `/audit-eval-evidence` |
 | "Audit this spec node"                                  | `/audit-specs`         |
 | "Diagnose the spx environment"                          | `/diagnose`            |
-| "File a follow-up in a dependency queue"                | `/issue`               |
+| "Claim this Change"                                     | `/claim-change`        |
+| "Release this Change" or "Hand this off"                | `/release-change`      |
+| "Close this Change as Applied"                          | `/close-change`        |
 
 <!-- langs:present -->
 
@@ -376,8 +378,6 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 
 ---
 
-## Session Management
+## Change Lifecycle
 
-Sessions are shared across every worktree. Hand off each session via `/handoff` so it can be resumed from any other worktree: the handoff leaves the worktree clean and persists all state on origin. Propose one when the session's goal is met or the work must pause; resume with `/pickup`. When a claimed session is complete and should leave the active queue, close it through `/handoff` or `/handoff --no-session` so claimed-session accounting archives it. To return a wrongly claimed session to the shared queue instead, run `spx session release <session-id>`.
-
-An explicit request to inspect, archive, or release identified session documents routes directly through the corresponding `spx session` command as operational-state management; `/handoff` is reserved for closing active work through reflection, persistence, continuation disposition, and claimed-session accounting. Direct session operations require `/understand` only before following their output into `spx/`, source, or test content.
+Work is coordinated through Changes in the store `spx/local/coordination.md` declares. Hold a Change through `/claim-change` before refining or executing it. When the work stops with continuation remaining, `/release-change` writes the Handoff, removes the holder, and returns the Change to Available for any agent to claim; when the Change reaches a terminal Lifecycle, `/close-change <Applied|Refined|Abandoned>` writes the terminal record and closes it. A follow-up is a Proposed Change created through `/author-change`. Maturity moves only through `/author-change`; the three Lifecycle skills move Lifecycle and nothing else.

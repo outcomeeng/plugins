@@ -31,7 +31,7 @@ The overlay cannot override the open-ready mandate — once `VERIFICATION_READIN
 <overlay_safety_checks>
 When `spx/local/merging.md` declares preflight checks, run all of them immediately before the first checkout-sensitive mutation owned by each lifecycle entry. The GitHub-PR orchestration flow and direct-push transport run them before branch or commit work, the opening flow runs them before push, direct-push runs them again before its default-branch push, the managing flow runs them after its initial read-only inspection and before base sync, finding repair, commit, push, or merge work, and `/handoff` runs them before every detach. `<merge_cleanup>` repeats the checks immediately before the merge command. A failed check stops before mutation with its output preserved.
 
-When the overlay declares post-cleanup checks, run all of them immediately after every detach-based cleanup and before branch deletion, session persistence, deploy, release, or closeout. This applies both to `<merge_cleanup>` and whenever `/handoff` detaches a checkout. A failed post-cleanup check stops the remaining cleanup and preserves the detached checkout for inspection.
+When the overlay declares post-cleanup checks, run all of them immediately after every detach-based cleanup and before branch deletion, Change disposition, deploy, release, or closeout. This applies both to `<merge_cleanup>` and whenever `/handoff` detaches a checkout. A failed post-cleanup check stops the remaining cleanup and preserves the detached checkout for inspection.
 </overlay_safety_checks>
 
 <delivered_value_boundary>
@@ -47,17 +47,15 @@ When a status assessment finds a determined changeset with commits ahead of its 
 `CLOSE` is the lifecycle disposition phase after the selected transport reaches the default branch on origin and every declared deploy or release phase has completed, no-oped, or stopped at an explicit readiness gate. Close is not a receipt. Close has two valid outcomes:
 
 - continue remaining in-scope work directly when the user's stated goal still has do-able work; or
-- close by invoking `/handoff` plain when the session is complete or continuation by Claude is impossible.
+- close when the session is complete — the goal is met with no in-scope work remaining, or continuation by Claude is impossible — by producing the operator-useful closeout from live state (product summary, verification evidence, delivered state, the branch-state closeout record with **Remaining Branches**, and the remaining-work disposition) and disposing of the held Change: `close-change Applied` when the Change's Output is delivered, or `release-change` with a Handoff when continuation remains for another holder; a conversation holding no Change records any remaining work as a Proposed Change through `author-change`.
 
-The `/handoff` invocation supplies the operator-useful product summary, verification evidence, delivered state, remaining-work disposition, and session-file decision. Merge transports invoke `/handoff` without receiving `--no-session`; the handoff workflow decides whether a continuation reader is needed from live state. A merge transport MUST NOT replace this phase with a receipt-only response that lists PR state, branch cleanup, commit SHAs, or sync mechanics while leaving the operator to infer what changed or what happens next.
-
-The closeout is `/handoff`'s output, never transport-authored prose. A hand-written summary that reads operator-useful is the same violation as a receipt, because the duties behind the message — claimed-session accounting, worktree-release verification, continuation disposition — run only when the skill runs. A `/handoff` completed earlier in the same conversation never satisfies `CLOSE` for work merged after it: new merged work reopens the session, and the handoff workflow's existing-session search keeps the repeat invocation cheap: it reconciles a same-conversation artifact as a same-owner continuation, archiving the superseded session; a thread another context's session already owns stays untouched with that existing owner. That cheapness is the reason to invoke it, never the reason to skip it.
+The closeout is built from live state after the merge, never from memory or from a closeout produced earlier in the same conversation: new merged work reopens the disposition, so a Change closed or released before the merge never accounts for work merged after it. A merge transport MUST NOT replace this phase with a receipt-only response that lists PR state, branch cleanup, commit SHAs, or sync mechanics while leaving the operator to infer what changed or what happens next, and MUST NOT close or release a Change whose transition precondition the live state does not satisfy — `close-change` verifies `Applied` from the integrated changeset and satisfied evidence, and `release-change` requires the work committed and pushed.
 
 </close_phase>
 
 <branch_state_closeout>
 
-After a default-branch merge, every transport produces branch-state closeout evidence before the final operator closeout. The GitHub-PR managing flow builds the full branch-state closeout record before returning its stable closeout-ready result. The direct-push transport preserves merge-time facts and delegates full record construction to `/handoff`, which computes the record from this section using its own closeout tool surface. The record removes ambiguity about which refs still exist, which are safe to delete, and which require operator attention.
+After a default-branch merge, every transport produces branch-state closeout evidence before the final operator closeout. The GitHub-PR managing flow builds the full branch-state closeout record before returning its stable closeout-ready result. The direct-push transport preserves merge-time facts and computes the full record from this section itself. The record removes ambiguity about which refs still exist, which are safe to delete, and which require operator attention.
 
 The closeout record includes:
 
@@ -86,7 +84,7 @@ Safe cleanup policy:
 
 Use git state observations rather than memory for every record field. The patch-equivalence observation is `git cherry -v --abbrev=40 origin/<base> <branch>`.
 
-The final `/handoff` closeout includes a compact **Remaining Branches** section with exactly these groups:
+The final closeout includes a compact **Remaining Branches** section with exactly these groups:
 
 - **Deleted locally**
 - **Deleted remotely**
@@ -565,7 +563,7 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - Merge runs only when `MERGE_READINESS` holds and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: the current-head CI review has no unresolved valid `BLOCKING` or `DEBT` finding, every other required check is terminal-green, branch hygiene and PR-state hold on the freshly inspected head, and the inspected head SHA matches the fetched remote branch head and status-check head. `MERGE_READINESS` carries no time-based settle.
 - A committed changeset ahead of its resolved base is treated as unfinished until it reaches the default branch on origin through the selected lifecycle, or stops at an explicit action-token emission or unresolved base-sync report with no independent authorized local action remaining.
 - Local readiness — clean working tree, committed changes, passing deterministic verification, tests, local review, or audits — is reported as evidence and then carried forward; it is never a reason to ask what to do next.
-- `CLOSE` continues in-scope work directly or invokes `/handoff` plain for operator-useful closeout and continuation disposition; a receipt-only response never satisfies the lifecycle, and neither a transport-authored closeout nor a `/handoff` completed before the merge satisfies it.
+- `CLOSE` continues in-scope work directly or produces the operator-useful closeout from live state and disposes of the held Change through `close-change` or `release-change`; a receipt-only response never satisfies the lifecycle, and neither a closeout from memory nor a Change disposition completed before the merge satisfies it.
 - No structured question or prose confirmation asks the operator to choose between auto-merge, hold-at-green, or pause; gate conditions use `<action_tokens>`, and unresolved synchronization follows `<base_sync>` with operator involvement only when no authorized autonomous continuation remains.
 - The changeset's git work runs in the assigned worktree per `<assigned_cwd_worktree_discipline>` with a passing `<occupancy_preflight>` — never in a worktree another live session holds, no created worktree, no `git stash`; a branch conflict is resolved by branching in the assigned worktree and continuing.
 - `spx/local/merging.md` is read only when present, its absence applies the defaults with no blocker, and merge behavior is never reconstructed from incidental docs or changed by editing a generated guide.

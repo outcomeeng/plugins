@@ -1,8 +1,8 @@
 """Enforce that the CI-pinned ``@outcomeeng/spx`` version meets the floor the
 shipped skills depend on.
 
-The shipped ``spec-tree`` skills (``/handoff``, ``/pickup``) and their co-located
-tests invoke the ``spx`` CLI and assume the behavior of a specific version. A
+The shipped ``spec-tree`` skills (``/diagnose``, the verification wrappers, the
+``SessionStart`` hook) and their co-located tests invoke the ``spx`` CLI and assume the behavior of a specific version. A
 skill or test that assumes a capability absent from the pinned spx ships a
 runtime contract the consumer's installed CLI cannot honor, and surfaces only as
 an opaque test failure against the pinned CLI or as a consumer-side regression.
@@ -60,19 +60,16 @@ from typing import Final
 # introduced `spx journal
 # list` and branch-scope render selectors used by the review-run inspection
 # helper. spx 0.6.7 introduced
-# `spx -C <path> session handoff`, which the /issue skill uses for
-# cross-repository follow-up capture. spx 0.6.3 exposes worktree occupancy
-# statuses as `running` and `free`, which the diagnose and pickup skills and the
-# agent-environment tests consume. spx 0.6.1 introduced `spx session show
-# --json`, the producer-owned session-frontmatter parser that /pickup claim
-# verification consumes. spx 0.6.0 introduced the `spx journal` channel
+# `spx -C <path> session handoff`. spx 0.6.3 exposes worktree occupancy
+# statuses as `running` and `free`, which the diagnose and Change Lifecycle
+# skills and the agent-environment tests consume. spx 0.6.1 introduced
+# `spx session show --json`. spx 0.6.0 introduced the `spx journal` channel
 # (open/append/seal/read/render over a type-agnostic append-only run journal),
 # the run-journal contract the agentic verification skills bind for their
 # durable run state (0.5.6 introduced `spx hook run session-start`, the
 # host-lifecycle hook runner the spec-tree plugin's SessionStart hook delegates
 # to for session identity, project-dir exports, and worktree occupancy; 0.5.4
-# introduced the explicit work-branch git_ref the /handoff and /pickup skills
-# depend on).
+# introduced the explicit work-branch git_ref).
 VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
 SPX_PACKAGE_NAME: Final = "@outcomeeng/spx"
 PNPM_EXECUTABLE: Final = "pnpm"
