@@ -12,19 +12,9 @@ class RequestContractError(RuntimeError):
     """The source operation contract names a field this generator cannot produce."""
 
 
-def wait_timeouts(module: ModuleType) -> st.SearchStrategy[int]:
-    """Millisecond bounds inside the adapter's declared timeout range."""
-    minimum, maximum = module.INTEGER_BOUNDS[module.TIMEOUT_FIELD]
-    return st.integers(min_value=minimum, max_value=maximum)
-
-
 def agent_names() -> st.SearchStrategy[str]:
     """Live agent names herdr admits."""
     return st.from_regex(r"[a-z][a-z0-9_-]{0,31}", fullmatch=True)
-
-
-def pane_ids() -> st.SearchStrategy[str]:
-    return st.from_regex(r"w[1-9][0-9]{0,2}:p[1-9][0-9]{0,3}", fullmatch=True)
 
 
 def agent_states(module: ModuleType) -> st.SearchStrategy[object]:

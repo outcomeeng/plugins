@@ -16,6 +16,7 @@ from outcomeeng_testing.harnesses.herdr_environment import (
     captured_payload,
     captured_responses,
     captured_success_response,
+    inventory_envelope,
     load_herdr_environment,
     projected_error_variants,
     request_for,
@@ -198,11 +199,11 @@ def test_start_and_wait_map_to_the_session_identity_and_state() -> None:
 def test_inventory_maps_to_complete_participants_or_named_results() -> None:
     def assert_inventory(
         module: ModuleType,
+        envelope: dict[str, object],
         agents: list[dict[str, object]],
         absent_name: str,
         state: object,
     ) -> None:
-        envelope = {module.RESULT_FIELD: {module.AGENTS_FIELD: agents}}
         participants = module.participants_from_inventory(envelope)
 
         assert [
@@ -236,7 +237,7 @@ def test_inventory_maps_to_complete_participants_or_named_results() -> None:
         try:
             module.participant_for(
                 module.participants_from_inventory(
-                    {module.RESULT_FIELD: {module.AGENTS_FIELD: duplicated}}
+                    inventory_envelope(module, duplicated)
                 ),
                 first_name,
             )

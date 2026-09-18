@@ -270,6 +270,25 @@ def captured_agent_item(module: ModuleType) -> dict[str, object]:
     return agents[0]
 
 
+def _captured_inventory_envelope(module: ModuleType) -> dict[str, object]:
+    inventory = captured_success_response(module, module.Operation.INVENTORY)
+    if inventory is None:
+        raise RuntimeError("No captured herdr inventory response.")
+    return cast(dict[str, object], captured_payload(inventory))
+
+
+def inventory_envelope(
+    module: ModuleType, agents: list[dict[str, object]]
+) -> dict[str, object]:
+    """Herdr's captured inventory envelope with only its agents list replaced."""
+    envelope = _captured_inventory_envelope(module)
+    result = cast(dict[str, object], envelope[module.RESULT_FIELD])
+    return {
+        **envelope,
+        module.RESULT_FIELD: {**result, module.AGENTS_FIELD: agents},
+    }
+
+
 def projected_error_variants(module: ModuleType) -> list[CapturedResponse]:
     """A captured error envelope varied to each projected code herdr did not
     emit under the capture conditions: only the code changes, so the envelope's
@@ -317,21 +336,19 @@ def request_for(module: ModuleType, operation: object) -> dict[str, object]:
 
 def run_inventory_mapping(
     assert_inventory: Callable[
-        [ModuleType, list[dict[str, object]], str, object], None
+        [ModuleType, dict[str, object], list[dict[str, object]], str, object], None
     ],
 ) -> None:
-    """Drive the captured inventory, inventories that carry every server state
-    by construction from its first item, and generated inventories, through the
-    participant projection."""
+    """Drive herdr's captured inventory envelope as emitted, that envelope with
+    an agents list carrying every server state by construction from its first
+    item, and that envelope with generated agents lists, through the participant
+    projection."""
     module = _load()
     template = captured_agent_item(module)
-    inventory = captured_success_response(module, module.Operation.INVENTORY)
-    if inventory is None:
-        raise RuntimeError("No captured herdr inventory response.")
-    envelope = cast(dict[str, object], captured_payload(inventory))
-    captured = cast(
+    captured = _captured_inventory_envelope(module)
+    captured_agents = cast(
         list[dict[str, object]],
-        cast(dict[str, object], envelope[module.RESULT_FIELD])[module.AGENTS_FIELD],
+        cast(dict[str, object], captured[module.RESULT_FIELD])[module.AGENTS_FIELD],
     )
     every_state = [
         agent_item_variant(module, template, ordinal, state)
@@ -348,9 +365,17 @@ def run_inventory_mapping(
     def generated_inventory(
         agents: list[dict[str, object]], absent_name: str, state: object
     ) -> None:
-        assert_inventory(module, captured, absent_name, state)
-        assert_inventory(module, every_state, absent_name, state)
-        assert_inventory(module, agents, absent_name, state)
+        assert_inventory(module, captured, captured_agents, absent_name, state)
+        assert_inventory(
+            module,
+            inventory_envelope(module, every_state),
+            every_state,
+            absent_name,
+            state,
+        )
+        assert_inventory(
+            module, inventory_envelope(module, agents), agents, absent_name, state
+        )
 
     run_replayable_property(
         generated_inventory,
