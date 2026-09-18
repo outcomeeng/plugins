@@ -6,18 +6,18 @@ description: >-
   record standards at its declared maturity and records the complete judgment
   through SPX file-scoped verification.
 argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Glob, Grep, Skill, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run:*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Skill, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf:*)
 ---
 
 <objective>
 
-A verdict on one complete contract-form Change against `change-standards` and the Definition of Ready for its declared Maturity — `approved`, `rejected` with each finding naming the violated rule, artifact location, and supporting evidence, or a complete `BLOCKED` diagnostic — or an `OUTSIDE_CONTRACT` result for a front-matter key-set mismatch.
+A read-only verdict on one complete contract-form Change against `change-standards` and the Definition of Ready for its declared Maturity, with the audit's own SPX verification-run journal retaining the judgment — `approved`, `rejected` with each finding naming the violated rule, artifact location, and supporting evidence, or a complete `BLOCKED` diagnostic — or an `OUTSIDE_CONTRACT` result for a front-matter key-set mismatch.
 
 </objective>
 
 <constraints>
 
-- NEVER edit the candidate, repository files, claims, Changes, comments, or project fields. Persist audit state only through `spx verification run`.
+- NEVER mutate the candidate or product content: repository files, claims, Changes, comments, and project fields remain unchanged. Persisting the audit's own journal state through `spx verification run` is the only permitted state mutation.
 - NEVER run deterministic verification, publish a Change, or delegate this audit to another session.
 - ALWAYS load `spec-tree:change-standards` with the candidate's declared Maturity before judging contract-form content. The standards load the common contract and exactly one cumulative Definition of Ready; this skill owns the audit procedure.
 - NEVER require a Git commit, changeset, remote issue, or remote revision as the audit subject. The local file's complete retained content is the subject.
@@ -56,9 +56,10 @@ plugin, or descriptive text, and never restrict which configured wrapper may
 invoke the skill. Resolve the loaded skill's absolute directory from the active
 skill metadata: use `CLAUDE_SKILL_DIR` when the harness exposes it, otherwise use
 the absolute `SKILL.md` location in the injected skill instructions. From that
-directory, read the owning plugin's `.claude-plugin/plugin.json` exactly two
-levels above it and retain its non-empty `version` as both the agent-owning and
-skill-owning plugin version. Run `spx --version` and retain its non-empty version
+directory, read the owning plugin manifest exactly two levels above it:
+`${SKILL_DIR}/../../.codex-plugin/plugin.json`.
+Retain its non-empty `version` as both the agent-owning and skill-owning plugin
+version. Run `spx --version` and retain its non-empty version
 as the tool version. A missing location, manifest, version, or command result is
 a pre-run absent prerequisite and returns the exact blocked diagnostic. These
 declared metadata reads are the sanctioned provenance source; never inspect an
@@ -80,6 +81,8 @@ substantive judgment.
    Pass the Markdown file directly as `--input`; do not wrap, truncate, or
    retype it into JSON. Capture the locator's exact `runToken`, distinct from
    any event rows emitted by the command. Use that token for all later commands.
+   This command creates the audit's own verification-run journal; it does not
+   mutate the retained candidate or product content.
 3. **Load the subject and rules.** Read the complete retained file through:
 
    ```bash
@@ -382,8 +385,9 @@ admits the candidate.
 - Every common record rule and every criterion in the one Definition of Ready
   selected by the declared maturity has a reconciled judgment; every rejected
   finding names the violated rule, artifact location, and supporting evidence.
-- The candidate is unchanged at completion, and SPX accepts the serial coverage,
-  finding, and terminal writes.
+- The candidate and product content are unchanged at completion, while SPX
+  accepts the serial coverage, finding, and terminal writes into the audit's
+  own verification-run journal.
 - Repeating the audit with the same retained input, standards version, bounded
   reference-resolution results, and run-driver identity yields the same
   applicability decisions, finding inventory, finding IDs, severities, and
@@ -391,8 +395,8 @@ admits the candidate.
 - The final output is `OUTSIDE_CONTRACT` for a front-matter key-set mismatch, the
   authoritative token and rendered projection, or the complete blocked
   diagnostic.
-- No candidate, Change store, claim, product artifact, or knowledge bundle was
-  modified; only the SPX verification-run store received the required audit
-  writes.
+- The only state mutation is the audit's own SPX verification-run journal;
+  candidate and product content, including the Change store, claims, product
+  artifacts, and knowledge bundles, remain unchanged.
 
 </success_criteria>
