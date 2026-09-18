@@ -9,6 +9,8 @@ PROVIDES the supervision contract of an orchestrating agent session — launch, 
 SO THAT an operator
 CAN run a fleet of coding agents through one session, one inbox, and one pane, never opening an officer's
 
+The orchestrating session is an agent session that holds none of the five Roles — Refiner, Executor, Author, Fixer, Verifier — for any Change an officer executes; it stands in for the operator toward the officers and owns each officer session's lifecycle, never the officer's work.
+
 ## Assertions
 
 ### Compliance
@@ -19,5 +21,5 @@ CAN run a fleet of coding agents through one session, one inbox, and one pane, n
 - ALWAYS: the operator's invocation of the orchestrating skill is the standing authorization for the panes of the officers it launched; the skill sets mutation authorization for those panes only, answers a prompt when the officer's latest fact shows the guarded action is its flow's next step, dismisses a prompt with no such fact and removes its cause, and never sends an interrupt while a Verifier pass runs
 - ALWAYS: reads happen on events — a message, an officer state change, a bound crossed — or on a cadence the operator names, never on a timer of the session's own; a read without a change produces no report unless the operator asked for one
 - ALWAYS: the per-Change ledger — passes, heads, verdicts, finding provenance, reads with their cause, running spend and wall time — is a derivation from the message records and the verification journal, rebuilt from those sources after a compaction or restart, and spend and wall time are reported as a courtesy, never as a gate
-- ALWAYS: the orchestrating session compacts an officer idle past the bound, restarts one whose session is gone, and closes one whose Change is Applied without an operator instruction; an operator instruction that names an officer's session, or an officer fact reporting an operator interaction, is recorded in the ledger as a failure of the orchestrating session
+- ALWAYS: the orchestrating session owns each officer session's lifecycle and nothing more: it compacts an officer idle past the bound, restarts one whose session is gone, and closes one whose Change is Applied without an operator instruction, while the officer keeps its own internal state, run identities, results, and the continuation of its own workflow; an operator instruction that names an officer's session, or an officer fact reporting an operator interaction, is recorded in the ledger as a failure of the orchestrating session to keep the operator out of that officer's pane
 - ALWAYS: officers are reported by their absolute worktree path and Change, every escalation leads with evidence, consequence, options, and one recommendation, what loaded truth settles is decided in the session, and the rest is raised to the operator through the structured question
