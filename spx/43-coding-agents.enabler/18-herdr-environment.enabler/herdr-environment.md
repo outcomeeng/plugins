@@ -7,15 +7,17 @@ malleability: spec
 
 PROVIDES a source-owned, versioned abstraction over the public herdr command surface — agent start, stop, relaunch, inventory, bounded wait, one-line prompt, and keystroke — with correlated session identities
 SO THAT orchestration, communication, and recovery workflows
-CAN launch and operate positively identified herdr agents without constructing raw herdr commands or discovering command syntax at runtime
+CAN launch and operate positively identified agent sessions in herdr panes without constructing raw herdr commands or discovering command syntax at runtime
+
+This capability is an agent adapter: the configured way the agent harness launches, observes, and communicates with an agent session that herdr hosts. It governs no agent and no agent session of its own.
 
 ## Assertions
 
 ### Mappings
 
 - Every supported operation — start, stop, relaunch, inventory, wait, prompt, and key — maps one source-owned request shape through the source-owned operation registry to one herdr argument vector and checked response result
-- Herdr agent evidence maps to complete source-preserved agent name, kind, pane, and the server's own working, blocked, idle, and done states, or to a named unavailable or ambiguous result
-- Start maps to the launched session's identity and returns only when the agent is ready for input; the bounded wait maps to the state reached or a named timeout, never to an open-ended poll
+- Herdr agent evidence maps to the complete source-preserved name, agent kind, pane, and the server's own working, blocked, idle, and done states of each hosted agent session, or to a named unavailable or ambiguous result
+- Start maps to the launched agent session's identity when that session is ready for input within the request's bound, or to a named not-ready result; the bounded wait maps to the state reached or a named timeout; neither is an open-ended poll
 - The environment surface carries the launch prompt and keystrokes only and produces no pane-borne handback block
 
 ### Compliance
