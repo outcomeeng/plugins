@@ -14,5 +14,5 @@ CAN preserve authored agent behavior in the Codex-native custom-agent surface
 
 ### Mappings
 
-- Source `skills` entries map in source order to enabled Codex `skills.config` entries and developer-instruction guidance that states enablement is not a spawn-time preload guarantee ([test](tests/test_native_artifact.mapping.l1.py))
+- Source agents with `skills` entries map to Codex `skills.include_instructions = true`; their entries map in source order to enabled `skills.config` entries and developer-instruction guidance that states enablement is not a spawn-time preload guarantee ([test](tests/test_native_artifact.mapping.l1.py))
 - Every central profile maps directly to its complete Codex-native configuration; an absent selection maps to Standard, with no model-alias or effort translation ([test](tests/test_native_artifact.mapping.l1.py))
