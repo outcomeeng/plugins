@@ -3,6 +3,8 @@ from typing import cast
 
 from outcomeeng_testing.generators.coding_agents import message_content
 from outcomeeng_testing.harnesses.coding_agents import (
+    PROWL_REJECTION_DETAIL,
+    PROWL_REJECTION_EXIT_CODE,
     fact_envelope,
     mutation_observation,
     observe_send_transport,
@@ -94,8 +96,8 @@ def test_agent_message_mappings() -> None:
     failed = module.delivery_result(
         envelope,
         delivered=False,
-        command_exit_code=7,
-        detail="transport rejected",
+        command_exit_code=PROWL_REJECTION_EXIT_CODE,
+        detail=PROWL_REJECTION_DETAIL,
     )
     transport = observe_send_transport(recipient[module.PANE_FIELD])
     delivered = module.delivery_result(

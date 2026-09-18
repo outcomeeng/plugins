@@ -10,6 +10,7 @@ from outcomeeng_testing.generators.coding_agents import (
     message_content,
 )
 from outcomeeng_testing.harnesses.coding_agents import (
+    MISMATCHED_TARGET_STATUS,
     fact_envelope,
     generated_envelope,
     mutation_observation,
@@ -239,7 +240,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
 
     for stale_target in (
         {**recipient_target, module.HEAD_FIELD: "f" * 40},
-        {**recipient_target, module.STATUS_FIELD: "dirty"},
+        {**recipient_target, module.STATUS_FIELD: MISMATCHED_TARGET_STATUS},
     ):
         with pytest.raises(module.MessageError) as raised:
             generated_envelope(
@@ -258,7 +259,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
         if state_field == module.HEAD_FIELD:
             mismatched_value = "f" * 40
         elif state_field == module.STATUS_FIELD:
-            mismatched_value = "dirty"
+            mismatched_value = MISMATCHED_TARGET_STATUS
         else:
             candidate = sender.get(state_field, "different")
             mismatched_value = (
@@ -279,7 +280,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
 
     for stale_target in (
         {**sender_target, module.HEAD_FIELD: "f" * 40},
-        {**sender_target, module.STATUS_FIELD: "dirty"},
+        {**sender_target, module.STATUS_FIELD: MISMATCHED_TARGET_STATUS},
     ):
         with pytest.raises(module.MessageError) as raised:
             generated_envelope(
@@ -298,7 +299,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
         if state_field == module.HEAD_FIELD:
             mismatched_value = "f" * 40
         elif state_field == module.STATUS_FIELD:
-            mismatched_value = "dirty"
+            mismatched_value = MISMATCHED_TARGET_STATUS
         else:
             candidate = recipient.get(state_field, "different")
             mismatched_value = (
@@ -361,7 +362,8 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
             module.send_request(
                 {**valid_request, forbidden_field: forbidden_field}, discovery
             )
-        assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
+        assert raised.value.status == module.DeliveryStatus.INVALID_IDENTITY
+        assert forbidden_field in str(raised.value)
 
     for executable_field in module.FORBIDDEN_EXECUTABLE_FIELDS:
         with pytest.raises(module.MessageError) as raised:
@@ -369,6 +371,7 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
                 {**valid_request, executable_field: "caller-owned"}, discovery
             )
         assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
+        assert executable_field in str(raised.value)
 
     handback = production_handback(sender, recipient)
     handback_plan = production_handback_plan(sender, recipient)

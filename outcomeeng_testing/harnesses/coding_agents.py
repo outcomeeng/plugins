@@ -58,6 +58,13 @@ DOORBELL_PROPERTY_REPLAY_PATH = (
 # Failure simulation at the store boundary: the store rejects the send.
 STORE_REJECTION_EXIT_CODE = 3
 STORE_REJECTION_DETAIL = "store rejected the send"
+# Failure simulation at the Prowl boundary: the environment rejects the turn.
+PROWL_REJECTION_EXIT_CODE = 7
+PROWL_REJECTION_DETAIL = "transport rejected"
+# The synthetic mutation-target status a proposal reports in the test domain,
+# and a status that differs from it for a stale-target case.
+OBSERVED_TARGET_STATUS = "clean"
+MISMATCHED_TARGET_STATUS = "dirty"
 
 
 class HandbackPlanError(RuntimeError):
@@ -135,7 +142,7 @@ def mutation_observation(
         module.HEAD_FIELD: hashlib.sha1(
             participant[module.PANE_FIELD].encode(), usedforsecurity=False
         ).hexdigest(),
-        module.STATUS_FIELD: module.CLEAN_STATUS,
+        module.STATUS_FIELD: OBSERVED_TARGET_STATUS,
     }
     state = {field: target[field] for field in module.OBSERVED_STATE_FIELDS}
     return target, state

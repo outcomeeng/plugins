@@ -11,3 +11,13 @@ A shipped environment adapter carries the regex tables and the scanner functions
 **Gap.** Where the scanners live is a placement decision the adapter decisions do not make: the product's test infrastructure under `outcomeeng_testing/harnesses/`, or a repository-side checker the gate runs. The patterns declare what a raw command looks like for each tool; the compliance tests read them by import.
 
 **Settlement condition.** The adapter decisions, or the environments decision above them, name one home for raw-command detection outside the shipped adapters; each node's compliance test imports the scanners and patterns from that home; and no shipped adapter under `src/plugins/coding-agents/` defines a scanner over sibling scripts.
+
+## The evidence-repair same-class scan stops at the test file
+
+The apply flow's evidence repair scans for the rejected class inside the linked tests — a restated literal, a copied table — and stops there. The mirror shape is invisible to that scan: a value the tests import from production that no production path consumes. `agent_message.py` carried `FORBIDDEN_TARGET_FIELDS`, `FORBIDDEN_EXECUTABLE_FIELDS`, and `CLEAN_STATUS` as constants only the node's tests and harness read, so a test that iterated them was coupled to an inert declaration, and emptying the constant left the test green.
+
+**Evidence.** `spec-tree:test-evidence-auditor` on `spx/43-coding-agents.enabler/21-agent-communication.enabler` at `1b2479a84f70e528315aa7fb16c40448d31817bf` rejected restated literals in the tests; the repair at `4113d674c47ccd118de35b522d4c626a96c17a52` closed those, and the second pass at that head rejected the relocated-constant shape under the same rule, `source-ownership`.
+
+**Gap.** `src/plugins/spec-tree/skills/apply/SKILL.md` `<stabilized_diff_rule>` names the same-class sweep over the touched node's governed files but does not name the consumer check: for every source-owned value a test imports, a production path consumes it.
+
+**Settlement condition.** The apply flow's same-class sweep, or the test-evidence standard it applies, states that a source-owned value a test imports has a production consumer, and a compliance test's violating cases come from the linked test or a real production contract, never from a constant only tests read.

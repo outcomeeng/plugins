@@ -57,7 +57,6 @@ PANE_FIELD = "pane"
 WORKTREE_FIELD = "worktree"
 RUN_FIELD = "run"
 BRANCH_FIELD = "branch"
-CLEAN_STATUS = "clean"
 FULL_HEAD_PATTERN = re.compile(r"[0-9a-f]{40}")
 TRANSPORT_SCHEMA_VERSION = 1
 TRANSPORT_OPERATION_FIELD = "operation"
@@ -847,6 +846,21 @@ def send_request(
     handback_plan: object = None,
 ) -> dict[str, object]:
     value = _object(request, MESSAGE_REQUEST_FIELD)
+    targeting = sorted(set(value) & FORBIDDEN_TARGET_FIELDS)
+    if targeting:
+        raise MessageError(
+            DeliveryStatus.INVALID_IDENTITY,
+            "Message request targets by a field that never selects an endpoint: "
+            f"{', '.join(targeting)}. Targets resolve only by complete pane identity.",
+        )
+    executable = sorted(set(value) & FORBIDDEN_EXECUTABLE_FIELDS)
+    if executable:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Message request carries caller-authored executable handback data: "
+            f"{', '.join(executable)}. Only the block the environment capability "
+            "returns is accepted.",
+        )
     unexpected = sorted(set(value) - REQUEST_INPUT_FIELDS)
     if unexpected:
         raise MessageError(
