@@ -5,7 +5,7 @@ description: >-
   Change store to hold it for refinement or execution. NEVER assign a Change or
   write its Status by hand without this skill.
 argument-hint: "[#N | owner/repo#N | issue-url]"
-allowed-tools: Read, Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --show-current), Bash(gh pr view:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh project view:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-edit:*), Bash(gh api user --jq .login), Bash(printf:*), Bash(printenv CLAUDE_CODE_SESSION_ID), Bash(git rev-parse --show-toplevel), AskUserQuestion, Skill
+allowed-tools: Read, Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(gh pr view:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh project view:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-edit:*), Bash(gh api user --jq .login), Bash(printf:*), Bash(printenv CLAUDE_CODE_SESSION_ID), Bash(git rev-parse --show-toplevel), AskUserQuestion, Skill
 ---
 
 <objective>
@@ -14,7 +14,7 @@ One Change moved from `Available` to `Claimed` in the declared store — this ag
 
 <required_reading>
 
-Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the common record contract and `references/lifecycle.md`, whose rules govern every store read and write below by their `id`.
+Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the common record contract and the Lifecycle rules, which govern every store read and write below by their `id`.
 
 </required_reading>
 
@@ -39,7 +39,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
    ```
 
    A later claim in the same conversation emits its own marker; the newest marker names the Change the release and close skills act on unless they receive an explicit reference.
-7. **Bring the Handoff's branch into the assigned worktree.** Read only the newest `Handoff:` comment's `Branch or PR` line. When it names a branch on origin, run `spx worktree status` from the assigned root as a read-only check — record no claim of your own, and surface a diagnostic when the running session's claim is absent — then `git fetch origin <branch>` and `git switch <branch>` in this worktree, creating the local tracking branch when none exists; a branch another worktree holds is unavailable here, so branch from `origin/<branch>` under a fresh name in this worktree and continue. When the line names a pull request, resolve its head branch with `gh pr view <url> --json headRefName` and treat it the same way. When it is `none` or no Handoff exists, leave the checkout as it is. Use skill `spec-tree:sync-base` afterwards, before any Change detail is presented as current.
+7. **Bring the Handoff's branch into the assigned worktree.** Read only the newest `Handoff:` comment's `Branch or PR` line. When it names a branch on origin, run `spx worktree status` from the assigned root as a read-only check that records no worktree claim; when the running session's claim is absent, stop before any checkout transition and report the diagnostic. Otherwise `git fetch origin <branch>` and `git switch <branch>` in this worktree, creating the local tracking branch when none exists; a branch another worktree holds is unavailable here, so branch from `origin/<branch>` under a fresh name in this worktree and continue. When the line names a pull request, resolve its head branch with `gh pr view <url> --json headRefName` and treat it the same way. When it is `none` or no Handoff exists, leave the checkout as it is. Use skill `spec-tree:sync-base` afterwards, before any Change detail is presented as current.
 
 </workflow>
 
