@@ -26,8 +26,6 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`@outcomeeng/spx` 0.7.0 or newer.** `/diagnose` judges the installed spx against a 0.7.0 floor: the release whose `spx diagnose --format json` `worktree-pool` record carries `mainCheckoutPath`, the reading the coding-agents plugin's agent-mail capability maps the mail project key from.
 
-||||||| parent of bd806188e (refactor(spec-tree): retire pickup, handoff, and issue)
-
 ## 0.96.1
 
 ### Fixed
