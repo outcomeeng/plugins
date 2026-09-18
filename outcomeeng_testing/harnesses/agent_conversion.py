@@ -208,6 +208,16 @@ def spec_tree_wrapper_agents() -> tuple[SourceAgent, ...]:
     )
 
 
+def repository_wrapper_agents() -> tuple[SourceAgent, ...]:
+    """Return every authored marketplace wrapper agent."""
+    return tuple(
+        parse_agent_markdown(path)
+        for path in iter_agent_files(
+            REPOSITORY_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME
+        )
+    )
+
+
 def agent_conversion_fixture(name: str) -> str:
     """Read one inert whole-agent fixture."""
     return (AGENT_CONVERSION_FIXTURES_DIR / name).read_text(encoding="utf-8")

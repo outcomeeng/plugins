@@ -5,6 +5,7 @@ from __future__ import annotations
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     AGENT_SKILL_ENABLED_FIELD,
+    AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD,
     SKILL_ENABLEMENT_LIMITATION,
     convert_agent,
 )
@@ -14,8 +15,8 @@ from outcomeeng.distribution.profiles import AGENT_PROFILES, AgentProfile
 from outcomeeng_testing.harnesses.agent_conversion import (
     converted_instruction_value,
     converted_skill_config,
+    repository_wrapper_agents,
     source_agent,
-    spec_tree_wrapper_agents,
 )
 
 
@@ -29,7 +30,7 @@ def test_complete_native_profile_reaches_converted_agent() -> None:
 
 
 def test_skills_are_preserved_as_codex_config_and_guidance() -> None:
-    wrappers = spec_tree_wrapper_agents()
+    wrappers = repository_wrapper_agents()
 
     assert wrappers
     for source in wrappers:
@@ -40,5 +41,8 @@ def test_skills_are_preserved_as_codex_config_and_guidance() -> None:
             {AGENT_NAME_FIELD: skill, AGENT_SKILL_ENABLED_FIELD: True}
             for skill in source.skills
         )
+        skills = converted.values["skills"]
+        assert isinstance(skills, dict)
+        assert skills[AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD] is True
         assert all(skill in instructions for skill in source.skills)
         assert SKILL_ENABLEMENT_LIMITATION in instructions

@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import asdict
 from pathlib import Path
 
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     AGENT_SKILL_ENABLED_FIELD,
+    APPROVAL_POLICY_FIELD,
     CODEX_AGENT_ENV_SEPARATOR,
     CODEX_AGENT_ENV_VAR,
     READ_ONLY_SANDBOX_MODE,
+    SANDBOX_MODE_FIELD,
     WEB_SEARCH_DISABLED,
+    convert_agent,
 )
-from dataclasses import asdict
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.profiles import AGENT_PROFILES, AgentProfile
 from outcomeeng_testing.harnesses.agent_conversion import (
@@ -30,6 +33,7 @@ from outcomeeng_testing.harnesses.agent_conversion import (
     oracle_string,
     oracle_strings,
     parsed_toml_skill_config,
+    spec_tree_wrapper_agents,
     toml_compatible,
     toml_string,
     toml_table,
@@ -59,6 +63,19 @@ def test_agent_frontmatter_and_body_convert_to_codex_toml(tmp_path: Path) -> Non
         for skill in expected_skills
     ]
     assert all(tool in instructions for tool in expected_tools)
+
+
+def test_journal_writing_auditors_inherit_codex_execution_policy() -> None:
+    sources = {source.name: source for source in spec_tree_wrapper_agents()}
+
+    for agent_name in ("change-auditor", "implementation-auditor"):
+        source = sources[agent_name]
+        converted = convert_agent(source)
+
+        assert source.sandbox_mode is None
+        assert source.approval_policy is None
+        assert SANDBOX_MODE_FIELD not in converted.values
+        assert APPROVAL_POLICY_FIELD not in converted.values
 
 
 def test_folded_yaml_description_converts_to_text(tmp_path: Path) -> None:
