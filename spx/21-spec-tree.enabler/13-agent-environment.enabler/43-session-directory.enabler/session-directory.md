@@ -1,7 +1,7 @@
 # Session Directory
 
 PROVIDES the per-runtime session directory convention keyed on the agent session identity
-SO THAT session management nodes (sessions, pickup, handoff)
+SO THAT concurrent agent sessions sharing one `.spx/`
 CAN accumulate per-session state without colliding across concurrent agents
 
 ## Assertions
