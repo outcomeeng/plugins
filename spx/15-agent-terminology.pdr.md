@@ -33,11 +33,7 @@ Exact external API fields, command names, filesystem paths, and attributed quota
 
 `runtime` remains valid for execution-time behavior or an execution environment such as Python when no agent concept is meant.
 
-**Output.** What a Change is meant to produce: a decision, spec, or evidence evolution, a lower-layer reconciliation, or both.
-
-**Change.** The methodology's mutable coordination object for one intended Output. A repository's coordination overlay realizes it where one is declared; the roles below hold whether or not that overlay is present.
-
-**Activity.** One entry in a Change's mutable, ordered execution plan.
+**Change, Output, and Activity.** The chapter `versions/4.0/methodology/change/changes.md` of `outcomeeng/methodology` is the home of what a Change, an Output, and an Activity are; the roles below use those terms as that chapter defines them and hold whether or not a repository declares a coordination overlay.
 
 **Role.** What an agent session does for a Change; a session holds a role for that Change and may hold another in a different one. A role name is capitalized, so it stands apart from the everyday word. One round is one Author or Fixer pass together with every Verifier pass it triggers.
 
