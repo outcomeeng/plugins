@@ -80,9 +80,10 @@ the remaining-item preservation and whole-field removal in
 `spx/18-plugin-build.enabler/43-target-emission.enabler/target-emission.md`, and the
 rendered-tool-only manual guidance and Codex composition in
 `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/execution-policy.md`.
-The behavior lives in `outcomeeng/distribution/build.py` (`_make_kind_global`,
-`_remove_unavailable_frontmatter_items`, `_remove_unavailable_tool_items`) and
-`outcomeeng/distribution/contracts.py` (`RUNTIME_TOKEN_OPTIONAL_NAMES`). No
+The behavior lives in `outcomeeng/distribution/build.py` (the registry's optional
+capabilities in `resolve_runtime_token`, `_remove_unavailable_frontmatter_items`,
+`_remove_unavailable_tool_items`) and `outcomeeng/distribution/contracts.py`
+(`RUNTIME_TOKEN_USE_SKILL_NAMES`). No
 linked test exercises it: the `dist-diff` parity step detects drift between
 authored source and generated output but not a wrong-but-stable rendering.
 

@@ -6,7 +6,7 @@ CAN write one source that renders each tool name, field name, concept term, and 
 
 ## Assertions
 
-- ALWAYS: an optional tool capability — one declared in the optional-names table beside the runtime-token registry with a name for some targets and none for others — renders the target's name where one exists and, where none exists, is removed only as one complete item of list-valued `allowed-tools` or `tools` frontmatter; every other placement of an unavailable capability fails the build. The optional-names table sits outside the source-layer guard, so a target's name for an optional capability is not forbidden raw in authored source.
+- ALWAYS: an optional tool capability — one the runtime-token registry's `tool` kind lists as optional, with a name for some targets and none for others — renders the target's name where one exists and, where none exists, resolves through the same registry path to an unavailable placeholder that the renderer removes only as one complete item of list-valued `allowed-tools` or `tools` frontmatter; every other placement of an unavailable capability fails the build. The optional capability's target names join the guard-enforced forbidden set like every other `tool` name.
 
 ### Compliance
 
