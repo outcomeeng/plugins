@@ -76,6 +76,9 @@ STORE_INBOX_FIELD = "inbox"
 # The store reads `--to` as a list joined by this separator, so a recipient
 # that carries it names several agents and no longer maps back to one record.
 STORE_RECIPIENT_SEPARATOR = ","
+# The store's parser reads a separate value that begins with `-` as another
+# option, so every free-text option travels attached, `--option=value`.
+ATTACHED_OPTION_SEPARATOR = "="
 
 # Fields of the capability's requests and results.
 SCHEMA_VERSION_FIELD = "schemaVersion"
@@ -433,9 +436,10 @@ def validate_record(
 ) -> dict[str, object]:
     """Return the record with every field checked against the record contract.
 
-    A record read from a store row (`from_store`) is total over the rows the
-    store returns: its correlation may be absent and its subject empty, because
-    another sender wrote those fields, and no single row fails the read.
+    A record read from a store row (`from_store`) admits what another sender
+    may have left: an absent correlation and an empty subject. Its id, sender,
+    and subject key remain required, because a row without them is not the
+    store's inbox shape.
     """
     value = _object(record, location)
     expected = RECORD_FIELDS if with_id else RECORD_INPUT_FIELDS
@@ -606,10 +610,11 @@ def _split_kind(subject: str) -> tuple[RecordKind, str]:
 def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]:
     """Map one inbox item of the store back onto a record for its recipient.
 
-    The mapping is total over the rows the store returns: a row without a
-    thread was not written by this adapter, so it reads as an unclassified
-    record with no correlation and its subject verbatim; an acknowledgement
-    status outside the ones that require a receipt reads as not required.
+    A row another sender wrote reads back rather than failing the read: a row
+    without a thread reads as an unclassified record with no correlation and
+    its subject verbatim, and an acknowledgement status outside the ones that
+    require a receipt reads as not required. A row without the store's id,
+    sender, or subject key is a malformed store response and fails the read.
     """
     value = _object(item, STORE_INBOX_FIELD)
     location = f"{STORE_INBOX_FIELD}[]"
@@ -790,6 +795,12 @@ def operation_request(
     return request
 
 
+def attached_option(option: str, value: object) -> str:
+    """One free-text option with its value attached, the form the store's
+    parser reads whatever character the value begins with."""
+    return f"{option}{ATTACHED_OPTION_SEPARATOR}{value}"
+
+
 def command_for(request: object, project_key: str) -> tuple[str, ...]:
     """Map one checked request onto the exact store argument vector."""
     operation, arguments = _validated_request(request)
@@ -801,8 +812,10 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
             )
         command.extend((NAME_OPTION, str(arguments[AGENT_FIELD])))
         if TASK_FIELD in arguments:
-            command.extend(
-                (PUBLIC_AM_ARGUMENT_OPTIONS[TASK_FIELD], str(arguments[TASK_FIELD]))
+            command.append(
+                attached_option(
+                    PUBLIC_AM_ARGUMENT_OPTIONS[TASK_FIELD], arguments[TASK_FIELD]
+                )
             )
     elif operation is Operation.SEND:
         fields = store_fields_for(arguments[RECORD_FIELD])
@@ -813,8 +826,10 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
             (RECORD_SUBJECT_FIELD, STORE_SUBJECT_FIELD),
             (BODY_FIELD, STORE_BODY_FIELD),
         ):
-            command.extend(
-                (PUBLIC_AM_RECORD_OPTIONS[record_field], str(fields[store_field]))
+            command.append(
+                attached_option(
+                    PUBLIC_AM_RECORD_OPTIONS[record_field], fields[store_field]
+                )
             )
         if fields[STORE_ACK_REQUIRED_FIELD] is True:
             command.append(PUBLIC_AM_RECORD_OPTIONS[ACK_REQUIRED_FIELD])

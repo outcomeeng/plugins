@@ -60,11 +60,20 @@ def test_agent_mail_operation_mappings() -> None:
                 module.CORRELATION_FIELD,
                 module.BODY_FIELD,
             ):
-                assert record[field_name] in argv
+                assert (
+                    module.attached_option(
+                        module.PUBLIC_AM_RECORD_OPTIONS[field_name], record[field_name]
+                    )
+                    in argv
+                )
             assert (
-                f"{module.KIND_PREFIX_OPEN}{record[module.KIND_FIELD]}"
-                f"{module.KIND_PREFIX_CLOSE}{record[module.RECORD_SUBJECT_FIELD]}"
-            ) in argv
+                module.attached_option(
+                    module.PUBLIC_AM_RECORD_OPTIONS[module.RECORD_SUBJECT_FIELD],
+                    f"{module.KIND_PREFIX_OPEN}{record[module.KIND_FIELD]}"
+                    f"{module.KIND_PREFIX_CLOSE}{record[module.RECORD_SUBJECT_FIELD]}",
+                )
+                in argv
+            )
             assert (module.ACK_REQUIRED_OPTION in reading.options_seen) is (
                 record[module.ACK_REQUIRED_FIELD]
             )

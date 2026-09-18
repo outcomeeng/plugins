@@ -18,6 +18,8 @@ OPTIONS_HEADING: Final = "Options:"
 ARGUMENTS_HEADING: Final = "Arguments:"
 OPTIONS_PLACEHOLDER: Final = "[OPTIONS]"
 SEPARATOR: Final = "--"
+# Joins an option to a value carried in the same token.
+ATTACHED_VALUE_SEPARATOR: Final = "="
 REPEAT_MARKER: Final = "repeat"
 _OPTION_LINE: Final = re.compile(
     r"^\s*(?:-[A-Za-z],\s*)?(?P<long>--[a-z][a-z0-9-]*)(?:,\s*-[A-Za-z])?"
@@ -146,12 +148,15 @@ def read_argv(contract: UsageContract, argv: tuple[str, ...]) -> ArgvReading:
             trailing.extend(argv[index + 1 :])
             break
         if token.startswith("--"):
-            options_seen[token] = options_seen.get(token, 0) + 1
-            if token not in contract.options:
-                unknown.append(token)
+            # `--option=value` carries its value in the same token, the form a
+            # value that begins with `-` must take.
+            option, attached, _ = token.partition(ATTACHED_VALUE_SEPARATOR)
+            options_seen[option] = options_seen.get(option, 0) + 1
+            if option not in contract.options:
+                unknown.append(option)
                 index += 1
                 continue
-            index += 2 if contract.options[token] else 1
+            index += 2 if contract.options[option] and not attached else 1
             continue
         positionals.append(token)
         index += 1
