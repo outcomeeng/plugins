@@ -77,10 +77,36 @@ def test_agent_mail_operation_mappings() -> None:
             assert (module.ACK_REQUIRED_OPTION in reading.options_seen) is (
                 record[module.ACK_REQUIRED_FIELD]
             )
-        elif operation is module.Operation.RECEIPT:
-            assert reading.positionals == (str(arguments[module.MESSAGE_ID_FIELD]),)
+        elif operation is module.Operation.REGISTER:
+            assert (
+                module.attached_option(
+                    module.NAME_OPTION, arguments[module.AGENT_FIELD]
+                )
+                in argv
+            )
+            for field_name in (
+                module.PROGRAM_FIELD,
+                module.MODEL_FIELD,
+                module.TASK_FIELD,
+            ):
+                if field_name in arguments:
+                    assert (
+                        module.attached_option(
+                            module.PUBLIC_AM_ARGUMENT_OPTIONS[field_name],
+                            arguments[field_name],
+                        )
+                        in argv
+                    )
         else:
-            assert arguments[module.AGENT_FIELD] in argv
+            if operation is module.Operation.RECEIPT:
+                assert reading.positionals == (str(arguments[module.MESSAGE_ID_FIELD]),)
+            assert (
+                module.attached_option(
+                    module.PUBLIC_AM_ARGUMENT_OPTIONS[module.AGENT_FIELD],
+                    arguments[module.AGENT_FIELD],
+                )
+                in argv
+            )
 
         payload = store_response_payload(module, operation, arguments)
         runner = diagnosis_seeded_runner(

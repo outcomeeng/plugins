@@ -56,6 +56,12 @@ INVENTORY_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-herdr-environment.enabler/tests/"
     "test_herdr_environment.mapping.l1.py"
 )
+OPTION_PREFIX_SEED = 2026091814
+OPTION_PREFIX_EXAMPLES = 10
+OPTION_PREFIX_REPLAY_PATH = (
+    "spx/43-coding-agents.enabler/18-herdr-environment.enabler/tests/"
+    "test_herdr_environment.mapping.l1.py"
+)
 UNKNOWN_OPERATION_SEED = 2026091813
 UNKNOWN_OPERATION_EXAMPLES = 20
 UNKNOWN_OPERATION_REPLAY_PATH = INVENTORY_REPLAY_PATH
@@ -458,6 +464,51 @@ def run_inventory_mapping(
         generated_inventory,
         seed_value=INVENTORY_SEED,
         replay_path=INVENTORY_REPLAY_PATH,
+    )
+
+
+def option_prefixed_requests(
+    module: ModuleType, text: str
+) -> list[tuple[dict[str, object], str]]:
+    """Every registry request with one of herdr's own text arguments replaced by
+    `text` under herdr's long-option prefix, paired with the field replaced.
+    Agent arguments follow herdr's separator and are left as they are."""
+    prefixed = f"{module.LONG_OPTION_PREFIX}{text}"
+    variants: list[tuple[dict[str, object], str]] = []
+    for request in operation_requests(module):
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        for field_name in sorted(arguments):
+            if field_name in module.TEXT_ARGUMENT_FIELDS:
+                changed = {**arguments, field_name: prefixed}
+            elif (
+                field_name in module.TEXT_LIST_ARGUMENT_FIELDS
+                and field_name != module.AGENT_ARGUMENTS_FIELD
+            ):
+                changed = {**arguments, field_name: [prefixed]}
+            else:
+                continue
+            variants.append(({**request, module.ARGUMENTS_FIELD: changed}, field_name))
+    return variants
+
+
+def run_option_prefix_rejections(
+    assert_case: Callable[[ModuleType, dict[str, object], str], None],
+) -> None:
+    """Drive generated texts under herdr's long-option prefix through every
+    text argument of every registry request."""
+    module = _load()
+
+    @seed(OPTION_PREFIX_SEED)
+    @settings(max_examples=OPTION_PREFIX_EXAMPLES, deadline=None, print_blob=True)
+    @given(text=agent_names())
+    def generated_prefix(text: str) -> None:
+        for request, field_name in option_prefixed_requests(module, text):
+            assert_case(module, request, field_name)
+
+    run_replayable_property(
+        generated_prefix,
+        seed_value=OPTION_PREFIX_SEED,
+        replay_path=OPTION_PREFIX_REPLAY_PATH,
     )
 
 

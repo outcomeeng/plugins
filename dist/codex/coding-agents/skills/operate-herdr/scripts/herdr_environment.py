@@ -41,6 +41,10 @@ PANE_OPTION = "--pane"
 PATH_OPTION = "--path"
 NO_FOCUS_OPTION = "--no-focus"
 AGENT_ARGUMENTS_SEPARATOR = "--"
+# Herdr reads a token that begins with this prefix as one of its options, and
+# offers no separator or attached form for a text that does, so no text
+# argument may begin with it.
+LONG_OPTION_PREFIX = "--"
 
 # Fields of herdr's public JSON envelope.
 RESULT_FIELD = "result"
@@ -390,6 +394,19 @@ def _text(value: object, location: str) -> str:
     return value
 
 
+def _herdr_text(value: object, location: str) -> str:
+    """A text herdr receives as a positional or an option value: non-empty and
+    never beginning with the long-option prefix herdr would read as an option."""
+    text = _text(value, location)
+    if text.startswith(LONG_OPTION_PREFIX):
+        raise HerdrEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Text at {location} begins with {LONG_OPTION_PREFIX!r}, which herdr "
+            f"reads as an option: {text!r}.",
+        )
+    return text
+
+
 def _text_list(value: object, location: str) -> list[str]:
     items = _array(value, location)
     if not items:
@@ -512,10 +529,15 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     location = f"request.{ARGUMENTS_FIELD}"
     for field_name in TEXT_ARGUMENT_FIELDS:
         if field_name in arguments:
-            _text(arguments[field_name], f"{location}.{field_name}")
+            _herdr_text(arguments[field_name], f"{location}.{field_name}")
     for field_name in TEXT_LIST_ARGUMENT_FIELDS:
         if field_name in arguments:
-            _text_list(arguments[field_name], f"{location}.{field_name}")
+            items = _text_list(arguments[field_name], f"{location}.{field_name}")
+            # Agent arguments follow herdr's `--` separator and may carry the
+            # launched agent's own options; every other list is herdr's.
+            if field_name != AGENT_ARGUMENTS_FIELD:
+                for index, item in enumerate(items):
+                    _herdr_text(item, f"{location}.{field_name}[{index}]")
     for field_name in BOOLEAN_ARGUMENT_FIELDS:
         if field_name in arguments:
             _boolean(arguments[field_name], f"{location}.{field_name}")

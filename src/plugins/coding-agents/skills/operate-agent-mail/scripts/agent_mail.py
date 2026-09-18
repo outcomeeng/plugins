@@ -77,7 +77,7 @@ STORE_INBOX_FIELD = "inbox"
 # that carries it names several agents and no longer maps back to one record.
 STORE_RECIPIENT_SEPARATOR = ","
 # The store's parser reads a separate value that begins with `-` as another
-# option, so every free-text option travels attached, `--option=value`.
+# option, so every text-valued option travels attached, `--option=value`.
 ATTACHED_OPTION_SEPARATOR = "="
 
 # Fields of the capability's requests and results.
@@ -819,10 +819,12 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
     command = [*PUBLIC_AM_COMMAND_PREFIXES[operation], PROJECT_OPTION, project_key]
     if operation is Operation.REGISTER:
         for field_name in (PROGRAM_FIELD, MODEL_FIELD):
-            command.extend(
-                (PUBLIC_AM_ARGUMENT_OPTIONS[field_name], str(arguments[field_name]))
+            command.append(
+                attached_option(
+                    PUBLIC_AM_ARGUMENT_OPTIONS[field_name], arguments[field_name]
+                )
             )
-        command.extend((NAME_OPTION, str(arguments[AGENT_FIELD])))
+        command.append(attached_option(NAME_OPTION, arguments[AGENT_FIELD]))
         if TASK_FIELD in arguments:
             command.append(
                 attached_option(
@@ -846,8 +848,10 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
         if fields[STORE_ACK_REQUIRED_FIELD] is True:
             command.append(PUBLIC_AM_RECORD_OPTIONS[ACK_REQUIRED_FIELD])
     else:
-        command.extend(
-            (PUBLIC_AM_ARGUMENT_OPTIONS[AGENT_FIELD], str(arguments[AGENT_FIELD]))
+        command.append(
+            attached_option(
+                PUBLIC_AM_ARGUMENT_OPTIONS[AGENT_FIELD], arguments[AGENT_FIELD]
+            )
         )
         if operation is Operation.INBOX:
             for field_name in (UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD):

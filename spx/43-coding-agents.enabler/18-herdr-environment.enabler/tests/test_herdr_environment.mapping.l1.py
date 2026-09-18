@@ -21,6 +21,7 @@ from outcomeeng_testing.harnesses.herdr_environment import (
     projected_error_variants,
     request_for,
     run_inventory_mapping,
+    run_option_prefix_rejections,
     run_unknown_operation_mapping,
     usage_contract_for,
 )
@@ -290,6 +291,24 @@ def test_herdr_error_codes_project_to_named_statuses() -> None:
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.COMMAND_FAILED
         assert result[module.ERROR_CODE_FIELD] == captured.error_code
         assert result[module.DETAIL_FIELD] == captured_error_message(module, captured)
+
+
+def test_text_arguments_under_the_option_prefix_are_rejected_before_any_command() -> (
+    None
+):
+    def assert_case(
+        module: ModuleType, request: dict[str, object], field_name: str
+    ) -> None:
+        runner = RecordingRunner([])
+        result = module.execute(request, runner)
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA, (
+            field_name
+        )
+        assert field_name in str(result[module.DETAIL_FIELD])
+        assert runner.calls == []
+
+    run_option_prefix_rejections(assert_case)
 
 
 def test_absent_server_and_unsupported_operation_map_to_unavailable_results() -> None:
