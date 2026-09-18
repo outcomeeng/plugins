@@ -20,7 +20,7 @@ A complete store-independent Change record authored locally, independently appro
 - Preserve an explicitly selected local working file inside the Product repository. Otherwise use `<local_draft>` to obtain an SPX-managed file. Every refinement and repair changes that one file.
 - Keep provider conversations, transcripts, prompt copies, and received conversation input out of the Change record. Preserve established intent in Output, Value, Frame, and Activities.
 - Ask only about a consequential operator-owned choice that supplied intent and repository truth leave unresolved. Ask one focused question at a time and state how its answer changes the record.
-- Keep operator judgment in the main conversation. Dispatch the configured `change-auditor` in an isolated verifier session after the candidate stabilizes. NEVER replace it with an in-conversation audit.
+- Require the operator's attestation as input to `Framed`. When the operator is reachable, obtain it through the structured question. Otherwise stop with `attestation-required`, naming the exact judgment the operator must attest. Dispatch the configured `change-auditor` in an isolated verifier session after the candidate stabilizes. NEVER replace it with an in-conversation audit.
 - Keep remote content unchanged until the complete local candidate passes audit. A local draft grants no remote claim or integration authority.
 
 </essential_principles>
