@@ -3,12 +3,10 @@ from types import ModuleType
 from typing import cast
 
 from outcomeeng_testing.harnesses.agent_mail import (
-    AbsentExecutableRunner,
-    RecordingRunner,
     agent_mail_source_texts,
-    diagnosis_with_main_checkout,
+    diagnosis_seeded_absent_store_runner,
+    diagnosis_seeded_runner,
     git_project_key_violation_source,
-    json_command_result,
     load_agent_mail,
     mail_command_source_texts,
     raw_mail_violation_source,
@@ -34,10 +32,7 @@ def test_unavailable_results_admit_no_fallback() -> None:
         assert module.PROJECT_KEY_FIELD not in result
         assert project_key not in completed.stdout
 
-        diagnosis = json_command_result(
-            module, diagnosis_with_main_checkout(module, project_key)
-        )
-        no_store = AbsentExecutableRunner(module.AM_COMMAND, [diagnosis])
+        no_store = diagnosis_seeded_absent_store_runner(module, project_key)
         result = module.execute(request, no_store)
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.STORE_UNAVAILABLE
         assert [argv[0] for argv, _ in no_store.calls] == [
@@ -59,13 +54,10 @@ def test_registration_result_carries_no_token() -> None:
             dict[str, object], store_response_payload(module, module.Operation.REGISTER)
         )
         token = cast(str, captured[module.STORE_REGISTRATION_TOKEN_FIELD])
-        runner = RecordingRunner(
-            [
-                json_command_result(
-                    module, diagnosis_with_main_checkout(module, project_key)
-                ),
-                store_response_result(module, module.Operation.REGISTER),
-            ]
+        runner = diagnosis_seeded_runner(
+            module,
+            project_key,
+            store_response_result(module, module.Operation.REGISTER),
         )
 
         result = module.execute(request, runner)

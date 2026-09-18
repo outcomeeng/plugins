@@ -140,31 +140,39 @@ def project_key_paths() -> st.SearchStrategy[str]:
     return st.from_regex(r"/[a-z0-9]{1,12}(?:/[a-z0-9._-]{1,16}){0,5}", fullmatch=True)
 
 
-# The spec's diagnosis shapes: a worktree-pool record with a main checkout
-# path, and the three ways the path can be absent.
+# The diagnosis shapes the adapter decision names: exactly one worktree-pool
+# record with an absolute main checkout path resolves the key; no record, a
+# record under another name, two records, empty readings, and a relative path
+# each yield the unavailable result.
 DIAGNOSIS_WITH_PATH = "with-path"
 DIAGNOSIS_NO_RECORD = "no-record"
 DIAGNOSIS_OTHER_RECORD = "other-record"
+DIAGNOSIS_TWO_RECORDS = "two-records"
 DIAGNOSIS_EMPTY_READINGS = "empty-readings"
+DIAGNOSIS_RELATIVE_PATH = "relative-path"
 DIAGNOSIS_SHAPES = (
     DIAGNOSIS_WITH_PATH,
     DIAGNOSIS_NO_RECORD,
     DIAGNOSIS_OTHER_RECORD,
+    DIAGNOSIS_TWO_RECORDS,
     DIAGNOSIS_EMPTY_READINGS,
+    DIAGNOSIS_RELATIVE_PATH,
 )
+# The one shape whose key resolves; every other shape maps to no key.
+RESOLVING_DIAGNOSIS_SHAPES = frozenset({DIAGNOSIS_WITH_PATH})
+
+
+def _worktree_pool_record(module: ModuleType, path: str) -> dict[str, object]:
+    return {
+        module.NAME_FIELD: module.WORKTREE_POOL_CHECK,
+        module.READINGS_FIELD: {module.MAIN_CHECKOUT_PATH_FIELD: path},
+    }
 
 
 def diagnosis_payload(module: ModuleType, shape: str, path: str) -> dict[str, object]:
     """One diagnosis payload of the named shape carrying the generated path."""
     if shape == DIAGNOSIS_WITH_PATH:
-        return {
-            module.CHECKS_FIELD: [
-                {
-                    module.NAME_FIELD: module.WORKTREE_POOL_CHECK,
-                    module.READINGS_FIELD: {module.MAIN_CHECKOUT_PATH_FIELD: path},
-                }
-            ]
-        }
+        return {module.CHECKS_FIELD: [_worktree_pool_record(module, path)]}
     if shape == DIAGNOSIS_NO_RECORD:
         return {module.CHECKS_FIELD: []}
     if shape == DIAGNOSIS_OTHER_RECORD:
@@ -176,6 +184,13 @@ def diagnosis_payload(module: ModuleType, shape: str, path: str) -> dict[str, ob
                 }
             ]
         }
+    if shape == DIAGNOSIS_TWO_RECORDS:
+        return {
+            module.CHECKS_FIELD: [
+                _worktree_pool_record(module, path),
+                _worktree_pool_record(module, path),
+            ]
+        }
     if shape == DIAGNOSIS_EMPTY_READINGS:
         return {
             module.CHECKS_FIELD: [
@@ -185,4 +200,12 @@ def diagnosis_payload(module: ModuleType, shape: str, path: str) -> dict[str, ob
                 }
             ]
         }
+    if shape == DIAGNOSIS_RELATIVE_PATH:
+        return {module.CHECKS_FIELD: [_worktree_pool_record(module, path.lstrip("/"))]}
     raise RequestContractError(f"No diagnosis shape named {shape!r}")
+
+
+def expected_project_key(shape: str, path: str) -> str | None:
+    """The key the adapter decision derives for one shape: the absolute main
+    checkout path of the one worktree-pool record, or none."""
+    return path if shape in RESOLVING_DIAGNOSIS_SHAPES else None

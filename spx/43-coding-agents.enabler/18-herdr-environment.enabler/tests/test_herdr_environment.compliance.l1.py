@@ -6,7 +6,7 @@ from outcomeeng_testing.harnesses.herdr_environment import (
     herdr_help_violation_source,
     load_herdr_environment,
     raw_herdr_violation_source,
-    run_runner_bound_probe,
+    run_bound_through_execute,
 )
 
 
@@ -21,16 +21,24 @@ def test_mutating_operations_fail_before_execution_without_authorization() -> No
         gated.add(operation)
         arguments = dict(cast(dict[str, object], request[module.ARGUMENTS_FIELD]))
         arguments.pop(module.MUTATION_AUTHORIZED_FIELD, None)
-        unauthorized = {**request, module.ARGUMENTS_FIELD: arguments}
+        absent = {**request, module.ARGUMENTS_FIELD: arguments}
+        withheld = {
+            **request,
+            module.ARGUMENTS_FIELD: {
+                **arguments,
+                module.MUTATION_AUTHORIZED_FIELD: False,
+            },
+        }
 
-        try:
-            module.command_for(unauthorized)
-        except module.HerdrEnvironmentError as error:
-            assert error.status == module.ExecutionStatus.MUTATION_UNAUTHORIZED
-        else:
-            raise AssertionError(
-                f"{operation.value} built a command without authorization"
-            )
+        for unauthorized in (absent, withheld):
+            try:
+                module.command_for(unauthorized)
+            except module.HerdrEnvironmentError as error:
+                assert error.status == module.ExecutionStatus.MUTATION_UNAUTHORIZED
+            else:
+                raise AssertionError(
+                    f"{operation.value} built a command without authorization"
+                )
 
     assert gated == set(module.MUTATING_OPERATIONS)
 
@@ -57,10 +65,17 @@ def test_wait_bearing_requests_carry_a_bound_and_the_runner_is_bounded() -> None
 
     assert bounded == set(module.WAIT_BEARING_OPERATIONS) | {module.Operation.PROMPT}
 
-    bound, child_sleep, expired = run_runner_bound_probe()
-    assert bound < child_sleep
-    assert expired is not None
-    assert expired.timeout == bound
+    smallest = module.INTEGER_BOUNDS[module.TIMEOUT_FIELD][0]
+    request = module.operation_request(
+        module.Operation.WAIT, agent="bound-probe", timeout=smallest
+    )
+    result, bounds, child_sleep = run_bound_through_execute(module, request)
+
+    assert bounds == [module.command_bound_seconds(request)]
+    assert bounds[0] * 1000 > smallest
+    assert bounds[0] < child_sleep
+    assert result[module.STATUS_FIELD] == module.ExecutionStatus.COMMAND_FAILED
+    assert module.COMMAND_EXIT_CODE_FIELD not in result
 
 
 def test_no_other_shipped_script_constructs_herdr_commands() -> None:

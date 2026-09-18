@@ -31,20 +31,6 @@ def agent_states(module: ModuleType) -> st.SearchStrategy[object]:
     return st.sampled_from(tuple(module.AgentState))
 
 
-def projected_error_codes(module: ModuleType) -> st.SearchStrategy[str]:
-    return st.sampled_from(tuple(module.HERDR_ERROR_STATUSES))
-
-
-def unprojected_error_codes(module: ModuleType) -> st.SearchStrategy[str]:
-    return st.from_regex(r"[a-z]+(?:_[a-z]+){0,3}", fullmatch=True).filter(
-        lambda code: code not in module.HERDR_ERROR_STATUSES
-    )
-
-
-def error_messages() -> st.SearchStrategy[str]:
-    return st.text(min_size=1, max_size=120)
-
-
 def unknown_operation_names(module: ModuleType) -> st.SearchStrategy[str]:
     known = {operation.value for operation in module.Operation}
     return st.from_regex(r"[a-z]+(?:-[a-z]+){0,2}", fullmatch=True).filter(
@@ -52,29 +38,38 @@ def unknown_operation_names(module: ModuleType) -> st.SearchStrategy[str]:
     )
 
 
-def herdr_agent_item(
-    module: ModuleType, ordinal: int, state: object, *, name: str | None = None
+def agent_item_variant(
+    module: ModuleType,
+    template: dict[str, object],
+    ordinal: int,
+    state: object,
+    *,
+    name: str | None = None,
 ) -> dict[str, object]:
-    """One hosted agent session as herdr's public inventory lists it."""
+    """One hosted agent session varied from a captured inventory item.
+
+    Only the fields the evidence quantifies over change: the server state and
+    the identities that keep sessions distinct. Every other field keeps the
+    value herdr emitted.
+    """
     suffix = str(ordinal)
     return {
+        **template,
         module.NAME_FIELD: name if name is not None else f"agent-{suffix}",
-        module.AGENT_KIND_FIELD: "claude",
         module.AGENT_STATUS_FIELD: str(state),
         module.PANE_ID_FIELD: f"w1:p{suffix}",
         module.TAB_ID_FIELD: f"w1:t{suffix}",
-        module.WORKSPACE_ID_FIELD: "w1",
-        module.CWD_FIELD: f"/worktrees/{suffix}",
-        module.INTERACTIVE_READY_FIELD: state != module.AgentState.BLOCKED,
     }
 
 
-def inventories(module: ModuleType) -> st.SearchStrategy[list[dict[str, object]]]:
+def inventories(
+    module: ModuleType, template: dict[str, object]
+) -> st.SearchStrategy[list[dict[str, object]]]:
     """Inventories of distinct agent sessions over every server state."""
 
     def build(states: list[object]) -> list[dict[str, object]]:
         return [
-            herdr_agent_item(module, ordinal, state)
+            agent_item_variant(module, template, ordinal, state)
             for ordinal, state in enumerate(states, start=1)
         ]
 

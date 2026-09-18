@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "not_git_worktree",
+    "message": "Herdr worktree actions require a workspace inside a Git work tree"
+  },
+  "id": "cli:worktree:open"
+}

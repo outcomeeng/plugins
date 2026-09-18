@@ -5,7 +5,8 @@ from typing import cast
 from outcomeeng_testing.harnesses.agent_mail import (
     AbsentExecutableRunner,
     RecordingRunner,
-    diagnosis_with_main_checkout,
+    diagnosis_seeded_absent_store_runner,
+    diagnosis_seeded_runner,
     failed_command_result,
     json_command_result,
     load_agent_mail,
@@ -70,13 +71,8 @@ def test_agent_mail_operation_mappings() -> None:
             assert arguments[module.AGENT_FIELD] in argv
 
         payload = store_response_payload(module, operation)
-        runner = RecordingRunner(
-            [
-                json_command_result(
-                    module, diagnosis_with_main_checkout(module, project_key)
-                ),
-                store_response_result(module, operation),
-            ]
+        runner = diagnosis_seeded_runner(
+            module, project_key, store_response_result(module, operation)
         )
         result = module.execute(request, runner)
 
@@ -158,14 +154,13 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
     def assert_case(
         module: ModuleType, agent: str, program: str, model: str, project_key: str
     ) -> None:
-        diagnosis = json_command_result(
-            module, diagnosis_with_main_checkout(module, project_key)
-        )
         request = module.operation_request(module.Operation.INBOX, agent=agent)
 
         failed = module.execute(
             request,
-            RecordingRunner([diagnosis, failed_command_result(module, 3, program)]),
+            diagnosis_seeded_runner(
+                module, project_key, failed_command_result(module, 3, program)
+            ),
         )
         assert failed[module.STATUS_FIELD] == module.ExecutionStatus.COMMAND_FAILED
         assert failed[module.DETAIL_FIELD] == program
@@ -173,13 +168,8 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
 
         malformed = module.execute(
             request,
-            RecordingRunner(
-                [
-                    json_command_result(
-                        module, diagnosis_with_main_checkout(module, project_key)
-                    ),
-                    text_command_result(module, model),
-                ]
+            diagnosis_seeded_runner(
+                module, project_key, text_command_result(module, model)
             ),
         )
         assert malformed[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
@@ -201,15 +191,7 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
             == module.ExecutionStatus.DIAGNOSIS_UNAVAILABLE
         )
         no_store = module.execute(
-            request,
-            AbsentExecutableRunner(
-                module.AM_COMMAND,
-                [
-                    json_command_result(
-                        module, diagnosis_with_main_checkout(module, project_key)
-                    )
-                ],
-            ),
+            request, diagnosis_seeded_absent_store_runner(module, project_key)
         )
         assert no_store[module.STATUS_FIELD] == module.ExecutionStatus.STORE_UNAVAILABLE
 

@@ -17,9 +17,11 @@ from hypothesis import given, seed, settings
 
 from outcomeeng_testing.generators.agent_mail import (
     DIAGNOSIS_SHAPES,
+    DIAGNOSIS_WITH_PATH,
     agent_names,
     coordination_references,
     diagnosis_payload,
+    expected_project_key,
     message_records,
     message_texts,
     operation_requests,
@@ -191,7 +193,46 @@ def store_response_payload(module: ModuleType, operation: object) -> object:
 def diagnosis_with_main_checkout(
     module: ModuleType, main_checkout_path: str
 ) -> dict[str, object]:
-    return diagnosis_payload(module, DIAGNOSIS_SHAPES[0], main_checkout_path)
+    return diagnosis_payload(module, DIAGNOSIS_WITH_PATH, main_checkout_path)
+
+
+def diagnosis_seeded_runner(
+    module: ModuleType, project_key: str, *results: CommandResultContract
+) -> RecordingRunner:
+    """A recording runner whose first reply is the diagnosis resolving
+    `project_key`, followed by the store replies in order."""
+    return RecordingRunner(
+        [
+            json_command_result(
+                module, diagnosis_with_main_checkout(module, project_key)
+            ),
+            *results,
+        ]
+    )
+
+
+def diagnosis_seeded_absent_store_runner(
+    module: ModuleType, project_key: str
+) -> AbsentExecutableRunner:
+    """A runner that resolves `project_key` from the diagnosis and then finds
+    no store executable."""
+    return AbsentExecutableRunner(
+        module.AM_COMMAND,
+        [
+            json_command_result(
+                module, diagnosis_with_main_checkout(module, project_key)
+            )
+        ],
+    )
+
+
+def captured_inbox_item(module: ModuleType) -> dict[str, object]:
+    """The first message the store's captured inbox response lists."""
+    payload = cast(
+        dict[str, object], store_response_payload(module, module.Operation.INBOX)
+    )
+    items = cast(list[dict[str, object]], payload[module.STORE_INBOX_FIELD])
+    return items[0]
 
 
 def store_inbox_echo(
@@ -202,12 +243,14 @@ def store_inbox_echo(
 ) -> dict[str, object]:
     """Render a sent message the way the store's inbox surface returns it.
 
-    The store lists a delivered message under the inbox field names; `ack_status`
-    is the store's status for a message that required acknowledgement and is
-    `none` for one that did not.
+    The item keeps the shape of the store's captured inbox response; the fields
+    the send wrote and the store assigned replace the captured values.
+    `ack_status` is the store's status for a message that required
+    acknowledgement and is `none` for one that did not.
     """
     ack_required = send_fields[module.STORE_ACK_REQUIRED_FIELD]
     return {
+        **captured_inbox_item(module),
         module.STORE_ID_FIELD: message_id,
         module.STORE_FROM_FIELD: send_fields[module.STORE_FROM_FIELD],
         module.STORE_SUBJECT_FIELD: send_fields[module.STORE_SUBJECT_FIELD],
@@ -299,8 +342,7 @@ def run_project_key_mapping(
         @given(path=project_key_paths(), agent=agent_names())
         def generated_key_mapping(path: str, agent: str) -> None:
             payload = diagnosis_payload(module, shape, path)
-            expected_key = path if shape == DIAGNOSIS_SHAPES[0] else None
-            assert_key(module, shape, payload, expected_key, agent)
+            assert_key(module, shape, payload, expected_project_key(shape, path), agent)
 
         return generated_key_mapping
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import subprocess
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -15,14 +14,12 @@ from typing import Protocol, cast
 from hypothesis import given, seed, settings
 
 from outcomeeng_testing.generators.herdr_environment import (
+    agent_item_variant,
     agent_names,
     agent_states,
-    error_messages,
-    herdr_agent_item,
     inventories,
+    operation_requests,
     unknown_operation_names,
-    unprojected_error_codes,
-    wait_timeouts,
 )
 from outcomeeng_testing.harnesses.cli_usage import (
     UsageContract,
@@ -40,37 +37,46 @@ CODING_AGENTS_RUNTIME_ROOTS = (
     ROOT / "dist/codex/coding-agents",
 )
 OPERATE_HERDR_RELATIVE = Path("skills/operate-herdr")
+FIXTURE_ROOT = ROOT / "outcomeeng_testing/fixtures/herdr_environment"
 # Captured `herdr <command> --help` texts: herdr's own grammar declaration.
-USAGE_FIXTURE_ROOT = ROOT / "outcomeeng_testing/fixtures/herdr_environment/usage"
-RAW_HERDR_VIOLATION_FIXTURE = (
-    ROOT / "outcomeeng_testing/fixtures/herdr_environment/raw_herdr_command.py.txt"
-)
-HERDR_HELP_VIOLATION_FIXTURE = (
-    ROOT / "outcomeeng_testing/fixtures/herdr_environment/herdr_help_command.py.txt"
-)
-ERROR_PROJECTION_SEED = 2026091811
-ERROR_PROJECTION_EXAMPLES = 40
-ERROR_PROJECTION_REPLAY_PATH = (
+USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
+# Captured herdr responses, by command: what herdr wrote to stdout on success
+# (`<command>.json`, or `<command>.txt` for a text command) and, under
+# `errors/`, the envelope it wrote to stderr on failure (`<command>.<code>.json`).
+RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
+ERROR_FIXTURE_ROOT = RESPONSE_FIXTURE_ROOT / "errors"
+RAW_HERDR_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_herdr_command.py.txt"
+HERDR_HELP_VIOLATION_FIXTURE = FIXTURE_ROOT / "herdr_help_command.py.txt"
+# herdr's exit code on every captured error envelope.
+CAPTURED_ERROR_EXIT_CODE = 1
+INVENTORY_SEED = 2026091812
+INVENTORY_EXAMPLES = 40
+INVENTORY_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-herdr-environment.enabler/tests/"
     "test_herdr_environment.mapping.l1.py"
 )
-INVENTORY_SEED = 2026091812
-INVENTORY_EXAMPLES = 40
-INVENTORY_REPLAY_PATH = ERROR_PROJECTION_REPLAY_PATH
 UNKNOWN_OPERATION_SEED = 2026091813
 UNKNOWN_OPERATION_EXAMPLES = 20
-UNKNOWN_OPERATION_REPLAY_PATH = ERROR_PROJECTION_REPLAY_PATH
-# Bound for the real child the runner-bound probe runs against.
-RUNNER_BOUND_SECONDS = 1
-RUNNER_BOUND_CHILD_SLEEP_SECONDS = 30
-# A herdr envelope id in the CLI's own form.
-ENVELOPE_ID = "cli:agent:list"
+UNKNOWN_OPERATION_REPLAY_PATH = INVENTORY_REPLAY_PATH
+# The child the bound probe runs in place of herdr outlives every bound the
+# adapter derives from the smallest request timeout.
+BOUND_PROBE_CHILD_SLEEP_SECONDS = 30
 
 
 class CommandResultContract(Protocol):
     returncode: int
     stdout: str
     stderr: str
+
+
+class BoundedRunnerContract(Protocol):
+    def run(
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        *,
+        timeout_seconds: int = 0,
+    ) -> CommandResultContract: ...
 
 
 @dataclass
@@ -110,6 +116,42 @@ class AbsentExecutableRunner:
         raise FileNotFoundError(argv[0])
 
 
+@dataclass
+class BoundProbeRunner:
+    """Failure-simulation collaborator: runs the adapter's real default runner
+    against a child that outlives the bound the adapter passes, so the timeout
+    the adapter derives is enforced by a real subprocess and propagates as
+    herdr's would."""
+
+    default_runner: BoundedRunnerContract
+    bounds: list[int] = field(default_factory=list)
+
+    def run(
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        *,
+        timeout_seconds: int = 0,
+    ) -> CommandResultContract:
+        self.bounds.append(timeout_seconds)
+        child = (
+            sys.executable,
+            "-c",
+            f"import time; time.sleep({BOUND_PROBE_CHILD_SLEEP_SECONDS})",
+        )
+        return self.default_runner.run(child, stdin, timeout_seconds=timeout_seconds)
+
+
+@dataclass(frozen=True)
+class CapturedResponse:
+    """One response herdr emitted for one operation's command, read by path."""
+
+    operation: object
+    path: str
+    result: CommandResultContract
+    error_code: str | None
+
+
 def _load() -> ModuleType:
     spec = importlib.util.spec_from_file_location(
         "coding_agents_herdr_environment", HERDR_ENVIRONMENT_PATH
@@ -127,79 +169,149 @@ def load_herdr_environment() -> ModuleType:
     return _load()
 
 
+def _command_fixture_name(module: ModuleType, operation: object) -> str:
+    prefix = module.PUBLIC_HERDR_COMMAND_PREFIXES[operation]
+    return "-".join(prefix[1:])
+
+
 def usage_contract_for(module: ModuleType, operation: object) -> UsageContract:
     """Herdr's captured usage declaration for one operation's command."""
-    prefix = module.PUBLIC_HERDR_COMMAND_PREFIXES[operation]
-    return usage_contract_from_path(USAGE_FIXTURE_ROOT / f"{'-'.join(prefix[1:])}.txt")
+    return usage_contract_from_path(
+        USAGE_FIXTURE_ROOT / f"{_command_fixture_name(module, operation)}.txt"
+    )
 
 
-def herdr_success_result(module: ModuleType, result: object) -> CommandResultContract:
-    """Return one controlled public success envelope from the herdr boundary."""
+def _success_result(module: ModuleType, path: Path) -> CommandResultContract:
+    return cast(
+        CommandResultContract,
+        module.CommandResult(0, path.read_text(encoding="utf-8"), ""),
+    )
+
+
+def _error_result(module: ModuleType, path: Path) -> CommandResultContract:
     return cast(
         CommandResultContract,
         module.CommandResult(
-            0,
-            json.dumps({module.ID_FIELD: ENVELOPE_ID, module.RESULT_FIELD: result}),
-            "",
+            CAPTURED_ERROR_EXIT_CODE, "", path.read_text(encoding="utf-8")
         ),
     )
 
 
-def herdr_inventory_result(
-    module: ModuleType, agents: list[dict[str, object]]
-) -> CommandResultContract:
-    return herdr_success_result(module, {module.AGENTS_FIELD: agents})
+def _error_code(module: ModuleType, path: Path) -> str:
+    envelope = json.loads(path.read_text(encoding="utf-8"))
+    return str(envelope[module.ERROR_FIELD][module.CODE_FIELD])
 
 
-def herdr_error_result(
-    module: ModuleType, code: str, message: str
-) -> CommandResultContract:
-    """Return one controlled public error envelope as herdr writes it on stderr."""
-    return cast(
-        CommandResultContract,
-        module.CommandResult(
-            1,
-            "",
-            json.dumps(
-                {
-                    module.ID_FIELD: ENVELOPE_ID,
-                    module.ERROR_FIELD: {
-                        module.CODE_FIELD: code,
-                        module.MESSAGE_FIELD: message,
-                    },
-                }
-            ),
-        ),
+def captured_success_response(
+    module: ModuleType, operation: object
+) -> CapturedResponse | None:
+    """Herdr's captured success response for one operation, when one exists."""
+    name = _command_fixture_name(module, operation)
+    suffix = "txt" if operation in module.TEXT_OPERATIONS else "json"
+    path = RESPONSE_FIXTURE_ROOT / f"{name}.{suffix}"
+    if not path.is_file():
+        return None
+    return CapturedResponse(
+        operation, str(path.relative_to(ROOT)), _success_result(module, path), None
     )
 
 
-def run_error_projection_mapping(
-    assert_projection: Callable[[ModuleType, str, str, bool, str, int], None],
-) -> None:
-    """Drive every projected herdr error code by construction, and generated
-    unprojected codes, through the adapter with generated selectors and bounds."""
-    module = _load()
-    projected_codes = tuple(module.HERDR_ERROR_STATUSES)
+def captured_error_responses(
+    module: ModuleType, operation: object
+) -> list[CapturedResponse]:
+    """Every error envelope herdr emitted for one operation's command."""
+    name = _command_fixture_name(module, operation)
+    return [
+        CapturedResponse(
+            operation,
+            str(path.relative_to(ROOT)),
+            _error_result(module, path),
+            _error_code(module, path),
+        )
+        for path in sorted(ERROR_FIXTURE_ROOT.glob(f"{name}.*.json"))
+    ]
 
-    @seed(ERROR_PROJECTION_SEED)
-    @settings(max_examples=ERROR_PROJECTION_EXAMPLES, deadline=None, print_blob=True)
-    @given(
-        unprojected=unprojected_error_codes(module),
-        message=error_messages(),
-        selector=agent_names(),
-        timeout=wait_timeouts(module),
+
+def captured_responses(module: ModuleType) -> list[CapturedResponse]:
+    """Every captured response, success and error, across every operation."""
+    responses: list[CapturedResponse] = []
+    for operation in module.Operation:
+        success = captured_success_response(module, operation)
+        if success is not None:
+            responses.append(success)
+        responses.extend(captured_error_responses(module, operation))
+    return responses
+
+
+def captured_payload(response: CapturedResponse) -> object:
+    """The captured response decoded: the JSON envelope, or the text verbatim."""
+    if response.error_code is not None:
+        return json.loads(response.result.stderr)
+    try:
+        return json.loads(response.result.stdout)
+    except json.JSONDecodeError:
+        return response.result.stdout
+
+
+def captured_error_message(module: ModuleType, response: CapturedResponse) -> str:
+    envelope = cast(dict[str, object], captured_payload(response))
+    error = cast(dict[str, object], envelope[module.ERROR_FIELD])
+    return str(error[module.MESSAGE_FIELD])
+
+
+def captured_agent_item(module: ModuleType) -> dict[str, object]:
+    """The first hosted agent session in herdr's captured inventory."""
+    inventory = captured_success_response(module, module.Operation.INVENTORY)
+    if inventory is None:
+        raise RuntimeError("No captured herdr inventory response.")
+    envelope = cast(dict[str, object], captured_payload(inventory))
+    result = cast(dict[str, object], envelope[module.RESULT_FIELD])
+    agents = cast(list[dict[str, object]], result[module.AGENTS_FIELD])
+    return agents[0]
+
+
+def projected_error_variants(module: ModuleType) -> list[CapturedResponse]:
+    """A captured error envelope varied to each projected code herdr did not
+    emit under the capture conditions: only the code changes, so the envelope's
+    shape, stream, and exit code stay what herdr wrote."""
+    template = next(
+        response
+        for response in captured_responses(module)
+        if response.error_code in module.HERDR_ERROR_STATUSES
     )
-    def generated_projection(
-        unprojected: str, message: str, selector: str, timeout: int
-    ) -> None:
-        for code in projected_codes:
-            assert_projection(module, code, message, True, selector, timeout)
-        assert_projection(module, unprojected, message, False, selector, timeout)
+    envelope = cast(dict[str, object], captured_payload(template))
+    captured_codes = {
+        response.error_code
+        for response in captured_responses(module)
+        if response.error_code is not None
+    }
+    variants: list[CapturedResponse] = []
+    for code in module.HERDR_ERROR_STATUSES:
+        if code in captured_codes:
+            continue
+        error = dict(cast(dict[str, object], envelope[module.ERROR_FIELD]))
+        error[module.CODE_FIELD] = code
+        variant = json.dumps({**envelope, module.ERROR_FIELD: error})
+        variants.append(
+            CapturedResponse(
+                template.operation,
+                f"{template.path} varied to {code}",
+                cast(
+                    CommandResultContract,
+                    module.CommandResult(CAPTURED_ERROR_EXIT_CODE, "", variant),
+                ),
+                code,
+            )
+        )
+    return variants
 
-    run_replayable_property(
-        generated_projection,
-        seed_value=ERROR_PROJECTION_SEED,
-        replay_path=ERROR_PROJECTION_REPLAY_PATH,
+
+def request_for(module: ModuleType, operation: object) -> dict[str, object]:
+    """The first registry request of one operation, from the generated set."""
+    return next(
+        request
+        for request in operation_requests(module)
+        if module.Operation(request[module.OPERATION_FIELD]) is operation
     )
 
 
@@ -208,24 +320,35 @@ def run_inventory_mapping(
         [ModuleType, list[dict[str, object]], str, object], None
     ],
 ) -> None:
-    """Drive inventories that carry every server state by construction, plus
-    generated inventories, through the participant projection."""
+    """Drive the captured inventory, inventories that carry every server state
+    by construction from its first item, and generated inventories, through the
+    participant projection."""
     module = _load()
+    template = captured_agent_item(module)
+    inventory = captured_success_response(module, module.Operation.INVENTORY)
+    if inventory is None:
+        raise RuntimeError("No captured herdr inventory response.")
+    envelope = cast(dict[str, object], captured_payload(inventory))
+    captured = cast(
+        list[dict[str, object]],
+        cast(dict[str, object], envelope[module.RESULT_FIELD])[module.AGENTS_FIELD],
+    )
     every_state = [
-        herdr_agent_item(module, ordinal, state)
+        agent_item_variant(module, template, ordinal, state)
         for ordinal, state in enumerate(module.AgentState, start=1)
     ]
 
     @seed(INVENTORY_SEED)
     @settings(max_examples=INVENTORY_EXAMPLES, deadline=None, print_blob=True)
     @given(
-        agents=inventories(module),
+        agents=inventories(module, template),
         absent_name=agent_names(),
         state=agent_states(module),
     )
     def generated_inventory(
         agents: list[dict[str, object]], absent_name: str, state: object
     ) -> None:
+        assert_inventory(module, captured, absent_name, state)
         assert_inventory(module, every_state, absent_name, state)
         assert_inventory(module, agents, absent_name, state)
 
@@ -254,19 +377,15 @@ def run_unknown_operation_mapping(
     )
 
 
-def run_runner_bound_probe() -> tuple[int, int, subprocess.TimeoutExpired | None]:
-    """Run the default runner against a child that outlives its bound."""
-    module = _load()
-    argv = (
-        sys.executable,
-        "-c",
-        f"import time; time.sleep({RUNNER_BOUND_CHILD_SLEEP_SECONDS})",
-    )
-    try:
-        module.SubprocessRunner().run(argv, timeout_seconds=RUNNER_BOUND_SECONDS)
-    except subprocess.TimeoutExpired as error:
-        return RUNNER_BOUND_SECONDS, RUNNER_BOUND_CHILD_SLEEP_SECONDS, error
-    return RUNNER_BOUND_SECONDS, RUNNER_BOUND_CHILD_SLEEP_SECONDS, None
+def run_bound_through_execute(
+    module: ModuleType, request: dict[str, object]
+) -> tuple[dict[str, object], list[int], int]:
+    """Execute one request against the real default runner bound, with a child
+    that outlives it; return the result, the bounds the adapter passed, and the
+    child's sleep."""
+    probe = BoundProbeRunner(cast(BoundedRunnerContract, module.SubprocessRunner()))
+    result = module.execute(request, probe)
+    return result, probe.bounds, BOUND_PROBE_CHILD_SLEEP_SECONDS
 
 
 def _source_texts(paths: tuple[Path, ...]) -> dict[str, str]:
