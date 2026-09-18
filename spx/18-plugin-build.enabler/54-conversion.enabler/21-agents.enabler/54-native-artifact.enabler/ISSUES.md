@@ -61,3 +61,17 @@ Evidence: `source_agent()` supplies hand-authored source path, name, description
 Successor: [outcomeeng/changes#85](https://github.com/outcomeeng/changes/issues/85).
 
 Revisit and settlement condition: Change #85 establishes production-owned conversion vocabulary and source-payload contracts, migrates every affected native-artifact test and imported harness use, and passes the applicable test-evidence audit.
+
+## DEBT [evidence]: approval-policy positive conversion path
+
+Defect class: `evidence`.
+
+Finding: the generally available `approval_policy` converter field has no positive scenario or mapping evidence.
+
+Evidence: `outcomeeng/distribution/agents.py:259` reads and emits `approval_policy`, while the hosted review at [PR #583](https://github.com/outcomeeng/plugins/pull/583#issuecomment-5730664407) found no positive scenario or mapping that exercises this conversion path.
+
+Impact: a supported positive conversion path remains uncovered, so deterministic verification does not establish that an authored `approval_policy` reaches the generated native artifact correctly.
+
+Successor: [outcomeeng/changes#85](https://github.com/outcomeeng/changes/issues/85).
+
+Revisit and settlement condition: Change #85 adds a positive scenario or mapping for `approval_policy`, records passing deterministic evidence for that path, and passes the applicable evidence audit.
