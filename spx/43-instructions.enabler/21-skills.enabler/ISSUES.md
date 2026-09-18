@@ -74,6 +74,29 @@ capture where multi-word intent must survive. Either choice also owes the
 Source: `instructions:skill-auditor` findings `f-007` and `f-010`, severity
 `WARNING`, on the changeset merged as PR 488.
 
+## The composing-skill assertion awaits verification selection
+
+The assertion under `## Assertions` in `skills.md` that a composing skill names each
+static dependency through the shared `require_skill` directive, states an argument- or
+run-time-named dependency as the owned `Use skill` sentence, and declares skill-use
+capability through the optional `tool('use_skill')` token is an authoring declaration
+with no tag; every other assertion in the file carries `[audit]`. It is the fifth
+declaration of the optional-capability class, beside the four
+`spx/18-plugin-build.enabler/ISSUES.md` records under "Optional tool-capability
+rendering has no deterministic evidence yet".
+
+**Impact.** The declaration is approved for form only; no evidence result attaches to
+it until a verification type is selected and tagged.
+
+**Settlement condition.** Verification is selected for the assertion — `[audit]`
+through the skill auditor's composed-dependency rule in `skill-standards`, or a
+`[test]` link once the authored-source compliance evidence Change #85 lands reaches
+skill bodies — and the tag is applied.
+
+**Evidence.** CI changeset review on PR #584, head
+`b0a6237f359687bd40a01755af6f4ff2d88387b2`, finding `DEBT [evidence]` at
+`spx/43-instructions.enabler/21-skills.enabler/skills.md:15`, during Change #76.
+
 ## `skill-standards` names the eager-foundation exception by a section that does not hold it
 
 `src/plugins/instructions/skills/skill-standards/SKILL.md:14` (`<success_criteria>`
