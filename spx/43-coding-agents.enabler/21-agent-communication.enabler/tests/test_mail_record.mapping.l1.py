@@ -57,9 +57,11 @@ def test_checked_send_results_map_to_delivery_results() -> None:
         == request[message.RECORD_CORRELATION_FIELD]
     )
     doorbell = cast(dict[str, object], delivered[message.DOORBELL_FIELD])
-    assert doorbell[message.TEXT_FIELD] == (
-        f"[{request[message.SENDER_FIELD]}] mail {store_id}"
+    resolved = message.parse_doorbell(
+        doorbell[message.TEXT_FIELD], [request[message.SENDER_FIELD]]
     )
+    assert resolved[message.SENDER_FIELD] == request[message.SENDER_FIELD]
+    assert resolved[message.RECORD_ID_FIELD] == store_id
     assert doorbell[message.DOORBELL_SUBMITTED_FIELD] is False
     assert delivered[message.CAPABILITY_FIELD] == delivered_capability
 

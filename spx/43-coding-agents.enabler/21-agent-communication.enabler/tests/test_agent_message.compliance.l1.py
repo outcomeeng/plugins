@@ -19,6 +19,7 @@ from outcomeeng_testing.harnesses.coding_agents import (
     production_handback_plan,
     public_message_context,
 )
+from outcomeeng_testing.harnesses.prowl_environment import load_prowl_environment
 
 
 def test_delivery_preserves_complete_public_identities_and_semantic_payload() -> None:
@@ -319,6 +320,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
 
 def test_send_request_targets_only_exact_pane_identity() -> None:
     module, sender, recipient, discovery = public_message_context()
+    prowl = load_prowl_environment()
     request_content = message_content(module.MessageKind.FACT, 28)
     valid_request = module.build_request(
         to_pane=recipient[module.PANE_FIELD],
@@ -347,8 +349,8 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
     assert raised.value.status == module.DeliveryStatus.INVALID_IDENTITY
 
     for invalid_discovery in (
-        {**discovery, module.STATUS_FIELD: "identity-unavailable"},
-        {**discovery, module.STATUS_FIELD: "identity-ambiguous"},
+        {**discovery, module.STATUS_FIELD: prowl.ExecutionStatus.IDENTITY_UNAVAILABLE},
+        {**discovery, module.STATUS_FIELD: prowl.ExecutionStatus.IDENTITY_AMBIGUOUS},
     ):
         with pytest.raises(module.MessageError) as raised:
             module.send_request(valid_request, invalid_discovery)

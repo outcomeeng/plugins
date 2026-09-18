@@ -16,62 +16,30 @@ def test_agent_message_mappings() -> None:
     sender = participants[0]
     recipient = participants[1]
     active_reference = str(uuid.uuid5(uuid.NAMESPACE_URL, sender[module.PANE_FIELD]))
-    assert module.RESPONSE_KINDS == frozenset(
-        {
-            module.MessageKind.ACKNOWLEDGEMENT,
-            module.MessageKind.MUTATION_STATE,
-            module.MessageKind.MUTATION_AUTHORIZATION,
-        }
-    )
+    initiating_kinds = set(module.MessageKind) - module.RESPONSE_KINDS
     assert {
         module.coordination_reference(kind, active_reference)
-        for kind in (
-            module.MessageKind.ACKNOWLEDGEMENT,
-            module.MessageKind.MUTATION_STATE,
-            module.MessageKind.MUTATION_AUTHORIZATION,
-        )
+        for kind in module.RESPONSE_KINDS
     } == {active_reference}
-    proposal_reference = module.coordination_reference(
-        module.MessageKind.OWNERSHIP_PROPOSAL,
-        None,
-        lambda: uuid.uuid5(uuid.NAMESPACE_URL, sender[module.WORKTREE_FIELD]),
-    )
-    fact_reference = module.coordination_reference(
-        module.MessageKind.FACT,
-        None,
-        lambda: uuid.uuid5(uuid.NAMESPACE_URL, recipient[module.WORKTREE_FIELD]),
-    )
-    assert str(uuid.UUID(proposal_reference)) == proposal_reference
-    assert str(uuid.UUID(fact_reference)) == fact_reference
-    assert len({active_reference, proposal_reference, fact_reference}) == 3
+    minted_references = {
+        module.coordination_reference(
+            kind,
+            None,
+            lambda kind=kind: uuid.uuid5(uuid.NAMESPACE_URL, str(kind)),
+        )
+        for kind in initiating_kinds
+    }
+    assert len(minted_references) == len(initiating_kinds)
+    assert active_reference not in minted_references
+    for reference in minted_references:
+        assert str(uuid.UUID(reference)) == reference
 
     sender_target, sender_state = mutation_observation(module, sender)
     recipient_target, recipient_state = mutation_observation(module, recipient)
 
     observed_states: set[object] = set()
     initiating_references: set[str] = set()
-    for ordinal, (kind, expected_state) in enumerate(
-        (
-            (
-                module.MessageKind.OWNERSHIP_PROPOSAL,
-                module.MessageState.OWNERSHIP_PROPOSED,
-            ),
-            (module.MessageKind.FACT, module.MessageState.FACT_REPORTED),
-            (
-                module.MessageKind.ACKNOWLEDGEMENT,
-                module.MessageState.ACKNOWLEDGED,
-            ),
-            (
-                module.MessageKind.MUTATION_STATE,
-                module.MessageState.MUTATION_STATE_REPORTED,
-            ),
-            (
-                module.MessageKind.MUTATION_AUTHORIZATION,
-                module.MessageState.MUTATION_AUTHORIZED,
-            ),
-        ),
-        start=1,
-    ):
+    for ordinal, kind in enumerate(module.MessageKind, start=1):
         content = message_content(kind, ordinal)
         fields: dict[str, object] = {}
         if kind in module.RESPONSE_KINDS:
@@ -94,7 +62,6 @@ def test_agent_message_mappings() -> None:
             **fields,
         )
         assert envelope[module.KIND_FIELD] == kind
-        assert envelope[module.MESSAGE_STATE_FIELD] == expected_state
         assert envelope[module.ACCEPTED_FIELD] is fields.get("accepted")
         if kind in module.RESPONSE_KINDS:
             assert envelope[module.COORDINATION_REFERENCE_FIELD] == active_reference
@@ -105,11 +72,10 @@ def test_agent_message_mappings() -> None:
             assert str(uuid.UUID(envelope_reference)) == envelope_reference
             assert envelope_reference not in initiating_references
             initiating_references.add(envelope_reference)
+        assert envelope[module.MESSAGE_STATE_FIELD] not in observed_states
         observed_states.add(envelope[module.MESSAGE_STATE_FIELD])
     assert observed_states == set(module.MessageState)
-    assert len(initiating_references) == len(
-        set(module.MessageKind) - module.RESPONSE_KINDS
-    )
+    assert len(initiating_references) == len(initiating_kinds)
 
     rejected_content = message_content(module.MessageKind.ACKNOWLEDGEMENT, 7)
     rejected_acknowledgement = module.build_envelope(

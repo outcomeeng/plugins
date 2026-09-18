@@ -60,6 +60,10 @@ STORE_REJECTION_EXIT_CODE = 3
 STORE_REJECTION_DETAIL = "store rejected the send"
 
 
+class HandbackPlanError(RuntimeError):
+    """The environment capability's plan-handback command did not complete."""
+
+
 def _load(name: str) -> ModuleType:
     spec = importlib.util.spec_from_file_location(name, AGENT_MESSAGE_PATH)
     if spec is None or spec.loader is None:
@@ -205,7 +209,9 @@ def production_handback_plan(
         stdout=stdout,
     )
     if exit_code != 0:
-        raise AssertionError(f"handback plan failed: {stdout.getvalue()}")
+        raise HandbackPlanError(
+            f"plan-handback exited {exit_code}: {stdout.getvalue()}"
+        )
     return cast(dict[str, object], json.loads(stdout.getvalue()))
 
 

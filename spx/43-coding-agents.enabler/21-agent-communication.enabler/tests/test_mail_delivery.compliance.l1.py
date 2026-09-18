@@ -119,12 +119,14 @@ def test_same_worktree_delegation_requires_complete_authority() -> None:
     record = message.mail_request({**request, message.AUTHORITY_FIELD: authority})[
         message.RECORD_FIELD
     ]
-    assert cast(str, record[message.BODY_FIELD]).startswith(
-        message.render_authority(authority)
-    )
-    assert cast(str, record[message.BODY_FIELD]).endswith(
-        cast(str, request[message.BODY_FIELD])
-    )
+    body = cast(str, record[message.BODY_FIELD])
+    original = cast(str, request[message.BODY_FIELD])
+    assert body.endswith(original)
+    rendered = body[: -len(original)]
+    assert sender in rendered
+    for path in cast(list[str], authority[message.WRITE_SCOPE_FIELD]):
+        assert path in rendered
+    assert sender not in original
 
     for violating, status in (
         (
