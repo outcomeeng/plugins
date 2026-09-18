@@ -17,7 +17,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 - Registration, send, inbox, and acknowledgement each map one source-owned request shape to one mail command and checked result that preserves the store's message, thread, and agent identities verbatim
 - The fields of a message record map onto the store's fields and back without loss; a store limit never shapes the record
-- An order to an agent in any supported environment, its delegation request, and its one correlated terminal handback are message records of this capability; every terminal handback maps to exactly one completed, failed, rejected, or unavailable result carrying the complete initiating coordination reference
+- An order to an agent session in an environment whose surface produces no pane-borne handback block, its delegation request, and its one correlated terminal handback are message records of this capability; every terminal handback maps to exactly one completed, failed, rejected, or unavailable result carrying the complete initiating coordination reference
 - The project key maps from the `worktree-pool` record's main checkout path in `spx diagnose --format json`, so every worktree of one pool resolves one mail project; a diagnosis that reports no main checkout path yields the unavailable result
 
 ### Compliance
