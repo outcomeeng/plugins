@@ -12,6 +12,8 @@ One capability keeps herdr command knowledge testable and portable while preserv
 - Every wait-bearing request — wait, prompt with wait, start, relaunch — carries an explicit millisecond timeout, and the default runner's subprocess bound exceeds it.
 - Herdr agent evidence is projected to the complete source-preserved name, agent kind, pane, tab, workspace, working directory, readiness, and the server's own working, blocked, idle, done, and unknown states.
 - The herdr error codes `server_not_running`, `agent_not_found`, `agent_not_ready`, `agent_blocked`, `agent_prompt_stalled`, and `timeout` map to named statuses; every other error preserves its code and message verbatim under the command-failed status.
+- A read's public response is terminal text, carried verbatim under the result's output field; every other public response is herdr's JSON envelope, carried as the result's response object.
+- A start, relaunch, wait, or prompt result carries the one hosted agent session it acted on, projected onto the same complete source-preserved fields as an inventory item.
 - Every command execution is bounded, argument-vector based, fully reaped before return, and isolated from the adapter request stream.
 - Start, relaunch, stop, key, and open-worktree cannot construct an argument vector unless the request carries explicit mutation authorization.
 - The environment surface carries the launch prompt, prompts, and keystrokes only; no operation produces a pane-borne handback block.
@@ -32,6 +34,7 @@ One capability keeps herdr command knowledge testable and portable while preserv
 - NEVER: a shipped coding-agents skill outside `/operate-herdr` instructs a workflow to construct herdr commands, invoke herdr command help, or depend on an external environment-control skill ([audit])
 - ALWAYS: the herdr subprocess boundary accepts a dependency-injected `CommandRunner` Protocol and the default runner uses null-device stdin, captured output, and a bounded timeout ([audit])
 - ALWAYS: tests inject controlled runner implementations only under `/test` Stage 5 exception 1 (failure simulation) or exception 2 (interaction protocols) ([audit])
+- ALWAYS: response-mapping evidence reads captured public responses of the real tool by path — the bytes herdr wrote for one command, kept as inert fixtures — never an envelope composed from the adapter's own field constants; a variant of a captured response changes only the value the assertion's domain ranges over and names the captured response it varies ([audit])
 - ALWAYS: `/operate-herdr` owns all bundled-script access; composing skills invoke the capability through the skill surface rather than manufacturing a cross-skill filesystem path ([audit])
 - NEVER: framework mocks or monkeypatching replace herdr behavior or the command-runner boundary ([audit])
 - NEVER: the adapter owns another workflow's retry, checkpoint, persistence, result interpretation, or continuation decision ([audit])
