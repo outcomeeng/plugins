@@ -50,7 +50,7 @@ Walk these steps on each management pass. Authorized routine steps — inspect, 
 
 **Step 0 — Load references.** Invoke `/understand` and the governing node's `/contextualize` immediately before the first product content this pass reads or modifies — a finding fix, base-sync conflict reconciliation, `/commit-changes` of edited product content, a coordination-note edit — or the first node this pass discusses, and at no earlier step. PR inspection, check wait, merge, deploy, and release touch no product content and proceed without either reload. {!% require_skill 'spec-tree:merging-standards' %!} It supplies the shared vocabulary. {!% require_skill 'spec-tree:commit-changes' %!} It supplies the follow-up commit format. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
 
-**Step 1 — Identify the PR.** When `$ARGUMENTS` is non-empty, resolve the PR from that pointer before inspecting state. Use the command field set under `<step name="pr_identity_fields">`. Use bare `gh pr view` only when `$ARGUMENTS` is empty and the current branch is the intended PR branch.
+**Step 1 — Identify the PR.** When `$ARGUMENTS` is non-empty, resolve the PR from that pointer before inspecting state. Use the command field set of the `pr_identity_fields` step above. Use bare `gh pr view` only when `$ARGUMENTS` is empty and the current branch is the intended PR branch.
 
 ```bash
 gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
