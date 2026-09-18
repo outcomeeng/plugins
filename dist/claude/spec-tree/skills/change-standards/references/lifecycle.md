@@ -1,8 +1,8 @@
-<authority>
+<scope>
 
-The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`: require `methodology.version: "4.0"`, resolve `methodology.source`, and read `versions/4.0/methodology/change/changes.md` inside that declared source. This reference operationalizes that chapter's Lifecycle and Handoff rules for the store `spx/local/coordination.md` declares; it replaces nothing in the chapter. Lifecycle records who holds a Change or how it ended and moves independently of Maturity.
+This reference operationalizes the Lifecycle and Handoff rules of the Change chapter `change-record.md` names, for the store `spx/local/coordination.md` declares; it replaces nothing in the chapter. Lifecycle records who holds a Change or how it ended and moves independently of Maturity.
 
-</authority>
+</scope>
 
 <lifecycle_rules>
 
@@ -62,7 +62,7 @@ Handoff:
 - Hazards: <what the next holder cannot derive quickly — an unsealed run, a held checkout, a flaky check — each with the read-only command that re-confirms it>
 ```
 
-Optional context lines after the five: the current agent session id and the assigned worktree root. The Handoff records what was true when it was posted; refinement of the Output belongs in the body through `author-change`, before the release.
+Optional context lines after the five: the current agent session id and the assigned worktree root. The Handoff records what was true when it was posted; refinement of the Output belongs in the body, before the release.
 
 </rule>
 

@@ -27,7 +27,7 @@ Read `${SKILL_DIR}/references/change-record.md` completely. Then read exactly on
 | `Executable` | `${SKILL_DIR}/references/dor-executable.md` |
 | `Lifecycle`  | `${SKILL_DIR}/references/lifecycle.md`      |
 
-NEVER load another Maturity's Definition of Ready in the same invocation. Each Definition of Ready is cumulative and complete for its level. `lifecycle.md` carries the store-binding, ordered-write, complete-readback, write-inspection, inert-stdin, and Claim, Handoff, and terminal-record rules the three Lifecycle skills share. The shared references own the rules; authoring, auditing, and transition procedures remain in their respective skills.
+NEVER load another Maturity's Definition of Ready in the same invocation. Each Definition of Ready is cumulative and complete for its level. `lifecycle.md` carries the store-binding, ordered-write, complete-readback, write-inspection, inert-stdin, and Claim, Handoff, and terminal-record rules. The shared references own the rules and no procedure.
 
 </loading_contract>
 

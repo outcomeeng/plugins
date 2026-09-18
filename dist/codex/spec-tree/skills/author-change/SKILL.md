@@ -5,7 +5,7 @@ description: >-
   Engineering Change record. NEVER use it to author a spec or review a code
   changeset.
 argument-hint: "<local Change path and intent | existing Change reference and revision>"
-allowed-tools: Read, Write, Edit, Grep, Glob, Skill, collaboration.spawn_agent, collaboration.wait_agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
+allowed-tools: Read, Write, Edit, Grep, Glob, collaboration.spawn_agent, collaboration.wait_agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
 ---
 
 <objective>
@@ -118,7 +118,7 @@ Any mismatch or partial write is a failed persistence result. Preserve the local
 
 <result>
 
-Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. Use skill `spec-tree:release-change`. Invoke it when work stops or transfers with continuation remaining; preserve any unaudited local candidate locally and leave the published Change unchanged.
+Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. Use skill `spec-tree:release-change`. Invoke it only when this session holds the Change (Status `Claimed` with this session's winning Claim) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Preserve any unaudited local candidate locally and leave the published Change unchanged.
 
 </result>
 

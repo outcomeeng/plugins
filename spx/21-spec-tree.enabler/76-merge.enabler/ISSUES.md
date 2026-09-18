@@ -160,3 +160,17 @@ Building that step needs a listing surface that spans both record kinds. Runs op
 **Settlement condition**: a management pass loads only the sections its phase reads, and `instructions:skill-auditor` over `merging-standards` raises no eager-payload warning.
 
 **Evidence**: `instructions:skill-auditor` warning f-008 on `src/plugins/spec-tree/skills/merging-standards/SKILL.md` at head `604f62878c495e613e39570c1bd197c4f74c3641`.
+
+## DEBT [conciseness]: the merge-lifecycle skills restate rules and grants they do not use
+
+Defect class: `conciseness`.
+
+Finding: one typed skill audit per skill on the Change Lifecycle changeset (head `a28a5be91fc2ea04151c283059caa9cb9a11fd12`) approved `merging-standards`, `merge`, `manage-pr`, and `manage-github-pr` with these worth-improving findings that predate that changeset and lie outside its bounded concern: `merging-standards` — `merge-policy.md` success criteria re-list 29 section rules, the same-class sweep and finding disposition are stated at three sites, and `merge-cleanup.md` prose restates its script comments; `merge` — Step 1 carries six actions in one paragraph, `classify_changeset.py` resolves a sibling skill's directory by walking `parent.parent.parent` with a generic `RuntimeError`, and the sixth success criterion restates Step 1; `manage-pr` — the ordered procedure sits under non-semantic `<step>` names, the post-wait rule and the `gh pr view --json` pair are restated four and three times, and its description shares the trigger term "manage" with `manage-github-pr`; `manage-github-pr` — the default-autonomy rule is stated four times, the final success criterion bundles five properties, and the `git rev-parse` grant names no step that uses it.
+
+Evidence: `instructions:skill-auditor` verdicts on the four skills, findings f-008 to f-011 (`merging-standards`), f-010 to f-012 (`merge`), f-009, f-011, f-012 (`manage-pr`), f-008 and f-010 (`manage-github-pr`).
+
+Impact: every load of these skills pays for restated payload, and one rule edited in one of its copies drifts from the others.
+
+Successor: a Proposed Change filed after outcomeeng/changes#91 merges, carrying the CLOSE-teaching consolidation entry above as well.
+
+Revisit and settlement condition: each rule stated once with cross-references, semantic tag names in `manage-pr`, distinct trigger terms in the two descriptions, and one typed skill audit per revised skill approving with no `conciseness` finding.

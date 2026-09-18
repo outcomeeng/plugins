@@ -187,3 +187,17 @@ Preserved refs and observed heads:
 **Impact:** `/contextualize`, `/align`, and `/refactor` parse both forms; a reader of this tree sees the prior form until the migration, and a `PLAN.md` here is a note the 4.0 grammar does not admit.
 
 **Settlement condition:** The SPX CLI admits the seven suffixes, `{slug}.spec.md`, front matter, and the status claim; this repository's consumer Change migrates every directory, spec, and `PLAN.md` — the latter into Changes — and these `[test]` assertions state the 4.0 grammar against the migrated parser.
+
+## DEBT [payload]: the foundation renders 14 code points under its eager ceiling
+
+Defect class: `payload`.
+
+Finding: the typed skill audit of `understand` on the Change Lifecycle changeset (head `a28a5be91fc2ea04151c283059caa9cb9a11fd12`) measured the rendered Claude payload at 39,986 and the Codex payload at 39,909 code points against the 40,000 ceiling of `/skill-standards` `<eager_foundation_exception>`; it also found `references/product-domain-shapes.md` pointing at `kind-decision.md` by bare filename, and self-trigger statements at the operational-continuation and note-discovery sentences.
+
+Evidence: `instructions:skill-auditor` findings f-008, f-009, f-010 on `src/plugins/spec-tree/skills/understand/SKILL.md`.
+
+Impact: the next wording edit can push the rendered payload over the ceiling and turn an approval into a must-fix.
+
+Successor: a Proposed Change filed after outcomeeng/changes#91 merges.
+
+Revisit and settlement condition: one conditional paragraph moved into the reference that owns its detail, the bare pointer spelled through `${CLAUDE_SKILL_DIR}`, the self-trigger clauses dropped, and one typed skill audit approving with headroom above 1,000 code points.
