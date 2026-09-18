@@ -15,7 +15,7 @@ A complete store-independent Change record authored locally, independently appro
 <essential_principles>
 
 - Operate on one Change. Resolve new-versus-existing identity and the requested target Maturity before routing.
-- Invoke `spec-tree:change-standards` with exactly the target Maturity. It loads the common contract and only that Maturity's cumulative Definition of Ready.
+- Use skill `spec-tree:change-standards`. Invoke it with exactly the target Maturity. It loads the common contract and only that Maturity's cumulative Definition of Ready.
 - Load `spx/local/coordination.md` when present for the Change store, Product, project, and field mapping. Store coordinates and revision selectors remain outside the record.
 - Preserve an explicitly selected local working file inside the Product repository. Otherwise use `<local_draft>` to obtain an SPX-managed file. Every refinement and repair changes that one file.
 - Keep provider conversations, transcripts, prompt copies, and received conversation input out of the Change record. Preserve established intent in Output, Value, Frame, and Activities.
@@ -46,7 +46,7 @@ Resolve these facts before routing:
 3. Intended Output and the established reason it is worth Build refinement.
 4. Consequential choices still open after reading governing Decisions, specs, affected references, predecessor Changes, blockers, and the current record.
 
-Draft directly when the Output is clear and consequential choices are resolved. Invoke `/interview` only for unresolved scope, compatibility, failure behavior, dependency, evidence, rollout, recovery, monitoring, or resource-limit choices that change the Output or Frame. A problem with no chosen Output returns to operator judgment in discovery. The template supplies output shape and never acts as a questionnaire.
+Draft directly when the Output is clear and consequential choices are resolved. Use skill `spec-tree:interview`. Invoke it only for unresolved scope, compatibility, failure behavior, dependency, evidence, rollout, recovery, monitoring, or resource-limit choices that change the Output or Frame. A problem with no chosen Output returns to operator judgment in discovery. The template supplies output shape and never acts as a questionnaire.
 
 Never reopen a settled choice, infer silence as agreement, or demand beneficiaries, business value, research, or alternatives for a precise maintenance Change. Re-run triage when investigation exposes a new consequential choice.
 
@@ -118,7 +118,7 @@ Any mismatch or partial write is a failed persistence result. Preserve the local
 
 <result>
 
-Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. Invoke `/handoff` when work stops or transfers; preserve any unaudited local candidate locally and leave the published Change unchanged.
+Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. Use skill `spec-tree:handoff`. Invoke it when work stops or transfers; preserve any unaudited local candidate locally and leave the published Change unchanged.
 
 </result>
 

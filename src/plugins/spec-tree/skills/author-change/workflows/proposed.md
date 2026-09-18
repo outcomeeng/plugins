@@ -1,6 +1,6 @@
 <required_reading>
 
-Invoke `spec-tree:change-standards` with `Proposed`; it loads the common record contract and the Proposed Definition of Ready only. Read `${CLAUDE_SKILL_DIR}/templates/change.md` and the router's store configuration.
+Use skill `spec-tree:change-standards`. Invoke it with `Proposed`; it loads the common record contract and the Proposed Definition of Ready only. Read `${CLAUDE_SKILL_DIR}/templates/change.md` and the router's store configuration.
 
 </required_reading>
 

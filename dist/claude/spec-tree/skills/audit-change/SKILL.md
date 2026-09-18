@@ -6,7 +6,7 @@ description: >-
   record standards at its declared maturity and records the complete judgment
   through SPX file-scoped verification.
 argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Glob, Grep, Skill, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf:*)
+allowed-tools: Read, Grep, Skill, Bash(git rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Bash(printf:*)
 ---
 
 <objective>

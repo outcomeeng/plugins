@@ -7,7 +7,7 @@ refined_from: []
 blocked_by: []
 ---
 
-<!-- Apply /change-standards for the selected Maturity. The closed schema permits exactly the six keys above. A root keeps refined_from: []; a successor carries every immutable predecessor identity. blocked_by carries current blockers. Replace placeholders and remove every comment before audit. Keep all four top-level sections in this order. Never paste received conversation input into the record. -->
+<!-- Use skill `spec-tree:change-standards`. Apply it for the selected Maturity. The closed schema permits exactly the six keys above. A root keeps refined_from: []; a successor carries every immutable predecessor identity. blocked_by carries current blockers. Replace placeholders and remove every comment before audit. Keep all four top-level sections in this order. Never paste received conversation input into the record. -->
 
 # Output
 
