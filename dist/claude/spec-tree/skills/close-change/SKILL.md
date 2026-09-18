@@ -5,8 +5,8 @@ description: >-
   Applied, Refined, or Abandoned — to write the terminal record, remove the
   holder, and close it in the declared store. NEVER close a Change issue by hand
   or before its terminal precondition holds.
-argument-hint: "<Applied|Refined|Abandoned>"
-arguments: terminal
+argument-hint: "<Applied|Refined|Abandoned> [#N | owner/repo#N | issue-url]"
+arguments: terminal reference
 allowed-tools: Read, Bash(git fetch:*), Bash(git merge-base --is-ancestor:*), Bash(spx spec status:*), Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh project view:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-edit:*), Bash(gh api user --jq .login), Bash(printf:*), Bash(printenv CLAUDE_CODE_SESSION_ID), AskUserQuestion, Skill
 ---
 
@@ -23,7 +23,7 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
 <workflow>
 
 1. **Validate the argument.** Require `$terminal` to equal `Applied`, `Refined`, or `Abandoned` exactly. Any other value, including an empty one, is a refused invocation naming the three accepted values; nothing is read or written.
-2. **Resolve the held Change.** Take the newest `<CLAIMED_CHANGE>` marker in the conversation; none present is a blocked operation naming the missing marker. Read the issue and its single project item under `canonical-state`. Resolve `<current-login>` with `gh api user --jq .login` and the agent session id from `printenv CLAUDE_CODE_SESSION_ID`. Require the issue `OPEN`, Status `Claimed`, `<current-login>` in the assignee list, and the winning Claim under `claim-record` to be this session's. Any other state is reported verbatim and stops without mutation.
+2. **Resolve the held Change.** Take `$reference` when present — `#N`, `owner/repo#N`, or an issue URL; an `owner/repo` that differs from the overlay store is a blocked operation — otherwise the newest `<CLAIMED_CHANGE>` marker in the conversation; neither present is a blocked operation naming the missing reference. A close that runs after a compaction supplies the reference, because the marker does not survive it. Read the issue and its single project item under `canonical-state`. Resolve `<current-login>` with `gh api user --jq .login` and the agent session id from `printenv CLAUDE_CODE_SESSION_ID`. Require the issue `OPEN`, Status `Claimed`, `<current-login>` in the assignee list, and the winning Claim under `claim-record` to be this session's. Any other state is reported verbatim and stops without mutation.
 3. **Verify the terminal precondition from current state**, never from this conversation's account of it:
    - `Applied`: the changeset has integrated into the authoritative branch — `git fetch origin <default>` then `git merge-base --is-ancestor <merge-commit> origin/<default>` exits zero for the merge commit the record or conversation names; the Assertions and evidence governing the Change's Nodes are satisfied — `spx spec status --format json` reports no `failing` node among the Frame's Nodes, and every evidence obligation the Frame states has its verdict; and the Output is delivered — every Activity in the body is checked. A merged pull request alone is not `Applied`; a Change with no changeset and no Nodes satisfies the first two by having nothing to integrate or verify, and the third decides.
    - `Refined`: at least one successor exists in the store. The successors are the store records whose front-matter `refined_from` names this Change: find candidates with `gh issue list --repo <store> --state all --search '<issue-url>' --json number,state,body,url`, read each hit's front matter, and keep those naming this Change. Zero such records refuses the close, because a Change whose Output continues nowhere is not refined; a successor the conversation names that the store does not hold refuses the close and names it.
@@ -55,7 +55,7 @@ Return the issue URL and the readback values verbatim. A terminal Change receive
 
 <success_criteria>
 
-- An argument outside `Applied`, `Refined`, and `Abandoned` was refused with the accepted values and no read or write.
+- A terminal argument outside `Applied`, `Refined`, and `Abandoned` was refused with the accepted values and no read or write; the held Change resolved from the explicit reference when given, else from the newest marker.
 - This session held the Change and the named terminal precondition held from current state before the first write; `Refined` was refused while the store held no successor or any known successor was absent.
 - The terminal state reads back complete: the exact terminal comment newest, an empty assignee list, Status equal to the argument, the issue `CLOSED` with the matching reason, and Product and Maturity unchanged.
 - Every failed transition stopped before later mutation and reported the ordered successful writes, the failed operation, and the complete observed state.

@@ -8,7 +8,7 @@ This reference operationalizes the Lifecycle and Handoff rules of the Change cha
 
 <rule id="store-binding">
 
-Read `spx/local/coordination.md` for the Change store (`owner/repo`), the project owner and number, and the Product value. Read no other overlay. Every store command names only that store; a `gh` grant admits any repository the account reaches, so this discipline is the containment. An absent overlay is a blocked operation naming the missing file; no Lifecycle transition runs without a declared store.
+Read `spx/local/coordination.md` for the Change store (`owner/repo`), the project owner and number, and the Product value. Read no other overlay for the store; a transition that moves the checkout reads `spx/local/merging.md` for the safety checks the repository declares around a detach. Every store command names only that store; a `gh` grant admits any repository the account reaches, so this discipline is the containment. An absent overlay is a blocked operation naming the missing file; no Lifecycle transition runs without a declared store.
 
 </rule>
 

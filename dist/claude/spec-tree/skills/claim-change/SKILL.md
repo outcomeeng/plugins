@@ -5,7 +5,7 @@ description: >-
   Change store to hold it for refinement or execution. NEVER assign a Change or
   write its Status by hand without this skill.
 argument-hint: "[#N | owner/repo#N | issue-url]"
-allowed-tools: Read, Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh project view:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-edit:*), Bash(gh api user --jq .login), Bash(printf:*), Bash(printenv CLAUDE_CODE_SESSION_ID), Bash(git rev-parse --show-toplevel), AskUserQuestion, Skill
+allowed-tools: Read, Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --show-current), Bash(gh pr view:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh project view:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-edit:*), Bash(gh api user --jq .login), Bash(printf:*), Bash(printenv CLAUDE_CODE_SESSION_ID), Bash(git rev-parse --show-toplevel), AskUserQuestion, Skill
 ---
 
 <objective>
@@ -39,12 +39,13 @@ Use skill `spec-tree:change-standards`. Invoke it with `Lifecycle`; it loads the
    ```
 
    A later claim in the same conversation emits its own marker; the newest marker names the Change the release and close skills act on unless they receive an explicit reference.
+7. **Bring the Handoff's branch into the assigned worktree.** Read only the newest `Handoff:` comment's `Branch or PR` line. When it names a branch on origin, run `spx worktree status` from the assigned root as a read-only check — record no claim of your own, and surface a diagnostic when the running session's claim is absent — then `git fetch origin <branch>` and `git switch <branch>` in this worktree, creating the local tracking branch when none exists; a branch another worktree holds is unavailable here, so branch from `origin/<branch>` under a fresh name in this worktree and continue. When the line names a pull request, resolve its head branch with `gh pr view <url> --json headRefName` and treat it the same way. When it is `none` or no Handoff exists, leave the checkout as it is. Use skill `spec-tree:sync-base` afterwards, before any Change detail is presented as current.
 
 </workflow>
 
 <result>
 
-Return the issue URL, the readback values verbatim, the Maturity, and the newest `Handoff:` comment's `Branch or PR` line when one exists — the next holder's starting point. Refinement below Executable continues through `author-change`; execution at Executable continues from the Handoff's Next Activity or the first unchecked Activity.
+Return the issue URL, the readback values verbatim, the Maturity, the newest `Handoff:` comment's `Branch or PR` line when one exists, and the branch now checked out in the assigned worktree. Refinement below Executable continues through `author-change`; execution at Executable continues from the Handoff's Next Activity or the first unchecked Activity.
 
 </result>
 
@@ -63,5 +64,6 @@ Return the issue URL, the readback values verbatim, the Maturity, and the newest
 - A losing concurrent claim removed only its own holder record, verified the winner unchanged, reported `owned_elsewhere`, and executed nothing.
 - Every failed transition stopped before later mutation and reported the ordered successful writes, the failed operation, and the complete observed state.
 - Maturity and every body section are untouched.
+- When the newest Handoff names a branch or pull request, that work is checked out in the assigned worktree after a read-only occupancy check, and the checkout is current with its base.
 
 </success_criteria>

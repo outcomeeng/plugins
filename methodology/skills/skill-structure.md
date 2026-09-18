@@ -312,7 +312,7 @@ Skills for writing implementation code and committing results. `apply` is an orc
 
 ## Marker-based state detection
 
-Foundation skills emit XML markers into the conversation when loaded. All declare and spec skills check for these markers before starting work. Apply skills (`commit-changes`) operate independently; `manage-github-pr` checks the foundation marker so local lifecycle routing is known. This follows the same pattern as `/pickup` emitting `<PICKUP_ID>` for `/handoff` to find.
+Foundation skills emit XML markers into the conversation when loaded. All declare and spec skills check for these markers before starting work. Apply skills (`commit-changes`) operate independently; `manage-github-pr` checks the foundation marker so local lifecycle routing is known. This follows the same pattern as `claim-change` emitting `<CLAIMED_CHANGE>` for `release-change` and `close-change` to find.
 
 | Marker                                   | Emitted by      | Checked by                                            | Meaning                              |
 | ---------------------------------------- | --------------- | ----------------------------------------------------- | ------------------------------------ |

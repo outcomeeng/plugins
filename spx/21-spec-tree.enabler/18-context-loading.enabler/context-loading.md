@@ -42,5 +42,5 @@ CAN operate with complete, verified context before any work begins
 - ALWAYS: the `/understand` skill reads the root instruction file from disk only when the live conversation does not already carry it complete — a harness that injects the whole file satisfies the step, and a truncated or absent injection requires the read ([audit])
 - NEVER: the `/contextualize` skill proceeds with partial context — it aborts if any required document is missing ([audit])
 - NEVER: the `/contextualize` skill adds a cited governance decision to the read-set from `PLAN.md`, `ISSUES.md`, or any other coordination-note prose ([audit])
-- NEVER: the `/contextualize` skill accepts a `SPEC_TREE_FOUNDATION` mention in a compaction summary, session file, handoff note, prior-run description, or statement that `/understand` ran as evidence that the marker is live ([audit])
+- NEVER: the `/contextualize` skill accepts a `SPEC_TREE_FOUNDATION` mention in a compaction summary, Handoff, prior-run description, or statement that `/understand` ran as evidence that the marker is live ([audit])
 - NEVER: the `/contextualize` skill infers implementation state from test imports — implementation state is unknown unless another workflow establishes it ([audit])
