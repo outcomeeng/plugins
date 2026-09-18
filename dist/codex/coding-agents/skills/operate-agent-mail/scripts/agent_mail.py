@@ -649,8 +649,20 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
 
 
 def project_key_from_diagnosis(payload: object) -> str:
-    """Return the pool's main checkout path from the worktree-pool record."""
-    checks = _array(_object(payload, "diagnosis").get(CHECKS_FIELD), CHECKS_FIELD)
+    """Return the pool's main checkout path from the worktree-pool record.
+
+    A payload that is not an object, carries no check list, or carries one
+    that is not an array holds no worktree-pool record, so it is the
+    diagnosis-unavailable result like any diagnosis without that record.
+    """
+    checks_value = payload.get(CHECKS_FIELD) if isinstance(payload, dict) else None
+    if not isinstance(checks_value, list):
+        raise AgentMailError(
+            ExecutionStatus.DIAGNOSIS_UNAVAILABLE,
+            f"The diagnosis carries no {CHECKS_FIELD} array, so no "
+            f"{WORKTREE_POOL_CHECK} record can be read.",
+        )
+    checks = cast(list[object], checks_value)
     records = [
         record
         for record in checks

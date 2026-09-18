@@ -210,7 +210,7 @@ def test_project_key_mapping() -> None:
     def assert_key(
         module: ModuleType,
         shape: str,
-        payload: dict[str, object],
+        payload: object,
         expected_key: str | None,
         agent: str,
     ) -> None:

@@ -16,12 +16,19 @@ from typing import Protocol, cast
 from hypothesis import given, seed, settings
 
 from outcomeeng_testing.generators.agent_mail import (
+    DIAGNOSIS_CHECKS_NOT_ARRAY,
+    DIAGNOSIS_EMPTY_READINGS,
+    DIAGNOSIS_NO_CHECKS,
+    DIAGNOSIS_NO_RECORD,
+    DIAGNOSIS_NOT_OBJECT,
+    DIAGNOSIS_OTHER_RECORD,
+    DIAGNOSIS_RELATIVE_PATH,
     DIAGNOSIS_SHAPES,
+    DIAGNOSIS_TWO_RECORDS,
     DIAGNOSIS_WITH_PATH,
     agent_names,
     capture_row_ordinals,
     coordination_references,
-    diagnosis_payload,
     expected_project_key,
     message_records,
     message_texts,
@@ -53,8 +60,12 @@ OPERATE_AGENT_MAIL_RELATIVE = Path("skills/operate-agent-mail")
 FIXTURE_ROOT = ROOT / "outcomeeng_testing/fixtures/agent_mail"
 # Captured `am <command> --help` texts: the store CLI's own grammar declaration.
 USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
-# Captured `am` responses for each operation's public command.
+# Captured `am` responses for each operation's public command, and the
+# captured `spx diagnose --format json` response the adapter reads the project
+# key from (taken with `@outcomeeng/spx` 0.7.1; the floor is 0.7.0, whose
+# `worktree-pool` record carries the same readings).
 RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
+DIAGNOSIS_FIXTURE = RESPONSE_FIXTURE_ROOT / "spx-diagnose.json"
 RAW_MAIL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_command.py.txt"
 GIT_PROJECT_KEY_VIOLATION_FIXTURE = FIXTURE_ROOT / "git_project_key.py.txt"
 RECORD_ROUNDTRIP_SEED = 2026091801
@@ -335,10 +346,92 @@ def inbox_response_without_thread(
     )
 
 
-def diagnosis_with_main_checkout(
-    module: ModuleType, main_checkout_path: str
-) -> dict[str, object]:
-    return diagnosis_payload(module, DIAGNOSIS_WITH_PATH, main_checkout_path)
+def captured_diagnosis(module: ModuleType) -> dict[str, object]:
+    """The captured `spx diagnose --format json` response, decoded."""
+    payload = json.loads(DIAGNOSIS_FIXTURE.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise CaptureError(f"{DIAGNOSIS_FIXTURE} is not a JSON object")
+    return cast(dict[str, object], payload)
+
+
+def _captured_pool_record(
+    module: ModuleType, payload: dict[str, object]
+) -> tuple[list[dict[str, object]], dict[str, object]]:
+    """The captured check list and its one worktree-pool record. A capture
+    without the keys the adapter reads is a capture gap, never a passing case."""
+    checks = payload.get(module.CHECKS_FIELD)
+    if not isinstance(checks, list):
+        raise CaptureError(
+            f"{DIAGNOSIS_FIXTURE} carries no {module.CHECKS_FIELD} array"
+        )
+    records = [
+        cast(dict[str, object], record)
+        for record in cast(list[object], checks)
+        if isinstance(record, dict)
+        and record.get(module.NAME_FIELD) == module.WORKTREE_POOL_CHECK
+    ]
+    if len(records) != 1:
+        raise CaptureError(
+            f"{DIAGNOSIS_FIXTURE} carries {len(records)} {module.WORKTREE_POOL_CHECK} "
+            "records"
+        )
+    readings = records[0].get(module.READINGS_FIELD)
+    if not isinstance(readings, dict) or module.MAIN_CHECKOUT_PATH_FIELD not in cast(
+        dict[str, object], readings
+    ):
+        raise CaptureError(
+            f"{DIAGNOSIS_FIXTURE} {module.WORKTREE_POOL_CHECK} record carries no "
+            f"{module.READINGS_FIELD}.{module.MAIN_CHECKOUT_PATH_FIELD}"
+        )
+    return [cast(dict[str, object], check) for check in checks], records[0]
+
+
+def diagnosis_variant(module: ModuleType, shape: str, path: str) -> object:
+    """One diagnosis payload of the named shape: the captured response with the
+    generated path in place of the machine's, varied only in what the shape
+    names. Every key comes from the capture."""
+    payload = captured_diagnosis(module)
+    checks, record = _captured_pool_record(module, payload)
+    readings = cast(dict[str, object], record[module.READINGS_FIELD])
+    with_path = {
+        **record,
+        module.READINGS_FIELD: {**readings, module.MAIN_CHECKOUT_PATH_FIELD: path},
+    }
+    others = [check for check in checks if check is not record]
+    if shape == DIAGNOSIS_WITH_PATH:
+        return {**payload, module.CHECKS_FIELD: [*others, with_path]}
+    if shape == DIAGNOSIS_NO_RECORD:
+        return {**payload, module.CHECKS_FIELD: others}
+    if shape == DIAGNOSIS_OTHER_RECORD:
+        renamed = {**with_path, module.NAME_FIELD: f"other-{path.strip('/')}"}
+        return {**payload, module.CHECKS_FIELD: [*others, renamed]}
+    if shape == DIAGNOSIS_TWO_RECORDS:
+        return {**payload, module.CHECKS_FIELD: [*others, with_path, with_path]}
+    if shape == DIAGNOSIS_EMPTY_READINGS:
+        emptied = {**record, module.READINGS_FIELD: {}}
+        return {**payload, module.CHECKS_FIELD: [*others, emptied]}
+    if shape == DIAGNOSIS_RELATIVE_PATH:
+        relative = {
+            **record,
+            module.READINGS_FIELD: {
+                **readings,
+                module.MAIN_CHECKOUT_PATH_FIELD: path.lstrip("/"),
+            },
+        }
+        return {**payload, module.CHECKS_FIELD: [*others, relative]}
+    if shape == DIAGNOSIS_NOT_OBJECT:
+        return [*others, with_path]
+    if shape == DIAGNOSIS_NO_CHECKS:
+        return {
+            key: value for key, value in payload.items() if key != module.CHECKS_FIELD
+        }
+    if shape == DIAGNOSIS_CHECKS_NOT_ARRAY:
+        return {**payload, module.CHECKS_FIELD: with_path}
+    raise CaptureError(f"No diagnosis shape named {shape!r}")
+
+
+def diagnosis_with_main_checkout(module: ModuleType, main_checkout_path: str) -> object:
+    return diagnosis_variant(module, DIAGNOSIS_WITH_PATH, main_checkout_path)
 
 
 def diagnosis_seeded_runner(
@@ -481,9 +574,10 @@ def run_terminal_property(
 
 
 def run_project_key_mapping(
-    assert_key: Callable[[ModuleType, str, dict[str, object], str | None, str], None],
+    assert_key: Callable[[ModuleType, str, object, str | None, str], None],
 ) -> None:
-    """Drive every diagnosis shape by construction, with generated paths inside each."""
+    """Drive every diagnosis shape as a variant of the captured response, with
+    generated paths inside each."""
     module = _load()
 
     def drive(shape: str) -> Callable[[], None]:
@@ -493,7 +587,7 @@ def run_project_key_mapping(
         )
         @given(path=project_key_paths(), agent=agent_names())
         def generated_key_mapping(path: str, agent: str) -> None:
-            payload = diagnosis_payload(module, shape, path)
+            payload = diagnosis_variant(module, shape, path)
             assert_key(module, shape, payload, expected_project_key(shape, path), agent)
 
         return generated_key_mapping
