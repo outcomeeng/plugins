@@ -1,6 +1,6 @@
 # Change Record Contract
 
-A Change is a self-contained, store-neutral coordination record for one intended Output. Its record shape, Maturity-specific Definitions of Ready, authority requirements, persistence behavior, and compatibility boundary are fixed by this decision; `audit-change` produces its Agentic verdict under `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`.
+A Change is a self-contained, store-neutral coordination record for one intended Output. Its record shape, Maturity-specific Definitions of Ready, authority requirements, Lifecycle transitions, persistence behavior, and compatibility boundary are fixed by this decision; `audit-change` produces its Agentic verdict under `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`.
 
 ## Record
 
@@ -67,6 +67,18 @@ An Executable Change is ready when:
 
 Framed requires the operator's attestation. Sliced requires a named accountable person. An agent may advance Sliced to Executable only inside the authority of the attested Frame.
 
+## Lifecycle
+
+Lifecycle records who holds the Change or how it ended: `Available` means no holder; `Claimed` means one holder; `Applied`, `Refined`, and `Abandoned` are terminal. One skill moves each transition and moves nothing else: `claim-change` moves `Available` to `Claimed`, `release-change` moves `Claimed` to `Available`, and `close-change` moves `Claimed` to the terminal value its one argument names. None of the three writes Maturity, and none writes a body section other than the Handoff or the terminal record; Maturity moves only through `author-change`. Author, Fixer, and Verifier roles hold no claim.
+
+A claim requires an open record whose Product is the configured Product, whose Maturity is one declared value, whose Lifecycle is `Available`, and whose holder is empty; any other state is reported without mutation. The claim adds the holder, records the Claim — the claiming agent session and its assigned worktree root — and writes `Claimed`. When two sessions claim at once, the earliest Claim after the latest Handoff wins, and the losing session withdraws its own holder record and reports the winner.
+
+A release requires the Handoff: branch or changeset, completed and next Activities, blockers, and the hazards the next holder cannot derive quickly — never a secret and never content that belongs in the body. What the holder learned about the Output is refined into the body through `author-change` before the release. The release writes the Handoff, removes the holder, and writes `Available`; Maturity stays as it is, and any agent may claim the Change next.
+
+A close requires its terminal precondition from current state, not from the holder's account. `Applied` requires the changeset integrated into the authoritative branch, the Assertions and evidence governing the Change's Nodes satisfied, and the Output delivered; a merged pull request alone is not `Applied`. `Refined` requires every known successor to exist in the store, each naming this Change in `refined_from`. `Abandoned` requires the operator's explicit direction and records the operator's stated reason. The close writes the terminal record, removes the holder, writes the terminal Lifecycle, and closes the record with the matching reason. A terminal Change receives no Handoff and never returns to `Available`.
+
+Every transition is an ordered write with a complete readback: each write lands in its declared order, the transition reads Product, Maturity, Lifecycle, the holder, and the newest Claim, Handoff, or terminal record back from the store, and it completes only when every value equals the intended state. When a write fails or a readback differs, the transition stops before every later mutation and reports the completed writes in order, the failed operation, and the observed state; no later write is guessed to make a partial transition look complete.
+
 ## Persistence
 
 Persistence maps every front-matter field to the configured coordination store's native features, writes the complete record without stripping its front matter, and reads every field back unchanged before reporting success. A coordination-store limit never shapes the record.
@@ -85,7 +97,7 @@ One self-contained record preserves Change meaning across local drafting and coo
 
 1. A Change carries its complete coordination meaning in the record and remains portable across coordination stores.
 2. Maturity advances only when the declared level's cumulative Definition of Ready holds and its human or Frame-derived authority is present.
-3. Persistence preserves field equality, while audit accepts only records whose front matter carries the contract's closed key set.
+3. Lifecycle moves through one skill per transition — claim, release with a Handoff, close to a named terminal value — each an ordered write with a complete readback that never touches Maturity; persistence preserves field equality, while audit accepts only records whose front matter carries the contract's closed key set.
 
 ## Verification
 
@@ -95,3 +107,9 @@ One self-contained record preserves Change meaning across local drafting and coo
 - ALWAYS: persistence maps every front-matter field to the configured coordination store's native features, writes the complete self-contained record, and reads each persisted field back unchanged before reporting success; a coordination-store limit never shapes the record.
 - NEVER: store-native metadata replaces, strips, or restates authoritative Change content.
 - NEVER: `audit-change` judges or migrates a record whose front matter does not carry the contract's closed key set; the auditor reports it as outside the contract.
+- ALWAYS: `claim-change` claims only an open record whose Product, Maturity, `Available` Lifecycle, and empty holder verify from current state; it adds the holder, records the Claim, writes `Claimed`, and reads the complete state back before execution begins, and a losing concurrent claim withdraws its own holder record and reports the winner.
+- ALWAYS: `release-change` writes a Handoff carrying branch or changeset, completed and next Activities, blockers, and hazards, then removes the holder, writes `Available`, and reads the complete state back, leaving Maturity unchanged.
+- ALWAYS: `close-change` verifies the named terminal precondition from current state, writes the terminal record, removes the holder, writes the terminal Lifecycle, closes the record with the matching reason, and reads the complete terminal state back; it refuses an argument outside `Applied`, `Refined`, and `Abandoned`, and refuses `Refined` while a known successor is absent from the store.
+- NEVER: a Lifecycle skill writes Maturity or a body section other than the Handoff or the terminal record.
+- NEVER: a Lifecycle transition performs a later mutation after a required write fails or a readback differs from the intended state; its diagnostic names every completed write, the failed operation, and the observed state.
+- NEVER: a Handoff, Claim, or terminal record carries a secret value or credential payload.
