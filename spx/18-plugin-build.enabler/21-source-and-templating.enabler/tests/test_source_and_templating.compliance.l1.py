@@ -14,7 +14,10 @@ from outcomeeng.distribution.build import (
     plugin_names,
     template_source_files,
 )
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import (
+    REQUIRE_SKILL_GUIDANCE_TEMPLATE,
+    Target,
+)
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
     source_scenarios,
@@ -75,7 +78,7 @@ def test_jinja_environment_uses_custom_delimiters() -> None:
 @pytest.mark.parametrize("case", source_scenarios(), ids=lambda c: c.skill)
 def test_require_skill_expands_to_neutral_guidance(case: SourceScenario) -> None:
     rendered = expand_require_skill(RequireSkillDirective(case.skill_ref))
-    assert rendered == f"Use skill `{case.skill_ref}`."
+    assert rendered == REQUIRE_SKILL_GUIDANCE_TEMPLATE.format(skill_ref=case.skill_ref)
 
 
 def test_neutral_guidance_oracle_rejects_runtime_specific_wording() -> None:
