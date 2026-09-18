@@ -6,14 +6,14 @@ from typing import cast
 import pytest
 
 from outcomeeng_testing.generators.coding_agents import (
+    MISMATCHED_TARGET_STATUS,
+    mutation_observation,
     mail_record_input,
     message_content,
 )
 from outcomeeng_testing.harnesses.coding_agents import (
-    MISMATCHED_TARGET_STATUS,
     fact_envelope,
     generated_envelope,
-    mutation_observation,
     observe_mail_send,
     observe_send_transport,
     production_handback,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from types import ModuleType
 
@@ -66,3 +67,34 @@ def delegation_authority(
 def doorbell_lines() -> st.SearchStrategy[tuple[str, int]]:
     """Sender names and store ids over the doorbell's open domain."""
     return st.tuples(agent_names(), store_message_ids())
+
+
+# The synthetic mutation-target status a proposal reports, and a status that
+# differs from it for a stale-target case.
+OBSERVED_TARGET_STATUS = "clean"
+MISMATCHED_TARGET_STATUS = "dirty"
+
+
+def mutation_observation(
+    module: ModuleType,
+    participant: dict[str, str],
+) -> tuple[dict[str, object], dict[str, object]]:
+    """A synthetic mutation target for one participant and its projected observed state."""
+    target: dict[str, object] = {
+        module.PANE_FIELD: participant[module.PANE_FIELD],
+        module.WORKTREE_FIELD: participant[module.WORKTREE_FIELD],
+        module.BRANCH_FIELD: participant[module.BRANCH_FIELD],
+        module.REPOSITORY_FIELD: participant[module.REPOSITORY_FIELD],
+        module.HEAD_FIELD: hashlib.sha1(
+            participant[module.PANE_FIELD].encode(), usedforsecurity=False
+        ).hexdigest(),
+        module.STATUS_FIELD: OBSERVED_TARGET_STATUS,
+    }
+    state = {field: target[field] for field in module.OBSERVED_STATE_FIELDS}
+    return target, state
+
+
+def unsupported_capability_operation(capability: ModuleType) -> str:
+    """An operation name outside the capability's declared operations, derived
+    from every declared name so no member can equal it."""
+    return "-".join(operation.value for operation in capability.Operation)

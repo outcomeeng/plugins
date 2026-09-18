@@ -1,12 +1,14 @@
 import uuid
 from typing import cast
 
-from outcomeeng_testing.generators.coding_agents import message_content
+from outcomeeng_testing.generators.coding_agents import (
+    message_content,
+    mutation_observation,
+)
 from outcomeeng_testing.harnesses.coding_agents import (
     PROWL_REJECTION_DETAIL,
     PROWL_REJECTION_EXIT_CODE,
     fact_envelope,
-    mutation_observation,
     observe_send_transport,
     observed_message_participants,
 )

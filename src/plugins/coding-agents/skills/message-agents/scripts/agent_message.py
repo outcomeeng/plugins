@@ -1236,11 +1236,6 @@ def mail_delivery_result(
             DeliveryStatus.INVALID_SCHEMA,
             f"Capability schema version must be {MAIL_CAPABILITY_SCHEMA_VERSION}.",
         )
-    if value.get(TRANSPORT_OPERATION_FIELD) != MAIL_SEND_OPERATION:
-        raise MessageError(
-            DeliveryStatus.INVALID_SCHEMA,
-            "A mail delivery result requires the capability's send result.",
-        )
     status = _text(value.get(STATUS_FIELD), f"{CAPABILITY_RESULT_FIELD}.{STATUS_FIELD}")
     if status != TRANSPORT_SUCCEEDED_STATUS:
         present = set(value)
@@ -1265,6 +1260,12 @@ def mail_delivery_result(
             AGREED_FIELD: False,
             OWNERSHIP_ESTABLISHED_FIELD: False,
         }
+    if value.get(TRANSPORT_OPERATION_FIELD) != MAIL_SEND_OPERATION:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered result requires the capability's send result, not "
+            f"{value.get(TRANSPORT_OPERATION_FIELD)!r}.",
+        )
     if set(value) != MAIL_SUCCESS_FIELDS:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,

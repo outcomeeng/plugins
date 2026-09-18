@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 import json
 import sys
@@ -14,7 +13,11 @@ from typing import Callable, cast
 
 from hypothesis import given, seed, settings
 
-from outcomeeng_testing.generators.coding_agents import doorbell_lines, message_content
+from outcomeeng_testing.generators.coding_agents import (
+    doorbell_lines,
+    message_content,
+    unsupported_capability_operation,
+)
 from outcomeeng_testing.generators.prowl_environment import (
     message_texts,
     public_agent_item,
@@ -27,6 +30,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     json_command_result,
     load_agent_mail,
     store_response_result,
+    text_command_result,
 )
 from outcomeeng_testing.harnesses.agent_mail import (
     RecordingRunner as MailRecordingRunner,
@@ -58,13 +62,11 @@ DOORBELL_PROPERTY_REPLAY_PATH = (
 # Failure simulation at the store boundary: the store rejects the send.
 STORE_REJECTION_EXIT_CODE = 3
 STORE_REJECTION_DETAIL = "store rejected the send"
+# Failure simulation at the store boundary: the store's reply is not JSON.
+STORE_UNREADABLE_REPLY = "not a json reply"
 # Failure simulation at the Prowl boundary: the environment rejects the turn.
 PROWL_REJECTION_EXIT_CODE = 7
 PROWL_REJECTION_DETAIL = "transport rejected"
-# The synthetic mutation-target status a proposal reports in the test domain,
-# and a status that differs from it for a stale-target case.
-OBSERVED_TARGET_STATUS = "clean"
-MISMATCHED_TARGET_STATUS = "dirty"
 
 
 class HandbackPlanError(RuntimeError):
@@ -127,25 +129,6 @@ def observe_send_transport(pane: str) -> dict[str, object]:
         no_wait=True,
     )
     return cast(dict[str, object], prowl.execute(request, runner))
-
-
-def mutation_observation(
-    module: ModuleType,
-    participant: dict[str, str],
-) -> tuple[dict[str, object], dict[str, object]]:
-    """Return a synthetic mutation target and its projected observed state."""
-    target: dict[str, object] = {
-        module.PANE_FIELD: participant[module.PANE_FIELD],
-        module.WORKTREE_FIELD: participant[module.WORKTREE_FIELD],
-        module.BRANCH_FIELD: participant[module.BRANCH_FIELD],
-        module.REPOSITORY_FIELD: participant[module.REPOSITORY_FIELD],
-        module.HEAD_FIELD: hashlib.sha1(
-            participant[module.PANE_FIELD].encode(), usedforsecurity=False
-        ).hexdigest(),
-        module.STATUS_FIELD: OBSERVED_TARGET_STATUS,
-    }
-    state = {field: target[field] for field in module.OBSERVED_STATE_FIELDS}
-    return target, state
 
 
 def resolver_discovery(
@@ -329,6 +312,44 @@ def observe_rejected_mail_send(
         ]
     )
     return _mail_send_result(message, record, runner)
+
+
+def observe_absent_diagnosis_mail_send(
+    message: ModuleType, record: dict[str, object]
+) -> dict[str, object]:
+    """The capability's result when no diagnosis executable exists (failure simulation)."""
+    agent_mail = load_agent_mail()
+    runner = AbsentExecutableRunner(agent_mail.SPX_COMMAND, [])
+    return _mail_send_result(message, record, runner)
+
+
+def observe_unreadable_store_reply_mail_send(
+    message: ModuleType, record: dict[str, object]
+) -> dict[str, object]:
+    """The capability's result when the store replies with text that is not JSON
+    (failure simulation)."""
+    agent_mail = load_agent_mail()
+    runner = MailRecordingRunner(
+        [
+            _diagnosis_reply(agent_mail),
+            text_command_result(agent_mail, STORE_UNREADABLE_REPLY),
+        ]
+    )
+    return _mail_send_result(message, record, runner)
+
+
+def observe_unsupported_operation_mail_send(
+    message: ModuleType, record: dict[str, object]
+) -> dict[str, object]:
+    """The capability's result for a send request whose operation the capability
+    does not declare."""
+    agent_mail = load_agent_mail()
+    request = {
+        **message.mail_send_request(record),
+        message.TRANSPORT_OPERATION_FIELD: unsupported_capability_operation(agent_mail),
+    }
+    runner = MailRecordingRunner([_diagnosis_reply(agent_mail)])
+    return cast(dict[str, object], agent_mail.execute(request, runner))
 
 
 def observe_absent_store_mail_send(

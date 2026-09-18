@@ -4,9 +4,12 @@ from outcomeeng_testing.generators.coding_agents import mail_record_input
 from outcomeeng_testing.harnesses.agent_mail import load_agent_mail
 from outcomeeng_testing.harnesses.coding_agents import (
     load_agent_message,
+    observe_absent_diagnosis_mail_send,
     observe_absent_store_mail_send,
     observe_mail_send,
     observe_rejected_mail_send,
+    observe_unreadable_store_reply_mail_send,
+    observe_unsupported_operation_mail_send,
 )
 
 
@@ -35,6 +38,7 @@ def test_every_sender_kind_maps_to_a_record_the_capability_accepts() -> None:
 
 def test_checked_send_results_map_to_delivery_results() -> None:
     message = load_agent_message()
+    capability = load_agent_mail()
     request = mail_record_input(message, 1, message.RecordKind.FACT)
     record = message.mail_request({**request})[message.RECORD_FIELD]
 
@@ -65,9 +69,13 @@ def test_checked_send_results_map_to_delivery_results() -> None:
     assert doorbell[message.DOORBELL_SUBMITTED_FIELD] is False
     assert delivered[message.CAPABILITY_FIELD] == delivered_capability
 
+    failed_statuses: set[object] = set()
     for failed_capability in (
         observe_rejected_mail_send(message, record),
         observe_absent_store_mail_send(message, record),
+        observe_absent_diagnosis_mail_send(message, record),
+        observe_unreadable_store_reply_mail_send(message, record),
+        observe_unsupported_operation_mail_send(message, record),
     ):
         failed = message.mail_delivery_result(failed_capability)
         assert failed[message.STATUS_FIELD] == message.DeliveryStatus.DELIVERY_FAILED
@@ -80,3 +88,8 @@ def test_checked_send_results_map_to_delivery_results() -> None:
             message.COMMAND_EXIT_CODE_FIELD
         )
         assert message.RECORD_ID_FIELD not in failed
+        assert failed_capability[message.STATUS_FIELD] not in failed_statuses
+        failed_statuses.add(failed_capability[message.STATUS_FIELD])
+    assert failed_statuses == set(capability.ExecutionStatus) - {
+        capability.ExecutionStatus.SUCCEEDED
+    }
