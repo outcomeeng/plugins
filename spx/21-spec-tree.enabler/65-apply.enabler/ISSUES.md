@@ -20,7 +20,7 @@
 
 **Impact.** File creation and same-class sweeps run behind per-call approval prompts inside a flow that line 29 says must not stop between nodes.
 
-**Settlement condition.** The grant carries the file-creation and read-only search capabilities the flow itself performs, per `/skill-standards` `<tool_restriction_security>`'s "narrowest the task needs" rule.
+**Settlement condition.** The grant carries the file-creation and read-only search capabilities the flow itself performs, per `/skill-standards` `<tool_restriction_security>`'s "narrowest the task needs" rule. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
 
 ## `apply` states three conditions more than once
 
@@ -28,7 +28,7 @@
 
 **Impact.** About forty lines of eager payload carry no added rule, and one condition has several edit points.
 
-**Settlement condition.** Each condition is stated once at its point of action and cross-referenced by tag name elsewhere, per `/skill-standards` `<conciseness>`.
+**Settlement condition.** Each condition is stated once at its point of action and cross-referenced by tag name elsewhere, per `/skill-standards` `<conciseness>`. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
 
 ## `apply` Step 5 names a skill the spec-tree plugin does not ship
 
@@ -36,7 +36,7 @@
 
 **Impact.** The name resolves nowhere in a consumer checkout, and `/audit-skill`'s broken-reference check flags it once the conditional is read literally.
 
-**Settlement condition.** Step 5 names only `/verify`'s own eval routing, or the unshipped skill name is gone.
+**Settlement condition.** Step 5 names only `/verify`'s own eval routing, or the unshipped skill name is gone. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
 
 ## `apply` Step 8 opens with a hard-wrapped paragraph
 
@@ -44,4 +44,4 @@
 
 **Impact.** Inconsistent dprint output and spurious diff noise on the next edit.
 
-**Settlement condition.** The paragraph is one line, matching the file's convention.
+**Settlement condition.** The paragraph is one line, matching the file's convention. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
