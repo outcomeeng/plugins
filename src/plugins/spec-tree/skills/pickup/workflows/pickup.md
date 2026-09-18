@@ -65,7 +65,7 @@ The script reads only — it reaches `spx session show`, `spx spec status`, `gh`
 Present the per-claim verdict report. When the `<nodes>` section names at least one node and `<SPEC_TREE_FOUNDATION>` is not live, invoke `/understand` once now — the path check below is the workflow's first product-content access:
 
 ```text
-Use skill `spec-tree:understand`.
+{!% require_skill 'spec-tree:understand' %!}
 ```
 
 Then, for each node in the `<nodes>` section, check for coordination-note paths only:
@@ -110,7 +110,7 @@ NEVER offer the user a choice here. NEVER propose fixes, code, or any implementa
 The ONLY valid next action after presenting the session is to invoke `/contextualize` on the target node. When `<SPEC_TREE_FOUNDATION>` is not yet live, invoke `/understand` first:
 
 ```text
-Use skill `spec-tree:understand`.
+{!% require_skill 'spec-tree:understand' %!}
 ```
 
 The spec-tree methodology forbids all work without loaded context.

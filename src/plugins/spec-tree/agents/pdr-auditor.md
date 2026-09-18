@@ -2,7 +2,7 @@
 name: pdr-auditor
 description: >-
   ALWAYS invoke when auditing PDR evidence quality after writing a PDR or before implementing outcomes governed by the PDR.
-tools: Read, Grep, Glob, Bash, {{! tool('use_skill') !}}
+tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git branch --show-current:*)
 profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only

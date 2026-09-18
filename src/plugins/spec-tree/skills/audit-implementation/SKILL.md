@@ -402,15 +402,15 @@ A missing required concern skill or an unsupported path already claimed by a rec
 
 <skill_map>
 
-For each language partition, invoke the required implementation concern skills:
+For each language partition, compose the required implementation concern skills with the owned instruction, the discovered language name in place:
 
-| Concern      | Dispatch template           |
-| ------------ | --------------------------- |
-| Code         | `audit-{lang}-code`         |
-| Tests        | `audit-{lang}-tests`        |
-| Architecture | `audit-{lang}-architecture` |
+| Concern      | Composition instruction                       |
+| ------------ | --------------------------------------------- |
+| Code         | Use skill `{lang}:audit-{lang}-code`.         |
+| Tests        | Use skill `{lang}:audit-{lang}-tests`.        |
+| Architecture | Use skill `{lang}:audit-{lang}-architecture`. |
 
-The dispatch contract is the skill name. The orchestration does not embed per-language file globs, commands, test naming, architecture examples, or local standards. Each concern skill owns its policy and returns findings for its concern only.
+The composition contract is the plugin-qualified skill name. The orchestration does not embed per-language file globs, commands, test naming, architecture examples, or local standards. Each concern skill owns its policy and returns findings for its concern only.
 
 </skill_map>
 
