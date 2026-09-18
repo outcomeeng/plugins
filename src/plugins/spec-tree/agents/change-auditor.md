@@ -3,7 +3,7 @@ name: change-auditor
 description: >-
   ALWAYS invoke when auditing one local Outcome Engineering Change record
   before publication or after refinement.
-tools: Bash, Read, Glob, Grep, Skill
+tools: Bash, Read, Glob, Grep, {{! tool('use_skill') !}}
 profile: standard
 skills:
   - spec-tree:audit-change
