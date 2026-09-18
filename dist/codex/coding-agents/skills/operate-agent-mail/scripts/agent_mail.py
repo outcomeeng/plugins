@@ -65,16 +65,17 @@ STORE_THREAD_ID_FIELD = "thread_id"
 STORE_THREAD_FIELD = "thread"
 STORE_ACK_REQUIRED_FIELD = "ack_required"
 STORE_ACK_STATUS_FIELD = "ack_status"
-# The store's acknowledgement statuses on the inbox surface: `none` when no
-# acknowledgement is required, and the two states of a required one.
-STORE_ACK_STATUS_NONE = "none"
+# The two states of a required acknowledgement on the store's inbox surface;
+# every other status the store reports reads as no acknowledgement required.
 STORE_ACK_STATUS_PENDING = "pending"
 STORE_ACK_STATUS_ACKED = "acked"
 STORE_ACK_REQUIRED_STATUSES = frozenset(
     {STORE_ACK_STATUS_PENDING, STORE_ACK_STATUS_ACKED}
 )
-STORE_ACK_STATUSES = STORE_ACK_REQUIRED_STATUSES | {STORE_ACK_STATUS_NONE}
 STORE_INBOX_FIELD = "inbox"
+# The store reads `--to` as a list joined by this separator, so a recipient
+# that carries it names several agents and no longer maps back to one record.
+STORE_RECIPIENT_SEPARATOR = ","
 
 # Fields of the capability's requests and results.
 SCHEMA_VERSION_FIELD = "schemaVersion"
@@ -142,8 +143,9 @@ RECORD_INPUT_FIELDS = frozenset(
     }
 )
 RECORD_FIELDS = RECORD_INPUT_FIELDS | {RECORD_ID_FIELD}
-# Text fields a record never leaves empty; the body may be empty when an inbox
-# read omits bodies.
+# Text fields a sent record never leaves empty. A row the store returns may
+# leave the correlation absent and the subject empty, and its body is empty
+# when the read omits bodies.
 RECORD_TEXT_FIELDS = (
     CORRELATION_FIELD,
     SENDER_FIELD,
@@ -423,9 +425,18 @@ def _record_kind(value: object, location: str, *, sent: bool) -> RecordKind:
 
 
 def validate_record(
-    record: object, *, location: str = RECORD_FIELD, with_id: bool
+    record: object,
+    *,
+    location: str = RECORD_FIELD,
+    with_id: bool,
+    from_store: bool = False,
 ) -> dict[str, object]:
-    """Return the record with every field checked against the record contract."""
+    """Return the record with every field checked against the record contract.
+
+    A record read from a store row (`from_store`) is total over the rows the
+    store returns: its correlation may be absent and its subject empty, because
+    another sender wrote those fields, and no single row fails the read.
+    """
     value = _object(record, location)
     expected = RECORD_FIELDS if with_id else RECORD_INPUT_FIELDS
     unexpected = sorted(set(value) - expected)
@@ -455,7 +466,21 @@ def validate_record(
         ),
     }
     for field_name in RECORD_TEXT_FIELDS:
-        validated[field_name] = _text(value.get(field_name), f"{location}.{field_name}")
+        raw = value.get(field_name)
+        field_location = f"{location}.{field_name}"
+        if from_store and field_name == CORRELATION_FIELD and raw is None:
+            validated[field_name] = None
+        elif from_store and field_name == RECORD_SUBJECT_FIELD:
+            validated[field_name] = _string(raw, field_location)
+        else:
+            validated[field_name] = _text(raw, field_location)
+    recipient = cast(str, validated[RECIPIENT_FIELD])
+    if STORE_RECIPIENT_SEPARATOR in recipient:
+        raise AgentMailError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"A record names one recipient; {location}.{RECIPIENT_FIELD} carries "
+            f"the store's {STORE_RECIPIENT_SEPARATOR!r} separator: {recipient!r}.",
+        )
     validated[BODY_FIELD] = _string(value.get(BODY_FIELD), f"{location}.{BODY_FIELD}")
     if with_id:
         validated[RECORD_ID_FIELD] = _integer(
@@ -579,33 +604,42 @@ def _split_kind(subject: str) -> tuple[RecordKind, str]:
 
 
 def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]:
-    """Map one inbox item of the store back onto a record for its recipient."""
+    """Map one inbox item of the store back onto a record for its recipient.
+
+    The mapping is total over the rows the store returns: a row without a
+    thread was not written by this adapter, so it reads as an unclassified
+    record with no correlation and its subject verbatim; an acknowledgement
+    status outside the ones that require a receipt reads as not required.
+    """
     value = _object(item, STORE_INBOX_FIELD)
     location = f"{STORE_INBOX_FIELD}[]"
-    kind, subject = _split_kind(
-        _text(value.get(STORE_SUBJECT_FIELD), f"{location}.{STORE_SUBJECT_FIELD}")
+    thread = value.get(STORE_THREAD_FIELD)
+    correlation = thread if isinstance(thread, str) and thread else None
+    subject_text = _string(
+        value.get(STORE_SUBJECT_FIELD), f"{location}.{STORE_SUBJECT_FIELD}"
     )
+    if correlation is None:
+        kind, subject = RecordKind.UNCLASSIFIED, subject_text
+    else:
+        kind, subject = _split_kind(subject_text)
     body = value.get(STORE_BODY_FIELD)
-    ack_status = value.get(STORE_ACK_STATUS_FIELD)
-    if ack_status not in STORE_ACK_STATUSES:
-        raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA,
-            f"Unsupported {STORE_ACK_STATUS_FIELD} at {location}: {ack_status!r}.",
-        )
     return validate_record(
         {
             RECORD_SCHEMA_FIELD: RECORD_SCHEMA_VERSION,
             RECORD_ID_FIELD: value.get(STORE_ID_FIELD),
             KIND_FIELD: kind.value,
-            CORRELATION_FIELD: value.get(STORE_THREAD_FIELD),
+            CORRELATION_FIELD: correlation,
             SENDER_FIELD: value.get(STORE_FROM_FIELD),
             RECIPIENT_FIELD: recipient,
             RECORD_SUBJECT_FIELD: subject,
             BODY_FIELD: body if isinstance(body, str) else "",
-            ACK_REQUIRED_FIELD: ack_status in STORE_ACK_REQUIRED_STATUSES,
+            ACK_REQUIRED_FIELD: (
+                value.get(STORE_ACK_STATUS_FIELD) in STORE_ACK_REQUIRED_STATUSES
+            ),
         },
         location=location,
         with_id=True,
+        from_store=True,
     )
 
 

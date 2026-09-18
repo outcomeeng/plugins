@@ -36,9 +36,9 @@ def store_exit_codes() -> st.SearchStrategy[int]:
     return st.integers(min_value=1, max_value=255)
 
 
-def store_ack_required_statuses(module: ModuleType) -> st.SearchStrategy[str]:
-    """The store's acknowledgement statuses for a message that required one."""
-    return st.sampled_from(sorted(module.STORE_ACK_REQUIRED_STATUSES))
+def capture_row_ordinals() -> st.SearchStrategy[int]:
+    """Ordinals a harness reduces onto the rows of a captured response."""
+    return st.integers(min_value=0, max_value=1_000)
 
 
 def message_texts() -> st.SearchStrategy[str]:

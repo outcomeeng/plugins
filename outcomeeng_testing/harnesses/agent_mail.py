@@ -19,6 +19,7 @@ from outcomeeng_testing.generators.agent_mail import (
     DIAGNOSIS_SHAPES,
     DIAGNOSIS_WITH_PATH,
     agent_names,
+    capture_row_ordinals,
     coordination_references,
     diagnosis_payload,
     expected_project_key,
@@ -27,7 +28,7 @@ from outcomeeng_testing.generators.agent_mail import (
     operation_requests,
     program_names,
     project_key_paths,
-    store_ack_required_statuses,
+    sent_record_kinds,
     store_exit_codes,
     store_message_ids,
     terminal_record_kinds,
@@ -79,6 +80,12 @@ COMPLIANCE_EXAMPLES = 10
 STORE_RESPONSE_SEED = 2026091806
 STORE_RESPONSE_EXAMPLES = 10
 STORE_RESPONSE_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+INBOX_ROW_SEED = 2026091807
+INBOX_ROW_EXAMPLES = 10
+INBOX_ROW_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+RECIPIENT_BOUNDARY_SEED = 2026091808
+RECIPIENT_BOUNDARY_EXAMPLES = 20
+RECIPIENT_BOUNDARY_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 COMPLIANCE_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.compliance.l1.py"
@@ -93,6 +100,27 @@ class CommandResultContract(Protocol):
     returncode: int
     stdout: str
     stderr: str
+
+
+class CaptureError(RuntimeError):
+    """The captured store responses do not carry what a replay or variant needs."""
+
+
+@dataclass(frozen=True)
+class CapturedInboxRow:
+    """One row of a captured `am robot inbox` response, with the capture's path."""
+
+    capture: str
+    item: dict[str, object]
+
+
+@dataclass(frozen=True)
+class CapturedInboxResponse:
+    """One captured inbox response, or a named variant of one, replayable by path."""
+
+    capture: str
+    result: CommandResultContract
+    payload: dict[str, object]
 
 
 @dataclass
@@ -174,25 +202,137 @@ def usage_contract_for(module: ModuleType, operation: object) -> UsageContract:
     )
 
 
-def store_response_result(
-    module: ModuleType, operation: object
-) -> CommandResultContract:
-    """The store's captured response for one operation's command, by path."""
+def _response_shaping_fields(module: ModuleType) -> tuple[str, ...]:
+    """Request fields whose presence changes the row shape the store writes back:
+    `--include-bodies` adds the body to every inbox row, while the other options
+    filter or bound the same shape."""
+    return (module.INCLUDE_BODIES_FIELD,)
+
+
+def _shaping_suffix(module: ModuleType, arguments: dict[str, object] | None) -> str:
+    """The option-named suffix of the capture a request shape selects: the base
+    command's capture carries none, and one taken with `--include-bodies`
+    carries `.include-bodies`."""
+    present = arguments or {}
+    return "".join(
+        f".{module.PUBLIC_AM_ARGUMENT_OPTIONS[field_name].lstrip('-')}"
+        for field_name in _response_shaping_fields(module)
+        if present.get(field_name) is True
+    )
+
+
+def _response_fixture_path(
+    module: ModuleType, operation: object, arguments: dict[str, object] | None
+) -> Path:
     name = _command_fixture_name(module, operation)
     suffix = "json" if operation in module.JSON_OPERATIONS else "txt"
-    path = RESPONSE_FIXTURE_ROOT / f"{name}.{suffix}"
+    return (
+        RESPONSE_FIXTURE_ROOT / f"{name}{_shaping_suffix(module, arguments)}.{suffix}"
+    )
+
+
+def _result_from_path(module: ModuleType, path: Path) -> CommandResultContract:
     return cast(
         CommandResultContract,
         module.CommandResult(0, path.read_text(encoding="utf-8"), ""),
     )
 
 
-def store_response_payload(module: ModuleType, operation: object) -> object:
+def store_response_result(
+    module: ModuleType,
+    operation: object,
+    arguments: dict[str, object] | None = None,
+) -> CommandResultContract:
+    """The store's captured response for one operation's request shape, by path:
+    the capture taken under the same response-shaping options the request
+    carries."""
+    return _result_from_path(
+        module, _response_fixture_path(module, operation, arguments)
+    )
+
+
+def store_response_payload(
+    module: ModuleType,
+    operation: object,
+    arguments: dict[str, object] | None = None,
+) -> object:
     """The captured response decoded: JSON for JSON operations, text otherwise."""
-    result = store_response_result(module, operation)
+    result = store_response_result(module, operation, arguments)
     if operation in module.JSON_OPERATIONS:
         return json.loads(result.stdout)
     return result.stdout.strip()
+
+
+def _inbox_captures_with_bodies(module: ModuleType) -> list[Path]:
+    """Every captured inbox response taken with `--include-bodies`, in path
+    order: the store answered the same command while a receipt was pending and
+    again after it was recorded."""
+    base = _response_fixture_path(
+        module, module.Operation.INBOX, {module.INCLUDE_BODIES_FIELD: True}
+    )
+    return sorted(RESPONSE_FIXTURE_ROOT.glob(f"{base.stem}*.json"))
+
+
+def captured_inbox_responses_with_bodies(
+    module: ModuleType,
+) -> list[CapturedInboxResponse]:
+    """Each captured `--include-bodies` inbox response, replayable by path."""
+    return [
+        CapturedInboxResponse(
+            str(path.relative_to(ROOT)),
+            _result_from_path(module, path),
+            json.loads(path.read_text(encoding="utf-8")),
+        )
+        for path in _inbox_captures_with_bodies(module)
+    ]
+
+
+def captured_inbox_rows_with_bodies(module: ModuleType) -> list[CapturedInboxRow]:
+    """Every row across the captured `--include-bodies` inbox responses."""
+    return [
+        CapturedInboxRow(response.capture, cast(dict[str, object], item))
+        for response in captured_inbox_responses_with_bodies(module)
+        for item in cast(list[object], response.payload[module.STORE_INBOX_FIELD])
+    ]
+
+
+def _row_variant(
+    row: CapturedInboxRow, changes: dict[str, object]
+) -> dict[str, object]:
+    """The captured row with the named values replaced. A variant changes only
+    values the capture carries; a key the store never wrote is a capture gap."""
+    absent = sorted(set(changes) - set(row.item))
+    if absent:
+        raise CaptureError(
+            f"{row.capture} carries no {', '.join(absent)}; a variant changes "
+            "only values the captured row has"
+        )
+    return {**row.item, **changes}
+
+
+def inbox_response_without_thread(
+    module: ModuleType, response: CapturedInboxResponse
+) -> CapturedInboxResponse:
+    """The captured inbox response with the thread removed from its first row:
+    the variant ranges over the thread value alone, and names the capture it
+    varies."""
+    items = cast(list[dict[str, object]], response.payload[module.STORE_INBOX_FIELD])
+    if not items:
+        raise CaptureError(f"{response.capture} lists no inbox row to vary")
+    first = CapturedInboxRow(response.capture, items[0])
+    if module.STORE_THREAD_FIELD not in first.item:
+        raise CaptureError(f"{response.capture} carries no thread on its first row")
+    varied = {
+        key: value
+        for key, value in first.item.items()
+        if key != module.STORE_THREAD_FIELD
+    }
+    payload = {**response.payload, module.STORE_INBOX_FIELD: [varied, *items[1:]]}
+    return CapturedInboxResponse(
+        f"{response.capture} (first row without {module.STORE_THREAD_FIELD})",
+        cast(CommandResultContract, module.CommandResult(0, json.dumps(payload), "")),
+        payload,
+    )
 
 
 def diagnosis_with_main_checkout(
@@ -231,44 +371,51 @@ def diagnosis_seeded_absent_store_runner(
     )
 
 
-def captured_inbox_item(module: ModuleType) -> dict[str, object]:
-    """The first message the store's captured inbox response lists."""
-    payload = cast(
-        dict[str, object], store_response_payload(module, module.Operation.INBOX)
-    )
-    items = cast(list[dict[str, object]], payload[module.STORE_INBOX_FIELD])
-    return items[0]
-
-
 def store_inbox_echo(
     module: ModuleType,
     send_fields: dict[str, object],
     message_id: int,
-    ack_status: str,
+    row_ordinal: int,
 ) -> dict[str, object]:
-    """Render a sent message the way the store's inbox surface returns it.
+    """Render a sent message the way the store's inbox surface returned one of
+    the same acknowledgement class.
 
-    The item keeps the shape of the store's captured inbox response; the fields
-    the send wrote and the store assigned replace the captured values.
-    `ack_status` is the store's status for a message that required
-    acknowledgement and is `none` for one that did not.
+    The row is a captured `--include-bodies` inbox row whose acknowledgement
+    status matches the send's requirement — `row_ordinal` selects among the
+    matching rows, so a required acknowledgement is echoed both pending and
+    recorded — with the sender, subject, thread, body, and id the send wrote
+    and the store assigned in place of the captured values. The status, the
+    body field, and every other key stay the store's own bytes.
     """
-    ack_required = send_fields[module.STORE_ACK_REQUIRED_FIELD]
-    return {
-        **captured_inbox_item(module),
-        module.STORE_ID_FIELD: message_id,
-        module.STORE_FROM_FIELD: send_fields[module.STORE_FROM_FIELD],
-        module.STORE_SUBJECT_FIELD: send_fields[module.STORE_SUBJECT_FIELD],
-        module.STORE_THREAD_FIELD: send_fields[module.STORE_THREAD_ID_FIELD],
-        module.STORE_ACK_STATUS_FIELD: (
-            ack_status if ack_required is True else module.STORE_ACK_STATUS_NONE
-        ),
-        module.STORE_BODY_FIELD: send_fields[module.STORE_BODY_FIELD],
-    }
+    ack_required = send_fields[module.STORE_ACK_REQUIRED_FIELD] is True
+    rows = [
+        row
+        for row in captured_inbox_rows_with_bodies(module)
+        if (
+            row.item.get(module.STORE_ACK_STATUS_FIELD)
+            in module.STORE_ACK_REQUIRED_STATUSES
+        )
+        is ack_required
+    ]
+    if not rows:
+        raise CaptureError(
+            "no captured inbox row with bodies shows a message whose "
+            f"acknowledgement requirement is {ack_required}"
+        )
+    return _row_variant(
+        rows[row_ordinal % len(rows)],
+        {
+            module.STORE_ID_FIELD: message_id,
+            module.STORE_FROM_FIELD: send_fields[module.STORE_FROM_FIELD],
+            module.STORE_SUBJECT_FIELD: send_fields[module.STORE_SUBJECT_FIELD],
+            module.STORE_THREAD_FIELD: send_fields[module.STORE_THREAD_ID_FIELD],
+            module.STORE_BODY_FIELD: send_fields[module.STORE_BODY_FIELD],
+        },
+    )
 
 
 def run_record_roundtrip_property(
-    assert_roundtrip: Callable[[ModuleType, dict[str, object], int, str], None],
+    assert_roundtrip: Callable[[ModuleType, dict[str, object], int, int], None],
 ) -> None:
     """Drive generated records while the linked test owns the round-trip predicate."""
     module = _load()
@@ -278,12 +425,12 @@ def run_record_roundtrip_property(
     @given(
         record=message_records(module),
         message_id=store_message_ids(),
-        ack_status=store_ack_required_statuses(module),
+        row_ordinal=capture_row_ordinals(),
     )
     def generated_roundtrip(
-        record: dict[str, object], message_id: int, ack_status: str
+        record: dict[str, object], message_id: int, row_ordinal: int
     ) -> None:
-        assert_roundtrip(module, record, message_id, ack_status)
+        assert_roundtrip(module, record, message_id, row_ordinal)
 
     run_replayable_property(
         generated_roundtrip,
@@ -377,6 +524,100 @@ def run_operation_mapping(
         generated_mapping,
         seed_value=OPERATION_MAPPING_SEED,
         replay_path=OPERATION_MAPPING_REPLAY_PATH,
+    )
+
+
+def inbox_request_with_bodies(module: ModuleType) -> dict[str, object]:
+    """The first registry inbox request that asks the store for bodies."""
+    for request in operation_requests(module):
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        if (
+            module.Operation(request[module.OPERATION_FIELD]) is module.Operation.INBOX
+            and arguments.get(module.INCLUDE_BODIES_FIELD) is True
+        ):
+            return request
+    raise CaptureError("the registry declares no inbox request with bodies")
+
+
+def run_inbox_row_mapping(
+    assert_rows: Callable[
+        [ModuleType, dict[str, object], str, CapturedInboxResponse], None
+    ],
+) -> None:
+    """Drive every captured `--include-bodies` inbox response, and the variant
+    of each without a thread on its first row, through the inbox request under
+    generated project keys."""
+    module = _load()
+    request = inbox_request_with_bodies(module)
+    responses: list[CapturedInboxResponse] = []
+    for captured in captured_inbox_responses_with_bodies(module):
+        responses.append(captured)
+        responses.append(inbox_response_without_thread(module, captured))
+    if not responses:
+        raise CaptureError("no captured inbox response with bodies exists")
+
+    @seed(INBOX_ROW_SEED)
+    @settings(max_examples=INBOX_ROW_EXAMPLES, deadline=None, print_blob=True)
+    @given(project_key=project_key_paths())
+    def generated_rows(project_key: str) -> None:
+        for response in responses:
+            assert_rows(module, request, project_key, response)
+
+    run_replayable_property(
+        generated_rows,
+        seed_value=INBOX_ROW_SEED,
+        replay_path=INBOX_ROW_REPLAY_PATH,
+    )
+
+
+def run_recipient_boundary(
+    assert_case: Callable[[ModuleType, dict[str, object], str], None],
+) -> None:
+    """Drive records whose recipient joins two generated names with the store's
+    separator — the one text the store reads as several agents — under
+    generated project keys."""
+    module = _load()
+
+    @seed(RECIPIENT_BOUNDARY_SEED)
+    @settings(max_examples=RECIPIENT_BOUNDARY_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        kind=sent_record_kinds(module),
+        first=agent_names(),
+        second=agent_names(),
+        sender=agent_names(),
+        correlation=coordination_references(),
+        subject=message_texts(),
+        body=message_texts(),
+        project_key=project_key_paths(),
+    )
+    def generated_case(
+        kind: object,
+        first: str,
+        second: str,
+        sender: str,
+        correlation: str,
+        subject: str,
+        body: str,
+        project_key: str,
+    ) -> None:
+        record = {
+            module.RECORD_SCHEMA_FIELD: module.RECORD_SCHEMA_VERSION,
+            module.KIND_FIELD: kind,
+            module.CORRELATION_FIELD: correlation,
+            module.SENDER_FIELD: sender,
+            module.RECIPIENT_FIELD: (
+                f"{first}{module.STORE_RECIPIENT_SEPARATOR}{second}"
+            ),
+            module.RECORD_SUBJECT_FIELD: subject,
+            module.BODY_FIELD: body,
+            module.ACK_REQUIRED_FIELD: False,
+        }
+        assert_case(module, record, project_key)
+
+    run_replayable_property(
+        generated_case,
+        seed_value=RECIPIENT_BOUNDARY_SEED,
+        replay_path=RECIPIENT_BOUNDARY_REPLAY_PATH,
     )
 
 

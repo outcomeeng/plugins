@@ -4,14 +4,17 @@ from typing import cast
 
 from outcomeeng_testing.harnesses.agent_mail import (
     AbsentExecutableRunner,
+    CapturedInboxResponse,
     RecordingRunner,
     diagnosis_seeded_absent_store_runner,
     diagnosis_seeded_runner,
     failed_command_result,
     json_command_result,
     load_agent_mail,
+    run_inbox_row_mapping,
     run_operation_mapping,
     run_project_key_mapping,
+    run_recipient_boundary,
     run_store_response_cases,
     store_response_payload,
     store_response_result,
@@ -70,9 +73,9 @@ def test_agent_mail_operation_mappings() -> None:
         else:
             assert arguments[module.AGENT_FIELD] in argv
 
-        payload = store_response_payload(module, operation)
+        payload = store_response_payload(module, operation, arguments)
         runner = diagnosis_seeded_runner(
-            module, project_key, store_response_result(module, operation)
+            module, project_key, store_response_result(module, operation, arguments)
         )
         result = module.execute(request, runner)
 
@@ -102,6 +105,14 @@ def test_agent_mail_operation_mappings() -> None:
             assert [record[module.SENDER_FIELD] for record in records] == [
                 item[module.STORE_FROM_FIELD] for item in items
             ]
+            assert [record[module.BODY_FIELD] for record in records] == [
+                item.get(module.STORE_BODY_FIELD, "") for item in items
+            ]
+            assert [record[module.ACK_REQUIRED_FIELD] for record in records] == [
+                item[module.STORE_ACK_STATUS_FIELD]
+                in module.STORE_ACK_REQUIRED_STATUSES
+                for item in items
+            ]
         elif operation is module.Operation.SEND:
             assert response == store
             record = cast(dict[str, object], data[module.RECORD_FIELD])
@@ -118,6 +129,72 @@ def test_agent_mail_operation_mappings() -> None:
 
     assert seen_operations == operations
     assert seen_kinds == {kind.value for kind in module.SENT_KINDS}
+
+
+def test_inbox_rows_map_totally_onto_records() -> None:
+    def assert_rows(
+        module: ModuleType,
+        request: dict[str, object],
+        project_key: str,
+        captured: CapturedInboxResponse,
+    ) -> None:
+        result = module.execute(
+            request, diagnosis_seeded_runner(module, project_key, captured.result)
+        )
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED, (
+            captured.capture
+        )
+        items = cast(
+            list[dict[str, object]], captured.payload[module.STORE_INBOX_FIELD]
+        )
+        data = cast(dict[str, object], result[module.DATA_FIELD])
+        records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
+        assert len(records) == len(items)
+        for record, item in zip(records, items, strict=True):
+            assert record[module.RECORD_ID_FIELD] == item[module.STORE_ID_FIELD]
+            assert record[module.SENDER_FIELD] == item[module.STORE_FROM_FIELD]
+            assert record[module.BODY_FIELD] == item[module.STORE_BODY_FIELD]
+            assert record[module.ACK_REQUIRED_FIELD] is (
+                item[module.STORE_ACK_STATUS_FIELD]
+                in module.STORE_ACK_REQUIRED_STATUSES
+            )
+            thread = item.get(module.STORE_THREAD_FIELD)
+            if thread:
+                assert record[module.CORRELATION_FIELD] == thread
+            else:
+                assert record[module.CORRELATION_FIELD] is None
+                assert record[module.KIND_FIELD] == module.RecordKind.UNCLASSIFIED
+                assert (
+                    record[module.RECORD_SUBJECT_FIELD]
+                    == item[module.STORE_SUBJECT_FIELD]
+                )
+
+    run_inbox_row_mapping(assert_rows)
+
+
+def test_send_rejects_a_recipient_the_store_reads_as_several_agents() -> None:
+    def assert_case(
+        module: ModuleType, record: dict[str, object], project_key: str
+    ) -> None:
+        try:
+            module.store_fields_for(record)
+        except module.AgentMailError as error:
+            assert error.status == module.ExecutionStatus.INVALID_SCHEMA
+        else:
+            raise AssertionError("a fan-out recipient reached the store fields")
+
+        runner = diagnosis_seeded_runner(module, project_key)
+        request = {
+            module.SCHEMA_VERSION_FIELD: module.SCHEMA_VERSION,
+            module.OPERATION_FIELD: module.Operation.SEND.value,
+            module.ARGUMENTS_FIELD: {module.RECORD_FIELD: record},
+        }
+        result = module.execute(request, runner)
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+        assert runner.calls == []
+
+    run_recipient_boundary(assert_case)
 
 
 def test_project_key_mapping() -> None:

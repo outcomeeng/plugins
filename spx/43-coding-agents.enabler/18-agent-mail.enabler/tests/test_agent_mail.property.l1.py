@@ -10,12 +10,12 @@ from outcomeeng_testing.harnesses.agent_mail import (
 
 def test_message_records_round_trip_through_the_store_fields() -> None:
     def assert_roundtrip(
-        module: ModuleType, record: dict[str, object], message_id: int, ack_status: str
+        module: ModuleType, record: dict[str, object], message_id: int, row_ordinal: int
     ) -> None:
         send_fields = module.store_fields_for(record)
         subject = cast(str, send_fields[module.STORE_SUBJECT_FIELD])
         read_back = module.record_from_inbox_item(
-            store_inbox_echo(module, send_fields, message_id, ack_status),
+            store_inbox_echo(module, send_fields, message_id, row_ordinal),
             recipient=cast(str, record[module.RECIPIENT_FIELD]),
         )
 
