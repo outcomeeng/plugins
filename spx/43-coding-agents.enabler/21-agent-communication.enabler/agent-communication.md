@@ -18,25 +18,25 @@ On the Prowl submission route, the envelope of ownership proposals, one-way fact
 
 ## Assertions
 
-- Every kind a sender writes maps to one message record carrying exactly the fields this node declares, and the agent-mail capability's `send` accepts that record unchanged.
-- A checked succeeded `send` result of the agent-mail capability maps to the delivered mail result carrying the record's store-assigned id verbatim and the doorbell line `[<sender>] mail <id>`; a failed or unavailable capability result maps to `delivery-failed` with its status and detail preserved.
-- A rendered doorbell parses back to its sender and id, and a doorbell whose sender is absent from the supplied live inventory resolves to no sender.
-- ALWAYS: a mail delivery result is delivered only with the capability's checked succeeded `send` result, and a doorbell is submitted only with checked Prowl input evidence that trailing Enter was sent; an unsubmitted doorbell is reported beside the delivered message, never as a failed delivery.
-- NEVER: a same-worktree delegation request whose authority omits the sender as owner, names an empty write scope, or admits Git mutation reaches a record.
-- NEVER: a message record or delivery record is written under `.spx/` or any other repository path; the store holds the record.
-- NEVER: another shipped coding-agents skill instructs a workflow to send a doorbell that carries more than the one pointer line, or to place a record body in a pane.
-
 ### Mappings
 
+- Every kind a sender writes maps to one message record carrying exactly the fields this node declares, and the agent-mail capability's `send` accepts that record unchanged ([test](tests/test_mail_record.mapping.l1.py))
+- A checked succeeded `send` result of the agent-mail capability maps to the delivered mail result carrying the record's store-assigned id verbatim and the doorbell line `[<sender>] mail <id>`; a failed or unavailable capability result maps to `delivery-failed` with its status and detail preserved ([test](tests/test_mail_record.mapping.l1.py))
 - Ownership proposals, one-way facts, acknowledgements, mutation-state reports, mutation authorizations, and delivery failures map to distinct source-owned message and result states ([test](tests/test_agent_message.mapping.l1.py))
 - Every acknowledgement, mutation-state report, and mutation authorization preserves the complete active proposal reference, while every message that initiates a coordination reference receives a new UUID ([test](tests/test_agent_message.mapping.l1.py))
 
 ### Properties
 
+- A rendered doorbell parses back to its sender and id ([test](tests/test_doorbell.property.l1.py))
 - Every valid source-generated structured handback block is preserved unchanged in a production request ([test](tests/test_agent_message.property.l1.py))
 
 ### Compliance
 
+- NEVER: a doorbell whose sender is absent from the supplied live inventory resolves to a sender ([test](tests/test_mail_delivery.compliance.l1.py))
+- ALWAYS: a mail delivery result is delivered only with the capability's checked succeeded `send` result, and a doorbell is submitted only with checked Prowl input evidence that trailing Enter was sent; an unsubmitted doorbell is reported beside the delivered message, never as a failed delivery ([test](tests/test_mail_delivery.compliance.l1.py))
+- NEVER: a same-worktree delegation request whose authority omits the sender as owner, names an empty write scope, or admits Git mutation reaches a record ([test](tests/test_mail_delivery.compliance.l1.py))
+- NEVER: a message record or delivery record is written under `.spx/` or any other repository path; the store holds the record ([audit])
+- NEVER: another shipped coding-agents skill instructs a workflow to send a doorbell that carries more than the one pointer line, or to place a record body in a pane ([audit])
 - ALWAYS: delivery validates complete sender and recipient agent, environment endpoint, worktree, branch, repository, and applicable run identities before sending ([test](tests/test_agent_message.compliance.l1.py))
 - ALWAYS: delegated-mutation proposals, state reports, and authorizations validate exact endpoint, worktree, branch, repository, full-HEAD, and status fields before transport ([test](tests/test_agent_message.compliance.l1.py))
 - ALWAYS: delivery on the Prowl submission route requires checked public Prowl input evidence that trailing Enter submitted the turn; text remaining editable in the recipient pane is not delivery ([test](tests/test_agent_message.compliance.l1.py))
