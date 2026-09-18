@@ -73,6 +73,7 @@ STORE_ACK_STATUS_ACKED = "acked"
 STORE_ACK_REQUIRED_STATUSES = frozenset(
     {STORE_ACK_STATUS_PENDING, STORE_ACK_STATUS_ACKED}
 )
+STORE_ACK_STATUSES = STORE_ACK_REQUIRED_STATUSES | {STORE_ACK_STATUS_NONE}
 STORE_INBOX_FIELD = "inbox"
 
 # Fields of the capability's requests and results.
@@ -586,6 +587,11 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
     )
     body = value.get(STORE_BODY_FIELD)
     ack_status = value.get(STORE_ACK_STATUS_FIELD)
+    if ack_status not in STORE_ACK_STATUSES:
+        raise AgentMailError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Unsupported {STORE_ACK_STATUS_FIELD} at {location}: {ack_status!r}.",
+        )
     return validate_record(
         {
             RECORD_SCHEMA_FIELD: RECORD_SCHEMA_VERSION,
@@ -596,8 +602,7 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
             RECIPIENT_FIELD: recipient,
             RECORD_SUBJECT_FIELD: subject,
             BODY_FIELD: body if isinstance(body, str) else "",
-            ACK_REQUIRED_FIELD: ack_status is not None
-            and ack_status != STORE_ACK_STATUS_NONE,
+            ACK_REQUIRED_FIELD: ack_status in STORE_ACK_REQUIRED_STATUSES,
         },
         location=location,
         with_id=True,
