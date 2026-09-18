@@ -35,6 +35,7 @@ One capability keeps store command knowledge and the record mapping testable and
 - ALWAYS: the store subprocess boundary accepts a dependency-injected `CommandRunner` Protocol and the default runner uses null-device stdin, captured output, and a bounded timeout ([audit])
 - ALWAYS: tests inject controlled runner implementations only under `/test` Stage 5 exception 1 (failure simulation) or exception 2 (interaction protocols) ([audit])
 - ALWAYS: response-mapping evidence reads captured public responses of the real tool by path — the bytes `am` wrote for one command, kept as inert fixtures — never an envelope composed from the adapter's own field constants; a variant of a captured response changes only the value the assertion's domain ranges over and names the captured response it varies ([audit])
+- ALWAYS: an incidental value an evidence case needs — a selector, a text, an exit code, an operation name — comes from a spec-governed generator or from the registry request set, never from a call-site literal in the linked test ([audit])
 - ALWAYS: `/operate-agent-mail` owns all bundled-script access; composing skills invoke the capability through the skill surface rather than manufacturing a cross-skill filesystem path ([audit])
 - NEVER: framework mocks or monkeypatching replace store behavior or the command-runner boundary ([audit])
 - NEVER: the adapter owns another workflow's retry, checkpoint, persistence, result interpretation, or continuation decision ([audit])
