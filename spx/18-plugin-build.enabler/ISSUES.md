@@ -95,9 +95,19 @@ adds no test file or test infrastructure, and assigns the fixtures, property gen
 harness, and linked tests to Change #85, whose assertion-design records #76
 carries.
 
-**Settlement condition**: Change #85 lands the deterministic evidence and tags
-the four assertions with `[test](...)` links.
+The exception clause on the tagged portable-fields assertion in
+`spx/18-plugin-build.enabler/43-target-emission.enabler/target-emission.md` —
+"except a tool field whose every item is unavailable on a target" — rests on the
+same evidence: its linked `tests/test_target_emission.compliance.l1.py` compares
+each target's rendered source with its emitted output, and both sides pass through
+the same removal, so disabling `_remove_unavailable_frontmatter_items` leaves that
+test passing. The clause keeps the assertion true for the one corpus case
+(`coordinate-agents` on Codex) without deterministic coverage of its own.
+
+**Settlement condition**: Change #85 lands the deterministic evidence, tags
+the four assertions with `[test](...)` links, and covers the exception clause
+against emitted output alone.
 
 **Evidence**: `spec-tree:changes-reviewer` runs
-`2026-09-18_03-20-58-166-8b80f274938c` and `2026-09-18_04-29-55-695-83f3737b9f22`
-(debt, evidence) during Change #76.
+`2026-09-18_03-20-58-166-8b80f274938c`, `2026-09-18_04-29-55-695-83f3737b9f22`,
+and `2026-09-18_13-02-51-809-99cdf563caa5` (debt, evidence) during Change #76.
