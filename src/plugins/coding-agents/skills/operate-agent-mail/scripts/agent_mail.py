@@ -281,7 +281,7 @@ TEXT_ARGUMENT_FIELDS = frozenset({AGENT_FIELD, PROGRAM_FIELD, MODEL_FIELD, TASK_
 ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "agent": AGENT_FIELD,
     "program": PROGRAM_FIELD,
-    "model": MODEL_FIELD,
+    "agent_model": MODEL_FIELD,
     "task": TASK_FIELD,
     "record": RECORD_FIELD,
     "message_id": MESSAGE_ID_FIELD,

@@ -43,7 +43,10 @@ def test_unavailable_results_admit_no_fallback() -> None:
 def test_registration_result_carries_no_token() -> None:
     module = load_agent_mail()
     request = module.operation_request(
-        module.Operation.REGISTER, agent="Officer", program="claude-code", model="opus"
+        module.Operation.REGISTER,
+        agent="Officer",
+        program="claude-code",
+        agent_model="opus",
     )
     token = "secret-registration-token"
     runner = RecordingRunner(
