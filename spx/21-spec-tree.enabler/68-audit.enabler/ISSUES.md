@@ -328,13 +328,11 @@ probe ended before a child session started, and later commits changed the
 generated definition, so no successful minimal isolated invocation exists for
 the current emitted role.
 
-**Required handling**: run the owning one-shot probe against an exact committed
-generated definition in a disposable installation that can authenticate, then
-retain the native configuration, child rollout, and terminal
+**Settlement condition**: one retained minimal isolated invocation of the
+exact emitted role that starts a child session and returns the terminal
 `spx verification run` result. A loader or authentication failure remains a
 failed invocation rather than approval evidence.
 
 **Evidence**: `instructions:subagent-auditor` finding `f-001` against
-`src/plugins/spec-tree/agents/implementation-auditor.md`; retained probe files
-under
-`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/probes/codex-skill-composition/`.
+`src/plugins/spec-tree/agents/implementation-auditor.md` on Change #76 head
+`843ddd709b058970d414ec755cc10121ff6bb5ff`.

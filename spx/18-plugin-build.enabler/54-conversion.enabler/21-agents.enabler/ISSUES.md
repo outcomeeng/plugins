@@ -66,12 +66,11 @@ produce concern-audit coverage for changed implementation files, and it did not
 return the implementation-audit terminal-result contract. Retrying the same
 probe result is prohibited by the Change.
 
-**Required handling**: decide whether Change #76 expands to correct and
-re-attest the implementation-audit orchestration, or whether its acceptance is
-narrowed to the observed cross-harness skill-loading behavior and the audit
-execution defect becomes a separate Change owned by implementation-audit
-orchestration.
+**Settlement condition**: a generated Codex implementation auditor produces a
+concern-audit result for every changed implementation path in its scope and
+returns the run token with its rendered projection; the defect belongs to
+implementation-audit orchestration, not to skill composition.
 
-**Evidence**: the second failed attestation and adjacent retained artifacts in
-`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/probes/codex-skill-composition/probe.md`, plus SPX run
-`2026-09-17_15-12-34-814-1080e7adf6da`.
+**Evidence**: SPX run `2026-09-17_15-12-34-814-1080e7adf6da`, sealed
+`approved` with zero findings over 319 `coverage-gap` units, observed on Change
+#76 subject `6c64464abf07a2e384dabea0d3d0bc19a1b12956`.

@@ -1,8 +1,0 @@
-{
-  "artifact_root": "/Users/shz/Code/outcomeeng/plugins/codex-skill-tool-fix/spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/probes/codex-skill-composition/runs/20260917T214902Z",
-  "child_terminal_condition": null,
-  "failure": null,
-  "parent_exit_code": 0,
-  "parent_thread_id": "01a0b158-8f2f-7a11-bb27-a72ad9ba8f7c",
-  "replicated_shell_exit_code": 0
-}
