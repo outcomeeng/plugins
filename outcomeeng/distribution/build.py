@@ -18,7 +18,7 @@ import subprocess
 import sys
 from ast import literal_eval
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import Final, Protocol
@@ -247,15 +247,18 @@ class RuntimeTokenKind:
     (``tool``, ``field``, ``file``) are enforced, while the common-word concept-term
     kind (``term``) is not — a whole-token match on a word like "agent" would flag
     every prose mention, so terms are covered by review instead. A new kind opts into
-    or out of guard enforcement explicitly through this flag. ``optional`` names the
-    capabilities of this kind that some runtimes lack: resolving one for a runtime
-    with no name yields the unavailable-token placeholder instead of an error, and
-    the renderer removes that placeholder only as a complete tool-list item.
+    or out of guard enforcement explicitly through this flag. ``optional_names``
+    maps the capabilities some runtimes lack to their per-runtime names: resolving
+    one for a runtime with no name yields the unavailable-token placeholder instead
+    of an error, and the renderer removes that placeholder only as a complete
+    tool-list item. Optional names stay outside the guard's forbidden set like the
+    ``term`` kind's concept terms — the one optional capability today renders as
+    the common word ``Skill`` — so review covers a raw appearance.
     """
 
     lint_enforced: bool
     names: dict[str, dict[str, str]]
-    optional: frozenset[str] = frozenset()
+    optional_names: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -319,9 +322,10 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
             RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: (
                 RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES
             ),
+        },
+        optional_names={
             RUNTIME_TOKEN_USE_SKILL_CAPABILITY: RUNTIME_TOKEN_USE_SKILL_NAMES,
         },
-        optional=frozenset({RUNTIME_TOKEN_USE_SKILL_CAPABILITY}),
     ),
     RUNTIME_TOKEN_FIELD_KIND: RuntimeTokenKind(
         lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_FIELD_KIND],
@@ -375,17 +379,19 @@ def resolve_runtime_token(
     ``RuntimeTokenError`` when the kind is absent, the capability has no entry in
     that kind, or the kind has no name for the runtime — the caller wraps the
     absent-runtime case in a per-runtime conditional. A capability the kind lists
-    as optional resolves to the unavailable-token placeholder for a runtime with
-    no name, so the renderer can remove it as one complete tool-list item.
+    under ``optional_names`` resolves to the unavailable-token placeholder for a
+    runtime with no name, so the renderer can remove it as one complete tool-list
+    item.
     """
     kind_entry = registry.get(kind)
     if kind_entry is None:
         raise RuntimeTokenError(f"unknown runtime-token kind {kind!r}")
+    optional_entry = kind_entry.optional_names.get(capability)
+    if optional_entry is not None:
+        return optional_entry.get(runtime, _unavailable_runtime_token(kind, capability))
     entry = kind_entry.names.get(capability)
     if entry is None:
         raise RuntimeTokenError(f"unknown {kind} capability {capability!r}")
-    if runtime not in entry and capability in kind_entry.optional:
-        return _unavailable_runtime_token(kind, capability)
     if runtime not in entry:
         raise RuntimeTokenError(
             f"{kind} capability {capability!r} has no name for runtime {runtime!r}; "
