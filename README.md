@@ -474,7 +474,7 @@ Skills are distributed as standalone repositories, compatible with any agent tha
 
 ## Credits
 
-The `instructions` plugin's meta-skills are derived from [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources?tab=readme-ov-file#skills). The `/handoff` and `/pickup` spec-tree commands are based on `/whats-next` from the same project.
+The `instructions` plugin's meta-skills are derived from [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources?tab=readme-ov-file#skills). The Change Lifecycle skills `/claim-change` and `/release-change` descend from the former `/handoff` and `/pickup` commands, which were based on `/whats-next` from the same project.
 
 ## License
 
