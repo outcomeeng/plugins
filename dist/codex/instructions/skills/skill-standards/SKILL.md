@@ -44,7 +44,7 @@ For language-specific skill prose that references a foundation, use the unqualif
 
 Context placement, agent selection, and dispatch policy belong to the caller. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or caller check to the invoked skill.
 
-**Composed skill dependencies.** Every composing SKILL.md includes the build's `use_skill` runtime tool token as a complete `allowed-tools` item. A `require_skill` directive renders as `Use skill \`{plugin}:{skill}\`.` Shared authored source never spells a harness-specific skill tool name; the build emits the target's available tool set and removes an unavailable capability as one complete list item.
+**Composed skill dependencies.** A composing SKILL.md names each dependency with the instruction ``Use skill `{plugin}:{skill}`.`` and, on a harness that exposes a skill-composition tool, grants that tool as one complete `allowed-tools` item; on a harness without one it grants nothing for composition. Source authored for more than one harness never spells one harness's skill tool name.
 
 </skill_organization>
 
@@ -279,7 +279,7 @@ allowed-tools: Read
 
 - `user-invocable: false` — prevents false activations from user prompts.
 - Passive description (no `ALWAYS`/`NEVER`) — directive descriptions trigger false activations for a reference.
-- `allowed-tools: Read` — reference skills only read. Add `Skill` only when explicitly composing another read-only reference skill.
+- `allowed-tools: Read` — reference skills only read. Add the harness's skill-composition tool only when explicitly composing another read-only reference skill.
 
 **How consuming skills reference it.** Name the reference skill in running text for traceability, then explicitly invoke it through the runtime's documented skill-composition surface before applying its rules. A bare `See /skill-name` instruction is insufficient.
 
