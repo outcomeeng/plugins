@@ -20,8 +20,8 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ### Properties
 
-- The fields of a message record map onto the store's fields and back without loss; a store limit never shapes the record ([test](tests/test_agent_mail.property.l1.py))
-- An order to an agent session in an environment whose surface produces no pane-borne handback block, its delegation request, and its one correlated terminal handback are message records of this capability; every terminal handback maps to exactly one completed, failed, rejected, or unavailable result carrying the complete initiating coordination reference ([test](tests/test_agent_mail.property.l1.py))
+- The fields of the message record `spx/43-coding-agents.enabler/21-agent-communication.enabler` declares map onto the store's fields and back without loss; a store limit never shapes the record ([test](tests/test_agent_mail.property.l1.py))
+- An order to an agent session in an environment whose surface produces no pane-borne handback block, its delegation request, and its one correlated terminal handback are message records the communication node declares, delivered through this capability; every terminal handback maps to exactly one completed, failed, rejected, or unavailable result carrying the complete initiating coordination reference ([test](tests/test_agent_mail.property.l1.py))
 
 ### Compliance
 
