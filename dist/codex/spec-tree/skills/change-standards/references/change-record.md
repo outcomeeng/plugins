@@ -19,7 +19,7 @@ Every Change begins with YAML front matter containing exactly these required key
 | `refined_from` | Immutable list of canonical predecessor Change identities; `[]` for a root. |
 | `blocked_by`   | Mutable list of canonical blocker Change identities; `[]` when unblocked.   |
 
-A missing required key, duplicate key, invalid value type, or unknown key is a defect. Store coordinates, issue identities, holder data, timestamps, and verification data stay outside front matter.
+Each required key appears exactly once. The `compatibility-boundary` rule governs a candidate whose front matter omits, repeats, or adds a key. For a candidate inside the contract, an invalid value type or value is a defect. Store coordinates, issue identities, holder data, timestamps, and verification data stay outside front matter.
 
 The body contains exactly these top-level sections in this order:
 
@@ -98,9 +98,9 @@ Store commands, provider identifiers, project item identifiers, revision selecto
 
 <rule id="compatibility-boundary">
 
-`audit-change` accepts only records authored under this contract. Explicit superseded forms are outside the audit: stripped front matter; a `change_ref` key; a `# Relationships` top-level section; or a `Refined from:` or `Blocked by:` body line. Return no audit verdict, migration, inferred field, alias, or body-line interpretation for such a record.
+Before interpreting the body, `audit-change` inventories the front-matter key occurrences. It accepts only a candidate that carries each of the six closed-set keys exactly once and no other key. Stripped front matter, a missing or repeated required key, and any extra key — including `change_ref` — place the candidate outside the contract.
 
-A contract-shaped candidate with a missing required key, an unknown key other than the superseded `change_ref`, or another malformed current field remains an auditable defect. This distinction keeps current mistakes visible while excluding records that clearly use the earlier representation.
+Return `OUTSIDE_CONTRACT` with the expected and observed key inventories and no audit verdict, migration, alias, inferred front matter, or body-line lineage interpretation. Body shape never establishes compatibility. A candidate carrying the exact closed key set remains auditable when a value, top-level section, body line, or Maturity-specific requirement violates the record contract or selected Definition of Ready.
 
 </rule>
 
