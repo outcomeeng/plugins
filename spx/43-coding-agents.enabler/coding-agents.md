@@ -1,6 +1,6 @@
 # Coding Agents
 
-PROVIDES shared environment, identity, authority, communication, and coordination contracts for coding agents
+PROVIDES shared environment, identity, authority, communication, coordination, and supervision contracts for coding agents
 SO THAT agent-facing workflows operating across panes, sessions, worktrees, native supervisors, and remote-managed tasks
 CAN use environment capabilities without centralizing workflow ownership or reconstructing environment state
 
