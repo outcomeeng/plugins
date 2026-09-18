@@ -29,7 +29,7 @@ The project key is the pool's main checkout path from `spx diagnose --format jso
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, require a concrete operation before running the adapter.
+1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report to the invoking workflow that one operation from `<operation_surface>` is required; the adapter has no default operation.
 2. Build this source-owned request shape and set only the arguments the operation accepts:
 
 ```json
@@ -82,8 +82,9 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/agent_mail.py" project-key
 
 <constraints>
 
-- ALWAYS execute the bundled script through `${CLAUDE_SKILL_DIR}`; never import it from another filesystem location or manufacture a path outside this skill directory.
-- ALWAYS preserve store identities verbatim: message ids, thread ids, agent names, and timestamps.
+- ALWAYS execute the bundled script through `${CLAUDE_SKILL_DIR}`; never import it from another filesystem location or manufacture a path outside this skill directory, because that expression is the only one that resolves to this skill's directory under the Bash tool, and a manufactured path breaks silently when the plugin cache moves.
+- ALWAYS preserve store identities verbatim: message ids, thread ids, agent names, and timestamps, because downstream skills index on the literal and the operator compares it against the store.
+- ALWAYS supply arguments under the field names in `<operation_surface>` and leave the mapping to the adapter: it alone turns a field into an `am` option or a store field and reads it back, and it rejects an argument outside the operation's shape as `invalid-schema` rather than dropping it.
 - NEVER invoke raw `am` commands, `am` command help, or read the store's database.
 - NEVER derive the project key from Git state, the working directory, or an environment variable; the diagnosis is its only source.
 - NEVER treat a receipt as agreement, ownership, authorization, or the acknowledgement of a proposal; it records only that the recipient read one message.

@@ -49,6 +49,8 @@ ERROR_FIELD = "error"
 CODE_FIELD = "code"
 MESSAGE_FIELD = "message"
 AGENTS_FIELD = "agents"
+# The one hosted agent session a start, wait, or prompt result carries.
+SESSION_FIELD = "agent"
 # Fields of one hosted agent session in that envelope.
 NAME_FIELD = "name"
 AGENT_KIND_FIELD = "agent"
@@ -94,6 +96,8 @@ AGENT_ARGUMENTS_FIELD = "agentArguments"
 MUTATION_AUTHORIZED_FIELD = "mutationAuthorized"
 PARTICIPANTS_FIELD = "participants"
 PARTICIPANT_FIELD = "participant"
+# The verbatim terminal text a read returns; herdr writes it as text, not JSON.
+OUTPUT_FIELD = "output"
 
 REQUEST_FIELDS = frozenset({SCHEMA_VERSION_FIELD, OPERATION_FIELD, ARGUMENTS_FIELD})
 SUCCESS_RESULT_FIELDS = frozenset(
@@ -136,6 +140,12 @@ MUTATING_OPERATIONS = frozenset(
 # Operations whose command waits on the agent; each carries an explicit timeout.
 WAIT_BEARING_OPERATIONS = frozenset(
     {Operation.WAIT, Operation.START, Operation.RELAUNCH}
+)
+# Operations whose public response is terminal text rather than a JSON envelope.
+TEXT_OPERATIONS = frozenset({Operation.READ})
+# Operations whose public result carries the one hosted agent session it acted on.
+SESSION_OPERATIONS = frozenset(
+    {Operation.START, Operation.RELAUNCH, Operation.WAIT, Operation.PROMPT}
 )
 
 
@@ -613,32 +623,46 @@ def command_bound_seconds(request: object) -> int:
     return COMMAND_TIMEOUT_SECONDS
 
 
+def _participant(item: object, location: str) -> dict[str, object]:
+    """Project one hosted agent session onto its complete source-preserved fields."""
+    agent = _object(item, location)
+    participant: dict[str, object] = {}
+    for field_name in PARTICIPANT_FIELDS:
+        if field_name not in agent:
+            raise HerdrEnvironmentError(
+                ExecutionStatus.INVALID_SCHEMA,
+                f"Agent evidence at {location} carries no {field_name}.",
+            )
+        participant[field_name] = agent[field_name]
+    _text(participant[NAME_FIELD], f"{location}.{NAME_FIELD}")
+    _text(participant[PANE_ID_FIELD], f"{location}.{PANE_ID_FIELD}")
+    _agent_state(participant[AGENT_STATUS_FIELD], f"{location}.{AGENT_STATUS_FIELD}")
+    return participant
+
+
+def _result_object(response: object) -> dict[str, object]:
+    envelope = _object(response, RESPONSE_FIELD)
+    return _object(envelope.get(RESULT_FIELD), f"{RESPONSE_FIELD}.{RESULT_FIELD}")
+
+
 def participants_from_inventory(response: object) -> list[dict[str, object]]:
     """Project herdr's agent inventory onto complete source-preserved participants."""
-    envelope = _object(response, RESPONSE_FIELD)
-    result = _object(envelope.get(RESULT_FIELD), f"{RESPONSE_FIELD}.{RESULT_FIELD}")
+    result = _result_object(response)
     agents = _array(
         result.get(AGENTS_FIELD), f"{RESPONSE_FIELD}.{RESULT_FIELD}.{AGENTS_FIELD}"
     )
-    participants: list[dict[str, object]] = []
-    for index, item in enumerate(agents):
-        location = f"{AGENTS_FIELD}[{index}]"
-        agent = _object(item, location)
-        participant: dict[str, object] = {}
-        for field_name in PARTICIPANT_FIELDS:
-            if field_name not in agent:
-                raise HerdrEnvironmentError(
-                    ExecutionStatus.INVALID_SCHEMA,
-                    f"Agent evidence at {location} carries no {field_name}.",
-                )
-            participant[field_name] = agent[field_name]
-        _text(participant[NAME_FIELD], f"{location}.{NAME_FIELD}")
-        _text(participant[PANE_ID_FIELD], f"{location}.{PANE_ID_FIELD}")
-        _agent_state(
-            participant[AGENT_STATUS_FIELD], f"{location}.{AGENT_STATUS_FIELD}"
-        )
-        participants.append(participant)
-    return participants
+    return [
+        _participant(item, f"{AGENTS_FIELD}[{index}]")
+        for index, item in enumerate(agents)
+    ]
+
+
+def session_from_response(response: object) -> dict[str, object]:
+    """Project the one hosted agent session a start, wait, or prompt result carries."""
+    result = _result_object(response)
+    return _participant(
+        result.get(SESSION_FIELD), f"{RESPONSE_FIELD}.{RESULT_FIELD}.{SESSION_FIELD}"
+    )
 
 
 def participant_for(
@@ -822,15 +846,18 @@ def execute(request: object, runner: CommandRunner) -> dict[str, object]:
             result.returncode,
             code,
         )
-    try:
-        response = _object(json.loads(result.stdout), RESPONSE_FIELD)
-    except (json.JSONDecodeError, HerdrEnvironmentError) as error:
-        return _failure_result(
-            operation.value,
-            ExecutionStatus.INVALID_SCHEMA,
-            f"herdr returned an unexpected response: {error}",
-            result.returncode,
-        )
+    if operation in TEXT_OPERATIONS:
+        response: dict[str, object] = {OUTPUT_FIELD: result.stdout}
+    else:
+        try:
+            response = _object(json.loads(result.stdout), RESPONSE_FIELD)
+        except (json.JSONDecodeError, HerdrEnvironmentError) as error:
+            return _failure_result(
+                operation.value,
+                ExecutionStatus.INVALID_SCHEMA,
+                f"herdr returned an unexpected response: {error}",
+                result.returncode,
+            )
     return validate_operation_result(
         {
             SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
