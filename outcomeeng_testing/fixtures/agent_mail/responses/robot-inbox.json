@@ -1,0 +1,54 @@
+{
+  "_meta": {
+    "command": "robot inbox",
+    "timestamp": "2026-09-18T08:21:11.014895+00:00",
+    "format": "json",
+    "version": "1.0",
+    "project": "/Users/shz/Code/outcomeeng/plugins",
+    "agent": "AmberGull"
+  },
+  "_actions": [
+    "am robot thread --project /Users/shz/Code/outcomeeng/plugins change-88-exec"
+  ],
+  "_diagnostics": {
+    "schema": "tail_latency_phase_ledger.v1",
+    "operation": "robot_inbox",
+    "total_us": 503466,
+    "phases": [
+      {
+        "name": "queue_wait",
+        "elapsed_us": 2
+      },
+      {
+        "name": "server_fetch",
+        "elapsed_us": 503456
+      }
+    ],
+    "rows_returned": 2,
+    "include_bodies": false,
+    "outcome": "pre_render"
+  },
+  "count": 2,
+  "inbox": [
+    {
+      "id": 99,
+      "priority": "read",
+      "from": "PeachFrog",
+      "subject": "Order: execute outcomeeng/changes#88 slice 1",
+      "thread": "change-88-exec",
+      "age": "1h ago",
+      "ack_status": "acked",
+      "importance": "normal"
+    },
+    {
+      "id": 40,
+      "priority": "read",
+      "from": "PeachFrog",
+      "subject": "Order: acknowledge and report",
+      "thread": "probe-herdr",
+      "age": "6h ago",
+      "ack_status": "acked",
+      "importance": "normal"
+    }
+  ]
+}

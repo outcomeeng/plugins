@@ -1,0 +1,23 @@
+{
+  "id": "cli:agent:prompt",
+  "result": {
+    "agent": {
+      "agent": "claude",
+      "agent_status": "idle",
+      "cwd": "/Users/shz/Code/outcomeeng/plugins/worktrees/orchestrate-officers",
+      "focused": false,
+      "foreground_cwd": "/Users/shz/Code/outcomeeng/plugins/worktrees/orchestrate-officers",
+      "interactive_ready": true,
+      "name": "nowaitprobe",
+      "pane_id": "w9:p4",
+      "revision": 3,
+      "state_change_seq": 51,
+      "tab_id": "w9:t1",
+      "terminal_id": "term_65bc51a5a57935",
+      "terminal_title": "✳ Claude Code",
+      "terminal_title_stripped": "Claude Code",
+      "workspace_id": "w9"
+    },
+    "type": "agent_prompted"
+  }
+}

@@ -1,0 +1,16 @@
+Actionable inbox with priority ordering, urgency/ack synthesis
+
+Usage: am robot inbox [OPTIONS]
+
+Options:
+      --format <FORMAT>    Output format: toon (default at TTY), json (default when piped), md (for thread/message)
+      --urgent             Show only urgent messages
+      --ack-overdue        Show only ack-overdue messages
+      --json               Output JSON (shorthand for --format json)
+      --project <PROJECT>  Project key (absolute path or slug). Falls back to AGENT_MAIL_PROJECT, then CWD
+      --unread             Show only unread messages
+      --agent <AGENT>      Agent name. Falls back to AGENT_MAIL_AGENT, then AGENT_NAME
+      --all                Show all messages (no filtering)
+      --limit <LIMIT>      Maximum messages to return
+      --include-bodies     Include message bodies in output
+  -h, --help               Print help

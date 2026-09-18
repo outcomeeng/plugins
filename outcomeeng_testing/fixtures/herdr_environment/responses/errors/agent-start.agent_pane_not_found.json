@@ -1,0 +1,4 @@
+{
+  "error": { "code": "agent_pane_not_found", "message": "agent target pane w9:p99 not found" },
+  "id": "cli:agent:start"
+}

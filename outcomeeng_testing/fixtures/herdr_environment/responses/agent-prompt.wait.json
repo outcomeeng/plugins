@@ -1,0 +1,23 @@
+{
+  "id": "cli:agent:prompt",
+  "result": {
+    "agent": {
+      "agent": "claude",
+      "agent_status": "done",
+      "cwd": "/Users/shz/Code/outcomeeng/plugins/worktrees/orchestrate-officers",
+      "focused": false,
+      "foreground_cwd": "/Users/shz/Code/outcomeeng/plugins/worktrees/orchestrate-officers",
+      "interactive_ready": true,
+      "name": "startprobe",
+      "pane_id": "w9:p3",
+      "revision": 4,
+      "state_change_seq": 8,
+      "tab_id": "w9:t1",
+      "terminal_id": "term_65bbf79a7f9924",
+      "terminal_title": "✳ Reply with ok",
+      "terminal_title_stripped": "Reply with ok",
+      "workspace_id": "w9"
+    },
+    "type": "agent_prompted"
+  }
+}

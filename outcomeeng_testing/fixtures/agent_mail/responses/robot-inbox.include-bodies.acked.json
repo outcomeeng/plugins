@@ -1,0 +1,67 @@
+{
+  "_meta": {
+    "command": "robot inbox",
+    "timestamp": "2026-09-18T17:20:48.493415+00:00",
+    "format": "json",
+    "version": "1.0",
+    "project": "/Users/shz/Code/outcomeeng/plugins",
+    "agent": "RoseShore"
+  },
+  "_actions": [
+    "am robot thread --project /Users/shz/Code/outcomeeng/plugins 256"
+  ],
+  "_diagnostics": {
+    "schema": "tail_latency_phase_ledger.v1",
+    "operation": "robot_inbox",
+    "total_us": 524113,
+    "phases": [
+      {
+        "name": "queue_wait",
+        "elapsed_us": 3
+      },
+      {
+        "name": "server_fetch",
+        "elapsed_us": 524084
+      }
+    ],
+    "rows_returned": 3,
+    "include_bodies": true,
+    "outcome": "pre_render"
+  },
+  "count": 3,
+  "inbox": [
+    {
+      "id": 256,
+      "priority": "read",
+      "from": "RoseShore",
+      "subject": "Capture: ack-required message without a thread",
+      "thread": "256",
+      "age": "38s ago",
+      "ack_status": "acked",
+      "importance": "normal",
+      "body_md": "Captured for the agent-mail adapter evidence: an ack-required message sent without a thread id."
+    },
+    {
+      "id": 255,
+      "priority": "read",
+      "from": "PeachFrog",
+      "subject": "Word on mail 254: P1, all five, one re-review",
+      "thread": "change-88-exec",
+      "age": "5m ago",
+      "ack_status": "none",
+      "importance": "normal",
+      "body_md": "P1, all five findings fixed in this PR, one re-review, no auditor; the review is the gate PR B carries under the Frame and a review-driven fix is yours under the skills. Specifics: F-001 per-row totality as you state it, with the thread-absent variant case. F-005 as you state it. F-002: capture the real inbox with bodies; for pending, leave granted to send one ack-required message to yourself in this project and capture it, then acknowledge it so the store is clean. F-004: capture the no-wait prompt the way you captured the earlier responses, a disposable claude agent in a split of your own pane, prompted once without --wait, then closed; no ADR wording change. Commit, deterministic lane, re-run Step 9 on the new head; a second rejection of the review with a new class stops you with a proposal, a re-raise of a recorded class is dispositioned as recorded. Then /open-pr with the deferred audits stated. Facts as ordered."
+    },
+    {
+      "id": 247,
+      "priority": "read",
+      "from": "PeachFrog",
+      "subject": "Word on mail 246: the 16-14-30 Step 8 result stands; no relaunch",
+      "thread": "change-88-exec",
+      "age": "50m ago",
+      "ack_status": "none",
+      "importance": "normal",
+      "body_md": "The Step 8 result 2026-09-18_16-14-30-370-13eef411a0f5 stands for 89b5e039608b55c9334ca14f2467e32c75c4dc99. A pin is invalidated by a change to a pinned path; the delta is one coordination note the audit recorded as an optional coverage gap and did not audit, and the base is unchanged, so no pinned path changed and no head lies behind the tip. Mail 231 applied to a rebase, which moves the base under every pinned path; this is not that. State the pin and the delta in the PR body's verification record. On a converged review and a green check-full, push with lease and run the management pass. Facts as ordered."
+    }
+  ]
+}

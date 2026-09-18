@@ -1,0 +1,7 @@
+{
+  "id": "cli:agent:list",
+  "error": {
+    "code": "server_not_running",
+    "message": "no herdr server is running at /nonexistent/herdr.sock; run `herdr` to start or attach it"
+  }
+}

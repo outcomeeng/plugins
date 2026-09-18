@@ -1,10 +1,22 @@
 # Changelog — coding-agents plugin
 
-Coding-agent environments and coordination: Prowl pane operation, recipient discovery, bounded delegation, and cross-worktree coordination.
+Coding-agent environments and coordination: Prowl and herdr pane operation, agent-mail message records, recipient discovery, bounded delegation, and cross-worktree coordination.
 
 What changed in **this plugin**, for a consumer repository. An entry appears when a change alters what a consumer can rely on, must do, or must know.
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
+
+## 0.7.0
+
+### Added
+
+- **`/operate-agent-mail`.** A source-owned capability over the agent-mail store: `register`, `send`, `inbox`, and `receipt` map to checked results under the project key read from `spx diagnose --format json`'s `worktree-pool` record, so every worktree of one pool shares one mail project. A message record — `schema`, `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, `ackRequired` — maps onto the store's fields and reads back without loss; `recipient` names one agent, and a value carrying the store's `,` separator is rejected before any command runs. A row another sender wrote reads back rather than failing the inbox read: without a thread it reads as an `unclassified` record with `correlation: null` and its subject verbatim, and an acknowledgement status other than `pending` or `acked` reads as `ackRequired: false`; a row without the store's `id`, `from`, or `subject` key is a malformed store response and fails the read as `invalid-schema`. A registration result never carries the store's token; an absent store or diagnosis yields a named unavailable result and no fallback.
+- **`/operate-herdr`.** A source-owned capability over the public herdr command surface: `inventory`, `read`, `wait`, `prompt`, `start`, `relaunch`, `stop`, `key`, and `open-worktree` map to checked results with herdr identities and states verbatim; a `read` result carries herdr's terminal text verbatim under `output`, and a `start`, `relaunch`, `wait`, or `prompt` result carries the one hosted session it acted on; the lifecycle codes `server_not_running`, `agent_not_found`, `agent_not_ready`, `agent_blocked`, `agent_prompt_stalled`, and `timeout` project to named statuses; every wait carries an explicit bound; pane-changing operations require mutation authorization in the request; a text argument beginning with `--`, which herdr reads as one of its options, is rejected with `invalid-schema` before any command runs.
+
+### Requires
+
+- **`@outcomeeng/spx` 0.7.0 or newer.** `/operate-agent-mail` derives the mail project key from the `worktree-pool` record's `mainCheckoutPath` in `spx diagnose --format json`.
+- **`am` and `herdr` on `PATH`.** Each capability returns its named unavailable result when its executable or server is absent.
 
 ## 0.6.1
 

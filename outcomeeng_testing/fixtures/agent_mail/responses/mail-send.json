@@ -1,0 +1,13 @@
+{
+  "id": 36,
+  "subject": "officer1 registered",
+  "body_md": "AmberGull registered from herdr pane w1:p1; awaiting orders",
+  "importance": "normal",
+  "ack_required": false,
+  "thread_id": "probe-herdr",
+  "created_ts": "2026-09-18T01:35:42.664462Z",
+  "from": "AmberGull",
+  "to": [
+    "PeachFrog"
+  ]
+}

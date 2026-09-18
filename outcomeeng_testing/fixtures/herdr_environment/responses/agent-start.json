@@ -1,0 +1,24 @@
+{
+  "id": "cli:agent:start",
+  "result": {
+    "agent": {
+      "agent": "claude",
+      "agent_status": "idle",
+      "cwd": "/Users/shz/Code/outcomeeng/plugins/worktrees/orchestrate-officers",
+      "focused": false,
+      "foreground_cwd": "/Users/shz/Code/outcomeeng/plugins/worktrees/orchestrate-officers",
+      "interactive_ready": true,
+      "name": "startprobe",
+      "pane_id": "w9:p3",
+      "revision": 3,
+      "state_change_seq": 6,
+      "tab_id": "w9:t1",
+      "terminal_id": "term_65bbf79a7f9924",
+      "terminal_title": "✳ Claude Code",
+      "terminal_title_stripped": "Claude Code",
+      "workspace_id": "w9"
+    },
+    "argv": ["claude", "--model", "haiku"],
+    "type": "agent_started"
+  }
+}

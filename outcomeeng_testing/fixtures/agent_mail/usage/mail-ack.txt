@@ -1,0 +1,11 @@
+Acknowledge a message (also marks as read)
+
+Usage: am mail ack --project <PROJECT_KEY> --agent <AGENT_NAME> <MESSAGE_ID>
+
+Arguments:
+  <MESSAGE_ID>  Message ID
+
+Options:
+  -p, --project <PROJECT_KEY>  Project key
+  -a, --agent <AGENT_NAME>     Agent name
+  -h, --help                   Print help

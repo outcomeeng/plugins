@@ -1,0 +1,19 @@
+{
+  "id": 15,
+  "name": "AmberGull",
+  "program": "claude-code",
+  "model": "opus",
+  "task_description": "herdr probe",
+  "inception_ts": "2026-09-18T01:35:29.565493Z",
+  "last_active_ts": "2026-09-18T08:20:55.739874Z",
+  "project_id": 9,
+  "attachments_policy": "auto",
+  "reaper_exempt": false,
+  "capabilities": [
+    "send_message",
+    "fetch_inbox",
+    "file_reservation_paths",
+    "acknowledge_message"
+  ],
+  "registration_token": "REDACTED-registration-token"
+}
