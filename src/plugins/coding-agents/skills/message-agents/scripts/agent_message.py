@@ -10,7 +10,7 @@ import re
 import sys
 import uuid
 from enum import StrEnum
-from typing import Callable, Mapping, TextIO, cast
+from typing import Callable, Mapping, Sequence, TextIO, cast
 
 SCHEMA_VERSION = 4
 SCHEMA_VERSION_FIELD = "schemaVersion"
@@ -331,19 +331,30 @@ def _message_kind(value: object, location: str = "request.kind") -> MessageKind:
         ) from error
 
 
+def _field_sets(
+    value: Mapping[str, object], expected: frozenset[str]
+) -> tuple[list[str], list[str]]:
+    return sorted(set(value) - expected), sorted(expected - set(value))
+
+
+def _field_mismatch(unexpected: Sequence[str], missing: Sequence[str]) -> str:
+    details: list[str] = []
+    if unexpected:
+        details.append(f"unsupported: {', '.join(unexpected)}")
+    if missing:
+        details.append(f"missing: {', '.join(missing)}")
+    return "; ".join(details)
+
+
 def validate_identity(identity: object, label: str) -> dict[str, str]:
     value = _object(identity, label)
     unexpected = sorted(set(value) - IDENTITY_INPUT_FIELDS)
     missing = sorted(set(IDENTITY_FIELDS) - set(value))
     if unexpected or missing:
-        details: list[str] = []
-        if unexpected:
-            details.append(f"unsupported: {', '.join(unexpected)}")
-        if missing:
-            details.append(f"missing: {', '.join(missing)}")
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            f"{label.title()} identity fields are invalid ({'; '.join(details)}).",
+            f"{label.title()} identity fields are invalid "
+            f"({_field_mismatch(unexpected, missing)}).",
         )
     validated = {
         field: _text(value.get(field), f"{label}.{field}") for field in IDENTITY_FIELDS
@@ -373,7 +384,8 @@ def _validated_handback(
     if unexpected or missing:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Handback must contain exactly the environment-owned fields.",
+            "Handback must contain exactly the environment-owned fields "
+            f"({_field_mismatch(unexpected, missing)}).",
         )
     if handback.get(SCHEMA_VERSION_FIELD) != HANDBACK_SCHEMA_VERSION:
         raise MessageError(
@@ -550,14 +562,9 @@ def _validated_fields(
     unexpected = sorted(set(item) - fields)
     missing = sorted(fields - set(item))
     if unexpected or missing:
-        details: list[str] = []
-        if unexpected:
-            details.append(f"unsupported: {', '.join(unexpected)}")
-        if missing:
-            details.append(f"missing: {', '.join(missing)}")
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            f"{label} fields are invalid ({'; '.join(details)}).",
+            f"{label} fields are invalid ({_field_mismatch(unexpected, missing)}).",
         )
     validated = {field: _text(item.get(field), f"{label}.{field}") for field in fields}
     if (
@@ -713,7 +720,8 @@ def validate_envelope(envelope: object) -> dict[str, object]:
     if unexpected or missing:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Envelope must contain exactly the source-owned fields.",
+            "Envelope must contain exactly the source-owned fields "
+            f"({_field_mismatch(unexpected, missing)}).",
         )
     if value.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
         raise MessageError(
@@ -997,7 +1005,8 @@ def _validated_authority(value: object, sender: str) -> dict[str, object]:
     if set(authority) != AUTHORITY_FIELDS:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Authority must name exactly owner, writeScope, and gitMutation.",
+            "Authority must name exactly owner, writeScope, and gitMutation "
+            f"({_field_mismatch(*_field_sets(authority, AUTHORITY_FIELDS))}).",
         )
     owner = _text(authority.get(OWNER_FIELD), f"{AUTHORITY_FIELD}.{OWNER_FIELD}")
     if owner != sender:
@@ -1095,11 +1104,18 @@ def mail_send_request(record: Mapping[str, object]) -> dict[str, object]:
 def mail_request(request: object) -> dict[str, object]:
     """Map one message request onto the record and the capability's send request."""
     value = _object(request, MESSAGE_REQUEST_FIELD)
-    unexpected = sorted(set(value) - RECORD_FIELDS - {AUTHORITY_FIELD})
-    if unexpected or RECORD_SCHEMA_FIELD in value:
+    if RECORD_SCHEMA_FIELD in value:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Message request contains fields outside the record this node declares.",
+            f"Message request must not supply {RECORD_SCHEMA_FIELD!r}; "
+            f"the script assigns record schema {RECORD_SCHEMA_VERSION}.",
+        )
+    unexpected = sorted(set(value) - RECORD_FIELDS - {AUTHORITY_FIELD})
+    if unexpected:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Message request contains fields outside the declared record: "
+            f"{', '.join(unexpected)}.",
         )
     record = mail_record(
         kind=value.get(KIND_FIELD),
@@ -1155,7 +1171,8 @@ def _delivered_record(result: Mapping[str, object]) -> dict[str, object]:
     if set(record) != DELIVERED_RECORD_FIELDS:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "A delivered record carries exactly the declared fields and the store id.",
+            "A delivered record carries exactly the declared fields and the store id "
+            f"({_field_mismatch(*_field_sets(record, DELIVERED_RECORD_FIELDS))}).",
         )
     message_id = record.get(RECORD_ID_FIELD)
     if not isinstance(message_id, int) or isinstance(message_id, bool):
@@ -1237,7 +1254,8 @@ def mail_delivery_result(
     if set(value) != MAIL_SUCCESS_FIELDS:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "A delivered result requires the complete checked capability result.",
+            "A delivered result requires the complete checked capability result "
+            f"({_field_mismatch(*_field_sets(value, MAIL_SUCCESS_FIELDS))}).",
         )
     exit_code = value.get(COMMAND_EXIT_CODE_FIELD)
     if not isinstance(exit_code, int) or isinstance(exit_code, bool) or exit_code != 0:
