@@ -28,8 +28,10 @@ from outcomeeng_testing.generators.agent_mail import (
     program_names,
     project_key_paths,
     store_ack_required_statuses,
+    store_exit_codes,
     store_message_ids,
     terminal_record_kinds,
+    unsupported_operation_names,
 )
 from outcomeeng_testing.harnesses.cli_usage import (
     UsageContract,
@@ -74,6 +76,9 @@ OPERATION_MAPPING_EXAMPLES = 10
 OPERATION_MAPPING_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 COMPLIANCE_SEED = 2026091805
 COMPLIANCE_EXAMPLES = 10
+STORE_RESPONSE_SEED = 2026091806
+STORE_RESPONSE_EXAMPLES = 10
+STORE_RESPONSE_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 COMPLIANCE_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.compliance.l1.py"
@@ -396,6 +401,43 @@ def run_generated_identities(
         generated_case,
         seed_value=COMPLIANCE_SEED,
         replay_path=COMPLIANCE_REPLAY_PATH,
+    )
+
+
+def run_store_response_cases(
+    assert_case: Callable[[ModuleType, str, str, int, str, str, str], None],
+) -> None:
+    """Drive generated store failure responses — a nonzero exit with its detail,
+    malformed output, an unsupported operation name — through a linked predicate
+    under generated keys."""
+    module = _load()
+
+    @seed(STORE_RESPONSE_SEED)
+    @settings(max_examples=STORE_RESPONSE_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        agent=agent_names(),
+        project_key=project_key_paths(),
+        exit_code=store_exit_codes(),
+        detail=message_texts(),
+        malformed=message_texts(),
+        unsupported=unsupported_operation_names(module),
+    )
+    def generated_case(
+        agent: str,
+        project_key: str,
+        exit_code: int,
+        detail: str,
+        malformed: str,
+        unsupported: str,
+    ) -> None:
+        assert_case(
+            module, agent, project_key, exit_code, detail, malformed, unsupported
+        )
+
+    run_replayable_property(
+        generated_case,
+        seed_value=STORE_RESPONSE_SEED,
+        replay_path=STORE_RESPONSE_REPLAY_PATH,
     )
 
 

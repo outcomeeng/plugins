@@ -23,6 +23,19 @@ def program_names() -> st.SearchStrategy[str]:
     return st.from_regex(r"[a-z][a-z0-9-]{1,24}", fullmatch=True)
 
 
+def unsupported_operation_names(module: ModuleType) -> st.SearchStrategy[str]:
+    """Operation names outside the adapter's registry."""
+    known = {operation.value for operation in module.Operation}
+    return st.from_regex(r"[a-z][a-z0-9-]{1,24}", fullmatch=True).filter(
+        lambda name: name not in known
+    )
+
+
+def store_exit_codes() -> st.SearchStrategy[int]:
+    """Nonzero exit codes the store CLI can end with."""
+    return st.integers(min_value=1, max_value=255)
+
+
 def store_ack_required_statuses(module: ModuleType) -> st.SearchStrategy[str]:
     """The store's acknowledgement statuses for a message that required one."""
     return st.sampled_from(sorted(module.STORE_ACK_REQUIRED_STATUSES))

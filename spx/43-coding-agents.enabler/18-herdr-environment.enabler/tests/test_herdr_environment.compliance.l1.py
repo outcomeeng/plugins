@@ -6,6 +6,7 @@ from outcomeeng_testing.harnesses.herdr_environment import (
     herdr_help_violation_source,
     load_herdr_environment,
     raw_herdr_violation_source,
+    request_for,
     run_bound_through_execute,
 )
 
@@ -65,9 +66,10 @@ def test_wait_bearing_requests_carry_a_bound_and_the_runner_is_bounded() -> None
 
     assert bounded == set(module.WAIT_BEARING_OPERATIONS)
 
-    smallest = module.INTEGER_BOUNDS[module.TIMEOUT_FIELD][0]
-    request = module.operation_request(
-        module.Operation.WAIT, agent="bound-probe", timeout=smallest
+    request = request_for(module, module.Operation.WAIT)
+    smallest = cast(
+        int,
+        cast(dict[str, object], request[module.ARGUMENTS_FIELD])[module.TIMEOUT_FIELD],
     )
     result, bounds, child_sleep = run_bound_through_execute(module, request)
 

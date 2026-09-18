@@ -10,9 +10,9 @@ from outcomeeng_testing.harnesses.agent_mail import (
     failed_command_result,
     json_command_result,
     load_agent_mail,
-    run_generated_identities,
     run_operation_mapping,
     run_project_key_mapping,
+    run_store_response_cases,
     store_response_payload,
     store_response_result,
     text_command_result,
@@ -152,30 +152,36 @@ def test_project_key_mapping() -> None:
 
 def test_store_responses_map_to_results_without_rewriting() -> None:
     def assert_case(
-        module: ModuleType, agent: str, program: str, model: str, project_key: str
+        module: ModuleType,
+        agent: str,
+        project_key: str,
+        exit_code: int,
+        detail: str,
+        malformed_text: str,
+        unsupported_name: str,
     ) -> None:
         request = module.operation_request(module.Operation.INBOX, agent=agent)
 
         failed = module.execute(
             request,
             diagnosis_seeded_runner(
-                module, project_key, failed_command_result(module, 3, program)
+                module, project_key, failed_command_result(module, exit_code, detail)
             ),
         )
         assert failed[module.STATUS_FIELD] == module.ExecutionStatus.COMMAND_FAILED
-        assert failed[module.DETAIL_FIELD] == program
-        assert failed[module.COMMAND_EXIT_CODE_FIELD] == 3
+        assert failed[module.DETAIL_FIELD] == detail
+        assert failed[module.COMMAND_EXIT_CODE_FIELD] == exit_code
 
         malformed = module.execute(
             request,
             diagnosis_seeded_runner(
-                module, project_key, text_command_result(module, model)
+                module, project_key, text_command_result(module, malformed_text)
             ),
         )
         assert malformed[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
 
         unsupported = module.execute(
-            {**request, module.OPERATION_FIELD: program}, RecordingRunner([])
+            {**request, module.OPERATION_FIELD: unsupported_name}, RecordingRunner([])
         )
         assert (
             unsupported[module.STATUS_FIELD]
@@ -195,4 +201,4 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
         )
         assert no_store[module.STATUS_FIELD] == module.ExecutionStatus.STORE_UNAVAILABLE
 
-    run_generated_identities(assert_case)
+    run_store_response_cases(assert_case)
