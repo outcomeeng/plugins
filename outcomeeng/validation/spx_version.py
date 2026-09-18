@@ -41,11 +41,11 @@ from typing import Final
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
-# above it. spx 0.7.0 is the release the coding-agents plugin's agent-mail and
-# herdr capabilities pin their `spx diagnose --format json` reading against: the
-# agent-mail adapter derives the mail project key from the `worktree-pool`
-# record's `mainCheckoutPath`, so that record's shape is part of the floor's
-# contract. spx 0.6.21 is the first release whose `spx verification run start`
+# above it. spx 0.7.0 is the release whose `spx diagnose --format json`
+# `worktree-pool` record carries `mainCheckoutPath`; the agent-mail capability
+# the coding-agents plugin's agent-mail node specifies maps the mail project key
+# from that path, so the record's shape is part of the floor's contract.
+# spx 0.6.21 is the first release whose `spx verification run start`
 # reports the resolved changed-path set as `resolvedScope` and whose `render`
 # projection carries `auditScopeUnits`; the implementation audit's stage-4
 # enumeration and its stage-7 reconciler read those two fields, and below this
