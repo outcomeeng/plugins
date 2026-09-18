@@ -47,6 +47,8 @@ Return the issue URL and the readback values verbatim. A terminal Change receive
 
 **A terminal Change was closed from an incomplete transition.** Claude closed the issue before the terminal record, the holder removal, and the terminal Status write had all succeeded, and reported completion without reading the complete state back. Each write lands in its declared order, and the close completes only when the readback shows every value.
 
+**Zero successors read as every successor present.** Claude closed a Change `Refined` because the empty set of known successors was vacuously complete. A Refined Change's Output continues in its successors, so `Refined` requires at least one successor in the store naming this Change; zero successors refuses the close.
+
 **A merge stood in for Applied.** Claude closed a Change `Applied` on the strength of a merged pull request while a deploy phase and the evidence for one Node were outstanding. `Applied` requires the changeset integrated, the evidence satisfied, and the Output delivered, verified from current state.
 
 </failure_modes>
@@ -54,7 +56,7 @@ Return the issue URL and the readback values verbatim. A terminal Change receive
 <success_criteria>
 
 - An argument outside `Applied`, `Refined`, and `Abandoned` was refused with the accepted values and no read or write.
-- This session held the Change and the named terminal precondition held from current state before the first write; `Refined` was refused while any known successor was absent.
+- This session held the Change and the named terminal precondition held from current state before the first write; `Refined` was refused while the store held no successor or any known successor was absent.
 - The terminal state reads back complete: the exact terminal comment newest, an empty assignee list, Status equal to the argument, the issue `CLOSED` with the matching reason, and Product and Maturity unchanged.
 - Every failed transition stopped before later mutation and reported the ordered successful writes, the failed operation, and the complete observed state.
 

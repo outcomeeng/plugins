@@ -68,7 +68,7 @@ Optional context lines after the five: the current agent session id and the assi
 
 <rule id="terminal-record">
 
-A terminal record is one comment whose text the terminal value fixes: `Application complete: changeset integrated, evidence satisfied, and Output delivered.` for `Applied`; `Refinement complete: all known successors exist.` for `Refined`; `Abandoned: <the operator's stated reason>` for `Abandoned`. The close reason is `completed` for `Applied` and `Refined` and `not planned` for `Abandoned`. A terminal Change receives no Handoff and never returns to `Available`.
+A terminal record is one comment whose text the terminal value fixes: `Application complete: changeset integrated, evidence satisfied, and Output delivered.` for `Applied`; `Refinement complete: all known successors exist.` for `Refined`, which requires at least one successor; `Abandoned: <the operator's stated reason>` for `Abandoned`. The close reason is `completed` for `Applied` and `Refined` and `not planned` for `Abandoned`. A terminal Change receives no Handoff and never returns to `Available`.
 
 </rule>
 
