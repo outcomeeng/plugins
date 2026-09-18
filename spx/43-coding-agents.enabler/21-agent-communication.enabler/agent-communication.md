@@ -12,7 +12,7 @@ A same-worktree delegation request carries the authority `spx/43-coding-agents.e
 
 ## Delivery routes
 
-On the mail route, the record in the store is delivery: a message is delivered when the agent-mail capability's checked `send` result carries the record with its store-assigned `id`. The doorbell into the recipient's pane is exactly one line, `[<sender>] mail <id>`, and nothing else; no JSON and no record body reaches a pane, and no message record lives under `.spx/`. Acknowledgement is the recipient's separate receipt. A pane line counts as a sender's doorbell only when its sender resolves in the live agent inventory. Until an inbox watcher wakes the Captain, the doorbell into the Captain's Prowl pane is the interim wake, and its submission evidence is the Prowl trailing-Enter record.
+On the mail route, the record in the store is delivery: a message is delivered when the agent-mail capability's checked `send` result carries the record with its store-assigned `id`. The doorbell into the recipient's pane is exactly one line, `[<sender>] mail <id>`, and nothing else; no JSON and no record body reaches a pane, and no message record lives under `.spx/`. Acknowledgement is the recipient's separate receipt. A pane line counts as a sender's doorbell only when its sender resolves in the live agent inventory. A doorbell into a Prowl pane is submitted as a turn; its submission evidence is the Prowl trailing-Enter record.
 
 On the Prowl submission route, the envelope of ownership proposals, one-way facts, acknowledgements, mutation-state reports, and mutation authorizations travels as the pane text, and delivery is checked public Prowl input evidence that trailing Enter submitted the turn.
 
