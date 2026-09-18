@@ -1,58 +1,57 @@
 ---
-title: "[Title naming the Output]"
+title: "[Title naming the intended Output]"
 product: "[Exactly one configured Product]"
 maturity: Proposed
 lifecycle: Available
 refined_from: []
+blocked_by: []
 ---
 
-<!-- Local authoring guidance: apply /change-standards after triaging the request. This template records the result; its headings are not interview questions. The closed front-matter schema permits only title, product, maturity, lifecycle, refined_from, and change_ref when revising. Use refined_from: [] for a root; a successor carries immutable canonical predecessor references. For revision, add change_ref with the canonical reference and use confirmed Lifecycle and holder metadata from the store. Maturity names the level being authored and audited. Replace placeholders and remove these comments before audit. Publication maps title and native project fields, removes change_ref, retains refined_from in the Change record, and sends the body below. Omit sections whose maturity requirements do not yet apply; expose unresolved questions instead of inventing answers. -->
+<!-- Apply /change-standards for the selected Maturity. The closed schema permits exactly the six keys above. A root keeps refined_from: []; a successor carries every immutable predecessor identity. blocked_by carries current blockers. Replace placeholders and remove every comment before audit. Keep all four top-level sections in this order. Never paste received conversation input into the record. -->
 
 # Output
 
-[The observable result this Change produces.]
-
-## Behavior
-
-[The behavior and constraints that define the Output. Add Surface: subsections only when multiple surfaces need disambiguation.]
+[The decision or spec evolution, lower-layer reconciliation, or combination this Change produces.]
 
 # Value
 
-[The established reason to produce this Output. For routine maintenance, a concise concrete purpose is sufficient; omit Outcome and Impact unless those claims are established.]
-
-## Outcome
-
-[The established intended change for users. Omit this subsection when Value already states the maintenance purpose, governing truth restored, or prototype question answered.]
-
-## Impact
-
-[The established broader benefit. Omit this subsection when it would require an invented claim.]
-
-<!-- Proposed only: an Input section may present received input. From Framed maturity onward, omit Input entirely. Original input and edit history belong to the Change infrastructure. -->
-
-# Relationships
-
-[Record unresolved blockers by exact Change reference. Omit when absent. Lineage lives only in front-matter refined_from; do not restate it here or add authoritative successor or reverse changeset lists.]
+[The established reason the operator conditionally prioritizes this Output: truth restored, operator judgment, prototype question, or Output and condition moved.]
 
 # Frame
 
 ## Nodes
 
-[Full existing or intended node paths, each carrying its own target malleability. At Executable maturity, include required node states and evidence obligations. Identify Product and repository where needed for disambiguation.]
+[At Framed or later: every affected or intended Node with its per-node target malleability. At Executable: add each required node state and evidence obligations.]
 
 ## Assertions
 
-[Per node: exact assertion targets, additions/amendments/removals, and intended declarations. At Executable maturity, include evidence obligations.]
+[At Framed or later: each addition, amendment, or removal by owning Node and exact target.]
 
 ## Decisions
 
-[Exact governing references and settled choices. Identify intended Decision changes and the Activities that author them.]
+[At Framed or later: each governing or intended Decision and the choice that remains settled.]
 
-<!-- From Framed maturity onward, the operator conversation adds this only after approving the complete Frame: Intent attestation: attested by the operator on YYYY-MM-DD. Proposed Changes omit it. -->
+## Dependencies and sequence
+
+[Known dependencies, blockers already represented in blocked_by, and sequencing facts. From Sliced onward these are resolved and cycle-free.]
+
+## Repository
+
+[From Sliced onward: exactly one repository boundary.]
+
+## Accountability
+
+[From Sliced onward: Accountable person: <name or stable identity>.]
+
+<!-- At Proposed, after operator review: Proposal review: reviewed by the operator on YYYY-MM-DD. -->
+
+<!-- From Framed onward, after the operator approves the complete Frame: Intent attestation: attested by the operator on YYYY-MM-DD. -->
+
+[At Proposed: retain consequential unresolved questions here. Remove guidance and unused subsections; retain the four top-level sections.]
 
 # Activities
 
-- [ ] [Meaningful next result, with its exact target and dependencies.]
-- [ ] [At Executable maturity, the complete merge composition required by the least malleable affected node after the Change, followed by any subsequent result in execution order.]
+- [ ] [Meaningful next result with its target and dependency.]
+- [ ] [At Executable: every ordered result needed to proceed without reopening product or architecture judgment.]
 
-<!-- Verification records are excluded. Transient branch/changeset state, blockers, and hazards needed for takeover belong in the existing Handoff workflow. -->
+<!-- Keep verification runs, command logs, cost estimates, resource accounting, and session narrative outside the Change. -->

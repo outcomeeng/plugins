@@ -2,124 +2,158 @@
 name: author-change
 description: >-
   ALWAYS invoke this skill when creating, interviewing, or revising an Outcome
-  Engineering Change record. NEVER use it to author a spec or review a code changeset.
+  Engineering Change record. NEVER use it to author a spec or review a code
+  changeset.
 argument-hint: "<local Change path and intent | existing Change reference and revision>"
 allowed-tools: Read, Write, Edit, Grep, Glob, Skill, collaboration.spawn_agent, collaboration.wait_agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh project field-list:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project item-edit:*), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run render:*), Bash(printf:*)
 ---
 
 <objective>
-A request routed to local creation or revision of one Change, independently audited before publication at its established maturity.
+A complete store-independent Change record authored locally, independently approved at its declared Maturity, persisted through the configured store, and read back equal.
 </objective>
 
 <essential_principles>
 
-Invoke `spec-tree:change-standards` through the skill-composition surface before applying record rules. Load `spx/local/coordination.md` when present for the Change store, Product, project, and field mapping. Read only the selected Change, necessary relationships, and repository references; establish normal foundation and node context before reading product content.
-
-Keep operator judgment in the main conversation. Delegate judgment of the authored record to the configured `change-auditor` role in a separate verifier session. NEVER invoke `audit-change` as an in-conversation replacement for that role.
-
-The scope is one Change. Preserve an explicitly selected local working file inside the Product repository. Otherwise use `<local_draft>` to obtain an SPX-managed file. Preserve an existing file until its identity and revision authority are established. The working document is the authored artifact; SPX retains its complete contents as verification input without a separate payload file.
-
-Handle missing store configuration or ambiguous target identity before any external write. Never infer claim authority from access to the store. An existing holder's claim must be respected. A local draft grants no remote claim. Drafting and repair write only the selected local file; publication occurs after the audit gate passes.
+- Operate on one Change. Resolve new-versus-existing identity and the requested target Maturity before routing.
+- Invoke `spec-tree:change-standards` with exactly the target Maturity. It loads the common contract and only that Maturity's cumulative Definition of Ready.
+- Load `spx/local/coordination.md` when present for the Change store, Product, project, and field mapping. Store coordinates and revision selectors remain outside the record.
+- Preserve an explicitly selected local working file inside the Product repository. Otherwise use `<local_draft>` to obtain an SPX-managed file. Every refinement and repair changes that one file.
+- Keep provider conversations, transcripts, prompt copies, and received conversation input out of the Change record. Preserve established intent in Output, Value, Frame, and Activities.
+- Ask only about a consequential operator-owned choice that supplied intent and repository truth leave unresolved. Ask one focused question at a time and state how its answer changes the record.
+- Keep operator judgment in the main conversation. Dispatch the configured `change-auditor` in an isolated verifier session after the candidate stabilizes. NEVER replace it with an in-conversation audit.
+- Keep remote content unchanged until the complete local candidate passes audit. A local draft grants no remote claim or integration authority.
 
 </essential_principles>
 
 <local_draft>
 
-Run from the selected Product repository. For a new working file, send the complete candidate as literal text to `spx change draft create --input stdin`. Consume the returned `draftId`, absolute `path`, and normalized `relativePath`; never construct a storage path or identifier. Resolve the selected Product repository and returned absolute path before editing, and require path-component containment of the returned path inside that repository. When the returned path resolves outside the selected repository, obtain destination-specific confirmation naming that exact absolute path before writing it. Edit the confirmed returned file directly for every refinement round. SPX owns storage and treats the document as opaque text; the shared standards own its metadata and Markdown format.
+Run from the selected Product repository. For a new file, send the complete candidate as literal stdin to `spx change draft create --input stdin`. Consume the returned `draftId`, absolute `path`, and normalized `relativePath`; never construct a storage path or identifier. Require path-component containment inside the selected repository before editing. A returned path outside it requires destination-specific operator authority naming the absolute path.
 
-For resumption without an exact path, use `spx change draft list` to locate existing draft descriptors. Inspect only candidates needed to resolve identity. An ambiguous match requires one plain-text question; never overwrite or create a competing draft by assumption. Keep a selected file through audit, publication, interruption, and handoff. Do not automatically delete local work after publication.
+For resumption without an exact path, use `spx change draft list` and inspect only the descriptors needed to identify the candidate. An ambiguous match requires a focused identity question. Preserve an existing candidate until its relationship to the selected store record is established. Do not delete a draft automatically after publication.
 
-Send content as data through stdin, using a quoted heredoc delimiter absent from the document or the tool's literal stdin facility. Never interpolate document text into executable shell syntax. A failed draft operation preserves its diagnostic and stops dependent work; never substitute a hand-created storage directory.
+Send record content as data through a quoted heredoc delimiter absent from the record or the harness's literal stdin facility. A programmatic one-line runner uses one physical `printf '%s\n' '<safely-quoted-content>' | <command>` line. NEVER interpolate record content into executable shell syntax or create a temporary payload file.
 
 </local_draft>
 
-<intake>
+<intake_and_triage>
 
-Read `$ARGUMENTS` as the complete request. When empty, use an unambiguous active request from the conversation; otherwise ask one plain-text question for the Change or intended Output and wait.
+Read `$ARGUMENTS` as the complete request. When it is empty, use one unambiguous active request from the conversation; otherwise ask for the intended Output or exact Change identity and wait.
 
-For a request already identifying creation or revision, route directly and apply `<triage>` before asking refinement questions. A problem without a chosen Output enters creation. For ambiguous Change identity, ask which Change the operator means. Never treat an unanswered question as agreement. Route requests to author Decisions or specs to `/author`, code implementation to `/apply`, and Handoff-only work to `/handoff`.
+Resolve these facts before routing:
 
-</intake>
+1. New root, new successor, or revision of one existing Change. For a successor, resolve the complete predecessor set before drafting. For a revision, retain the canonical store reference outside the record.
+2. Target Maturity: `Proposed`, `Framed`, `Sliced`, or `Executable`.
+3. Intended Output and the established reason it is worth Build refinement.
+4. Consequential choices still open after reading governing Decisions, specs, affected references, predecessor Changes, blockers, and the current record.
 
-<triage>
+Draft directly when the Output is clear and consequential choices are resolved. Invoke `/interview` only for unresolved scope, compatibility, failure behavior, dependency, evidence, rollout, recovery, monitoring, or resource-limit choices that change the Output or Frame. A problem with no chosen Output returns to operator judgment in discovery. The template supplies output shape and never acts as a questionnaire.
 
-First identify what the request changes, the intended Output, and any consequential choices it leaves open. Inspect the relevant governing Decisions, specs, and affected references before asking the operator to resolve a choice. Reuse explicit answers from the request and existing Change; never ask for a generic problem statement, beneficiaries, or business value merely to fill the template.
+Never reopen a settled choice, infer silence as agreement, or demand beneficiaries, business value, research, or alternatives for a precise maintenance Change. Re-run triage when investigation exposes a new consequential choice.
 
-| Request state                                  | Refinement                                                                                                                                                                                                   |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Output clear; consequential choices resolved   | Draft or revise directly without an interview. A precise internal file rename needs its affected references and constraints checked, not a beneficiary interview.                                            |
-| Output clear; consequential choices unresolved | Invoke `/interview` only for choices that repository truth and supplied intent cannot settle. A public CLI rename can require a compatibility decision despite its small edit size.                          |
-| Problem described; Output unchosen             | Invoke `/interview` to help formulate a proposed Output. Pause for the operator when proceeding requires prioritizing competing outcomes or deciding whether to pursue the work. Discovery owns that choice. |
-
-Select questions by the unresolved choice: scope, compatibility, failure behavior, dependencies, required evidence, or operation such as rollout, recovery, monitoring, and resource limits. Ask in plain text, one at a time, explain the consequences, and wait for the answer. Do not reopen a resolved choice or treat silence as a decision. The template is an output format, never a questionnaire.
-
-Triage controls refinement depth only. Preserve maturity requirements, operator attestation, independent verification, and publication authority on every route. A clear execution request does not by itself attest an unwritten Frame. Revisit triage when investigation exposes a consequential choice. Keep resulting specifications in the Change and its governing artifacts. Reusable investigation and rejected alternatives belong in knowledge when separately requested; NEVER require a runtime knowledge-bundle read or automatically write back to a knowledge bundle.
-
-</triage>
+</intake_and_triage>
 
 <routing>
 
-| Request                                         | Workflow                                  |
-| ----------------------------------------------- | ----------------------------------------- |
-| Create a Change from an Output or problem       | `${SKILL_DIR}/workflows/create-change.md` |
-| Interview, refine, or revise an existing Change | `${SKILL_DIR}/workflows/revise-change.md` |
+| Target Maturity | Workflow                               |
+| --------------- | -------------------------------------- |
+| `Proposed`      | `${SKILL_DIR}/workflows/proposed.md`   |
+| `Framed`        | `${SKILL_DIR}/workflows/framed.md`     |
+| `Sliced`        | `${SKILL_DIR}/workflows/sliced.md`     |
+| `Executable`    | `${SKILL_DIR}/workflows/executable.md` |
 
-Read the selected workflow completely. Both workflows use `${SKILL_DIR}/templates/change.md` and return here for the shared audit gate.
+Read exactly one maturity workflow and `${SKILL_DIR}/templates/change.md`. The workflow handles both creation and revision at that level. A current record at a different Maturity is input to the selected workflow; its target Maturity controls the one Definition of Ready loaded.
 
 </routing>
 
+<revision_safety>
+
+For an existing Change, read its complete current body, store-native projection, holder, predecessor and blocker records needed for the revision, and latest Handoff when resuming execution. Import the complete record into the selected draft once. Preserve `refined_from` byte-for-byte unless creating a new successor; revisions never change it. Retain the inspected remote representation outside the record for the publication concurrency check.
+
+A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordinary resumption. Splitting and coalescing are separate lineage operations. A Claimed holder writes a Handoff and releases the Change before lowering Maturity. Reconcile an existing local candidate with the store representation before overwriting either.
+
+</revision_safety>
+
 <audit_gate>
 
-1. Stabilize the complete local candidate against the shared standards. Resolve contradictions across metadata and body, remove template guidance, and read the file back before requesting audit. Its metadata identifies the maturity being judged. Keep the remote record unchanged throughout local iteration.
-2. Dispatch `spec-tree_change-auditor` through the native subagent capability with only the candidate's normalized repository-relative file path. Start without authoring history; the verifier independently reads the candidate's metadata, body, and governing references. Preserve the returned handle. SPX records the local file as the audit subject. If the role or its supported SPX recording contract is unavailable, report the exact failure and stop publication; never substitute another artifact classification, an in-conversation verdict, or a GitHub audit comment.
-3. While verification runs, inspect still-unchecked relationships and continuation hazards in the current work. Preserve the candidate under audit unchanged. Collect the required final result through the native result-collection capability.
-4. Inspect the returned SPX run token, retained input, and rendered projection. Only a complete `terminalStatus: approved` result over this file's unchanged metadata and body at the requested maturity passes. Any local edit invalidates that approval. After approval, proceed directly to publication; do not ask for a second confirmation of publication already authorized by this workflow.
-5. For a completed rejection, inspect the cited rule and sweep the entire candidate for the same defect class. Batch repairs in the local file, re-read affected sections together, and obtain a new independent audit. Ask the operator in plain text when a repair reopens judgment; preserve the question until answered. A failed launch or unusable result stops the invocation with its exact diagnostic; never retry, substitute another verifier, or issue a replacement verdict. Preserve the local candidate when the gate remains blocked.
-6. Stop after three consecutive rejected, unknown, or blocked results at this gate. Report the latest failure, the defect-class sweep, and why the repairs did not resolve it. Ask one plain-text question for the needed decision. NEVER advance maturity or claim the audit passed to end the loop.
+1. Stabilize and read back the complete local candidate. Inventory all six front-matter keys first, then all four ordered top-level body sections. Resolve contradictions and remove template guidance.
+2. Dispatch `spec-tree_change-auditor` once through the native subagent capability with only the normalized repository-relative candidate path. Start without authoring history or a suggested verdict.
+3. Preserve the candidate unchanged while the audit runs. Collect the same invocation until it returns its SPX run token and rendered projection.
+4. Require `terminalStatus: approved`, zero findings, complete common-rule and declared-DoR coverage, and retained input equal to the unchanged candidate. An outside-contract result, failed launch, unusable result, rejected verdict, or blocked diagnostic withholds publication.
+5. For a completed rejection, sweep the complete candidate for the cited defect class, batch repairs, read affected sections together, and dispatch a new audit only after the repaired candidate stabilizes. Ask the operator when repair reopens judgment. Stop after three consecutive completed non-approvals at this gate and report the outstanding class.
 
-Keep audit results in SPX and the current conversation. Update Change content only with the resulting refinement. Do not persist audit bookkeeping in its body or comments.
+Audit results remain in SPX and the conversation. NEVER write audit bookkeeping into the Change body, comments, or project fields.
 
 </audit_gate>
 
-<publication>
+<persistence>
 
-Publication requires the unchanged local file's passing audit and the authority for its content and maturity. For a new Change, recheck duplicate identity before creation. For revision, compare the current remote body, native metadata, and holder with the version imported into the local file. Reconcile intervening edits locally and re-audit any changed candidate before publication. If the configured store cannot protect an update from concurrent writes, establish exclusive revision authority before writing; unresolved ownership blocks publication.
+Publication requires unchanged local content approved by `<audit_gate>`, content authority for the target Maturity, and revision authority for an existing store record. Re-read the remote representation immediately before mutation and reconcile any intervening edit locally; re-audit a changed candidate.
 
-Use the configured store's native operations to create or update exactly one approved Change. Resolve actual field identifiers and option identifiers before mutation; never hardcode organization, repository, project, Product, or field IDs. On GitHub, map `title` to the issue title and `product`, `maturity`, and `lifecycle` to native project fields. Use `change_ref` only to select an existing issue. Retain immutable `refined_from` in a YAML metadata header at the start of the published issue body. Publish the Markdown body beginning at `# Output` after that retained metadata. Keep the mapped metadata and `change_ref` out of the issue body. Read the body, retained `refined_from`, and native fields back and compare them with the approved candidate. If a multi-step write fails, retain the local file and returned canonical reference, report the successful writes and remaining failed operation, and resume from observed state without creating a duplicate Change or publishing an unaudited revision.
+For the GitHub store declared by `spx/local/coordination.md`, use `gh` only. Resolve repository, project, field IDs, option IDs, issue identity, and project item ID from live reads; hardcode none of them. Map every front-matter field:
 
-Treat record content as data when sending it through command input. Never evaluate shell syntax embedded in a Change. Keep publication confined to the selected Change and its configured project item. Authentication failures stop publication without printing credentials.
+| Record field   | Store-native projection                                                 |
+| -------------- | ----------------------------------------------------------------------- |
+| `title`        | Issue title and the unchanged YAML field in the issue body              |
+| `product`      | Project `Product` field and the unchanged YAML field in the issue body  |
+| `maturity`     | Project `Maturity` field and the unchanged YAML field in the issue body |
+| `lifecycle`    | Project `Status` field and the unchanged YAML field in the issue body   |
+| `refined_from` | The unchanged YAML list in the native issue body                        |
+| `blocked_by`   | The unchanged YAML list in the native issue body                        |
 
-Return the canonical Change reference, current Maturity and Lifecycle, a concise account of the content revised, and the next Activity or unresolved operator question. When refinement work is ending or being delegated, invoke `/handoff` for the existing Change; that workflow owns claim release and transient continuation. A handoff must preserve an unaudited local candidate locally and leave the published Change content unchanged. Pass the last published record and a pointer to the retained local work, never the candidate body as remotely publishable content. A new draft with no published Change remains a local file when publication is blocked.
+Create or update exactly one issue. Send the complete local file, including both YAML delimiters and every front-matter field, through `gh issue create --body-file -` or `gh issue edit --body-file -`. Set the issue title from `title`. Add or locate its project item, then set Product, Maturity, and Status through `gh project item-edit`. NEVER strip front matter, synthesize `# Relationships`, add body-line lineage, or publish a draft iteration.
 
-</publication>
+After all writes, read the issue through `gh issue view --json title,body,projectItems,number,url` and the project item through `gh project item-list --format json`. Require:
+
+- issue title equals `title`;
+- issue body equals the complete approved local file;
+- project Product equals `product`;
+- project Maturity equals `maturity`;
+- project Status equals `lifecycle`;
+- parsed issue-body `refined_from` equals the local list in order;
+- parsed issue-body `blocked_by` equals the local list in order.
+
+Any mismatch or partial write is a failed persistence result. Preserve the local file and canonical issue reference, report successful writes and the exact failed or unequal field, and resume from observed state without creating a duplicate or publishing unaudited content. Authentication failures stop without printing credentials.
+
+</persistence>
+
+<result>
+
+Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. Invoke `/handoff` when work stops or transfers; preserve any unaudited local candidate locally and leave the published Change unchanged.
+
+</result>
 
 <reference_index>
 
-- `spec-tree:change-standards`: shared record requirements, explicitly loaded before either route.
-- `${SKILL_DIR}/templates/change.md`: maturity-aware Change body, read by either route.
+- `spec-tree:change-standards`: common record contract plus exactly one cumulative Definition of Ready.
+- `${SKILL_DIR}/templates/change.md`: store-independent six-field, four-section record template.
 
 </reference_index>
 
 <workflows_index>
 
-- `${SKILL_DIR}/workflows/create-change.md`: one new Change.
-- `${SKILL_DIR}/workflows/revise-change.md`: one existing Change, preserving identity and lineage.
+- `${SKILL_DIR}/workflows/proposed.md`
+- `${SKILL_DIR}/workflows/framed.md`
+- `${SKILL_DIR}/workflows/sliced.md`
+- `${SKILL_DIR}/workflows/executable.md`
 
 </workflows_index>
 
 <failure_modes>
 
-**A Change omitted specifications settled in conversation.** Claude treated a record and a Handoff as sufficient while a fresh holder still needed the earlier discussion to identify the work. Check the complete Change against the shared continuation rule before audit; put durable intent in the Change and keep transient execution facts in the Handoff.
+**Conversation text entered the Change.** Claude copied received instructions into an Input section to preserve context. The record then depended on provider conversation and violated the methodology boundary. Preserve the proposal in Output and Value, and keep conversation text in provider context and store history.
+
+**Publication stripped authoritative fields.** Claude projected title and project fields, removed front matter from the issue body, and left lineage as a body line. The stored Change ceased to be portable. Publish the complete local record and treat native fields as equality-checked projections.
 
 </failure_modes>
 
 <success_criteria>
 
-- The selected workflow produces exactly one coherent Change in the configured store.
-- Its current content meets the shared standards at its declared maturity and retains operator-approved constraints.
-- Triage selects direct drafting when consequential choices are resolved; interviews address only unresolved operator-owned choices and never manufacture value claims for routine maintenance.
-- Drafting and every repair stay in one local working file. An independent SPX audit approves that unchanged file before publication; missing or unsuccessful verification blocks every candidate publication.
-- Publication is confirmed by reading back the body, retained immutable lineage, and native metadata, with no duplicate record or verification bookkeeping added to the Change.
+- Exactly one local candidate and one configured-store Change represent the intended Output.
+- The candidate satisfies the one cumulative Definition of Ready loaded for its declared Maturity and carries the required authority.
+- Triage asks only questions whose answers change Output, Frame, Maturity, risk, or ownership.
+- The complete unchanged record receives an independent approved audit before publication.
+- Every front-matter field and the complete issue body read back equal after `gh` persistence.
+- The record contains no store-specific key, received conversation input, audit bookkeeping, or authoritative body restatement of front matter.
 - Continuation depends only on the Change, repository references, and applicable Handoff.
 
 </success_criteria>
