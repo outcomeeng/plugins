@@ -6,6 +6,7 @@ from outcomeeng_testing.generators.herdr_environment import (
     herdr_agent_item,
     operation_requests,
 )
+from outcomeeng_testing.harnesses.cli_usage import read_argv
 from outcomeeng_testing.harnesses.herdr_environment import (
     AbsentExecutableRunner,
     RecordingRunner,
@@ -16,69 +17,8 @@ from outcomeeng_testing.harnesses.herdr_environment import (
     run_error_projection_mapping,
     run_inventory_mapping,
     run_unknown_operation_mapping,
+    usage_contract_for,
 )
-
-
-def _target(module: ModuleType, arguments: dict[str, object]) -> str:
-    for field_name in module.SELECTOR_FIELDS:
-        value = arguments.get(field_name)
-        if value is not None:
-            return cast(str, value)
-    raise AssertionError("request carries no selector")
-
-
-def _expected_command(
-    module: ModuleType, request: dict[str, object]
-) -> tuple[str, ...]:
-    operation = module.Operation(request[module.OPERATION_FIELD])
-    arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
-    options = module.PUBLIC_HERDR_ARGUMENT_OPTIONS
-    command = list(module.PUBLIC_HERDR_COMMAND_PREFIXES[operation])
-    if operation is module.Operation.INVENTORY:
-        return tuple(command)
-    if operation in {module.Operation.START, module.Operation.RELAUNCH}:
-        command.append(cast(str, arguments[module.NAME_FIELD]))
-        for field_name in (module.KIND_FIELD, module.PANE_FIELD):
-            command.extend((options[field_name], cast(str, arguments[field_name])))
-        command.extend(
-            (options[module.TIMEOUT_FIELD], str(arguments[module.TIMEOUT_FIELD]))
-        )
-        if module.AGENT_ARGUMENTS_FIELD in arguments:
-            command.append(module.AGENT_ARGUMENTS_SEPARATOR)
-            command.extend(cast(list[str], arguments[module.AGENT_ARGUMENTS_FIELD]))
-        return tuple(command)
-    if operation is module.Operation.STOP:
-        command.append(cast(str, arguments[module.PANE_FIELD]))
-        return tuple(command)
-    if operation is module.Operation.OPEN_WORKTREE:
-        command.extend(
-            (options[module.PATH_FIELD], cast(str, arguments[module.PATH_FIELD]))
-        )
-        command.append(module.NO_FOCUS_OPTION)
-        return tuple(command)
-    command.append(_target(module, arguments))
-    if operation is module.Operation.READ:
-        for field_name in (module.SOURCE_FIELD, module.LINES_FIELD):
-            if field_name in arguments:
-                command.extend((options[field_name], str(arguments[field_name])))
-    elif operation is module.Operation.WAIT:
-        for state in cast(list[str], arguments.get(module.UNTIL_FIELD, [])):
-            command.extend((options[module.UNTIL_FIELD], state))
-        command.extend(
-            (options[module.TIMEOUT_FIELD], str(arguments[module.TIMEOUT_FIELD]))
-        )
-    elif operation is module.Operation.PROMPT:
-        command.append(cast(str, arguments[module.TEXT_FIELD]))
-        if arguments.get(module.WAIT_FIELD) is True:
-            command.append(options[module.WAIT_FIELD])
-            for state in cast(list[str], arguments.get(module.UNTIL_FIELD, [])):
-                command.extend((options[module.UNTIL_FIELD], state))
-            command.extend(
-                (options[module.TIMEOUT_FIELD], str(arguments[module.TIMEOUT_FIELD]))
-            )
-    elif operation is module.Operation.KEY:
-        command.extend(cast(list[str], arguments[module.KEYS_FIELD]))
-    return tuple(command)
 
 
 def test_herdr_operation_mappings() -> None:
@@ -90,9 +30,40 @@ def test_herdr_operation_mappings() -> None:
     }
 
     for ordinal, request in enumerate(requests, start=1):
+        operation = module.Operation(request[module.OPERATION_FIELD])
         arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
-        expected = _expected_command(module, request)
-        assert module.command_for(request) == expected
+        argv = module.command_for(request)
+        contract = usage_contract_for(module, operation)
+        reading = read_argv(contract, argv)
+
+        assert reading.command_path == (module.HERDR_COMMAND, *contract.command_path)
+        assert reading.unknown_options == ()
+        assert contract.required_options <= set(reading.options_seen)
+        for option, count in reading.options_seen.items():
+            assert count == 1 or option in contract.repeatable_options
+        if contract.variadic_positional:
+            assert len(reading.positionals) >= len(contract.required_positionals)
+        else:
+            assert len(reading.positionals) == len(contract.required_positionals)
+        text_values = [
+            value
+            for field_name, value in arguments.items()
+            if field_name in module.TEXT_ARGUMENT_FIELDS
+        ]
+        for value in text_values:
+            assert value in argv
+        for field_name in module.TEXT_LIST_ARGUMENT_FIELDS:
+            for value in cast(list[str], arguments.get(field_name, [])):
+                assert value in argv
+        if module.TIMEOUT_FIELD in arguments:
+            assert str(arguments[module.TIMEOUT_FIELD]) in argv
+            assert module.TIMEOUT_OPTION in reading.options_seen
+        else:
+            assert module.TIMEOUT_OPTION not in reading.options_seen
+        if module.AGENT_ARGUMENTS_FIELD in arguments:
+            assert reading.trailing == tuple(
+                cast(list[str], arguments[module.AGENT_ARGUMENTS_FIELD])
+            )
 
         envelope_result = {
             module.AGENTS_FIELD: [
@@ -107,8 +78,8 @@ def test_herdr_operation_mappings() -> None:
         response = cast(dict[str, object], result[module.RESPONSE_FIELD])
         assert response[module.RESULT_FIELD] == envelope_result
         assert len(runner.calls) == 1
-        argv, stdin, bound = runner.calls[0]
-        assert (argv, stdin) == (expected, None)
+        called_argv, stdin, bound = runner.calls[0]
+        assert (called_argv, stdin) == (argv, None)
         if module.TIMEOUT_FIELD in arguments:
             assert bound * 1000 > cast(int, arguments[module.TIMEOUT_FIELD])
         else:
@@ -171,10 +142,15 @@ def test_inventory_maps_to_complete_participants_or_named_results() -> None:
 
 def test_herdr_error_codes_project_to_named_statuses() -> None:
     def assert_projection(
-        module: ModuleType, code: str, message: str, projected: bool
+        module: ModuleType,
+        code: str,
+        message: str,
+        projected: bool,
+        selector: str,
+        timeout: int,
     ) -> None:
         request = module.operation_request(
-            module.Operation.WAIT, agent="officer", timeout=1000
+            module.Operation.WAIT, agent=selector, timeout=timeout
         )
         runner = RecordingRunner([herdr_error_result(module, code, message)])
         result = module.execute(request, runner)

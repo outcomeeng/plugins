@@ -8,10 +8,24 @@ from types import ModuleType
 from hypothesis import strategies as st
 
 
-def _identity_text(minimum: int = 1, maximum: int = 40) -> st.SearchStrategy[str]:
+class RequestContractError(RuntimeError):
+    """The source operation contract names a field this generator cannot produce."""
+
+
+def agent_names(minimum: int = 1, maximum: int = 40) -> st.SearchStrategy[str]:
+    """Agent names and other store identities the mail store admits."""
     return st.from_regex(
         rf"[A-Za-z][A-Za-z0-9_-]{{{minimum - 1},{maximum - 1}}}", fullmatch=True
     )
+
+
+def program_names() -> st.SearchStrategy[str]:
+    return st.from_regex(r"[a-z][a-z0-9-]{1,24}", fullmatch=True)
+
+
+def store_ack_required_statuses(module: ModuleType) -> st.SearchStrategy[str]:
+    """The store's acknowledgement statuses for a message that required one."""
+    return st.sampled_from(sorted(module.STORE_ACK_REQUIRED_STATUSES))
 
 
 def message_texts() -> st.SearchStrategy[str]:
@@ -49,9 +63,9 @@ def message_records(module: ModuleType) -> st.SearchStrategy[dict[str, object]]:
             module.ACK_REQUIRED_FIELD: ack_required,
         },
         kind=sent_record_kinds(module),
-        correlation=st.one_of(coordination_references(), _identity_text()),
-        sender=_identity_text(),
-        recipient=_identity_text(),
+        correlation=st.one_of(coordination_references(), agent_names()),
+        sender=agent_names(),
+        recipient=agent_names(),
         subject=message_texts(),
         body=message_texts(),
         ack_required=st.booleans(),
@@ -83,7 +97,9 @@ def _request_argument_value(
         return module.INTEGER_BOUNDS[field_name][0]
     if field_name in module.BOOLEAN_ARGUMENT_FIELDS:
         return True
-    raise AssertionError(f"Source operation contract has no generator for {field_name}")
+    raise RequestContractError(
+        f"Source operation contract has no generator for {field_name}"
+    )
 
 
 def operation_requests(module: ModuleType) -> list[dict[str, object]]:
@@ -124,58 +140,49 @@ def project_key_paths() -> st.SearchStrategy[str]:
     return st.from_regex(r"/[a-z0-9]{1,12}(?:/[a-z0-9._-]{1,16}){0,5}", fullmatch=True)
 
 
-def diagnosis_payloads(
-    module: ModuleType,
-) -> st.SearchStrategy[tuple[dict[str, object], str | None]]:
-    """The spec's two diagnosis shapes: a main checkout path, or none."""
+# The spec's diagnosis shapes: a worktree-pool record with a main checkout
+# path, and the three ways the path can be absent.
+DIAGNOSIS_WITH_PATH = "with-path"
+DIAGNOSIS_NO_RECORD = "no-record"
+DIAGNOSIS_OTHER_RECORD = "other-record"
+DIAGNOSIS_EMPTY_READINGS = "empty-readings"
+DIAGNOSIS_SHAPES = (
+    DIAGNOSIS_WITH_PATH,
+    DIAGNOSIS_NO_RECORD,
+    DIAGNOSIS_OTHER_RECORD,
+    DIAGNOSIS_EMPTY_READINGS,
+)
 
-    def with_path(path: str) -> tuple[dict[str, object], str | None]:
-        return (
-            {
-                module.CHECKS_FIELD: [
-                    {
-                        module.NAME_FIELD: module.WORKTREE_POOL_CHECK,
-                        module.READINGS_FIELD: {module.MAIN_CHECKOUT_PATH_FIELD: path},
-                    }
-                ]
-            },
-            path,
-        )
 
-    def without_path(shape: str, path: str) -> tuple[dict[str, object], str | None]:
-        if shape == "no-record":
-            return ({module.CHECKS_FIELD: []}, None)
-        if shape == "other-record":
-            return (
+def diagnosis_payload(module: ModuleType, shape: str, path: str) -> dict[str, object]:
+    """One diagnosis payload of the named shape carrying the generated path."""
+    if shape == DIAGNOSIS_WITH_PATH:
+        return {
+            module.CHECKS_FIELD: [
                 {
-                    module.CHECKS_FIELD: [
-                        {
-                            module.NAME_FIELD: f"other-{path.strip('/')}",
-                            module.READINGS_FIELD: {
-                                module.MAIN_CHECKOUT_PATH_FIELD: path
-                            },
-                        }
-                    ]
-                },
-                None,
-            )
-        return (
-            {
-                module.CHECKS_FIELD: [
-                    {
-                        module.NAME_FIELD: module.WORKTREE_POOL_CHECK,
-                        module.READINGS_FIELD: {},
-                    }
-                ]
-            },
-            None,
-        )
-
-    return st.one_of(
-        project_key_paths().map(with_path),
-        st.builds(
-            without_path,
-            st.sampled_from(("no-record", "other-record", "empty-readings")),
-            project_key_paths(),
-        ),
-    )
+                    module.NAME_FIELD: module.WORKTREE_POOL_CHECK,
+                    module.READINGS_FIELD: {module.MAIN_CHECKOUT_PATH_FIELD: path},
+                }
+            ]
+        }
+    if shape == DIAGNOSIS_NO_RECORD:
+        return {module.CHECKS_FIELD: []}
+    if shape == DIAGNOSIS_OTHER_RECORD:
+        return {
+            module.CHECKS_FIELD: [
+                {
+                    module.NAME_FIELD: f"other-{path.strip('/')}",
+                    module.READINGS_FIELD: {module.MAIN_CHECKOUT_PATH_FIELD: path},
+                }
+            ]
+        }
+    if shape == DIAGNOSIS_EMPTY_READINGS:
+        return {
+            module.CHECKS_FIELD: [
+                {
+                    module.NAME_FIELD: module.WORKTREE_POOL_CHECK,
+                    module.READINGS_FIELD: {},
+                }
+            ]
+        }
+    raise RequestContractError(f"No diagnosis shape named {shape!r}")

@@ -8,6 +8,16 @@ from types import ModuleType
 from hypothesis import strategies as st
 
 
+class RequestContractError(RuntimeError):
+    """The source operation contract names a field this generator cannot produce."""
+
+
+def wait_timeouts(module: ModuleType) -> st.SearchStrategy[int]:
+    """Millisecond bounds inside the adapter's declared timeout range."""
+    minimum, maximum = module.INTEGER_BOUNDS[module.TIMEOUT_FIELD]
+    return st.integers(min_value=minimum, max_value=maximum)
+
+
 def agent_names() -> st.SearchStrategy[str]:
     """Live agent names herdr admits."""
     return st.from_regex(r"[a-z][a-z0-9_-]{0,31}", fullmatch=True)
@@ -88,7 +98,9 @@ def _request_argument_value(
         return module.INTEGER_BOUNDS[field_name][0]
     if field_name in module.BOOLEAN_ARGUMENT_FIELDS:
         return True
-    raise AssertionError(f"Source operation contract has no generator for {field_name}")
+    raise RequestContractError(
+        f"Source operation contract has no generator for {field_name}"
+    )
 
 
 def operation_requests(module: ModuleType) -> list[dict[str, object]]:

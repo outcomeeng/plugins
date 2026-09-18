@@ -51,7 +51,12 @@ The project key is the pool's main checkout path from `spx diagnose --format jso
 }
 ```
 
-3. Submit the request over stdin.
+3. Submit the request over stdin in one of the forms in `<invocation_forms>`.
+4. Accept only `status: "succeeded"`. Preserve the complete versioned result: `commandExitCode`, `projectKey`, the store's `response`, and `data`. A delivered message is the `record` in `data` carrying its store-assigned `id`. Stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `store-unavailable`, `diagnosis-unavailable`, or `operation-unavailable`; none of them admits a fallback command, key, or store.
+
+</workflow>
+
+<invocation_forms>
 
 When the shell accepts multiline input:
 
@@ -73,9 +78,7 @@ To read the project key alone:
 python3 "${CLAUDE_SKILL_DIR}/scripts/agent_mail.py" project-key
 ```
 
-4. Accept only `status: "succeeded"`. Preserve the complete versioned result: `commandExitCode`, `projectKey`, the store's `response`, and `data`. A delivered message is the `record` in `data` carrying its store-assigned `id`; that id is the value a doorbell line names. Stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `store-unavailable`, `diagnosis-unavailable`, or `operation-unavailable`; none of them admits a fallback command, key, or store.
-
-</workflow>
+</invocation_forms>
 
 <constraints>
 
@@ -90,7 +93,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/agent_mail.py" project-key
 
 <testing>
 
-Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Run every registry operation and require the exact `am` argument vector under the diagnosed project key; round-trip generated records through the store field mapping; reduce repeated and conflicting terminal handbacks; run the CLI where no executable resolves and require `diagnosis-unavailable` with no fallback; and require a registration result that carries no token.
+The bundled adapter is covered by tests over generated request, record, and diagnosis domains with controlled `CommandRunner` implementations at the store boundary: every registry operation's argument vector is read against the store CLI's captured usage text under the diagnosed project key; generated records round-trip through the store field mapping; repeated and conflicting terminal handbacks reduce to one result; the CLI run where no executable resolves returns `diagnosis-unavailable` with no fallback; and a captured registration response reaches the result without its token.
 
 </testing>
 

@@ -68,7 +68,12 @@ Every other code stays verbatim under `command-failed`. A stalled or timed-out r
 ```
 
 3. For `key`, `start`, `relaunch`, `stop`, or `open-worktree`, require the explicit standing or same-turn authorization the invoking workflow holds for that exact pane, then add `"mutationAuthorized": true` inside `arguments`. When it is absent, do not run the adapter.
-4. Submit the request over stdin.
+4. Submit the request over stdin in one of the forms in `<invocation_forms>`.
+5. Accept only `status: "succeeded"`. Preserve the complete versioned result, `commandExitCode`, and the public `response`, whose `result` is herdr's own envelope: an inventory lists `agents` with `name`, `agent`, `agent_status`, `pane_id`, `tab_id`, `workspace_id`, `cwd`, and `interactive_ready`. Act on a named lifecycle status from `<lifecycle_statuses>`; stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `mutation-unauthorized`, or `operation-unavailable`.
+
+</workflow>
+
+<invocation_forms>
 
 When the shell accepts multiline input:
 
@@ -84,9 +89,7 @@ When the runner requires one physical command line:
 printf '%s\n' '{"schemaVersion":1,"operation":"inventory","arguments":{}}' | python3 "${CLAUDE_SKILL_DIR}/scripts/herdr_environment.py" run
 ```
 
-5. Accept only `status: "succeeded"`. Preserve the complete versioned result, `commandExitCode`, and the public `response`, whose `result` is herdr's own envelope: an inventory lists `agents` with `name`, `agent`, `agent_status`, `pane_id`, `tab_id`, `workspace_id`, `cwd`, and `interactive_ready`. Act on a named lifecycle status from `<lifecycle_statuses>`; stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `mutation-unauthorized`, or `operation-unavailable`.
-
-</workflow>
+</invocation_forms>
 
 <constraints>
 
@@ -101,7 +104,7 @@ printf '%s\n' '{"schemaVersion":1,"operation":"inventory","arguments":{}}' | pyt
 
 <testing>
 
-Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Run every registry operation and require the exact herdr argument vector and a subprocess bound above the request's timeout; project generated inventories to complete participants and resolve absent and duplicated selectors; map every projected error code to its named status and an unprojected code to `command-failed` with the code verbatim; require every mutating request to fail without authorization and every wait-bearing request to fail without a timeout; and run the default runner against a child that outlives its bound.
+The bundled adapter is covered by tests over generated request, inventory, and error-code domains with controlled `CommandRunner` implementations at the herdr boundary: every registry operation's argument vector is read against herdr's captured usage text and carries a subprocess bound above the request's timeout; inventories over every server state project to complete participants and absent or duplicated selectors resolve to their named results; every projected error code maps to its named status and an unprojected code to `command-failed` with the code verbatim; every mutating request fails without authorization and every wait-bearing request fails without a timeout; and the default runner ends a child that outlives its bound.
 
 </testing>
 

@@ -1,0 +1,23 @@
+Register or update an agent identity in a project (idempotent)
+
+Usage: am agents register [OPTIONS] --project <PROJECT_KEY> --program <PROGRAM> --model <MODEL>
+
+Options:
+  -p, --project <PROJECT_KEY>
+          Project key (slug or human_key / absolute path)
+      --program <PROGRAM>
+          Agent program (e.g. "claude-code", "codex-cli")
+      --model <MODEL>
+          Underlying model (e.g. "opus-4.6", "gpt-5-turbo")
+  -n, --name <NAME>
+          Agent name (adjective+noun, e.g. "BlueLake"). Auto-generated if omitted
+  -t, --task <TASK>
+          Short description of the agent's current task
+      --attachments-policy <ATTACHMENTS_POLICY>
+          Attachments policy: auto, inline, file, none [default: auto]
+      --format <FORMAT>
+          Output format: table, json, or toon (default: auto-detect)
+      --json
+          Output JSON (shorthand for --format json)
+  -h, --help
+          Print help

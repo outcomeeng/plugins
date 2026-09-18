@@ -67,7 +67,14 @@ STORE_THREAD_ID_FIELD = "thread_id"
 STORE_THREAD_FIELD = "thread"
 STORE_ACK_REQUIRED_FIELD = "ack_required"
 STORE_ACK_STATUS_FIELD = "ack_status"
+# The store's acknowledgement statuses on the inbox surface: `none` when no
+# acknowledgement is required, and the two states of a required one.
 STORE_ACK_STATUS_NONE = "none"
+STORE_ACK_STATUS_PENDING = "pending"
+STORE_ACK_STATUS_ACKED = "acked"
+STORE_ACK_REQUIRED_STATUSES = frozenset(
+    {STORE_ACK_STATUS_PENDING, STORE_ACK_STATUS_ACKED}
+)
 STORE_INBOX_FIELD = "inbox"
 
 # Fields of the capability's requests and results.
@@ -399,9 +406,10 @@ def _operation(value: object) -> Operation:
     try:
         return Operation(_text(value, OPERATION_FIELD))
     except ValueError as error:
+        valid = ", ".join(sorted(operation.value for operation in Operation))
         raise AgentMailError(
             ExecutionStatus.OPERATION_UNAVAILABLE,
-            f"Unsupported agent-mail operation: {value!r}.",
+            f"Unsupported agent-mail operation: {value!r}. Valid operations: {valid}.",
         ) from error
 
 
@@ -409,8 +417,10 @@ def _record_kind(value: object, location: str, *, sent: bool) -> RecordKind:
     try:
         kind = RecordKind(_text(value, location))
     except ValueError as error:
+        valid = ", ".join(sorted(member.value for member in SENT_KINDS))
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Unsupported record kind at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Unsupported record kind at {location}. Valid kinds: {valid}.",
         ) from error
     if sent and kind not in SENT_KINDS:
         raise AgentMailError(
@@ -658,6 +668,13 @@ def resolve_project_key(runner: CommandRunner) -> str:
     return project_key_from_diagnosis(payload)
 
 
+def _describe_shapes(contract: OperationContract) -> str:
+    return "; ".join(
+        f"required {sorted(shape.required_fields)}, optional {sorted(shape.optional_fields)}"
+        for shape in contract.request_shapes
+    )
+
+
 def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     value = _object(request, "request")
     unexpected = sorted(set(value) - REQUEST_FIELDS)
@@ -691,7 +708,8 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     ):
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} arguments do not match a source-owned request shape.",
+            f"{operation.value} arguments do not match a source-owned request shape; "
+            f"accepted shapes: {_describe_shapes(contract)}.",
         )
     for field_name in TEXT_ARGUMENT_FIELDS:
         if field_name in arguments:

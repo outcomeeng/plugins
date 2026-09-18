@@ -10,12 +10,12 @@ from outcomeeng_testing.harnesses.agent_mail import (
 
 def test_message_records_round_trip_through_the_store_fields() -> None:
     def assert_roundtrip(
-        module: ModuleType, record: dict[str, object], message_id: int
+        module: ModuleType, record: dict[str, object], message_id: int, ack_status: str
     ) -> None:
         send_fields = module.store_fields_for(record)
         subject = cast(str, send_fields[module.STORE_SUBJECT_FIELD])
         read_back = module.record_from_inbox_item(
-            store_inbox_echo(module, send_fields, message_id),
+            store_inbox_echo(module, send_fields, message_id, ack_status),
             recipient=cast(str, record[module.RECIPIENT_FIELD]),
         )
 
@@ -31,15 +31,19 @@ def test_message_records_round_trip_through_the_store_fields() -> None:
 
 def test_terminal_handbacks_reduce_to_exactly_one_result() -> None:
     def assert_terminal(
-        module: ModuleType, reference: str, first_kind: object, second_kind: object
+        module: ModuleType,
+        reference: str,
+        first_kind: object,
+        second_kind: object,
+        content: dict[str, str],
     ) -> None:
         first = module.terminal_handback(
             kind=first_kind,
             correlation=reference,
-            sender="Officer",
-            recipient="Captain",
-            subject="terminal result",
-            body="complete inline result",
+            sender=content[module.SENDER_FIELD],
+            recipient=content[module.RECIPIENT_FIELD],
+            subject=content[module.RECORD_SUBJECT_FIELD],
+            body=content[module.BODY_FIELD],
         )
         second = {**first, module.KIND_FIELD: second_kind}
 

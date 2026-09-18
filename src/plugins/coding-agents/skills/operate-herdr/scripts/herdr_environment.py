@@ -417,9 +417,10 @@ def _operation(value: object) -> Operation:
     try:
         return Operation(_text(value, OPERATION_FIELD))
     except ValueError as error:
+        valid = ", ".join(sorted(operation.value for operation in Operation))
         raise HerdrEnvironmentError(
             ExecutionStatus.OPERATION_UNAVAILABLE,
-            f"Unsupported herdr operation: {value!r}.",
+            f"Unsupported herdr operation: {value!r}. Valid operations: {valid}.",
         ) from error
 
 
@@ -430,6 +431,13 @@ def _agent_state(value: object, location: str) -> AgentState:
         raise HerdrEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA, f"Unsupported agent state at {location}."
         ) from error
+
+
+def _describe_shapes(contract: OperationContract) -> str:
+    return "; ".join(
+        f"required {sorted(shape.required_fields)}, optional {sorted(shape.optional_fields)}"
+        for shape in contract.request_shapes
+    )
 
 
 def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
@@ -473,7 +481,8 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     ):
         raise HerdrEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} arguments do not match a source-owned request shape.",
+            f"{operation.value} arguments do not match a source-owned request shape; "
+            f"accepted shapes: {_describe_shapes(contract)}.",
         )
     selectors = [field for field in SELECTOR_FIELDS if field in arguments]
     if (

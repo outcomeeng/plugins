@@ -18,10 +18,15 @@ from outcomeeng_testing.generators.herdr_environment import (
     agent_names,
     agent_states,
     error_messages,
+    herdr_agent_item,
     inventories,
-    projected_error_codes,
     unknown_operation_names,
     unprojected_error_codes,
+    wait_timeouts,
+)
+from outcomeeng_testing.harnesses.cli_usage import (
+    UsageContract,
+    usage_contract_from_path,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -35,6 +40,8 @@ CODING_AGENTS_RUNTIME_ROOTS = (
     ROOT / "dist/codex/coding-agents",
 )
 OPERATE_HERDR_RELATIVE = Path("skills/operate-herdr")
+# Captured `herdr <command> --help` texts: herdr's own grammar declaration.
+USAGE_FIXTURE_ROOT = ROOT / "outcomeeng_testing/fixtures/herdr_environment/usage"
 RAW_HERDR_VIOLATION_FIXTURE = (
     ROOT / "outcomeeng_testing/fixtures/herdr_environment/raw_herdr_command.py.txt"
 )
@@ -120,6 +127,12 @@ def load_herdr_environment() -> ModuleType:
     return _load()
 
 
+def usage_contract_for(module: ModuleType, operation: object) -> UsageContract:
+    """Herdr's captured usage declaration for one operation's command."""
+    prefix = module.PUBLIC_HERDR_COMMAND_PREFIXES[operation]
+    return usage_contract_from_path(USAGE_FIXTURE_ROOT / f"{'-'.join(prefix[1:])}.txt")
+
+
 def herdr_success_result(module: ModuleType, result: object) -> CommandResultContract:
     """Return one controlled public success envelope from the herdr boundary."""
     return cast(
@@ -161,21 +174,27 @@ def herdr_error_result(
 
 
 def run_error_projection_mapping(
-    assert_projection: Callable[[ModuleType, str, str, bool], None],
+    assert_projection: Callable[[ModuleType, str, str, bool, str, int], None],
 ) -> None:
-    """Drive projected and unprojected herdr error codes through the adapter."""
+    """Drive every projected herdr error code by construction, and generated
+    unprojected codes, through the adapter with generated selectors and bounds."""
     module = _load()
+    projected_codes = tuple(module.HERDR_ERROR_STATUSES)
 
     @seed(ERROR_PROJECTION_SEED)
     @settings(max_examples=ERROR_PROJECTION_EXAMPLES, deadline=None, print_blob=True)
     @given(
-        projected=projected_error_codes(module),
         unprojected=unprojected_error_codes(module),
         message=error_messages(),
+        selector=agent_names(),
+        timeout=wait_timeouts(module),
     )
-    def generated_projection(projected: str, unprojected: str, message: str) -> None:
-        assert_projection(module, projected, message, True)
-        assert_projection(module, unprojected, message, False)
+    def generated_projection(
+        unprojected: str, message: str, selector: str, timeout: int
+    ) -> None:
+        for code in projected_codes:
+            assert_projection(module, code, message, True, selector, timeout)
+        assert_projection(module, unprojected, message, False, selector, timeout)
 
     run_replayable_property(
         generated_projection,
@@ -189,8 +208,13 @@ def run_inventory_mapping(
         [ModuleType, list[dict[str, object]], str, object], None
     ],
 ) -> None:
-    """Drive generated inventories and selectors through the participant projection."""
+    """Drive inventories that carry every server state by construction, plus
+    generated inventories, through the participant projection."""
     module = _load()
+    every_state = [
+        herdr_agent_item(module, ordinal, state)
+        for ordinal, state in enumerate(module.AgentState, start=1)
+    ]
 
     @seed(INVENTORY_SEED)
     @settings(max_examples=INVENTORY_EXAMPLES, deadline=None, print_blob=True)
@@ -202,6 +226,7 @@ def run_inventory_mapping(
     def generated_inventory(
         agents: list[dict[str, object]], absent_name: str, state: object
     ) -> None:
+        assert_inventory(module, every_state, absent_name, state)
         assert_inventory(module, agents, absent_name, state)
 
     run_replayable_property(
