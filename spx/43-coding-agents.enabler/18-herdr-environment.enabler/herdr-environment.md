@@ -16,7 +16,7 @@ This capability is an agent adapter: the configured way the agent harness launch
 ### Mappings
 
 - Every supported operation — open-worktree, start, stop, relaunch, inventory, read, wait, prompt, and key — maps one source-owned request shape through the source-owned operation registry to one herdr argument vector and checked response result ([test](tests/test_herdr_environment.mapping.l1.py))
-- Herdr agent evidence maps to the complete source-preserved name, agent kind, pane, and the server's own working, blocked, idle, and done states of each hosted agent session, or to a named unavailable or ambiguous result ([test](tests/test_herdr_environment.mapping.l1.py))
+- Herdr agent evidence maps to the complete source-preserved name, agent kind, pane, and the server's own working, blocked, idle, done, and unknown states of each hosted agent session, or to a named unavailable or ambiguous result ([test](tests/test_herdr_environment.mapping.l1.py))
 - Start maps to the launched agent session's identity when that session is ready for input within the request's bound, or to a named not-ready result; the bounded wait maps to the state reached or a named timeout; neither is an open-ended poll ([test](tests/test_herdr_environment.mapping.l1.py))
 - An absent herdr server or an unsupported operation maps to the source-owned unavailable result and no fallback ([test](tests/test_herdr_environment.mapping.l1.py))
 
