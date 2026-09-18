@@ -1,6 +1,6 @@
 <authority>
 
-The governing methodology is `outcomeeng/methodology` version 4.0, chapter `versions/4.0/methodology/change/changes.md`. This reference operationalizes that chapter without replacing it. A Change is mutable coordination for one intended Output in one Product; it declares no product, architecture, or methodology truth.
+The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`: require `methodology.version: "4.0"`, resolve `methodology.source`, and read `versions/4.0/methodology/change/changes.md` inside that declared source. This reference operationalizes that chapter without replacing it. A Change is mutable coordination for one intended Output in one Product; it declares no product, architecture, or methodology truth.
 
 </authority>
 
