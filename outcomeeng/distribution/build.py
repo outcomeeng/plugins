@@ -69,11 +69,12 @@ from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_FIELD_KIND,
     RUNTIME_TOKEN_FILE_KIND,
     RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT,
-    RUNTIME_TOKEN_OPTIONAL_NAMES,
     RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY,
     RUNTIME_TOKEN_ROOT_GUIDE_NAMES,
     RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
     RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES,
+    RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
+    RUNTIME_TOKEN_USE_SKILL_NAMES,
     RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY,
     RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
     RUNTIME_TOKEN_TERM_KIND,
@@ -246,11 +247,15 @@ class RuntimeTokenKind:
     (``tool``, ``field``, ``file``) are enforced, while the common-word concept-term
     kind (``term``) is not — a whole-token match on a word like "agent" would flag
     every prose mention, so terms are covered by review instead. A new kind opts into
-    or out of guard enforcement explicitly through this flag.
+    or out of guard enforcement explicitly through this flag. ``optional`` names the
+    capabilities of this kind that some runtimes lack: resolving one for a runtime
+    with no name yields the unavailable-token placeholder instead of an error, and
+    the renderer removes that placeholder only as a complete tool-list item.
     """
 
     lint_enforced: bool
     names: dict[str, dict[str, str]]
+    optional: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -314,7 +319,9 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
             RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: (
                 RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES
             ),
+            RUNTIME_TOKEN_USE_SKILL_CAPABILITY: RUNTIME_TOKEN_USE_SKILL_NAMES,
         },
+        optional=frozenset({RUNTIME_TOKEN_USE_SKILL_CAPABILITY}),
     ),
     RUNTIME_TOKEN_FIELD_KIND: RuntimeTokenKind(
         lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_FIELD_KIND],
@@ -367,7 +374,9 @@ def resolve_runtime_token(
     kind-generic resolution is exercised with a controlled registry. Raises
     ``RuntimeTokenError`` when the kind is absent, the capability has no entry in
     that kind, or the kind has no name for the runtime — the caller wraps the
-    absent-runtime case in a per-runtime conditional.
+    absent-runtime case in a per-runtime conditional. A capability the kind lists
+    as optional resolves to the unavailable-token placeholder for a runtime with
+    no name, so the renderer can remove it as one complete tool-list item.
     """
     kind_entry = registry.get(kind)
     if kind_entry is None:
@@ -375,6 +384,8 @@ def resolve_runtime_token(
     entry = kind_entry.names.get(capability)
     if entry is None:
         raise RuntimeTokenError(f"unknown {kind} capability {capability!r}")
+    if runtime not in entry and capability in kind_entry.optional:
+        return _unavailable_runtime_token(kind, capability)
     if runtime not in entry:
         raise RuntimeTokenError(
             f"{kind} capability {capability!r} has no name for runtime {runtime!r}; "
@@ -679,6 +690,21 @@ def _unavailable_runtime_token(kind: str, capability: str) -> str:
     )
 
 
+def _frontmatter_bounds(text: str) -> tuple[int, int]:
+    """Return ``(closing_index, fence_end)`` of a text that opens a frontmatter fence.
+
+    Raises FrontmatterError when the opening fence has no closing fence or the
+    closing fence is malformed. Callers check ``text.startswith("---\\n")`` first.
+    """
+    closing_index = text.find("\n---", len("---\n"))
+    if closing_index == -1:
+        raise FrontmatterError("frontmatter starts with --- but has no closing fence")
+    fence_end = closing_index + len("\n---")
+    if len(text) > fence_end and text[fence_end] not in {"\n", "\r"}:
+        raise FrontmatterError("frontmatter closing fence is malformed")
+    return closing_index, fence_end
+
+
 def _remove_unavailable_frontmatter_items(text: str) -> str:
     """Remove unavailable tool tokens only as complete frontmatter-list items."""
     if _UNAVAILABLE_RUNTIME_TOKEN_START not in text:
@@ -688,13 +714,7 @@ def _remove_unavailable_frontmatter_items(text: str) -> str:
             "an unavailable runtime capability was used outside frontmatter"
         )
 
-    closing_index = text.find("\n---", len("---\n"))
-    if closing_index == -1:
-        raise FrontmatterError("frontmatter starts with --- but has no closing fence")
-    fence_end = closing_index + len("\n---")
-    if len(text) > fence_end and text[fence_end] not in {"\n", "\r"}:
-        raise FrontmatterError("frontmatter closing fence is malformed")
-
+    closing_index, fence_end = _frontmatter_bounds(text)
     lines = text[len("---\n") : closing_index].splitlines()
     kept_lines: list[str] = []
     index = 0
@@ -978,14 +998,7 @@ def strip_frontmatter_fields(
     if not text.startswith("---\n"):
         return text
 
-    closing_index = text.find("\n---", len("---\n"))
-    if closing_index == -1:
-        raise FrontmatterError("frontmatter starts with --- but has no closing fence")
-
-    fence_end = closing_index + len("\n---")
-    if len(text) > fence_end and text[fence_end] not in {"\n", "\r"}:
-        raise FrontmatterError("frontmatter closing fence is malformed")
-
+    closing_index, fence_end = _frontmatter_bounds(text)
     raw_frontmatter = text[len("---\n") : closing_index]
     suffix = text[fence_end:]
     field_set = frozenset(fields)
@@ -1012,12 +1025,7 @@ def frontmatter_field_names(text: str) -> frozenset[str]:
     """Return top-level field names from the opening YAML frontmatter fence."""
     if not text.startswith("---\n"):
         return frozenset()
-    closing_index = text.find("\n---", len("---\n"))
-    if closing_index == -1:
-        raise FrontmatterError("frontmatter starts with --- but has no closing fence")
-    fence_end = closing_index + len("\n---")
-    if len(text) > fence_end and text[fence_end] not in {"\n", "\r"}:
-        raise FrontmatterError("frontmatter closing fence is malformed")
+    closing_index, _fence_end = _frontmatter_bounds(text)
     return frozenset(
         key
         for line in text[len("---\n") : closing_index].splitlines()
@@ -1184,12 +1192,6 @@ def _make_kind_global(
         if resolved is None:
             raise RuntimeTokenError(
                 f"{kind} token {capability!r} rendered with no target in context"
-            )
-        optional_names = RUNTIME_TOKEN_OPTIONAL_NAMES.get((kind, capability))
-        if optional_names is not None:
-            return optional_names.get(
-                resolved,
-                _unavailable_runtime_token(kind, capability),
             )
         return resolve_runtime_token(
             kind,

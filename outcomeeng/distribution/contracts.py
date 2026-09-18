@@ -143,11 +143,6 @@ RUNTIME_TOKEN_REQUIRED_NAMES: Final[dict[tuple[str, str], dict[str, str]]] = {
         RUNTIME_TOKEN_ROOT_GUIDE_NAMES
     ),
 }
-RUNTIME_TOKEN_OPTIONAL_NAMES: Final[dict[tuple[str, str], dict[str, str]]] = {
-    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_USE_SKILL_CAPABILITY): (
-        RUNTIME_TOKEN_USE_SKILL_NAMES
-    )
-}
 
 
 def format_target_branches(
