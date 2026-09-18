@@ -6,6 +6,8 @@ CAN write one source that renders each tool name, field name, concept term, and 
 
 ## Assertions
 
+- ALWAYS: an optional tool capability — one declared in the optional-names table beside the runtime-token registry with a name for some targets and none for others — renders the target's name where one exists and, where none exists, is removed only as one complete item of list-valued `allowed-tools` or `tools` frontmatter; every other placement of an unavailable capability fails the build. The optional-names table sits outside the source-layer guard, so a target's name for an optional capability is not forbidden raw in authored source.
+
 ### Compliance
 
 - ALWAYS: configuration examples and descriptions select a complete central
@@ -18,6 +20,5 @@ CAN write one source that renders each tool name, field name, concept term, and 
 - ALWAYS: a runtime-explicit registry token renders the named runtime's name regardless of the build target — a cross-runtime comparison can name a specific agent's capability on every target ([test](tests/test_runtime_parameterization.compliance.l1.py))
 - NEVER: a registry token names a kind the registry lacks, or a capability the build target's kind registry has no name for, without a surrounding per-runtime conditional — the build fails rather than emit an empty or foreign name ([test](tests/test_runtime_parameterization.compliance.l1.py))
 - ALWAYS: a per-runtime conditional block wrapping a target-only registry token renders the token only for the named target and emits nothing for the others — a capability absent on a runtime is expressed as fact-level divergence ([test](tests/test_runtime_parameterization.compliance.l1.py))
-- A tool capability unavailable on one build target is expressible once in list-valued `allowed-tools` or `tools` frontmatter; the renderer omits the complete unavailable item for that target, while use of that unavailable capability in prose or another field fails the build.
 - ALWAYS: the runtime-token registry is keyed by token kind (`tool`, `field`, `term`, `file`), and each kind declares whether the source-layer guard enforces its names — the `tool`, `field`, and `file` kinds are guard-enforced unique tokens, the `term` kind of common-word concept terms is not, so a kind's names join or stay out of the validation gate's forbidden set explicitly ([test](tests/test_runtime_parameterization.compliance.l1.py))
 - ALWAYS: that a raw runtime-divergent name never appears in authored source — the discipline this rendering mechanism exists to make possible — is enforced by the runtime-token validation gate at `spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`, not by this node ([audit])

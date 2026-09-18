@@ -12,6 +12,8 @@ The skills-about-skills cluster is three peers with distinct roles:
 
 ## Assertions
 
+- ALWAYS: a composing skill names each dependency through the shared `require_skill` directive and declares skill-use capability through the optional `tool('use_skill')` frontmatter token, so every generated agent surface receives its native instruction and capability set.
+
 ### Compliance
 
 - ALWAYS: skill-authoring and audit guidance forbids model and reasoning
@@ -21,7 +23,6 @@ The skills-about-skills cluster is three peers with distinct roles:
 - ALWAYS: `/skill-standards` owns every rule `/audit-skill` enforces — standards and enforcement stay in one place so drift cannot open between them ([audit])
 - ALWAYS: `/create-skill` and `/audit-skill` load `/skill-standards` before doing any authoring or evaluation work — prevents memory-based assessment ([audit])
 - ALWAYS: a skill governs its own behavior and remains independent of the agent, skill, or context that invokes it ([audit])
-- A composing skill names each dependency through the shared `require_skill` directive and declares skill-use capability through the registry-backed `tool('use_skill')` frontmatter token, so every generated agent surface receives its native instruction and capability set.
 - ALWAYS: `/skill-standards` requires a workflow step writing outside the invocation checkout to obtain confirmation naming the absolute destination before that write, and `/audit-skill` flags an unconfirmed one as critical — resolving a path establishes where it is, never permission to write there ([audit])
 - NEVER: `/skill-standards` permits skill content that frames a permission prompt, sandbox refusal, or tool-layer decline as an obstacle and documents a route around it, and `/audit-skill` flags such content as critical — a documented bypass turns one operator's approval into a standing one for every session that loads the skill ([audit])
 - ALWAYS: before proposing or applying a skill rename, `/create-skill` classifies every skill the repository requires reviewing by current name, skill type, governing naming form, proposed name or keep disposition, and reason; it reads declared methodology vocabulary and relevant file history before calling a name defective, and never infers a batch rename from a shared token, suffix, or grammatical number ([audit])

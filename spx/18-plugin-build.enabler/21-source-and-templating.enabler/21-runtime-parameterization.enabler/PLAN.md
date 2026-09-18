@@ -11,10 +11,13 @@ validation lint (`outcomeeng/validation/runtime_tokens.py`, governed by
 `spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`) enforces every authored
 file under `src/plugins/` and `src/_shared/`, except the explicit files named in
 `RUNTIME_TOKEN_IGNORE` because they must name harness guide filenames as data.
-The registry is seeded with `ask_user` (`AskUserQuestion`/`request_user_input`),
-`use_skill` (`Skill`/unavailable), and the no-Codex-equivalent `ScheduleWakeup`.
-An unavailable capability is removed only when its token occupies one complete item in
-`allowed-tools` or agent `tools`; every other placement fails the build. The ignore-list
+The registry is seeded with `ask_user` (`AskUserQuestion`/`request_user_input`) and
+the no-Codex-equivalent `ScheduleWakeup`. The optional capability `use_skill`
+(`Skill` on Claude Code, unavailable on Codex) is declared in the optional-names
+table beside the registry, outside the source-layer guard. An unavailable
+capability is removed only when its token occupies one complete item in
+`allowed-tools` or agent `tools`; a field whose every item is unavailable is
+removed for that target; every other placement fails the build. The ignore-list
 mechanism remains as the tracked exemption surface for any future not-yet-converted plugin.
 
 ## Phase 2

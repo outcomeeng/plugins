@@ -6,6 +6,8 @@ CAN install plugin content from committed generated trees that match each coding
 
 ## Assertions
 
+- ALWAYS: every item of a list-valued skill or agent tool field that names a capability unavailable on the target is removed as a complete item; remaining item order and spelling are preserved with no empty item or dangling separator, and a field whose every item is unavailable is removed from that target's output.
+
 ### Compliance
 
 - ALWAYS: every `src/plugins/<plugin>/.../` source file produces at least one corresponding output in `dist/claude/<plugin>/` and at least one in `dist/codex/<plugin>/` — a source that emits into no target tree is a coverage gap, while a fan-out source emits once per plugin it renders for ([test](tests/test_target_emission.compliance.l1.py))
@@ -15,8 +17,7 @@ CAN install plugin content from committed generated trees that match each coding
 - ALWAYS: `${CLAUDE_SKILL_DIR}/...` paths in source appear verbatim in `dist/claude/` output — Claude Code resolves the variable during skill execution ([test](tests/test_target_emission.compliance.l1.py))
 - ALWAYS: unescaped `${CLAUDE_SKILL_DIR}/...` execution paths in source appear as `${SKILL_DIR}/...` paths in `dist/codex/` output — Codex resolves bundled skill files through its skill-directory variable ([test](tests/test_target_emission.compliance.l1.py))
 - ALWAYS: source lines marked with the skill-directory rewrite escape emit `${CLAUDE_SKILL_DIR}` verbatim in both generated targets — authoring guidance can teach the canonical Claude Code source token while normal executable paths still translate per target ([test](tests/test_target_emission.compliance.l1.py))
-- ALWAYS: target-specific frontmatter fields (`disable-model-invocation` for Codex) are absent from a target that does not consume them, while portable skill capability fields such as `argument-hint` and `allowed-tools` appear in both generated runtime trees ([test](tests/test_target_emission.compliance.l1.py))
-- A tool capability unavailable on the target is removed as one complete item from list-valued skill or agent frontmatter; remaining item order and spelling are preserved, with no empty item or dangling separator.
+- ALWAYS: target-specific frontmatter fields (`disable-model-invocation` for Codex) are absent from a target that does not consume them, while portable skill capability fields such as `argument-hint` and `allowed-tools` appear in both generated runtime trees, except a tool field whose every item is unavailable on a target ([test](tests/test_target_emission.compliance.l1.py))
 - ALWAYS: an include inside a per-target conditional emits its shared-topic sibling files only into the matching generated target, including when the conditional include is nested inside another shared fragment ([test](tests/test_target_emission.compliance.l1.py))
 - NEVER: a built output contains execution-time injection syntax that inlines sister-skill content — fan-out at build time replaces injection ([test](tests/test_target_emission.compliance.l1.py))
 - NEVER: an unescaped `dist/codex/` output references `${CLAUDE_SKILL_DIR}` — Codex output uses `${SKILL_DIR}` for executable skill-directory references ([test](tests/test_target_emission.compliance.l1.py))
