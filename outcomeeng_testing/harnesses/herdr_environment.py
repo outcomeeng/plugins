@@ -6,6 +6,7 @@ import importlib.util
 import json
 import sys
 from collections.abc import Callable
+from itertools import combinations
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -144,12 +145,23 @@ class BoundProbeRunner:
 
 @dataclass(frozen=True)
 class CapturedResponse:
-    """One response herdr emitted for one operation's command, read by path."""
+    """One response herdr emitted for one operation's command, read by path.
+
+    `shaping_fields` names the request fields whose presence selected this
+    capture — a command answers `--wait` with a different response than the
+    same command without it — so a replay pairs the capture with a request of
+    the same shape.
+    """
 
     operation: object
     path: str
     result: CommandResultContract
     error_code: str | None
+    shaping_fields: frozenset[str] = frozenset()
+
+
+class CaptureError(RuntimeError):
+    """The captured responses do not cover the shape a replay asked for."""
 
 
 def _load() -> ModuleType:
@@ -202,18 +214,76 @@ def _error_code(module: ModuleType, path: Path) -> str:
     return str(envelope[module.ERROR_FIELD][module.CODE_FIELD])
 
 
+def _response_shaping_fields(module: ModuleType) -> tuple[str, ...]:
+    """Request fields whose presence changes what the command writes back.
+
+    Herdr answers `agent prompt` with the state it observed after `--wait` and
+    with the submission alone without it, so the two shapes are captured
+    separately; every other option filters or bounds the same response shape.
+    """
+    return (module.WAIT_FIELD,)
+
+
+def _shaping_suffix(module: ModuleType, fields: frozenset[str]) -> str:
+    """The option-named suffix of the capture a request shape selects: the base
+    command's capture carries none, and a capture taken with `--wait` carries
+    `.wait`."""
+    return "".join(
+        f".{module.PUBLIC_HERDR_ARGUMENT_OPTIONS[field_name].lstrip('-')}"
+        for field_name in _response_shaping_fields(module)
+        if field_name in fields
+    )
+
+
+def _shaping_fields_of(
+    module: ModuleType, arguments: dict[str, object] | None
+) -> frozenset[str]:
+    present = arguments or {}
+    return frozenset(
+        field_name
+        for field_name in _response_shaping_fields(module)
+        if present.get(field_name) is True
+    )
+
+
 def captured_success_response(
-    module: ModuleType, operation: object
+    module: ModuleType,
+    operation: object,
+    arguments: dict[str, object] | None = None,
 ) -> CapturedResponse | None:
-    """Herdr's captured success response for one operation, when one exists."""
+    """Herdr's captured success response for one operation's request shape,
+    when one exists: the capture taken under the same response-shaping options
+    the request carries."""
     name = _command_fixture_name(module, operation)
     suffix = "txt" if operation in module.TEXT_OPERATIONS else "json"
-    path = RESPONSE_FIXTURE_ROOT / f"{name}.{suffix}"
+    fields = _shaping_fields_of(module, arguments)
+    path = RESPONSE_FIXTURE_ROOT / f"{name}{_shaping_suffix(module, fields)}.{suffix}"
     if not path.is_file():
         return None
     return CapturedResponse(
-        operation, str(path.relative_to(ROOT)), _success_result(module, path), None
+        operation,
+        str(path.relative_to(ROOT)),
+        _success_result(module, path),
+        None,
+        fields,
     )
+
+
+def _captured_success_variants(
+    module: ModuleType, operation: object
+) -> list[CapturedResponse]:
+    """Every captured success response of one operation: the base command's and
+    each option-shaped one."""
+    shaping = _response_shaping_fields(module)
+    variants: list[CapturedResponse] = []
+    for size in range(len(shaping) + 1):
+        for chosen in combinations(shaping, size):
+            captured = captured_success_response(
+                module, operation, dict.fromkeys(chosen, True)
+            )
+            if captured is not None:
+                variants.append(captured)
+    return variants
 
 
 def captured_error_responses(
@@ -236,9 +306,7 @@ def captured_responses(module: ModuleType) -> list[CapturedResponse]:
     """Every captured response, success and error, across every operation."""
     responses: list[CapturedResponse] = []
     for operation in module.Operation:
-        success = captured_success_response(module, operation)
-        if success is not None:
-            responses.append(success)
+        responses.extend(_captured_success_variants(module, operation))
         responses.extend(captured_error_responses(module, operation))
     return responses
 
@@ -325,12 +393,21 @@ def projected_error_variants(module: ModuleType) -> list[CapturedResponse]:
     return variants
 
 
-def request_for(module: ModuleType, operation: object) -> dict[str, object]:
-    """The first registry request of one operation, from the generated set."""
-    return next(
-        request
-        for request in operation_requests(module)
-        if module.Operation(request[module.OPERATION_FIELD]) is operation
+def request_for(
+    module: ModuleType,
+    operation: object,
+    shaping_fields: frozenset[str] = frozenset(),
+) -> dict[str, object]:
+    """The first registry request of one operation whose response-shaping
+    fields are exactly `shaping_fields`, from the generated set."""
+    for request in operation_requests(module):
+        if module.Operation(request[module.OPERATION_FIELD]) is not operation:
+            continue
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        if _shaping_fields_of(module, arguments) == shaping_fields:
+            return request
+    raise CaptureError(
+        f"no registry request of {operation} carries exactly {sorted(shaping_fields)}"
     )
 
 

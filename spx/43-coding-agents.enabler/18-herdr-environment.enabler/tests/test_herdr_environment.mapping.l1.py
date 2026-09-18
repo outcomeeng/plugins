@@ -70,7 +70,7 @@ def test_herdr_operation_mappings() -> None:
                 cast(list[str], arguments[module.AGENT_ARGUMENTS_FIELD])
             )
 
-        captured = captured_success_response(module, operation)
+        captured = captured_success_response(module, operation, arguments)
         if captured is None:
             # herdr emitted only an error for this command under capture; the
             # response mapping below covers it with that envelope.
@@ -103,7 +103,7 @@ def test_captured_responses_map_to_results_without_rewriting() -> None:
     for captured in captured_responses(module):
         operation = module.Operation(captured.operation)
         covered.add(operation)
-        request = request_for(module, operation)
+        request = request_for(module, operation, captured.shaping_fields)
         result = module.execute(request, RecordingRunner([captured.result]))
 
         assert json.loads(json.dumps(result)) == result
@@ -128,20 +128,29 @@ def test_captured_responses_map_to_results_without_rewriting() -> None:
 def test_start_and_wait_map_to_the_session_identity_and_state() -> None:
     module = load_herdr_environment()
 
-    def session_of(operation: object) -> tuple[dict[str, object], dict[str, object]]:
-        captured = captured_success_response(module, operation)
+    def session_of(
+        operation: object, shaping_fields: frozenset[str] = frozenset()
+    ) -> tuple[dict[str, object], dict[str, object]]:
+        request = request_for(module, operation, shaping_fields)
+        captured = captured_success_response(
+            module, operation, cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        )
         assert captured is not None, f"no captured {operation} response"
         envelope = cast(dict[str, object], captured_payload(captured))
         result = cast(dict[str, object], envelope[module.RESULT_FIELD])
         emitted = cast(dict[str, object], result[module.SESSION_FIELD])
-        executed = module.execute(
-            request_for(module, operation), RecordingRunner([captured.result])
-        )
+        executed = module.execute(request, RecordingRunner([captured.result]))
         assert executed[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
         return emitted, module.session_from_response(executed[module.RESPONSE_FIELD])
 
-    for operation in module.SESSION_OPERATIONS:
-        emitted, session = session_of(operation)
+    # Every session-bearing operation, and the prompt under both of its
+    # response shapes: submitted alone, and observed after `--wait`.
+    session_shapes = [
+        (operation, frozenset[str]()) for operation in module.SESSION_OPERATIONS
+    ]
+    session_shapes.append((module.Operation.PROMPT, frozenset({module.WAIT_FIELD})))
+    for operation, shaping_fields in session_shapes:
+        emitted, session = session_of(operation, shaping_fields)
         assert session == {
             field_name: emitted[field_name] for field_name in module.PARTICIPANT_FIELDS
         }
