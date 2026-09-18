@@ -1,0 +1,3 @@
+"""Violating shipped-script payload for herdr help invocation detection."""
+
+checked_herdr_command().append("--help")

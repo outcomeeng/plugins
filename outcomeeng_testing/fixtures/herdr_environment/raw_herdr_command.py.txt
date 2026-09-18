@@ -1,0 +1,5 @@
+"""Violating shipped-script payload for raw herdr command detection."""
+
+import subprocess
+
+subprocess.run(["herdr", "agent", "list"], check=True)
