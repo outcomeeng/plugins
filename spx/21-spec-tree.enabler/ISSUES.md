@@ -187,3 +187,13 @@ Preserved refs and observed heads:
 **Impact:** `/contextualize`, `/align`, and `/refactor` parse both forms; a reader of this tree sees the prior form until the migration, and a `PLAN.md` here is a note the 4.0 grammar does not admit.
 
 **Settlement condition:** The SPX CLI admits the seven suffixes, `{slug}.spec.md`, front matter, and the status claim; this repository's consumer Change migrates every directory, spec, and `PLAN.md` — the latter into Changes — and these `[test]` assertions state the 4.0 grammar against the migrated parser.
+
+## Eval prompts embed authored source, so build tokens reach model-facing prompts
+
+Nine eval suites under this node declare the authored `src/plugins/spec-tree/skills/.../SKILL.md` as their `prompt_source` producer: `32-decisions.enabler/21-adr-auditing.enabler/evals/{structure,voice,tag-validity}`, `32-decisions.enabler/32-pdr-auditing.enabler/evals/{structure,voice,tag-validity}`, `35-evidence.enabler/69-verify-skill.enabler/evals/routing` (which embeds the authored source beside both renderings), `68-audit.enabler/32-audit-specs.enabler/evals/structure`, and `68-audit.enabler/32-audit-tests.enabler/evals/full-chain-ownership`. Since composing skills declare skill-use capability through the `{{! tool('use_skill') !}}` frontmatter token, every one of those materialized `prompt.md` files carries that unrendered build token in the embedded frontmatter, a subject no agent harness ever sees. The one Codex suite, `68-audit.enabler/32-audit-tests.enabler/evals/full-chain-ownership-codex`, declares the rendered `dist/codex/...` producer and is clean.
+
+The eval-evidence audits of these nodes on head `3e269d96119858872790af10b2a087118eca0b41` rated producer coupling `PASS` with the authored producer, so the token changes no verdict field; the local review on the same head raised the divergence as `debt`. Re-pointing nine suites at a rendered producer changes what each suite claims — the routing suite deliberately embeds all three forms — so the move is a decision over the eval producer policy for this subtree, not a mechanical edit.
+
+**Settlement condition**: each suite declares the rendered producer of the harness it runs under, or the eval harness renders an authored producer through the build before materialization, and every affected `prompt.md` is rematerialized with a passing run recorded.
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-09-18_03-20-58-166-8b80f274938c` (debt, consistency) and `spec-tree:eval-evidence-auditor` finding `f-001` on `68-audit.enabler/32-audit-specs.enabler`, both during Change #76.
