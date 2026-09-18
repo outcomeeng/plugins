@@ -1,14 +1,32 @@
 ---
 name: message-agents
 description: >-
-  ALWAYS invoke this skill when discovering a Prowl coding-agent recipient or sending facts, ownership proposals, state reports, authorizations, or acknowledgements to another agent pane.
+  ALWAYS invoke this skill when sending a message record to a registered agent-mail name with its one-line doorbell, discovering a Prowl coding-agent recipient, or sending facts, ownership proposals, state reports, authorizations, or acknowledgements to another agent pane.
 argument-hint: "<JSON message request>"
 allowed-tools: Bash(printf:*), Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py":*), AskUserQuestion
 ---
 
 <objective>
-A source-owned coordination envelope delivered to one complete Prowl pane identity, with transport status kept distinct from acknowledgement, agreement, authorization, and ownership.
+One message delivered on the route its request selects — a message record in the agent-mail store with its one-line doorbell, or a source-owned coordination envelope submitted into one complete Prowl pane — with delivery kept distinct from acknowledgement, agreement, authorization, and ownership.
 </objective>
+
+<route_selection>
+
+The request shape selects the route. A request carrying `recipient` as an agent-mail name, `correlation`, `body`, and `ackRequired` is a mail request and follows `<mail_route>`. A request carrying `recipientPath`, `facts`, and a pane-bound kind is a Prowl request and follows `<workflow>`. A request that mixes the two is `invalid-schema`; the bundled script rejects fields outside the selected route's shape.
+
+</route_selection>
+
+<mail_route>
+
+1. Read `$ARGUMENTS` as one JSON message request with exactly `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, plus `authority` only on a same-worktree `delegation-request`. `sender` is the caller's own registered agent-mail name and `recipient` is one registered name. `kind` is one of `order`, `fact`, `question`, `answer`, `delegation-request`, `delegation-completed`, `delegation-failed`, `delegation-rejected`, or `delegation-unavailable`. `correlation` is the thread every reply to one exchange shares. A same-worktree `delegation-request` carries `authority` with `owner` equal to `sender`, a non-empty `writeScope` list, and `gitMutation: false`; the record body opens with that authority rendered, and a request without it reaches no record.
+2. Pass the request to the bundled script's `mail-request` operation. It returns the `record` and the complete `capability` send request for `/operate-agent-mail`.
+3. Invoke `/operate-agent-mail` once with that `capability` request unchanged. Preserve its complete result.
+4. Pass the capability result to the bundled script's `mail-result` operation as `capabilityResult`. A `succeeded` result whose `data.record` carries the store-assigned `id` returns `status: "delivered"` with the `doorbell.text` line `[<sender>] mail <id>`; any other capability result returns `delivery-failed` with the capability's status and detail preserved. Delivery is the record in the store; stop here on `delivery-failed`.
+5. Ring the doorbell: send exactly `doorbell.text` and nothing else into the recipient's pane through the environment capability — `/operate-prowl` `send` for a Prowl pane, `/operate-herdr` `prompt` for a herdr pane. No JSON and no record body reaches a pane. For a Prowl pane, pass the complete checked `send` result back to `mail-result` as `doorbellTransport` beside the same `capabilityResult`; `doorbell.submitted` is true only with `status: "succeeded"`, `commandExitCode: 0`, and `response.data.input.trailing_enter_sent: true`. An unsubmitted doorbell leaves the message delivered and is reported beside it; never send the doorbell twice.
+6. Report the store-assigned `id`, `correlation`, `status`, and `doorbell`. `delivered` means the record exists in the store; it NEVER means acknowledged, agreed, authorized, or owned. Acknowledgement is the recipient's separate `/operate-agent-mail` receipt.
+7. To resolve a doorbell that arrives in the caller's own pane, pass its `line` and the `agents` names from the live inventory — the agent-mail registrations or the environment capability's agent list — to the bundled script's `doorbell` operation. It returns the `sender` and `id`, and rejects a line whose sender is absent from that inventory; then read the record through `/operate-agent-mail` `inbox`.
+
+</mail_route>
 
 <workflow>
 
@@ -33,6 +51,18 @@ A source-owned coordination envelope delivered to one complete Prowl pane identi
 Pass every payload over stdin. When the shell accepts multiline input:
 
 ```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" mail-request <<'JSON'
+{"messageRequest":{"kind":"fact","correlation":"<thread>","sender":"<own-name>","recipient":"<name>","subject":"<subject>","body":"<body>","ackRequired":false}}
+JSON
+
+python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" mail-result <<'JSON'
+{"capabilityResult":{},"doorbellTransport":null}
+JSON
+
+python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" doorbell <<'JSON'
+{"line":"[<sender>] mail <id>","agents":[]}
+JSON
+
 python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" build <<'JSON'
 {"discovery":{},"messageRequest":{},"handbackPlan":null}
 JSON
@@ -45,9 +75,14 @@ JSON
 When the runner requires one physical command line:
 
 ```bash
+printf '%s\n' '{"messageRequest":{"kind":"fact","correlation":"<thread>","sender":"<own-name>","recipient":"<name>","subject":"<subject>","body":"<body>","ackRequired":false}}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" mail-request
+printf '%s\n' '{"capabilityResult":{},"doorbellTransport":null}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" mail-result
+printf '%s\n' '{"line":"[<sender>] mail <id>","agents":[]}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" doorbell
 printf '%s\n' '{"discovery":{},"messageRequest":{},"handbackPlan":null}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" build
 printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":{},"detail":"<exact-environment-detail>"}' | python3 "${CLAUDE_SKILL_DIR}/scripts/agent_message.py" result
 ```
+
+Every operation exits 0 on its success shape — `record` present for `mail-request`, `status: "delivered"` for `mail-result`, `id` present for `doorbell`, `delivery.status: "ready"` for `build`, `status: "delivered"` for `result` — and 2 with a versioned `{schemaVersion, status, detail}` object on `invalid-schema`, `invalid-identity`, or `delivery-failed`.
 
 </command_forms>
 
@@ -55,14 +90,15 @@ printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":
 
 - ALWAYS preserve complete source-supplied agent, pane, worktree, branch, repository, run, coordination-reference, mutation-target, observed-state, and transport identities.
 - ALWAYS report the selected target using the exact `recipientPath` supplied by the caller while using the resolved pane UUID only inside the delivery operation.
-- ALWAYS invoke `/operate-prowl` for source-owned target resolution and delivery.
+- ALWAYS invoke `/operate-prowl` for source-owned target resolution and Prowl delivery, and `/operate-agent-mail` for mail delivery and receipt; the bundled script executes no command and reads no store.
+- ALWAYS send a doorbell as exactly the one line `[<sender>] mail <id>`; no JSON and no record body reaches a pane, and no message record is written under `.spx/`.
 - ALWAYS preserve a production request's complete source-generated `handback` block unchanged.
 - ALWAYS require the matching complete successful `/operate-prowl plan-handback` result before building a production request.
 - NEVER accept or construct a handback command, return-pane field, or cross-skill adapter path.
 - ALWAYS retain each complete command result in the active tool context and feed it into the next source-owned operation; no scratch file or shell redirect is part of this workflow.
 - NEVER scan transcript files, use another terminal multiplexer, or ask the operator to relay a message as a fallback.
 - NEVER select an endpoint by title, focus, position, inferred prose, or an undeclared environment.
-- NEVER convert transport success into acknowledgement, agreement, ownership, mutation authorization, or continuation state.
+- NEVER convert transport success or a stored record into acknowledgement, agreement, ownership, mutation authorization, or continuation state.
 
 </constraints>
 
@@ -70,8 +106,11 @@ printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":
 
 Before release, exercise `coordination_reference`, `build_envelope`, `send_request`, `delivery_request`, and `delivery_result` with complete resolver identities and controlled environment-result payloads. Run the documented `build` stdin form and require `delivery.status: "ready"`; run the documented `result` form with a complete successful `send` payload and require `status: "delivered"`, then remove or alter each required transport field and require rejection. The matrix covers authoritative `toPane` selection from ambiguous candidates, caller exclusion, optional run-identity preservation and rejection, accepted and rejected acknowledgements, all message kinds, complete HEAD/status validation, exact mutation target/state matching, a production request that preserves the source-generated handback block only with its matching complete `plan-handback` result, rejection of caller-authored executable handback fields, malformed identities and optional fields, and transport results that never establish acknowledgement, agreement, authorization, or ownership.
 
+The mail route is exercised in the node's `tests/` under `spx/43-coding-agents.enabler/21-agent-communication.enabler`: every record kind maps to a record the agent-mail capability accepts unchanged; the capability's checked `send` result over the store's captured reply maps to `delivered` with the store id and the doorbell line, and a rejected or absent store maps to `delivery-failed` with the capability's status and detail; generated doorbells parse back to their sender and id; a sender absent from the inventory and a line carrying more than the doorbell are rejected; a delivered result requires every checked capability field and a zero exit code; a same-worktree delegation without complete authority reaches no record.
+
 Recorded exercised payload/results:
 
+- `mail-request` with a `fact` request → one `record` and the `capability` send request; `mail-result` with the capability's succeeded result → `status: "delivered"`, the store id, and `doorbell.text` `[<sender>] mail <id>` with `submitted: false` until a checked doorbell transport is supplied.
 - `build` with a complete resolver-selected recipient and a `fact` request → one envelope and `delivery.status: "ready"` for that recipient pane.
 - `result` with `delivered: true`, matching zero exit codes, `status: "succeeded"`, and `response.data.input.trailing_enter_sent: true` → `status: "delivered"`; changing the trailing-Enter field to false → `invalid-schema`.
 - `result` with `delivered: false`, exit code 7, and `detail: "transport rejected"` → `status: "delivery-failed"` while acknowledgement, agreement, and ownership remain false.

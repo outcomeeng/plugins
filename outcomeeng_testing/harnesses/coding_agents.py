@@ -14,10 +14,22 @@ from typing import Callable, cast
 
 from hypothesis import given, seed, settings
 
-from outcomeeng_testing.generators.coding_agents import message_content
+from outcomeeng_testing.generators.coding_agents import doorbell_lines, message_content
 from outcomeeng_testing.generators.prowl_environment import (
     message_texts,
     public_agent_item,
+)
+from outcomeeng_testing.harnesses.agent_mail import (
+    AbsentExecutableRunner,
+    CommandResultContract,
+    captured_diagnosis,
+    failed_command_result,
+    json_command_result,
+    load_agent_mail,
+    store_response_result,
+)
+from outcomeeng_testing.harnesses.agent_mail import (
+    RecordingRunner as MailRecordingRunner,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 from outcomeeng_testing.harnesses.prowl_environment import (
@@ -37,6 +49,15 @@ HANDBACK_PROPERTY_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/21-agent-communication.enabler/tests/"
     "test_agent_message.property.l1.py"
 )
+DOORBELL_PROPERTY_SEED = 2026091809
+DOORBELL_PROPERTY_EXAMPLES = 60
+DOORBELL_PROPERTY_REPLAY_PATH = (
+    "spx/43-coding-agents.enabler/21-agent-communication.enabler/tests/"
+    "test_doorbell.property.l1.py"
+)
+# Failure simulation at the store boundary: the store rejects the send.
+STORE_REJECTION_EXIT_CODE = 3
+STORE_REJECTION_DETAIL = "store rejected the send"
 
 
 def _load(name: str) -> ModuleType:
@@ -248,4 +269,102 @@ def generated_envelope(
             request=content.request,
             **fields,
         ),
+    )
+
+
+def _mail_send_result(
+    message: ModuleType,
+    record: dict[str, object],
+    runner: MailRecordingRunner | AbsentExecutableRunner,
+) -> dict[str, object]:
+    agent_mail = load_agent_mail()
+    return cast(
+        dict[str, object],
+        agent_mail.execute(message.mail_send_request(record), runner),
+    )
+
+
+def _diagnosis_reply(agent_mail: ModuleType) -> CommandResultContract:
+    return json_command_result(agent_mail, captured_diagnosis(agent_mail))
+
+
+def observe_mail_send(
+    message: ModuleType, record: dict[str, object]
+) -> dict[str, object]:
+    """The capability's checked send result over the store's captured reply."""
+    agent_mail = load_agent_mail()
+    runner = MailRecordingRunner(
+        [
+            _diagnosis_reply(agent_mail),
+            store_response_result(agent_mail, agent_mail.Operation.SEND),
+        ]
+    )
+    return _mail_send_result(message, record, runner)
+
+
+def observe_rejected_mail_send(
+    message: ModuleType, record: dict[str, object]
+) -> dict[str, object]:
+    """The capability's result when the store rejects the send (failure simulation)."""
+    agent_mail = load_agent_mail()
+    runner = MailRecordingRunner(
+        [
+            _diagnosis_reply(agent_mail),
+            failed_command_result(
+                agent_mail, STORE_REJECTION_EXIT_CODE, STORE_REJECTION_DETAIL
+            ),
+        ]
+    )
+    return _mail_send_result(message, record, runner)
+
+
+def observe_absent_store_mail_send(
+    message: ModuleType, record: dict[str, object]
+) -> dict[str, object]:
+    """The capability's result when no store executable exists (failure simulation)."""
+    agent_mail = load_agent_mail()
+    runner = AbsentExecutableRunner(
+        agent_mail.AM_COMMAND, [_diagnosis_reply(agent_mail)]
+    )
+    return _mail_send_result(message, record, runner)
+
+
+def observe_doorbell_transport(
+    pane: str, *, trailing_enter_sent: bool
+) -> dict[str, object]:
+    """The complete Prowl adapter result for one doorbell line sent into a pane."""
+    prowl = load_prowl_environment()
+    runner = RecordingRunner(
+        [prowl_send_command_result(prowl, trailing_enter_sent=trailing_enter_sent)]
+    )
+    request = prowl.operation_request(
+        prowl.Operation.SEND,
+        pane=pane,
+        text="doorbell line under test",
+        no_wait=True,
+    )
+    return cast(dict[str, object], prowl.execute(request, runner))
+
+
+def run_doorbell_roundtrip_property(
+    assert_roundtrip: Callable[[ModuleType, str, int], None],
+) -> None:
+    """Drive generated doorbell senders and ids while the linked test owns the law."""
+    message = load_agent_message()
+
+    @seed(DOORBELL_PROPERTY_SEED)
+    @settings(
+        max_examples=DOORBELL_PROPERTY_EXAMPLES,
+        deadline=None,
+        print_blob=True,
+    )
+    @given(line=doorbell_lines())
+    def generated_doorbell_property(line: tuple[str, int]) -> None:
+        sender, message_id = line
+        assert_roundtrip(message, sender, message_id)
+
+    run_replayable_property(
+        generated_doorbell_property,
+        seed_value=DOORBELL_PROPERTY_SEED,
+        replay_path=DOORBELL_PROPERTY_REPLAY_PATH,
     )

@@ -6,12 +6,14 @@ from typing import cast
 import pytest
 
 from outcomeeng_testing.generators.coding_agents import (
+    mail_record_input,
     message_content,
 )
 from outcomeeng_testing.harnesses.coding_agents import (
     fact_envelope,
     generated_envelope,
     mutation_observation,
+    observe_mail_send,
     observe_send_transport,
     production_handback,
     production_handback_plan,
@@ -93,16 +95,22 @@ def test_delivery_requires_complete_checked_transport_evidence() -> None:
 
 def test_transport_success_establishes_no_coordination_state() -> None:
     module, sender, recipient, _ = public_message_context()
-    result = module.delivery_result(
+    prowl_result = module.delivery_result(
         fact_envelope(module, sender, recipient),
         delivered=True,
         command_exit_code=0,
         transport=observe_send_transport(recipient[module.PANE_FIELD]),
     )
+    record = module.mail_request(
+        {**mail_record_input(module, 5, module.RecordKind.ORDER)}
+    )[module.RECORD_FIELD]
+    mail_result = module.mail_delivery_result(observe_mail_send(module, record))
 
-    assert result[module.ACKNOWLEDGED_FIELD] is False
-    assert result[module.AGREED_FIELD] is False
-    assert result[module.OWNERSHIP_ESTABLISHED_FIELD] is False
+    for result in (prowl_result, mail_result):
+        assert result[module.STATUS_FIELD] == module.DeliveryStatus.DELIVERED
+        assert result[module.ACKNOWLEDGED_FIELD] is False
+        assert result[module.AGREED_FIELD] is False
+        assert result[module.OWNERSHIP_ESTABLISHED_FIELD] is False
 
 
 def test_envelopes_reject_incomplete_participant_identities() -> None:
