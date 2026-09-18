@@ -1,4 +1,4 @@
-<!-- Generated from the complete producer at src/plugins/spec-tree/skills/audit-adr/SKILL.md. -->
+<!-- Generated from the complete producer at dist/claude/spec-tree/skills/audit-adr/SKILL.md. -->
 
 Apply the complete producer below to the supplied ADR. Treat the supplied scope classification as language-neutral. Return only the producer's structured JSON verdict.
 
@@ -8,7 +8,7 @@ description: >-
   ADR audit methodology — judges one ADR against the ADR evidence model,
   covering section structure, atemporal voice, and per-rule tag validity.
 argument-hint: "<adr-file-path>"
-allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git branch --show-current:*)
+allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
 ---
 
 <objective>

@@ -32,5 +32,5 @@ trials = 1
 
 [prompt_source]
 kind = "producer-file"
-producer = "src/plugins/spec-tree/skills/audit-tests/SKILL.md"
+producer = "dist/claude/spec-tree/skills/audit-tests/SKILL.md"
 template = "prompt.template.md"

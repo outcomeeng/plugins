@@ -1,12 +1,12 @@
 <!-- Generated from the complete producer set:
-src/plugins/spec-tree/skills/audit-pdr/SKILL.md
-src/plugins/spec-tree/skills/audit-pdr/references/pdr-evidence-model.md
+dist/claude/spec-tree/skills/audit-pdr/SKILL.md
+dist/claude/spec-tree/skills/audit-pdr/references/pdr-evidence-model.md
 -->
 
 Apply the complete producer below to the supplied PDR. Return only the producer's structured JSON verdict.
 
 <pre><code>
-<!-- Producer: src/plugins/spec-tree/skills/audit-pdr/SKILL.md -->
+<!-- Producer: dist/claude/spec-tree/skills/audit-pdr/SKILL.md -->
 
 ---
 name: audit-pdr
@@ -15,7 +15,7 @@ description: >-
   covering content classification, property quality, per-rule tag validity,
   atemporal voice, and consistency with ancestor decisions.
 argument-hint: "<pdr-file-path>"
-allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git branch --show-current:*)
+allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
 ---
 
 <objective>
@@ -269,7 +269,7 @@ The verdict is sound when:
 </success_criteria>
 
 
-<!-- Producer: src/plugins/spec-tree/skills/audit-pdr/references/pdr-evidence-model.md -->
+<!-- Producer: dist/claude/spec-tree/skills/audit-pdr/references/pdr-evidence-model.md -->
 
 <overview>
 

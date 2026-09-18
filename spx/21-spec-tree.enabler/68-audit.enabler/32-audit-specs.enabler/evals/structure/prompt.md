@@ -1,4 +1,4 @@
-<!-- Generated from the complete producer at src/plugins/spec-tree/skills/audit-specs/SKILL.md. -->
+<!-- Generated from the complete producer at dist/claude/spec-tree/skills/audit-specs/SKILL.md. -->
 
 Apply the complete producer below to the supplied spec node. When the input carries `context`, treat it as the governing methodology context loaded by the producer's contextualization step. Return only the producer's structured JSON verdict.
 
@@ -9,7 +9,7 @@ description: >-
   node-spec form, covering section structure, atemporal voice, and per-assertion
   tag fitness.
 argument-hint: "<node-spec-file-path>"
-allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git branch --show-current:*)
+allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
 ---
 
 <objective>

@@ -61,14 +61,11 @@ the producer `src/plugins/spec-tree/skills/audit-specs/SKILL.md` (new
 `missing-assertions`, `missing-frontmatter`, and `unfalsifiable-assertion` rules;
 a rewritten Step 3), a changed `prompt.template.md`, and the rematerialized
 `prompt.md`, so no committed run proves the current producer, prompt, and case set.
-The `prompt_source` embeds the authored source, so the unresolved build token
-`{{! tool('use_skill') !}}` in the embedded frontmatter now reaches the model-facing
-prompt.
 
 **Settlement condition**: one passing run of
 `just eval spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/evals/structure/eval.toml`
 on a head that carries the current producer, with its row committed to
 `history.jsonl`.
 
-**Evidence**: `spec-tree:eval-evidence-auditor` findings `f-001` and `f-005` on
+**Evidence**: `spec-tree:eval-evidence-auditor` finding `f-005` on
 head `a65659114b99767b90b4d920550fff5dc0824794` during Change #76, whose prototype boundary runs no eval.
