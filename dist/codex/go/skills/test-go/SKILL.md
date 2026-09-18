@@ -3,14 +3,14 @@ name: test-go
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for Go.
   NEVER write or fix Go tests without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(go test:*), Bash(go vet:*), Bash(go build:*), Bash(gofmt:*), Bash(staticcheck:*), Bash(golangci-lint:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(go test:*), Bash(go vet:*), Bash(go build:*), Bash(gofmt:*), Bash(staticcheck:*), Bash(golangci-lint:*)
 ---
 
-Invoke the `go:go-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-standards`.
 
-Invoke the `go:go-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-test-standards`.
 
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `spec-tree:test`.
 
 <objective>
 Go test files that supply evidence, at the level and assertion type `/test` selects, for a spec-tree node's assertions.

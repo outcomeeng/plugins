@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when reviewing, auditing, or checking spec file conformance.
   NEVER check spec conformance without this skill.
 argument-hint: "[file, directory, or changed-file list]"
-allowed-tools: Read, Glob, Grep, Skill
+allowed-tools: Read, Glob, Grep
 ---
 
 <objective>

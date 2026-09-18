@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when continuing an open pull request against a repository the operator does not control — answering review, publishing a revision, or reporting its current state.
   NEVER comment on or push to such a pull request without this skill.
 argument-hint: "[pull request number or URL]"
-allowed-tools: Read, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(git status --porcelain), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api user:*), Bash(git fetch:*), Bash(git switch:*), Bash(git rev-list:*), Bash(git branch --show-current), Bash(git add:*), Bash(git commit:*), Bash(git push origin HEAD:refs/heads/*), Bash(printf:*)
+allowed-tools: Read, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(git status --porcelain), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api user:*), Bash(git fetch:*), Bash(git switch:*), Bash(git rev-list:*), Bash(git branch --show-current), Bash(git add:*), Bash(git commit:*), Bash(git push origin HEAD:refs/heads/*), Bash(printf:*)
 ---
 
 <objective>
@@ -13,7 +13,7 @@ Every valid review finding answered in the head branch, and — when any finding
 
 <workflow>
 
-**Step 1 — Load the standards and resolve the pull request.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
+**Step 1 — Load the standards and resolve the pull request.** {!% require_skill 'contribute:contribution-standards' %!}
 
 `$ARGUMENTS` is a pull-request number or URL. A bare number is the number; a URL's trailing path segment is the number. Both the URL check and the empty-input lookup need the resolved base, so Step 2 settles them.
 

@@ -6,7 +6,7 @@ description: >-
 allowed-tools: Read, Grep, Glob, Skill
 ---
 
-Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `python:python-standards`.
 
 <objective>
 

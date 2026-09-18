@@ -4,10 +4,12 @@ effort: "medium"
 name: adr-auditor
 description: >-
   ALWAYS invoke when auditing ADR evidence quality after writing an ADR or before implementing from it.
-tools: Bash, Read, Glob, Grep, Skill
+tools: Read, Glob, Grep, Skill, Bash(git branch --show-current:*)
 skills:
   - spec-tree:audit-adr
 ---
+
+Use skill `spec-tree:audit-adr`.
 
 <role>
 

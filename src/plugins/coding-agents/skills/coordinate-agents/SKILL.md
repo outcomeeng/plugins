@@ -2,7 +2,7 @@
 name: coordinate-agents
 description: >-
   ALWAYS invoke this skill when coding agents in separate worktrees may overlap, depend on each other, share an external blocker, or need ownership coordination.
-allowed-tools: Skill
+allowed-tools: "{{! tool('use_skill') !}}"
 ---
 
 <objective>

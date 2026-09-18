@@ -57,11 +57,7 @@ PLUGIN_SUBDIRS: Final = frozenset(
         CODEX_PLUGIN_SUBDIR_NAME,
     }
 )
-REQUIRE_SKILL_GUIDANCE_TEMPLATE: Final = (
-    "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
-    "unavailable, report the missing skill and continue with the closest "
-    "available workflow."
-)
+REQUIRE_SKILL_GUIDANCE_TEMPLATE: Final = "Use skill `{skill_ref}`."
 
 
 def build_variable_token(variable: str) -> str:
@@ -102,6 +98,7 @@ RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT: Final[dict[str, bool]] = {
 }
 
 RUNTIME_TOKEN_ASK_USER_CAPABILITY: Final = "ask_user"
+RUNTIME_TOKEN_USE_SKILL_CAPABILITY: Final = "use_skill"
 RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: Final = "spawn_agent"
 RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: Final = "wait_agent"
 RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: Final = "schedule_wakeup"
@@ -112,6 +109,9 @@ RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: Final = "root_guide"
 RUNTIME_TOKEN_ASK_USER_NAMES: Final[dict[str, str]] = {
     Target.CLAUDE.value: "AskUserQuestion",
     Target.CODEX.value: "request_user_input",
+}
+RUNTIME_TOKEN_USE_SKILL_NAMES: Final[dict[str, str]] = {
+    Target.CLAUDE.value: "Skill",
 }
 RUNTIME_TOKEN_SPAWN_AGENT_NAMES: Final[dict[str, str]] = {
     Target.CODEX.value: "collaboration.spawn_agent",

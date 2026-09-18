@@ -3,10 +3,10 @@ name: architect-typescript
 description: >-
   ALWAYS invoke this skill when writing ADRs for TypeScript.
   NEVER author a TypeScript ADR without this skill.
-allowed-tools: Read, Write, Glob, Grep, Skill
+allowed-tools: Read, Write, Glob, Grep
 ---
 
-Invoke the `typescript:typescript-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `typescript:typescript-architecture-standards`.
 
 <objective>
 A binding TypeScript ADR whose testability constraints live as ALWAYS/NEVER rules under the `## Verification` section's `### Audit` subsection.

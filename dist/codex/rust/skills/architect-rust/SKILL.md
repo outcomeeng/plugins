@@ -3,12 +3,12 @@ name: architect-rust
 description: >-
   ALWAYS invoke this skill when writing ADRs for Rust.
   NEVER author a Rust ADR without this skill.
-allowed-tools: Read, Write, Glob, Grep, Skill
+allowed-tools: Read, Write, Glob, Grep
 ---
 
-Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `rust:rust-standards`.
 
-Invoke the `rust:rust-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `rust:rust-architecture-standards`.
 
 <objective>
 A Rust ADR that follows the standard Rust architecture template, preserves spec-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.

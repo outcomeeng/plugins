@@ -9,6 +9,8 @@ skills:
   - go:simplify-go
 ---
 
+Use skill `go:simplify-go`.
+
 <role>
 Go implementation simplification through `go:simplify-go`.
 </role>

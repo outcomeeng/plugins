@@ -63,3 +63,45 @@ Renaming "the agent guide" and `root_guide` requires one product-vocabulary deci
 `src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py` runs well past the fifty-line threshold — parse, dotted-version compare, language/harness filtering, router rendering, shared-region parsing with whole-side git-recency reconcile, and biggest-identical-span bootstrap — imported as a module by `outcomeeng_testing/harnesses/instruction_block.py` and exercised by the four `l1` suites here. Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; this generator has proven its value many times over. The render model (router block plus shared regions, reconciled by git recency) keeps that obligation alive even though it deletes the earlier command-slot parser.
 
 The migration requires an unpublished `@outcomeeng/spx` capability and a cross-repo port. Until that capability is published and the consuming floor advances, the generator ships as a stdlib script under `spx/13-plugin-and-runtime-conventions.adr.md`. The migration is filed in the spx CLI's session queue (`outcomeeng/spx`, handoff `2026-07-04_14-49-08`); revisit this issue when that handoff publishes the required capability.
+
+## The background updater duplicates its skill and leaves write authority undefined
+
+The configured-agent audit of
+`src/plugins/spec-tree/agents/instruction-block-updater.md` during Change #76
+rejected three boundaries:
+
+- the wrapper runs `--reconcile` and `--write` through `Bash` while its source
+  declares no native writable sandbox boundary;
+- its role and protocol still describe `spec-tree:update-instruction-block` as
+  preloaded or injected even though generated Codex configuration explicitly
+  says skill enablement is not a preload guarantee; and
+- its protocol copies the skill's detect, reconcile, render, write,
+  verification, marker-reading, and ambiguity handling instead of remaining a
+  thin skill-backed wrapper.
+
+**Required handling**: choose the native workspace-write boundary for the two
+root instruction files, reduce the wrapper to an explicit skill invocation plus
+the background runner's material non-interactive constraint, and relay the
+skill-owned result contract. Retain one minimal isolated update against a
+disposable product checkout.
+
+**Evidence**: `instructions:subagent-auditor` findings `f-001` through `f-003`
+against `src/plugins/spec-tree/agents/instruction-block-updater.md` on Change
+#76 head `843ddd709b058970d414ec755cc10121ff6bb5ff`.
+
+## Generated root instruction files exceed the declared byte budget
+
+The `regenerate-instruction-blocks` pre-commit hook reports
+`CLAUDE.md 58417/32768 breach (25649 over)` and
+`AGENTS.md 61159/32768 breach (28391 over)`. The render-model decision keeps a
+standing breach report-only until the surface fits, then fails regressions, so
+the hook succeeds while the harness can truncate both files.
+
+**Required handling**: continue moving operational policy from the root router
+into the skills that consume it until both generated files fit the 32768-byte
+combined project-document ceiling, then preserve the passing boundary in the
+gate.
+
+**Evidence**: repeated `regenerate-instruction-blocks` hook output while
+committing Change #76, including commit
+`7ddd752f1cf44e22a51fe7beed45225c99e6a393`.

@@ -3,7 +3,9 @@ description = "ALWAYS invoke when applying spec-tree template drift to a product
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 web_search = "disabled"
-developer_instructions = """<role>
+developer_instructions = """Use skill `spec-tree:update-instruction-block`.
+
+<role>
 
 Background runner for the product's root instruction block — the managed block in `CLAUDE.md` and `AGENTS.md` — template updates. This is the default, autonomous way to apply the recurring template-drift maintenance. The `spec-tree:update-instruction-block` skill is preloaded into this context; Claude follows its workflow directly and holds no update logic of its own — the skill owns the detect, render, bootstrap, and recency-reconcile behavior, and the deterministic parse, filter, render, and shared-region logic live in the skill's `scripts/instruction_block.py`.
 

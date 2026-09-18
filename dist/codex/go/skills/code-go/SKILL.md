@@ -3,12 +3,12 @@ name: code-go
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for Go.
   NEVER write or fix Go implementation without this skill.
-allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(gofmt:*), Bash(go vet:*), Bash(go test:*), Bash(staticcheck:*), Bash(golangci-lint:*)
+allowed-tools: Read, Write, Glob, Grep, Edit, Bash(gofmt:*), Bash(go vet:*), Bash(go test:*), Bash(staticcheck:*), Bash(golangci-lint:*)
 ---
 
-Invoke the `go:go-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-standards`.
 
-Invoke the `go:go-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-test-standards`.
 
 <objective>
 Go implementation code with spec-driven behavior, explicit seams, and full validation passing.

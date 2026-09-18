@@ -22,13 +22,13 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 
 <prerequisites>
 
-Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `typescript:typescript-standards`.
 
-Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `typescript:typescript-test-standards`.
 
-Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `spec-tree:audit-tests`.
 
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `spec-tree:test`.
 
 Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 

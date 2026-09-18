@@ -2,7 +2,7 @@
 name: adr-auditor
 description: >-
   ALWAYS invoke when auditing ADR evidence quality after writing an ADR or before implementing from it.
-tools: Bash, Read, Glob, Grep, Skill
+tools: Read, Glob, Grep, {{! tool('use_skill') !}}, Bash(git branch --show-current:*)
 profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only
@@ -10,6 +10,8 @@ sandbox_mode: read-only
 skills:
   - spec-tree:audit-adr
 ---
+
+{!% require_skill 'spec-tree:audit-adr' %!}
 
 <role>
 {!% if target == 'codex' %!}

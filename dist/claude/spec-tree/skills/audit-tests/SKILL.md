@@ -5,7 +5,7 @@ description: >-
   behavior-coupled evidence its assertions are fulfilled, covering predicate
   ownership, source ownership, coupling, falsifiability, and full-chain coverage.
 argument-hint: "<spec-node-path-or-evidence-scope>"
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob, Skill, Bash(git diff:*)
 ---
 
 <objective>
@@ -66,7 +66,7 @@ If the request carries no target, return `REJECTED` with only `gate-1-assertion`
 
 **Step 0: Load shared test-evidence standards**
 
-Invoke the `spec-tree:test-evidence-standards` skill through the runtime skill-composition surface before proceeding. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, mutation litmus, and assertion-design-record rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
+Use skill `spec-tree:test-evidence-standards`. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, mutation litmus, and assertion-design-record rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
 
 </step>
 

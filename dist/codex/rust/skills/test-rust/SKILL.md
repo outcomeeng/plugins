@@ -3,14 +3,14 @@ name: test-rust
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for Rust.
   NEVER write or fix Rust tests without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo check:*), Bash(cargo clippy:*), Bash(cargo fmt --check:*), Bash(cargo llvm-cov:*), Bash(spx validation:*), Bash(just test:*), Bash(just check:*), Bash(just verify:*), Bash(just validate:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(cargo test:*), Bash(cargo check:*), Bash(cargo clippy:*), Bash(cargo fmt --check:*), Bash(cargo llvm-cov:*), Bash(spx validation:*), Bash(just test:*), Bash(just check:*), Bash(just verify:*), Bash(just validate:*)
 ---
 
-Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `rust:rust-standards`.
 
-Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `rust:rust-test-standards`.
 
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `spec-tree:test`.
 
 <objective>
 Rust tests for what the `/test` router selected, at the chosen level.

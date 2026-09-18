@@ -3,7 +3,7 @@ name: simplify-typescript
 description: >-
   ALWAYS invoke this skill when simplifying TypeScript implementation while preserving behavior.
 argument-hint: "<HEAD|base...head>"
-allowed-tools: Read, Glob, Grep, Edit, Skill, Bash(git status:*), Bash(git rev-parse:*), Bash(git diff:*)
+allowed-tools: Read, Glob, Grep, Edit, {{! tool('use_skill') !}}, Bash(git status:*), Bash(git rev-parse:*), Bash(git diff:*)
 ---
 
 {!% require_skill 'typescript:typescript-test-standards' %!}

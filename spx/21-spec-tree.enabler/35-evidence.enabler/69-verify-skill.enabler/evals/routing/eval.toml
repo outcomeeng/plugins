@@ -24,7 +24,6 @@ ci_policy = "manual"
 [prompt_source]
 kind = "producer-files"
 producers = [
-  "src/plugins/spec-tree/skills/verify/SKILL.md",
   "dist/claude/spec-tree/skills/verify/SKILL.md",
   "dist/codex/spec-tree/skills/verify/SKILL.md",
 ]

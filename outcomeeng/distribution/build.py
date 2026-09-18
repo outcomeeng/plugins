@@ -18,7 +18,7 @@ import subprocess
 import sys
 from ast import literal_eval
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import Final, Protocol
@@ -33,6 +33,7 @@ from jinja2 import (
 from jinja2.runtime import Context
 
 from outcomeeng.distribution.agents import (
+    AGENT_TOOLS_FIELD,
     convert_agent_markdown,
     parse_agent_text,
 )
@@ -72,6 +73,8 @@ from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_ROOT_GUIDE_NAMES,
     RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
     RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES,
+    RUNTIME_TOKEN_USE_SKILL_CAPABILITY,
+    RUNTIME_TOKEN_USE_SKILL_NAMES,
     RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY,
     RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
     RUNTIME_TOKEN_TERM_KIND,
@@ -244,11 +247,18 @@ class RuntimeTokenKind:
     (``tool``, ``field``, ``file``) are enforced, while the common-word concept-term
     kind (``term``) is not — a whole-token match on a word like "agent" would flag
     every prose mention, so terms are covered by review instead. A new kind opts into
-    or out of guard enforcement explicitly through this flag.
+    or out of guard enforcement explicitly through this flag. ``optional_names``
+    maps the capabilities some runtimes lack to their per-runtime names: resolving
+    one for a runtime with no name yields the unavailable-token placeholder instead
+    of an error, and the renderer removes that placeholder only as a complete
+    tool-list item. Optional names stay outside the guard's forbidden set like the
+    ``term`` kind's concept terms — the one optional capability today renders as
+    the common word ``Skill`` — so review covers a raw appearance.
     """
 
     lint_enforced: bool
     names: dict[str, dict[str, str]]
+    optional_names: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -313,6 +323,9 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
                 RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES
             ),
         },
+        optional_names={
+            RUNTIME_TOKEN_USE_SKILL_CAPABILITY: RUNTIME_TOKEN_USE_SKILL_NAMES,
+        },
     ),
     RUNTIME_TOKEN_FIELD_KIND: RuntimeTokenKind(
         lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_FIELD_KIND],
@@ -365,21 +378,26 @@ def resolve_runtime_token(
     kind-generic resolution is exercised with a controlled registry. Raises
     ``RuntimeTokenError`` when the kind is absent, the capability has no entry in
     that kind, or the kind has no name for the runtime — the caller wraps the
-    absent-runtime case in a per-runtime conditional.
+    absent-runtime case in a per-runtime conditional. A capability the kind lists
+    under ``optional_names`` resolves to the unavailable-token placeholder for a
+    runtime with no name, so the renderer can remove it as one complete tool-list
+    item.
     """
     kind_entry = registry.get(kind)
     if kind_entry is None:
         raise RuntimeTokenError(f"unknown runtime-token kind {kind!r}")
+    optional_entry = kind_entry.optional_names.get(capability)
+    if optional_entry is not None:
+        return optional_entry.get(runtime, _unavailable_runtime_token(kind, capability))
     entry = kind_entry.names.get(capability)
     if entry is None:
         raise RuntimeTokenError(f"unknown {kind} capability {capability!r}")
-    name = entry.get(runtime)
-    if name is None:
+    if runtime not in entry:
         raise RuntimeTokenError(
             f"{kind} capability {capability!r} has no name for runtime {runtime!r}; "
             "wrap the token in a per-runtime conditional"
         )
-    return name
+    return entry[runtime]
 
 
 _DIRECTIVE_RE: Final = re.compile(
@@ -393,6 +411,16 @@ _DIRECTIVE_BODY_RE: Final = re.compile(
 )
 _PLANNING_DIRECTIVE_PLACEHOLDER_START: Final = "\ue000outcomeeng-directive:"
 _PLANNING_DIRECTIVE_PLACEHOLDER_END: Final = "\ue001"
+_UNAVAILABLE_RUNTIME_TOKEN_START: Final = "\ue002outcomeeng-unavailable-runtime-token:"
+_UNAVAILABLE_RUNTIME_TOKEN_END: Final = "\ue003"
+_UNAVAILABLE_RUNTIME_TOKEN_PATTERN: Final = re.compile(
+    re.escape(_UNAVAILABLE_RUNTIME_TOKEN_START)
+    + r"(?P<kind>[a-z_]+):(?P<capability>[a-z_]+)"
+    + re.escape(_UNAVAILABLE_RUNTIME_TOKEN_END)
+)
+_OPTIONAL_TOOL_FRONTMATTER_FIELDS: Final = frozenset(
+    {AGENT_TOOLS_FIELD, "allowed-tools"}
+)
 
 # Jinja control statements share the `{!% %!}` block delimiter with the build's
 # directives. The build owns this vocabulary; validators and evidence import it
@@ -649,7 +677,7 @@ def render_text(
         runtime_token_registry=runtime_token_registry,
         raw_literals=raw_literals,
     )
-    return _restore_literals(
+    restored = _restore_literals(
         _render_jinja(
             rendered,
             shared_root=shared_root,
@@ -658,6 +686,125 @@ def render_text(
         ),
         tuple(raw_literals),
     )
+    return _remove_unavailable_frontmatter_items(restored)
+
+
+def _unavailable_runtime_token(kind: str, capability: str) -> str:
+    return (
+        f"{_UNAVAILABLE_RUNTIME_TOKEN_START}{kind}:{capability}"
+        f"{_UNAVAILABLE_RUNTIME_TOKEN_END}"
+    )
+
+
+def _frontmatter_bounds(text: str) -> tuple[int, int]:
+    """Return ``(closing_index, fence_end)`` of a text that opens a frontmatter fence.
+
+    Raises FrontmatterError when the opening fence has no closing fence or the
+    closing fence is malformed. Callers check ``text.startswith("---\\n")`` first.
+    """
+    closing_index = text.find("\n---", len("---\n"))
+    if closing_index == -1:
+        raise FrontmatterError("frontmatter starts with --- but has no closing fence")
+    fence_end = closing_index + len("\n---")
+    if len(text) > fence_end and text[fence_end] not in {"\n", "\r"}:
+        raise FrontmatterError("frontmatter closing fence is malformed")
+    return closing_index, fence_end
+
+
+def _remove_unavailable_frontmatter_items(text: str) -> str:
+    """Remove unavailable tool tokens only as complete frontmatter-list items."""
+    if _UNAVAILABLE_RUNTIME_TOKEN_START not in text:
+        return text
+    if not text.startswith("---\n"):
+        raise RuntimeTokenError(
+            "an unavailable runtime capability was used outside frontmatter"
+        )
+
+    closing_index, fence_end = _frontmatter_bounds(text)
+    lines = text[len("---\n") : closing_index].splitlines()
+    kept_lines: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        key = _frontmatter_key(line)
+        if key not in _OPTIONAL_TOOL_FRONTMATTER_FIELDS:
+            kept_lines.append(line)
+            index += 1
+            continue
+
+        field_lines = [line]
+        index += 1
+        while index < len(lines) and _is_continuation_line(lines[index]):
+            field_lines.append(lines[index])
+            index += 1
+        kept_lines.extend(_remove_unavailable_tool_items(key, field_lines))
+
+    suffix = text[fence_end:]
+    result = (
+        "---\n" + "\n".join(kept_lines) + "\n---" + suffix
+        if kept_lines
+        else suffix.lstrip("\r\n")
+    )
+    match = _UNAVAILABLE_RUNTIME_TOKEN_PATTERN.search(result)
+    if match is not None:
+        raise RuntimeTokenError(
+            f"{match.group('kind')} capability {match.group('capability')!r} "
+            "is unavailable for this runtime and may appear only as a complete "
+            "item in allowed-tools or tools frontmatter"
+        )
+    return result
+
+
+def _remove_unavailable_tool_items(key: str, lines: list[str]) -> list[str]:
+    """Return one tool field with complete unavailable items removed."""
+    if not any(_UNAVAILABLE_RUNTIME_TOKEN_START in line for line in lines):
+        return lines
+    first = lines[0]
+    _field, separator, raw_value = first.partition(":")
+    if raw_value.strip():
+        # A plain scalar may continue onto indented lines; YAML folds each
+        # line break into one space, so the folded value carries every item.
+        folded_value = " ".join(
+            [raw_value, *(line.strip() for line in lines[1:] if _is_list_line(line))]
+        )
+        items = folded_value.split(",")
+        kept_items = [item for item in items if not _is_unavailable_tool_item(item)]
+        if any(_UNAVAILABLE_RUNTIME_TOKEN_START in item for item in kept_items):
+            return lines
+        if not kept_items:
+            return []
+        return [f"{key}{separator}{','.join(kept_items)}"]
+
+    kept_continuations = [
+        line
+        for line in lines[1:]
+        if not _is_unavailable_tool_item(_frontmatter_list_item(line))
+    ]
+    if any(_UNAVAILABLE_RUNTIME_TOKEN_START in line for line in kept_continuations):
+        return lines
+    meaningful_continuations = [
+        line for line in kept_continuations if _is_list_line(line)
+    ]
+    return [first, *kept_continuations] if meaningful_continuations else []
+
+
+def _is_list_line(line: str) -> bool:
+    """Return whether a continuation line carries list content, not blank or comment."""
+    stripped = line.strip()
+    return bool(stripped) and not stripped.startswith("#")
+
+
+def _frontmatter_list_item(line: str) -> str:
+    stripped = line.strip()
+    return stripped[1:].strip() if stripped.startswith("-") else stripped
+
+
+def _is_unavailable_tool_item(item: str) -> bool:
+    stripped = item.strip()
+    if len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {"'", '"'}:
+        stripped = stripped[1:-1]
+    match = _UNAVAILABLE_RUNTIME_TOKEN_PATTERN.fullmatch(stripped)
+    return match is not None and match.group("kind") == RUNTIME_TOKEN_TOOL_KIND
 
 
 def _render_jinja(
@@ -868,14 +1015,7 @@ def strip_frontmatter_fields(
     if not text.startswith("---\n"):
         return text
 
-    closing_index = text.find("\n---", len("---\n"))
-    if closing_index == -1:
-        raise FrontmatterError("frontmatter starts with --- but has no closing fence")
-
-    fence_end = closing_index + len("\n---")
-    if len(text) > fence_end and text[fence_end] not in {"\n", "\r"}:
-        raise FrontmatterError("frontmatter closing fence is malformed")
-
+    closing_index, fence_end = _frontmatter_bounds(text)
     raw_frontmatter = text[len("---\n") : closing_index]
     suffix = text[fence_end:]
     field_set = frozenset(fields)
@@ -902,12 +1042,7 @@ def frontmatter_field_names(text: str) -> frozenset[str]:
     """Return top-level field names from the opening YAML frontmatter fence."""
     if not text.startswith("---\n"):
         return frozenset()
-    closing_index = text.find("\n---", len("---\n"))
-    if closing_index == -1:
-        raise FrontmatterError("frontmatter starts with --- but has no closing fence")
-    fence_end = closing_index + len("\n---")
-    if len(text) > fence_end and text[fence_end] not in {"\n", "\r"}:
-        raise FrontmatterError("frontmatter closing fence is malformed")
+    closing_index, _fence_end = _frontmatter_bounds(text)
     return frozenset(
         key
         for line in text[len("---\n") : closing_index].splitlines()

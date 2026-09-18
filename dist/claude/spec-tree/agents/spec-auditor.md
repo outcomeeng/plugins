@@ -4,10 +4,12 @@ effort: "medium"
 name: spec-auditor
 description: >-
   ALWAYS invoke when auditing a spec node's assertion quality after writing an enabler or outcome node spec or before closing it.
-tools: Read, Grep, Glob, Bash, Skill
+tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
 skills:
   - spec-tree:audit-specs
 ---
+
+Use skill `spec-tree:audit-specs`.
 
 <role>
 

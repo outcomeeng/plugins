@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when opening a pull request against a repository the operator does not control — a fork's upstream, or any base whose permission is READ, TRIAGE, or NONE.
   NEVER open a pull request against such a repository without this skill.
 argument-hint: "[what the change does, or empty to describe it from the branch]"
-allowed-tools: Read, Glob, Skill, collaboration.spawn_agent, collaboration.wait_agent, request_user_input, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh api users/*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git rev-parse:*), Bash(git switch:*), Bash(git cherry-pick:*), Bash(git diff:*), Bash(git status --porcelain), Bash(git add:*), Bash(git commit:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
+allowed-tools: Read, Glob, collaboration.spawn_agent, collaboration.wait_agent, request_user_input, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh api users/*), Bash(gh pr create:*), Bash(git fetch:*), Bash(git rev-parse:*), Bash(git switch:*), Bash(git cherry-pick:*), Bash(git diff:*), Bash(git status --porcelain), Bash(git add:*), Bash(git commit:*), Bash(git branch --show-current), Bash(git log:*), Bash(git push -u origin HEAD:refs/heads/*), Bash(mktemp -d), Bash(printf:*)
 ---
 
 <objective>
@@ -13,7 +13,7 @@ One pull request open against a repository the operator does not control, carryi
 
 <workflow>
 
-**Step 1 — Load the standards and read the invocation input.** Invoke `/contribution-standards` through the runtime's skill-composition surface. Its `<invariants>` govern every step below; this workflow adds ordering and the pull-request specifics.
+**Step 1 — Load the standards and read the invocation input.** Use skill `contribute:contribution-standards`. Its `<invariants>` govern every step below; this workflow adds ordering and the pull-request specifics.
 
 `$ARGUMENTS`, when non-empty, is the one-sentence description of the change used in Step 3's authorization and in the Step 9 body. When it is empty, derive that sentence from the checkout's current branch at invocation — the branch the change was written on, distinct from the `<branch>` Step 4 cuts — and its own commit subjects (`git log --format=%s origin/HEAD..HEAD`), which needs nothing a later step resolves.
 

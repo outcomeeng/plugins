@@ -4,10 +4,10 @@ description: >-
   Configuration, profile, authority, context-isolation, and output-contract standards
   for configured subagents. Loaded by creator and auditor skills.
 user-invocable: false
-allowed-tools: Read, Skill
+allowed-tools: Read
 ---
 
-Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `instructions:agent-prompt-standards`.
 
 <objective>
 One set of authoring rules for custom agents whose native configuration,

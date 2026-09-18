@@ -3,7 +3,7 @@ name: sync-fork
 description: >-
   ALWAYS invoke this skill when bringing a fork's default branch current with the repository it was forked from.
   NEVER bring a fork's default branch current with `gh repo sync`, `git merge`, or `git reset` run directly.
-allowed-tools: Skill, Bash(git remote get-url origin), Bash(gh repo view:*), Bash(gh repo sync:*), Bash(git fetch:*), Bash(git rev-list:*), Bash(git log:*)
+allowed-tools: Bash(git remote get-url origin), {{! tool('use_skill') !}}, Bash(gh repo view:*), Bash(gh repo sync:*), Bash(git fetch:*), Bash(git rev-list:*), Bash(git log:*)
 ---
 
 <objective>
@@ -12,7 +12,7 @@ The fork's default branch current with its upstream's default branch, or the div
 
 <workflow>
 
-**Step 1 — Load the standards.** Invoke `/contribution-standards` through the runtime's skill-composition surface for the upstream, base, and head vocabulary.
+**Step 1 — Load the standards.** {!% require_skill 'contribute:contribution-standards' %!} Its vocabulary names the upstream, base, and head.
 
 **Step 2 — GATE: Establish the target.** Read the live `<UPSTREAM_TARGET>` marker; invoke `/upstream` when none is live. Only `upstream-contribution` continues — it is the classification that reports both a head repository and the upstream it was forked from. `head-ambiguous` names several forks, and choosing which to sync is the operator's. `fork-absent` has nothing to sync, `controlled` describes a repository that is not a fork of another party's, and `blocked` stops with the resolver's `detail` verbatim.
 

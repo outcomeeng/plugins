@@ -3,7 +3,7 @@ name: code-rust
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for Rust.
   NEVER write or fix Rust implementation without this skill.
-allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(cargo fmt --check:*), Bash(cargo clippy:*), Bash(cargo test:*)
+allowed-tools: Read, Write, Glob, Grep, Edit, {{! tool('use_skill') !}}, Bash(cargo fmt --check:*), Bash(cargo clippy:*), Bash(cargo test:*)
 ---
 
 {!% require_skill 'rust:rust-standards' %!}

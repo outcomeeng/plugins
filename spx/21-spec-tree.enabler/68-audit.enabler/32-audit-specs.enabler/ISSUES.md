@@ -52,3 +52,20 @@ retired invocation.
 **Evidence.** Surfaced by the plugin-wide skill-name review that `spx/local/skills.md`
 requires of any material skill change, run during the `audit-implementation`
 completion-contract repair.
+
+## Eval run history is stale for the structure suite
+
+The newest passing row for `evals/structure` (6/6, git SHA
+`90bdeb9925e4a395269c6f3c7722f1fab0e86322`, 2026-07-13) predates nine commits to
+the producer `src/plugins/spec-tree/skills/audit-specs/SKILL.md` (new
+`missing-assertions`, `missing-frontmatter`, and `unfalsifiable-assertion` rules;
+a rewritten Step 3), a changed `prompt.template.md`, and the rematerialized
+`prompt.md`, so no committed run proves the current producer, prompt, and case set.
+
+**Settlement condition**: one passing run of
+`just eval spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/evals/structure/eval.toml`
+on a head that carries the current producer, with its row committed to
+`history.jsonl`.
+
+**Evidence**: `spec-tree:eval-evidence-auditor` finding `f-005` on
+head `a65659114b99767b90b4d920550fff5dc0824794` during Change #76, whose prototype boundary runs no eval.

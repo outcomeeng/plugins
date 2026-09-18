@@ -2,7 +2,7 @@
 name: "audit-{{subject}}"
 description: >-
   {{Subject}} audit methodology — judges {{target}} against {{governing standards}}.
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}
 ---
 
 <objective>

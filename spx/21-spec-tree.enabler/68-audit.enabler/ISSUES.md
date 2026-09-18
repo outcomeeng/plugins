@@ -317,3 +317,22 @@ than changing the capture form blind.
 **Evidence.** `WARNING` (argument capture style) from
 `instructions:skill-auditor` on the coverage-accounting changeset, three
 rounds running.
+
+## The implementation-auditor wrapper lacks a successful exact-role invocation
+
+The configured-agent audit of
+`src/plugins/spec-tree/agents/implementation-auditor.md` during Change #76
+approved the wrapper's profile, capability, thin-delegation, and result-contract
+shape, then rejected its execution evidence. The retained Codex composition
+probe ended before a child session started, and later commits changed the
+generated definition, so no successful minimal isolated invocation exists for
+the current emitted role.
+
+**Settlement condition**: one retained minimal isolated invocation of the
+exact emitted role that starts a child session and returns the terminal
+`spx verification run` result. A loader or authentication failure remains a
+failed invocation rather than approval evidence.
+
+**Evidence**: `instructions:subagent-auditor` finding `f-001` against
+`src/plugins/spec-tree/agents/implementation-auditor.md` on Change #76 head
+`843ddd709b058970d414ec755cc10121ff6bb5ff`.

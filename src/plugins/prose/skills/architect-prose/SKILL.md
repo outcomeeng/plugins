@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when writing ADRs for prose.
   NEVER author a prose ADR without this skill.
 argument-hint: "[interface|documentation|copy] <what to structure>"
-allowed-tools: Read, Write, Glob, Grep, Skill
+allowed-tools: Read, Write, Glob, Grep, {{! tool('use_skill') !}}
 ---
 
 {!% require_skill 'prose:prose-standards' %!}

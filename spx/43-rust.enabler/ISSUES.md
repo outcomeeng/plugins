@@ -19,3 +19,21 @@
 **Revisit condition**: `python-test-standards` and `typescript-test-standards` carry the test-standards half verbatim, so correcting rust alone diverges it from two untouched siblings — the divergence `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`'s defect-class-sweep rule exists to prevent. Resolve as one pass across the three language plugins, each with its own `skill-auditor` gate and version bump.
 
 **Evidence**: raised by `instructions:skill-auditor` against `rust-test-standards` and `architect-rust` during the predicate-seam correction.
+
+## `rust-simplifier` has no skill-owned launch path
+
+`src/plugins/rust/agents/rust-simplifier.md` says a governing skill requests
+the role, while no Rust skill explicitly launches the configured
+`rust-simplifier` with a target-only prompt. The root invocation policy permits
+a configured-agent launch only when an active skill selects the exact role, so
+the definition's description alone cannot authorize its use.
+
+**Required handling**: decide which Rust authoring workflow owns
+behavior-preserving simplification, add its explicit target-only dispatch, and
+retain one minimal isolated invocation result for the emitted role. If no Rust
+workflow should launch it, retire the configured agent and reconcile the Rust
+spec rather than leaving an unreachable entry point.
+
+**Evidence**: `instructions:subagent-auditor` finding `f-001` against
+`src/plugins/rust/agents/rust-simplifier.md` on Change #76 head
+`843ddd709b058970d414ec755cc10121ff6bb5ff`.

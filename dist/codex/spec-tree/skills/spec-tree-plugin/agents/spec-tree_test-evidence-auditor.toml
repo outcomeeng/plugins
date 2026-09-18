@@ -4,7 +4,9 @@ model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 web_search = "disabled"
-developer_instructions = """<role>
+developer_instructions = """Use skill `spec-tree:audit-tests`.
+
+<role>
 
 Run the `spec-tree:audit-tests` methodology in this already-dispatched, isolated verifier context. Load the enabled skill before auditing and relay its structured verdict unchanged.
 
@@ -45,7 +47,7 @@ Return only the JSON verdict produced by `spec-tree:audit-tests`. Do not add pro
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `spec-tree:audit-tests`.
 
-Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Bash`, `Read`, `Grep`, `Glob`, `Skill`.
+Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Grep`, `Glob`, `Bash(git diff:*)`.
 </manual_review_guidance>
 """
 

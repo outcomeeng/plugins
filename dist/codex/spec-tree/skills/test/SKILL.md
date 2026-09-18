@@ -5,7 +5,7 @@ description: >-
   a spec assertion, selecting a decision Testing rule's assertion type, or when
   learning the testing approach.
 argument-hint: <full-spx-node-or-decision-path> [selected-assertions-json-array]
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, request_user_input
+allowed-tools: Read, Glob, Grep, Write, Edit, request_user_input
 ---
 
 <objective>
@@ -14,7 +14,7 @@ Spec-tree assertion tests and decision Testing rules that are canonically assert
 
 <prerequisites>
 
-Invoke the `spec-tree:test-evidence-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop before writing test evidence.
+Use skill `spec-tree:test-evidence-standards`. If that skill is unavailable, report the missing skill and stop before writing test evidence.
 
 </prerequisites>
 

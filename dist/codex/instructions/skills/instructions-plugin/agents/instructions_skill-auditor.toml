@@ -4,7 +4,9 @@ model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 web_search = "disabled"
-developer_instructions = """<role>
+developer_instructions = """Use skill `instructions:audit-skill`.
+
+<role>
 
 Run the `instructions:audit-skill` methodology in this already-dispatched, isolated verifier context. Load the enabled skill before auditing and relay its structured verdict unchanged.
 
@@ -24,7 +26,7 @@ Run the `instructions:audit-skill` methodology in this already-dispatched, isola
 <workflow>
 
 1. Read the caller's scoped skill paths.
-2. Load `instructions:audit-skill` and follow its methodology with those values.
+2. Follow the composed skill instruction above with those values.
 3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>
@@ -46,7 +48,7 @@ Return only the JSON verdict produced by `instructions:audit-skill`. Do not add 
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `instructions:audit-skill`.
 
-Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Grep`, `Glob`, `Bash`, `Skill`.
+Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Grep`, `Glob`, `Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*)`.
 </manual_review_guidance>
 """
 

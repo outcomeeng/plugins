@@ -5,10 +5,12 @@ name: changeset-coherence-auditor
 description: >-
   ALWAYS invoke when deciding whether an exact committed changeset is one
   coherent review unit or requires a dependency-ordered split.
-tools: Bash, Read, Glob, Grep, Skill
+tools: Read, Glob, Grep, Bash(python3:*), Bash(git diff:*), Bash(git show:*), Skill
 skills:
   - spec-tree:audit-changeset-coherence
 ---
+
+Use skill `spec-tree:audit-changeset-coherence`.
 
 <role>
 

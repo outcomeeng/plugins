@@ -4,12 +4,12 @@ description: >-
   Go implementation-code audit methodology — judges the Go code files in
   scope for design flaws, architecture-decision compliance, concurrency
   soundness, and unsafe/cgo soundness.
-allowed-tools: Read, Grep, Glob, Bash(grep:*), Skill
+allowed-tools: Read, Grep, Glob, Bash(grep:*)
 ---
 
-Invoke the `go:go-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-standards`.
 
-Invoke the `go:go-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `go:go-test-standards`.
 
 <objective>
 A verdict on Go implementation code — `APPROVED`, or `REJECTED` with each finding naming the design flaw, boundary violation, ADR/PDR drift, concurrency defect, or unsafe/cgo soundness issue; the violated rule; and the evidence.

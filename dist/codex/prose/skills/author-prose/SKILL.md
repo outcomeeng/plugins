@@ -3,12 +3,12 @@ name: author-prose
 description: >-
   ALWAYS invoke this skill when writing text for human readers — docs pages, UI text, error messages, emails, release notes. NEVER invoke for chat responses, code comments, commit messages, or agent instructions.
 argument-hint: "[interface|documentation|copy] <what to write>"
-allowed-tools: Read, Edit, Write, Glob, Grep, Skill
+allowed-tools: Read, Edit, Write, Glob, Grep
 ---
 
-Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `prose:prose-standards`.
 
-Invoke the `prose:prose-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `prose:prose-architecture-standards`.
 
 <objective>
 

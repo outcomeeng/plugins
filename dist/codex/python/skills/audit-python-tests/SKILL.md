@@ -3,7 +3,7 @@ name: audit-python-tests
 description: >-
   Python test-evidence audit methodology — judges the Python tests in scope
   against the spec-tree and Python-specific evidence properties.
-allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
+allowed-tools: Read, Grep, Glob, Bash(git diff:*)
 ---
 
 <objective>
@@ -20,13 +20,13 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 
 <prerequisites>
 
-Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `python:python-standards`.
 
-Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `python:python-test-standards`.
 
-Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `spec-tree:audit-tests`.
 
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `spec-tree:test`.
 
 Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist; otherwise apply the loaded skills only. Each overlay routes behavior to the product's governing specs and decisions, supplements the loaded skills, and does not declare product truth.
 

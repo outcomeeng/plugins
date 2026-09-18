@@ -3,10 +3,12 @@ name: go-simplifier
 description: >-
   ALWAYS invoke when the governing skill requests behavior-preserving simplification of changed Go implementation.
 profile: standard
-tools: Read, Grep, Glob, Bash, Edit, Skill
+tools: Read, Grep, Glob, Bash, Edit, {{! tool('use_skill') !}}
 skills:
   - go:simplify-go
 ---
+
+{!% require_skill 'go:simplify-go' %!}
 
 <role>
 Go implementation simplification through `go:simplify-go`.

@@ -9,6 +9,8 @@ skills:
   - rust:simplify-rust
 ---
 
+Use skill `rust:simplify-rust`.
+
 <role>
 Rust implementation simplification through `rust:simplify-rust`.
 </role>

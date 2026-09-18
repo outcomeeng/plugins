@@ -3,10 +3,10 @@ name: audit-python-code
 description: >-
   Python implementation-code audit methodology — judges the Python code files in
   scope for design flaws and architecture-decision compliance.
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob
 ---
 
-Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `python:python-standards`.
 
 <objective>
 

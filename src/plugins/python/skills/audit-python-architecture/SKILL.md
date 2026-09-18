@@ -4,7 +4,7 @@ description: >-
   Python-specific architecture audit — judges the Python architecture target in
   scope for dependency injection, mocking prohibition, execution-level accuracy,
   Python anti-patterns, and test-double exception cases.
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}
 ---
 
 {!% require_skill 'python:python-architecture-standards' %!}

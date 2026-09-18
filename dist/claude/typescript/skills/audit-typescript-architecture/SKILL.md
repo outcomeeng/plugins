@@ -7,7 +7,7 @@ description: >-
 allowed-tools: Read, Grep, Glob, Skill
 ---
 
-Invoke the `typescript:typescript-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `typescript:typescript-architecture-standards`.
 
 <objective>
 A JSON verdict on a TypeScript architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, TypeScript anti-patterns, and ancestor consistency.

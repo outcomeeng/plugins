@@ -1,4 +1,4 @@
-<!-- Generated from the complete producer at src/plugins/spec-tree/skills/audit-specs/SKILL.md. -->
+<!-- Generated from the complete producer at dist/claude/spec-tree/skills/audit-specs/SKILL.md. -->
 
 Apply the complete producer below to the supplied spec node. When the input carries `context`, treat it as the governing methodology context loaded by the producer's contextualization step. Return only the producer's structured JSON verdict.
 

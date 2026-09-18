@@ -3,7 +3,7 @@ name: architect-rust
 description: >-
   ALWAYS invoke this skill when writing ADRs for Rust.
   NEVER author a Rust ADR without this skill.
-allowed-tools: Read, Write, Glob, Grep, Skill
+allowed-tools: Read, Write, Glob, Grep, {{! tool('use_skill') !}}
 ---
 
 {!% require_skill 'rust:rust-standards' %!}

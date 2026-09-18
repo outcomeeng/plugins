@@ -8,9 +8,9 @@ arguments: skill_path
 allowed-tools: Read, Grep, Glob, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Skill
 ---
 
-Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `instructions:skill-standards`.
 
-Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `instructions:agent-prompt-standards`.
 
 <objective>
 An `APPROVED` or `REJECTED` verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`, with findings grouped as keep-these-aspects, worth-improving, and must-fix; every rejected finding names the artifact location, violated rule, and evidence.

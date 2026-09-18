@@ -28,6 +28,7 @@ from outcomeeng.distribution.profiles import (
 
 AGENT_NAME_FIELD: Final = "name"
 AGENT_SKILL_ENABLED_FIELD: Final = "enabled"
+AGENT_TOOLS_FIELD: Final = "tools"
 SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
     {
         AGENT_NAME_FIELD,
@@ -38,7 +39,7 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
         "mcp_servers",
         "permissionMode",
         "skills",
-        "tools",
+        AGENT_TOOLS_FIELD,
         "disallowedTools",
     }
 )
@@ -205,8 +206,8 @@ def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
         mcp_servers=_optional_mapping(frontmatter, "mcp_servers"),
         permission_mode=_optional_string(frontmatter, "permissionMode"),
         skills=_string_tuple(frontmatter, "skills"),
-        tools=_string_tuple(frontmatter, "tools"),
-        tools_declared="tools" in frontmatter,
+        tools=_string_tuple(frontmatter, AGENT_TOOLS_FIELD),
+        tools_declared=AGENT_TOOLS_FIELD in frontmatter,
         disallowed_tools=_string_tuple(frontmatter, "disallowedTools"),
         unsupported_fields=unsupported_fields,
     )

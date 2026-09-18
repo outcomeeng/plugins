@@ -354,7 +354,7 @@ The final response relays the rendered SPX projection and run token. Do not summ
 
 <coverage_model>
 
-Build an expected coverage inventory before invoking any language concern skill. Discover programming-language plugins by reading the installed skill inventory this context carries for `code-{lang}` names — a name absent from that inventory is a language that is not installed, and invoking a concern skill is dispatch to a discovered language, never a probe for whether one exists — then validate the complete read-only `audit-{lang}-{code|tests|architecture}` trio for each discovered language before invoking any concern. Never load a write-capable `code-{lang}` skill inside the audit — the `Skill` grant cannot be narrowed to names discovered at run time, so this rule is the containment — and never create a language partition from a file extension, filename, or artifact class alone.
+Build an expected coverage inventory before invoking any language concern skill. Discover programming-language plugins by reading the installed skill inventory this context carries for `code-{lang}` names — a name absent from that inventory is a language that is not installed, and invoking a concern skill is dispatch to a discovered language, never a probe for whether one exists — then validate the complete read-only `audit-{lang}-{code|tests|architecture}` trio for each discovered language before invoking any concern. Never load a write-capable `code-{lang}` skill inside the audit — the skill-composition grant cannot be narrowed to names discovered at run time, so this rule is the containment — and never create a language partition from a file extension, filename, or artifact class alone.
 
 Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; never manufacture a language name, a missing concern skill, or an unsupported unit for a path outside implementation-audit ownership.
 
@@ -402,15 +402,15 @@ A missing required concern skill or an unsupported path already claimed by a rec
 
 <skill_map>
 
-For each language partition, invoke the required implementation concern skills:
+For each language partition, compose the required implementation concern skills with the owned instruction, the discovered language name in place:
 
-| Concern      | Dispatch template           |
-| ------------ | --------------------------- |
-| Code         | `audit-{lang}-code`         |
-| Tests        | `audit-{lang}-tests`        |
-| Architecture | `audit-{lang}-architecture` |
+| Concern      | Composition instruction                       |
+| ------------ | --------------------------------------------- |
+| Code         | Use skill `{lang}:audit-{lang}-code`.         |
+| Tests        | Use skill `{lang}:audit-{lang}-tests`.        |
+| Architecture | Use skill `{lang}:audit-{lang}-architecture`. |
 
-The dispatch contract is the skill name. The orchestration does not embed per-language file globs, commands, test naming, architecture examples, or local standards. Each concern skill owns its policy and returns findings for its concern only.
+The composition contract is the plugin-qualified skill name. The orchestration does not embed per-language file globs, commands, test naming, architecture examples, or local standards. Each concern skill owns its policy and returns findings for its concern only.
 
 </skill_map>
 

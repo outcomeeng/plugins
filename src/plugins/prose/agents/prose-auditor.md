@@ -2,11 +2,13 @@
 name: prose-auditor
 description: >-
   ALWAYS invoke when auditing human-facing text — documents, web pages, articles, docs, UI text, product messages, or internal team pages — for prose quality and style-kind conformance. NEVER invoke for chat responses to the user, operational prose such as code comments or commit messages, or an artifact a repository or domain workflow governs — a spec, decision record, SKILL.md, coordination note, or agent guide.
-tools: Read, Glob, Grep, Skill, Bash
+tools: Read, Glob, Grep, {{! tool('use_skill') !}}, Bash
 profile: strong
 skills:
   - prose:audit-prose
 ---
+
+{!% require_skill 'prose:audit-prose' %!}
 
 <role>
 Run prose audits in this already-dispatched, isolated verifier context. Invoke the `prose:audit-prose` skill on the text or paths the caller names, together with the kind the dispatch supplies for them, and relay the raw run token of the sealed audit run as the final message.

@@ -22,7 +22,7 @@ Production-relevance recognition, merge command, and local deterministic verific
 
 Walk these steps in order. Every step is a routine workflow operation — verify, review, push, open — and runs directly. The opening flow contains no operator-confirmation pauses.
 
-**Step 0 — Load references.** Invoke /merging-standards (shared vocabulary) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
+**Step 0 — Load references.** Use skill `spec-tree:merging-standards`. It supplies the shared vocabulary. Use skill `spec-tree:commit-changes`. It supplies the commit type and scope classification. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
 
 **Step 1 — GATE: Pre-flight.** Run `spx worktree status` from the assigned root and require a fresh passing /merging-standards `<occupancy_preflight>` before any checkout-sensitive mutation. Run `<repository_target_gate>`, every overlay-declared preflight check per `<overlay_safety_checks>`, then `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this step before the push even when an earlier lifecycle entry already ran a preflight before branch or commit work; the later check guards the checkout state at publication time.
 

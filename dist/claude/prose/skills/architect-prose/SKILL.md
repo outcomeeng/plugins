@@ -7,9 +7,9 @@ argument-hint: "[interface|documentation|copy] <what to structure>"
 allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 
-Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `prose:prose-standards`.
 
-Invoke the `prose:prose-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `prose:prose-architecture-standards`.
 
 <objective>
 A binding prose ADR, authored to the decision template the `/understand` foundation provides, whose structural rules are ALWAYS/NEVER rules carrying `([audit])`.

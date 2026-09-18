@@ -4,7 +4,7 @@ description: >-
   Configuration, profile, authority, context-isolation, and output-contract standards
   for configured subagents. Loaded by creator and auditor skills.
 user-invocable: false
-allowed-tools: Read, Skill
+allowed-tools: Read, {{! tool('use_skill') !}}
 ---
 
 {!% require_skill 'instructions:agent-prompt-standards' %!}

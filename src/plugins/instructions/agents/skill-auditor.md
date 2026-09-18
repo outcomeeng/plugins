@@ -3,7 +3,7 @@ name: skill-auditor
 description: >-
   ALWAYS invoke when auditing, reviewing, or evaluating SKILL.md files for best
   practices compliance, or when the user asks to audit a skill.
-tools: Read, Grep, Glob, Bash, Skill
+tools: Read, Grep, Glob, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), {{! tool('use_skill') !}}
 profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only
@@ -11,6 +11,8 @@ sandbox_mode: read-only
 skills:
   - instructions:audit-skill
 ---
+
+{!% require_skill 'instructions:audit-skill' %!}
 
 <role>
 {!% if target == 'codex' %!}
@@ -34,7 +36,7 @@ Run the `instructions:audit-skill` methodology in this already-dispatched, isola
 <workflow>
 
 1. Read the caller's scoped skill paths.
-2. {!% if target == 'codex' %!}Load `instructions:audit-skill` and follow its methodology with those values.{!% else %!}Confirm the injected `instructions:audit-skill` content is present in this context; when it is absent, load `instructions:audit-skill` through the Skill tool. Follow that methodology with those values.{!% endif %!}
+2. Follow the composed skill instruction above with those values.
 3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>

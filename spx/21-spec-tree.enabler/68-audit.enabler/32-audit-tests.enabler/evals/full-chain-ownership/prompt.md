@@ -1,4 +1,4 @@
-<!-- Generated from the complete producer at src/plugins/spec-tree/skills/audit-tests/SKILL.md. -->
+<!-- Generated from the complete producer at dist/claude/spec-tree/skills/audit-tests/SKILL.md. -->
 
 The runner substitutes only the case's `input` object into `{input_json}`; grader expectations remain withheld from the producer. Apply the complete producer below to the supplied test-evidence package. The package's `language_composition` field is completed composition evidence governed by the producer's Step 3f input contract. Return only the producer's structured JSON verdict.
 
@@ -9,7 +9,7 @@ description: >-
   behavior-coupled evidence its assertions are fulfilled, covering predicate
   ownership, source ownership, coupling, falsifiability, and full-chain coverage.
 argument-hint: "<spec-node-path-or-evidence-scope>"
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob, Skill, Bash(git diff:*)
 ---
 
 <objective>
@@ -70,7 +70,7 @@ If the request carries no target, return `REJECTED` with only `gate-1-assertion`
 
 **Step 0: Load shared test-evidence standards**
 
-Invoke the `spec-tree:test-evidence-standards` skill through the runtime skill-composition surface before proceeding. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, mutation litmus, and assertion-design-record rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
+Use skill `spec-tree:test-evidence-standards`. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, mutation litmus, and assertion-design-record rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
 
 </step>
 

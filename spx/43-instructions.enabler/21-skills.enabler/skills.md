@@ -12,6 +12,8 @@ The skills-about-skills cluster is three peers with distinct roles:
 
 ## Assertions
 
+- ALWAYS: a composing skill names each static dependency — one `plugin:skill` name with no argument — through the shared `require_skill` directive, states a dependency that carries an argument or a run-time-resolved name as the owned `Use skill` sentence with that value in place, and declares skill-use capability through the optional `tool('use_skill')` frontmatter token, so every generated agent surface receives its native instruction and capability set.
+
 ### Compliance
 
 - ALWAYS: skill-authoring and audit guidance forbids model and reasoning

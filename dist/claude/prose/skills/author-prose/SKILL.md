@@ -6,9 +6,9 @@ argument-hint: "[interface|documentation|copy] <what to write>"
 allowed-tools: Read, Edit, Write, Glob, Grep, Skill
 ---
 
-Invoke the `prose:prose-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `prose:prose-standards`.
 
-Invoke the `prose:prose-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `prose:prose-architecture-standards`.
 
 <objective>
 

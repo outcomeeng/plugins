@@ -6,6 +6,8 @@ CAN write one source that renders each tool name, field name, concept term, and 
 
 ## Assertions
 
+- ALWAYS: an optional tool capability — one the runtime-token registry's `tool` kind lists under its optional names, with a name for some targets and none for others — renders the target's name where one exists and, where none exists, resolves through the same registry path to an unavailable placeholder that the renderer removes only as one complete item of list-valued `allowed-tools` or `tools` frontmatter; every other placement of an unavailable capability fails the build. Optional names stay outside the guard's forbidden set like the review-covered `term` kind, because the one optional capability renders as the common word `Skill`.
+
 ### Compliance
 
 - ALWAYS: configuration examples and descriptions select a complete central

@@ -13,7 +13,7 @@ The maintainer's question answered with evidence in one comment on the open issu
 
 <workflow>
 
-**Step 1 — Load the standards and resolve the issue.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
+**Step 1 — Load the standards and resolve the issue.** Use skill `contribute:contribution-standards`.
 
 `$ARGUMENTS` is an issue number or URL. A bare number is the number; a URL's trailing path segment is the number. An empty `$ARGUMENTS` stops the flow, because this skill continues an identified thread and never picks one. The URL check needs the resolved base, so Step 2 settles it.
 

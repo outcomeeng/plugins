@@ -2,7 +2,7 @@
 name: spec-auditor
 description: >-
   ALWAYS invoke when auditing a spec node's assertion quality after writing an enabler or outcome node spec or before closing it.
-tools: Read, Grep, Glob, Bash, Skill
+tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git branch --show-current:*)
 profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only
@@ -10,6 +10,8 @@ sandbox_mode: read-only
 skills:
   - spec-tree:audit-specs
 ---
+
+{!% require_skill 'spec-tree:audit-specs' %!}
 
 <role>
 {!% if target == 'codex' %!}

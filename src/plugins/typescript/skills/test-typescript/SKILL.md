@@ -5,7 +5,7 @@ description: >-
   NEVER write or fix TypeScript tests without this skill.
 argument-hint: "<full-spx-node-path>"
 arguments: node_path
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, {{! tool('use_skill') !}}, Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)
 ---
 
 {!% require_skill 'typescript:typescript-standards' %!}

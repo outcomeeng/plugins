@@ -3,7 +3,7 @@ name: test-go
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for Go.
   NEVER write or fix Go tests without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(go test:*), Bash(go vet:*), Bash(go build:*), Bash(gofmt:*), Bash(staticcheck:*), Bash(golangci-lint:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, {{! tool('use_skill') !}}, Bash(go test:*), Bash(go vet:*), Bash(go build:*), Bash(gofmt:*), Bash(staticcheck:*), Bash(golangci-lint:*)
 ---
 
 {!% require_skill 'go:go-standards' %!}

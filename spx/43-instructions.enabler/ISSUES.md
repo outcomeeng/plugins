@@ -6,7 +6,7 @@ Current instructions-plugin follow-ups. Coordination note; not spec truth.
 
 The canonical auditor shape lives in `src/plugins/instructions/skills/skill-standards/references/auditor-skeleton.md`: verdict-shaped `<objective>`, `<audit_workflow>`, `<verdict_format>`, `<failure_modes>`, soundness `<success_criteria>`, and no `<quick_start>`.
 
-Open work: sweep the remaining `audit-*` skills onto that skeleton. Keep the post-collapse composition exception: generic composing auditors that invoke language audits require `Skill` in `allowed-tools`.
+Open work: sweep the remaining `audit-*` skills onto that skeleton. Keep the post-collapse composition exception: generic composing auditors that invoke language audits require the build's `use_skill` runtime token in `allowed-tools`.
 
 The prose pair is resolved: `audit-prose` uses `<audit_workflow>` directly, the composed per-kind auditors are removed with the five-skill prose surface, and the skeleton's `<prose_variant>` exemption is deleted — no `audit-*` skill holds a procedure-name exemption.
 

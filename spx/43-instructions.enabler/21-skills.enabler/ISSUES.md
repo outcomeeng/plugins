@@ -19,7 +19,7 @@ Source: skill-auditor finding `f-003`, rule `overbroad_allowed_tools`, severity
 ## Reconcile the auditor Bash capability contract
 
 `src/plugins/instructions/skills/create-skill/templates/auditor-skill.md:5` now uses
-`allowed-tools: Read, Grep, Glob, Skill`. The post-merge audit requires `Bash` for
+`allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}`. The post-merge audit requires `Bash` for
 auditor command-based verification, while an earlier audit rejected bare `Bash` as
 overbroad. `/skill-standards`'s command-capability rules also require command-specific
 `Bash(<command>:*)` grants. A generic auditor template cannot select those commands
@@ -73,3 +73,83 @@ capture where multi-word intent must survive. Either choice also owes the
 
 Source: `instructions:skill-auditor` findings `f-007` and `f-010`, severity
 `WARNING`, on the changeset merged as PR 488.
+
+## The composing-skill assertion awaits verification selection
+
+The assertion under `## Assertions` in `skills.md` that a composing skill names each
+static dependency through the shared `require_skill` directive, states an argument- or
+run-time-named dependency as the owned `Use skill` sentence, and declares skill-use
+capability through the optional `tool('use_skill')` token is an authoring declaration
+with no tag; every other assertion in the file carries `[audit]`. It is the fifth
+declaration of the optional-capability class, beside the four
+`spx/18-plugin-build.enabler/ISSUES.md` records under "Optional tool-capability
+rendering has no deterministic evidence yet".
+
+**Impact.** The declaration is approved for form only; no evidence result attaches to
+it until a verification type is selected and tagged.
+
+**Settlement condition.** Verification is selected for the assertion — `[audit]`
+through the skill auditor's composed-dependency rule in `skill-standards`, or a
+`[test]` link once the authored-source compliance evidence Change #85 lands reaches
+skill bodies — and the tag is applied.
+
+**Evidence.** CI changeset review on PR #584, head
+`b0a6237f359687bd40a01755af6f4ff2d88387b2`, finding `DEBT [evidence]` at
+`spx/43-instructions.enabler/21-skills.enabler/skills.md:15`, during Change #76.
+
+## `skill-standards` names the eager-foundation exception by a section that does not hold it
+
+`src/plugins/instructions/skills/skill-standards/SKILL.md:14` (`<success_criteria>`
+(a)) points to "the eager-foundation exception in `<progressive_disclosure>`", and
+`<progressive_disclosure>` at lines 320 and 346 says "unless the eager-foundation
+exception below applies", while the exception lives in its own
+`<eager_foundation_exception>` tag at line 301, which precedes
+`<progressive_disclosure>`.
+
+**Impact.** An author following the tag-by-name convention this skill prescribes
+lands on a section that does not hold the rule.
+
+**Settlement condition.** `<success_criteria>` names `<eager_foundation_exception>`
+and both `<progressive_disclosure>` branches drop "below".
+
+Source: `instructions:skill-auditor` finding rule `stale_cross_reference`, severity
+`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
+[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
+standards-skill pass that owns it.
+
+## The Claude render of `skill-standards` sits 930 code points under the eager-payload ceiling
+
+`dist/claude/instructions/skills/skill-standards/SKILL.md` measures 39070 code
+points against the 40,000-code-point ceiling `skill-standards`
+`<eager_foundation_exception>` declares for itself.
+
+**Impact.** The next small edit to a Claude-only section tips the reference past
+the ceiling and turns a routine change into a must-fix on this reference.
+
+**Settlement condition.** Conditional detail leaves the eager body for its
+reference — the `<context>` bash-block constraints at lines 274-280, already
+carried by `references/command-capabilities.md` `<dynamic_context>`, are one
+candidate — so a routine edit has room.
+
+Source: `instructions:skill-auditor` finding rule `eager_payload_headroom`, severity
+`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
+[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
+standards-skill pass that owns it.
+
+## `script-standards.md` states the testing-record requirement with a weak modal
+
+`src/plugins/instructions/skills/skill-standards/references/script-standards.md:32`,
+inside `<script_testing_rule>`, reads "The skill's documentation should record what
+was tested and with what inputs"; `/agent-prompt-standards` `<constraint_language>`
+bars "should" from a rule block.
+
+**Impact.** The testing-record requirement reads as optional beside the preceding
+"must be tested" sentence.
+
+**Settlement condition.** The sentence reads "records what was tested and with what
+inputs".
+
+Source: `instructions:skill-auditor` finding rule `weak_modal_in_rule`, severity
+`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
+[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
+standards-skill pass that owns it.

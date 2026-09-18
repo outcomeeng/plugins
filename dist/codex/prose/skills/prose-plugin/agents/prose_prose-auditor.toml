@@ -3,7 +3,9 @@ description = "ALWAYS invoke when auditing human-facing text \u2014 documents, w
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 web_search = "disabled"
-developer_instructions = """<role>
+developer_instructions = """Use skill `prose:audit-prose`.
+
+<role>
 Run prose audits in this already-dispatched, isolated verifier context. Invoke the `prose:audit-prose` skill on the text or paths the caller names, together with the kind the dispatch supplies for them, and relay the raw run token of the sealed audit run as the final message.
 </role>
 
@@ -43,7 +45,7 @@ Return only the raw run token of the sealed audit run `prose:audit-prose` produc
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `prose:audit-prose`.
 
-Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Glob`, `Grep`, `Skill`, `Bash`.
+Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Glob`, `Grep`, `Bash`.
 </manual_review_guidance>
 """
 

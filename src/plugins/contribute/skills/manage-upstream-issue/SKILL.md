@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when continuing an open issue in a repository the operator does not control — answering a maintainer, adding evidence, or reporting the thread's current state.
   NEVER comment on or close an issue in such a repository without this skill.
 argument-hint: "[issue number or URL]"
-allowed-tools: Read, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api user:*), Bash(printf:*)
+allowed-tools: Read, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(gh issue view:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh api user:*), Bash(printf:*)
 ---
 
 <objective>
@@ -13,7 +13,7 @@ The maintainer's question answered with evidence in one comment on the open issu
 
 <workflow>
 
-**Step 1 — Load the standards and resolve the issue.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
+**Step 1 — Load the standards and resolve the issue.** {!% require_skill 'contribute:contribution-standards' %!}
 
 `$ARGUMENTS` is an issue number or URL. A bare number is the number; a URL's trailing path segment is the number. An empty `$ARGUMENTS` stops the flow, because this skill continues an identified thread and never picks one. The URL check needs the resolved base, so Step 2 settles it.
 

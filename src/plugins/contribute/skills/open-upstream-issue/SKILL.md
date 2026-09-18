@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when filing an issue in a repository the operator does not control — a fork's upstream, or any base whose permission is READ, TRIAGE, or NONE.
   NEVER open an issue against such a repository without this skill.
 argument-hint: "[what was observed]"
-allowed-tools: Read, Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(gh issue create:*), Bash(gh search issues:*), Bash(printf:*)
+allowed-tools: Read, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(gh issue create:*), Bash(gh search issues:*), Bash(printf:*)
 ---
 
 <objective>
@@ -13,7 +13,7 @@ One issue open in a repository the operator does not control, carrying an observ
 
 <workflow>
 
-**Step 1 — Load the standards and read the invocation input.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
+**Step 1 — Load the standards and read the invocation input.** {!% require_skill 'contribute:contribution-standards' %!}
 
 `$ARGUMENTS`, when non-empty, is the observation this report is built around: it supplies Step 3's distinguishing search terms, Step 4's claim to gather evidence for, and Step 5's one-sentence summary. When it is empty, present, through the runtime's structured-question tool, the request for what was observed, before Step 3, because a report has no subject without it.
 

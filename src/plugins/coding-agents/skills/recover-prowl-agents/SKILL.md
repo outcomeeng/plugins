@@ -3,7 +3,7 @@ name: recover-prowl-agents
 description: >-
   ALWAYS invoke this skill when preparing for or recovering coding-agent sessions after a Prowl restart. NEVER restart Prowl without a prepared exact-session manifest.
 argument-hint: "<prepare|recover> <absolute-manifest-path>"
-allowed-tools: Read, Write, Skill, Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py":*), {{! tool('ask_user') !}}
+allowed-tools: Read, Write, {{! tool('use_skill') !}}, Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py":*), {{! tool('ask_user') !}}
 ---
 
 <objective>

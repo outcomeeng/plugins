@@ -47,3 +47,37 @@ These back the assertions at `source-and-templating.md` lines 21 and 24 through 
 **Resolution shape**: add a violating body to the parametrized domain and assert the regex reports it, keeping the conforming scan as the second half. This also gives the entry above — the one recording that the same test matches path-shaped and skill-identity-shaped occurrences but not a quoted value in a condition — a place to prove which shapes are detected.
 
 **Evidence**: raised as a `REJECT` finding by the test-evidence auditor against the path-boundary changeset, which neither authored this assertion nor edited this test.
+
+## Linked tests delegate their predicates to boolean-returning harnesses
+
+Twenty-three test-evidence findings on this node's seven linked test files, its
+harness, and one generator share one class with the entry "Property predicates
+are hidden in boolean-returning harnesses" in
+`spx/18-plugin-build.enabler/ISSUES.md`:
+
+- `test_parse_directives.scenario.l1.py`, `test_render_text.scenario.l1.py`,
+  `test_parse_directives.property.l1.py`, `test_expand_include.property.l1.py`,
+  `test_render_text.property.l1.py`, and most assertions of
+  `test_source_and_templating.compliance.l1.py` assert only a boolean returned by
+  `outcomeeng_testing/harnesses/source_and_templating.py`, which owns the
+  equality, membership, and exception predicates (findings `f-001` through
+  `f-017`, `f-019`, `f-020`).
+- `test_per_plugin_template_body_names_no_single_plugin` scans the committed
+  conforming body only and constructs no violating template (finding `f-021`).
+- `outcomeeng_testing/generators/fragments.py` restates the standard Jinja
+  delimiters, and the harness restates the frontmatter delimiter, the skill-name
+  field, and `dist` in place of the constants `outcomeeng/distribution/contracts.py`
+  owns (findings `f-022` through `f-024`).
+
+The repair is a rewrite of the node's evidence seam — observation-returning
+harnesses, test-owned predicates, one violating template fixture, and imported
+constants — across the seven test files, the harness, and the generator; Change
+#85 owns the deterministic-evidence hardening of this subtree.
+
+**Settlement condition**: every linked test carries its own predicate over a
+harness observation, the generator and harness import the owned constants, and a
+passing test-evidence audit of this node.
+
+**Evidence**: `spec-tree:test-evidence-auditor` verdict `REJECTED` on head
+`a65659114b99767b90b4d920550fff5dc0824794` during Change #76; the one finding that changeset caused (`f-018`, a
+restated spec literal in the `require_skill` test) was fixed in the changeset.

@@ -70,3 +70,44 @@ Revisit condition: before claiming cost-bounded verifier-agent execution, identi
 **Not defects**, though an earlier draft of this entry listed them: the `### Testing` block's `[compliance]` tags carry no path because the canonical ADR template's Testing subsection has no path placeholder, unlike a spec assertion; and the no-separate-ADRs rule is correctly `[audit]`, being governance about decision shape.
 
 **Evidence**: nine findings confirmed by `adr-auditor` against the decision as it stands on `main`.
+
+## Optional tool-capability rendering has no deterministic evidence yet
+
+Four untagged ALWAYS assertions declare the optional-capability class: the
+optional-names lookup and complete-item removal in
+`spx/18-plugin-build.enabler/21-source-and-templating.enabler/21-runtime-parameterization.enabler/runtime-parameterization.md`,
+the remaining-item preservation and whole-field removal in
+`spx/18-plugin-build.enabler/43-target-emission.enabler/target-emission.md`, and the
+rendered-tool-only manual guidance and Codex composition in
+`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/execution-policy.md`.
+The behavior lives in `outcomeeng/distribution/build.py` (the registry's optional
+names in `resolve_runtime_token`, `_remove_unavailable_frontmatter_items`,
+`_remove_unavailable_tool_items`) and `outcomeeng/distribution/contracts.py`
+(`RUNTIME_TOKEN_USE_SKILL_NAMES`). No
+linked test exercises it: the `dist-diff` parity step detects drift between
+authored source and generated output but not a wrong-but-stable rendering.
+
+Commit `560a6e0ac4d13c680aedb73d5f797632baf32e20` added compliance tests and harness
+changes for it; commit `4d2019250b17e8009649d127188bac24272f2550` withdrew them because
+Change #76 treats these nodes as prototype scope — the three spec files carry no
+`malleability` field, so the projector reads them as implementation-malleable —
+adds no test file or test infrastructure, and assigns the fixtures, property generator, observation
+harness, and linked tests to Change #85, whose assertion-design records #76
+carries.
+
+The exception clause on the tagged portable-fields assertion in
+`spx/18-plugin-build.enabler/43-target-emission.enabler/target-emission.md` —
+"except a tool field whose every item is unavailable on a target" — rests on the
+same evidence: its linked `tests/test_target_emission.compliance.l1.py` compares
+each target's rendered source with its emitted output, and both sides pass through
+the same removal, so disabling `_remove_unavailable_frontmatter_items` leaves that
+test passing. The clause keeps the assertion true for the one corpus case
+(`coordinate-agents` on Codex) without deterministic coverage of its own.
+
+**Settlement condition**: Change #85 lands the deterministic evidence, tags
+the four assertions with `[test](...)` links, and covers the exception clause
+against emitted output alone.
+
+**Evidence**: `spec-tree:changes-reviewer` runs
+`2026-09-18_03-20-58-166-8b80f274938c`, `2026-09-18_04-29-55-695-83f3737b9f22`,
+and `2026-09-18_13-02-51-809-99cdf563caa5` (debt, evidence) during Change #76.

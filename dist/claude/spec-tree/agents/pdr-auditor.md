@@ -4,10 +4,12 @@ effort: "medium"
 name: pdr-auditor
 description: >-
   ALWAYS invoke when auditing PDR evidence quality after writing a PDR or before implementing outcomes governed by the PDR.
-tools: Read, Grep, Glob, Bash, Skill
+tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
 skills:
   - spec-tree:audit-pdr
 ---
+
+Use skill `spec-tree:audit-pdr`.
 
 <role>
 

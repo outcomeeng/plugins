@@ -43,3 +43,34 @@ projection.
 **Evidence**: raised by the skill-authoring audit of the canonical
 agent-registry changeset as a size/hygiene warning, not a correctness
 defect.
+
+## Codex composition probe returns no usable implementation-audit verdict
+
+The Change #76 probe on subject
+`6c64464abf07a2e384dabea0d3d0bc19a1b12956` completed installation,
+authenticated through the repository-installation harness, launched exactly
+one generated `spec-tree_implementation-auditor`, and observed the child read
+`spec-tree:audit-implementation` plus the installed Go and Python concern
+skills without searching for a dedicated tool named `Skill`.
+
+The child then recorded every one of the changeset's 319 paths as an optional,
+skipped `coverage-gap` unit. That set includes changed Python implementation
+and test files. SPX run `2026-09-17_15-12-34-814-1080e7adf6da` consequently
+sealed `approved` with zero findings without any path receiving an audited
+concern result. The child's final answer, relayed unchanged by the parent,
+contained only the run token; the generated implementation-auditor contract
+requires the token and rendered projection.
+
+This leaves two Change #76 probe observations unsatisfied: the child did not
+produce concern-audit coverage for changed implementation files, and it did not
+return the implementation-audit terminal-result contract. Retrying the same
+probe result is prohibited by the Change.
+
+**Settlement condition**: a generated Codex implementation auditor produces a
+concern-audit result for every changed implementation path in its scope and
+returns the run token with its rendered projection; the defect belongs to
+implementation-audit orchestration, not to skill composition.
+
+**Evidence**: SPX run `2026-09-17_15-12-34-814-1080e7adf6da`, sealed
+`approved` with zero findings over 319 `coverage-gap` units, observed on Change
+#76 subject `6c64464abf07a2e384dabea0d3d0bc19a1b12956`.

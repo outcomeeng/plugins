@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke when auditing, reviewing, or evaluating {{! term('configured_agent') !}}
   configuration files for best practices compliance, or when the user asks to audit a
   {{! term('configured_agent') !}}.
-tools: Read, Grep, Glob, Skill
+tools: Read, Grep, Glob, {{! tool('use_skill') !}}
 profile: standard
 {!% if target == 'codex' %!}
 sandbox_mode: read-only
@@ -12,6 +12,8 @@ sandbox_mode: read-only
 skills:
   - instructions:audit-subagent
 ---
+
+{!% require_skill 'instructions:audit-subagent' %!}
 
 <role>
 {!% if target == 'codex' %!}
@@ -35,7 +37,7 @@ Run the `instructions:audit-subagent` methodology in this already-dispatched, is
 <workflow>
 
 1. Read the caller's {{! term('configured_agent') !}} configuration path.
-2. {!% if target == 'codex' %!}Load `instructions:audit-subagent` and follow its methodology with that value.{!% else %!}Confirm the injected `instructions:audit-subagent` content is present in this context; when it is absent, load `instructions:audit-subagent` through the Skill tool. Follow that methodology with that value.{!% endif %!}
+2. Follow the composed skill instruction above with that value.
 3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>

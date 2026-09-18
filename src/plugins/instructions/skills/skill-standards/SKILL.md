@@ -44,6 +44,11 @@ For language-specific skill prose that references a foundation, use the unqualif
 
 Context placement, agent selection, and dispatch policy belong to the caller. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or caller check to the invoked skill.
 
+**Composed skill dependencies.** A composing SKILL.md names each dependency with the instruction ``Use skill `{plugin}:{skill}`.`` and, on a harness that exposes a skill-composition tool, grants that tool as one complete `allowed-tools` item; on a harness without one it grants nothing for composition. Source authored for more than one harness never spells one harness's skill tool name.
+{!# Source-only maintainer guidance: in this marketplace the instruction is the`require_skill`directive and the grant is the`use_skill` tool token; the build
+renders the target's name and removes an unavailable capability as one complete
+list item. Generated guidance describes only the harness it ships to. #!}
+
 </skill_organization>
 
 {!% if target == 'claude' %!}
@@ -83,7 +88,7 @@ Pick the gate by role:
 - A user-only side-effecting command (`/deploy`) uses `disable-model-invocation: true`. NEVER set it on a skill other skills or subagents must load: it blocks the Skill-tool call (surfacing `Skill <name> cannot be used with Skill tool due to disable-model-invocation`) AND blocks subagent preloading.
 - A skill any automation loop re-enters — a scheduled wakeup, heartbeat, or `/loop` target — MUST be user-invocable (leave the default; never `user-invocable: false`). Automation fires as a user-style prompt, so `user-invocable: false` rejects it and no Claude-private heartbeat exists to bypass that. When a loop body is otherwise reference-like, expose a user-invocable entry the loop targets rather than gating the body. Such a loop body keeps a **passive** description — it is invoked by exact name (the timer or a parent skill), not by description-match, so a directive description would only cause false auto-activations. A user-invocable skill with a passive description is the correct shape here, not a defect.
 
-Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per the read-only rule for audit skills, plus `Skill` when the audit composes another skill — audit runs never modify files.
+Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per the read-only rule for audit skills, plus `{{! tool('use_skill') !}}` when the audit composes another skill — audit runs never modify files.
 
 **Directory match is mandatory.** `skills/author/` → `name: author`. A mismatch breaks skill lookup.
 
@@ -402,7 +407,7 @@ Six skill types. Each has a distinct purpose and primary output.
 
 <reference_skills>
 
-Reference skills hold shared domain knowledge that multiple skills need. Consuming workflows explicitly invoke them through the runtime's documented skill-composition surface. A `/skill-name` mention in prose records the dependency but never loads the reference.
+Reference skills hold shared domain knowledge that multiple skills need. Consuming workflows state each one as the instruction ``Use skill `{plugin}:{skill}`.`` per the composed-dependency rule in `<skill_organization>`. A `/skill-name` mention in prose records the dependency but never loads the reference.
 
 **When to create a reference skill.** Two or more skills in the same plugin need the same domain knowledge (standards, patterns, anti-patterns, conventions). Alternatives fail: duplicating the content creates maintenance drift, and putting it in one skill's `references/` directory makes it unreachable from the other skill's `${CLAUDE_SKILL_DIR}`.
 
@@ -420,18 +425,18 @@ allowed-tools: Read
 
 - `user-invocable: false` — prevents false activations from user prompts.
 - Passive description (no `ALWAYS`/`NEVER`) — directive descriptions trigger false activations for a reference.
-- `allowed-tools: Read` — reference skills only read. Add `Skill` only when explicitly composing another read-only reference skill.
+- `allowed-tools: Read` — reference skills only read. Add the harness's skill-composition tool only when explicitly composing another read-only reference skill.
 
-**How consuming skills reference it.** Name the reference skill in running text for traceability, then explicitly invoke it through the runtime's documented skill-composition surface before applying its rules. A bare `See /skill-name` instruction is insufficient.
+**How consuming skills reference it.** Name the reference skill in running text for traceability, then state the dependency as ``Use skill `{plugin}:{skill}`.`` before applying its rules. A bare `See /skill-name` instruction is insufficient.
 
 ```markdown
 # In test-typescript/SKILL.md:
 
-Invoke `/typescript-test-standards` through the runtime's skill-composition surface before applying its test file naming, execution-level, and reusable-pattern rules.
+Use skill `typescript:typescript-test-standards`. Apply its test file naming, execution-level, and reusable-pattern rules.
 
 # In audit-typescript-tests/SKILL.md:
 
-Before auditing, invoke `/typescript-test-standards` through the runtime's skill-composition surface and apply its complete catalog of TypeScript test rules.
+Before auditing: Use skill `typescript:typescript-test-standards`. Apply its complete catalog of TypeScript test rules.
 ```
 
 **Naming convention:** `{domain}-standards` for standards. Examples: `typescript-test-standards`, `skill-standards`, `agent-prompt-standards`.

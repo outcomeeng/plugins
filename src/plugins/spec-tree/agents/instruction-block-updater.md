@@ -2,11 +2,13 @@
 name: instruction-block-updater
 description: >-
   ALWAYS invoke when applying spec-tree template drift to a product's root CLAUDE.md and AGENTS.md managed instruction block in the background — it regenerates a stale or absent instruction block from the installed template without user interaction. NEVER use this agent to reconcile a known `shared`-region ambiguity; that needs the interactive `/update-instruction-block` Step 3 reconcile.
-tools: Bash, Read
+tools: Bash, Read, {{! tool('use_skill') !}}
 profile: standard
 skills:
   - spec-tree:update-instruction-block
 ---
+
+{!% require_skill 'spec-tree:update-instruction-block' %!}
 
 <role>
 

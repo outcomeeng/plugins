@@ -3,10 +3,10 @@ name: simplify-typescript
 description: >-
   ALWAYS invoke this skill when simplifying TypeScript implementation while preserving behavior.
 argument-hint: "<HEAD|base...head>"
-allowed-tools: Read, Glob, Grep, Edit, Skill, Bash(git status:*), Bash(git rev-parse:*), Bash(git diff:*)
+allowed-tools: Read, Glob, Grep, Edit, Bash(git status:*), Bash(git rev-parse:*), Bash(git diff:*)
 ---
 
-Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Use skill `typescript:typescript-test-standards`.
 
 <objective>
 Simpler TypeScript implementation with unchanged behavior and type safety, accompanied by a scope and verification report.
