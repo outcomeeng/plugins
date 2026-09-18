@@ -11,7 +11,7 @@ allowed-tools: Read, Glob, Grep, Skill, Bash(git rev-parse:*), Bash(realpath:*),
 
 <objective>
 
-A verdict on one complete contract-form Change against `change-standards` and the Definition of Ready for its declared Maturity — `approved`, `rejected` with rule-attributed findings, or a complete `BLOCKED` diagnostic — or an `OUTSIDE_CONTRACT` result for a front-matter key-set mismatch.
+A verdict on one complete contract-form Change against `change-standards` and the Definition of Ready for its declared Maturity — `approved`, `rejected` with each finding naming the violated rule, artifact location, and supporting evidence, or a complete `BLOCKED` diagnostic — or an `OUTSIDE_CONTRACT` result for a front-matter key-set mismatch.
 
 </objective>
 
@@ -92,9 +92,15 @@ substantive judgment.
    an otherwise contract-shaped candidate, invoke it with
    `Proposed` only as the schema floor, record the invalid declaration against
    `record-shape`, and mark DoR-specific criteria not applicable because no
-   valid declared Maturity exists. Establish normal read-only foundation and
-   node context for product references actually needed by the loaded rules.
-   Never synchronize or modify the inspected checkout.
+   valid declared Maturity exists. Judge from the retained candidate and loaded
+   standards. Only when a loaded rule explicitly requires an existing reference
+   to resolve, check whether the exact candidate-named repository-relative path
+   exists. An absolute path, a path that traverses outside the repository, or a
+   path that does not resolve is a finding against that rule. Do not read
+   referenced artifact content, derive node context, invoke
+   `spec-tree:contextualize` or `spec-tree:sync-base`, synchronize, or modify
+   the inspected checkout. Record a finding when required record evidence is
+   absent; judge an explicitly labeled intended reference as record content.
 4. **Enumerate.** Derive the expected inventory from every `<rule id="...">` in
    the common reference and every criterion ID in the selected DoR. Include one
    root unit for the complete file and one child per common rule and DoR
@@ -109,8 +115,9 @@ substantive judgment.
    evidence obligations, Decisions, repository boundary, dependencies, and
    Activities together. Assess every common rule and selected DoR criterion.
    Distinguish intended paths and explicit prototype constraints from broken
-   existing references. Record each defect with its violated rule and concrete
-   observed-versus-expected evidence. A concise maintenance record can satisfy
+   existing references through the bounded lookup in step 3. Record each defect
+   with its violated rule and concrete observed-versus-expected evidence. A
+   concise maintenance record can satisfy
    every applicable requirement. Never manufacture missing benefits, research,
    questionnaires, or alternatives as findings.
 6. **Record.** Once the complete root inspection has finished, append the root
@@ -252,7 +259,7 @@ the exact lowercase common-rule or DoR-criterion identifier. Sort the inventory
 by loaded unit order, then location, message, severity, observed evidence, and
 expected evidence before assigning ordinals. Do not use discovery order or
 store state as a tiebreaker. The same retained input, loaded standards version,
-product references, and run-driver identity therefore construct the same
+bounded reference-resolution results, and run-driver identity construct the same
 finding inventory and IDs. The final idempotency key is
 `<complete-unit-id>:<finding-key>`. Before execution, require the final key to
 start with the complete unit ID followed by one literal colon and require the
@@ -373,15 +380,19 @@ admits the candidate.
 
 - The run retains the complete local candidate and identifies exactly that file.
 - Every common record rule and every criterion in the one Definition of Ready
-  selected by the declared maturity has a reconciled judgment, with concrete
-  evidence for every finding.
-- The candidate is unchanged at completion, and SPX accepts the serial coverage, finding, and terminal writes.
-- Repeating the audit with the same retained input, standards version, product
-  references, and run-driver identity yields the same applicability decisions,
-  finding inventory, finding IDs, severities, and terminal verdict.
+  selected by the declared maturity has a reconciled judgment; every rejected
+  finding names the violated rule, artifact location, and supporting evidence.
+- The candidate is unchanged at completion, and SPX accepts the serial coverage,
+  finding, and terminal writes.
+- Repeating the audit with the same retained input, standards version, bounded
+  reference-resolution results, and run-driver identity yields the same
+  applicability decisions, finding inventory, finding IDs, severities, and
+  terminal verdict.
 - The final output is `OUTSIDE_CONTRACT` for a front-matter key-set mismatch, the
   authoritative token and rendered projection, or the complete blocked
   diagnostic.
-- No candidate, Change store, claim, product artifact, or knowledge bundle was modified; only the SPX verification-run store received the required audit writes.
+- No candidate, Change store, claim, product artifact, or knowledge bundle was
+  modified; only the SPX verification-run store received the required audit
+  writes.
 
 </success_criteria>
