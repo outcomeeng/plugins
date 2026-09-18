@@ -23,7 +23,6 @@ _OPTION_LINE: Final = re.compile(
     r"^\s*(?:-[A-Za-z],\s*)?(?P<long>--[a-z][a-z0-9-]*)(?:,\s*-[A-Za-z])?"
     r"(?P<value>\s+<[^>]+>)?"
 )
-_LONG_IN_USAGE: Final = re.compile(r"(--[a-z][a-z0-9-]*)(\s+<[^>]+>)?")
 
 
 @dataclass(frozen=True)
@@ -104,7 +103,10 @@ def usage_contract(usage_text: str) -> UsageContract:
             break
         match = _OPTION_LINE.match(line)
         if match and line.lstrip().startswith("-"):
-            current = match.group("long")
+            long_option = match.group("long")
+            if not isinstance(long_option, str):
+                raise RuntimeError(f"Option line without a long option: {line!r}")
+            current = long_option
             options[current] = match.group("value") is not None
             description = line[match.end() :]
         else:
