@@ -63,7 +63,7 @@ def test_wait_bearing_requests_carry_a_bound_and_the_runner_is_bounded() -> None
         else:
             raise AssertionError(f"{operation.value} accepted a wait without a bound")
 
-    assert bounded == set(module.WAIT_BEARING_OPERATIONS) | {module.Operation.PROMPT}
+    assert bounded == set(module.WAIT_BEARING_OPERATIONS)
 
     smallest = module.INTEGER_BOUNDS[module.TIMEOUT_FIELD][0]
     request = module.operation_request(

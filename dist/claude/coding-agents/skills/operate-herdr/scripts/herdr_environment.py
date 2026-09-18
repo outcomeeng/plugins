@@ -43,7 +43,6 @@ NO_FOCUS_OPTION = "--no-focus"
 AGENT_ARGUMENTS_SEPARATOR = "--"
 
 # Fields of herdr's public JSON envelope.
-ID_FIELD = "id"
 RESULT_FIELD = "result"
 ERROR_FIELD = "error"
 CODE_FIELD = "code"
@@ -77,7 +76,6 @@ OPERATION_FIELD = "operation"
 ARGUMENTS_FIELD = "arguments"
 STATUS_FIELD = "status"
 DETAIL_FIELD = "detail"
-COMMAND_FIELD = "command"
 COMMAND_EXIT_CODE_FIELD = "commandExitCode"
 RESPONSE_FIELD = "response"
 ERROR_CODE_FIELD = "errorCode"
@@ -94,8 +92,6 @@ KIND_FIELD = "kind"
 PATH_FIELD = "path"
 AGENT_ARGUMENTS_FIELD = "agentArguments"
 MUTATION_AUTHORIZED_FIELD = "mutationAuthorized"
-PARTICIPANTS_FIELD = "participants"
-PARTICIPANT_FIELD = "participant"
 # The verbatim terminal text a read returns; herdr writes it as text, not JSON.
 OUTPUT_FIELD = "output"
 
@@ -137,9 +133,10 @@ MUTATING_OPERATIONS = frozenset(
         Operation.OPEN_WORKTREE,
     }
 )
-# Operations whose command waits on the agent; each carries an explicit timeout.
+# Operations whose command waits on the agent — prompt only when the request
+# sets `wait` — and therefore carry an explicit timeout.
 WAIT_BEARING_OPERATIONS = frozenset(
-    {Operation.WAIT, Operation.START, Operation.RELAUNCH}
+    {Operation.WAIT, Operation.START, Operation.RELAUNCH, Operation.PROMPT}
 )
 # Operations whose public response is terminal text rather than a JSON envelope.
 TEXT_OPERATIONS = frozenset({Operation.READ})
@@ -485,6 +482,15 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
         raise HerdrEnvironmentError(
             ExecutionStatus.MUTATION_UNAUTHORIZED,
             f"{operation.value} requires {MUTATION_AUTHORIZED_FIELD}: true before command construction.",
+        )
+    if (
+        operation in WAIT_BEARING_OPERATIONS
+        and arguments.get(WAIT_FIELD, operation is not Operation.PROMPT) is True
+        and TIMEOUT_FIELD not in arguments
+    ):
+        raise HerdrEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"{operation.value} waits on the agent and requires an explicit {TIMEOUT_FIELD}.",
         )
     if not any(
         shape.accepts(frozenset(arguments)) for shape in contract.request_shapes
@@ -851,6 +857,10 @@ def execute(request: object, runner: CommandRunner) -> dict[str, object]:
     else:
         try:
             response = _object(json.loads(result.stdout), RESPONSE_FIELD)
+            if operation is Operation.INVENTORY:
+                participants_from_inventory(response)
+            elif operation in SESSION_OPERATIONS:
+                session_from_response(response)
         except (json.JSONDecodeError, HerdrEnvironmentError) as error:
             return _failure_result(
                 operation.value,

@@ -56,8 +56,6 @@ MAIN_CHECKOUT_PATH_FIELD = "mainCheckoutPath"
 # Fields of the store's public responses.
 STORE_ID_FIELD = "id"
 STORE_NAME_FIELD = "name"
-STORE_PROGRAM_FIELD = "program"
-STORE_MODEL_FIELD = "model"
 STORE_REGISTRATION_TOKEN_FIELD = "registration_token"
 STORE_SUBJECT_FIELD = "subject"
 STORE_BODY_FIELD = "body_md"
@@ -340,13 +338,6 @@ class SubprocessRunner:
             check=False,
         )
         return CommandResult(completed.returncode, completed.stdout, completed.stderr)
-
-
-def unavailable_status_for(argv: tuple[str, ...]) -> ExecutionStatus:
-    """Name the unavailable result an absent executable yields."""
-    if argv[:1] == (SPX_COMMAND,):
-        return ExecutionStatus.DIAGNOSIS_UNAVAILABLE
-    return ExecutionStatus.STORE_UNAVAILABLE
 
 
 def _object(value: object, location: str) -> dict[str, object]:
