@@ -1,7 +1,7 @@
 # Agent Environment
 
 PROVIDES a stable per-agent session identity and a per-runtime session directory keyed on it
-SO THAT session management nodes (sessions, pickup, handoff)
+SO THAT concurrent agent sessions sharing one `.spx/`
 CAN scope work to the current agent without file-system heuristics or race conditions
 
 The spec-tree plugin's only runtime hook is a `SessionStart` hook that delegates to the `spx` CLI hook runner — `spx hook run <hook-name-kebab-case>`, here `spx hook run session-start` — through a hook-safety-compliant inline guard. On the normal path the `spx` hook runner delivers the session environment: it writes the agent session identity and project directories into the harness-provided `$CLAUDE_ENV_FILE` and records the worktree-occupancy claim. On the disabled-or-absent path the guard exits with a valid empty result and writes nothing. The plugin owns only the hook's wiring and its fail-open guard; it embeds no `.spx/`, git, transcript, or session logic of its own, per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md` and `spx/15-hook-safety.pdr.md`. The identity's distinctness and the per-session directory the `spx` CLI realizes are its own contract, verified by its suite; this node verifies the plugin's integration with it. This node holds the hook-wide constraint that spans its children.

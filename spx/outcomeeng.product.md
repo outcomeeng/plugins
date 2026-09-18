@@ -51,7 +51,7 @@ CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted dev
 - TDD flow orchestration (`/apply`) with language-specific delegation
 - Commit workflow (`/commit-changes`) with Conventional Commits
 - Language-specific plugins (Python, TypeScript, Rust, Go) for architecture, tests, code, and review
-- Session management (handoff, pickup) for conversation continuity
+- Change coordination (claim, release with a Handoff, close) for work continuity across agent sessions
 - Pre-commit validation infrastructure for plugin and skill quality
 - Persistent marketplace installation and isolated end-to-end install verification, governed by `spx/12-marketplace-state.adr.md`
 - Interface surfaces (browser) that render the spec tree from the SPX CLI projection and support interactive review and restructuring

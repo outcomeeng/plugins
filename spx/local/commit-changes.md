@@ -32,7 +32,7 @@ Plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
 - ✅ Adding new skills (e.g., new `/design-frontend` skill)
 - ✅ Adding new thin agents
 - ✅ Removing or renaming a skill or thin agent — structure is symmetric, so a loss counts like a gain
-- ✅ Major functional changes (e.g., atomic claim mechanism in `/pickup`)
+- ✅ Major functional changes (e.g., the atomic claim mechanism in `/claim-change`)
 - ✅ Significant user experience improvements
 - 🎯 **Use sparingly** — only for substantial additions or changes
 
@@ -127,7 +127,7 @@ just build-skills  # propagate the bumped version into dist/
 | Add an implementation-auditor agent     | 0.2.0 | 0.3.0 | New thin agent = MINOR                                                               |
 | Add self-organizing handoff             | 0.3.0 | 0.4.0 | Major functional change = MINOR — not structural, pass `just bump origin/main minor` |
 | Fix typo in an installed skill          | 0.4.0 | 0.4.1 | Plugin-surface documentation patch                                                   |
-| Refactor pickup logic                   | 0.4.1 | 0.4.2 | Refactoring = PATCH                                                                  |
+| Refactor claim logic                    | 0.4.1 | 0.4.2 | Refactoring = PATCH                                                                  |
 | Improve error messages                  | 0.4.2 | 0.4.3 | Small enhancement = PATCH                                                            |
 | Add `/design-frontend`                  | 0.4.3 | 0.5.0 | New skill = MINOR                                                                    |
 | Retire a thin agent                     | 0.5.0 | 0.6.0 | A lost thin agent is structural = MINOR                                              |

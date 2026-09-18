@@ -39,7 +39,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 **Step GATE: Check foundation**
 
 Check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker.
-A marker mentioned only in a compaction summary, session file, handoff note, prior run description, or statement that `/understand` ran does not count. Reading the `/understand` SKILL.md file alone does not count.
+A marker mentioned only in a compaction summary, Handoff, prior run description, or statement that `/understand` ran does not count. Reading the `/understand` SKILL.md file alone does not count.
 If absent → STOP. Invoke `/understand` first, then continue with Step SYNC before Step 0. Do not inspect git, session state, product files, or spec-tree content before the live marker is present.
 
 </step>
@@ -162,7 +162,7 @@ Glob: "{path-to-dir}/PLAN.md"
 Glob: "{path-to-dir}/ISSUES.md"
 ```
 
-**If ISSUES.md, or a prior-form PLAN.md, exists, read it.** These are stale-prone coordination notes left by previous agents via `/handoff`. Deferred plans or known issues in an ancestor node may bear on the target, but they are fallible inputs, not authority — reconcile each against the specs, decisions, assertions, tests, implementation, and current user intent before letting it steer work.
+**If ISSUES.md, or a prior-form PLAN.md, exists, read it.** These are stale-prone coordination notes left by previous agents. Deferred plans or known issues in an ancestor node may bear on the target, but they are fallible inputs, not authority — reconcile each against the specs, decisions, assertions, tests, implementation, and current user intent before letting it steer work.
 
 **2d. Read all lower-index siblings' specs**
 
@@ -209,7 +209,7 @@ Glob: "$target/PLAN.md"
 Glob: "$target/ISSUES.md"
 ```
 
-**If ISSUES.md, or a prior-form PLAN.md, exists, read it.** These are stale-prone coordination notes left by previous sessions via `/handoff`. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
+**If ISSUES.md, or a prior-form PLAN.md, exists, read it.** These are stale-prone coordination notes left by previous sessions. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
 
 **Do not read test file bodies.** Record the test links visible in the target spec and whether co-located test files exist. Context loading does not infer implementation state from test imports. When the next workflow needs test details, route to `/test`, `/audit-tests`, or `/apply`.
 

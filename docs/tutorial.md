@@ -195,23 +195,25 @@ Multiple concerns = multiple commits. The skill never uses `git add .`.
 
 <!-- TODO: Add screenshot of /commit-changes in action -->
 
-## 8. Hand off and pick up
+## 8. Claim, release, and close a Change
 
-When you need to continue work in a fresh session:
-
-```text
-> /handoff                             # create a timestamped handoff
-```
-
-This saves the current context — what you were working on, what's done, what's next — to `.spx/sessions/`.
-
-To resume in a new session:
+Work is coordinated through Changes in the store `spx/local/coordination.md` declares. Hold one before working on it:
 
 ```text
-> /pickup                              # list and claim a previous handoff
+> /claim-change #42                    # Available → Claimed, this session as holder
 ```
 
-<!-- TODO: Add screenshot of /handoff and /pickup in action -->
+When you stop with work remaining, release it with a Handoff so any agent can pick it up:
+
+```text
+> /release-change                      # writes the Handoff, Claimed → Available
+```
+
+When the Change reaches its end, close it to a terminal Lifecycle:
+
+```text
+> /close-change Applied                # or Refined, or Abandoned
+```
 
 ## 9. Refactor the tree
 
@@ -244,16 +246,16 @@ This stops the current ad hoc work and restarts the proper TDD flow from Step 1.
 
 ## Workflow summary
 
-| Step          | What you do                                       | Command/Skill                    |
-| ------------- | ------------------------------------------------- | -------------------------------- |
-| **Setup**     | Install spx CLI, add marketplace, install plugins | `npm install -g @outcomeeng/spx` |
-| **Bootstrap** | Create spec tree for your product                 | `/bootstrap`                     |
-| **Author**    | Create specs, decisions, nodes                    | `/author`                        |
-| **Decompose** | Break down large nodes                            | `/decompose`                     |
-| **Align**     | Check consistency and quality                     | `/align`                         |
-| **Test**      | Write tests from spec assertions                  | `/test`                          |
-| **Implement** | TDD flow: architect → test → code                 | `/apply`                         |
-| **Commit**    | Selective staging, Conventional Commits           | `/commit-changes`                |
-| **Hand off**  | Save context for next session                     | `/handoff` → `/pickup`           |
-| **Refactor**  | Restructure the tree                              | `/refactor`                      |
-| **Correct**   | Stop ad hoc work, restart methodology             | `/refocus`                       |
+| Step           | What you do                                       | Command/Skill                                       |
+| -------------- | ------------------------------------------------- | --------------------------------------------------- |
+| **Setup**      | Install spx CLI, add marketplace, install plugins | `npm install -g @outcomeeng/spx`                    |
+| **Bootstrap**  | Create spec tree for your product                 | `/bootstrap`                                        |
+| **Author**     | Create specs, decisions, nodes                    | `/author`                                           |
+| **Decompose**  | Break down large nodes                            | `/decompose`                                        |
+| **Align**      | Check consistency and quality                     | `/align`                                            |
+| **Test**       | Write tests from spec assertions                  | `/test`                                             |
+| **Implement**  | TDD flow: architect → test → code                 | `/apply`                                            |
+| **Commit**     | Selective staging, Conventional Commits           | `/commit-changes`                                   |
+| **Coordinate** | Claim, release, and close a Change                | `/claim-change`, `/release-change`, `/close-change` |
+| **Refactor**   | Restructure the tree                              | `/refactor`                                         |
+| **Correct**    | Stop ad hoc work, restart methodology             | `/refocus`                                          |

@@ -395,9 +395,9 @@ Command defaults are authority for cost-bearing and quota-bearing runs. When a d
 
 <closing_protocol>
 
-- ALWAYS: continue actionable in-scope work and invoke `/handoff` only when no continuation remains or continuation is impossible.
+- ALWAYS: continue actionable in-scope work; close out only when no continuation remains or continuation is impossible.
 
-Apply the closing test: can the operator reasonably ask “What now?” A passing check, merge, clean worktree, or persisted note is a milestone, never permission to stop while do-able work remains. Run `/handoff` only when the goal is met or continuation is impossible — the operator halted work, context is exhausted, or an external blocker prevents the next action. When operator judgment is required, close with the structured-question tool rather than a prose offer.
+Apply the closing test: can the operator reasonably ask “What now?” A passing check, merge, clean worktree, or persisted note is a milestone, never permission to stop while do-able work remains. Dispose of the held Change only when the goal is met or continuation is impossible: `/close-change` when the Change reached its terminal Lifecycle, `/release-change` with a Handoff when continuation remains for another holder; a conversation holding no Change records remaining work as a Proposed Change through `/author-change`. When operator judgment is required, close with the structured-question tool rather than a prose offer.
 
 </closing_protocol>
 
@@ -405,7 +405,7 @@ Apply the closing test: can the operator reasonably ask “What now?” A passin
 
 - ALWAYS: keep the live ledger conversation-local and persist unresolved items only at their correct durable or coordination tier.
 
-Fixed entries disappear. Unresolved entries persist only through a decision, spec, Change, or `ISSUES.md`. Session files under `.spx/` carry ephemeral initialization context and remain outside Git.
+Fixed entries disappear. Unresolved entries persist only through a decision, spec, Change, or `ISSUES.md`.
 
 </spec_tree_integration>
 
@@ -421,7 +421,7 @@ Continue through `/merge` unless the operator explicitly limited the request to 
 
 <workflow>
 
-1. Load this complete inline foundation on every invocation. A marker in a compaction summary, session file, handoff note, or prior-run statement does not count. After compaction, treat the marker as absent until this workflow emits it again.
+1. Load this complete inline foundation on every invocation. A marker in a compaction summary, Handoff, or prior-run statement does not count. After compaction, treat the marker as absent until this workflow emits it again.
 2. Check internal consistency across every foundation section and surface any contradiction immediately. No mandatory foundation reference read follows this step.
 3. Locate these operational references and list their paths without reading them until another skill needs them: `${CLAUDE_SKILL_DIR}/references/kind-decision.md`, `${CLAUDE_SKILL_DIR}/references/grammar.md`, `${CLAUDE_SKILL_DIR}/references/artifact-placement.md`, `${CLAUDE_SKILL_DIR}/references/status-claims.md`, `${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md`, and `spx/local/*.md`. Note discovery belongs to `/contextualize`, never to `/understand`.
 4. Read `spx/local/merging.md` when present. Changes destined for the default branch route through `/merge`; absence of the overlay applies the default lifecycle.

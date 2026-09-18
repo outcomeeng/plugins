@@ -149,13 +149,13 @@ The `/understand` `<files_in_a_node>` eval-lane bullet (authored in `src/plugins
 
 ## 25. The `spx/EXCLUDE` mechanism is still shipped while this repository carries no such file
 
-This repository has no `spx/EXCLUDE` and no root `conftest.py`: no node is in specified state, every declared `[test]` and `[eval]` link resolves, and the `eval-links` validation step fails the gate on a dangling link. The `apply`, `test`, `handoff`, `manage-github-pr`, and `test-typescript` skills still describe exclusion as the specified-state mechanism — the `/understand` foundation states the status-claim model and names the list only as a passing-scope list a toolchain without the claim still reads — and `spx test passing` reads it. The specs `spx/21-spec-tree.enabler/65-apply.enabler/apply.md`, `spx/21-spec-tree.enabler/76-sessions.enabler/25-handoff.enabler/20-closure.enabler/closure.md`, and `spx/15-validation.enabler/32-reference-portability.enabler/reference-portability.md` name the file as a mechanism.
+This repository has no `spx/EXCLUDE` and no root `conftest.py`: no node is in specified state, every declared `[test]` and `[eval]` link resolves, and the `eval-links` validation step fails the gate on a dangling link. The `apply`, `test`, `manage-github-pr`, and `test-typescript` skills still describe exclusion as the specified-state mechanism — the `/understand` foundation states the status-claim model and names the list only as a passing-scope list a toolchain without the claim still reads — and `spx test passing` reads it. The specs `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` and `spx/15-validation.enabler/32-reference-portability.enabler/reference-portability.md` name the file as a mechanism.
 
 The target model replaces the file with committed per-node `spx.status.json` claims: `spx spec status --update` folds available local evidence into the claims and never runs verification; a claim rests as `passed`, `failed`, or `not-run`; CI reproduces every passing claim and refutes what it cannot reproduce; state derives from the claim (no references → `declared`, not-run → `specified`, passed → `passing`, failed or refuted → `failing`). "No passing claim ⇒ not run" is the automatic exclusion, so the file has no remaining content.
 
 **Gate.** The `spx` CLI ships the claim-and-reproduction model (filed in the `outcomeeng/spx` session queue as `2026-07-05_19-20-16`); an `@outcomeeng/spx` release carrying it is published; `REQUIRED_SPX_VERSION` in `outcomeeng/validation/spx_version.py` and `SPX_VERSION` in `.github/workflows/check.yml` advance to it. The installed CLI 0.6.26 already exposes `spx spec status --update` ("refresh each node's `spx.status.json`") while the floor is 0.6.15; whether that release satisfies the first gate is unverified. Committed `spx.status.json` files are not adopted here until the gate holds.
 
-**Resolution shape.** The `/understand` foundation already carries the status-claim model — `references/status-claims.md` replaces `excluded-nodes.md`, and `<malleability_and_state>` and `<decision_to_spec_alignment>` state it. Once the gate holds: sweep the seven skills above (each plugin takes the `skill-auditor` gate and a bump) and the `/apply` fallback sentence in `docs/tutorial.md` that describes the mechanism to consumers; re-point the three specs above from the file to the `specified` state; drop `EXCLUDE` from `PORTABLE_SPX_FILES` in `outcomeeng/validation/reference_portability.py` once no shipped text names it. Per-mechanism evidence readers for eval and audit, and a cost-reward CI reproduction policy, are not required for the retirement.
+**Resolution shape.** The `/understand` foundation already carries the status-claim model — `references/status-claims.md` replaces `excluded-nodes.md`, and `<malleability_and_state>` and `<decision_to_spec_alignment>` state it. Once the gate holds: sweep the six skills above (each plugin takes the `skill-auditor` gate and a bump) and the `/apply` fallback sentence in `docs/tutorial.md` that describes the mechanism to consumers; re-point the two specs above from the file to the `specified` state; drop `EXCLUDE` from `PORTABLE_SPX_FILES` in `outcomeeng/validation/reference_portability.py` once no shipped text names it. Per-mechanism evidence readers for eval and audit, and a cost-reward CI reproduction policy, are not required for the retirement.
 
 ## 26. Inline-foundation preservation refs are unreconciled
 
@@ -187,3 +187,17 @@ Preserved refs and observed heads:
 **Impact:** `/contextualize`, `/align`, and `/refactor` parse both forms; a reader of this tree sees the prior form until the migration, and a `PLAN.md` here is a note the 4.0 grammar does not admit.
 
 **Settlement condition:** The SPX CLI admits the seven suffixes, `{slug}.spec.md`, front matter, and the status claim; this repository's consumer Change migrates every directory, spec, and `PLAN.md` — the latter into Changes — and these `[test]` assertions state the 4.0 grammar against the migrated parser.
+
+## DEBT [payload]: the foundation renders 14 code points under its eager ceiling
+
+Defect class: `payload`.
+
+Finding: the typed skill audit of `understand` on the Change Lifecycle changeset (head `a28a5be91fc2ea04151c283059caa9cb9a11fd12`) measured the rendered Claude payload at 39,986 and the Codex payload at 39,909 code points against the 40,000 ceiling of `/skill-standards` `<eager_foundation_exception>`; it also found `references/product-domain-shapes.md` pointing at `kind-decision.md` by bare filename, and self-trigger statements at the operational-continuation and note-discovery sentences.
+
+Evidence: `instructions:skill-auditor` findings f-008, f-009, f-010 on `src/plugins/spec-tree/skills/understand/SKILL.md`; the second pass added that the passing-scope-list clause is stated three times (line 45, line 175, `references/status-claims.md`) and that every node template and example writes the `[test]` path in one language's filename form where `references/grammar.md` admits three.
+
+Impact: the next wording edit can push the rendered payload over the ceiling and turn an approval into a must-fix.
+
+Successor: a Proposed Change filed after outcomeeng/changes#91 merges.
+
+Revisit and settlement condition: one conditional paragraph moved into the reference that owns its detail, the bare pointer spelled through `${CLAUDE_SKILL_DIR}`, the self-trigger clauses dropped, and one typed skill audit approving with headroom above 1,000 code points.

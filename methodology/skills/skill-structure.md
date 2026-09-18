@@ -12,7 +12,7 @@ Three methodology steps drive all work. Audit gates operate within each step. Se
 2. **Spec** — establish test, evaluate, or audit evidence that makes assertions verifiable. Node becomes Specified.
 3. **Apply** — write implementation code that makes deterministic evidence pass and satisfies agentic evidence. Node becomes Passing.
 
-Planning is transient — `PLAN.md` coordination notes left by `/handoff`, not durable artifacts.
+Planning is transient — a Change and its Handoff in the coordination store, not durable artifacts.
 
 Within these steps:
 
@@ -312,7 +312,7 @@ Skills for writing implementation code and committing results. `apply` is an orc
 
 ## Marker-based state detection
 
-Foundation skills emit XML markers into the conversation when loaded. All declare and spec skills check for these markers before starting work. Apply skills (`commit-changes`) operate independently; `manage-github-pr` checks the foundation marker so local lifecycle routing is known. This follows the same pattern as `/pickup` emitting `<PICKUP_ID>` for `/handoff` to find.
+Foundation skills emit XML markers into the conversation when loaded. All declare and spec skills check for these markers before starting work. Apply skills (`commit-changes`) operate independently; `manage-github-pr` checks the foundation marker so local lifecycle routing is known. This follows the same pattern as `claim-change` emitting `<CLAIMED_CHANGE>` for `release-change` and `close-change` to find.
 
 | Marker                                   | Emitted by      | Checked by                                            | Meaning                              |
 | ---------------------------------------- | --------------- | ----------------------------------------------------- | ------------------------------------ |
@@ -496,7 +496,7 @@ Orchestrates the full declare → spec → apply flow. Spans all three steps bec
 3. State the lifecycle plan and proceed autonomously by default; use the runtime's structured-question tool before mutation only when the local merge overlay opts into confirmation.
 4. Invoke implementation skills when the requested work is not yet in the tree.
 5. Invoke `commit-changes`, then the internal `open-pr` and `manage-pr` protocols unless the local lifecycle overlay declares a different route.
-6. Invoke `handoff` after merge unless the route stops earlier; the handoff skill decides whether any continuation needs a session file.
+6. After merge, continue remaining in-scope work or close out and dispose of the held Change through `close-change` or `release-change`, unless the route stops earlier.
 
 #### `open-pr`
 

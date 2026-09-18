@@ -39,3 +39,17 @@ Two further readings show the same gap from the CLI side. `spx diagnose` reports
 **Impact:** A consumer's awareness of its peers and consumers is missing from the loaded context, and a provider scopes its mandate without the consumer contracts the walk is meant to supply.
 
 **Settlement condition:** `13-context-enumeration.adr.md` states the 4.0 read order, `context-loading.md` asserts it, and `/contextualize` reads every sibling contract at each level with prerequisite and awareness distinguished in the manifest.
+
+## DEBT [conciseness]: the context loader restates lifecycle policy and its own steps
+
+Defect class: `conciseness`.
+
+Finding: the typed skill audit of `contextualize` on the Change Lifecycle changeset (head `a28a5be91fc2ea04151c283059caa9cb9a11fd12`) found the marker template hardcoding four lifecycle-policy sentences that `/merging-standards` owns, 23 success-criteria items several of which echo workflow steps, seven `bash` fences holding tool pseudo-syntax, and a sentence fragment opening Step 2.
+
+Evidence: `instructions:skill-auditor` findings f-009 to f-012 on `src/plugins/spec-tree/skills/contextualize/SKILL.md`.
+
+Impact: the manifest's lifecycle lines drift from the merge policy they copy, and the criteria block duplicates the workflow on every load.
+
+Successor: a Proposed Change filed after outcomeeng/changes#91 merges.
+
+Revisit and settlement condition: the four lifecycle fields derived from the read overlay or the merge policy, criteria reduced to falsifiable marker properties, fences labelled `text`, and one typed skill audit approving with no `conciseness` finding.

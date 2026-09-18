@@ -118,7 +118,7 @@ Any mismatch or partial write is a failed persistence result. Preserve the local
 
 <result>
 
-Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. Use skill `spec-tree:handoff`. Invoke it when work stops or transfers; preserve any unaudited local candidate locally and leave the published Change unchanged.
+Return the canonical Change reference, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next Activity or unresolved operator question. Use skill `spec-tree:release-change`. Invoke it only when this session holds the Change (Status `Claimed` with this session's winning Claim) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Preserve any unaudited local candidate locally and leave the published Change unchanged.
 
 </result>
 

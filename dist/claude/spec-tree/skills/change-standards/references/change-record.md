@@ -1,3 +1,10 @@
+<contents>
+
+- `<authority>` — the governing Change chapter and the record's boundary
+- `<record_rules>` — `record-shape`, `output-and-value`, `received-input-boundary`, `lineage`, `blockers`, `frame`, `maturity-and-authority`, `activities`, `store-independence`, `compatibility-boundary`
+
+</contents>
+
 <authority>
 
 The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`: require `methodology.version: "4.0"`, resolve `methodology.source`, and read `versions/4.0/methodology/change/changes.md` inside that declared source. This reference operationalizes that chapter without replacing it. A Change is mutable coordination for one intended Output in one Product; it declares no product, architecture, or methodology truth.
@@ -98,9 +105,9 @@ Store commands, provider identifiers, project item identifiers, revision selecto
 
 <rule id="compatibility-boundary">
 
-Before interpreting the body, `audit-change` inventories the front-matter key occurrences. It accepts only a candidate that carries each of the six closed-set keys exactly once and no other key. Stripped front matter, a missing or repeated required key, and any extra key — including `change_ref` — place the candidate outside the contract.
+Inventory the front-matter key occurrences before interpreting the body. A candidate is inside the contract only when it carries each of the six closed-set keys exactly once and no other key. Stripped front matter, a missing or repeated required key, and any extra key — including `change_ref` — place the candidate outside the contract.
 
-Return `OUTSIDE_CONTRACT` with the expected and observed key inventories and no audit verdict, migration, alias, inferred front matter, or body-line lineage interpretation. Body shape never establishes compatibility. A candidate carrying the exact closed key set remains auditable when a value, top-level section, body line, or Maturity-specific requirement violates the record contract or selected Definition of Ready.
+A candidate outside the contract receives no judgment, migration, alias, inferred front matter, or body-line lineage interpretation; report it as outside the contract with the expected and observed key inventories. Body shape never establishes compatibility. A candidate carrying the exact closed key set remains judgeable when a value, top-level section, body line, or Maturity-specific requirement violates the record contract or selected Definition of Ready.
 
 </rule>
 

@@ -1,7 +1,7 @@
 # Worktree Provisioning
 
 PROVIDES the `init-worktrees` provisioning flow that classifies a checkout's git layout and brings a single or non-compliant checkout into the bare-repository worktree pool of `spx/21-spec-tree.enabler/11-repository-layout.pdr.md`, pushing every local ref to the remote and carrying a prior checkout's gitignored state across
-SO THAT the session, reviewing, and merging workflows
+SO THAT the Change Lifecycle, reviewing, and merging workflows
 CAN assume the shared-`.spx/` bare-pool topology without re-deriving or repairing it
 
 ## Assertions
