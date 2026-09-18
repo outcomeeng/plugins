@@ -78,6 +78,7 @@ def test_jinja_environment_uses_custom_delimiters() -> None:
 @pytest.mark.parametrize("case", source_scenarios(), ids=lambda c: c.skill)
 def test_require_skill_expands_to_neutral_guidance(case: SourceScenario) -> None:
     rendered = expand_require_skill(RequireSkillDirective(case.skill_ref))
+    assert case.skill_ref in rendered
     assert rendered == REQUIRE_SKILL_GUIDANCE_TEMPLATE.format(skill_ref=case.skill_ref)
 
 

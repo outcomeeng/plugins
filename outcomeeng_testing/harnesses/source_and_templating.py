@@ -383,10 +383,6 @@ def jinja_environment_uses_custom_delimiters() -> bool:
         )
 
 
-def require_skill_expands_to_neutral_guidance() -> bool:
-    return all(_require_expands_neutrally(case) for case in source_scenarios())
-
-
 def require_skill_neutrality_oracle_rejects_runtime_specific_guidance() -> bool:
     runtime_names = _runtime_specific_names()
     return all(
@@ -605,15 +601,6 @@ def _fragment_required(case: SourceScenario) -> bool:
         except SourceFormatError:
             return True
         return False
-
-
-def _require_expands_neutrally(case: SourceScenario) -> bool:
-    rendered = expand_require_skill(RequireSkillDirective(case.skill_ref))
-    return _require_guidance_is_neutral(
-        rendered,
-        skill_ref=case.skill_ref,
-        runtime_names=_runtime_specific_names(),
-    )
 
 
 def _runtime_specific_names() -> tuple[str, ...]:
