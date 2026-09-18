@@ -13,7 +13,7 @@ Every valid review finding answered in the head branch, and — when any finding
 
 <workflow>
 
-**Step 1 — Load the standards and resolve the pull request.** Invoke `/contribution-standards` through the runtime's skill-composition surface.
+**Step 1 — Load the standards and resolve the pull request.** {!% require_skill 'contribute:contribution-standards' %!}
 
 `$ARGUMENTS` is a pull-request number or URL. A bare number is the number; a URL's trailing path segment is the number. Both the URL check and the empty-input lookup need the resolved base, so Step 2 settles them.
 

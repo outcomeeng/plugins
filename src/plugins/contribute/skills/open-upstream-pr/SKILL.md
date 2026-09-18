@@ -13,7 +13,7 @@ One pull request open against a repository the operator does not control, carryi
 
 <workflow>
 
-**Step 1 — Load the standards and read the invocation input.** Invoke `/contribution-standards` through the runtime's skill-composition surface. Its `<invariants>` govern every step below; this workflow adds ordering and the pull-request specifics.
+**Step 1 — Load the standards and read the invocation input.** {!% require_skill 'contribute:contribution-standards' %!} Its `<invariants>` govern every step below; this workflow adds ordering and the pull-request specifics.
 
 `$ARGUMENTS`, when non-empty, is the one-sentence description of the change used in Step 3's authorization and in the Step 9 body. When it is empty, derive that sentence from the checkout's current branch at invocation — the branch the change was written on, distinct from the `<branch>` Step 4 cuts — and its own commit subjects (`git log --format=%s origin/HEAD..HEAD`), which needs nothing a later step resolves.
 
