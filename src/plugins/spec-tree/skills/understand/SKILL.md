@@ -397,7 +397,7 @@ Command defaults are authority for cost-bearing and quota-bearing runs. When a d
 
 - ALWAYS: continue actionable in-scope work; close out only when no continuation remains or continuation is impossible.
 
-Apply the closing test: can the operator reasonably ask “What now?” A passing check, merge, clean worktree, or persisted note is a milestone, never permission to stop while do-able work remains. Dispose of the held Change only when the goal is met or continuation is impossible: `close-change` when the Change reached its terminal Lifecycle, `release-change` with a Handoff when continuation remains for another holder; a conversation holding no Change records remaining work as a Proposed Change through `author-change`. When operator judgment is required, close with the structured-question tool rather than a prose offer.
+Apply the closing test: can the operator reasonably ask “What now?” A passing check, merge, clean worktree, or persisted note is a milestone, never permission to stop while do-able work remains. Dispose of the held Change only when the goal is met or continuation is impossible: `/close-change` when the Change reached its terminal Lifecycle, `/release-change` with a Handoff when continuation remains for another holder; a conversation holding no Change records remaining work as a Proposed Change through `/author-change`. When operator judgment is required, close with the structured-question tool rather than a prose offer.
 
 </closing_protocol>
 

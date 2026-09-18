@@ -194,7 +194,7 @@ Defect class: `payload`.
 
 Finding: the typed skill audit of `understand` on the Change Lifecycle changeset (head `a28a5be91fc2ea04151c283059caa9cb9a11fd12`) measured the rendered Claude payload at 39,986 and the Codex payload at 39,909 code points against the 40,000 ceiling of `/skill-standards` `<eager_foundation_exception>`; it also found `references/product-domain-shapes.md` pointing at `kind-decision.md` by bare filename, and self-trigger statements at the operational-continuation and note-discovery sentences.
 
-Evidence: `instructions:skill-auditor` findings f-008, f-009, f-010 on `src/plugins/spec-tree/skills/understand/SKILL.md`.
+Evidence: `instructions:skill-auditor` findings f-008, f-009, f-010 on `src/plugins/spec-tree/skills/understand/SKILL.md`; the second pass added that the passing-scope-list clause is stated three times (line 45, line 175, `references/status-claims.md`) and that every node template and example writes the `[test]` path in one language's filename form where `references/grammar.md` admits three.
 
 Impact: the next wording edit can push the rendered payload over the ceiling and turn an approval into a must-fix.
 
