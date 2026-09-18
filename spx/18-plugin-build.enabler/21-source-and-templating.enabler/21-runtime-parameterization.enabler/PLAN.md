@@ -13,12 +13,13 @@ file under `src/plugins/` and `src/_shared/`, except the explicit files named in
 `RUNTIME_TOKEN_IGNORE` because they must name harness guide filenames as data.
 The registry is seeded with `ask_user` (`AskUserQuestion`/`request_user_input`) and
 the no-Codex-equivalent `ScheduleWakeup`. The optional capability `use_skill`
-(`Skill` on Claude Code, unavailable on Codex) is a `tool` kind entry the registry
-lists as optional, so the guard forbids its raw Claude name and the resolver yields
-an unavailable placeholder for Codex. An unavailable capability is removed only
-when its token occupies one complete item in `allowed-tools` or agent `tools`; a
-field whose every item is unavailable is removed for that target; every other
-placement fails the build. The ignore-list
+(`Skill` on Claude Code, unavailable on Codex) sits under the `tool` kind's optional
+names, resolved by the same registry path, with the Codex resolution an
+unavailable placeholder; its common-word Claude name stays outside the guard and
+review covers it. An unavailable capability is removed only when its token
+occupies one complete item in `allowed-tools` or agent `tools`; a field whose every
+item is unavailable is removed for that target; every other placement fails the
+build. The ignore-list
 mechanism remains as the tracked exemption surface for any future not-yet-converted plugin.
 
 ## Phase 2
