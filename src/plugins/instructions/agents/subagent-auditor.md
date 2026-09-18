@@ -37,7 +37,7 @@ Run the `instructions:audit-subagent` methodology in this already-dispatched, is
 <workflow>
 
 1. Read the caller's {{! term('configured_agent') !}} configuration path.
-2. Use skill `instructions:audit-subagent`. Follow its methodology with that value.
+2. Follow the composed skill instruction above with that value.
 3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>

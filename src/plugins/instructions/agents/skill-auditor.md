@@ -36,7 +36,7 @@ Run the `instructions:audit-skill` methodology in this already-dispatched, isola
 <workflow>
 
 1. Read the caller's scoped skill paths.
-2. Use skill `instructions:audit-skill`. Follow its methodology with those values.
+2. Follow the composed skill instruction above with those values.
 3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>
