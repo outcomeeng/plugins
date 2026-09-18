@@ -41,7 +41,11 @@ from typing import Final
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
-# above it. spx 0.6.21 is the first release whose `spx verification run start`
+# above it. spx 0.7.0 is the release the coding-agents plugin's agent-mail and
+# herdr capabilities pin their `spx diagnose --format json` reading against: the
+# agent-mail adapter derives the mail project key from the `worktree-pool`
+# record's `mainCheckoutPath`, so that record's shape is part of the floor's
+# contract. spx 0.6.21 is the first release whose `spx verification run start`
 # reports the resolved changed-path set as `resolvedScope` and whose `render`
 # projection carries `auditScopeUnits`; the implementation audit's stage-4
 # enumeration and its stage-7 reconciler read those two fields, and below this
@@ -90,7 +94,7 @@ VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
     "finish",
     "render",
 )
-REQUIRED_SPX_VERSION: Final = "0.6.21"
+REQUIRED_SPX_VERSION: Final = "0.7.0"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"
