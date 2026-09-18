@@ -74,7 +74,7 @@ From Sliced onward the Frame identifies one repository, resolved dependencies an
 
 Maturity records refinement readiness and may move backward when its Definition of Ready becomes false. Lifecycle records ownership or termination and changes independently. Applied, Refined, and Abandoned are terminal Lifecycle values.
 
-Advancement requires the target level's complete Definition of Ready and authority. At Proposed, `# Frame` carries `Proposal review: reviewed by the operator on <date>.` after operator review. From Framed onward, the in-Frame Intent attestation records the operator's approval of the complete Frame. Sliced additionally names the accountable person, and Executable remains inside that attested Frame. An agent may advance Sliced to Executable only while resolving implementation detail inside that Frame. A reopened product or architecture judgment blocks Executable advancement.
+Advancement requires the target level's complete Definition of Ready and authority. At Proposed, `# Frame` carries `Proposal review: reviewed by the operator on <date>.` after operator review. From Framed onward, the in-Frame Intent attestation records the operator's approval of the complete Frame. Sliced additionally names the accountable person, and Executable remains inside that attested Frame. Claude may advance Sliced to Executable by resolving implementation detail inside the Frame. A reopened product or architecture judgment blocks Executable advancement.
 
 A Claimed holder writes a Handoff and releases the Change before lowering Maturity. Author, Fixer, and Verifier roles hold no claim and gain no integration authority from editing or auditing the record.
 

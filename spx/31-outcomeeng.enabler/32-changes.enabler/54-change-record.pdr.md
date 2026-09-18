@@ -69,29 +69,29 @@ Framed requires the operator's attestation. Sliced requires a named accountable 
 
 ## Persistence
 
-Change authoring operates on the complete local draft maintained by `spx change draft`. A persistence workflow uses `gh` to map every front-matter field to the coordination store's native features, writes the complete record without stripping its front matter, and reads the persisted representation back before reporting success. The read-back value of every field equals the local draft.
+Persistence maps every front-matter field to the configured coordination store's native features, writes the complete record without stripping its front matter, and reads every field back unchanged before reporting success. A coordination-store limit never shapes the record.
 
-The record remains authoritative without any store-specific field, label, relationship, or rendering. Store-native metadata is a projection of the record rather than a second source of Change semantics. Persistence is an authoring-skill instruction and never a requirement that the record format embeds store commands or provider identifiers.
+The record remains authoritative without any store-specific field, label, relationship, or rendering. Store-native metadata is a projection of the record rather than a second source of Change semantics. The persistence skill instruction selects the client for the configured store; the record embeds no store commands or provider identifiers.
 
 ## Compatibility
 
-`audit-change` accepts only records authored under this contract. A record in an earlier form receives no migration, legacy alias, inferred front matter, body-line lineage interpretation, or audit verdict.
+`audit-change` accepts only records whose front matter carries this contract's closed key set. A record whose front matter does not carry that closed key set is outside the contract: it receives no migration, alias, inferred front matter, body-line lineage interpretation, or audit verdict, and the auditor reports it as outside the contract.
 
 ## Rationale
 
-One self-contained record preserves Change meaning across local drafting and coordination stores, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Excluding earlier record forms keeps the contract closed and avoids treating inference as product truth.
+One self-contained record preserves Change meaning across local drafting and coordination stores, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth.
 
 ## Product properties
 
 1. A Change carries its complete coordination meaning in the record and remains portable across coordination stores.
 2. Maturity advances only when the declared level's cumulative Definition of Ready holds and its human or Frame-derived authority is present.
-3. Persistence preserves field equality, while audit accepts only records authored under this contract.
+3. Persistence preserves field equality, while audit accepts only records whose front matter carries the contract's closed key set.
 
 ## Verification
 
 - ALWAYS: a Change record contains exactly the six required front-matter keys and the four fixed top-level body sections in their declared order.
 - ALWAYS: Proposed, Framed, Sliced, and Executable each have one independently loadable, cumulative Definition of Ready.
 - ALWAYS: Maturity advances only when the target level's Definition of Ready holds and the level's authority is present: operator attestation for Framed, a named accountable person for Sliced, and the attested Frame for Executable.
-- ALWAYS: persistence maps every front-matter field through `gh`, writes the complete self-contained record, and reads each persisted field back equal before reporting success.
+- ALWAYS: persistence maps every front-matter field to the configured coordination store's native features, writes the complete self-contained record, and reads each persisted field back unchanged before reporting success; a coordination-store limit never shapes the record.
 - NEVER: store-native metadata replaces, strips, or restates authoritative Change content.
-- NEVER: `audit-change` judges or migrates a record authored outside this contract.
+- NEVER: `audit-change` judges or migrates a record whose front matter does not carry the contract's closed key set; the auditor reports it as outside the contract.
