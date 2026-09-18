@@ -757,10 +757,17 @@ def _remove_unavailable_frontmatter_items(text: str) -> str:
 
 def _remove_unavailable_tool_items(key: str, lines: list[str]) -> list[str]:
     """Return one tool field with complete unavailable items removed."""
+    if not any(_UNAVAILABLE_RUNTIME_TOKEN_START in line for line in lines):
+        return lines
     first = lines[0]
     _field, separator, raw_value = first.partition(":")
     if raw_value.strip():
-        items = raw_value.split(",")
+        # A plain scalar may continue onto indented lines; YAML folds each
+        # line break into one space, so the folded value carries every item.
+        folded_value = " ".join(
+            [raw_value, *(line.strip() for line in lines[1:] if _is_list_line(line))]
+        )
+        items = folded_value.split(",")
         kept_items = [item for item in items if not _is_unavailable_tool_item(item)]
         if any(_UNAVAILABLE_RUNTIME_TOKEN_START in item for item in kept_items):
             return lines
@@ -776,11 +783,15 @@ def _remove_unavailable_tool_items(key: str, lines: list[str]) -> list[str]:
     if any(_UNAVAILABLE_RUNTIME_TOKEN_START in line for line in kept_continuations):
         return lines
     meaningful_continuations = [
-        line
-        for line in kept_continuations
-        if line.strip() and not line.lstrip().startswith("#")
+        line for line in kept_continuations if _is_list_line(line)
     ]
     return [first, *kept_continuations] if meaningful_continuations else []
+
+
+def _is_list_line(line: str) -> bool:
+    """Return whether a continuation line carries list content, not blank or comment."""
+    stripped = line.strip()
+    return bool(stripped) and not stripped.startswith("#")
 
 
 def _frontmatter_list_item(line: str) -> str:
