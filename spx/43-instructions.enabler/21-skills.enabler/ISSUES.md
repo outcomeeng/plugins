@@ -73,3 +73,60 @@ capture where multi-word intent must survive. Either choice also owes the
 
 Source: `instructions:skill-auditor` findings `f-007` and `f-010`, severity
 `WARNING`, on the changeset merged as PR 488.
+
+## `skill-standards` names the eager-foundation exception by a section that does not hold it
+
+`src/plugins/instructions/skills/skill-standards/SKILL.md:14` (`<success_criteria>`
+(a)) points to "the eager-foundation exception in `<progressive_disclosure>`", and
+`<progressive_disclosure>` at lines 320 and 346 says "unless the eager-foundation
+exception below applies", while the exception lives in its own
+`<eager_foundation_exception>` tag at line 301, which precedes
+`<progressive_disclosure>`.
+
+**Impact.** An author following the tag-by-name convention this skill prescribes
+lands on a section that does not hold the rule.
+
+**Settlement condition.** `<success_criteria>` names `<eager_foundation_exception>`
+and both `<progressive_disclosure>` branches drop "below".
+
+Source: `instructions:skill-auditor` finding rule `stale_cross_reference`, severity
+`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
+[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
+standards-skill pass that owns it.
+
+## The Claude render of `skill-standards` sits 930 code points under the eager-payload ceiling
+
+`dist/claude/instructions/skills/skill-standards/SKILL.md` measures 39070 code
+points against the 40,000-code-point ceiling `skill-standards`
+`<eager_foundation_exception>` declares for itself.
+
+**Impact.** The next small edit to a Claude-only section tips the reference past
+the ceiling and turns a routine change into a must-fix on this reference.
+
+**Settlement condition.** Conditional detail leaves the eager body for its
+reference — the `<context>` bash-block constraints at lines 274-280, already
+carried by `references/command-capabilities.md` `<dynamic_context>`, are one
+candidate — so a routine edit has room.
+
+Source: `instructions:skill-auditor` finding rule `eager_payload_headroom`, severity
+`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
+[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
+standards-skill pass that owns it.
+
+## `script-standards.md` states the testing-record requirement with a weak modal
+
+`src/plugins/instructions/skills/skill-standards/references/script-standards.md:32`,
+inside `<script_testing_rule>`, reads "The skill's documentation should record what
+was tested and with what inputs"; `/agent-prompt-standards` `<constraint_language>`
+bars "should" from a rule block.
+
+**Impact.** The testing-record requirement reads as optional beside the preceding
+"must be tested" sentence.
+
+**Settlement condition.** The sentence reads "records what was tested and with what
+inputs".
+
+Source: `instructions:skill-auditor` finding rule `weak_modal_in_rule`, severity
+`WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76;
+[Change #92](https://github.com/outcomeeng/changes/issues/92) carries the
+standards-skill pass that owns it.
