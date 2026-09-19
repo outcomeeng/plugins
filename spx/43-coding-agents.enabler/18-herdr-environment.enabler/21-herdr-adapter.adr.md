@@ -15,6 +15,7 @@ One capability keeps herdr command knowledge testable and portable while preserv
 - A read's public response is terminal text, carried verbatim under the result's output field; every other public response is herdr's JSON envelope, carried as the result's response object.
 - A start, relaunch, wait, or prompt result carries the one hosted agent session it acted on, projected onto the same complete source-preserved fields as an inventory item.
 - Every command execution is bounded, argument-vector based, fully reaped before return, and isolated from the adapter request stream.
+- Captured usage and public-response fixtures identify `herdr` 0.9.1 as their source-tool version pin. A change to that pin, or a live probe that reports grammar or response drift, invalidates the affected fixtures and requires recapture before they serve as oracles.
 - Start, relaunch, stop, key, and open-worktree cannot construct an argument vector unless the request carries explicit mutation authorization.
 - The environment surface carries the launch prompt, prompts, and keystrokes only; no operation produces a pane-borne handback block.
 
@@ -34,8 +35,6 @@ One capability keeps herdr command knowledge testable and portable while preserv
 - NEVER: a shipped coding-agents skill outside `/operate-herdr` instructs a workflow to construct herdr commands, invoke herdr command help, or depend on an external environment-control skill ([audit])
 - ALWAYS: the herdr subprocess boundary accepts a dependency-injected `CommandRunner` Protocol and the default runner uses null-device stdin, captured output, and a bounded timeout ([audit])
 - ALWAYS: tests inject controlled runner implementations only under `/test` Stage 5 exception 1 (failure simulation) or exception 2 (interaction protocols) ([audit])
-- ALWAYS: response-mapping evidence reads captured public responses of the real tool by path — the bytes herdr wrote for one command, kept as inert fixtures — never an envelope composed from the adapter's own field constants; a variant of a captured response changes only the value the assertion's domain ranges over and names the captured response it varies ([audit])
-- ALWAYS: an incidental value an evidence case needs — a selector, a text, an exit code, an operation name — comes from a spec-governed generator or from the registry request set, never from a call-site literal in the linked test ([audit])
 - ALWAYS: `/operate-herdr` owns all bundled-script access; composing skills invoke the capability through the skill surface rather than manufacturing a cross-skill filesystem path ([audit])
 - NEVER: framework mocks or monkeypatching replace herdr behavior or the command-runner boundary ([audit])
 - NEVER: the adapter owns another workflow's retry, checkpoint, persistence, result interpretation, or continuation decision ([audit])

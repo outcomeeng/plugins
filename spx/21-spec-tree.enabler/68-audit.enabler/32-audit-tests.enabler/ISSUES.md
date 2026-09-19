@@ -52,3 +52,24 @@ surface producer defects to repair first.
 
 **Evidence**: `spec-tree:eval-evidence-auditor` findings `f-004` and `f-005` on
 head `a65659114b99767b90b4d920550fff5dc0824794` during Change #76, whose prototype boundary runs no eval.
+
+## The independent-conformance eval case omits its alias declaration
+
+The `approves-independent-conformance-oracle` case imports
+`@testing/generators/routeUrls`, while its artifact package supplies
+`testing/generators/routeUrls.ts` and a `package.json` with no `imports`,
+`exports`, or path mapping. It supplies no Vitest or TypeScript configuration
+that maps `@testing` to `testing/`. The evidence-chain rules require import
+resolution to follow a supplied discovery artifact or a repository path, so a
+Verifier can correctly reject the case as `incomplete-evidence-chain` instead
+of reaching the intended oracle-independence judgment.
+
+**Evidence.** Codex full-suite run `2026-09-19T03-15-41Z` rejected this case
+because the alias mapping was absent. A local edit to replace the alias with a
+relative import made runs `2026-09-19T03-48-02Z` and
+`2026-09-19T03-57-34Z` pass, but those rows and the case edit were discarded
+because Change #94 treats the suite as evidence and cannot alter its oracle.
+
+**Settlement condition.** A separate Change decides the intended executable
+fixture shape, supplies the matching module-resolution artifact or uses a real
+relative import, and establishes the revised case through both full suites.
