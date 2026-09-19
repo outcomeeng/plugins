@@ -440,12 +440,27 @@ ORCHESTRATING_SESSION_ESCALATION_POLICY_REQUIREMENTS: Final = (
     ("operator assumed away", "Assume the operator is away"),
     ("decision-local hold", "hold only the raised decision"),
     (
+        "loaded-truth continuation",
+        "keep every officer moving on what loaded truth settles",
+    ),
+    (
+        "escalation shape",
+        "lead with evidence, consequence, options, and one recommendation",
+    ),
+    (
         "three autonomous decision classes",
         "Decide autonomously exactly these three classes",
     ),
     ("two-pass choice", "at the two-pass ceiling"),
     ("external-state phase hold", "hold a deploy or release blocked by external state"),
     ("outside-Frame revert", "order reversion of an edit outside the Frame"),
+    ("third Verifier pass wait", "A third Verifier pass"),
+    ("raised expense wait", "a raised expense ceiling"),
+    ("Frame change wait", "a Frame change"),
+    (
+        "product-intent conflict wait",
+        "and a product-intent conflict wait for the operator's word without exception",
+    ),
 )
 CODEX_VERIFIER_DISPATCH_POLICY_ANCHOR: Final = (
     "**Already-dispatched Verifier boundary.**"
