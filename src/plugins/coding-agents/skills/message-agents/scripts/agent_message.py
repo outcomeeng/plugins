@@ -178,17 +178,15 @@ RECORD_TEXT_FIELDS = (
     BODY_FIELD,
 )
 # The authority a same-worktree delegation request carries: the sender as the
-# tracked-file and Git owner, the recipient's exact write scope, no Git mutation.
+# tracked-file and Git owner, no write scope, no Git mutation. The recipient
+# reads the shared tree and returns its result in the mail record.
 AUTHORITY_FIELD = "authority"
 OWNER_FIELD = "owner"
 WRITE_SCOPE_FIELD = "writeScope"
 GIT_MUTATION_FIELD = "gitMutation"
-AUTHORITY_FIELDS = frozenset({OWNER_FIELD, WRITE_SCOPE_FIELD, GIT_MUTATION_FIELD})
+AUTHORITY_FIELDS = frozenset({OWNER_FIELD, GIT_MUTATION_FIELD})
 AUTHORITY_HEADING = "Authority"
-AUTHORITY_SCOPE_SEPARATOR = ", "
-AUTHORITY_TEMPLATE = (
-    "{heading}: owner {owner}; write scope {scope}; git mutation forbidden"
-)
+AUTHORITY_TEMPLATE = "{heading}: owner {owner}; no write scope; git mutation forbidden"
 AUTHORITY_BODY_SEPARATOR = "\n\n"
 
 # The agent-mail capability's public request and result surface, read by the
@@ -1016,10 +1014,16 @@ def _record_kind(value: object, location: str) -> RecordKind:
 
 def _validated_authority(value: object, sender: str) -> dict[str, object]:
     authority = _object(value, AUTHORITY_FIELD)
+    if WRITE_SCOPE_FIELD in authority:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A same-worktree delegation carries no write scope; the recipient "
+            "reads the shared tree and returns its result in the mail record.",
+        )
     if set(authority) != AUTHORITY_FIELDS:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Authority must name exactly owner, writeScope, and gitMutation "
+            "Authority must name exactly owner and gitMutation "
             f"({_field_mismatch(*_field_sets(authority, AUTHORITY_FIELDS))}).",
         )
     owner = _text(authority.get(OWNER_FIELD), f"{AUTHORITY_FIELD}.{OWNER_FIELD}")
@@ -1028,35 +1032,18 @@ def _validated_authority(value: object, sender: str) -> dict[str, object]:
             DeliveryStatus.INVALID_IDENTITY,
             "A same-worktree delegation names the sender as the owner.",
         )
-    scope = authority.get(WRITE_SCOPE_FIELD)
-    if (
-        not isinstance(scope, list)
-        or not scope
-        or not all(isinstance(path, str) and path for path in scope)
-    ):
-        raise MessageError(
-            DeliveryStatus.INVALID_SCHEMA,
-            "A same-worktree delegation names a non-empty recipient write scope.",
-        )
     if authority.get(GIT_MUTATION_FIELD) is not False:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
             "A same-worktree delegation forbids Git mutation by the recipient.",
         )
-    return {
-        OWNER_FIELD: owner,
-        WRITE_SCOPE_FIELD: list(scope),
-        GIT_MUTATION_FIELD: False,
-    }
+    return {OWNER_FIELD: owner, GIT_MUTATION_FIELD: False}
 
 
 def render_authority(authority: Mapping[str, object]) -> str:
     """The readable form of a delegation's authority, as the record body opens."""
-    scope = cast(list[str], authority[WRITE_SCOPE_FIELD])
     return AUTHORITY_TEMPLATE.format(
-        heading=AUTHORITY_HEADING,
-        owner=authority[OWNER_FIELD],
-        scope=AUTHORITY_SCOPE_SEPARATOR.join(scope),
+        heading=AUTHORITY_HEADING, owner=authority[OWNER_FIELD]
     )
 
 

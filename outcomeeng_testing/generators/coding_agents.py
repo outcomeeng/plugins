@@ -53,15 +53,18 @@ def mail_record_input(
     }
 
 
-def delegation_authority(
-    module: ModuleType, owner: str, ordinal: int
+def delegation_authority(module: ModuleType, owner: str) -> dict[str, object]:
+    """One conforming same-worktree authority for the named owner: no write
+    scope, no Git mutation."""
+    return {module.OWNER_FIELD: owner, module.GIT_MUTATION_FIELD: False}
+
+
+def scoped_delegation_authority(
+    module: ModuleType, authority: dict[str, object], ordinal: int
 ) -> dict[str, object]:
-    """One conforming same-worktree authority for the named owner."""
-    return {
-        module.OWNER_FIELD: owner,
-        module.WRITE_SCOPE_FIELD: [f"scope-{ordinal}/answer.md"],
-        module.GIT_MUTATION_FIELD: False,
-    }
+    """A conforming scope-less authority with a write scope added: the one
+    field a same-worktree delegation never carries."""
+    return {**authority, module.WRITE_SCOPE_FIELD: [f"delegation-{ordinal}/answer.md"]}
 
 
 def doorbell_lines() -> st.SearchStrategy[tuple[str, int]]:

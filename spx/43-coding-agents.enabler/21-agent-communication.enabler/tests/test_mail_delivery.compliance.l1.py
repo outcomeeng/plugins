@@ -5,6 +5,7 @@ import pytest
 from outcomeeng_testing.generators.coding_agents import (
     delegation_authority,
     mail_record_input,
+    scoped_delegation_authority,
 )
 from outcomeeng_testing.harnesses.coding_agents import (
     load_agent_message,
@@ -114,7 +115,7 @@ def test_same_worktree_delegation_requires_complete_authority() -> None:
     message = load_agent_message()
     request = mail_record_input(message, 3, message.RecordKind.DELEGATION_REQUEST)
     sender = cast(str, request[message.SENDER_FIELD])
-    authority = delegation_authority(message, sender, 3)
+    authority = delegation_authority(message, sender)
 
     record = message.mail_request({**request, message.AUTHORITY_FIELD: authority})[
         message.RECORD_FIELD
@@ -124,8 +125,7 @@ def test_same_worktree_delegation_requires_complete_authority() -> None:
     assert body.endswith(original)
     rendered = body[: -len(original)]
     assert sender in rendered
-    for path in cast(list[str], authority[message.WRITE_SCOPE_FIELD]):
-        assert path in rendered
+    assert message.WRITE_SCOPE_FIELD not in authority
     assert sender not in original
 
     for violating, status in (
@@ -137,7 +137,7 @@ def test_same_worktree_delegation_requires_complete_authority() -> None:
             message.DeliveryStatus.INVALID_IDENTITY,
         ),
         (
-            {**authority, message.WRITE_SCOPE_FIELD: []},
+            scoped_delegation_authority(message, authority, 3),
             message.DeliveryStatus.INVALID_SCHEMA,
         ),
         (
