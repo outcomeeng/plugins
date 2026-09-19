@@ -39,8 +39,6 @@ Every entry carries `passed`, `failed`, or `not-run`. A `passed` or `failed` ent
 
 <state_derivation>
 
-Claude treated a transport checkpoint as delivered value.
-
 | State     | Condition                                                                                                       |
 | --------- | --------------------------------------------------------------------------------------------------------------- |
 | Declared  | The spec exists, and verification artifacts required by its malleability are missing                            |

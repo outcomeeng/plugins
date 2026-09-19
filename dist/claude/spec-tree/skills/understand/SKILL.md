@@ -66,7 +66,13 @@ Remaining evidence or implementation work is downstream work recorded in a Chang
 
 - ALWAYS: specs state atemporal product truth and contain no history or journey language.
 
-Dated history belongs in a knowledge root.
+| Temporal                 | Atemporal                |
+| ------------------------ | ------------------------ |
+| “We discovered that X”   | “X ensures Y”            |
+| “We need to address X”   | “The product provides X” |
+| “Currently, the system…” | “The system…”            |
+
+Read each sentence aloud; if it would sound wrong after the work ships, rewrite it. Dated history belongs in a knowledge root.
 
 </atemporal_voice>
 
@@ -359,7 +365,7 @@ When Claude calls both the Author and the Fixer, they must use separate agent se
 
 - ALWAYS: record every observed imperfection immediately with its evidence, governing workflow, handling, and classification.
 
-The current-turn ledger takes every imperfection — failing validation, broken link, stale reference, dead code, missing evidence, misplaced file, wrong index, or anything else that is not right — with what exposed it, the workflow governing the fix, and the proposed handling. Apply clear, local, low-risk corrections immediately. Surface a blocking decision through the structured-question tool, except under `<orchestrating_session_escalation>`. Hold a non-blocking decision only until the next natural checkpoint.
+The current-turn ledger takes every imperfection — failing validation, broken link, stale reference, dead code, missing evidence, misplaced file, wrong index, or anything else that is not right — with what exposed it, the workflow governing the fix, and the proposed handling. Apply clear, local, low-risk corrections immediately. Surface a blocking decision through the structured-question tool. Hold a non-blocking decision only until the next natural checkpoint.
 
 </recording>
 
@@ -391,17 +397,9 @@ Command defaults are authority for cost-bearing and quota-bearing runs. When a d
 
 - ALWAYS: continue actionable in-scope work; close out only when no continuation remains or continuation is impossible.
 
-Apply the closing test: can the operator reasonably ask “What now?” A passing check, merge, clean worktree, or persisted note is a milestone, never permission to stop while do-able work remains. Dispose of the held Change only when the goal is met or continuation is impossible: `/close-change` when the Change reached its terminal Lifecycle, `/release-change` with a Handoff when continuation remains for another holder; a conversation holding no Change records remaining work as a Proposed Change through `/author-change`. When operator judgment is required, close with the structured-question tool except under `<orchestrating_session_escalation>`.
+Apply the closing test: can the operator reasonably ask “What now?” A passing check, merge, clean worktree, or persisted note is a milestone, never permission to stop while do-able work remains. Dispose of the held Change only when the goal is met or continuation is impossible: `/close-change` when the Change reached its terminal Lifecycle, `/release-change` with a Handoff when continuation remains for another holder; a conversation holding no Change records remaining work as a Proposed Change through `/author-change`. When operator judgment is required, close with the structured-question tool rather than a prose offer.
 
 </closing_protocol>
-
-<orchestrating_session_escalation>
-
-- ALWAYS: treat an orchestrating session with officers in flight as the sole structured-question exception.
-
-Write its escalation as text in its own pane and never through the structured-question tool, because a pending structured question suspends supervision; hold only the decision and keep every officer moving on what loaded truth settles.
-
-</orchestrating_session_escalation>
 
 <spec_tree_integration>
 
@@ -425,10 +423,11 @@ Continue through `/merge` unless the operator explicitly limited the request to 
 
 1. Load this complete inline foundation on every invocation. A marker in a compaction summary, Handoff, or prior-run statement does not count. After compaction, treat the marker as absent until this workflow emits it again.
 2. Check internal consistency across every foundation section and surface any contradiction immediately. No mandatory foundation reference read follows this step.
-3. Locate the operational references `${CLAUDE_SKILL_DIR}/references/{kind-decision,grammar,artifact-placement,status-claims,product-domain-shapes}.md` and list them without reading. Enumerate `spx/local/*.md`; read `spx/local/merging.md` when present and list every other overlay without reading it. Changes destined for the default branch route through `/merge`; absence of the merging overlay applies the default lifecycle. Note discovery belongs to `/contextualize`, never to `/understand`.
-4. Locate templates under `${CLAUDE_SKILL_DIR}/templates/` — `product/product-name.spec.md`, `decisions/decision-name.{adr,pdr}.md`, `nodes/{substrate,capability,domain,interface,surface,variant}-name.spec.md`, `records/node-name.outcome.md`, `probes/probe.md` — and `${CLAUDE_SKILL_DIR}/examples/*.md`. Record the resolved absolute template directory as `Template root` in the marker; consuming authoring and audit workflows read their required templates there.
-5. Read the complete root `CLAUDE.md` from disk only when the live conversation does not already carry it complete; a harness that injects the whole file satisfies this step, and a truncated or absent injection requires the read. It routes skill invocation, names the repository's methodology declaration, and carries product commands.
-6. Emit the marker:
+3. Locate these operational references and list their paths without reading them until another skill needs them: `${CLAUDE_SKILL_DIR}/references/kind-decision.md`, `${CLAUDE_SKILL_DIR}/references/grammar.md`, `${CLAUDE_SKILL_DIR}/references/artifact-placement.md`, `${CLAUDE_SKILL_DIR}/references/status-claims.md`, `${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md`, and `spx/local/*.md`. Note discovery belongs to `/contextualize`, never to `/understand`.
+4. Read `spx/local/merging.md` when present. Changes destined for the default branch route through `/merge`; absence of the overlay applies the default lifecycle.
+5. Locate templates under `${CLAUDE_SKILL_DIR}/templates/` — `product/product-name.spec.md`, `decisions/decision-name.{adr,pdr}.md`, `nodes/{substrate,capability,domain,interface,surface,variant}-name.spec.md`, `records/node-name.outcome.md`, `probes/probe.md` — and `${CLAUDE_SKILL_DIR}/examples/*.md`. Record the resolved absolute template directory as `Template root` in the marker; consuming authoring and audit workflows read their required templates there.
+6. Read the complete root `CLAUDE.md` from disk only when the live conversation does not already carry it complete; a harness that injects the whole file satisfies this step, and a truncated or absent injection requires the read. It routes skill invocation, names the repository's methodology declaration, and carries product commands.
+7. Emit the marker:
 
 ```text
 <SPEC_TREE_FOUNDATION>
@@ -449,15 +448,15 @@ Examples available: adr, pdr, capability, domain, outcome-record, probe
 
 **Mandatory references made progressive disclosure fictional.**
 
-Keep unconditional foundation truth inline and govern the total eager payload; reserve references for conditional detail, templates, and examples.
+Claude loaded `SKILL.md`, then opened six references required on every fresh invocation; one aggregate read truncated, forcing repeat reads. Keep unconditional foundation truth inline and govern the total eager payload; reserve references for conditional detail, templates, and examples.
 
 **Higher-level truth was shaped to current code.**
 
-Preserve the declaration, align first affected lower specs, and record downstream work in a Change.
+Claude rejected coherent decisions because implementation lagged or tooling could not realize them. Preserve the declaration, align first affected lower specs, and record downstream work in a Change.
 
 **A pushed branch was reported as complete.**
 
-Continue through `/merge` until the changeset reaches the default branch on origin or an explicit gate blocks every remaining action.
+Claude treated a transport checkpoint as delivered value. Continue through `/merge` until the changeset reaches the default branch on origin or an explicit gate blocks every remaining action.
 
 </failure_modes>
 

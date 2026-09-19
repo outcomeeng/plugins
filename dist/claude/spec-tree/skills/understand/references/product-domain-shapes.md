@@ -2,9 +2,7 @@
 
 Product shape comes from consumers, jobs, surfaces, actors, constraints, success signals, and top-level intent. Code organization can inform vocabulary, constraints, and open questions, but it does not define the spec-tree structure.
 
-Claude rejected coherent decisions because implementation lagged or tooling could not realize them.
-
-This reference gives `/bootstrap` and `/decompose` the shared classifier and examples for separating aggregate product domains, first concrete behaviors, cases that contain one coherent concern, and code-shaped candidate areas, before the kind decision procedure in `${CLAUDE_SKILL_DIR}/references/kind-decision.md` fixes each concern's kind.
+This reference gives `/bootstrap` and `/decompose` the shared classifier and examples for separating aggregate product domains, first concrete behaviors, cases that contain one coherent concern, and code-shaped candidate areas, before the kind decision procedure in `kind-decision.md` fixes each concern's kind.
 
 </overview>
 

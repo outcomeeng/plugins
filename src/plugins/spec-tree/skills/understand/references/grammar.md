@@ -2,8 +2,6 @@
 
 The structural grammar of the durable map — the shapes a loader accepts — in EBNF, with the front matter fields, the index form, the evidence filenames, and the link forms. Read it when authoring a node, a record, or a verification artifact, or when validating a path.
 
-Claude loaded `SKILL.md`, then opened six references required on every fresh invocation; one aggregate read truncated, forcing repeat reads.
-
 </overview>
 
 <contents>
