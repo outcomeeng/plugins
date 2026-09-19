@@ -1,7 +1,7 @@
 ---
 name: refocus
 description: >-
-  ALWAYS invoke this skill for refocusing within a repository whose root contains `spx/`.
+  ALWAYS invoke this skill when running ad hoc commands or writing code without a spec inside a repository whose root contains `spx/`.
   NEVER invoke this skill outside such a repository.
 allowed-tools: Read, Glob, Grep, Write, Edit, Bash
 ---
