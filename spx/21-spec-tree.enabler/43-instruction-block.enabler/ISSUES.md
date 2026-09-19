@@ -114,18 +114,22 @@ operator-question mutation-privilege-revocation wording, and Codex
 Verifier-spawning-boundary wording. The drift-gate assertion describes a
 regression by "a surface that previously fit," introducing temporal wording into
 an atemporal spec. The Operator questions exception for an orchestrating session
-with officers in flight has no assertion. `spx/12-shipped-scripting.adr.md`
-establishes that agreement between a spec-declared value and its complying
-source uses audit evidence because every deterministic oracle repeats the
-declaration. `spx/15-spec-coverage.adr.md` establishes that tests over Markdown
-structure prove formatting rather than behavior.
+with officers in flight is declared at `spx/21-spec-tree.enabler/spec-tree.md`
+with `[audit]`; the instruction-block node itself carries no assertion for that
+router sentence. `spx/12-shipped-scripting.adr.md` establishes that agreement
+between a spec-declared value and its complying source uses audit evidence
+because every deterministic oracle repeats the declaration.
+`spx/15-spec-coverage.adr.md` establishes that tests over Markdown structure
+prove formatting rather than behavior. The removal-mutation test over router
+prose is part of the same gap because it uses the pinned-prose verification form
+under settlement.
 
-**Impact.** The five links couple Passing to pinned wording and structure while
-providing no behavioral verdict for the claims they label; the drift-gate claim
-records history rather than permanent truth; and the Operator questions
-exception has no declared verification path.
+**Impact.** The five links and the removal-mutation test couple Passing to pinned
+wording and structure while providing no behavioral verdict for the claims they
+label; the drift-gate claim records history rather than permanent truth; and the
+instruction-block node leaves the router sentence's verification form unstated.
 
 **Settlement condition.** The instruction-block node's decision names one
 verification form for pinned router prose, the drift-gate claim states its rule
-atemporally, and the Operator questions exception is authored as an assertion in
-that form.
+atemporally, and the router sentence carrying the Operator questions exception
+is settled under the same condition as the five prose-coupling assertions.
