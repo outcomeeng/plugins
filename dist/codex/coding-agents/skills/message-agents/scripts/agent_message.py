@@ -10,7 +10,7 @@ import re
 import sys
 import uuid
 from enum import StrEnum
-from typing import Callable, TextIO, cast
+from typing import Callable, Mapping, Sequence, TextIO, cast
 
 SCHEMA_VERSION = 4
 SCHEMA_VERSION_FIELD = "schemaVersion"
@@ -57,7 +57,6 @@ PANE_FIELD = "pane"
 WORKTREE_FIELD = "worktree"
 RUN_FIELD = "run"
 BRANCH_FIELD = "branch"
-CLEAN_STATUS = "clean"
 FULL_HEAD_PATTERN = re.compile(r"[0-9a-f]{40}")
 TRANSPORT_SCHEMA_VERSION = 1
 TRANSPORT_OPERATION_FIELD = "operation"
@@ -151,10 +150,87 @@ FORBIDDEN_EXECUTABLE_FIELDS = frozenset(
 IDENTITY_FIELDS = ("agent", "pane", "worktree", "branch", "repository")
 IDENTITY_INPUT_FIELDS = frozenset((*IDENTITY_FIELDS, RUN_FIELD))
 
+# The message record this node declares and the agent-mail capability maps.
+RECORD_SCHEMA_VERSION = 1
+RECORD_SCHEMA_FIELD = "schema"
+RECORD_ID_FIELD = "id"
+RECORD_CORRELATION_FIELD = "correlation"
+BODY_FIELD = "body"
+ACK_REQUIRED_FIELD = "ackRequired"
+RECORD_FIELDS = frozenset(
+    {
+        RECORD_SCHEMA_FIELD,
+        RECORD_CORRELATION_FIELD,
+        KIND_FIELD,
+        SENDER_FIELD,
+        RECIPIENT_FIELD,
+        SUBJECT_FIELD,
+        BODY_FIELD,
+        ACK_REQUIRED_FIELD,
+    }
+)
+DELIVERED_RECORD_FIELDS = RECORD_FIELDS | {RECORD_ID_FIELD}
+RECORD_TEXT_FIELDS = (
+    RECORD_CORRELATION_FIELD,
+    SENDER_FIELD,
+    RECIPIENT_FIELD,
+    SUBJECT_FIELD,
+    BODY_FIELD,
+)
+# The authority a same-worktree delegation request carries: the sender as the
+# tracked-file and Git owner, no write scope, no Git mutation. The recipient
+# reads the shared tree and returns its result in the mail record.
+AUTHORITY_FIELD = "authority"
+OWNER_FIELD = "owner"
+WRITE_SCOPE_FIELD = "writeScope"
+GIT_MUTATION_FIELD = "gitMutation"
+AUTHORITY_FIELDS = frozenset({OWNER_FIELD, GIT_MUTATION_FIELD})
+AUTHORITY_HEADING = "Authority"
+AUTHORITY_TEMPLATE = "{heading}: owner {owner}; no write scope; git mutation forbidden"
+AUTHORITY_BODY_SEPARATOR = "\n\n"
+
+# The agent-mail capability's public request and result surface, read by the
+# script's own constants; the capability owns the store.
+MAIL_CAPABILITY_SCHEMA_VERSION = 1
+MAIL_SEND_OPERATION = "send"
+ARGUMENTS_FIELD = "arguments"
+RECORD_FIELD = "record"
+PROJECT_KEY_FIELD = "projectKey"
+CAPABILITY_FIELD = "capability"
+CAPABILITY_RESULT_FIELD = "capabilityResult"
+CAPABILITY_STATUS_FIELD = "capabilityStatus"
+MAIL_SUCCESS_FIELDS = frozenset(
+    {
+        SCHEMA_VERSION_FIELD,
+        TRANSPORT_OPERATION_FIELD,
+        STATUS_FIELD,
+        COMMAND_EXIT_CODE_FIELD,
+        PROJECT_KEY_FIELD,
+        TRANSPORT_RESPONSE_FIELD,
+        DATA_FIELD,
+    }
+)
+MAIL_FAILURE_REQUIRED_FIELDS = frozenset(
+    {SCHEMA_VERSION_FIELD, TRANSPORT_OPERATION_FIELD, STATUS_FIELD, DETAIL_FIELD}
+)
+MAIL_FAILURE_OPTIONAL_FIELDS = frozenset({COMMAND_EXIT_CODE_FIELD})
+
+# The doorbell: the one pane line that points a recipient at a delivered record.
+DOORBELL_FIELD = "doorbell"
+DOORBELL_SUBMITTED_FIELD = "submitted"
+DOORBELL_TRANSPORT_FIELD = "doorbellTransport"
+LINE_FIELD = "line"
+AGENTS_FIELD = "agents"
+DOORBELL_TEMPLATE = "[{sender}] mail {id}"
+DOORBELL_PATTERN = re.compile(r"\[(?P<sender>[^\[\]\s]+)\] mail (?P<id>[1-9][0-9]*)")
+
 
 class Operation(StrEnum):
     BUILD = "build"
     RESULT = "result"
+    MAIL_REQUEST = "mail-request"
+    MAIL_RESULT = "mail-result"
+    DOORBELL = "doorbell"
 
 
 class MessageKind(StrEnum):
@@ -163,6 +239,20 @@ class MessageKind(StrEnum):
     ACKNOWLEDGEMENT = "acknowledgement"
     MUTATION_STATE = "mutation-state"
     MUTATION_AUTHORIZATION = "mutation-authorization"
+
+
+class RecordKind(StrEnum):
+    """The kinds a sender writes on the mail route."""
+
+    ORDER = "order"
+    FACT = "fact"
+    QUESTION = "question"
+    ANSWER = "answer"
+    DELEGATION_REQUEST = "delegation-request"
+    DELEGATION_COMPLETED = "delegation-completed"
+    DELEGATION_FAILED = "delegation-failed"
+    DELEGATION_REJECTED = "delegation-rejected"
+    DELEGATION_UNAVAILABLE = "delegation-unavailable"
 
 
 class MessageState(StrEnum):
@@ -238,19 +328,30 @@ def _message_kind(value: object, location: str = "request.kind") -> MessageKind:
         ) from error
 
 
+def _field_sets(
+    value: Mapping[str, object], expected: frozenset[str]
+) -> tuple[list[str], list[str]]:
+    return sorted(set(value) - expected), sorted(expected - set(value))
+
+
+def _field_mismatch(unexpected: Sequence[str], missing: Sequence[str]) -> str:
+    details: list[str] = []
+    if unexpected:
+        details.append(f"unsupported: {', '.join(unexpected)}")
+    if missing:
+        details.append(f"missing: {', '.join(missing)}")
+    return "; ".join(details)
+
+
 def validate_identity(identity: object, label: str) -> dict[str, str]:
     value = _object(identity, label)
     unexpected = sorted(set(value) - IDENTITY_INPUT_FIELDS)
     missing = sorted(set(IDENTITY_FIELDS) - set(value))
     if unexpected or missing:
-        details: list[str] = []
-        if unexpected:
-            details.append(f"unsupported: {', '.join(unexpected)}")
-        if missing:
-            details.append(f"missing: {', '.join(missing)}")
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            f"{label.title()} identity fields are invalid ({'; '.join(details)}).",
+            f"{label.title()} identity fields are invalid "
+            f"({_field_mismatch(unexpected, missing)}).",
         )
     validated = {
         field: _text(value.get(field), f"{label}.{field}") for field in IDENTITY_FIELDS
@@ -280,7 +381,8 @@ def _validated_handback(
     if unexpected or missing:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Handback must contain exactly the environment-owned fields.",
+            "Handback must contain exactly the environment-owned fields "
+            f"({_field_mismatch(unexpected, missing)}).",
         )
     if handback.get(SCHEMA_VERSION_FIELD) != HANDBACK_SCHEMA_VERSION:
         raise MessageError(
@@ -457,14 +559,9 @@ def _validated_fields(
     unexpected = sorted(set(item) - fields)
     missing = sorted(fields - set(item))
     if unexpected or missing:
-        details: list[str] = []
-        if unexpected:
-            details.append(f"unsupported: {', '.join(unexpected)}")
-        if missing:
-            details.append(f"missing: {', '.join(missing)}")
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            f"{label} fields are invalid ({'; '.join(details)}).",
+            f"{label} fields are invalid ({_field_mismatch(unexpected, missing)}).",
         )
     validated = {field: _text(item.get(field), f"{label}.{field}") for field in fields}
     if (
@@ -620,7 +717,8 @@ def validate_envelope(envelope: object) -> dict[str, object]:
     if unexpected or missing:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Envelope must contain exactly the source-owned fields.",
+            "Envelope must contain exactly the source-owned fields "
+            f"({_field_mismatch(unexpected, missing)}).",
         )
     if value.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
         raise MessageError(
@@ -746,6 +844,21 @@ def send_request(
     handback_plan: object = None,
 ) -> dict[str, object]:
     value = _object(request, MESSAGE_REQUEST_FIELD)
+    targeting = sorted(set(value) & FORBIDDEN_TARGET_FIELDS)
+    if targeting:
+        raise MessageError(
+            DeliveryStatus.INVALID_IDENTITY,
+            "Message request targets by a field that never selects an endpoint: "
+            f"{', '.join(targeting)}. Targets resolve only by complete pane identity.",
+        )
+    executable = sorted(set(value) & FORBIDDEN_EXECUTABLE_FIELDS)
+    if executable:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Message request carries caller-authored executable handback data: "
+            f"{', '.join(executable)}. Only the block the environment capability "
+            "returns is accepted.",
+        )
     unexpected = sorted(set(value) - REQUEST_INPUT_FIELDS)
     if unexpected:
         raise MessageError(
@@ -887,6 +1000,294 @@ def delivery_result(
     return result
 
 
+def _record_kind(value: object, location: str) -> RecordKind:
+    raw = _text(value, location)
+    try:
+        return RecordKind(raw)
+    except ValueError as error:
+        valid = ", ".join(kind.value for kind in RecordKind)
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Unsupported record kind {raw!r}. Valid kinds: {valid}.",
+        ) from error
+
+
+def _validated_authority(value: object, sender: str) -> dict[str, object]:
+    authority = _object(value, AUTHORITY_FIELD)
+    if WRITE_SCOPE_FIELD in authority:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A same-worktree delegation carries no write scope; the recipient "
+            "reads the shared tree and returns its result in the mail record.",
+        )
+    if set(authority) != AUTHORITY_FIELDS:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Authority must name exactly owner and gitMutation "
+            f"({_field_mismatch(*_field_sets(authority, AUTHORITY_FIELDS))}).",
+        )
+    owner = _text(authority.get(OWNER_FIELD), f"{AUTHORITY_FIELD}.{OWNER_FIELD}")
+    if owner != sender:
+        raise MessageError(
+            DeliveryStatus.INVALID_IDENTITY,
+            "A same-worktree delegation names the sender as the owner.",
+        )
+    if authority.get(GIT_MUTATION_FIELD) is not False:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A same-worktree delegation forbids Git mutation by the recipient.",
+        )
+    return {OWNER_FIELD: owner, GIT_MUTATION_FIELD: False}
+
+
+def render_authority(authority: Mapping[str, object]) -> str:
+    """The readable form of a delegation's authority, as the record body opens."""
+    return AUTHORITY_TEMPLATE.format(
+        heading=AUTHORITY_HEADING, owner=authority[OWNER_FIELD]
+    )
+
+
+def mail_record(
+    *,
+    kind: object,
+    correlation: object,
+    sender: object,
+    recipient: object,
+    subject: object,
+    body: object,
+    ack_required: object,
+    authority: object = None,
+) -> dict[str, object]:
+    """Build the message record this node declares for the mail route."""
+    record_kind = _record_kind(kind, f"request.{KIND_FIELD}")
+    validated_sender = _text(sender, f"request.{SENDER_FIELD}")
+    validated_body = _text(body, f"request.{BODY_FIELD}")
+    if authority is not None:
+        if record_kind is not RecordKind.DELEGATION_REQUEST:
+            raise MessageError(
+                DeliveryStatus.INVALID_SCHEMA,
+                "Only a delegation request carries same-worktree authority.",
+            )
+        validated_body = AUTHORITY_BODY_SEPARATOR.join(
+            (
+                render_authority(_validated_authority(authority, validated_sender)),
+                validated_body,
+            )
+        )
+    if not isinstance(ack_required, bool):
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Expected a boolean at request.{ACK_REQUIRED_FIELD}.",
+        )
+    return {
+        RECORD_SCHEMA_FIELD: RECORD_SCHEMA_VERSION,
+        RECORD_CORRELATION_FIELD: _text(
+            correlation, f"request.{RECORD_CORRELATION_FIELD}"
+        ),
+        KIND_FIELD: record_kind,
+        SENDER_FIELD: validated_sender,
+        RECIPIENT_FIELD: _text(recipient, f"request.{RECIPIENT_FIELD}"),
+        SUBJECT_FIELD: _text(subject, f"request.{SUBJECT_FIELD}"),
+        BODY_FIELD: validated_body,
+        ACK_REQUIRED_FIELD: ack_required,
+    }
+
+
+def mail_send_request(record: Mapping[str, object]) -> dict[str, object]:
+    """The agent-mail capability's send request carrying one record."""
+    return {
+        SCHEMA_VERSION_FIELD: MAIL_CAPABILITY_SCHEMA_VERSION,
+        TRANSPORT_OPERATION_FIELD: MAIL_SEND_OPERATION,
+        ARGUMENTS_FIELD: {RECORD_FIELD: dict(record)},
+    }
+
+
+def mail_request(request: object) -> dict[str, object]:
+    """Map one message request onto the record and the capability's send request."""
+    value = _object(request, MESSAGE_REQUEST_FIELD)
+    if RECORD_SCHEMA_FIELD in value:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Message request must not supply {RECORD_SCHEMA_FIELD!r}; "
+            f"the script assigns record schema {RECORD_SCHEMA_VERSION}.",
+        )
+    unexpected = sorted(set(value) - RECORD_FIELDS - {AUTHORITY_FIELD})
+    if unexpected:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "Message request contains fields outside the declared record: "
+            f"{', '.join(unexpected)}.",
+        )
+    record = mail_record(
+        kind=value.get(KIND_FIELD),
+        correlation=value.get(RECORD_CORRELATION_FIELD),
+        sender=value.get(SENDER_FIELD),
+        recipient=value.get(RECIPIENT_FIELD),
+        subject=value.get(SUBJECT_FIELD),
+        body=value.get(BODY_FIELD),
+        ack_required=value.get(ACK_REQUIRED_FIELD),
+        authority=value.get(AUTHORITY_FIELD),
+    )
+    return {
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        RECORD_FIELD: record,
+        CAPABILITY_FIELD: mail_send_request(record),
+    }
+
+
+def doorbell_text(sender: str, message_id: int) -> str:
+    """The one pane line that points the recipient at a delivered record."""
+    return DOORBELL_TEMPLATE.format(sender=sender, id=message_id)
+
+
+def parse_doorbell(line: object, agents: object) -> dict[str, object]:
+    """Resolve one pane line to its sender and store id against a live inventory."""
+    text = _text(line, LINE_FIELD)
+    match = DOORBELL_PATTERN.fullmatch(text)
+    if match is None:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"A doorbell is exactly one line {DOORBELL_TEMPLATE!r}.",
+        )
+    if not isinstance(agents, list) or not all(
+        isinstance(name, str) for name in agents
+    ):
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA, "Expected an array of agent names."
+        )
+    sender = match.group("sender")
+    if sender not in agents:
+        raise MessageError(
+            DeliveryStatus.INVALID_IDENTITY,
+            f"Doorbell sender {sender!r} is absent from the live inventory.",
+        )
+    return {SENDER_FIELD: sender, RECORD_ID_FIELD: int(match.group("id"))}
+
+
+def _delivered_record(result: Mapping[str, object]) -> dict[str, object]:
+    data = _object(result.get(DATA_FIELD), f"{CAPABILITY_RESULT_FIELD}.{DATA_FIELD}")
+    record = _object(
+        data.get(RECORD_FIELD), f"{CAPABILITY_RESULT_FIELD}.{DATA_FIELD}.{RECORD_FIELD}"
+    )
+    if set(record) != DELIVERED_RECORD_FIELDS:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered record carries exactly the declared fields and the store id "
+            f"({_field_mismatch(*_field_sets(record, DELIVERED_RECORD_FIELDS))}).",
+        )
+    message_id = record.get(RECORD_ID_FIELD)
+    if not isinstance(message_id, int) or isinstance(message_id, bool):
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered record carries the store-assigned integer id.",
+        )
+    if record.get(RECORD_SCHEMA_FIELD) != RECORD_SCHEMA_VERSION:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Record schema version must be {RECORD_SCHEMA_VERSION}.",
+        )
+    _record_kind(record.get(KIND_FIELD), f"{RECORD_FIELD}.{KIND_FIELD}")
+    for field in RECORD_TEXT_FIELDS:
+        _text(record.get(field), f"{RECORD_FIELD}.{field}")
+    if not isinstance(record.get(ACK_REQUIRED_FIELD), bool):
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Expected a boolean at {RECORD_FIELD}.{ACK_REQUIRED_FIELD}.",
+        )
+    return dict(record)
+
+
+def _doorbell_submitted(transport: object) -> bool:
+    if transport is None:
+        return False
+    value = _object(transport, DOORBELL_TRANSPORT_FIELD)
+    exit_code = value.get(COMMAND_EXIT_CODE_FIELD)
+    try:
+        _checked_success_transport(
+            value, exit_code if isinstance(exit_code, int) else None
+        )
+    except MessageError:
+        return False
+    return True
+
+
+def mail_delivery_result(
+    capability_result: object,
+    *,
+    doorbell_transport: object = None,
+) -> dict[str, object]:
+    """Map the capability's checked send result to this node's delivery result."""
+    value = _object(capability_result, CAPABILITY_RESULT_FIELD)
+    if value.get(SCHEMA_VERSION_FIELD) != MAIL_CAPABILITY_SCHEMA_VERSION:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Capability schema version must be {MAIL_CAPABILITY_SCHEMA_VERSION}.",
+        )
+    status = _text(value.get(STATUS_FIELD), f"{CAPABILITY_RESULT_FIELD}.{STATUS_FIELD}")
+    if status != TRANSPORT_SUCCEEDED_STATUS:
+        present = set(value)
+        if not (
+            MAIL_FAILURE_REQUIRED_FIELDS
+            <= present
+            <= MAIL_FAILURE_REQUIRED_FIELDS | MAIL_FAILURE_OPTIONAL_FIELDS
+        ):
+            raise MessageError(
+                DeliveryStatus.INVALID_SCHEMA,
+                "A failed capability result carries its status and detail.",
+            )
+        return {
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+            STATUS_FIELD: DeliveryStatus.DELIVERY_FAILED,
+            CAPABILITY_STATUS_FIELD: status,
+            DETAIL_FIELD: _text(
+                value.get(DETAIL_FIELD), f"{CAPABILITY_RESULT_FIELD}.{DETAIL_FIELD}"
+            ),
+            COMMAND_EXIT_CODE_FIELD: value.get(COMMAND_EXIT_CODE_FIELD),
+            ACKNOWLEDGED_FIELD: False,
+            AGREED_FIELD: False,
+            OWNERSHIP_ESTABLISHED_FIELD: False,
+        }
+    if value.get(TRANSPORT_OPERATION_FIELD) != MAIL_SEND_OPERATION:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered result requires the capability's send result, not "
+            f"{value.get(TRANSPORT_OPERATION_FIELD)!r}.",
+        )
+    if set(value) != MAIL_SUCCESS_FIELDS:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered result requires the complete checked capability result "
+            f"({_field_mismatch(*_field_sets(value, MAIL_SUCCESS_FIELDS))}).",
+        )
+    exit_code = value.get(COMMAND_EXIT_CODE_FIELD)
+    if not isinstance(exit_code, int) or isinstance(exit_code, bool) or exit_code != 0:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered result requires a zero capability exit code.",
+        )
+    record = _delivered_record(value)
+    message_id = cast(int, record[RECORD_ID_FIELD])
+    sender = cast(str, record[SENDER_FIELD])
+    return {
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        STATUS_FIELD: DeliveryStatus.DELIVERED,
+        RECORD_ID_FIELD: message_id,
+        RECORD_CORRELATION_FIELD: record[RECORD_CORRELATION_FIELD],
+        KIND_FIELD: record[KIND_FIELD],
+        SENDER_FIELD: sender,
+        RECIPIENT_FIELD: record[RECIPIENT_FIELD],
+        DOORBELL_FIELD: {
+            TEXT_FIELD: doorbell_text(sender, message_id),
+            DOORBELL_SUBMITTED_FIELD: _doorbell_submitted(doorbell_transport),
+        },
+        COMMAND_EXIT_CODE_FIELD: exit_code,
+        CAPABILITY_FIELD: dict(value),
+        ACKNOWLEDGED_FIELD: False,
+        AGREED_FIELD: False,
+        OWNERSHIP_ESTABLISHED_FIELD: False,
+    }
+
+
 def command_exit_code(operation: Operation, result: object) -> int:
     value = _object(result, "result")
     status = value.get(STATUS_FIELD)
@@ -898,6 +1299,10 @@ def command_exit_code(operation: Operation, result: object) -> int:
             and delivery.get(STATUS_FIELD) == DeliveryStatus.READY
             else 2
         )
+    if operation is Operation.MAIL_REQUEST:
+        return 0 if isinstance(value.get(RECORD_FIELD), dict) else 2
+    if operation is Operation.DOORBELL:
+        return 0 if isinstance(value.get(RECORD_ID_FIELD), int) else 2
     return 0 if status == DeliveryStatus.DELIVERED else 2
 
 
@@ -937,6 +1342,15 @@ def main(
                 value.get(DISCOVERY_FIELD),
                 handback_plan=value.get(HANDBACK_PLAN_FIELD),
             )
+        elif operation is Operation.MAIL_REQUEST:
+            result = mail_request(value.get(MESSAGE_REQUEST_FIELD))
+        elif operation is Operation.MAIL_RESULT:
+            result = mail_delivery_result(
+                value.get(CAPABILITY_RESULT_FIELD),
+                doorbell_transport=value.get(DOORBELL_TRANSPORT_FIELD),
+            )
+        elif operation is Operation.DOORBELL:
+            result = parse_doorbell(value.get(LINE_FIELD), value.get(AGENTS_FIELD))
         else:
             result = delivery_result(
                 value.get(ENVELOPE_FIELD),

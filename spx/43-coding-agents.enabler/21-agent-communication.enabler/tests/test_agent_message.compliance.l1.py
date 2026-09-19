@@ -6,17 +6,21 @@ from typing import cast
 import pytest
 
 from outcomeeng_testing.generators.coding_agents import (
+    MISMATCHED_TARGET_STATUS,
+    mutation_observation,
+    mail_record_input,
     message_content,
 )
 from outcomeeng_testing.harnesses.coding_agents import (
     fact_envelope,
     generated_envelope,
-    mutation_observation,
+    observe_mail_send,
     observe_send_transport,
     production_handback,
     production_handback_plan,
     public_message_context,
 )
+from outcomeeng_testing.harnesses.prowl_environment import load_prowl_environment
 
 
 def test_delivery_preserves_complete_public_identities_and_semantic_payload() -> None:
@@ -93,16 +97,22 @@ def test_delivery_requires_complete_checked_transport_evidence() -> None:
 
 def test_transport_success_establishes_no_coordination_state() -> None:
     module, sender, recipient, _ = public_message_context()
-    result = module.delivery_result(
+    prowl_result = module.delivery_result(
         fact_envelope(module, sender, recipient),
         delivered=True,
         command_exit_code=0,
         transport=observe_send_transport(recipient[module.PANE_FIELD]),
     )
+    record = module.mail_request(
+        {**mail_record_input(module, 5, module.RecordKind.ORDER)}
+    )[module.RECORD_FIELD]
+    mail_result = module.mail_delivery_result(observe_mail_send(module, record))
 
-    assert result[module.ACKNOWLEDGED_FIELD] is False
-    assert result[module.AGREED_FIELD] is False
-    assert result[module.OWNERSHIP_ESTABLISHED_FIELD] is False
+    for result in (prowl_result, mail_result):
+        assert result[module.STATUS_FIELD] == module.DeliveryStatus.DELIVERED
+        assert result[module.ACKNOWLEDGED_FIELD] is False
+        assert result[module.AGREED_FIELD] is False
+        assert result[module.OWNERSHIP_ESTABLISHED_FIELD] is False
 
 
 def test_envelopes_reject_incomplete_participant_identities() -> None:
@@ -230,7 +240,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
 
     for stale_target in (
         {**recipient_target, module.HEAD_FIELD: "f" * 40},
-        {**recipient_target, module.STATUS_FIELD: "dirty"},
+        {**recipient_target, module.STATUS_FIELD: MISMATCHED_TARGET_STATUS},
     ):
         with pytest.raises(module.MessageError) as raised:
             generated_envelope(
@@ -249,7 +259,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
         if state_field == module.HEAD_FIELD:
             mismatched_value = "f" * 40
         elif state_field == module.STATUS_FIELD:
-            mismatched_value = "dirty"
+            mismatched_value = MISMATCHED_TARGET_STATUS
         else:
             candidate = sender.get(state_field, "different")
             mismatched_value = (
@@ -270,7 +280,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
 
     for stale_target in (
         {**sender_target, module.HEAD_FIELD: "f" * 40},
-        {**sender_target, module.STATUS_FIELD: "dirty"},
+        {**sender_target, module.STATUS_FIELD: MISMATCHED_TARGET_STATUS},
     ):
         with pytest.raises(module.MessageError) as raised:
             generated_envelope(
@@ -289,7 +299,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
         if state_field == module.HEAD_FIELD:
             mismatched_value = "f" * 40
         elif state_field == module.STATUS_FIELD:
-            mismatched_value = "dirty"
+            mismatched_value = MISMATCHED_TARGET_STATUS
         else:
             candidate = recipient.get(state_field, "different")
             mismatched_value = (
@@ -311,6 +321,7 @@ def test_mutation_messages_require_exact_target_and_observed_state() -> None:
 
 def test_send_request_targets_only_exact_pane_identity() -> None:
     module, sender, recipient, discovery = public_message_context()
+    prowl = load_prowl_environment()
     request_content = message_content(module.MessageKind.FACT, 28)
     valid_request = module.build_request(
         to_pane=recipient[module.PANE_FIELD],
@@ -339,8 +350,8 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
     assert raised.value.status == module.DeliveryStatus.INVALID_IDENTITY
 
     for invalid_discovery in (
-        {**discovery, module.STATUS_FIELD: "identity-unavailable"},
-        {**discovery, module.STATUS_FIELD: "identity-ambiguous"},
+        {**discovery, module.STATUS_FIELD: prowl.ExecutionStatus.IDENTITY_UNAVAILABLE},
+        {**discovery, module.STATUS_FIELD: prowl.ExecutionStatus.IDENTITY_AMBIGUOUS},
     ):
         with pytest.raises(module.MessageError) as raised:
             module.send_request(valid_request, invalid_discovery)
@@ -351,7 +362,8 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
             module.send_request(
                 {**valid_request, forbidden_field: forbidden_field}, discovery
             )
-        assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
+        assert raised.value.status == module.DeliveryStatus.INVALID_IDENTITY
+        assert forbidden_field in str(raised.value)
 
     for executable_field in module.FORBIDDEN_EXECUTABLE_FIELDS:
         with pytest.raises(module.MessageError) as raised:
@@ -359,6 +371,7 @@ def test_send_request_targets_only_exact_pane_identity() -> None:
                 {**valid_request, executable_field: "caller-owned"}, discovery
             )
         assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
+        assert executable_field in str(raised.value)
 
     handback = production_handback(sender, recipient)
     handback_plan = production_handback_plan(sender, recipient)

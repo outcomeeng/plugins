@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.7.1
+
+### Added
+
+- **Mail delivery in `/message-agents`.** A request carrying an agent-mail `recipient`, `correlation`, `body`, and `ackRequired` takes the mail route: `mail-request` builds the message record the agent communication node declares — `schema`, `correlation`, `kind`, `sender`, `recipient`, `subject`, `body`, `ackRequired`, with `id` assigned by the store — and the `/operate-agent-mail` send request carrying it; `mail-result` maps the capability's checked `send` result to `delivered` with the store id and the doorbell line `[<sender>] mail <id>`, or to `delivery-failed` with the capability's status and detail; `doorbell` resolves a pane line to its sender and id against the live agent inventory. A same-worktree `delegation-request` carries `authority` — exactly the sender as `owner` and `gitMutation: false` — rendered at the top of the record body; an `authority` of any other shape, a missing or other owner, `gitMutation` admitted, or any extra field, reaches no record. The doorbell is the only line that reaches a pane; its submission evidence for a Prowl pane is the checked `trailing_enter_sent` record, reported beside the delivered message. The Prowl submission route is unchanged.
+
 ## 0.7.0
 
 ### Added
