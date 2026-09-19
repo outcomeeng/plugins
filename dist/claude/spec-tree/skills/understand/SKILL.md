@@ -172,7 +172,7 @@ NN-{slug}.{kind}/
 
 - ALWAYS: classify content by the artifact purpose that owns it.
 
-The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and the optional knowledge root. Operational files under `spx/local/` are configuration. The note raises no placement question. Placement decides only between the governing layer (ADR or PDR) and the declaring layer (spec). Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and verification reachability with the language's declared infrastructure home derives implementation locations.
+The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and the optional knowledge root. Operational files under `spx/local/`, and a passing-scope list a toolchain that has not adopted the status claim still reads, are configuration. The note raises no placement question. Placement decides only between the governing layer (ADR or PDR) and the declaring layer (spec). Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and verification reachability with the language's declared infrastructure home derives implementation locations.
 
 | Artifact            | Purpose                                            | Verified by                                  |
 | ------------------- | -------------------------------------------------- | -------------------------------------------- |
