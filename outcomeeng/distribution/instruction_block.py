@@ -451,7 +451,11 @@ ORCHESTRATING_SESSION_ESCALATION_POLICY_REQUIREMENTS: Final = (
         "three autonomous decision classes",
         "Decide autonomously exactly these three classes",
     ),
-    ("two-pass choice", "at the two-pass ceiling"),
+    (
+        "two-pass outcomes",
+        "at the two-pass ceiling, split the changeset, track the branch and findings "
+        "while resuming the next Activity, or stop",
+    ),
     ("external-state phase hold", "hold a deploy or release blocked by external state"),
     ("outside-Frame revert", "order reversion of an edit outside the Frame"),
     ("third Verifier pass wait", "A third Verifier pass"),
