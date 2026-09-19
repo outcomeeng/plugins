@@ -41,11 +41,17 @@ Step 5 of `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md` verif
 
 `<examples>` covers stale-router regeneration, delegation adoption, and a recency tie. The one-file-missing seeding topology that Step 4 and Step 5 both name carries no worked example.
 
-**Resolution shape**: restructure Step 5's verification into one bullet per topology, mirroring the nested detection/recommendation/apply shape Step 3's five report kinds now carry, and add a further example showing a repository with only one root instruction file present, its seeded counterpart, and the resulting region wrap.
+**Resolution shape**: restructure Step 5's verification into one bullet per topology, mirroring the nested detection/recommendation/apply shape Step 3's five report kinds now carry, and add a further example showing a repository with only one root instruction file present, its seeded counterpart, and the resulting region wrap. The same pass declares `/commit-changes` as a composed-skill dependency before its mandatory use.
 
 **Why it is large**: the restructure rewords all six topology branches, not the clauses a delegation change appends, and the missing example is for a topology no delegation change touches. Step 3's five ambiguity bullets are no longer part of this entry: a change edited one of them, which exhausted their deferral, and all five were restructured in that changeset. Both are editorial passes over the whole skill body whose surface is the file's structure rather than any one behavior, and each invalidates the skill-authoring gate for the entire surface — best taken in one pass gated by `skill-auditor` rather than folded into an unrelated behavior change.
 
 **Evidence**: surfaced by `instructions:audit-skills` on the changeset that added delegating-root-file adoption, as `worth-improving` findings on an otherwise approved surface. The same audit's two other findings are resolved in that changeset: the three stop conditions carry explicit `GATE` labels, and the two success criteria that asked for a confirmation now name the diff that decides them.
+
+The typed skill audit also returned `f-004` against
+`src/plugins/spec-tree/skills/update-instruction-block/SKILL.md:66`: mandatory
+`/commit-changes` usage lacks an explicit composed-skill dependency declaration.
+The subject lies outside PR A's diff. Fixing it would widen PR A's skill surface
+and its audit exposure.
 
 ## Root instruction terminology decision
 
