@@ -66,13 +66,7 @@ Remaining evidence or implementation work is downstream work recorded in a Chang
 
 - ALWAYS: specs state atemporal product truth and contain no history or journey language.
 
-| Temporal                 | Atemporal                |
-| ------------------------ | ------------------------ |
-| “We discovered that X”   | “X ensures Y”            |
-| “We need to address X”   | “The product provides X” |
-| “Currently, the system…” | “The system…”            |
-
-Read each sentence aloud; if it would sound wrong after the work ships, rewrite it. Dated history belongs in a knowledge root.
+Dated history belongs in a knowledge root.
 
 </atemporal_voice>
 
@@ -80,7 +74,7 @@ Read each sentence aloud; if it would sound wrong after the work ships, rewrite 
 
 - ALWAYS: keep one home per fact — structure carries relationships, and a checkable link carries what structure cannot.
 
-`${CLAUDE_SKILL_DIR}/references/grammar.md` carries link shapes and validation.
+Two in-tree link shapes exist: a **node-local** relative path whose target lives inside the node and prunes with it (assertion links), and a **tree-absolute** path written literally from `spx/` (cross-subtree decision citations). A leading slash or a `../` climb fails validation; tooling derives every graph.
 
 </single_location>
 
@@ -88,7 +82,7 @@ Read each sentence aloud; if it would sound wrong after the work ships, rewrite 
 
 - ALWAYS: derive declaration state from specs, evidence, and implementation; never hand-maintain status.
 
-`${CLAUDE_SKILL_DIR}/references/status-claims.md` carries declaration lifecycle and excluded operations.
+Writing a spec makes a declaration; linked evidence makes it verifiable. Pruning a node removes its verification artifacts and exposes implementation no surviving node reaches. These operations do not exist: closing or archiving a spec, moving it to done, assigning state by hand, marking complete, weakening a spec to match code, or closing an outcome record. Done is a structural event, never a state.
 
 </declarations>
 
@@ -142,15 +136,15 @@ A parent states its class contract and names no child; the tree walk surfaces ch
 
 ```text
 NN-{slug}.{kind}/
-├── {slug}.spec.md
-├── spx.status.json
-├── NN-{decision}.{adr|pdr}.md
-├── {slug}.outcome.md
-├── ISSUES.md
-├── knowledge/
-├── tests/
-├── evals/{rule-slug}/eval.toml
-├── probes/{probe-slug}/probe.md
+├── {slug}.spec.md                      # front matter: id; malleability on output nodes
+├── spx.status.json                     # machine-written status claim; every output node
+├── NN-{decision}.{adr|pdr}.md          # decision records share the sibling index space
+├── {slug}.outcome.md                   # optional outcome record; never on a product or variant
+├── ISSUES.md                           # the only node-local note
+├── knowledge/                          # optional OKF bundle: index.md and log.md required
+├── tests/                              # [test] files in the project's naming convention
+├── evals/{rule-slug}/eval.toml         # [eval] rules; cases, prompt, history beside it
+├── probes/{probe-slug}/probe.md        # [probe] protocols with the attested run's artifacts
 └── NN-{child-slug}.{kind}/
 ```
 
@@ -455,15 +449,15 @@ Examples available: adr, pdr, capability, domain, outcome-record, probe
 
 **Mandatory references made progressive disclosure fictional.**
 
-Claude loaded `SKILL.md`, then opened six references required on every fresh invocation; one aggregate read truncated, forcing repeat reads. Keep unconditional foundation truth inline and govern the total eager payload; reserve references for conditional detail, templates, and examples.
+Keep unconditional foundation truth inline and govern the total eager payload; reserve references for conditional detail, templates, and examples.
 
 **Higher-level truth was shaped to current code.**
 
-Claude rejected coherent decisions because implementation lagged or tooling could not realize them. Preserve the declaration, align first affected lower specs, and record downstream work in a Change.
+Preserve the declaration, align first affected lower specs, and record downstream work in a Change.
 
 **A pushed branch was reported as complete.**
 
-Claude treated a transport checkpoint as delivered value. Continue through `/merge` until the changeset reaches the default branch on origin or an explicit gate blocks every remaining action.
+Continue through `/merge` until the changeset reaches the default branch on origin or an explicit gate blocks every remaining action.
 
 </failure_modes>
 

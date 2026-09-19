@@ -20,6 +20,14 @@ Enforcement rules are production validation code. Their `[test]` evidence runs t
 
 An architecture choice belongs in an ADR and a product guarantee in a PDR, never in a spec. A condition only real use settles belongs in the outcome record, never in a spec or decision; a measured value or threshold belongs in the linked metric source, never in the record. A test reference belongs in a spec assertion, never in a decision. An enforceable static constraint is a `[test]` on the enforcement rule, never an `[audit]`. A behavior spanning children belongs to their lowest common output-kind ancestor, and one spanning a product's children to a common output-kind child, never to the product. A decision governing one subtree belongs in that node, never at the root. Pending work belongs in a Change; a known defect in `ISSUES.md` with a settlement condition; dated learning in the owning node's knowledge root. A parent never enumerates its children; a harness, generator, or fixture never lives in an executed test file.
 
+| Temporal                 | Atemporal                |
+| ------------------------ | ------------------------ |
+| “We discovered that X”   | “X ensures Y”            |
+| “We need to address X”   | “The product provides X” |
+| “Currently, the system…” | “The system…”            |
+
+Read each sentence aloud; if it would sound wrong after the work ships, rewrite it.
+
 Evidence specialization is valid when a child `[test]` rule concretizes an ancestor `[audit]` rule against a narrower source surface. Same-content repetition using the same evidence mechanism is duplication.
 
 </common_misplacements>
