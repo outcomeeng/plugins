@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
   NEVER write code, tests, or architecture for a spec-tree node without this skill.
 argument-hint: "[full-spx-node-path | plan-or-proposal]"
-allowed-tools: Read, Edit, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(git status:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(spx validation:*), Bash(spx spec status:*), Bash(spx test:*), Bash(just test:*), Bash(just check:*), Bash(just check-full:*), Bash(just verify:*), Bash(just validate:*), Bash(pnpm test:*), Bash(pnpm run test:*), Bash(pnpm run check:*), Bash(pnpm run lint:*), Bash(pnpm run typecheck:*), Bash(pnpm run validate:*), Bash(pnpm run verify:*), Bash(npm test:*), Bash(npm run test:*), Bash(npm run check:*), Bash(npm run lint:*), Bash(npm run typecheck:*), Bash(npm run validate:*), Bash(npm run verify:*), Bash(yarn test:*), Bash(yarn run test:*), Bash(yarn run check:*), Bash(yarn run lint:*), Bash(yarn run typecheck:*), Bash(yarn run validate:*), Bash(yarn run verify:*), Bash(bun test:*), Bash(bun run test:*), Bash(bun run check:*), Bash(bun run lint:*), Bash(bun run typecheck:*), Bash(bun run validate:*), Bash(bun run verify:*), Bash(uv run pytest:*), Bash(pytest:*), Bash(cargo test:*), Bash(cargo check:*), Bash(cargo clippy:*), Bash(cargo fmt --check:*), Bash(go test:*), Bash(go vet:*), Bash(make test:*), Bash(make check:*), Bash(make verify:*), Bash(make validate:*)
+allowed-tools: Read, Glob, Grep, Edit, Write, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(git status:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(spx validation:*), Bash(spx spec status:*), Bash(spx test:*), Bash(just test:*), Bash(just check:*), Bash(just check-full:*), Bash(just verify:*), Bash(just validate:*), Bash(pnpm test:*), Bash(pnpm run test:*), Bash(pnpm run check:*), Bash(pnpm run lint:*), Bash(pnpm run typecheck:*), Bash(pnpm run validate:*), Bash(pnpm run verify:*), Bash(npm test:*), Bash(npm run test:*), Bash(npm run check:*), Bash(npm run lint:*), Bash(npm run typecheck:*), Bash(npm run validate:*), Bash(npm run verify:*), Bash(yarn test:*), Bash(yarn run test:*), Bash(yarn run check:*), Bash(yarn run lint:*), Bash(yarn run typecheck:*), Bash(yarn run validate:*), Bash(yarn run verify:*), Bash(bun test:*), Bash(bun run test:*), Bash(bun run check:*), Bash(bun run lint:*), Bash(bun run typecheck:*), Bash(bun run validate:*), Bash(bun run verify:*), Bash(uv run pytest:*), Bash(pytest:*), Bash(cargo test:*), Bash(cargo check:*), Bash(cargo clippy:*), Bash(cargo fmt --check:*), Bash(go test:*), Bash(go vet:*), Bash(make test:*), Bash(make check:*), Bash(make verify:*), Bash(make validate:*)
 ---
 
 <objective>
@@ -19,7 +19,7 @@ The raw invocation string `$ARGUMENTS` controls what runs before the per-node fl
 - `$ARGUMENTS` containing a canonical full `spx/...` node path → the work queue is that single node.
 - Empty `$ARGUMENTS` → determine the work from the conversation. If nothing is clear, complete Step 1 first — invoke `/understand` when the live `SPEC_TREE_FOUNDATION` marker is absent — then read `spx/EXCLUDE`, whose entries are relative to `spx/`, and prefix each non-comment, non-blank entry with `spx/` before adding it to the work queue. Never access `spx/EXCLUDE` before the foundation is live, and never pass a bare entry to `/contextualize`. If no work is found, report "Nothing to apply" and stop.
 
-When the work is described as a plan or proposal rather than a specific node or queue, invoke `/slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
+Construct the work queue through Step 0 when its condition applies; otherwise use the specific node or `spx/EXCLUDE` list resolved above.
 
 When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
 
@@ -32,29 +32,39 @@ If a node's flow cannot reach its gate-specific passing state or a converged rev
 
 </invocation_modes>
 
-<language_detection>
+<lane_table>
 
-Before starting Step 3, determine the product language:
+Classify every Output in the changeset before selecting a language. Select every row present, compose the rows, run the union of their deterministic lanes, and dispatch each selected artifact auditor once over the whole changeset for its kind. A changeset with no code row never stops for language detection.
+
+| Output kind      | Authoring skill and standards                                                                                                                                           | Deterministic lane                                                                                   | Artifact auditors                                                                                                                                                                                                                                                    |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code             | The detected language's architecture, test, code, and optional simplification skills from `<skill_map>`, with that language's architecture, test, and code standards    | The selected language's repository-declared focused validation, tests, evals, formatting, and typing | Step 4 through `{{! subagent_name('spec-tree', 'adr-auditor') !}}` or `{{! subagent_name('spec-tree', 'pdr-auditor') !}}` for each changed decision; Steps 6, 8, and 8a when malleability selects them; Step 9 when malleability selects it                          |
+| Test evidence    | `spec-tree:verify`, then `spec-tree:test` and each applicable installed language specialist, with `spec-tree:test-evidence-standards` and the language's test standards | Every selected linked test and eval                                                                  | Steps 6 and 8a through `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}` and `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}` when malleability selects them; Step 9 when malleability selects it                                           |
+| Spec or decision | `spec-tree:author` and `spec-tree:verify`, with the live `/understand` templates and foundation                                                                         | The repository-declared spec validation and status projection                                        | Step 4 through `{{! subagent_name('spec-tree', 'adr-auditor') !}}` or `{{! subagent_name('spec-tree', 'pdr-auditor') !}}` for each changed decision; `{{! subagent_name('spec-tree', 'spec-auditor') !}}` for each changed spec; Step 9 when malleability selects it |
+| Skill            | `instructions:create-skill`, with `instructions:skill-standards` and `instructions:agent-prompt-standards`                                                              | The repository-declared skill build and deterministic skill or documentation checks                  | `{{! subagent_name('instructions', 'skill-auditor') !}}` once over the complete changed skill surface at the Step 8a-equivalent when the `instructions` plugin is installed; Step 9 when malleability selects it                                                     |
+| Prose            | `prose:author-prose`, with `prose:prose-standards`                                                                                                                      | The repository-declared documentation and prose checks                                               | `{{! subagent_name('prose', 'prose-auditor') !}}` once over the complete changed prose surface at the Step 8a-equivalent when the `prose` plugin is installed; Step 9 when malleability selects it                                                                   |
+
+For the code row only, determine one product language before its first language-specific authoring step:
 
 - `tsconfig.json` exists -> **TypeScript**
 - `pyproject.toml` or `setup.py` exists -> **Python**
 - `Cargo.toml` or `rust-toolchain.toml` exists -> **Rust**
 - `go.mod` exists -> **Go**
-- Multiple supported language markers exist -> inspect the loaded spec node for a single applicable language; when ambiguity remains, ask the operator and stop before Step 3 until one language is selected
-- No supported marker exists, or the selected language has no installed architecture, test, and code skills -> stop before Step 3 and report the exact marker state plus the missing language-plugin capability
+- Multiple supported language markers exist -> inspect the loaded spec node for a single applicable language; when ambiguity remains, ask the operator and stop the code row until one language is selected
+- No supported marker exists, or the selected language has no installed architecture, test, and code skills -> stop the code row and report the exact marker state plus the missing language-plugin capability
 
-Proceed to Step 3 only after exactly one supported language and its required skill surface resolve. Use that language for ALL Steps 3–8. Do not switch mid-flow.
+Use that language for every language-specific step in the code row. Do not switch mid-flow. Other selected rows continue independently when the code row is absent.
 
-</language_detection>
+</lane_table>
 
 <scope_detection>
 
-Before starting Step 3, determine the change's scope — this determination governs every later gate:
+Before starting the selected authoring lanes, determine the change's scope — this determination governs every later gate:
 
 - **Node-local** — the entire diff stays within the target node's own directory (its spec, its `tests/`, and the implementation files that node governs).
 - **Cross-node** — the work touches anything else: a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node.
 
-When the scope is cross-node, every audit gate — Steps 4, 6, and 8 — runs at **whole-changeset** scope, not only the target node, and Step 9 is REQUIRED before the flow may be declared complete. A per-node audit reads only the target node's files; it cannot see a regression the change introduced in a file the node does not own. Carry the determination through Steps 4, 6, and 8 — each gate step restates the scope requirement at its point of action.
+When the scope is cross-node, every selected audit runs at **whole-changeset** scope rather than only the target node. A per-node audit reads only the target node's files and cannot see a regression introduced in a file the node does not own. Carry the determination into every selected gate; Step 9 owns its own applicability condition.
 
 </scope_detection>
 
@@ -109,7 +119,9 @@ Reopen the complete result by reference when a finding needs exact detail. Never
 
 <evidence_auditor_gate>
 
-After Step 8, run the applicable artifact-type evidence auditors over the stabilized diff. This gate applies to node-local and cross-node changes. It is separate from the Step 6 evidence audit: Step 6 checks the test and eval evidence authored for the target node at that checkpoint in the TDD flow; Step 8a checks every evidence artifact the final changeset would publish.
+Read every touched node's `malleability` from its spec front matter; an absent field means `implementation`. Select the numbered gates from the least malleable touched node: the deterministic lane always; Step 9 for `verification` or `implementation`; Steps 6, 8, and 8a for `implementation` only. Product and outcome-record changes select the deterministic lane and Step 9 regardless. Step 4 remains independent of malleability and runs whenever a decision changed.
+
+When Step 8a is selected, run the applicable artifact-type evidence auditors over the stabilized diff at Step 8a after every preceding selected lane has completed. This gate applies to node-local and cross-node changes. It is separate from the Step 6 evidence audit: Step 6 checks the test and eval evidence authored for the target node at that checkpoint in the code or test-evidence flow; Step 8a checks every evidence artifact the final changeset would publish.
 
 Run deterministic verification first. Bring local validation, tests, and required eval runs to passing for the touched scope before dispatching evidence auditors. An evidence auditor reads and judges evidence quality; it never runs deterministic verification.
 
@@ -117,33 +129,29 @@ Dispatch `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}` during St
 
 Dispatch `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}` during Step 8a when the diff creates or modifies any `[eval]` assertion, `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, or producer artifact for an eval-backed assertion. For each affected governing node, pass only its canonical node path. The invoked audit discovers the assertions, eval artifacts, and producers. If the auditor returns `FAIL`, `UNKNOWN`, a failing row, an unknown row, or a reject finding, fix the evidence defect class, re-run the required eval evidence, and re-dispatch Step 8a.
 
-Before dispatching an applicable evidence auditor, apply `<verification_checkpoint>`; carry each verdict forward under `<result_carryover>`. When both evidence classes changed, dispatch both auditors against the same checkpoint. Step 8a completes only after every applicable evidence-auditor verdict is clean on the exact committed diff it reviews.
+Before dispatching an applicable evidence auditor, apply `<verification_checkpoint>`; carry each verdict forward under `<result_carryover>`. When both evidence classes changed, dispatch both auditors against the same checkpoint. Step 8a completes only after every applicable evidence-auditor verdict is clean on the exact committed diff it reviews. The skill row dispatches `{{! subagent_name('instructions', 'skill-auditor') !}}`, the prose row dispatches `{{! subagent_name('prose', 'prose-auditor') !}}`, the spec row dispatches `{{! subagent_name('spec-tree', 'spec-auditor') !}}`, and the decision row dispatches `{{! subagent_name('spec-tree', 'adr-auditor') !}}` or `{{! subagent_name('spec-tree', 'pdr-auditor') !}}` at this same checkpoint after their deterministic lanes. Skill and prose audits run when their plugins are installed and apply independently of whether malleability selects numbered test/eval evidence audit.
 
 </evidence_auditor_gate>
 
 <skill_map>
 
-Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
+This map is the code row's language-specific flow. Steps 0–2, 9, and 10 are language-independent. Apply the conditional steps through their owning workflow steps and `<lane_table>`.
 
-| Step | Purpose                  | TypeScript                                                                                                                          | Python                                          | Rust                                               | Go                                             |
-| ---- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------- | ---------------------------------------------- |
-| 0 §  | Select the slice         | {!% require_skill 'spec-tree:slice' %!}                                                                                             | same                                            | same                                               | same                                           |
-| 1    | Load methodology         | {!% require_skill 'spec-tree:understand' %!}                                                                                        | same                                            | same                                               | same                                           |
-| 2    | Load context             | Use skill `spec-tree:contextualize` for `{full-spx-node-path}`.                                                                     | same                                            | same                                               | same                                           |
-| 3    | Architect                | {!% require_skill 'typescript:architect-typescript' %!}                                                                             | {!% require_skill 'python:architect-python' %!} | {!% require_skill 'rust:architect-rust' %!}        | {!% require_skill 'go:architect-go' %!}        |
-| 4    | Architecture audit       | `{{! subagent_name('spec-tree', 'adr-auditor') !}}` agent                                                                           | same                                            | same                                               | same                                           |
-| 5    | Establish evidence       | {!% require_skill 'spec-tree:verify' %!}                                                                                            | same                                            | same                                               | same                                           |
-| 6    | Evidence audit           | `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}` agents | same                                            | same                                               | same                                           |
-| 7    | Implement                | {!% require_skill 'typescript:code-typescript' %!}                                                                                  | {!% require_skill 'python:code-python' %!}      | {!% require_skill 'rust:code-rust' %!}             | {!% require_skill 'go:code-go' %!}             |
-| 7a   | Simplify implementation  | `{{! subagent_name('typescript', 'typescript-simplifier') !}}`                                                                      | no declared simplifier                          | `{{! subagent_name('rust', 'rust-simplifier') !}}` | `{{! subagent_name('go', 'go-simplifier') !}}` |
-| 8    | Implementation audit     | `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` agent                                                                | same                                            | same                                               | same                                           |
-| 8a   | Evidence-auditor gates   | `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}` agents | same                                            | same                                               | same                                           |
-| 9    | Whole-changeset review † | `{{! subagent_name('spec-tree', 'changes-reviewer') !}}` agent                                                                      | same                                            | same                                               | same                                           |
-| 10   | Merge ‡                  | {!% require_skill 'spec-tree:merge' %!}                                                                                             | same                                            | same                                               | same                                           |
-
-§ Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue; it selects the observable slice whose node set becomes the work queue (see `<invocation_modes>`).
-† Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).
-‡ Step 10 runs for any change destined for the default branch — skip only when the user explicitly scoped the work to a proposal, analysis, review, or local-only change (see the step).
+| Step | Purpose                 | TypeScript                                                                                                                          | Python                                          | Rust                                               | Go                                             |
+| ---- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------- | ---------------------------------------------- |
+| 0    | Select the slice        | {!% require_skill 'spec-tree:slice' %!}                                                                                             | same                                            | same                                               | same                                           |
+| 1    | Load methodology        | {!% require_skill 'spec-tree:understand' %!}                                                                                        | same                                            | same                                               | same                                           |
+| 2    | Load context            | Use skill `spec-tree:contextualize` for `{full-spx-node-path}`.                                                                     | same                                            | same                                               | same                                           |
+| 3    | Architect               | {!% require_skill 'typescript:architect-typescript' %!}                                                                             | {!% require_skill 'python:architect-python' %!} | {!% require_skill 'rust:architect-rust' %!}        | {!% require_skill 'go:architect-go' %!}        |
+| 4    | Architecture audit      | `{{! subagent_name('spec-tree', 'adr-auditor') !}}` agent                                                                           | same                                            | same                                               | same                                           |
+| 5    | Establish evidence      | {!% require_skill 'spec-tree:verify' %!}                                                                                            | same                                            | same                                               | same                                           |
+| 6    | Evidence audit          | `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}` agents | same                                            | same                                               | same                                           |
+| 7    | Implement               | {!% require_skill 'typescript:code-typescript' %!}                                                                                  | {!% require_skill 'python:code-python' %!}      | {!% require_skill 'rust:code-rust' %!}             | {!% require_skill 'go:code-go' %!}             |
+| 7a   | Simplify implementation | `{{! subagent_name('typescript', 'typescript-simplifier') !}}`                                                                      | no declared simplifier                          | `{{! subagent_name('rust', 'rust-simplifier') !}}` | `{{! subagent_name('go', 'go-simplifier') !}}` |
+| 8    | Implementation audit    | `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` agent                                                                | same                                            | same                                               | same                                           |
+| 8a   | Evidence-auditor gates  | `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}`, `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}` agents | same                                            | same                                               | same                                           |
+| 9    | Whole-changeset review  | `{{! subagent_name('spec-tree', 'changes-reviewer') !}}` agent                                                                      | same                                            | same                                               | same                                           |
+| 10   | Merge                   | {!% require_skill 'spec-tree:merge' %!}                                                                                             | same                                            | same                                               | same                                           |
 
 Invoke the exact skill or agent surface shown. Never substitute, skip, or reorder.
 
@@ -179,11 +187,9 @@ Load the full context hierarchy for the specific node — parent chain, sibling 
 
 </step>
 
-<step number="3" name="Architect">
+<step number="3" name="Author">
 
-Invoke the architecting skill for the detected language.
-
-Produce the ADR(s) for the work item. The architecture must be complete before audit.
+Invoke every authoring skill selected by `<lane_table>`. For the code row, invoke the architecting skill for the detected language and produce the ADRs required by the work item before audit. Other rows author only the artifacts their selected skill owns.
 
 Before the architecture audit, invoke `/verify` separately for every new or changed ADR/PDR path. This moves each decision rule into its canonical verification subsection and supplies that subsection's tag before the auditor judges the decision. Keep target-node assertion routing in Step 5; this pre-audit decision routing creates no executable evidence link inside the decision record.
 
@@ -191,9 +197,9 @@ Before the architecture audit, invoke `/verify` separately for every new or chan
 
 <step number="4" name="Architecture audit" gate="true">
 
-Dispatch `{{! subagent_name('spec-tree', 'adr-auditor') !}}` with only the ADR path. The invoked `audit-adr` discovers its governing node, committed changeset, and implementation-language partitions, then composes each applicable `audit-{lang}-architecture` concern inside its isolated agent session. Require its structured JSON verdict.
+When a decision changed, dispatch its configured decision Auditor with only the decision path: `{{! subagent_name('spec-tree', 'adr-auditor') !}}` for an ADR or `{{! subagent_name('spec-tree', 'pdr-auditor') !}}` for a PDR. The invoked audit discovers its governing node and committed changeset; `audit-adr` additionally discovers implementation-language partitions and composes each applicable `audit-{lang}-architecture` concern inside its isolated agent session. Require the Auditor's structured JSON verdict. Skip Step 4 when no decision changed.
 
-When the scope is cross-node (see `<scope_detection>`), enumerate the ADRs governing every affected implementation surface across the whole changeset and dispatch each ADR path separately. This gate passes only when every required ADR audit approves.
+When the scope is cross-node (see `<scope_detection>`), enumerate the decisions governing every affected surface across the whole changeset and dispatch each decision path separately. This gate passes only when every required decision audit approves.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its verdict forward under `<result_carryover>`.
 
@@ -203,7 +209,7 @@ Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_che
 
 <step number="5" name="Establish evidence">
 
-Invoke `/verify` for the target node. It selects each assertion's verification type and routes selected test work through `/test` to the detected language specialist. It routes eval work through `/eval` when that capability is installed and records pathless audit requirements without producing their verdict.
+Invoke `/verify` for every selected row whose changed declaration requires verification routing. It selects each assertion's verification type, routes selected test work through `/test` to each applicable installed language specialist, routes selected evaluate work through its own eval routing, and records pathless audit requirements without producing their verdict.
 
 Establish every selected path-bearing evidence definition before implementation. When `/verify` selects test, the linked tests exist before implementation. When it selects evaluate, the eval definition, cases, prompt, and producer contract exist before implementation. A pathless audit selection records the isolated-verifier requirement and creates no preimplementation artifact.
 
@@ -211,7 +217,7 @@ Establish every selected path-bearing evidence definition before implementation.
 
 <step number="6" name="Evidence audit" gate="true">
 
-Dispatch the auditor matching every path-bearing evidence artifact Step 5 created or changed:
+When the least malleable touched node is `implementation`, dispatch the auditor matching every path-bearing evidence artifact Step 5 created or changed. Otherwise skip Step 6.
 
 - For test evidence, dispatch `{{! subagent_name('spec-tree', 'test-evidence-auditor') !}}` with only the canonical governing node path. The invoked audit discovers its assertions and complete test-evidence chain, then detects and composes the applicable `audit-{lang}-tests` concern inside its isolated agent session.
 - For eval evidence, dispatch `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}` with only the canonical governing node path. The invoked audit discovers its `[eval]` assertions, eval artifacts, and real producers. Require the audit-eval-evidence JSON verdict.
@@ -227,7 +233,7 @@ Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_che
 
 <step number="7" name="Implement">
 
-Invoke the coding skill for the detected language.
+For the code row, invoke the coding skill for the detected language. Other rows complete their artifact authoring through the skill selected in Step 3 and skip this step.
 
 Write implementation code, then run every applicable deterministic check selected in Step 5: selected tests pass and selected evals meet their declared completion threshold. Preserve each pathless audit requirement for its isolated verifier; never fabricate a test artifact for it.
 
@@ -235,7 +241,7 @@ Write implementation code, then run every applicable deterministic check selecte
 
 <step number="7a" name="Simplify implementation">
 
-For Go, Rust, or TypeScript, dispatch the configured simplifier selected in `<skill_map>` after Step 7. Python has no declared simplifier and skips this step. Never infer another subagent from a language name.
+For a code row in Go, Rust, or TypeScript, dispatch the configured simplifier selected in `<skill_map>` after Step 7. Python and changesets without a code row skip this step. Never infer another subagent from a language name.
 
 Before dispatch, invoke `/commit-changes` when needed and require a clean worktree. Record the full committed head. Pass only `HEAD`, or the explicit three-dot range used for the selected base. The invoked language skill independently selects the changed implementation and its governing evidence. Run one simplifier at a time, with no concurrent writer to its implementation scope.
 
@@ -251,11 +257,7 @@ An absent or malformed result follows `<launch_contract>`. A simplification resu
 
 <step number="8" name="Code audit" gate="true">
 
-Dispatch `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` with only
-the committed scope selector: `HEAD` for the current branch, or an explicit
-three-dot range for a selected base. The invoked skill discovers the repository,
-governing nodes, verification context, and language partitions; the wrapper
-supplies its own run-driver identity internally.
+When the least malleable touched node is `implementation` and the code row is selected, dispatch `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` with only the committed scope selector: `HEAD` for the current branch, or an explicit three-dot range for a selected base. The invoked skill discovers the repository, governing nodes, verification context, and language partitions; the wrapper supplies its own run-driver identity internally. Otherwise skip Step 8.
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — Step 4 audits the committed scope while Step 6 fans out across every affected governed evidence node and type. Those audit lenses remain necessary but insufficient, so the distinct whole-diff review in Step 9 stays required for cross-cutting effects no single audit lens catches.
 
@@ -267,25 +269,25 @@ The implementation-auditor composes the installed `audit-{lang}-{code|tests|arch
 
 </step>
 
-<step number="8a" name="Evidence-auditor gates" gate="true" condition="the change creates or modifies test or eval evidence">
+<step number="8a" name="Artifact-auditor gates" gate="true">
 
-Run `<evidence_auditor_gate>` whenever the stabilized diff creates or modifies a `[test]` assertion, linked test file, imported test-infrastructure artifact, `[eval]` assertion, eval artifact, or producer artifact for eval-backed evidence. The condition applies whether the change is node-local or cross-node.
+Run `<evidence_auditor_gate>` when the least malleable touched node is `implementation` and the stabilized diff creates or modifies a `[test]` assertion, linked test file, imported test-infrastructure artifact, `[eval]` assertion, eval artifact, or producer artifact for eval-backed evidence.
 
-Skip this step only when the diff changes no test or eval evidence surface named by `<evidence_auditor_gate>`.
+For every selected skill, prose, spec, or decision row, dispatch the exact artifact Auditor named by `<lane_table>` over the whole changeset after its deterministic lane passes. These Step 8a-equivalent artifact audits apply independently of malleability and the numbered test/eval evidence-audit selection.
 
 </step>
 
-<step number="9" name="Whole-changeset review" gate="true" condition="the change touches files or specs beyond the target node">
+<step number="9" name="Whole-changeset review" gate="true" condition="malleability selects review">
 
-Skip this step only when the entire diff is confined to the target node's own directory — its spec, its `tests/`, and the implementation files that node governs. The moment the work touches anything else — a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node — this step is REQUIRED before the flow may be declared complete.
+Run this step when the least malleable touched node is `verification` or `implementation`. Product and outcome-record changes also run it regardless of malleability. Skip it for a `spec`-malleable changeset containing neither product nor outcome-record changes.
 
-Before invoking the review, confirm every applicable Step 8a evidence-auditor verdict is clean, then apply `<verification_checkpoint>`. The reviewer must see the same committed diff whose touched evidence artifacts passed their artifact-type evidence audits.
+Before invoking the review, confirm every applicable numbered Step 8a evidence-auditor verdict and every Step 8a-equivalent artifact-auditor verdict is clean, then apply `<verification_checkpoint>`. The reviewer must see the same committed diff whose touched artifact surfaces passed their selected audits.
 
 Dispatch `{{! subagent_name('spec-tree', 'changes-reviewer') !}}` over the full committed changeset, passing only the raw scope token: `HEAD` for the current branch or an explicit committed range for a selected base. Never add a prose prompt, severity filter, or emphasis instruction. Collect the final message through the native result-collection capabilities and require it to be the raw review run token. A tool failure, terminal result without a final message, or non-token final message blocks Step 9 and follows `<launch_contract>`.
 
 Invoke `/project-run-journal`, then inspect the returned token through its `render_review_run.py` helper exactly as that skill directs. Treat the helper output as the inspection projection of the sealed journal prefix; the sealed prefix remains the only review result. Read the rendered terminal status, full head/base identity, scope coverage, blocking/debt counts, and findings before deciding whether Step 9 converged. Carry the review forward as the bounded projection `<result_carryover>` defines.
 
-The per-node gates in Steps 4, 6, and 8 inspect through distinct audit lenses; they do not see every cross-node effect — a stale reference a rename left in a sibling, dead code a move orphaned, or a spec a consolidation made false. The whole-diff review catches those effects.
+The selected artifact gates inspect through distinct audit lenses; they do not see every cross-node effect — a stale reference a rename left in a sibling, dead code a move orphaned, or a spec a consolidation made false. The whole-diff review catches those effects.
 
 Apply `<stabilized_diff_rule>` before invoking the review. Fix every valid finding in the rendered sealed projection, including every in-scope same-class instance found by the same-class sweep, then verify and checkpoint the changed subject before reviewing it. A missing or unusable raw token follows `<launch_contract>`. If rendering a valid token fails, preserve that token and diagnose the inspection failure through `/project-run-journal`; never launch another reviewer to replace the recorded result. The gate remains blocked until the sealed result is readable and every valid finding is resolved.
 
@@ -301,8 +303,6 @@ Invoke `/merge`. It selects the transport and drives the change to the default b
 
 The flow is complete only when the change reaches the default branch on origin, or an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base is never the endpoint for default-branch work.
 
-Claude tends to report the flow done the moment Step 9 converges and tests pass — while nothing has been committed, pushed, reviewed at integration time, or merged. That treatment of local readiness as completion is the exact failure this step exists to prevent.
-
 </step>
 
 </workflow>
@@ -317,20 +317,20 @@ If the full deterministic gate fails, fix the reported defect, run the focused t
 
 <review_gates>
 
-Steps 4, 6, 8, and applicable Step 8a are blocking audit gates. Steps 4, 6, and 8a emit verdicts from their auditor contracts. Step 8 returns an `spx verification run` token and rendered projection whose `terminalStatus` is authoritative; a `BLOCKED` result must relay a complete diagnostic from the implementation-auditor contract as described in Step 8. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work.
+Select the numbered gates from the least malleable touched node as `<evidence_auditor_gate>` defines. Step 4 is a blocking audit whenever a decision changed, independent of malleability. Selected Steps 6, 8, and 8a are blocking audit gates, and every selected Step 8a-equivalent artifact audit is blocking. Steps 4, 6, 8a, and the Step 8a-equivalent artifact audits emit verdicts from their Auditor contracts. Step 8 returns an `spx verification run` token and rendered projection whose `terminalStatus` is authoritative; a `BLOCKED` result must relay a complete diagnostic from the implementation-auditor contract as described in Step 8. Selected Step 9 is a blocking whole-changeset review. Step 10 is the terminal lifecycle boundary for default-branch work.
 
-- Before starting Step 5: require Step 4's workflow-local result to be `APPROVED`. If it is absent or differs, stop and invoke or repair Step 4.
-- Before starting Step 7: require Step 6's workflow-local result to pass — `APPROVED` from the test-evidence auditor, `overall: PASS` with no `FAIL` or `UNKNOWN` row from the eval-evidence auditor. If it is absent or differs, stop and invoke or repair Step 6.
-- Before considering implementation complete: inspect the Step 8 rendered projection. If `terminalStatus` is absent or differs from `approved`, stop — invoke or repair Step 8.
-- Before Step 8 for Go, Rust, or TypeScript, require Step 7a's usable `simplified` or `unchanged` result for the implementation being verified, with every resulting edit inspected, verified, and committed.
-- Before starting Step 9, the terminal full deterministic gate, Step 10, or completion: if the diff touches a test or eval evidence surface named by `<evidence_auditor_gate>`, require a clean Step 8a verdict over the exact committed diff and invoke or repair Step 8a when that verdict is absent. When the diff touches no named evidence surface, skip Step 8a.
-- Before declaring the flow complete: if the change touches anything beyond the target node, require a raw Step 9 review run token from the native final result and a rendered sealed projection from `/project-run-journal`. If no invocation has occurred, invoke Step 9. A failed invocation or unusable final result follows `<launch_contract>`; a blocked inspection preserves its token; valid findings follow the repair workflow.
+- Before starting Step 5: when a decision changed, require Step 4's workflow-local result to be `APPROVED`; otherwise skip Step 4.
+- Before starting Step 7: when Step 6 is selected, require `APPROVED` from the test-evidence auditor and `overall: PASS` with no `FAIL` or `UNKNOWN` row from the eval-evidence auditor; otherwise skip Step 6.
+- Before considering the code row complete: when Step 8 is selected, require its rendered projection to carry `terminalStatus: approved`; otherwise skip Step 8.
+- Before selected Step 8 for a Go, Rust, or TypeScript code row, require Step 7a's usable `simplified` or `unchanged` result for the implementation being verified, with every resulting edit inspected, verified, and committed.
+- Before starting Step 9, the terminal full deterministic gate, Step 10, or completion: require every artifact Auditor selected by `<lane_table>` and every evidence Auditor selected by `<evidence_auditor_gate>` to carry a clean verdict over the exact committed diff.
+- Before declaring the flow complete: when Step 9 is selected, require a raw review run token from the native final result and a rendered sealed projection from `/project-run-journal`. If no invocation has occurred, invoke Step 9. A failed invocation or unusable final result follows `<launch_contract>`; a blocked inspection preserves its token; valid findings follow the repair workflow.
 - Before invoking `/merge` when a full deterministic bundle is required: confirm the repository-declared full deterministic gate ran after every applicable agentic gate and against the current clean committed head. If any source, test, spec, generated-output, or configuration file changed afterward, rerun the invalidated agentic gates before running the declared full gate again.
 - Before declaring the flow complete for default-branch work: confirm the change reached the default branch on origin through Step 10's `/merge`, or that the user scoped the work to a proposal, analysis, review, or local-only change, or that an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base does not satisfy this — invoke Step 10.
 
 For completed verdicts of `REJECTED`, `UNKNOWN`, or a complete `BLOCKED` diagnostic at Steps 4 and 6; projection `terminalStatus: rejected` or a complete blocked diagnostic at Step 8; or valid findings at Step 9: fix the defect class, verify and checkpoint the changed subject, then audit that subject. Use Step 8's complete blocked diagnostic to identify the failed command, payload, installation, or skill-load boundary. Launch failures, unusable results, and blocked inspection of a valid review token follow `<launch_contract>` and Step 9; they never enter this relaunch loop.
 
-**3 consecutive completed rejected, unknown, or blocked verdicts on the same gate (Steps 4, 6, 8, 8a), or 3 consecutive completed Step 9 reviews that surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `{{! tool('ask_user') !}}`: report the gate, its most recent verdict and outstanding findings, the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again. A failed launch or unusable result stops on its first occurrence under `<launch_contract>`.
+One stop rule has two triggers. A Verifier rejection in a defect class that a prior repair claimed to close stops the queue at any pass until a widened repair, same-class scan, and governing-workflow, standard, or source-contract amendment land, per `<stabilized_diff_rule>`. Otherwise, a second consecutive completed rejected, unknown, or blocked Verifier verdict on one gate (Steps 4, 6, 8, 8a), or a second consecutive completed Step 9 review with unresolved valid findings, stops the flow. A launch with no run token and no verdict is no result under `<launch_contract>` and counts as neither a pass nor a rejection. On either trigger, the Executor surfaces one structured question through `{{! tool('ask_user') !}}` carrying the gate, the classes that survived, the repeated-class check, the latest verdict and outstanding findings, and one proposal: split, track, or stop. A failed launch or unusable result follows `<launch_contract>` and never enters the verdict count.
 
 </review_gates>
 
@@ -357,7 +357,7 @@ This is not slower. The ad hoc script takes the same effort as a test, but the s
 
 - Every product-declared touched-scope deterministic command exits zero on the final committed subject.
 - Each applicable architecture and test-evidence auditor returns `APPROVED`; each applicable eval-evidence auditor returns JSON `overall: PASS` with no `FAIL` or `UNKNOWN` row; and each implementation-audit run renders `terminalStatus: approved` for the exact committed subject.
-- A cross-node changeset carries a raw Step 9 review run token whose sealed projection renders successfully, with every valid finding fixed, including every in-scope same-class instance; unbacked findings are dropped.
+- A changeset that selects Step 9 carries a raw review run token whose sealed projection renders successfully, with every valid finding fixed, including every in-scope same-class instance; unbacked findings are dropped.
 - `git rev-parse HEAD` matches the final gate subject and `git status --porcelain` is empty.
 - The requested delivery boundary has observable completion: default-branch work has reached the default branch on origin through `/merge`'s selected transport and every declared release action reports success or no-op; proposal, analysis, review, or local-only work reaches its explicitly selected boundary; an explicit lifecycle gate reports its blocking token only after no independent action remains.
 
