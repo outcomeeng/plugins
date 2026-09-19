@@ -7,7 +7,7 @@
 
 <authority>
 
-The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`: require `methodology.version: "4.0"`, resolve `methodology.source`, and read `versions/4.0/methodology/change/changes.md` inside that declared source. This reference operationalizes that chapter without replacing it. A Change is mutable coordination for one intended Output in one Product; it declares no product, architecture, or methodology truth.
+The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`. An accepted `methodology.version` is exactly `4.0`, or exactly `4.0.N` with `N` one or more decimal digits representing a non-negative integer. Both accepted forms select `versions/4.0/methodology/change/changes.md` inside the declared `methodology.source`. An absent configuration, absent `methodology` block, the sentinel `installed`, another major or minor line, a non-integer patch component, an extra version component, and a prerelease suffix are invalid selections. The invalid-selection diagnostic contains the observed value — `absent` when no value exists — and the accepted forms `4.0` and `4.0.N`, where `N` is a non-negative integer. This reference operationalizes the selected chapter without replacing it. A Change is mutable coordination for one intended Output in one Product; it declares no product, architecture, or methodology truth.
 
 </authority>
 

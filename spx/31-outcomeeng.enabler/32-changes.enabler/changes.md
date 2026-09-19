@@ -13,6 +13,7 @@ CAN move a prioritized Output from proposal to executable work without placing m
 
 - A Change record has YAML front matter with the closed key set `title`, `product`, `maturity`, `lifecycle`, `refined_from`, and `blocked_by`, plus a body with fixed top-level sections; every key is required, and an unknown key is a defect.
 - `change-standards` carries one independently loadable Definition of Ready for each Maturity level: Proposed, Framed, Sliced, and Executable.
+- `change-standards` selects the 4.0 Change chapter — `versions/4.0/methodology/change/changes.md` inside the declared `methodology.source` — for a `methodology.version` declaration of `4.0` or `4.0.N` with `N` a non-negative integer, states that comparison, and rejects every other declaration.
 - `author-change` runs one workflow per Maturity level; each workflow loads only that level's Definition of Ready and advances Maturity only when the Definition of Ready holds and the level's authority is present.
 - `audit-change` reads the complete record front matter first, judges one record against the Definition of Ready for its declared Maturity, and emits a structured Agentic verdict under `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`.
 - Persistence maps every front-matter field to the configured coordination store's native features and reads every field back unchanged; a store limit never shapes the record, and the persistence skill instruction selects the client for the configured store.
