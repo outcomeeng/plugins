@@ -41,11 +41,17 @@ Step 5 of `src/plugins/spec-tree/skills/update-instruction-block/SKILL.md` verif
 
 `<examples>` covers stale-router regeneration, delegation adoption, and a recency tie. The one-file-missing seeding topology that Step 4 and Step 5 both name carries no worked example.
 
-**Resolution shape**: restructure Step 5's verification into one bullet per topology, mirroring the nested detection/recommendation/apply shape Step 3's five report kinds now carry, and add a further example showing a repository with only one root instruction file present, its seeded counterpart, and the resulting region wrap.
+**Resolution shape**: restructure Step 5's verification into one bullet per topology, mirroring the nested detection/recommendation/apply shape Step 3's five report kinds now carry, and add a further example showing a repository with only one root instruction file present, its seeded counterpart, and the resulting region wrap. The same pass declares `/commit-changes` as a composed-skill dependency before its mandatory use.
 
 **Why it is large**: the restructure rewords all six topology branches, not the clauses a delegation change appends, and the missing example is for a topology no delegation change touches. Step 3's five ambiguity bullets are no longer part of this entry: a change edited one of them, which exhausted their deferral, and all five were restructured in that changeset. Both are editorial passes over the whole skill body whose surface is the file's structure rather than any one behavior, and each invalidates the skill-authoring gate for the entire surface — best taken in one pass gated by `skill-auditor` rather than folded into an unrelated behavior change.
 
 **Evidence**: surfaced by `instructions:audit-skills` on the changeset that added delegating-root-file adoption, as `worth-improving` findings on an otherwise approved surface. The same audit's two other findings are resolved in that changeset: the three stop conditions carry explicit `GATE` labels, and the two success criteria that asked for a confirmation now name the diff that decides them.
+
+The typed skill audit also returned `f-004` against
+`src/plugins/spec-tree/skills/update-instruction-block/SKILL.md:66`: mandatory
+`/commit-changes` usage lacks an explicit composed-skill dependency declaration.
+The subject lies outside PR A's diff. Fixing it would widen PR A's skill surface
+and its audit exposure.
 
 ## Root instruction terminology decision
 
@@ -105,3 +111,31 @@ gate.
 **Evidence**: repeated `regenerate-instruction-blocks` hook output while
 committing Change #76, including commit
 `7ddd752f1cf44e22a51fe7beed45225c99e6a393`.
+
+## Pinned router prose is coupled to structural test evidence
+
+**Evidence.** Five `[test]` claims pin the Codex canonical-subagent-registry
+wording, missing-definition repair wording, checkout scope-split wording,
+operator-question mutation-privilege-revocation wording, and Codex
+Verifier-spawning-boundary wording. The drift-gate assertion describes a
+regression by "a surface that previously fit," introducing temporal wording into
+an atemporal spec. No assertion in `spx/21-spec-tree.enabler/spec-tree.md`
+declares an Operator questions exception for an orchestrating session with
+officers in flight, and the router carries no sentence admitting that exception.
+`spx/12-shipped-scripting.adr.md` establishes that agreement
+between a spec-declared value and its complying source uses audit evidence
+because every deterministic oracle repeats the declaration.
+`spx/15-spec-coverage.adr.md` establishes that tests over Markdown structure
+prove formatting rather than behavior. The removal-mutation test over router
+prose is part of the same gap because it uses the pinned-prose verification form
+under settlement.
+
+**Impact.** The five links and the removal-mutation test couple Passing to pinned
+wording and structure while providing no behavioral verdict for the claims they
+label; the drift-gate claim records history rather than permanent truth; and the
+instruction-block node leaves pinned router prose's verification form unstated.
+
+**Settlement condition.** The instruction-block node's decision names one
+verification form for pinned router prose, the drift-gate claim states its rule
+atemporally, and the removal-mutation test is settled under the same condition as
+the five prose-coupling assertions.
