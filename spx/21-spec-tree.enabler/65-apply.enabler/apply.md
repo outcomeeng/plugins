@@ -1,6 +1,6 @@
 # Apply
 
-PROVIDES the apply lifecycle — selecting the next executable observable slice, then driving each node in that slice through the per-node TDD flow — bounded by a whole-changeset review and a terminal merge-lifecycle gate
+PROVIDES the apply lifecycle — selecting the next executable observable slice, then driving each node in that slice through its composed Output-kind lanes — bounded by a whole-changeset review and a terminal merge-lifecycle gate
 SO THAT all implementation agents
 CAN turn an implementation plan into demonstrable value merged to the default branch, with each node conforming to its governing spec on the first pass
 
