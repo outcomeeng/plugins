@@ -201,3 +201,26 @@ Impact: the next wording edit can push the rendered payload over the ceiling and
 Successor: a Proposed Change filed after outcomeeng/changes#91 merges.
 
 Revisit and settlement condition: one conditional paragraph moved into the reference that owns its detail, the bare pointer spelled through `${CLAUDE_SKILL_DIR}`, the self-trigger clauses dropped, and one typed skill audit approving with headroom above 1,000 code points.
+
+## The refocus skill body carries skill-standards conformance debt
+
+**Evidence:** typed skill-auditor run `/root/audit_refocus_skill_round_1` reported the following findings against `src/plugins/spec-tree/skills/refocus/SKILL.md` while its amended activation description passed:
+
+- Warning f-004: the success criteria do not name an observable handoff or verification state.
+- Warning f-005: the success criteria repeat the requirement to stop further ad hoc commands.
+- Finding f-006: unrestricted `Bash` admits the uncontrolled operations the workflow is intended to stop.
+- Finding f-007: the ordered recovery procedure uses `<process>` instead of the canonical `<workflow>` section.
+- Finding f-008: deletion of undefined ad hoc scripts or debug code lacks deterministic ownership and target criteria.
+- Finding f-009: the skill requires `/apply` without declaring and authorizing that composition.
+
+**Impact:** the unchanged body and tool grant do not fully conform to the skill standards, leaving completion partly uncheckable, recovery structure noncanonical, deletion targets underspecified, shell authority broader than the workflow needs, and the required composed workflow unavailable through the declared contract.
+
+**Settlement condition:** a Change on the refocus skill body's conformance to the skill standards resolves all six findings and receives an approving typed skill-auditor verdict.
+
+## The refocus skill has no direct spec-tree coverage link
+
+**Evidence:** a governance search for `src/plugins/spec-tree/skills/refocus/SKILL.md` and `refocus` under `spx/` found no spec assertion or linked test that names the skill surface; its placement under the spec-tree plugin is the only ownership signal.
+
+**Impact:** the skill can change without invalidating node-specific evidence, and its governing node must be inferred from plugin ownership instead of derived from a declared audit assertion or linked verification path.
+
+**Settlement condition:** a spec assertion under the owning Spec Tree node names the refocus skill surface and routes its activation and workflow contract to current evidence.
