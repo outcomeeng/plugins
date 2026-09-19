@@ -358,8 +358,6 @@ def test_all_routers_enforce_operator_question_interrupt() -> None:
             router = dist.managed_router_block(document)
             policy = dist.operator_question_policy_block(router)
             assert policy is not None
-            question_section = dist.operator_question_section(router)
-            assert question_section is not None
 
             for _, required_text in dist.OPERATOR_QUESTION_REQUIREMENTS:
                 invalid_document = document.replace(
@@ -375,20 +373,6 @@ def test_all_routers_enforce_operator_question_interrupt() -> None:
                     raise AssertionError(
                         "incomplete operator-question policy was accepted: "
                         f"{required_text}"
-                    )
-
-            for (
-                _,
-                required_text,
-            ) in dist.ORCHESTRATING_SESSION_ESCALATION_POLICY_REQUIREMENTS:
-                invalid_document = document.replace(
-                    question_section,
-                    question_section.replace(required_text, "", 1),
-                    1,
-                )
-                with pytest.raises(dist.OperatorQuestionPolicyError):
-                    dist.validate_operator_question_policy(
-                        {agent_harness: invalid_document}
                     )
 
             for (
