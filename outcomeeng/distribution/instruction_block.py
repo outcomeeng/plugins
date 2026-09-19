@@ -429,6 +429,24 @@ OPERATOR_QUESTION_CONTRADICTIONS: Final = (
         "ALWAYS: stop any running process that is destructive or modifies files, external resources, or state",
     ),
 )
+OPERATOR_QUESTION_SECTION_HEADING: Final = "### Operator questions"
+ORCHESTRATING_SESSION_ESCALATION_POLICY_REQUIREMENTS: Final = (
+    (
+        "sole in-flight orchestration exception",
+        "orchestrating agent session with officers in flight as the sole exception",
+    ),
+    ("pane text escalation", "write its escalation as text in its own pane"),
+    ("structured-question exclusion", "never through the structured-question tool"),
+    ("operator assumed away", "Assume the operator is away"),
+    ("decision-local hold", "hold only the raised decision"),
+    (
+        "three autonomous decision classes",
+        "Decide autonomously exactly these three classes",
+    ),
+    ("two-pass choice", "at the two-pass ceiling"),
+    ("external-state phase hold", "hold a deploy or release blocked by external state"),
+    ("outside-Frame revert", "order reversion of an edit outside the Frame"),
+)
 CODEX_VERIFIER_DISPATCH_POLICY_ANCHOR: Final = (
     "**Already-dispatched Verifier boundary.**"
 )
@@ -1132,6 +1150,14 @@ def operator_question_policy_block(router: str) -> str | None:
     return router[start : end + len(OPERATOR_QUESTION_POLICY_CLOSE)]
 
 
+def operator_question_section(router: str) -> str | None:
+    """Return the human-facing Operator questions section from a router."""
+    try:
+        return _markdown_section(router, OPERATOR_QUESTION_SECTION_HEADING)
+    except FoundationAccessPolicyError:
+        return None
+
+
 def validate_operator_question_policy(
     blocks_by_harness: Mapping[str, str],
 ) -> None:
@@ -1160,6 +1186,21 @@ def validate_operator_question_policy(
             details = ", ".join(contradictions)
             raise OperatorQuestionPolicyError(
                 f"{harness} operator-question policy is contradictory: {details}"
+            )
+        question_section = operator_question_section(router)
+        if question_section is None:
+            raise OperatorQuestionPolicyError(
+                f"missing router section: {OPERATOR_QUESTION_SECTION_HEADING}"
+            )
+        missing_escalation = [
+            name
+            for name, required_text in ORCHESTRATING_SESSION_ESCALATION_POLICY_REQUIREMENTS
+            if not _operative_policy_line_contains(question_section, required_text)
+        ]
+        if missing_escalation:
+            details = ", ".join(missing_escalation)
+            raise OperatorQuestionPolicyError(
+                f"{harness} operator-question escalation policy is incomplete: {details}"
             )
 
 
@@ -1241,6 +1282,11 @@ OPERATIVE_POLICY_VALIDATIONS: Final = (
     OperativePolicyValidation(
         name="operator-question",
         requirements=OPERATOR_QUESTION_REQUIREMENTS,
+        validator=validate_operator_question_policy,
+    ),
+    OperativePolicyValidation(
+        name="orchestrating-session-escalation",
+        requirements=ORCHESTRATING_SESSION_ESCALATION_POLICY_REQUIREMENTS,
         validator=validate_operator_question_policy,
     ),
     OperativePolicyValidation(

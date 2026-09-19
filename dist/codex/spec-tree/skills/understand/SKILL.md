@@ -80,7 +80,7 @@ Read each sentence aloud; if it would sound wrong after the work ships, rewrite 
 
 - ALWAYS: keep one home per fact — structure carries relationships, and a checkable link carries what structure cannot.
 
-Two in-tree link shapes exist: a **node-local** relative path whose target lives inside the node and prunes with it (assertion links), and a **tree-absolute** path written literally from `spx/` (cross-subtree decision citations). A leading slash or a `../` climb fails validation; tooling derives every graph.
+`${SKILL_DIR}/references/grammar.md` carries link shapes and validation.
 
 </single_location>
 
@@ -88,7 +88,7 @@ Two in-tree link shapes exist: a **node-local** relative path whose target lives
 
 - ALWAYS: derive declaration state from specs, evidence, and implementation; never hand-maintain status.
 
-Writing a spec makes a declaration; linked evidence makes it verifiable. Pruning a node removes its verification artifacts and exposes implementation no surviving node reaches. These operations do not exist: closing or archiving a spec, moving it to done, assigning state by hand, marking complete, weakening a spec to match code, or closing an outcome record. Done is a structural event, never a state.
+`${SKILL_DIR}/references/status-claims.md` carries declaration lifecycle and excluded operations.
 
 </declarations>
 
@@ -124,7 +124,7 @@ Classify by the ordered procedure — product, variant, substrate, surface, inte
 
 - NEVER: give a `.product` an assertion, malleability, state, status claim, outcome record, or child enumeration.
 
-The operator judges a scope a product with three questions: does it need a surface or interface the tree lacks; does it run, ship, and transfer as a whole on its own; does it have its own backlog, checkout, and owner. A valid product spec is its front matter and title; a paragraph, product-local semantics, boundaries, and a Change-retention policy appear only where they change what a descendant does or how it is judged.
+`${SKILL_DIR}/references/product-domain-shapes.md` carries product-scope tests and optional prose.
 
 </product_scope>
 
@@ -132,7 +132,7 @@ The operator judges a scope a product with three questions: does it need a surfa
 
 - ALWAYS: separate a node into children on a countable trigger — two or more distinct concepts, present or foreseen, or too many assertions for one node.
 
-A parent states its class contract and names no child; the tree walk surfaces children. Behavior stays with the node that owns its meaning until two or more semantic owners share it or it has its own lifecycle and verification contract; then one provider is extracted. `/decompose` owns kind classification, placement, and index assignment.
+`${SKILL_DIR}/references/product-domain-shapes.md` carries split tests; `/decompose` owns classification, placement, and indexing.
 
 </decomposition>
 
@@ -172,7 +172,7 @@ NN-{slug}.{kind}/
 
 - ALWAYS: classify content by the artifact purpose that owns it.
 
-The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and the optional knowledge root. Operational files under `spx/local/`, and a passing-scope list a toolchain that has not adopted the status claim still reads, are configuration. The note raises no placement question. Placement decides only between the governing layer (ADR or PDR) and the declaring layer (spec). Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and verification reachability with the language's declared infrastructure home derives implementation locations.
+The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and the optional knowledge root. Operational files under `spx/local/` are configuration. The note raises no placement question. Placement decides only between the governing layer (ADR or PDR) and the declaring layer (spec). Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and verification reachability with the language's declared infrastructure home derives implementation locations.
 
 | Artifact            | Purpose                                            | Verified by                                  |
 | ------------------- | -------------------------------------------------- | -------------------------------------------- |
@@ -193,7 +193,7 @@ The taxonomy is closed: `spx/` admits no artifact outside this table, the canoni
 
 ADR versus PDR is decided by content: an ADR governs architecture the product's users cannot observe; a PDR governs behavior they can. A decision record is a file inside the node whose subtree it governs, at the position every later reader loads it from; a lower-index record constrains higher-index siblings and their descendants. When a decision's owner is unclear, decompose the structure first and author the record afterwards. Tree position determines reach, so broad reach never determines type, and a root record is one every subtree obeys.
 
-Test-infrastructure boundaries and the placements this taxonomy rules out are in `${SKILL_DIR}/references/artifact-placement.md`: files under `spx/<node>/tests/` hold typed assertion evidence only; harnesses, generators, and inert fixtures are governed production code in the language's declared infrastructure home, owned by the output node whose behavior they mediate, never a top-level infrastructure-testing subtree and never “test support,” “helpers,” “utilities,” or “tools”; a child `[test]` rule may concretize an ancestor `[audit]` rule, while same-content repetition with the same mechanism is duplication.
+`${SKILL_DIR}/references/artifact-placement.md` carries test-infrastructure boundaries and the placements this taxonomy rules out.
 
 </artifact_placement>
 
@@ -365,7 +365,7 @@ When Claude calls both the Author and the Fixer, they must use separate agent se
 
 - ALWAYS: record every observed imperfection immediately with its evidence, governing workflow, handling, and classification.
 
-The current-turn ledger takes every imperfection — failing validation, broken link, stale reference, dead code, missing evidence, misplaced file, wrong index, or anything else that is not right — with what exposed it, the workflow governing the fix, and the proposed handling. Apply clear, local, low-risk corrections immediately. Surface a blocking decision through the structured-question tool. Hold a non-blocking decision only until the next natural checkpoint.
+The current-turn ledger takes every imperfection — failing validation, broken link, stale reference, dead code, missing evidence, misplaced file, wrong index, or anything else that is not right — with what exposed it, the workflow governing the fix, and the proposed handling. Apply clear, local, low-risk corrections immediately. Surface a blocking decision through the structured-question tool, except under `<orchestrating_session_escalation>`. Hold a non-blocking decision only until the next natural checkpoint.
 
 </recording>
 
@@ -397,9 +397,17 @@ Command defaults are authority for cost-bearing and quota-bearing runs. When a d
 
 - ALWAYS: continue actionable in-scope work; close out only when no continuation remains or continuation is impossible.
 
-Apply the closing test: can the operator reasonably ask “What now?” A passing check, merge, clean worktree, or persisted note is a milestone, never permission to stop while do-able work remains. Dispose of the held Change only when the goal is met or continuation is impossible: `/close-change` when the Change reached its terminal Lifecycle, `/release-change` with a Handoff when continuation remains for another holder; a conversation holding no Change records remaining work as a Proposed Change through `/author-change`. When operator judgment is required, close with the structured-question tool rather than a prose offer.
+Apply the closing test: can the operator reasonably ask “What now?” A passing check, merge, clean worktree, or persisted note is a milestone, never permission to stop while do-able work remains. Dispose of the held Change only when the goal is met or continuation is impossible: `/close-change` when the Change reached its terminal Lifecycle, `/release-change` with a Handoff when continuation remains for another holder; a conversation holding no Change records remaining work as a Proposed Change through `/author-change`. When operator judgment is required, close with the structured-question tool except under `<orchestrating_session_escalation>`.
 
 </closing_protocol>
+
+<orchestrating_session_escalation>
+
+- ALWAYS: treat an orchestrating session with officers in flight as the sole structured-question exception.
+
+Write its escalation as text in its own pane, never through the structured-question tool, because a pending structured question suspends its supervision. Assume the operator is away, hold only the raised decision, continue every action loaded truth settles, and lead with evidence, consequence, options, and one recommendation. Every other session uses the structured-question tool.
+
+</orchestrating_session_escalation>
 
 <spec_tree_integration>
 
@@ -423,11 +431,10 @@ Continue through `/merge` unless the operator explicitly limited the request to 
 
 1. Load this complete inline foundation on every invocation. A marker in a compaction summary, Handoff, or prior-run statement does not count. After compaction, treat the marker as absent until this workflow emits it again.
 2. Check internal consistency across every foundation section and surface any contradiction immediately. No mandatory foundation reference read follows this step.
-3. Locate these operational references and list their paths without reading them until another skill needs them: `${SKILL_DIR}/references/kind-decision.md`, `${SKILL_DIR}/references/grammar.md`, `${SKILL_DIR}/references/artifact-placement.md`, `${SKILL_DIR}/references/status-claims.md`, `${SKILL_DIR}/references/product-domain-shapes.md`, and `spx/local/*.md`. Note discovery belongs to `/contextualize`, never to `/understand`.
-4. Read `spx/local/merging.md` when present. Changes destined for the default branch route through `/merge`; absence of the overlay applies the default lifecycle.
-5. Locate templates under `${SKILL_DIR}/templates/` — `product/product-name.spec.md`, `decisions/decision-name.{adr,pdr}.md`, `nodes/{substrate,capability,domain,interface,surface,variant}-name.spec.md`, `records/node-name.outcome.md`, `probes/probe.md` — and `${SKILL_DIR}/examples/*.md`. Record the resolved absolute template directory as `Template root` in the marker; consuming authoring and audit workflows read their required templates there.
-6. Read the complete root `AGENTS.md` from disk only when the live conversation does not already carry it complete; a harness that injects the whole file satisfies this step, and a truncated or absent injection requires the read. It routes skill invocation, names the repository's methodology declaration, and carries product commands.
-7. Emit the marker:
+3. Locate the operational references `${SKILL_DIR}/references/{kind-decision,grammar,artifact-placement,status-claims,product-domain-shapes}.md` and list them without reading. Enumerate `spx/local/*.md`; read `spx/local/merging.md` when present and list every other overlay without reading it. Changes destined for the default branch route through `/merge`; absence of the merging overlay applies the default lifecycle. Note discovery belongs to `/contextualize`, never to `/understand`.
+4. Locate templates under `${SKILL_DIR}/templates/` — `product/product-name.spec.md`, `decisions/decision-name.{adr,pdr}.md`, `nodes/{substrate,capability,domain,interface,surface,variant}-name.spec.md`, `records/node-name.outcome.md`, `probes/probe.md` — and `${SKILL_DIR}/examples/*.md`. Record the resolved absolute template directory as `Template root` in the marker; consuming authoring and audit workflows read their required templates there.
+5. Read the complete root `AGENTS.md` from disk only when the live conversation does not already carry it complete; a harness that injects the whole file satisfies this step, and a truncated or absent injection requires the read. It routes skill invocation, names the repository's methodology declaration, and carries product commands.
+6. Emit the marker:
 
 ```text
 <SPEC_TREE_FOUNDATION>

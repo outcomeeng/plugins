@@ -2,7 +2,7 @@
 
 Product shape comes from consumers, jobs, surfaces, actors, constraints, success signals, and top-level intent. Code organization can inform vocabulary, constraints, and open questions, but it does not define the spec-tree structure.
 
-This reference gives `/bootstrap` and `/decompose` the shared classifier and examples for separating aggregate product domains, first concrete behaviors, cases that contain one coherent concern, and code-shaped candidate areas, before the kind decision procedure in `kind-decision.md` fixes each concern's kind.
+This reference gives `/bootstrap` and `/decompose` the shared classifier and examples for separating aggregate product domains, first concrete behaviors, cases that contain one coherent concern, and code-shaped candidate areas, before the kind decision procedure in `${SKILL_DIR}/references/kind-decision.md` fixes each concern's kind.
 
 </overview>
 
@@ -20,6 +20,12 @@ Derive product shape from these dimensions:
 
 </product_dimensions>
 
+<product_scope>
+
+Judge a scope as a product only when it needs a surface or interface the tree lacks, runs and transfers as a whole, and has its own backlog, checkout, and owner. A valid product spec is its front matter and title. Add product-local semantics, boundaries, or a Change-retention policy only where the text changes descendant behavior or judgment.
+
+</product_scope>
+
 <shape_classifier>
 
 Classify the input before proposing children:
@@ -35,6 +41,8 @@ Classify the input before proposing children:
 When the aggregate and first concrete behavior are both present, create both levels from the first slice. Put shared vocabulary, rules, invariants, and cross-child assertions on the parent. Put behavior-specific assertions on the child. Known later siblings and a reserved horizon belong to the Change that refines them, never to a node note.
 
 When the input is one coherent concern, keep it whole. Splitting creates noise when each proposed child would carry only trivial assertions or every child needs the others to be meaningful.
+
+A parent states its class contract and names no child; the tree walk surfaces children. Behavior stays with the node that owns its meaning until two or more semantic owners share it or the behavior gains its own lifecycle and verification contract; then extract one provider.
 
 </shape_classifier>
 

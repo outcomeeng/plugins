@@ -39,6 +39,8 @@ Every entry carries `passed`, `failed`, or `not-run`. A `passed` or `failed` ent
 
 <state_derivation>
 
+Writing a spec makes a declaration; linked evidence makes it verifiable. Pruning a node removes its verification artifacts and exposes implementation no surviving node reaches. Closing or archiving a spec, moving it to done, assigning state by hand, marking complete, weakening a spec to match code, and closing an outcome record are absent from the model. Done is a structural event, never a state.
+
 | State     | Condition                                                                                                       |
 | --------- | --------------------------------------------------------------------------------------------------------------- |
 | Declared  | The spec exists, and verification artifacts required by its malleability are missing                            |

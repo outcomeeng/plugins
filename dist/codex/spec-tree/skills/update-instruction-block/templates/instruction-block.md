@@ -225,6 +225,7 @@ Raise an operator question through request_user_input, never as prose the operat
 
 - **ALWAYS** finish every action that does not depend on the answer first, so the question is the only thing outstanding when it is asked.
 - **NEVER** raise one to confirm work already authorized, to report progress, or to choose an option the loaded truth already decides.
+- **ALWAYS** treat an orchestrating agent session with officers in flight as the sole exception: write its escalation as text in its own pane, never through the structured-question tool, because a pending structured question suspends supervision. Assume the operator is away, hold only the raised decision, keep every officer moving on what loaded truth settles, and lead with evidence, consequence, options, and one recommendation. Decide autonomously exactly these three classes: at the two-pass ceiling, track the branch and findings while resuming the next Activity or stop; hold a deploy or release blocked by external state; and order reversion of an edit outside the Frame. A third Verifier pass, a raised expense ceiling, a Frame change, and a product-intent conflict wait for the operator's word without exception.
 
 ## Mutation Status Updates
 
