@@ -173,9 +173,10 @@ that found a coverage gap, so the gate consumed a giving-up as a verdict.
 
 How to avoid: A required unit reaches only `audited`, `not-applicable`,
 `missing-skill`, or `unsupported`. When none is reachable, return the
-`<verdict_format>` blocked diagnostic naming the concrete failed operation or
-absent prerequisite. Remaining work, elapsed time, context pressure, and
-unfinished reading are never that cause.
+`<verdict_format>` blocked diagnostic naming the failed command with one of the
+three command-evidence shapes, or the absent prerequisite that failed command
+established. Remaining work, elapsed time, context pressure, and unfinished
+reading are never that cause.
 
 </unblocked_stop>
 
@@ -192,7 +193,10 @@ files were present and readable; only the single oversized call failed.
 
 How to avoid: Read subject bodies one at a time, and re-issue a truncated or
 partial read in bounded ranges until the body is complete. An unrecovered read
-is never coverage evidence.
+is never coverage evidence. A diagnostic naming the run driver's own partial,
+truncated, or incomplete read as the failed operation is malformed: it carries
+none of the three command-evidence shapes and every dispatcher discards it as
+an unusable result.
 
 </unrecovered_truncation>
 
