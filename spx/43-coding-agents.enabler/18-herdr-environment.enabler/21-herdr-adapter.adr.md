@@ -15,6 +15,7 @@ One capability keeps herdr command knowledge testable and portable while preserv
 - A read's public response is terminal text, carried verbatim under the result's output field; every other public response is herdr's JSON envelope, carried as the result's response object.
 - A start, relaunch, wait, or prompt result carries the one hosted agent session it acted on, projected onto the same complete source-preserved fields as an inventory item.
 - Every command execution is bounded, argument-vector based, fully reaped before return, and isolated from the adapter request stream.
+- Captured usage and public-response fixtures identify `herdr` 0.9.1 as their source-tool version pin. A change to that pin, or a live probe that reports grammar or response drift, invalidates the affected fixtures and requires recapture before they serve as oracles.
 - Start, relaunch, stop, key, and open-worktree cannot construct an argument vector unless the request carries explicit mutation authorization.
 - The environment surface carries the launch prompt, prompts, and keystrokes only; no operation produces a pane-borne handback block.
 

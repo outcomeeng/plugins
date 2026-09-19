@@ -13,6 +13,7 @@ One capability keeps store command knowledge and the record mapping testable and
 - One record mapping is a bijection between a message record and the store fields the adapter writes: `correlation` to the thread id, `kind` to the subject prefix, `sender` to the sender, `recipient` to the recipients, `subject` to the subject remainder, `body` to the body, `ackRequired` to the acknowledgement requirement, and the store-assigned `id` to the record id.
 - Every command execution is bounded, argument-vector based, fully reaped before return, and isolated from the adapter request stream.
 - Store identities — message ids, thread ids, agent names, timestamps — remain byte-for-byte values from the public response.
+- Captured usage and public-response fixtures identify their source-tool version pins: `am` 0.3.24 for store grammar and responses, and `@outcomeeng/spx` 0.7.1 for the diagnosis response. A change to either pin, or a live probe that reports grammar or response drift, invalidates the affected fixtures and requires recapture before they serve as oracles.
 - A registration result never carries the store's registration token.
 - An absent `am` executable yields the store-unavailable result; an absent `spx` executable, a diagnosis without one `worktree-pool` record, or a record without a main checkout path yields the diagnosis-unavailable result. Neither result triggers a fallback.
 
