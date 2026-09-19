@@ -358,6 +358,8 @@ def test_all_routers_enforce_operator_question_interrupt() -> None:
             router = dist.managed_router_block(document)
             policy = dist.operator_question_policy_block(router)
             assert policy is not None
+            question_section = dist.operator_question_section(router)
+            assert question_section is not None
 
             for _, required_text in dist.OPERATOR_QUESTION_REQUIREMENTS:
                 invalid_document = document.replace(
@@ -396,6 +398,36 @@ def test_all_routers_enforce_operator_question_interrupt() -> None:
                         "contradictory operator-question policy was accepted: "
                         f"{contradiction_name}"
                     )
+
+            for (
+                _,
+                required_text,
+            ) in dist.ORCHESTRATING_SESSION_ESCALATION_POLICY_REQUIREMENTS:
+                invalid_document = document.replace(
+                    question_section,
+                    question_section.replace(required_text, "", 1),
+                    1,
+                )
+                with pytest.raises(dist.OperatorQuestionPolicyError):
+                    dist.validate_operator_question_policy(
+                        {agent_harness: invalid_document}
+                    )
+
+
+def test_operator_question_heading_is_required() -> None:
+    """Reject a router whose human-facing question section loses its heading."""
+    documents = evidence.rendered_instruction_blocks()
+    invalid_documents = {
+        agent_harness: document.replace(
+            dist.OPERATOR_QUESTION_SECTION_HEADING,
+            "",
+            1,
+        )
+        for agent_harness, document in documents.items()
+    }
+
+    with pytest.raises(dist.OperatorQuestionPolicyError):
+        dist.validate_operator_question_policy(invalid_documents)
 
 
 def test_codex_router_bounds_dispatched_verifiers() -> None:

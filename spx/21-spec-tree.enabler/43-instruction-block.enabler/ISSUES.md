@@ -125,6 +125,7 @@ with `[audit]`; the instruction-block node itself carries no assertion for that
 router sentence. `spx/12-shipped-scripting.adr.md` establishes that agreement
 between a spec-declared value and its complying source uses audit evidence
 because every deterministic oracle repeats the declaration.
+The assertion at `spx/21-spec-tree.enabler/spec-tree.md:60` correctly retains `[audit]` under `spx/12-shipped-scripting.adr.md`: the router sentence is a value the spec tree declares and a source complies with, so agreement is audit evidence; the tuple check is a build guard, not evidence of the claim.
 `spx/15-spec-coverage.adr.md` establishes that tests over Markdown structure
 prove formatting rather than behavior. The removal-mutation test over router
 prose is part of the same gap because it uses the pinned-prose verification form
