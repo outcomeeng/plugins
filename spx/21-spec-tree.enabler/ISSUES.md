@@ -208,6 +208,7 @@ Revisit and settlement condition: one conditional paragraph moved into the refer
 
 - Warning f-004: the success criteria do not name an observable handoff or verification state.
 - Warning f-005: the success criteria repeat the requirement to stop further ad hoc commands.
+- Round 2 warning f-003: the phrase “a monumental waste of effort” is motivational prose without an operational condition or verification signal.
 - Finding f-006: unrestricted `Bash` admits the uncontrolled operations the workflow is intended to stop.
 - Finding f-007: the ordered recovery procedure uses `<process>` instead of the canonical `<workflow>` section.
 - Finding f-008: deletion of undefined ad hoc scripts or debug code lacks deterministic ownership and target criteria.
