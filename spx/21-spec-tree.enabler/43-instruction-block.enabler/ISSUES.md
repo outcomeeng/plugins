@@ -119,13 +119,12 @@ wording, missing-definition repair wording, checkout scope-split wording,
 operator-question mutation-privilege-revocation wording, and Codex
 Verifier-spawning-boundary wording. The drift-gate assertion describes a
 regression by "a surface that previously fit," introducing temporal wording into
-an atemporal spec. The Operator questions exception for an orchestrating session
-with officers in flight is declared at `spx/21-spec-tree.enabler/spec-tree.md`
-with `[audit]`; the instruction-block node itself carries no assertion for that
-router sentence. `spx/12-shipped-scripting.adr.md` establishes that agreement
+an atemporal spec. No assertion in `spx/21-spec-tree.enabler/spec-tree.md`
+declares an Operator questions exception for an orchestrating session with
+officers in flight, and the router carries no sentence admitting that exception.
+`spx/12-shipped-scripting.adr.md` establishes that agreement
 between a spec-declared value and its complying source uses audit evidence
 because every deterministic oracle repeats the declaration.
-The assertion at `spx/21-spec-tree.enabler/spec-tree.md:60` correctly retains `[audit]` under `spx/12-shipped-scripting.adr.md`: the router sentence is a value the spec tree declares and a source complies with, so agreement is audit evidence; the tuple check is a build guard, not evidence of the claim.
 `spx/15-spec-coverage.adr.md` establishes that tests over Markdown structure
 prove formatting rather than behavior. The removal-mutation test over router
 prose is part of the same gap because it uses the pinned-prose verification form
@@ -134,9 +133,9 @@ under settlement.
 **Impact.** The five links and the removal-mutation test couple Passing to pinned
 wording and structure while providing no behavioral verdict for the claims they
 label; the drift-gate claim records history rather than permanent truth; and the
-instruction-block node leaves the router sentence's verification form unstated.
+instruction-block node leaves pinned router prose's verification form unstated.
 
 **Settlement condition.** The instruction-block node's decision names one
 verification form for pinned router prose, the drift-gate claim states its rule
-atemporally, and the router sentence carrying the Operator questions exception
-is settled under the same condition as the five prose-coupling assertions.
+atemporally, and the removal-mutation test is settled under the same condition as
+the five prose-coupling assertions.
