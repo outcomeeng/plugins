@@ -59,12 +59,12 @@ Use that language for every language-specific step in the code row. Do not switc
 
 <scope_detection>
 
-Before starting the selected authoring lanes, determine the change's scope — this determination governs every later gate:
+Before starting the selected authoring lanes, determine the change's scope — this determination governs each selected gate's subject, never which gates run:
 
 - **Node-local** — the entire diff stays within the target node's own directory (its spec, its `tests/`, and the implementation files that node governs).
 - **Cross-node** — the work touches anything else: a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node.
 
-When the scope is cross-node, every selected audit runs at **whole-changeset** scope rather than only the target node. A per-node audit reads only the target node's files and cannot see a regression introduced in a file the node does not own. Carry the determination into every selected gate; Step 9 owns its own applicability condition.
+Select gates only from the least malleable touched node under `<evidence_auditor_gate>`. When the scope is cross-node, widen each selected gate to the complete governed subject set: every affected decision for Step 4, every affected evidence node and type for Steps 6 and 8a, and the whole changeset for Step 8. A per-node audit reads only one node's files and cannot see a regression introduced in another governed surface. Step 9 always reviews the full committed changeset when malleability selects it, whether the scope is node-local or cross-node.
 
 </scope_detection>
 
@@ -223,7 +223,7 @@ When the least malleable touched node is `implementation`, dispatch the auditor 
 - For eval evidence, dispatch `{{! subagent_name('spec-tree', 'eval-evidence-auditor') !}}` with only the canonical governing node path. The invoked audit discovers its `[eval]` assertions, eval artifacts, and real producers. Require the audit-eval-evidence JSON verdict.
 - A pathless audit requirement creates no authoring artifact for Step 6. Its isolated verifier remains the workflow that produces the eventual audit verdict.
 
-When the scope is cross-node (see `<scope_detection>`), enumerate every governed node whose current linked test or eval evidence the change creates, modifies, or invalidates. Dispatch only each canonical node path, once per governed node and evidence type, in parallel when independent. Step 6 passes only when every applicable dispatched audit approves. A singular-node audit receives one node path; Step 8a covers the final changed evidence set and Step 9 reviews the whole changeset.
+When the scope is cross-node (see `<scope_detection>`), enumerate every governed node whose current linked test or eval evidence the change creates, modifies, or invalidates. Dispatch only each canonical node path, once per governed node and evidence type, in parallel when independent. Step 6 passes only when every applicable dispatched audit approves. A singular-node audit receives one node path; Step 8a covers the final changed evidence set, and Step 9 reviews the whole changeset when malleability selects it.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its verdict forward under `<result_carryover>`.
 
@@ -259,7 +259,7 @@ An absent or malformed result follows `<launch_contract>`. A simplification resu
 
 When the least malleable touched node is `implementation` and the code row is selected, dispatch `{{! subagent_name('spec-tree', 'implementation-auditor') !}}` with only the committed scope selector: `HEAD` for the current branch, or an explicit three-dot range for a selected base. The invoked skill discovers the repository, governing nodes, verification context, and language partitions; the wrapper supplies its own run-driver identity internally. Otherwise skip Step 8.
 
-When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — Step 4 audits the committed scope while Step 6 fans out across every affected governed evidence node and type. Those audit lenses remain necessary but insufficient, so the distinct whole-diff review in Step 9 stays required for cross-cutting effects no single audit lens catches.
+When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — Step 4 audits every affected decision while Step 6 fans out across every affected governed evidence node and type. Those audit lenses remain necessary but insufficient when malleability also selects Step 9, whose distinct whole-diff review catches cross-cutting effects no single audit lens catches.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its verdict forward under `<result_carryover>`.
 
