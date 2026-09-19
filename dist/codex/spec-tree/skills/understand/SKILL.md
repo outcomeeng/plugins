@@ -124,7 +124,7 @@ Classify by the ordered procedure — product, variant, substrate, surface, inte
 
 - NEVER: give a `.product` an assertion, malleability, state, status claim, outcome record, or child enumeration.
 
-`${SKILL_DIR}/references/product-domain-shapes.md` carries product-scope tests and optional prose.
+The operator judges a scope a product with three questions: does it need a surface or interface the tree lacks; does it run, ship, and transfer as a whole on its own; does it have its own backlog, checkout, and owner. A valid product spec is its front matter and title; a paragraph, product-local semantics, boundaries, and a Change-retention policy appear only where they change what a descendant does or how it is judged.
 
 </product_scope>
 
@@ -132,7 +132,7 @@ Classify by the ordered procedure — product, variant, substrate, surface, inte
 
 - ALWAYS: separate a node into children on a countable trigger — two or more distinct concepts, present or foreseen, or too many assertions for one node.
 
-`${SKILL_DIR}/references/product-domain-shapes.md` carries split tests; `/decompose` owns classification, placement, and indexing.
+A parent states its class contract and names no child; the tree walk surfaces children. Behavior stays with the node that owns its meaning until two or more semantic owners share it or it has its own lifecycle and verification contract; then one provider is extracted. `/decompose` owns kind classification, placement, and index assignment.
 
 </decomposition>
 
@@ -142,15 +142,15 @@ Classify by the ordered procedure — product, variant, substrate, surface, inte
 
 ```text
 NN-{slug}.{kind}/
-├── {slug}.spec.md                      # front matter: id; malleability on output nodes
-├── spx.status.json                     # machine-written status claim; every output node
-├── NN-{decision}.{adr|pdr}.md          # decision records share the sibling index space
-├── {slug}.outcome.md                   # optional outcome record; never on a product or variant
-├── ISSUES.md                           # the only node-local note
-├── knowledge/                          # optional OKF bundle: index.md and log.md required
-├── tests/                              # [test] files in the project's naming convention
-├── evals/{rule-slug}/eval.toml         # [eval] rules; cases, prompt, history beside it
-├── probes/{probe-slug}/probe.md        # [probe] protocols with the attested run's artifacts
+├── {slug}.spec.md
+├── spx.status.json
+├── NN-{decision}.{adr|pdr}.md
+├── {slug}.outcome.md
+├── ISSUES.md
+├── knowledge/
+├── tests/
+├── evals/{rule-slug}/eval.toml
+├── probes/{probe-slug}/probe.md
 └── NN-{child-slug}.{kind}/
 ```
 
@@ -193,7 +193,7 @@ The taxonomy is closed: `spx/` admits no artifact outside this table, the canoni
 
 ADR versus PDR is decided by content: an ADR governs architecture the product's users cannot observe; a PDR governs behavior they can. A decision record is a file inside the node whose subtree it governs, at the position every later reader loads it from; a lower-index record constrains higher-index siblings and their descendants. When a decision's owner is unclear, decompose the structure first and author the record afterwards. Tree position determines reach, so broad reach never determines type, and a root record is one every subtree obeys.
 
-`${SKILL_DIR}/references/artifact-placement.md` carries test-infrastructure boundaries and the placements this taxonomy rules out.
+Test-infrastructure boundaries and the placements this taxonomy rules out are in `${SKILL_DIR}/references/artifact-placement.md`: files under `spx/<node>/tests/` hold typed assertion evidence only; harnesses, generators, and inert fixtures are governed production code in the language's declared infrastructure home, owned by the output node whose behavior they mediate, never a top-level infrastructure-testing subtree and never “test support,” “helpers,” “utilities,” or “tools”; a child `[test]` rule may concretize an ancestor `[audit]` rule, while same-content repetition with the same mechanism is duplication.
 
 </artifact_placement>
 
@@ -405,7 +405,7 @@ Apply the closing test: can the operator reasonably ask “What now?” A passin
 
 - ALWAYS: treat an orchestrating session with officers in flight as the sole structured-question exception.
 
-Write its escalation as text in its own pane, never through the structured-question tool, because a pending structured question suspends its supervision. Assume the operator is away, hold only the raised decision, continue every action loaded truth settles, and lead with evidence, consequence, options, and one recommendation. Every other session uses the structured-question tool.
+Write its escalation as text in its own pane and never through the structured-question tool, because a pending structured question suspends supervision; hold only the decision and keep every officer moving on what loaded truth settles.
 
 </orchestrating_session_escalation>
 
