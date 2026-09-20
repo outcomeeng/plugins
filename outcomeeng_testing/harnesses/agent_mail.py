@@ -62,8 +62,8 @@ FIXTURE_ROOT = ROOT / "outcomeeng_testing/fixtures/agent_mail"
 USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
 # Captured `am` responses for each operation's public command, and the
 # captured `spx diagnose --format json` response the adapter reads the project
-# key from (taken with `@outcomeeng/spx` 0.7.1; the floor is 0.7.0, whose
-# `worktree-pool` record carries the same readings).
+# key from (taken with `@outcomeeng/spx` 0.7.1; the `worktree-pool` record
+# introduced in 0.7.0 carries the same readings).
 RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
 DIAGNOSIS_FIXTURE = RESPONSE_FIXTURE_ROOT / "spx-diagnose.json"
 RAW_MAIL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_command.py.txt"

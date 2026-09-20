@@ -41,7 +41,11 @@ from typing import Final
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
-# above it. spx 0.7.0 is the release whose `spx diagnose --format json`
+# above it. spx 0.7.2 is the first release whose project-configuration
+# methodology version accepts the `MAJOR.MINOR` form; the shipped `/diagnose`
+# skill invokes the CLI in consumer repositories whose declaration can be
+# `4.0`, so that parser behavior is part of the floor's contract. spx 0.7.0 is
+# the release whose `spx diagnose --format json`
 # `worktree-pool` record carries `mainCheckoutPath`; the agent-mail capability
 # the coding-agents plugin's agent-mail node specifies maps the mail project key
 # from that path, so the record's shape is part of the floor's contract.
@@ -91,7 +95,7 @@ VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
     "finish",
     "render",
 )
-REQUIRED_SPX_VERSION: Final = "0.7.0"
+REQUIRED_SPX_VERSION: Final = "0.7.2"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"
