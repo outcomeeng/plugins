@@ -68,13 +68,14 @@ released.
 An ordinary run does not force the conditions required to settle these
 assertions, which remain Declared:
 
-- assertion 8: a second rejected round and attempted third pass
-- assertion 9: every guarded, unexpected, stalled, and Verifier-time prompt
-  condition
-- assertion 12: every exceptional lifecycle and direct operator-interaction
-  condition
-- assertion 13: all three autonomous decisions, all four operator-held
-  decisions, and every term of the judgment step
+- "NEVER: a third round": a second rejected round and attempted third pass
+- "ALWAYS: the operator's invocation": every guarded, unexpected, stalled, and
+  Verifier-time prompt condition
+- "ALWAYS: lifecycle operations leave": every exceptional lifecycle and direct
+  operator-interaction condition
+- "ALWAYS: the orchestrating session assumes": all three autonomous decisions
+  and all four operator-held decisions
+- "ALWAYS: before endorsing": every term of the judgment step
 
 No probe pin exists yet. A future run must retain, at minimum, the mail-thread
 export, inventories before launch and after stop, the pane transcript, sealed

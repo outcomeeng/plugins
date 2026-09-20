@@ -102,9 +102,6 @@ the operator out of the officer's pane. After either Change operation succeeds,
 it stops the officer and relaunches the same agent kind in the same pane before
 the next order.
 
-Run exactly three officers across the operator's orchestrating sessions. Build
-an artifact that targets one agent through an officer running that agent.
-
 ## Known environment and mail facts
 
 - The adapter inbox can return zero records while the raw store inbox still
