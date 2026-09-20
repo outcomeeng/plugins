@@ -102,6 +102,66 @@ def test_entrypoint_preserves_decision_reasoning_and_operator_contact_failures()
     assert ledger[source.FAILURES_FIELD] == [{"value": failure, "source": provenance}]
 
 
+def test_entrypoint_preserves_journal_projection_and_run_token_provenance() -> None:
+    """A non-empty journal run rebuilds every journal-backed ledger field."""
+    source = load_ledger_module()
+    run_token = "2026-09-20_23-11-09-511-7ba897d4fc70"
+    journal_run = {
+        source.RUN_TOKEN_FIELD: run_token,
+        source.PASS_FIELD: {"round": 2},
+        source.HEAD_FIELD: "f6242c349a164559882a636f94a179eb753ef2cb",
+        source.VERDICT_FIELD: {"status": "approved"},
+        source.DECISION_FIELD: {"choice": "resume-next-activity"},
+        source.FAILURE_FIELD: {"kind": "operator-interaction"},
+        source.FINDING_PROVENANCE_FIELD: [{"finding": "review-debt-1"}],
+        source.READ_FIELD: {source.CAUSE_FIELD: "message", "id": 1070},
+        source.SPEND_FIELD: {
+            source.CURRENCY_FIELD: "USD",
+            source.AMOUNT_FIELD: "1.25",
+        },
+        source.WALL_TIME_SECONDS_FIELD: "3.5",
+    }
+    observation = run_ledger(
+        [source.DERIVE_OPERATION],
+        {
+            source.SCHEMA_VERSION_FIELD: source.SCHEMA_VERSION,
+            source.CHANGE_FIELD: "owner/changes#123",
+            source.MAIL_RECORDS_FIELD: [],
+            source.JOURNAL_RUNS_FIELD: [journal_run],
+        },
+    )
+    ledger = cast(dict[str, object], observation.result[source.LEDGER_FIELD])
+    provenance = {"kind": "journal", "id": run_token}
+
+    assert observation.exit_code == source.SUCCESS_EXIT_CODE
+    assert ledger[source.PASSES_FIELD] == [
+        {"value": journal_run[source.PASS_FIELD], "source": provenance}
+    ]
+    assert ledger[source.HEADS_FIELD] == [
+        {"value": journal_run[source.HEAD_FIELD], "source": provenance}
+    ]
+    assert ledger[source.VERDICTS_FIELD] == [
+        {"value": journal_run[source.VERDICT_FIELD], "source": provenance}
+    ]
+    assert ledger[source.DECISIONS_FIELD] == [
+        {"value": journal_run[source.DECISION_FIELD], "source": provenance}
+    ]
+    assert ledger[source.FAILURES_FIELD] == [
+        {"value": journal_run[source.FAILURE_FIELD], "source": provenance}
+    ]
+    assert ledger[source.FINDING_PROVENANCE_FIELD] == [
+        {
+            "value": journal_run[source.FINDING_PROVENANCE_FIELD][0],
+            "source": provenance,
+        }
+    ]
+    assert ledger[source.READS_FIELD] == [
+        {"value": journal_run[source.READ_FIELD], "source": provenance}
+    ]
+    assert ledger[source.RUNNING_SPEND_FIELD] == {"USD": 1.25}
+    assert ledger[source.WALL_TIME_SECONDS_FIELD] == 3.5
+
+
 def test_entrypoint_rejects_schema_version_two() -> None:
     """The shipped entry point rejects the declared unsupported schema case."""
     source = load_ledger_module()
