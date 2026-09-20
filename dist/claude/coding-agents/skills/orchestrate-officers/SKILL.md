@@ -194,7 +194,7 @@ session it contains. Relaunch the selected agent in a proven pane before the
 next order.
 
 **Claude treated an empty adapter inbox as an empty store.** The adapter can
-return zero rows while the store contains records. Use only the Captain's
+return zero rows while the store contains records. Use only the orchestrating session's
 explicit read-only store instruction for that project until the recorded
 adapter defect is repaired; never derive a raw store command.
 
