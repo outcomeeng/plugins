@@ -14,7 +14,9 @@ An unfilled field refuses the order.
 - Worktree proof: `<checked free-pool or occupancy result>`
 - Branch: `<complete branch ref>`
 - Frozen HEAD: `<full commit SHA>`
-- Verifier changeset selector: `origin/main...HEAD`
+- Verifier changeset selector: `origin/<base>...HEAD`
+
+`<base>` is the repository's resolved default branch.
 
 Each worktree pool has its own mail project. Registration in another pool does
 not establish an identity here. Descriptive agent names can be rejected by the
