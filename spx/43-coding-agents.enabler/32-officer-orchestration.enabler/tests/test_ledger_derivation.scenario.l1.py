@@ -3,45 +3,95 @@
 from typing import cast
 
 from outcomeeng_testing.harnesses.officer_orchestration import (
+    load_ledger_module,
     run_ledger,
 )
 
 
 def test_entrypoint_returns_the_minimum_versioned_ledger() -> None:
     """The shipped entry point is executable and pins its minimum result shape."""
+    source = load_ledger_module()
     observation = run_ledger(
-        ["derive"],
+        [source.DERIVE_OPERATION],
         {
-            "schemaVersion": 1,
-            "change": "owner/changes#123",
-            "mailRecords": [],
-            "journalRuns": [],
+            source.SCHEMA_VERSION_FIELD: source.SCHEMA_VERSION,
+            source.CHANGE_FIELD: "owner/changes#123",
+            source.MAIL_RECORDS_FIELD: [],
+            source.JOURNAL_RUNS_FIELD: [],
         },
     )
     result = observation.result
-    ledger = cast(dict[str, object], result["ledger"])
+    ledger = cast(dict[str, object], result[source.LEDGER_FIELD])
 
     assert observation.parameters == ("argv", "stdin", "stdout", "stderr")
-    assert observation.exit_code == 0
+    assert observation.exit_code == source.SUCCESS_EXIT_CODE
     assert observation.stderr == ""
-    assert set(result) == {"ledger", "schemaVersion", "status"}
-    assert result["schemaVersion"] == 1
-    assert result["status"] == "succeeded"
-    assert set(ledger) == {
-        "change",
-        "findingProvenance",
-        "heads",
-        "passes",
-        "reads",
-        "runningSpend",
-        "verdicts",
-        "wallTimeSeconds",
+    assert set(result) == {
+        source.LEDGER_FIELD,
+        source.SCHEMA_VERSION_FIELD,
+        source.STATUS_FIELD,
     }
-    assert ledger["change"] == "owner/changes#123"
-    assert ledger["passes"] == []
-    assert ledger["heads"] == []
-    assert ledger["verdicts"] == []
-    assert ledger["findingProvenance"] == []
-    assert ledger["reads"] == []
-    assert ledger["runningSpend"] == {}
-    assert ledger["wallTimeSeconds"] == 0
+    assert result[source.SCHEMA_VERSION_FIELD] == source.SCHEMA_VERSION
+    assert result[source.STATUS_FIELD] == source.SUCCEEDED_STATUS
+    assert set(ledger) == {
+        source.CHANGE_FIELD,
+        source.FINDING_PROVENANCE_FIELD,
+        source.HEADS_FIELD,
+        source.PASSES_FIELD,
+        source.READS_FIELD,
+        source.RUNNING_SPEND_FIELD,
+        source.VERDICTS_FIELD,
+        source.WALL_TIME_SECONDS_FIELD,
+    }
+    assert ledger[source.CHANGE_FIELD] == "owner/changes#123"
+    assert ledger[source.PASSES_FIELD] == []
+    assert ledger[source.HEADS_FIELD] == []
+    assert ledger[source.VERDICTS_FIELD] == []
+    assert ledger[source.FINDING_PROVENANCE_FIELD] == []
+    assert ledger[source.READS_FIELD] == []
+    assert ledger[source.RUNNING_SPEND_FIELD] == {}
+    assert ledger[source.WALL_TIME_SECONDS_FIELD] == 0
+
+
+def test_entrypoint_rejects_schema_version_two() -> None:
+    """The shipped entry point rejects the declared unsupported schema case."""
+    source = load_ledger_module()
+    observation = run_ledger(
+        [source.DERIVE_OPERATION],
+        {
+            source.SCHEMA_VERSION_FIELD: source.SCHEMA_VERSION + 1,
+            source.CHANGE_FIELD: "owner/changes#123",
+            source.MAIL_RECORDS_FIELD: [],
+            source.JOURNAL_RUNS_FIELD: [],
+        },
+    )
+    detail = cast(str, observation.result[source.DETAIL_FIELD])
+
+    assert observation.exit_code == source.INVALID_INPUT_EXIT_CODE
+    assert observation.stderr == ""
+    assert set(observation.result) == {
+        source.DETAIL_FIELD,
+        source.SCHEMA_VERSION_FIELD,
+        source.STATUS_FIELD,
+    }
+    assert observation.result[source.SCHEMA_VERSION_FIELD] == source.SCHEMA_VERSION
+    assert observation.result[source.STATUS_FIELD] == source.INVALID_INPUT_STATUS
+    assert source.SCHEMA_VERSION_FIELD in detail
+    assert str(source.SCHEMA_VERSION) in detail
+
+
+def test_entrypoint_rejects_malformed_json() -> None:
+    """The shipped entry point converts malformed stdin into a stable result."""
+    source = load_ledger_module()
+    observation = run_ledger([source.DERIVE_OPERATION], "{")
+
+    assert observation.exit_code == source.INVALID_INPUT_EXIT_CODE
+    assert observation.stderr == ""
+    assert set(observation.result) == {
+        source.DETAIL_FIELD,
+        source.SCHEMA_VERSION_FIELD,
+        source.STATUS_FIELD,
+    }
+    assert observation.result[source.SCHEMA_VERSION_FIELD] == source.SCHEMA_VERSION
+    assert observation.result[source.STATUS_FIELD] == source.INVALID_INPUT_STATUS
+    assert cast(str, observation.result[source.DETAIL_FIELD])
