@@ -16,21 +16,25 @@ Use skill `coding-agents:operate-herdr`.
 
 Use skill `coding-agents:operate-agent-mail`.
 
+Use skill `spec-tree:project-run-journal`.
+
 <essential_principles>
 
-Use only these two operational capabilities:
+Use only these capabilities:
 
 - `coding-agents:operate-herdr` for inventory, read, bounded wait, prompt,
   start, relaunch, stop, and other pane operations it owns
 - `coding-agents:operate-agent-mail` for registration, message records, inbox
   reads, and receipts
+- `spec-tree:project-run-journal` for read-only inspection of each sealed
+  verification run whose complete identity a durable mail record supplies
 
 Pass semantic requests to those skills and preserve their complete results.
 Neither infer nor reproduce their underlying command grammar. This skill has no
 daemon, watcher, or polling loop. Carry out exactly one routed operation per
 invocation, then return to the event boundary.
 
-For either capability, accept proof only from a result carrying
+For either coding-agents capability, accept proof only from a result carrying
 `schemaVersion: 1`, `status: "succeeded"`, and `commandExitCode: 0`. An
 agent-mail result additionally carries a non-empty `projectKey`, `response`,
 and `data`; a delivered record carries its integer store-assigned `id`. A herdr
@@ -143,6 +147,19 @@ Accept only `schemaVersion: 1` with `status: "succeeded"`. The ledger carries
 exactly `change`, `passes`, `heads`, `verdicts`, `decisions`, `failures`,
 `findingProvenance`, `reads`, `runningSpend`, and `wallTimeSeconds`, with source
 provenance on every event.
+
+After compaction or restart, acquire the inputs before invoking the entry
+point. Begin with the orchestrating and officer mail identities proven by the
+launch result. Read each positively identified participant's inbox exactly once
+through `coding-agents:operate-agent-mail`, select records carrying the exact
+per-Change correlation, and add any positively identified sender or recipient
+from those records to the finite read set. Finish when one pass adds no unread
+identity. Deduplicate the selected records by integer store `id`. Collect every
+complete verification run identity from those records and inspect it through
+`spec-tree:project-run-journal`, accepting only a sealed run whose recorded
+identity equals the requested identity. Missing, ambiguous, unavailable, or
+unsealed input makes reconstruction incomplete and produces a failed read;
+never derive or report a partial ledger.
 
 </ledger_derivation>
 
