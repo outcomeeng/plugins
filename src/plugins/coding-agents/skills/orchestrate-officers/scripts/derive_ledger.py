@@ -7,7 +7,7 @@ import json
 import sys
 from collections.abc import Mapping, Sequence
 from decimal import Decimal, InvalidOperation
-from typing import Any, Final, TextIO
+from typing import Final, TextIO
 
 SCHEMA_VERSION: Final = 1
 SCHEMA_VERSION_FIELD: Final = "schemaVersion"
@@ -19,7 +19,7 @@ DETAIL_FIELD: Final = "detail"
 LEDGER_FIELD: Final = "ledger"
 BODY_FIELD: Final = "body"
 ID_FIELD: Final = "id"
-RUN_ID_FIELD: Final = "runId"
+RUN_TOKEN_FIELD: Final = "runToken"
 PASS_FIELD: Final = "pass"
 HEAD_FIELD: Final = "head"
 VERDICT_FIELD: Final = "verdict"
@@ -54,10 +54,12 @@ class LedgerInputError(ValueError):
     """Report a malformed ledger source without a traceback."""
 
 
-def _mapping(value: object, label: str) -> Mapping[str, Any]:
+def _mapping(value: object, label: str) -> Mapping[str, object]:
     if not isinstance(value, Mapping):
         raise LedgerInputError(f"{label} must be an object")
-    return value
+    if not all(isinstance(key, str) for key in value):
+        raise LedgerInputError(f"{label} keys must be strings")
+    return {str(key): item for key, item in value.items()}
 
 
 def _sequence(value: object, label: str) -> Sequence[object]:
@@ -66,16 +68,26 @@ def _sequence(value: object, label: str) -> Sequence[object]:
     return value
 
 
-def _source(kind: str, source_id: object) -> dict[str, str]:
-    if not isinstance(source_id, str) or not source_id:
-        raise LedgerInputError(f"{kind} source identity must be a non-empty string")
+def _source(kind: str, source_id: int | str) -> dict[str, object]:
     return {SOURCE_KIND_FIELD: kind, SOURCE_ID_FIELD: source_id}
+
+
+def _mail_source(source_id: object) -> dict[str, object]:
+    if isinstance(source_id, bool) or not isinstance(source_id, int):
+        raise LedgerInputError("mail source identity must be an integer")
+    return _source("mail", source_id)
+
+
+def _journal_source(run_token: object) -> dict[str, object]:
+    if not isinstance(run_token, str) or not run_token:
+        raise LedgerInputError("journal runToken must be a non-empty string")
+    return _source("journal", run_token)
 
 
 def _append_entry(
     entries: list[dict[str, object]],
     value: object,
-    source: Mapping[str, str],
+    source: Mapping[str, object],
 ) -> None:
     if value is None:
         return
@@ -87,7 +99,7 @@ def _append_entry(
 def _append_findings(
     findings: list[dict[str, object]],
     value: object,
-    source: Mapping[str, str],
+    source: Mapping[str, object],
 ) -> None:
     if value is None:
         return
@@ -104,7 +116,7 @@ def _append_findings(
 def _append_reads(
     reads: list[dict[str, object]],
     value: object,
-    source: Mapping[str, str],
+    source: Mapping[str, object],
 ) -> None:
     if value is None:
         return
@@ -160,7 +172,9 @@ def _json_number(value: Decimal) -> int | float:
     return float(value)
 
 
-def _event_from_record(record: Mapping[str, Any]) -> Mapping[str, Any] | None:
+def _event_from_record(
+    record: Mapping[str, object],
+) -> Mapping[str, object] | None:
     body = record.get(BODY_FIELD)
     if not isinstance(body, str):
         raise LedgerInputError("mail record body must be a string")
@@ -173,7 +187,7 @@ def _event_from_record(record: Mapping[str, Any]) -> Mapping[str, Any] | None:
     return _mapping(payload[LEDGER_FIELD], "mail ledger event")
 
 
-def derive_ledger(payload: Mapping[str, Any]) -> dict[str, object]:
+def derive_ledger(payload: Mapping[str, object]) -> dict[str, object]:
     """Return one deterministic ledger derived from mail and journal sources."""
     if payload.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
         raise LedgerInputError(f"schemaVersion must be {SCHEMA_VERSION}")
@@ -192,7 +206,7 @@ def derive_ledger(payload: Mapping[str, Any]) -> dict[str, object]:
     mail_records = _sequence(payload.get(MAIL_RECORDS_FIELD), MAIL_RECORDS_FIELD)
     for raw_record in mail_records:
         record = _mapping(raw_record, "mail record")
-        source = _source("mail", record.get(ID_FIELD))
+        source = _mail_source(record.get(ID_FIELD))
         event = _event_from_record(record)
         if event is None:
             continue
@@ -207,7 +221,7 @@ def derive_ledger(payload: Mapping[str, Any]) -> dict[str, object]:
     journal_runs = _sequence(payload.get(JOURNAL_RUNS_FIELD), JOURNAL_RUNS_FIELD)
     for raw_run in journal_runs:
         run = _mapping(raw_run, "journal run")
-        source = _source("journal", run.get(RUN_ID_FIELD))
+        source = _journal_source(run.get(RUN_TOKEN_FIELD))
         _append_entry(passes, run.get(PASS_FIELD), source)
         _append_entry(heads, run.get(HEAD_FIELD), source)
         _append_entry(verdicts, run.get(VERDICT_FIELD), source)

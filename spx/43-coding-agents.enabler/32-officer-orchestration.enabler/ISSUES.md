@@ -3,8 +3,8 @@
 ## In-flight escalation conflicts with the methodology and generated router
 
 The node requires an orchestrating session with officers in flight to write an
-escalation as text in the Captain's own pane and never use the structured
-question tool. That rule stands on the operator's instruction. It conflicts
+escalation as text in its own pane and never use the structured question tool.
+That rule stands on the operator's instruction. It conflicts
 with the `/understand` foundation's imperfection and closing protocols, which
 require a blocking decision to use the structured-question tool. The generated
 root guide's `Operator questions` and `Autonomy Boundary` sections, rendered
