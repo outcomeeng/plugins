@@ -1,10 +1,17 @@
 # Changelog — coding-agents plugin
 
-Coding-agent environments and coordination: Prowl and herdr pane operation, agent-mail message records, recipient discovery, bounded delegation, and cross-worktree coordination.
+Coding-agent environments, coordination, and supervision: Prowl and herdr pane operation, agent-mail message records, recipient discovery, bounded delegation, officer fleets, and cross-worktree coordination.
 
 What changed in **this plugin**, for a consumer repository. An entry appears when a change alters what a consumer can rely on, must do, or must know.
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
+
+## 0.8.0
+
+### Added
+
+- **`/orchestrate-officers`.** One operator-facing session can supervise officer sessions that each execute one Change through eight bounded operations: launch, order, read, correct, answer, escalate, housekeep, and close. The skill composes `/operate-herdr` and `/operate-agent-mail`, keeps reads event-driven, enforces the two-round ceiling and decision boundary, rebuilds its per-Change ledger from durable mail and verification-journal sources, and relaunches an officer after release so the next order uses the current plugin catalog.
+- **Durable officer order and standing-rule contracts.** Bundled references define the complete order envelope, delegation roles, second-rejection procedure, reporting cadence, verdict-reuse rule, temporary `filed` disposition, lifecycle ownership, and known environment and mail constraints. A standard-library entry point derives the minimum versioned ledger from exported mail records and sealed journal runs.
 
 ## 0.7.1
 
