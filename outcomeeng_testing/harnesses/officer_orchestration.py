@@ -32,11 +32,15 @@ class LedgerModule(Protocol):
     DETAIL_FIELD: str
     LEDGER_FIELD: str
     FINDING_PROVENANCE_FIELD: str
+    DECISION_FIELD: str
+    FAILURE_FIELD: str
     RUNNING_SPEND_FIELD: str
     WALL_TIME_SECONDS_FIELD: str
     PASSES_FIELD: str
     HEADS_FIELD: str
     VERDICTS_FIELD: str
+    DECISIONS_FIELD: str
+    FAILURES_FIELD: str
     READS_FIELD: str
     SUCCEEDED_STATUS: str
     INVALID_INPUT_STATUS: str

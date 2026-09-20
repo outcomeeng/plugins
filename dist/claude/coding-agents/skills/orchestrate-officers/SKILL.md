@@ -16,7 +16,7 @@ Use skill `coding-agents:operate-herdr`.
 
 Use skill `coding-agents:operate-agent-mail`.
 
-<capabilities>
+<essential_principles>
 
 Use only these two operational capabilities:
 
@@ -27,72 +27,70 @@ Use only these two operational capabilities:
 
 Pass semantic requests to those skills and preserve their complete results.
 Neither infer nor reproduce their underlying command grammar. This skill has no
-daemon, watcher, or polling loop.
+daemon, watcher, or polling loop. Carry out exactly one routed operation per
+invocation, then return to the event boundary.
 
-</capabilities>
+For either capability, accept proof only from a result carrying
+`schemaVersion: 1`, `status: "succeeded"`, and `commandExitCode: 0`. An
+agent-mail result additionally carries a non-empty `projectKey`, `response`,
+and `data`; a delivered record carries its integer store-assigned `id`. A herdr
+JSON operation carries `response.result`, while a read carries terminal text in
+`response.output`. Require the operation-specific identity and state fields
+named by the routed workflow before relying on the result. Preserve and return
+any other status and detail as a failed operation without inferring success or
+trying a fallback.
 
-<required_references>
+</essential_principles>
 
-Read `${CLAUDE_SKILL_DIR}/references/officer-order.md` before preparing an
-officer's launch prompt or order. Read
-`${CLAUDE_SKILL_DIR}/references/standing-rules.md` before the first fleet
-operation and again after compaction or restart.
+<intake>
 
-</required_references>
+Interpret `$ARGUMENTS` as the operator request or officer event. Select one of
+the eight operations in `<routing>`. When the request is empty, ambiguous, or
+names several operations, run nothing and return `invalid-invocation` with the
+eight accepted operation names.
 
-<workflow>
+</intake>
 
-Interpret `$ARGUMENTS` as the operator request or officer event and select the
-one operation it names. When `$ARGUMENTS` is empty or names several operations,
-return an invalid-invocation result that lists the eight accepted operations.
-Carry out exactly one of these eight operations for each invocation, then
-return to the event boundary.
+<routing>
 
-1. **Launch.** Use `coding-agents:operate-herdr` to inventory the environment.
-   Require the exact absolute worktree, frozen full HEAD, and an existing free
-   pane before starting an officer. A linked worktree is prepared outside this
-   skill; do not request a workspace open for it. Start or relaunch the officer
-   in the proven pane. Deliver only the launch prompt, naming the Change and the
-   store-safe word-list mail name the officer must register. Use one bounded
-   wait for the registration fact. Stop the pane when registration is not
-   proven within that bound.
-2. **Order.** Refuse an order with any unfilled template field, an unproven
-   worktree, or an unregistered mail identity. Use
-   `coding-agents:operate-agent-mail` to send the complete order as one `order`
-   record. Record its store identity in the per-Change ledger.
-3. **Read.** Read only after a message, an officer state change, a crossed
-   bound, or an operator-named cadence. Use the inbox capability for message
-   records and the environment capability for a relevant pane state. Rebuild
-   the ledger from those records and sealed verification-journal data after
-   every compaction or restart. A read with no state change produces no report
-   unless the operator requested one.
-4. **Correct.** Treat the skill invocation as standing authorization only for
-   panes launched by this skill. Read the officer's pane before repeating a
-   stalled prompt. Answer a guarded prompt only when the latest officer fact
-   establishes that the action is the next step in its governing flow. Dismiss
-   an unexpected prompt and remove its cause. Do not send an interrupt while a
-   Verifier pass runs.
-5. **Answer.** Decide questions whose answer is already fixed by loaded skills,
-   decisions, specs, and checked state. Send the decision and its evidence as
-   an `answer` record. Write an unresolved decision in this orchestrating
-   session's pane under the autonomy rules in the standing-rules reference.
-6. **Escalate.** Lead with evidence, consequence, options, and one
-   recommendation. Hold only the affected decision; continue every independent
-   officer. Apply the autonomous and operator-held decision classes exactly as
-   the standing-rules reference defines them.
-7. **Housekeep.** Compact an officer idle beyond the declared bound, relaunch an
-   officer whose session ended, and report every officer by absolute worktree
-   and Change. Keep the officer's internal state and verification run
-   identities with that officer. Mail each commit and verdict before any
-   compaction.
-8. **Close.** When an officer completes terminal work, order
-   `/close-change Applied` through mail. When a held nonterminal Change still
-   has continuation, order `/release-change` with its Handoff instead. After
-   either lifecycle operation succeeds, stop the session through
-   `coding-agents:operate-herdr`, and relaunch the agent in the same pane before
-   the next order so it loads the current plugin catalog.
+| Requested operation | Workflow                                     |
+| ------------------- | -------------------------------------------- |
+| launch              | `${CLAUDE_SKILL_DIR}/workflows/launch.md`    |
+| order               | `${CLAUDE_SKILL_DIR}/workflows/order.md`     |
+| read                | `${CLAUDE_SKILL_DIR}/workflows/read.md`      |
+| correct             | `${CLAUDE_SKILL_DIR}/workflows/correct.md`   |
+| answer              | `${CLAUDE_SKILL_DIR}/workflows/answer.md`    |
+| escalate            | `${CLAUDE_SKILL_DIR}/workflows/escalate.md`  |
+| housekeep           | `${CLAUDE_SKILL_DIR}/workflows/housekeep.md` |
+| close               | `${CLAUDE_SKILL_DIR}/workflows/close.md`     |
 
-</workflow>
+</routing>
+
+<reference_index>
+
+| Reference                                          | Purpose                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------- |
+| `${CLAUDE_SKILL_DIR}/references/officer-order.md`  | Complete launch-and-order contract                          |
+| `${CLAUDE_SKILL_DIR}/references/standing-rules.md` | Fleet-wide autonomy, durability, event, and lifecycle rules |
+
+</reference_index>
+
+<workflows_index>
+
+All operation workflows live under `${CLAUDE_SKILL_DIR}/workflows/`:
+
+| Workflow       | Output                                                               |
+| -------------- | -------------------------------------------------------------------- |
+| `launch.md`    | One officer started in a proven pane and bounded registration result |
+| `order.md`     | One complete durable order record and ledger identity                |
+| `read.md`      | One event-caused state read and rebuilt ledger when required         |
+| `correct.md`   | One authorized prompt correction or dismissal                        |
+| `answer.md`    | One evidence-backed answer record or held decision                   |
+| `escalate.md`  | One bounded escalation with its decision disposition                 |
+| `housekeep.md` | One compaction, relaunch, or fleet-status action                     |
+| `close.md`     | One Change disposal and fresh-session transition                     |
+
+</workflows_index>
 
 <round_control>
 
@@ -118,10 +116,13 @@ shape:
 }
 ```
 
-Each mail record preserves the store's integer `id` and string `body`. A JSON body with
-a `ledger` object contributes its declared fields; other bodies remain durable
-mail facts without entering the numerical ledger. Each journal object preserves
-its `runToken`. Submit the document through one of these forms and preserve the
+Each mail record preserves the store's integer `id` and string `body`. A JSON
+body with a `ledger` object contributes its declared fields; other bodies
+remain durable mail facts without entering the derived ledger. A `decision`
+event records its autonomous class, choice, and reasoning. A `failure` event
+records an operator instruction naming an officer session or an officer fact
+reporting an operator interaction. Each journal object preserves its
+`runToken`. Submit the document through one of these forms and preserve the
 complete result.
 
 When the shell accepts multiline input:
@@ -139,8 +140,9 @@ printf '%s\n' '{"schemaVersion":1,"change":"owner/changes#123","mailRecords":[],
 ```
 
 Accept only `schemaVersion: 1` with `status: "succeeded"`. The ledger carries
-exactly `change`, `passes`, `heads`, `verdicts`, `findingProvenance`, `reads`,
-`runningSpend`, and `wallTimeSeconds`, with source provenance on every event.
+exactly `change`, `passes`, `heads`, `verdicts`, `decisions`, `failures`,
+`findingProvenance`, `reads`, `runningSpend`, and `wallTimeSeconds`, with source
+provenance on every event.
 
 </ledger_derivation>
 
@@ -151,6 +153,8 @@ The ledger entry point is tested with these inputs and results:
 - sample input `{"schemaVersion":1,"change":"owner/changes#123","mailRecords":[],"journalRuns":[]}` exits zero and writes the versioned succeeded result with the complete empty ledger
 - invalid input `{"schemaVersion":2,"change":"owner/changes#123","mailRecords":[],"journalRuns":[]}` exits two and writes `status: "invalid-input"` with the required-version detail
 - malformed JSON exits two and writes the deterministic invalid-input result
+- a mail ledger event carrying `decision` reasoning and an operator-contact
+  `failure` rebuilds both collections with its integer message id as provenance
 - the entry point reads stdin and writes stdout and stderr only; successful and invalid runs create no temporary files, so cleanup leaves no path behind
 
 </script_validation>
@@ -166,15 +170,21 @@ session, message, commit, and verification-run identities.
 
 <success_criteria>
 
-- Every officer has one proven worktree, pane, Change, and registered mail
-  identity before receiving an order.
-- Every order and result is durable in agent-mail, and the ledger can be rebuilt
-  from message records and sealed verification-journal data.
-- Reads are event-driven or operator-scheduled, all waits are bounded, and an
-  unchanged read stays quiet unless the operator requested a report.
-- The two-round ceiling, autonomy boundary, reuse rule, lifecycle ownership,
-  and fresh-session-after-release rule remain in force across compaction and
-  restart.
+- A launch result includes the successful herdr inventory/start identity, exact
+  worktree and pane, frozen full HEAD, Change, bounded wait result, and proven
+  registered mail identity before any order is sent.
+- An order result includes a successful agent-mail response whose returned
+  record has an integer store `id`; a derivation run over that record succeeds
+  and preserves the id as source provenance.
+- A read result names one allowed event cause, preserves the successful inbox or
+  pane response, and emits no state-change report when the checked state is
+  unchanged unless operator cadence requested one.
+- Every returned operation includes the complete capability results it relied
+  on; each accepted result satisfies `<essential_principles>`, and any failed
+  capability status remains a failed operation.
+- After compaction or restart, running the documented ledger derivation over
+  the durable mail and sealed journal inputs produces the exact ledger keys in
+  `<ledger_derivation>`, including decision reasoning and session failures.
 
 </success_criteria>
 
@@ -193,9 +203,9 @@ submitting a second prompt, and repeat only when the launch text is absent.
 session it contains. Relaunch the selected agent in a proven pane before the
 next order.
 
-**Claude treated an empty adapter inbox as an empty store.** The adapter can
-return zero rows while the store contains records. Use only the orchestrating session's
-explicit read-only store instruction for that project until the recorded
-adapter defect is repaired; never derive a raw store command.
+**Claude treated an empty adapter inbox as an empty store.** When a checked
+store observation proves records exist after an adapter inbox returned zero,
+use only the orchestrating session's explicit read-only store instruction for
+that project; never derive a raw store command.
 
 </failure_modes>
