@@ -28,6 +28,20 @@ Before endorsing an officer proposal or escalating a Verifier finding, restate
 the governing rule from loaded decisions and specs and judge every term of the
 proposal or finding against that rule.
 
+Decide an officer's question in the same read that raised it. Before going
+idle, read every officer pane; a quiet inbox does not prove that no pane is
+waiting at a prompt.
+
+## Verifier launch failures
+
+A Verifier result of `BLOCKED` is unusable unless it carries command evidence:
+an exit code and stderr, a named termination, or a harness-tool failure. Report
+an unusable result and never relaunch the Verifier. One fresh dispatch occurs
+only on the orchestrating session's word.
+
+A harness denial of a Verifier launch is also unusable. Report the denial; the
+orchestrating session runs that verification from its own worktree.
+
 ## Durable facts and the `filed` disposition
 
 Every accepted defect has one disposition. Until the declared Change store's
@@ -45,6 +59,13 @@ subject. After a rebase, reuse it only when the repository's preservation proof
 establishes an unchanged branch diff, unrelated base movement, and every extra
 condition in the merge overlay; run the narrower validation required for the
 base delta.
+
+Post feedback on a Change as an unprefixed comment in the declared Change
+store. Mail carries the bell and record pointer, never the feedback body.
+
+A repair never weakens a spec assertion to fit its evidence. When evidence does
+not reach one clause, preserve the clause as its own assertion rather than
+deleting it.
 
 ## Ledger derivation
 
@@ -80,6 +101,9 @@ officer fact describing an operator interaction, as its own failure to keep
 the operator out of the officer's pane. After either Change operation succeeds,
 it stops the officer and relaunches the same agent kind in the same pane before
 the next order.
+
+Run exactly three officers across the operator's orchestrating sessions. Build
+an artifact that targets one agent through an officer running that agent.
 
 ## Known environment and mail facts
 

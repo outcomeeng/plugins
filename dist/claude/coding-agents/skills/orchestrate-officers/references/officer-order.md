@@ -14,6 +14,7 @@ An unfilled field refuses the order.
 - Worktree proof: `<checked free-pool or occupancy result>`
 - Branch: `<complete branch ref>`
 - Frozen HEAD: `<full commit SHA>`
+- Verifier changeset selector: `origin/main...HEAD`
 
 Each worktree pool has its own mail project. Registration in another pool does
 not establish an identity here. Descriptive agent names can be rejected by the
@@ -50,6 +51,7 @@ Do not paraphrase, extend, or silently narrow this text.
 - Autonomous ceiling: `two rounds`
 - Third-round rule: `wait for the operator's word`
 - Second-rejection procedure: `report the repeated finding class, read the pushed changeset, read the sealed verification-journal runs, and propose split, track, or stop`
+- Repeated-class hard stop: `a new finding of a class already repaired twice on the same subject stops the officer and releases the Change with a Handoff`
 
 ## Standing rules
 
@@ -58,6 +60,12 @@ Attach the current orchestrating-session standing rules from
 table, judgment step, `filed` disposition, ledger derivation, event-read rule,
 verdict reuse rule, release lifecycle, and known transport facts. The order
 records that reference as standing authority for the officer's execution.
+
+Until the agent-mail inbox defect tracked in the consumer repository's declared
+Change store is settled, every bell line to the officer carries the message id
+and the orchestrating session's read-only authorization for the store's exact
+inbox command. The bell is a pointer and authorization only; it never carries
+the order text.
 
 ## Change lifecycle
 
