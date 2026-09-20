@@ -58,7 +58,9 @@ def test_entrypoint_returns_the_minimum_versioned_ledger() -> None:
     assert ledger[source.WALL_TIME_SECONDS_FIELD] == 0
 
 
-def test_entrypoint_preserves_decision_reasoning_and_operator_contact_failures() -> None:
+def test_entrypoint_preserves_decision_reasoning_and_operator_contact_failures() -> (
+    None
+):
     """Durable mail facts rebuild both required orchestration ledger classes."""
     source = load_ledger_module()
     decision = {
@@ -96,12 +98,8 @@ def test_entrypoint_preserves_decision_reasoning_and_operator_contact_failures()
     provenance = {"kind": "mail", "id": message_id}
 
     assert observation.exit_code == source.SUCCESS_EXIT_CODE
-    assert ledger[source.DECISIONS_FIELD] == [
-        {"value": decision, "source": provenance}
-    ]
-    assert ledger[source.FAILURES_FIELD] == [
-        {"value": failure, "source": provenance}
-    ]
+    assert ledger[source.DECISIONS_FIELD] == [{"value": decision, "source": provenance}]
+    assert ledger[source.FAILURES_FIELD] == [{"value": failure, "source": provenance}]
 
 
 def test_entrypoint_rejects_schema_version_two() -> None:
