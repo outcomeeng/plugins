@@ -12,6 +12,10 @@ event-driven execution while the operator uses one session, one inbox, and one
 pane.
 </objective>
 
+Use skill `coding-agents:operate-herdr`.
+
+Use skill `coding-agents:operate-agent-mail`.
+
 <capabilities>
 
 Use only these two operational capabilities:

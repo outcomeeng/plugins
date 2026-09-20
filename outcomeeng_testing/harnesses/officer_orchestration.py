@@ -7,6 +7,7 @@ import inspect
 import io
 import json
 import sys
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
@@ -24,7 +25,6 @@ LEDGER_MODULE_NAME = "coding_agents_officer_ledger"
 class LedgerEntrypointObservation:
     """Captured public entry-point output with its source contract."""
 
-    module: ModuleType
     parameters: tuple[str, ...]
     exit_code: int
     result: dict[str, object]
@@ -44,19 +44,20 @@ def load_ledger_module() -> ModuleType:
     return module
 
 
-def run_empty_source_ledger() -> LedgerEntrypointObservation:
-    """Invoke the documented empty-source interaction and capture observations."""
+def run_ledger(
+    arguments: Sequence[str], payload: Mapping[str, object]
+) -> LedgerEntrypointObservation:
+    """Execute the ledger entry point and capture its observations."""
     module = load_ledger_module()
     standard_output = io.StringIO()
     standard_error = io.StringIO()
     exit_code = module.main(
-        list(module.DERIVE_ARGUMENTS),
-        stdin=io.StringIO(json.dumps(module.empty_source_request())),
+        arguments,
+        stdin=io.StringIO(json.dumps(payload)),
         stdout=standard_output,
         stderr=standard_error,
     )
     return LedgerEntrypointObservation(
-        module=module,
         parameters=tuple(inspect.signature(module.main).parameters),
         exit_code=exit_code,
         result=cast(dict[str, object], json.loads(standard_output.getvalue())),

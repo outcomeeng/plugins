@@ -41,9 +41,6 @@ DERIVE_OPERATION: Final = "derive"
 DERIVE_ARGUMENTS: Final = (DERIVE_OPERATION,)
 SUCCESS_EXIT_CODE: Final = 0
 INVALID_INPUT_EXIT_CODE: Final = 2
-EMPTY_SOURCE_SAMPLE_CHANGE: Final = "owner/changes#123"
-ENTRYPOINT_PARAMETER_NAMES: Final = ("argv", "stdin", "stdout", "stderr")
-RESULT_FIELDS: Final = (SCHEMA_VERSION_FIELD, STATUS_FIELD, LEDGER_FIELD)
 READ_CAUSES: Final = frozenset(
     {"message", "officer-state-change", "bound-crossed", "operator-cadence"}
 )
@@ -51,23 +48,6 @@ PASSES_FIELD: Final = "passes"
 HEADS_FIELD: Final = "heads"
 VERDICTS_FIELD: Final = "verdicts"
 READS_FIELD: Final = "reads"
-LEDGER_FIELDS: Final = (
-    CHANGE_FIELD,
-    PASSES_FIELD,
-    HEADS_FIELD,
-    VERDICTS_FIELD,
-    FINDING_PROVENANCE_FIELD,
-    READS_FIELD,
-    RUNNING_SPEND_FIELD,
-    WALL_TIME_SECONDS_FIELD,
-)
-EMPTY_LEDGER_SEQUENCE_FIELDS: Final = (
-    PASSES_FIELD,
-    HEADS_FIELD,
-    VERDICTS_FIELD,
-    FINDING_PROVENANCE_FIELD,
-    READS_FIELD,
-)
 
 
 class LedgerInputError(ValueError):
@@ -191,16 +171,6 @@ def _event_from_record(record: Mapping[str, Any]) -> Mapping[str, Any] | None:
     if not isinstance(payload, Mapping) or LEDGER_FIELD not in payload:
         return None
     return _mapping(payload[LEDGER_FIELD], "mail ledger event")
-
-
-def empty_source_request() -> dict[str, object]:
-    """Return the documented empty-source request for one named Change."""
-    return {
-        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-        CHANGE_FIELD: EMPTY_SOURCE_SAMPLE_CHANGE,
-        MAIL_RECORDS_FIELD: [],
-        JOURNAL_RUNS_FIELD: [],
-    }
 
 
 def derive_ledger(payload: Mapping[str, Any]) -> dict[str, object]:
