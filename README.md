@@ -244,7 +244,7 @@ Skills are available in both Claude Code and Codex, with generated plugin surfac
 
 ### coding-agents
 
-Coding-agent environments and coordination: /operate-prowl, /message-agents, /coordinate-agents, /recover-prowl-agents
+Coding-agent environments, coordination, and officer supervision: /operate-prowl, /operate-herdr, /operate-agent-mail, /message-agents, /coordinate-agents, /recover-prowl-agents, /orchestrate-officers
 
 | Type  | Name                    | Purpose                                                                                                                                                                                                                                          |
 | ----- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
