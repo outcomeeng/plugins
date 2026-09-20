@@ -118,10 +118,10 @@ shape:
 }
 ```
 
-Each mail record preserves the store's `id` and string `body`. A JSON body with
+Each mail record preserves the store's integer `id` and string `body`. A JSON body with
 a `ledger` object contributes its declared fields; other bodies remain durable
 mail facts without entering the numerical ledger. Each journal object preserves
-its `runId`. Submit the document through one of these forms and preserve the
+its `runToken`. Submit the document through one of these forms and preserve the
 complete result.
 
 When the shell accepts multiline input:

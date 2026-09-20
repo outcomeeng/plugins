@@ -16,7 +16,8 @@ An unfilled field refuses the order.
 - Frozen HEAD: `<full commit SHA>`
 - Verifier changeset selector: `origin/<base>...HEAD`
 
-`<base>` is the repository's resolved default branch.
+`<base>` is the active flow's resolved changeset base. For a pull request, use
+its checked `baseRefName`; otherwise use the base the governing flow resolved.
 
 Each worktree pool has its own mail project. Registration in another pool does
 not establish an identity here. Descriptive agent names can be rejected by the

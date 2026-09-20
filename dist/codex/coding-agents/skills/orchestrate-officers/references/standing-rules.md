@@ -40,7 +40,8 @@ an unusable result and never relaunch the Verifier. One fresh dispatch occurs
 only on the orchestrating session's word.
 
 A harness denial of a Verifier launch is also unusable. Report the denial; the
-orchestrating session runs that verification from its own worktree.
+orchestrating session dispatches the configured Verifier from its own worktree
+in a separate Verifier agent session, preserving Author–Verifier isolation.
 
 ## Durable facts and the `filed` disposition
 

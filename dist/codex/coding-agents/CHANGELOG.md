@@ -1,4 +1,4 @@
-# Changelog — coding-agents plugin
+# Coding-agents plugin changelog
 
 Coding-agent environments and coordination: Prowl and herdr pane operation, agent-mail message records, recipient discovery, bounded delegation, and cross-worktree coordination.
 
