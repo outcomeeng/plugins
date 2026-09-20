@@ -85,8 +85,10 @@ return to the event boundary.
    and Change. Keep the officer's internal state and verification run
    identities with that officer. Mail each commit and verdict before any
    compaction.
-8. **Close.** Close an officer whose Change is Applied. After release, order the
-   release through mail, stop the session through
+8. **Close.** When an officer completes terminal work, order
+   `/close-change Applied` through mail. When a held nonterminal Change still
+   has continuation, order `/release-change` with its Handoff instead. After
+   either lifecycle operation succeeds, stop the session through
    `coding-agents:operate-herdr`, and relaunch the agent in the same pane before
    the next order so it loads the current plugin catalog.
 

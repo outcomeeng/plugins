@@ -70,11 +70,15 @@ loop. A read without a change remains quiet unless the operator requested a
 report.
 
 The orchestrating session owns launch, order, close, compaction, restart, and
-Applied-state close for every officer it launched. It records an operator
-instruction naming an officer session, or an officer fact describing an
-operator interaction, as its own failure to keep the operator out of the
-officer's pane. After release, it orders the release, stops the officer, and
-relaunches the same agent kind in the same pane before the next order.
+Change disposal for every officer it launched. It orders `/close-change
+Applied` when the officer completes terminal work. It reserves
+`/release-change` for a held nonterminal Change with continuation remaining and
+requires the Handoff to name completed and next Activities, blockers, and
+hazards. It records an operator instruction naming an officer session, or an
+officer fact describing an operator interaction, as its own failure to keep
+the operator out of the officer's pane. After either Change operation succeeds,
+it stops the officer and relaunches the same agent kind in the same pane before
+the next order.
 
 ## Known environment and mail facts
 
