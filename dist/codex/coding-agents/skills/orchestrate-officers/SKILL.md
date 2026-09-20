@@ -29,15 +29,18 @@ daemon, watcher, or polling loop.
 
 <required_references>
 
-Read [the officer order template](references/officer-order.md) before preparing
-an officer's launch prompt or order. Read
-[the standing rules](references/standing-rules.md) before the first fleet
+Read `${SKILL_DIR}/references/officer-order.md` before preparing an
+officer's launch prompt or order. Read
+`${SKILL_DIR}/references/standing-rules.md` before the first fleet
 operation and again after compaction or restart.
 
 </required_references>
 
 <workflow>
 
+Interpret `$ARGUMENTS` as the operator request or officer event and select the
+one operation it names. When `$ARGUMENTS` is empty or names several operations,
+return an invalid-invocation result that lists the eight accepted operations.
 Carry out exactly one of these eight operations for each invocation, then
 return to the event boundary.
 
@@ -135,6 +138,17 @@ exactly `change`, `passes`, `heads`, `verdicts`, `findingProvenance`, `reads`,
 
 </ledger_derivation>
 
+<script_validation>
+
+The ledger entry point is tested with these inputs and results:
+
+- sample input `{"schemaVersion":1,"change":"owner/changes#123","mailRecords":[],"journalRuns":[]}` exits zero and writes the versioned succeeded result with the complete empty ledger
+- invalid input `{"schemaVersion":2,"change":"owner/changes#123","mailRecords":[],"journalRuns":[]}` exits two and writes `status: "invalid-input"` with the required-version detail
+- malformed JSON exits two and writes the deterministic invalid-input result
+- the entry point reads stdin and writes stdout and stderr only; successful and invalid runs create no temporary files, so cleanup leaves no path behind
+
+</script_validation>
+
 <result>
 
 Return the operation, the complete officer identity, absolute worktree, Change,
@@ -157,3 +171,25 @@ session, message, commit, and verification-run identities.
   restart.
 
 </success_criteria>
+
+<failure_modes>
+
+**Claude opened an existing linked worktree.** The environment capability can
+reject an open request for a linked worktree that already exists. Prove the
+worktree and pane before launch, then start the officer in that pane without an
+open request.
+
+**Claude treated a submitted first prompt as active work.** A fresh session can
+accept its first prompt without beginning the task. Read the pane before
+submitting a second prompt, and repeat only when the launch text is absent.
+
+**Claude reused a stopped officer session.** Stop closes both the pane and the
+session it contains. Relaunch the selected agent in a proven pane before the
+next order.
+
+**Claude treated an empty adapter inbox as an empty store.** The adapter can
+return zero rows while the store contains records. Use only the Captain's
+explicit read-only store instruction for that project until the recorded
+adapter defect is repaired; never derive a raw store command.
+
+</failure_modes>

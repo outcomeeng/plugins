@@ -13,6 +13,10 @@ The orchestrating session is an agent session that holds none of the five Roles 
 
 ## Assertions
 
+### Scenarios
+
+- Given empty durable source records for a named Change, when the ledger derivation entry point executes, then its versioned result has the complete minimum ledger shape with empty passes, heads, verdicts, finding provenance, reads, running spend, and zero wall time [test](tests/test_ledger_derivation.scenario.l1.py)
+
 ### Compliance
 
 - ALWAYS: the orchestrating session launches every officer into a herdr pane through `spx/43-coding-agents.enabler/18-herdr-environment.enabler`, the one officer environment, delivers the launch prompt that names the Change and the mail name the officer registers under, and delivers every later order as a message record of `spx/43-coding-agents.enabler/18-agent-mail.enabler`; an order with an unfilled field or an unproven worktree is refused, an officer without a mail identity receives only the launch prompt, and one that has not registered within the bounded wait is stopped [probe](probes/officer-run/probe.md)
@@ -22,7 +26,7 @@ The orchestrating session is an agent session that holds none of the five Roles 
 - ALWAYS: the operator's invocation of the orchestrating skill is the standing authorization for the panes of the officers it launched; the skill sets mutation authorization for those panes only, answers a prompt when the officer's latest fact shows the guarded action is its flow's next step, dismisses a prompt with no such fact and removes its cause, and never sends an interrupt while a Verifier pass runs [probe](probes/officer-run/probe.md)
 - ALWAYS: reads happen on events — a message, an officer state change, a bound crossed — or on a cadence the operator names, never on a timer of the session's own; a read without a change produces no report unless the operator asked for one [probe](probes/officer-run/probe.md)
 - ALWAYS: the per-Change ledger — passes, heads, verdicts, finding provenance, reads with their cause, running spend and wall time — is a derivation from the message records and the verification journal, rebuilt from those sources after a compaction or restart, and spend and wall time are reported as a courtesy, never as a gate [probe](probes/officer-run/probe.md)
-- ALWAYS: given empty durable source records for a named Change, when the ledger derivation entry point executes, then its versioned result has the complete minimum ledger shape with empty passes, heads, verdicts, finding provenance, reads, running spend, and zero wall time [test](tests/test_ledger_derivation.scenario.l1.py)
+
 - ALWAYS: the orchestrating session compacts an officer idle past the bound, restarts one whose session is gone, and closes one whose Change is Applied without an operator instruction; after release, it orders /release-change, stops the session through the herdr capability, and relaunches the agent in the same pane before the next order [probe](probes/officer-run/probe.md)
 - ALWAYS: lifecycle operations leave the officer responsible for its internal state, run identities, results, and workflow continuation, while an operator instruction naming its session or an officer fact reporting an operator interaction is recorded in the ledger as a failure of the orchestrating session to keep the operator out of that officer's pane [audit]
 - ALWAYS: officers are reported by their absolute worktree path and Change, every escalation leads with evidence, consequence, options, and one recommendation, what loaded truth settles is decided in the session, and the rest is written as text in the orchestrating session's own pane, never raised through a structured question [probe](probes/officer-run/probe.md)

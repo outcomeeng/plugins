@@ -51,8 +51,9 @@ The per-Change ledger contains passes, full heads, verdicts, finding provenance,
 reads with their cause, running spend, and wall time. It is derived from
 agent-mail records and sealed verification-journal runs, never treated as an
 independent source of truth. Rebuild it after compaction or restart with
-`../scripts/derive_ledger.py` through that script's documented `derive` entry
-point. Spend and wall time are courtesy fields rather than gates.
+`${CLAUDE_SKILL_DIR}/scripts/derive_ledger.py` through that script's documented
+`derive` entry point. Spend and wall time are courtesy fields rather than
+gates.
 
 For machine-readable ledger facts, place a JSON object under a message record's
 body with a `ledger` object. The ledger object can carry `pass`, `head`,
