@@ -61,6 +61,18 @@ establishes an unchanged branch diff, unrelated base movement, and every extra
 condition in the merge overlay; run the narrower validation required for the
 base delta.
 
+Every orchestrating-session ledger event is a durable `fact` record addressed
+to the orchestrating mail identity under the Change's correlation before the
+session relies on it across compaction. This includes each autonomous decision,
+read cause, and orchestrating-session failure. After compaction or restart,
+begin with the proven orchestrating and officer identities, read each
+positively identified participant's inbox once, and expand the finite read set
+with positively identified senders and recipients in records carrying the
+exact Change correlation. Stop when no unread identity remains, deduplicate by
+integer store id, and inspect every recorded verification run identity through
+`spec-tree:project-run-journal`. A missing, ambiguous, unavailable, or unsealed
+source refuses reconstruction; a partial ledger is never reported.
+
 Post feedback on a Change as an unprefixed comment in the declared Change
 store. Mail carries the bell and record pointer, never the feedback body.
 
@@ -89,6 +101,31 @@ one of these causes: `message`, `officer-state-change`, `bound-crossed`, or
 `operator-cadence`. The derivation script also consumes sealed journal run
 objects directly and keeps source provenance with every derived entry.
 
+An officer reports a successful Change disposal as one `fact` record whose
+body contains this versioned object:
+
+```json
+{
+  "officerLifecycleResult": {
+    "schemaVersion": 1,
+    "change": "owner/changes#123",
+    "orderMessageId": 123,
+    "operation": "close-change",
+    "status": "succeeded",
+    "lifecycle": "Applied",
+    "handoff": null
+  }
+}
+```
+
+`operation` is `close-change` or `release-change`. A successful close carries
+`lifecycle: "Applied"` and `handoff: null`. A successful release carries the
+resulting nonterminal lifecycle and a `handoff` object with
+`completedActivities`, `nextActivities`, `blockers`, and `hazards`. The
+orchestrating session validates the sender, exact Change correlation, order
+store id, operation, status, lifecycle, and Handoff before stopping the
+officer. Delivery of the order alone never authorizes stop or relaunch.
+
 ## Event reads and lifecycle
 
 Read after a message, an officer state change, a crossed bound, or a cadence the
@@ -104,8 +141,9 @@ requires the Handoff to name completed and next Activities, blockers, and
 hazards. It records an operator instruction naming an officer session, or an
 officer fact describing an operator interaction, as its own failure to keep
 the operator out of the officer's pane. After either Change operation succeeds,
-it stops the officer and relaunches the same agent kind in the same pane before
-the next order.
+the officer mails the lifecycle-result fact above. Only its validated durable
+fact permits the orchestrating session to stop the officer and relaunch the
+same agent kind in the same pane before the next order.
 
 ## Known environment and mail facts
 
