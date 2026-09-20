@@ -1,7 +1,7 @@
 {
   "name": "coding-agents",
   "version": "0.8.0",
-  "description": "Coding-agent environments and coordination: /operate-prowl, /operate-herdr, /operate-agent-mail, /message-agents, /coordinate-agents, /recover-prowl-agents",
+  "description": "Coding-agent environments, coordination, and officer supervision: /operate-prowl, /operate-herdr, /operate-agent-mail, /message-agents, /coordinate-agents, /recover-prowl-agents, /orchestrate-officers",
   "author": {
     "name": "Simon Heimlicher",
     "url": "https://github.com/outcomeeng"
@@ -18,8 +18,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Coding Agents",
-    "shortDescription": "Operate and coordinate coding agents across Prowl panes",
-    "longDescription": "Operate the public Prowl environment, delegate bounded work with terminal handbacks, prepare and recover exact native sessions, deliver source-owned messages, and coordinate independent coding-agent workflows.",
+    "shortDescription": "Operate, coordinate, and supervise coding agents",
+    "longDescription": "Operate public Prowl and herdr environments, deliver durable agent-mail records, prepare and recover exact native sessions, coordinate independent workflows, and supervise bounded officer fleets through one operator-facing session.",
     "developerName": "Outcome Engineering",
     "category": "Developer Tools",
     "capabilities": [
