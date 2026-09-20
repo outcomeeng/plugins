@@ -3,26 +3,45 @@
 from typing import cast
 
 from outcomeeng_testing.harnesses.officer_orchestration import (
-    run_empty_source_ledger,
+    run_ledger,
 )
 
 
 def test_entrypoint_returns_the_minimum_versioned_ledger() -> None:
     """The shipped entry point is executable and pins its minimum result shape."""
-    observation = run_empty_source_ledger()
-    module = observation.module
+    observation = run_ledger(
+        ["derive"],
+        {
+            "schemaVersion": 1,
+            "change": "owner/changes#123",
+            "mailRecords": [],
+            "journalRuns": [],
+        },
+    )
     result = observation.result
-    ledger = cast(dict[str, object], result[module.LEDGER_FIELD])
+    ledger = cast(dict[str, object], result["ledger"])
 
-    assert observation.parameters == module.ENTRYPOINT_PARAMETER_NAMES
-    assert observation.exit_code == module.SUCCESS_EXIT_CODE
+    assert observation.parameters == ("argv", "stdin", "stdout", "stderr")
+    assert observation.exit_code == 0
     assert observation.stderr == ""
-    assert set(result) == set(module.RESULT_FIELDS)
-    assert result[module.SCHEMA_VERSION_FIELD] == module.SCHEMA_VERSION
-    assert result[module.STATUS_FIELD] == module.SUCCEEDED_STATUS
-    assert set(ledger) == set(module.LEDGER_FIELDS)
-    assert ledger[module.CHANGE_FIELD] == module.EMPTY_SOURCE_SAMPLE_CHANGE
-    for field_name in module.EMPTY_LEDGER_SEQUENCE_FIELDS:
-        assert ledger[field_name] == []
-    assert ledger[module.RUNNING_SPEND_FIELD] == {}
-    assert ledger[module.WALL_TIME_SECONDS_FIELD] == 0
+    assert set(result) == {"ledger", "schemaVersion", "status"}
+    assert result["schemaVersion"] == 1
+    assert result["status"] == "succeeded"
+    assert set(ledger) == {
+        "change",
+        "findingProvenance",
+        "heads",
+        "passes",
+        "reads",
+        "runningSpend",
+        "verdicts",
+        "wallTimeSeconds",
+    }
+    assert ledger["change"] == "owner/changes#123"
+    assert ledger["passes"] == []
+    assert ledger["heads"] == []
+    assert ledger["verdicts"] == []
+    assert ledger["findingProvenance"] == []
+    assert ledger["reads"] == []
+    assert ledger["runningSpend"] == {}
+    assert ledger["wallTimeSeconds"] == 0

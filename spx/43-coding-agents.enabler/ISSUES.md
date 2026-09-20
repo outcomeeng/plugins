@@ -29,6 +29,7 @@ Extending the pattern where it stands was attempted and withdrawn: adding an alt
 The apply flow's evidence repair scans for the rejected class inside the linked tests — a restated literal, a copied table — and stops there. The mirror shape is invisible to that scan: a value the tests import from production that no production path consumes. `agent_message.py` carried `FORBIDDEN_TARGET_FIELDS`, `FORBIDDEN_EXECUTABLE_FIELDS`, and `CLEAN_STATUS` as constants only the node's tests and harness read, so a test that iterated them was coupled to an inert declaration, and emptying the constant left the test green.
 
 **Evidence.** `spec-tree:test-evidence-auditor` on `spx/43-coding-agents.enabler/21-agent-communication.enabler` at `1b2479a84f70e528315aa7fb16c40448d31817bf` rejected restated literals in the tests; the repair at `4113d674c47ccd118de35b522d4c626a96c17a52` closed those, and the second pass at that head rejected the relocated-constant shape under the same rule, `source-ownership`.
+**Evidence.** The round-2 test-evidence audit on commit `c3980a80630789666e2186801fd8c10ecc856e45` again rejected source-owned values with no production consumer in Verifier session `/root/audit_officer_test_evidence_round2`.
 
 **Gap.** `src/plugins/spec-tree/skills/apply/SKILL.md` `<stabilized_diff_rule>` names the same-class sweep over the touched node's governed files but does not name the consumer check: for every source-owned value a test imports, a production path consumes it.
 
