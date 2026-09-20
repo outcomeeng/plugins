@@ -30,13 +30,14 @@ proposal or finding against that rule.
 
 ## Durable facts and the `filed` disposition
 
-Every accepted defect has one disposition. Until outcomeeng/changes#105 lands
-and the required version floor rises, use the prose disposition `filed` when a
-defect-owning `ISSUES.md` entry records the defect and its settlement condition.
-While the verification journal records that disposition as normal, do not
-raise the same finding again. Preserve the issue path and finding provenance in
-the ledger. Re-evaluate this temporary prose rule when that Change and floor
-condition are both satisfied.
+Every accepted defect has one disposition. Until the declared Change store's
+record for durable `filed` dispositions reaches Applied and the repository's
+required version floor includes that capability, use the prose disposition
+`filed` when a defect-owning `ISSUES.md` entry records the defect and its
+settlement condition. While the verification journal records that disposition
+as normal, do not raise the same finding again. Preserve the issue path and
+finding provenance in the ledger. Re-evaluate this temporary prose rule when
+that Change and floor condition are both satisfied.
 
 Mail every full commit SHA and every verdict with its complete verification run
 identity before compaction. Reuse a Verifier verdict for a byte-identical
@@ -83,9 +84,10 @@ the next order.
 ## Known environment and mail facts
 
 - The adapter inbox can return zero records while the raw store inbox still
-  holds them. outcomeeng/changes#103 tracks the defect. Until its repair ships,
-  follow the Captain's explicitly supplied read-only store instruction for the
-  affected project; do not derive or improvise that instruction here.
+  holds them. The declared Change store's record for the adapter-inbox defect
+  tracks its repair. Until that repair ships, follow the Captain's explicitly
+  supplied read-only store instruction for the affected project; do not derive
+  or improvise that instruction here.
 - Opening an already-created linked worktree through the environment capability
   can fail. Prepare and prove the linked worktree and pane before launch, then
   start the officer in that existing pane.
