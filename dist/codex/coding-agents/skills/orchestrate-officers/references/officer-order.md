@@ -59,6 +59,15 @@ table, judgment step, `filed` disposition, ledger derivation, event-read rule,
 verdict reuse rule, release lifecycle, and known transport facts. The order
 records that reference as standing authority for the officer's execution.
 
+## Change lifecycle
+
+- Terminal completion: `order /close-change Applied`
+- Continuation remaining on a held nonterminal Change: `order /release-change`
+  with a Handoff naming the completed and next Activities, blockers, and
+  hazards
+- Session lifecycle: `after either Change operation succeeds, stop the officer
+  and relaunch the same agent kind in the same pane before its next order`
+
 ## Reporting cadence
 
 - Immediate facts: `<events that require a message as they occur>`
