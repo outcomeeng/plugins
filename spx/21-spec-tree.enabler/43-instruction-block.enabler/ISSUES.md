@@ -110,7 +110,12 @@ gate.
 
 **Evidence**: repeated `regenerate-instruction-blocks` hook output while
 committing Change #76, including commit
-`7ddd752f1cf44e22a51fe7beed45225c99e6a393`.
+`7ddd752f1cf44e22a51fe7beed45225c99e6a393`; the hook at
+`050ef674a383987009b4c877a950eda0ce51adba` reports
+`CLAUDE.md 58211/32768` and `AGENTS.md 60953/32768`.
+
+**Settlement condition**: both generated root guides render within the
+32,768-byte budget and the gate rejects any later regression over that ceiling.
 
 ## Pinned router prose is coupled to structural test evidence
 
