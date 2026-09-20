@@ -91,7 +91,7 @@ VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
     "finish",
     "render",
 )
-REQUIRED_SPX_VERSION: Final = "0.7.0"
+REQUIRED_SPX_VERSION: Final = "0.7.2"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"
