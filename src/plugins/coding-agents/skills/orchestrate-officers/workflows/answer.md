@@ -1,0 +1,25 @@
+<required_reading>
+
+Read `${CLAUDE_SKILL_DIR}/references/standing-rules.md`.
+
+</required_reading>
+
+<process>
+
+1. Decide a question whose answer is fixed by loaded skills, decisions, specs,
+   and checked state.
+2. Send the decision and evidence as one `answer` record through
+   `coding-agents:operate-agent-mail`.
+3. Validate the returned record and integer store identity under the parent
+   skill's `<essential_principles>`.
+4. Hold an unresolved decision in this orchestrating session's pane under the
+   standing autonomy rules.
+
+</process>
+
+<success_criteria>
+
+The result contains either one validated durable answer record with its
+evidence or one held decision classified by the standing autonomy rules.
+
+</success_criteria>

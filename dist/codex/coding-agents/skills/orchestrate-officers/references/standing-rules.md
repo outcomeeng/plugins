@@ -39,20 +39,20 @@ an exit code and stderr, a named termination, or a harness-tool failure. Report
 an unusable result and never relaunch the Verifier. One fresh dispatch occurs
 only on the orchestrating session's word.
 
-A harness denial of a Verifier launch is also unusable. Report the denial; the
-orchestrating session dispatches the configured Verifier from its own worktree
-in a separate Verifier agent session, preserving Author–Verifier isolation.
+A harness denial of a Verifier launch is also unusable. Report the denial. The
+orchestrating session performs no Change work from its own checkout; after
+capacity changes, it may order the officer Executor to make one fresh dispatch
+from the officer's frozen worktree.
 
 ## Durable facts and the `filed` disposition
 
-Every accepted defect has one disposition. Until the declared Change store's
-record for durable `filed` dispositions reaches Applied and the repository's
-required version floor includes that capability, use the prose disposition
-`filed` when a defect-owning `ISSUES.md` entry records the defect and its
-settlement condition. While the verification journal records that disposition
-as normal, do not raise the same finding again. Preserve the issue path and
-finding provenance in the ledger. Re-evaluate this temporary prose rule when
-that Change and floor condition are both satisfied.
+Every accepted defect has one disposition. When the active verification
+journal's checked input contract has no durable `filed` value, use the prose
+disposition `filed` when a defect-owning `ISSUES.md` entry records the defect
+and its settlement condition. While the verification journal records that
+disposition as normal, do not raise the same finding again. Preserve the issue
+path and finding provenance in the ledger. Stop using the prose form once the
+checked journal contract accepts a durable `filed` disposition.
 
 Mail every full commit SHA and every verdict with its complete verification run
 identity before compaction. Reuse a Verifier verdict for a byte-identical
@@ -70,19 +70,23 @@ deleting it.
 
 ## Ledger derivation
 
-The per-Change ledger contains passes, full heads, verdicts, finding provenance,
-reads with their cause, running spend, and wall time. It is derived from
-agent-mail records and sealed verification-journal runs, never treated as an
-independent source of truth. Rebuild it after compaction or restart with
+The per-Change ledger contains passes, full heads, verdicts, autonomous
+decisions with their reasoning, orchestrating-session failures, finding
+provenance, reads with their cause, running spend, and wall time. It is derived
+from agent-mail records and sealed verification-journal runs, never treated as
+an independent source of truth. Rebuild it after compaction or restart with
 `${SKILL_DIR}/scripts/derive_ledger.py` through that script's documented
 `derive` entry point. Spend and wall time are courtesy fields rather than
 gates.
 
 For machine-readable ledger facts, place a JSON object under a message record's
 body with a `ledger` object. The ledger object can carry `pass`, `head`,
-`verdict`, `findingProvenance`, `read`, `spend`, and `wallTimeSeconds`. A read
-records one of these causes: `message`, `officer-state-change`, `bound-crossed`,
-or `operator-cadence`. The derivation script also consumes sealed journal run
+`verdict`, `decision`, `failure`, `findingProvenance`, `read`, `spend`, and
+`wallTimeSeconds`. A decision records its autonomous class, choice, and
+reasoning. A failure records either an operator instruction naming an officer
+session or an officer fact reporting an operator interaction. A read records
+one of these causes: `message`, `officer-state-change`, `bound-crossed`, or
+`operator-cadence`. The derivation script also consumes sealed journal run
 objects directly and keeps source provenance with every derived entry.
 
 ## Event reads and lifecycle
@@ -105,11 +109,10 @@ the next order.
 
 ## Known environment and mail facts
 
-- The adapter inbox can return zero records while the raw store inbox still
-  holds them. The declared Change store's record for the adapter-inbox defect
-  tracks its repair. Until that repair ships, follow the orchestrating session's
-  explicitly supplied read-only store instruction for the affected project; do
-  not derive or improvise that instruction here.
+- An adapter inbox can return zero records while a checked store observation
+  still shows records. In that state, follow only the orchestrating session's
+  explicitly supplied read-only store instruction for the affected project;
+  do not derive or improvise that instruction here.
 - Opening an already-created linked worktree through the environment capability
   can fail. Prepare and prove the linked worktree and pane before launch, then
   start the officer in that existing pane.

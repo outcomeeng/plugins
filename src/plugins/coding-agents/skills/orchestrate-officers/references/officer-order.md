@@ -64,11 +64,11 @@ table, judgment step, `filed` disposition, ledger derivation, event-read rule,
 verdict reuse rule, release lifecycle, and known transport facts. The order
 records that reference as standing authority for the officer's execution.
 
-Until the agent-mail inbox defect tracked in the consumer repository's declared
-Change store is settled, every bell line to the officer carries the message id
-and the orchestrating session's read-only authorization for the store's exact
-inbox command. The bell is a pointer and authorization only; it never carries
-the order text.
+When a checked store observation proves records exist after the adapter inbox
+returned zero, every bell line to the officer carries the message id and the
+orchestrating session's read-only authorization for the store's exact inbox
+command. The bell is a pointer and authorization only; it never carries the
+order text.
 
 ## Change lifecycle
 

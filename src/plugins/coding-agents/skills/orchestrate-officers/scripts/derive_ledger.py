@@ -23,6 +23,8 @@ RUN_TOKEN_FIELD: Final = "runToken"
 PASS_FIELD: Final = "pass"
 HEAD_FIELD: Final = "head"
 VERDICT_FIELD: Final = "verdict"
+DECISION_FIELD: Final = "decision"
+FAILURE_FIELD: Final = "failure"
 FINDING_PROVENANCE_FIELD: Final = "findingProvenance"
 READ_FIELD: Final = "read"
 SPEND_FIELD: Final = "spend"
@@ -47,6 +49,8 @@ READ_CAUSES: Final = frozenset(
 PASSES_FIELD: Final = "passes"
 HEADS_FIELD: Final = "heads"
 VERDICTS_FIELD: Final = "verdicts"
+DECISIONS_FIELD: Final = "decisions"
+FAILURES_FIELD: Final = "failures"
 READS_FIELD: Final = "reads"
 
 
@@ -198,6 +202,8 @@ def derive_ledger(payload: Mapping[str, object]) -> dict[str, object]:
     passes: list[dict[str, object]] = []
     heads: list[dict[str, object]] = []
     verdicts: list[dict[str, object]] = []
+    decisions: list[dict[str, object]] = []
+    failures: list[dict[str, object]] = []
     findings: list[dict[str, object]] = []
     reads: list[dict[str, object]] = []
     spend_totals: dict[str, Decimal] = {}
@@ -213,6 +219,8 @@ def derive_ledger(payload: Mapping[str, object]) -> dict[str, object]:
         _append_entry(passes, event.get(PASS_FIELD), source)
         _append_entry(heads, event.get(HEAD_FIELD), source)
         _append_entry(verdicts, event.get(VERDICT_FIELD), source)
+        _append_entry(decisions, event.get(DECISION_FIELD), source)
+        _append_entry(failures, event.get(FAILURE_FIELD), source)
         _append_findings(findings, event.get(FINDING_PROVENANCE_FIELD), source)
         _append_reads(reads, event.get(READ_FIELD), source)
         _add_spend(spend_totals, event.get(SPEND_FIELD))
@@ -225,6 +233,8 @@ def derive_ledger(payload: Mapping[str, object]) -> dict[str, object]:
         _append_entry(passes, run.get(PASS_FIELD), source)
         _append_entry(heads, run.get(HEAD_FIELD), source)
         _append_entry(verdicts, run.get(VERDICT_FIELD), source)
+        _append_entry(decisions, run.get(DECISION_FIELD), source)
+        _append_entry(failures, run.get(FAILURE_FIELD), source)
         _append_findings(findings, run.get(FINDING_PROVENANCE_FIELD), source)
         _append_reads(reads, run.get(READ_FIELD), source)
         _add_spend(spend_totals, run.get(SPEND_FIELD))
@@ -235,6 +245,8 @@ def derive_ledger(payload: Mapping[str, object]) -> dict[str, object]:
         PASSES_FIELD: passes,
         HEADS_FIELD: heads,
         VERDICTS_FIELD: verdicts,
+        DECISIONS_FIELD: decisions,
+        FAILURES_FIELD: failures,
         FINDING_PROVENANCE_FIELD: findings,
         READS_FIELD: reads,
         RUNNING_SPEND_FIELD: {
