@@ -8,7 +8,7 @@ An unfilled field refuses the order.
 - Change: `<repository#number and complete Change title>`
 - Activity: `<exact Activity identifier and text>`
 - Officer mail identity: `<registered store-assigned word-list name>`
-- Exact inbox instruction: `<verbatim instruction supplied by the Captain for this pool>`
+- Exact inbox instruction: `<verbatim instruction supplied by the orchestrating session for this pool>`
 - Mail correlation: `<stable per-Change correlation>`
 - Absolute worktree: `<absolute path>`
 - Worktree proof: `<checked free-pool or occupancy result>`

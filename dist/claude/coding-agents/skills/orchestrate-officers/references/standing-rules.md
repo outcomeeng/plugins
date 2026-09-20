@@ -109,9 +109,9 @@ an artifact that targets one agent through an officer running that agent.
 
 - The adapter inbox can return zero records while the raw store inbox still
   holds them. The declared Change store's record for the adapter-inbox defect
-  tracks its repair. Until that repair ships, follow the Captain's explicitly
-  supplied read-only store instruction for the affected project; do not derive
-  or improvise that instruction here.
+  tracks its repair. Until that repair ships, follow the orchestrating session's
+  explicitly supplied read-only store instruction for the affected project; do
+  not derive or improvise that instruction here.
 - Opening an already-created linked worktree through the environment capability
   can fail. Prepare and prove the linked worktree and pane before launch, then
   start the officer in that existing pane.
