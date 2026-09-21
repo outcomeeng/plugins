@@ -49,12 +49,12 @@ def test_every_claude_install_record_maps_to_one_update_or_one_warning() -> None
             continue
         assert matching_updates == [], (entry, disposition)
         assert isinstance(disposition, RecordWarningReason)
+        record_identity = f"records {plugin} at {scope} scope"
         matching_warnings = [
             warning
             for warning in unmatched_warnings
             if warning.reason is disposition
-            and plugin in warning.message
-            and scope in warning.message
+            and record_identity in warning.message
             and (project_path is None or str(project_path) in warning.message)
         ]
         assert len(matching_warnings) == 1, (entry, disposition, warnings)
