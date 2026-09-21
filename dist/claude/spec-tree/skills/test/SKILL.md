@@ -426,7 +426,7 @@ Delegate language-specific structure to `/test-go` or `/test-python` or `/test-r
 
 In decision-rule mode, update each `### Testing` rule with exactly one selected assertion-type tag and create no test scaffold. Continue directly to the report step.
 
-**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the entry when implementation begins. Use `/understand`'s excluded-node guidance for the convention.
+**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. The node is Specified: its verification artifacts exist while its implementation is absent. Keep the node outside the deterministic gate's passing scope by whatever means the toolchain declares, and return it to scope when implementation begins. Use `/understand`'s status-claim guidance for how a passing-scope list relates to the claim.
 
 </step>
 
