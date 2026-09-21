@@ -7,7 +7,7 @@ malleability: spec
 
 PROVIDES the supervision contract of an orchestrating agent session — launch, order, read, correct, answer, escalate, housekeep, and close — over officer sessions that each execute one Change
 SO THAT an operator
-CAN run a fleet of coding agents through one session, one inbox, and one pane, never opening an officer's
+CAN run a fleet of coding agents through one session, one inbox, and one pane, never opening an officer's pane
 
 The orchestrating session is an agent session that holds none of the five Roles — Refiner, Executor, Author, Fixer, Verifier — for any Change an officer executes; it stands in for the operator toward the officers and owns each officer session's lifecycle, never the officer's work.
 
