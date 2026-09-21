@@ -27,8 +27,10 @@ from outcomeeng_testing.generators.source_and_templating import (
 from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
 from outcomeeng_testing.harnesses.source_and_templating import (
     arrange_cache_only_skill_directory,
+    arrange_cache_only_template_directory,
     arrange_empty_skill_directory,
     arrange_manifestless_skill_directory,
+    arrange_manifestless_template_directory,
     bare_conditional_renders_per_target,
     implementation_is_ready,
     include_uses_fragment_file_contract,
@@ -94,6 +96,35 @@ def test_empty_skill_directory_is_absent(tmp_path: Path, case: SourceScenario) -
     assert not [
         source for source in sources if source.is_relative_to(arranged.skill_root)
     ]
+
+
+@pytest.mark.parametrize("case", source_scenarios(), ids=lambda c: c.skill)
+def test_cache_only_template_directory_is_absent(
+    tmp_path: Path, case: SourceScenario
+) -> None:
+    arranged = arrange_cache_only_template_directory(tmp_path, case)
+
+    projection = project_emissions(arranged.src_root)
+
+    sources = [emission.source for emission in projection.emissions]
+    assert arranged.authored_manifest in sources
+    assert not [
+        source for source in sources if source.is_relative_to(arranged.template_root)
+    ]
+
+
+@pytest.mark.parametrize("case", source_scenarios(), ids=lambda c: c.skill)
+def test_manifestless_template_directory_with_authored_source_is_rejected(
+    tmp_path: Path, case: SourceScenario
+) -> None:
+    arranged = arrange_manifestless_template_directory(tmp_path, case)
+
+    with pytest.raises(SourceFormatError) as raised:
+        project_emissions(arranged.src_root)
+
+    assert str(arranged.template_root.relative_to(arranged.src_root)) in str(
+        raised.value
+    )
 
 
 @pytest.mark.parametrize("case", source_scenarios(), ids=lambda c: c.skill)

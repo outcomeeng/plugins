@@ -10,6 +10,19 @@ This paragraph declares the base command and the protected set; the module compl
 
 Evidence for an assertion of this node states the outcome the governed code decides. A predicate that holds whether or not that code runs is not evidence, in either layer: not a test whose expectation the arrangement alone satisfies, and not an assertion whose link no mutation of the governed code can falsify.
 
+The values this node declares are these, and each carries the evidence named beside it. A value absent from this list is not declared by the node.
+
+| Declared value                  | Evidence                                                              |
+| ------------------------------- | --------------------------------------------------------------------- |
+| The base command                | audit, against the module's own base argv                             |
+| Its flag combination            | audit, against the same argv                                          |
+| The protected name `.git`       | audit, against the module's metadata-directory name                   |
+| The protected name `.gitignore` | audit, against the module's ignore-file name                          |
+| The protected name `.spx`       | audit, against the module's session-store name                        |
+| The active Python environment   | test — a path resolved at runtime, not a literal this node spells out |
+
+A test may import any of these values to arrange or read a case; what it may not do is stand as the evidence that the module's value equals the one declared here, because both sides of that comparison come from the same source. The behavior around each value — which paths the builder omits, which it keeps, what it returns when nothing is left — is test evidence and states no literal.
+
 The module invokes the command in the repository root whose top-level entries produced the pathspecs. That root reaches the command boundary with the argv, so the declaration holds for every caller rather than only for one whose working directory already matches.
 
 ## Assertions
@@ -24,10 +37,10 @@ The module invokes the command in the repository root whose top-level entries pr
 ### Compliance
 
 - ALWAYS: begin the generated argv with the declared base command when cleanup candidates exist ([test](tests/test_clean.compliance.l1.py))
-- ALWAYS: the base command the module declares carries the flag combination this node declares above — force, recurse into untracked directories, and gitignored paths only — which gives the desired remove-only-gitignored semantics ([audit])
+- ALWAYS: every value the table above lists as audit evidence — the base command, its flag combination, and the three protected names — equals the value the module declares ([audit])
 - ALWAYS: separate the base command from generated pathspecs with `--` ([test](tests/test_clean.compliance.l1.py))
 - NEVER: include the active in-repository Python environment in the generated pathspecs ([test](tests/test_clean.compliance.l1.py))
-- NEVER: include `.spx` in the generated pathspecs — the session store is operational state a live session reads ([test](tests/test_clean.compliance.l1.py))
-- NEVER: include `.git` or `.gitignore` in the generated pathspecs — the repository's own metadata is never a cleanup candidate ([test](tests/test_clean.compliance.l1.py))
+- NEVER: include the session store in the generated pathspecs while another ignored cache remains one — the store is operational state a live session reads ([test](tests/test_clean.compliance.l1.py))
+- NEVER: include the repository's own metadata in the generated pathspecs — neither its directory nor its ignore file is ever a cleanup candidate ([test](tests/test_clean.compliance.l1.py))
 - NEVER: fall back to the bare base command when no cleanup candidates exist ([test](tests/test_clean.compliance.l1.py))
 - ALWAYS: the root harness guides `CLAUDE.md` and `AGENTS.md` name `just clean` as the agent's own action when a gitignored artifact blocks a gate, with no operator question and no path-limited substitute ([audit])
