@@ -22,8 +22,8 @@ release.
   definitions.
 - One linked worktree is already created, proven free, and associated with an
   existing herdr pane; opening that linked worktree is outside the run.
-- The officer's worktree pool has an available agent-mail store and a candidate
-  store-safe word-list identity.
+- The repository has an available agent-mail store and a candidate store-safe
+  word-list identity.
 - The observer can retain mail-thread exports, herdr inventories, and the
   orchestrating session's pane transcript without editing them.
 
@@ -65,17 +65,20 @@ released.
 
 ## Limitations
 
-An ordinary run does not force the conditions required to settle these
+An ordinary run does not force the conditions required to settle these `[probe]`
 assertions, which remain Declared:
 
 - "NEVER: a third round": a second rejected round and attempted third pass
 - "ALWAYS: the operator's invocation": every guarded, unexpected, stalled, and
   Verifier-time prompt condition
-- "ALWAYS: lifecycle operations leave": every exceptional lifecycle and direct
-  operator-interaction condition
 - "ALWAYS: the orchestrating session assumes": all three autonomous decisions
   and all four operator-held decisions
-- "ALWAYS: before endorsing": every term of the judgment step
+
+Two further assertions of this node carry `[audit]` rather than `[probe]`:
+"ALWAYS: lifecycle operations leave", the officer's ownership of its own state
+and results under a lifecycle operation, and "ALWAYS: before endorsing", the
+pre-endorsement restatement of the governing rule. An audit verdict settles
+each, so neither depends on this protocol and neither is a limitation of it.
 
 No probe pin exists yet. A future run must retain, at minimum, the mail-thread
 export, inventories before launch and after stop, the pane transcript, sealed
