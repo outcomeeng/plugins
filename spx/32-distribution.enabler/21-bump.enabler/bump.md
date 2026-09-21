@@ -1,6 +1,6 @@
 # Bump
 
-PROVIDES the manifest version-bumping orchestration that detects which plugins changed against a base reference and updates each changed plugin's manifest version once per branch
+PROVIDES the manifest version-bumping orchestration that detects which plugins changed against a base reference and updates each changed plugin's manifest version when it is not already ahead of that base
 SO THAT marketplace maintainers and CI workflows
 CAN bump every modified plugin's version field consistently across all manifests for that plugin in a single command, preview the bump without writing, and verify in CI that every changed plugin already carries a bump
 
@@ -43,7 +43,7 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under th
 
 - ALWAYS: every manifest a changed plugin owns is written in the same bump pass — when both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` exist, both receive the same new version in one bump invocation ([test](tests/test_bump.compliance.l1.py))
 - ALWAYS: check availability of `git` before any orchestration step — missing tools fail fast with a diagnostic rather than partway through the sequence ([test](tests/test_bump.compliance.l1.py))
-- NEVER: bump a plugin whose working-tree version is already ahead of its `base_ref` version — the branch already carries a valid bump for that plugin (re-bumping during PR review is the failure `spx/local/commit-changes.md` prohibits); outside CHECK mode, that plugin is skipped with a diagnostic while every other changed-but-unbumped plugin is still bumped — or, under `--dry-run`, reported — in the same pass ([test](tests/test_bump.compliance.l1.py))
+- NEVER: bump a plugin whose working-tree version is already ahead of its `base_ref` version — the branch already carries a valid bump for that plugin; `spx/local/open-pr.md` owns the bump step after base synchronization and repeats it after a later rebase, preserving versions still ahead of the base and writing the next version from the base when it catches up or advances; outside CHECK mode, that plugin is skipped with a diagnostic while every other changed-but-unbumped plugin is still bumped — or, under `--dry-run`, reported — in the same pass ([test](tests/test_bump.compliance.l1.py))
 - NEVER: write a manifest for a plugin with no changes under an authored source or generated runtime root since `base_ref` — change detection is the sole trigger for writing ([test](tests/test_bump.compliance.l1.py))
 - NEVER: a shared fragment reaches a plugin's shipped surface without that plugin's version advancing in the same bump pass — a version that does not move when the surface moves misreports what the plugin ships ([test](tests/test_bump.compliance.l1.py))
 - NEVER: reformat manifest content beyond the version field — every byte outside the `"version": "{old}"` substring is preserved character-for-character, so version bumps produce minimal diffs and do not churn manifest authors' formatting choices ([test](tests/test_bump.compliance.l1.py))
