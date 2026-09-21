@@ -21,8 +21,13 @@ permissions, task boundary, and result are independently inspectable.
   and relay its declared result contract without copying its workflow into the wrapper.
 - ALWAYS: define the role, material constraints, workflow, and output expectations in the
   {{! term('configured_agent_prompt') !}}. Equivalent semantic tags satisfy the same requirement.
-- ALWAYS: use the XML structure and voice rules from `/agent-prompt-standards`.
+- ALWAYS: use the voice, constraint-language, and anti-pattern rules from
+  `/agent-prompt-standards`; take the prompt's XML structure from `/create-subagent`.
 - ALWAYS: declare every field required by the current harness and reject unsupported configuration.
+- ALWAYS: resolve a definition's governing context before judging its execution boundary
+  or its evidence: the owning node is the node whose linked test or audit assertion names
+  the definition, and a governing declaration is an assertion in that node's spec or a
+  decision on the path from the root that reaches the node by index.
 - ALWAYS: judge native sandbox and approval fields against the governing context's
   execution-boundary declaration before applying the harness contract.
 - NEVER: preserve a retired schema, compatibility alias, or fallback configuration.
@@ -89,12 +94,10 @@ and its system prompt in the body. Keep operational settings such as `tools`,
   step can run with the declared capabilities. An inherited tool set requires a concrete justification.
 - NEVER: treat a prompt-level restriction as an enforced permission boundary.
 - ALWAYS: admit a definition that inherits the invoking session's execution policy when its
-  governing context declares that inheritance with linked evidence — an assertion in the
-  owning node's spec, or a decision on the path from the root that reaches that node by
-  index. Resolve the owning node through the tree as the node whose linked test or audit
-  assertion names the definition, read the declaration there or in a decision above it,
-  name in the verdict which form was read, and judge the declaration's presence; an absent
-  native sandbox field does not invalidate declared inheritance.
+  governing context declares that inheritance with linked evidence. Read the declaration in
+  the owning node's spec or in a decision above it, name in the verdict which form was read,
+  and judge the declaration's presence; an absent native sandbox field does not invalidate
+  declared inheritance.
 - NEVER: accept a citation inside a definition's frontmatter or body as the inheritance
   declaration, or admit undeclared inheritance on a judgment that the definition needs the
   invoking policy — a definition whose governing context declares nothing stays a finding.
@@ -109,7 +112,8 @@ and its system prompt in the body. Keep operational settings such as `tools`,
 
 <invocation>
 
-- ALWAYS: apply the root guide's standing authorization and invocation mechanics.
+- ALWAYS: apply the standing authorization and invocation mechanics the repository's root
+  harness instruction file declares.
   The calling skill owns when to launch, the exact configured role, and the target-only prompt.
 - NEVER: turn a description, task pattern, available role, or apparent usefulness into a launch request.
 - ALWAYS: let the invoked skill independently discover context from the supplied target.
@@ -139,9 +143,8 @@ and its system prompt in the body. Keep operational settings such as `tools`,
 
 - ALWAYS: accept a retained per-harness, per-profile release acceptance — native loading
   and one minimal isolated execution for every declared profile — as the invocation
-  evidence of a definition whose governing context declares that acceptance in the owning
-  node's spec or in a decision on the path from the root that reaches it by index; name
-  the declaration and the acceptance artifact read.
+  evidence of a definition whose governing context declares that acceptance; name the
+  declaration and the acceptance artifact read.
 - ALWAYS: for every other definition, retain the native configuration and actual result of
   a minimal isolated invocation after a configuration change, using the owning workflow's
   exact definition and target.
