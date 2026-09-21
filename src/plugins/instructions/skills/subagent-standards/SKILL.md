@@ -78,7 +78,7 @@ and its system prompt in the body. Keep operational settings such as `tools`,
   including the intentional absence of unsupported controls.
 - NEVER: author model identifiers or individual reasoning controls independently,
   translate another harness's values, extend the profile set, or substitute after a failure.
-- ALWAYS: a skill retains its invoking session's configuration, including when a
+- ALWAYS: let a skill retain its invoking session's configuration, including when a
   configured subagent invokes it; `/skill-standards` owns the rule that skill frontmatter
   carries no model or reasoning override.
 
@@ -114,16 +114,11 @@ and its system prompt in the body. Keep operational settings such as `tools`,
 
 <invocation>
 
-{!% if target == 'codex' %!}
-
 - ALWAYS: apply the standing authorization and invocation mechanics the repository's root
-  `AGENTS.md` declares; when it declares none, a launch waits for the operator's request.
-  {!% else %!}
-- ALWAYS: apply the standing authorization and invocation mechanics the repository's root
-  `CLAUDE.md` declares; when it declares none, a launch waits for the operator's request.
-  {!% endif %!}
-- ALWAYS: the calling skill owns when to launch, the exact configured role, and the
-  target-only prompt.
+  harness instruction file declares; when it declares none, a launch waits for the
+  operator's request.
+- ALWAYS: leave launch timing, the exact configured role, and the target-only prompt to
+  the calling skill.
 - NEVER: turn a description, task pattern, available role, or apparent usefulness into a launch request.
 - ALWAYS: let the invoked skill independently discover context from the supplied target.
 - ALWAYS: start every audit and review without authoring conversation, reasoning,
@@ -133,6 +128,12 @@ and its system prompt in the body. Keep operational settings such as `tools`,
   Make one launch call; analyze and report a failed launch or unusable result without retry,
   substitution, or a replacement audit in the authoring conversation.
 - ALWAYS: preserve the invoked skill's result contract and finding-repair workflow.
+
+{!% if target == 'codex' %!}
+The root harness instruction file is the repository's `AGENTS.md`.
+{!% else %!}
+The root harness instruction file is the repository's `CLAUDE.md`.
+{!% endif %!}
 
 </invocation>
 
@@ -167,7 +168,8 @@ and its system prompt in the body. Keep operational settings such as `tools`,
 <success_criteria>
 
 - Native fields and complete profile agree with the selected role and its governing requirements.
-- Tool capabilities cover the workflow's steps and material restrictions are enforceable.
+- Tool capabilities cover the workflow's steps, and material restrictions are expressed in
+  native permission fields, never only in prompt text.
 - The role loads, starts through an explicit skill instruction, and returns its declared contract.
 - Verification evidence comes from an isolated session with independently discovered requirements.
 - Execution-boundary and invocation evidence are judged against the governing context's
