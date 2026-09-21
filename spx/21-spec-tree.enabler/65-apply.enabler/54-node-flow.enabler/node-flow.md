@@ -10,7 +10,7 @@ CAN produce implementations that conform to their governing specs on the first p
 
 - ALWAYS: invoke `/contextualize` for the work item before any implementation — the flow loads node context before code is written ([audit])
 - ALWAYS: the Code lane writes tests derived from spec assertions before implementation; the Test-evidence lane authors tests as its final artifact; the Spec-or-decision, Skill, and Prose lanes author only their owned artifacts and carry no test-before-implementation sequence ([audit])
-- ALWAYS: run every audit gate the least malleable node in the changeset selects through the responsible auditor agents before the flow is complete — the flow never self-approves a gate or runs an audit skill in its own context ([audit])
+- ALWAYS: run every audit gate the changeset owes — the numbered evidence gates and review its least malleable node selects, and the artifact auditors its Output kinds select — through the responsible auditor agents before the flow is complete; the flow never self-approves a gate or runs an audit skill in its own context ([audit])
 - ALWAYS: when a changeset spans nodes, widen every selected gate to its complete governed subject set without selecting an additional gate; Step 9 reviews the full changeset only when the least malleable touched node selects review ([audit])
 - ALWAYS: when an audit gate returns REJECTED, UNKNOWN, or BLOCKED, attempt remediation before proceeding — the gate verdict governs progression ([audit])
 - NEVER: modify a spec assertion to make a failing test pass — the declaration governs ([audit])
