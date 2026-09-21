@@ -71,9 +71,12 @@ RECORD_ROUNDTRIP_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.property.l1.py"
 )
+DELEGATION_CHAIN_SEED = 2026092201
+DELEGATION_CHAIN_EXAMPLES = 20
 TERMINAL_PROPERTY_SEED = 2026091802
 TERMINAL_PROPERTY_EXAMPLES = 40
 TERMINAL_PROPERTY_REPLAY_PATH = RECORD_ROUNDTRIP_REPLAY_PATH
+DELEGATION_CHAIN_REPLAY_PATH = RECORD_ROUNDTRIP_REPLAY_PATH
 PROJECT_KEY_MAPPING_SEED = 2026091803
 PROJECT_KEY_MAPPING_EXAMPLES = 20
 PROJECT_KEY_MAPPING_REPLAY_PATH = (
@@ -458,6 +461,74 @@ def run_record_roundtrip_property(
     )
 
 
+def run_delegation_chain_property(
+    assert_chain: Callable[
+        [ModuleType, str, list[dict[str, object]], RecordingRunner], None
+    ],
+) -> None:
+    """Drive an order, its delegation request, and its one correlated terminal
+    handback through the capability's own send path under one reference.
+
+    The three records share a correlation, and each is delivered by the same
+    `send` operation a caller uses, so the chain is evidenced where it happens
+    rather than at the reduction that follows it.
+    """
+    module = _load()
+
+    @seed(DELEGATION_CHAIN_SEED)
+    @settings(max_examples=DELEGATION_CHAIN_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        reference=coordination_references(),
+        terminal_kind=terminal_record_kinds(module),
+        sender=agent_names(),
+        recipient=agent_names(),
+        subject=message_texts(),
+        body=message_texts(),
+        project_key=project_key_paths(),
+    )
+    def generated_chain(
+        reference: str,
+        terminal_kind: object,
+        sender: str,
+        recipient: str,
+        subject: str,
+        body: str,
+        project_key: str,
+    ) -> None:
+        def record(kind: object, from_agent: str, to_agent: str) -> dict[str, object]:
+            return module.message_record(
+                kind=kind,
+                correlation=reference,
+                sender=from_agent,
+                recipient=to_agent,
+                subject=subject,
+                body=body,
+            )
+
+        chain = [
+            record(module.RecordKind.ORDER, sender, recipient),
+            record(module.RecordKind.DELEGATION_REQUEST, sender, recipient),
+            record(terminal_kind, recipient, sender),
+        ]
+        # Each operation resolves the key before it reaches the store, so the
+        # repository answers once per send rather than once per chain.
+        replies: list[CommandResultContract] = []
+        for _ in chain:
+            replies.append(
+                text_command_result(
+                    module, common_dir_output(COMMON_DIR_EXACT, project_key)
+                )
+            )
+            replies.append(store_response_result(module, module.Operation.SEND))
+        assert_chain(module, reference, chain, RecordingRunner(replies))
+
+    run_replayable_property(
+        generated_chain,
+        seed_value=DELEGATION_CHAIN_SEED,
+        replay_path=DELEGATION_CHAIN_REPLAY_PATH,
+    )
+
+
 def run_terminal_property(
     assert_terminal: Callable[[ModuleType, str, object, object, dict[str, str]], None],
 ) -> None:
@@ -828,22 +899,25 @@ def run_cli_project_key(working_directory: Path) -> tuple[int, dict[str, object]
 
 
 def requests_over_every_operation(module: ModuleType) -> list[dict[str, object]]:
-    """One request per source-owned operation, covering the whole enumeration.
+    """Exactly one request per source-owned operation.
 
     A rule quantified over operations is read against every member, so a
-    program reached only from one operation's path still falsifies it.
+    program or fallback reached only from one operation's path still falsifies
+    it. Record kind is no dimension of those rules, so the send request is one
+    record rather than one per kind: the operation enumeration is what the
+    rules range over, and repeating a launch per kind buys no falsification.
     """
-    requests = [
-        request
-        for request in operation_requests(module)
-        if _minimal_request(module, request)
-    ]
-    covered = {request[module.OPERATION_FIELD] for request in requests}
-    if covered != {operation.value for operation in module.Operation}:
+    operations = {operation.value for operation in module.Operation}
+    chosen: dict[str, dict[str, object]] = {}
+    for request in operation_requests(module):
+        name = cast(str, request[module.OPERATION_FIELD])
+        if name not in chosen and _minimal_request(module, request):
+            chosen[name] = request
+    if set(chosen) != operations:
         raise CaptureError(
-            f"The generated requests cover {sorted(covered)}, not every operation"
+            f"The generated requests cover {sorted(chosen)}, not every operation"
         )
-    return requests
+    return [chosen[name] for name in sorted(chosen)]
 
 
 def _minimal_request(module: ModuleType, request: dict[str, object]) -> bool:

@@ -17,6 +17,10 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **The SPX dependency of every mail operation.** No mail operation invokes an SPX command, so the capability no longer depends on `spx diagnose --format json` — an argument vector the next `@outcomeeng/spx` release retires — and an operation completes where only the store CLI and Git resolve.
 
+### Requires
+
+- **`git` on `PATH`, accepting `rev-parse --path-format=absolute --git-common-dir`.** Every mail operation resolves the project key through that vector before it reaches the store, so the capability depends on Git where it previously depended on the SPX diagnosis. The option arrived in Git 2.31; below it the vector exits nonzero and every operation returns `repository-unresolved`, with the command's own message carried in `detail` — an unknown-option message there distinguishes an old Git from a working directory that is no repository.
+
 ## 0.7.1
 
 ### Added

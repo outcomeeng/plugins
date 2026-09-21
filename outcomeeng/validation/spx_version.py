@@ -46,9 +46,12 @@ from typing import Final
 # skill invokes the CLI in consumer repositories whose declaration can be
 # `4.0`, so that parser behavior is part of the floor's contract. spx 0.7.0 is
 # the release whose `spx diagnose --format json`
-# `worktree-pool` record carries `mainCheckoutPath`; the agent-mail capability
-# the coding-agents plugin's agent-mail node specifies maps the mail project key
-# from that path, so the record's shape is part of the floor's contract.
+# `worktree-pool` record carries `mainCheckoutPath`; this product's merge
+# overlay reads that reading in its canonical-checkout preflight and again
+# after feature-worktree cleanup, so the record's shape is part of the floor's
+# contract. The agent-mail capability no longer reads it: it derives the mail
+# project key from the repository's own common Git directory and invokes no
+# spx command.
 # spx 0.6.21 is the first release whose `spx verification run start`
 # reports the resolved changed-path set as `resolvedScope` and whose `render`
 # projection carries `auditScopeUnits`; the implementation audit's stage-4
