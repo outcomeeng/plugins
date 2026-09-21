@@ -1,6 +1,7 @@
 """Network-backed real-agent mappings for repository installation."""
 
 import json
+import os
 from typing import cast
 
 from outcomeeng.distribution.installation import (
@@ -34,7 +35,7 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
         catalog_plugin_names_from_bytes(observation.subset_codex_catalog)
     )
 
-    assert observation.persistent_exit_code == 0, observation.persistent_stderr
+    assert observation.persistent_exit_code == os.EX_OK, observation.persistent_stderr
     assert (
         persistent_report[ReportField.COMPLETED_OPERATIONS]
         == observation.persistent_planned_operations
@@ -70,7 +71,7 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
         observation.invocation_checkout
     )
     assert observation.codex_registration_target == str(observation.invocation_checkout)
-    assert observation.subset_exit_code == 0, observation.subset_stderr
+    assert observation.subset_exit_code == os.EX_OK, observation.subset_stderr
     assert observation.subset_claude_plugins.installed == subset_claude_plugins
     assert observation.subset_claude_plugins.enabled == subset_claude_plugins
     assert observation.subset_codex_plugins.installed == subset_codex_plugins

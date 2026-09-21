@@ -60,19 +60,24 @@ def generated_catalog_subset(
     *,
     include_spec_tree: bool,
 ) -> frozenset[str]:
-    """Select a nontrivial catalog-bounded subset with the requested validity."""
-    selected = {
-        plugin
-        for index, plugin in enumerate(catalog)
-        if index % 2 == 0 and plugin != SPEC_TREE_PLUGIN
-    }
-    if not selected:
-        selected.update(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
+    """Select a canonical boundary subset with the requested validity."""
+    if SPEC_TREE_PLUGIN not in catalog:
+        raise ValueError("catalog must contain spec-tree")
     if include_spec_tree:
-        selected.add(SPEC_TREE_PLUGIN)
-    else:
-        selected.discard(SPEC_TREE_PLUGIN)
-    return frozenset(selected)
+        return frozenset({SPEC_TREE_PLUGIN})
+    selected = frozenset(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
+    if not selected:
+        raise ValueError("catalog must contain a plugin other than spec-tree")
+    return selected
+
+
+def marketplace_source_from_fixture(filename: str) -> str:
+    """Read a marketplace repository from a complete settings fixture."""
+    document = cast(
+        "dict[str, dict[str, dict[str, dict[str, str]]]]",
+        json.loads((FIXTURE_ROOT / filename).read_text(encoding="utf-8")),
+    )
+    return document["extraKnownMarketplaces"][MARKETPLACE_NAME]["source"]["repo"]
 
 
 def generated_agent_subsets(

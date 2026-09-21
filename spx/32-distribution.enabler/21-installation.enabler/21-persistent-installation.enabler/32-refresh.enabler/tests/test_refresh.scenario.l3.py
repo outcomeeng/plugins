@@ -1,6 +1,7 @@
 """Installation evidence grouped by its governing contract."""
 
 import json
+import os
 from outcomeeng.distribution.installation import (
     CLAUDE_LOCAL_SCOPE,
     CLAUDE_PROJECT_SCOPE,
@@ -24,7 +25,7 @@ def test_real_persistent_run_refreshes_a_second_checkout_at_local_scope() -> Non
         if isinstance(record, ClaudeInstallRecord)
     }
     assert expected <= recorded_before
-    assert observation.exit_code == 0, observation.stderr
+    assert observation.exit_code == os.EX_OK, observation.stderr
     document = json.loads(observation.stdout)
     refreshed = {
         (

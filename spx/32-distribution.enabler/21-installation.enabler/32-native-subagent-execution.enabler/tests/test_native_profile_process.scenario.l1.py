@@ -1,5 +1,6 @@
 """Real subprocess evidence for native profile timeout cleanup."""
 
+import os
 import subprocess
 
 from outcomeeng_testing.harnesses.capturing_runner import (
@@ -14,7 +15,7 @@ from outcomeeng_testing.harnesses.native_profile_process import (
 def test_parent_exit_decodes_output_and_terminates_descendant() -> None:
     with lingering_native_profile_process() as observation:
         assert isinstance(observation.result, subprocess.CompletedProcess)
-        assert observation.result.returncode == 0
+        assert observation.result.returncode == os.EX_OK
         assert observation.output is not None
         assert observation.result.stdout == observation.output.decode(
             "utf-8", errors="replace"

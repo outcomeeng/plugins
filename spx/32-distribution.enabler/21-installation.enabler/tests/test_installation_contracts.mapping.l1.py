@@ -1,5 +1,10 @@
 """Operation failure mapping across installation modes."""
 
+import json
+import os
+
+import pytest
+
 from outcomeeng.distribution.installation import (
     InstallationMode,
     ReportField,
@@ -15,8 +20,6 @@ from outcomeeng_testing.harnesses.installation import (
     observe_first_failure,
     observe_planned_operations,
 )
-import json
-import pytest
 
 
 def test_every_planned_operation_reports_its_failure_and_stops_installation() -> None:
@@ -25,11 +28,11 @@ def test_every_planned_operation_reports_its_failure_and_stops_installation() ->
         attempted = observation.attempted
         document = json.loads(observation.stderr)
 
-        assert observation.exit_code != 0
+        assert observation.exit_code != os.EX_OK
         assert observation.stdout == ""
         assert document[ReportField.OPERATION] == operation.value
         assert document[ReportField.AGENT] == attempted[-1].agent.value
-        assert document[ReportField.COMPLETED_OPERATIONS] == len(attempted) - 1
+        assert document[ReportField.COMPLETED_OPERATIONS] == len(attempted[:-1])
         assert document[ReportField.EXIT_CODE] == observation.exit_code
         assert attempted == observation.command_sequence[: len(attempted)]
 

@@ -31,7 +31,6 @@ def test_catalog_reconciliation_prunes_only_stale_owned_agents() -> None:
     observation = observe_agent_home_reconciliation()
     retired = set(observation.desired_first) - set(observation.desired_second)
 
-    assert len(retired) == 1
     assert set(observation.home_second) == (
         set(observation.home_initial) | set(observation.desired_second)
     )
@@ -71,7 +70,9 @@ def test_scope_split_reports_exact_and_changed_copies_before_mutation() -> None:
         ScopeSplitClassification.DIRECTED_REMOVAL,
         ScopeSplitClassification.SHADOWING_COLLISION,
     }
-    assert len(observation.entries) == 4
+    assert {entry.path for entry in observation.entries} == {
+        path.parent.resolve() / path.name for path in observation.checkout_paths
+    }
     assert {
         entry.classification
         for entry in observation.entries

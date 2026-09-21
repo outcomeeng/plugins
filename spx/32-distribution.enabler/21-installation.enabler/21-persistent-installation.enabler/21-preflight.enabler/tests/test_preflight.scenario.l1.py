@@ -1,6 +1,7 @@
 """Installation evidence grouped by its governing contract."""
 
 import json
+import os
 from outcomeeng.distribution.installation import (
     Agent,
     CANONICAL_MARKETPLACE_SOURCE,
@@ -14,7 +15,6 @@ from outcomeeng.distribution.installation import (
     UNREADABLE_SETTINGS_DIAGNOSTIC,
 )
 from outcomeeng_testing.harnesses.installation import (
-    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_claude_user_collision,
     observe_inspection_failure,
     observe_invalid_persistent_selection,
@@ -22,6 +22,11 @@ from outcomeeng_testing.harnesses.installation import (
     observe_noncanonical_registry_plan,
     observe_pathless_record_listing,
     observe_unreadable_source,
+)
+from outcomeeng_testing.generators.installation import marketplace_source_from_fixture
+
+NONCANONICAL_MARKETPLACE_SOURCE = marketplace_source_from_fixture(
+    "project-marketplace-noncanonical.json"
 )
 
 
@@ -41,11 +46,11 @@ def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> Non
     observation = observe_inspection_failure()
     document = json.loads(observation.stderr)
 
-    assert observation.exit_code != 0
+    assert observation.exit_code != os.EX_OK
     assert observation.stdout == ""
     assert document[ReportField.OPERATION] == Operation.MARKETPLACE_INSPECT.value
     assert document[ReportField.AGENT] == observation.attempted[-1].agent.value
-    assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted) - 1
+    assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted[:-1])
     assert (
         observation.attempted
         == observation.command_sequence[: len(observation.attempted)]
@@ -97,7 +102,7 @@ def test_unreadable_invocation_settings_stop_before_any_plan() -> None:
 
 
 def test_a_noncanonical_registry_source_stops_before_any_plan() -> None:
-    error = observe_noncanonical_registry_plan()
+    error = observe_noncanonical_registry_plan(NONCANONICAL_MARKETPLACE_SOURCE)
 
     assert error is not None
     assert error.startswith(REGISTRY_SOURCE_DIAGNOSTIC)

@@ -12,19 +12,23 @@ from outcomeeng_testing.generators.installation import (
     catalog_plugin_names_from_document,
     generated_claude_listing_entries,
     generated_codex_listing_entries,
+    marketplace_source_from_fixture,
 )
 from outcomeeng_testing.harnesses.installation import (
-    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_noncanonical_source,
     repository_root,
 )
 import json
 import pytest
 
+NONCANONICAL_MARKETPLACE_SOURCE = marketplace_source_from_fixture(
+    "project-marketplace-noncanonical.json"
+)
+
 
 @pytest.mark.parametrize("agent", tuple(Agent), ids=str)
 def test_every_noncanonical_agent_source_stops_before_any_plan(agent: Agent) -> None:
-    error = observe_noncanonical_source(agent)
+    error = observe_noncanonical_source(agent, NONCANONICAL_MARKETPLACE_SOURCE)
 
     assert error is not None
     assert NONCANONICAL_MARKETPLACE_SOURCE in error

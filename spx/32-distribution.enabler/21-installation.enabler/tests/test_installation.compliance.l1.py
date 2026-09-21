@@ -1,6 +1,7 @@
 """State-boundary and failure evidence for repository installation."""
 
 import json
+import os
 from pathlib import Path
 
 from outcomeeng.distribution.installation import (
@@ -173,7 +174,7 @@ def test_an_enable_failure_stops_the_run_rather_than_reading_as_idempotent() -> 
     observation = observe_first_failure(Operation.PLUGIN_ENABLE)
     document = json.loads(observation.stderr)
 
-    assert observation.exit_code != 0
+    assert observation.exit_code != os.EX_OK
     assert document[ReportField.AGENT] == Agent.CLAUDE.value
     assert document[ReportField.OPERATION] == Operation.PLUGIN_ENABLE.value
     assert document[ReportField.PLUGIN] == observation.attempted[-1].plugin
@@ -187,7 +188,7 @@ def test_a_failed_inspection_stops_before_any_planned_operation() -> None:
     observation = observe_inspection_failure()
     document = json.loads(observation.stderr)
 
-    assert observation.exit_code != 0
+    assert observation.exit_code != os.EX_OK
     assert document[ReportField.OPERATION] == Operation.MARKETPLACE_INSPECT.value
     assert document[ReportField.AGENT] == observation.attempted[-1].agent.value
     assert (
@@ -215,11 +216,11 @@ def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
     observation = observe_first_failure(Operation.PLUGIN_INSTALL, agent=Agent.CODEX)
     document = json.loads(observation.stderr)
 
-    assert observation.exit_code != 0
+    assert observation.exit_code != os.EX_OK
     assert document[ReportField.AGENT] == Agent.CODEX.value
     assert document[ReportField.OPERATION] == Operation.PLUGIN_INSTALL.value
     assert document[ReportField.PLUGIN] == observation.attempted[-1].plugin
-    assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted) - 1
+    assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted[:-1])
     assert (
         observation.attempted
         == observation.command_sequence[: len(observation.attempted)]
@@ -230,12 +231,12 @@ def test_first_agent_cli_failure_reports_the_operation_and_stops() -> None:
     observation = observe_first_failure(Operation.PLUGIN_INSTALL)
     document = json.loads(observation.stderr)
 
-    assert observation.exit_code != 0
+    assert observation.exit_code != os.EX_OK
     assert document[ReportField.AGENT] == Agent.CLAUDE.value
     assert document[ReportField.OPERATION] == Operation.PLUGIN_INSTALL.value
     assert document[ReportField.PLUGIN] == observation.attempted[-1].plugin
     assert document[ReportField.STDERR] == Operation.PLUGIN_INSTALL.value
-    assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted) - 1
+    assert document[ReportField.COMPLETED_OPERATIONS] == len(observation.attempted[:-1])
     assert (
         observation.attempted
         == observation.command_sequence[: len(observation.attempted)]

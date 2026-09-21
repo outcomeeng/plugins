@@ -124,6 +124,7 @@ from outcomeeng_testing.generators.installation import (
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
     generated_valid_catalog_subsets,
+    marketplace_source_from_fixture,
 )
 from outcomeeng.validation.ci_gate import JUST_BINARY
 from outcomeeng_testing.harnesses.discovery_auth import (
@@ -138,7 +139,9 @@ from outcomeeng_testing.harnesses.discovery_auth import (
 
 REQUIRED_BINARIES: tuple[str, ...] = (JUST_BINARY, CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
-NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
+NONCANONICAL_MARKETPLACE_SOURCE = marketplace_source_from_fixture(
+    "project-marketplace-noncanonical.json"
+)
 SUBAGENT_DISCOVERY_NAMES_FIELD = "subagent_names"
 SUBAGENT_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
@@ -275,6 +278,7 @@ class ScopeSplitObservation:
     """Checkout split classifications and selected-home mutation boundary."""
 
     entries: tuple[ScopeSplitEntry, ...]
+    checkout_paths: tuple[Path, ...]
     attempted: tuple[InstallationCommand, ...]
     home_before: tuple[tuple[str, bytes], ...]
     home_after: tuple[tuple[str, bytes], ...]
@@ -955,7 +959,7 @@ def observe_unreadable_source() -> UnreadableSourceObservation:
     return UnreadableSourceObservation(settings_path=settings, error=None)
 
 
-def observe_noncanonical_registry_plan() -> str | None:
+def observe_noncanonical_registry_plan(noncanonical_source: str) -> str | None:
     """Plan a persistent run whose machine registry names a noncanonical source.
 
     The invocation checkout declares the canonical source, so the registry
@@ -974,7 +978,7 @@ def observe_noncanonical_registry_plan() -> str | None:
             build_persistent_installation_plan(
                 preflight,
                 claude_marketplace_payload=claude_marketplace_listing_payload(
-                    NONCANONICAL_MARKETPLACE_SOURCE
+                    noncanonical_source
                 ),
                 claude_plugins_payload=_plugin_listing_payload(
                     Agent.CLAUDE, mirror, frozenset({SPEC_TREE_PLUGIN})
@@ -991,7 +995,7 @@ def observe_noncanonical_registry_plan() -> str | None:
     return None
 
 
-def observe_noncanonical_source(agent: Agent) -> str | None:
+def observe_noncanonical_source(agent: Agent, noncanonical_source: str) -> str | None:
     """Run persistent planning with one agent's own source noncanonical.
 
     For Claude Code the mirrored checkout's project settings declare the
@@ -1006,7 +1010,7 @@ def observe_noncanonical_source(agent: Agent) -> str | None:
         mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(
             mirror,
-            NONCANONICAL_MARKETPLACE_SOURCE
+            noncanonical_source
             if agent is Agent.CLAUDE
             else CANONICAL_MARKETPLACE_SOURCE,
         )
@@ -1022,7 +1026,7 @@ def observe_noncanonical_source(agent: Agent) -> str | None:
                     Agent.CLAUDE, mirror, frozenset({SPEC_TREE_PLUGIN})
                 ),
                 codex_marketplace_payload=codex_marketplace_listing_payload(
-                    NONCANONICAL_MARKETPLACE_SOURCE
+                    noncanonical_source
                     if agent is Agent.CODEX
                     else CANONICAL_CODEX_SOURCE
                 ),
@@ -1408,6 +1412,7 @@ def observe_scope_split() -> ScopeSplitObservation:
         (checkout_agents / linked.destination.name).symlink_to(linked.source)
         renamed_fixture = installation_fixture("local_helper.toml")
         shutil.copyfile(renamed_fixture, checkout_agents / renamed_fixture.name)
+        checkout_paths = tuple(sorted(checkout_agents.iterdir()))
         home_before = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
         runner = RecordingRunner()
         entries: tuple[ScopeSplitEntry, ...] = ()
@@ -1418,6 +1423,7 @@ def observe_scope_split() -> ScopeSplitObservation:
         home_after = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
     return ScopeSplitObservation(
         entries=entries,
+        checkout_paths=checkout_paths,
         attempted=tuple(runner.calls),
         home_before=home_before,
         home_after=home_after,
