@@ -2,8 +2,9 @@
 
 Covers the scenario assertions in `clean.md`: the recorded argv omits an
 active in-repository Python environment from generated pathspecs, Git dry-run
-output preserves that environment while listing another ignored cache, and
-the runner's exit code is propagated to the caller.
+output preserves the session store and that environment while listing another
+ignored cache, the runner's exit code is propagated to the caller, and a
+repository whose every top-level path is protected invokes no runner.
 """
 
 from __future__ import annotations

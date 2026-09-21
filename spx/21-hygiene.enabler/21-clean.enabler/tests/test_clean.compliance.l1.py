@@ -5,6 +5,7 @@ Covers the compliance assertions in `clean.md`:
 - ALWAYS: separate `git clean -fdX` from generated pathspecs with `--`.
 - NEVER: include the active in-repository Python environment in the generated
   pathspecs.
+- NEVER: include `.spx` in the generated pathspecs.
 - NEVER: fall back to bare `git clean -fdX` when no cleanup candidates exist.
 """
 

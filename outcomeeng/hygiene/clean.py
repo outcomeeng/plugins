@@ -7,15 +7,15 @@ Replaces the Justfile `clean` recipe's `find -delete` chain with `git clean
 - `-d`  recurse into untracked directories
 - `-X`  remove only files ignored by git (preserving untracked-but-not-ignored
   files)
-- pathspecs limit the cleanup to top-level entries outside the active Python
-  environment
+- pathspecs limit the cleanup to top-level entries outside the session store
+  and the active Python environment
 
 The module's contract:
 
 - `CLEAN_BASE_ARGV` names the `git clean` argv that gives gitignored-only
   cleanup semantics.
 - `build_clean_argv()` appends generated top-level pathspecs that omit the
-  active environment when needed.
+  session store and, when needed, the active environment.
 - `Runner` Protocol describes the injected subprocess boundary; `clean()`
   accepts it as a keyword argument.
 - `main()` wires a real `subprocess.run` adapter.
@@ -67,7 +67,7 @@ def build_clean_argv(
     repo_root: Path,
     active_python_prefix: Path,
 ) -> tuple[str, ...]:
-    """Build the cleanup argv without deleting the active Python environment."""
+    """Build the cleanup argv that spares the store and the active environment."""
     pathspecs = build_clean_pathspecs(
         repo_root=repo_root,
         active_python_prefix=active_python_prefix,
@@ -86,7 +86,7 @@ def build_clean_pathspecs(
     repo_root_absolute = Path(os.path.abspath(repo_root))
     active_python_prefix_absolute = Path(os.path.abspath(active_python_prefix))
     active_python_prefix_real = Path(os.path.realpath(active_python_prefix))
-    preserved_names = {GIT_IGNORE_FILE, GIT_METADATA_DIR}
+    preserved_names = {GIT_IGNORE_FILE, GIT_METADATA_DIR, SPX_STORE_DIR}
 
     try:
         relative_active_prefix = active_python_prefix_absolute.relative_to(
