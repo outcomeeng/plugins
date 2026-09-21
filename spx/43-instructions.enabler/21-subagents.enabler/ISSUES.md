@@ -214,3 +214,27 @@ or states how a definition with no governing spec tree is judged, and one typed 
 approves the wording. Deferred as a product-design question outside the changeset that
 amended the rule: the Change that amended it settled where a declaration lives, not how a
 tree-less consumer reads the rule.
+
+## Three wording findings on `/subagent-standards` await one typed audit round
+
+**Evidence:** `instructions:skill-auditor` WARNING findings on
+`src/plugins/instructions/skills/subagent-standards/SKILL.md` at head
+`6f0bec2f21901c57037add6ddda1ed32f61eba28`, an `APPROVED` verdict with an empty
+must-fix row: `f-007` — the description says "generated-subject" while the section is
+tagged `<configuration_subject>` and also governs directly authored definitions; `f-008` —
+the `<profiles>` rule that model and reasoning overrides stay out of skill frontmatter
+restates the `/skill-standards` frontmatter prohibition; `f-009` — the invocation rule
+names "the repository's root harness instruction file" without the per-harness filenames
+or the case where no such file declares standing authorization.
+
+**Impact:** a reader finds the generated-subject section under a different name, the
+frontmatter prohibition has two homes that can drift, and an auditor in a repository whose
+root instruction file declares no standing authorization cannot tell a finding from a
+missing declaration.
+
+**Settlement condition:** one change aligns the description word with the section tag,
+reduces the profiles rule to its subagent-facing half with a pointer to `/skill-standards`,
+and names the root instruction file per harness with the no-declaration case, then one
+typed skill audit approves. Deferred from the governing-context changeset because each
+round of that changeset's typed audit raised a fresh set of wording warnings on unchanged
+lines, and the round cap the operator set left no round for a fifth audit.
