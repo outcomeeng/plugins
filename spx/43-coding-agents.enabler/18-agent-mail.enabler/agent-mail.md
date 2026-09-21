@@ -15,7 +15,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ### Mappings
 
-- Registration, send, inbox, and receipt each map one source-owned request shape to one mail command and checked result that preserves the store's message, thread, and agent identities verbatim ([test](tests/test_agent_mail.mapping.l1.py))
+- Registration, send, and receipt each map one source-owned request shape to one mail command and checked result; inbox maps its request to the store's listing command and returns the recipient's records, preserving the store's message, thread, and agent identities verbatim ([test](tests/test_agent_mail.mapping.l1.py))
 - The project key maps from the `worktree-pool` record's main checkout path in `spx diagnose --format json`, so every worktree of one pool resolves one mail project; a diagnosis that reports no main checkout path yields the unavailable result ([test](tests/test_agent_mail.mapping.l1.py))
 
 ### Properties
