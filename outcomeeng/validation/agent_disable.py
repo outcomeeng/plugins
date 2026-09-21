@@ -24,8 +24,10 @@ SWITCH_UNSET: Final = "unset: rows starting a real process for this agent run"
 """The state wording for a switch holding anything else."""
 AGENT_SWITCHES: Final = (DISABLE_CLAUDE_ENV, DISABLE_CODEX_ENV)
 """Every switch that can declare a row optional, in reporting order."""
-SKIP_REPORT_ENV: Final = "OE_GATE_SKIP_REPORT"
-"""The variable naming the file a step's declared skips are recorded in."""
+SKIP_REPORT_OPTION: Final = "--oe-skip-report"
+"""The pytest option naming the file a step's declared skips are recorded in."""
+SKIP_REPORT_DEST: Final = "oe_skip_report"
+"""The pytest configuration name that option is stored under."""
 SKIP_REPORT_TEST_FIELD: Final = "test"
 """The recorded field naming the row a switch declared optional."""
 SKIP_REPORT_SWITCH_FIELD: Final = "switch"
@@ -79,8 +81,14 @@ def read_agent_disable_states(environment: Mapping[str, str]) -> AgentDisableSta
 
 
 def declared_switch(reason: str) -> str | None:
-    """Return the switch a skip reason names, or `None` when it names none."""
+    """Return the switch whose own declared reason this text carries, or `None`.
+
+    The match is against the reason this module produces for that switch, so a
+    skip declared for an unrelated cause never attributes itself to a switch
+    merely by mentioning its name.
+    """
     for switch in AGENT_SWITCHES:
-        if switch in reason:
+        declared = _disabled_reason({switch: DISABLE_VALUE}, switch)
+        if declared is not None and declared in reason:
             return switch
     return None
