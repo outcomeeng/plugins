@@ -15,9 +15,9 @@ The orchestrating session is an agent session that holds none of the five Roles 
 
 ### Scenarios
 
-- Given empty durable source records for a named Change, when the ledger derivation entry point executes, then its versioned result has the complete minimum ledger shape with empty passes, heads, verdicts, decisions, failures, finding provenance, reads, running spend, and zero wall time [test](tests/test_ledger_derivation.scenario.l1.py)
-- Given schema version 2 for the ledger derivation entry point, when the entry point executes, then it exits 2 and returns its versioned invalid-input result with the required schema version in the detail [test](tests/test_ledger_derivation.scenario.l1.py)
-- Given malformed JSON stdin for the ledger derivation entry point, when the entry point executes, then it exits 2 and returns its versioned invalid-input result [test](tests/test_ledger_derivation.scenario.l1.py)
+- Given Change `owner/changes#123` with empty mail records and empty verification-journal runs, when the ledger derivation entry point executes, then its versioned result has the complete minimum ledger shape with empty passes, heads, verdicts, decisions, failures, finding provenance, reads, running spend, and zero wall time [test](tests/test_ledger_derivation.scenario.l1.py)
+- Given Change `owner/changes#123` with schema version `2`, empty mail records, and empty verification-journal runs, when the ledger derivation entry point executes, then it exits 2 and returns its versioned invalid-input result with the required schema version in the detail [test](tests/test_ledger_derivation.scenario.l1.py)
+- Given the exact malformed JSON document `{` on stdin for the ledger derivation entry point, when the entry point executes, then it exits 2 and returns its versioned invalid-input result [test](tests/test_ledger_derivation.scenario.l1.py)
 
 ### Compliance
 

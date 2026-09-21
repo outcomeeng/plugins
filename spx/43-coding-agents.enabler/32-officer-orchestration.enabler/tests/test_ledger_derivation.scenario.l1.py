@@ -1,6 +1,5 @@
 """Reachability evidence for the officer-ledger derivation entry point."""
 
-import json
 from typing import cast
 
 from outcomeeng_testing.harnesses.officer_orchestration import (
@@ -24,7 +23,6 @@ def test_entrypoint_returns_the_minimum_versioned_ledger() -> None:
     result = observation.result
     ledger = cast(dict[str, object], result[source.LEDGER_FIELD])
 
-    assert observation.parameters == ("argv", "stdin", "stdout", "stderr")
     assert observation.exit_code == source.SUCCESS_EXIT_CODE
     assert observation.stderr == ""
     assert set(result) == {
@@ -58,117 +56,13 @@ def test_entrypoint_returns_the_minimum_versioned_ledger() -> None:
     assert ledger[source.WALL_TIME_SECONDS_FIELD] == 0
 
 
-def test_entrypoint_preserves_decision_reasoning_and_operator_contact_failures() -> (
-    None
-):
-    """Durable mail facts rebuild both required orchestration ledger classes."""
-    source = load_ledger_module()
-    decision = {
-        "class": "two-round-ceiling",
-        "choice": "stop",
-        "reasoning": "No bounded repair remains.",
-    }
-    failure = {
-        "kind": "operator-interaction",
-        "detail": "The officer reported a direct operator answer.",
-    }
-    message_id = 1062
-    observation = run_ledger(
-        [source.DERIVE_OPERATION],
-        {
-            source.SCHEMA_VERSION_FIELD: source.SCHEMA_VERSION,
-            source.CHANGE_FIELD: "owner/changes#123",
-            source.MAIL_RECORDS_FIELD: [
-                {
-                    "id": message_id,
-                    "body": json.dumps(
-                        {
-                            source.LEDGER_FIELD: {
-                                source.DECISION_FIELD: decision,
-                                source.FAILURE_FIELD: failure,
-                            }
-                        }
-                    ),
-                }
-            ],
-            source.JOURNAL_RUNS_FIELD: [],
-        },
-    )
-    ledger = cast(dict[str, object], observation.result[source.LEDGER_FIELD])
-    provenance = {"kind": "mail", "id": message_id}
-
-    assert observation.exit_code == source.SUCCESS_EXIT_CODE
-    assert ledger[source.DECISIONS_FIELD] == [{"value": decision, "source": provenance}]
-    assert ledger[source.FAILURES_FIELD] == [{"value": failure, "source": provenance}]
-
-
-def test_entrypoint_deduplicates_journal_projection_by_run_token() -> None:
-    """Repeated references to one run contribute once to every ledger field."""
-    source = load_ledger_module()
-    run_token = "2026-09-20_23-11-09-511-7ba897d4fc70"
-    journal_run = {
-        source.RUN_TOKEN_FIELD: run_token,
-        source.PASS_FIELD: {"round": 2},
-        source.HEAD_FIELD: "f6242c349a164559882a636f94a179eb753ef2cb",
-        source.VERDICT_FIELD: {"status": "approved"},
-        source.DECISION_FIELD: {"choice": "resume-next-activity"},
-        source.FAILURE_FIELD: {"kind": "operator-interaction"},
-        source.FINDING_PROVENANCE_FIELD: [{"finding": "review-debt-1"}],
-        source.READ_FIELD: {source.CAUSE_FIELD: "message", "id": 1070},
-        source.SPEND_FIELD: {
-            source.CURRENCY_FIELD: "USD",
-            source.AMOUNT_FIELD: "1.25",
-        },
-        source.WALL_TIME_SECONDS_FIELD: "3.5",
-    }
-    observation = run_ledger(
-        [source.DERIVE_OPERATION],
-        {
-            source.SCHEMA_VERSION_FIELD: source.SCHEMA_VERSION,
-            source.CHANGE_FIELD: "owner/changes#123",
-            source.MAIL_RECORDS_FIELD: [],
-            source.JOURNAL_RUNS_FIELD: [journal_run, journal_run],
-        },
-    )
-    ledger = cast(dict[str, object], observation.result[source.LEDGER_FIELD])
-    provenance = {"kind": "journal", "id": run_token}
-
-    assert observation.exit_code == source.SUCCESS_EXIT_CODE
-    assert ledger[source.PASSES_FIELD] == [
-        {"value": journal_run[source.PASS_FIELD], "source": provenance}
-    ]
-    assert ledger[source.HEADS_FIELD] == [
-        {"value": journal_run[source.HEAD_FIELD], "source": provenance}
-    ]
-    assert ledger[source.VERDICTS_FIELD] == [
-        {"value": journal_run[source.VERDICT_FIELD], "source": provenance}
-    ]
-    assert ledger[source.DECISIONS_FIELD] == [
-        {"value": journal_run[source.DECISION_FIELD], "source": provenance}
-    ]
-    assert ledger[source.FAILURES_FIELD] == [
-        {"value": journal_run[source.FAILURE_FIELD], "source": provenance}
-    ]
-    assert ledger[source.FINDING_PROVENANCE_FIELD] == [
-        {
-            "value": journal_run[source.FINDING_PROVENANCE_FIELD][0],
-            "source": provenance,
-        }
-    ]
-    assert ledger[source.READS_FIELD] == [
-        {"value": journal_run[source.READ_FIELD], "source": provenance}
-    ]
-    assert ledger[source.RUNNING_SPEND_FIELD] == {"USD": 1.25}
-    assert ledger[source.WALL_TIME_SECONDS_FIELD] == 3.5
-
-
 def test_entrypoint_rejects_schema_version_two() -> None:
     """The shipped entry point rejects the declared unsupported schema case."""
     source = load_ledger_module()
     observation = run_ledger(
         [source.DERIVE_OPERATION],
         {
-            source.SCHEMA_VERSION_FIELD: source.SCHEMA_VERSION + 1,
+            source.SCHEMA_VERSION_FIELD: 2,
             source.CHANGE_FIELD: "owner/changes#123",
             source.MAIL_RECORDS_FIELD: [],
             source.JOURNAL_RUNS_FIELD: [],

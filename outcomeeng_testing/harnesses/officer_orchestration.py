@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import inspect
 import io
 import json
 import sys
@@ -32,8 +31,6 @@ class LedgerModule(Protocol):
     DETAIL_FIELD: str
     LEDGER_FIELD: str
     FINDING_PROVENANCE_FIELD: str
-    DECISION_FIELD: str
-    FAILURE_FIELD: str
     RUNNING_SPEND_FIELD: str
     WALL_TIME_SECONDS_FIELD: str
     PASSES_FIELD: str
@@ -62,7 +59,6 @@ class LedgerModule(Protocol):
 class LedgerEntrypointObservation:
     """Captured public entry-point output with its source contract."""
 
-    parameters: tuple[str, ...]
     exit_code: int
     result: dict[str, object]
     stderr: str
@@ -96,7 +92,6 @@ def run_ledger(
         stderr=standard_error,
     )
     return LedgerEntrypointObservation(
-        parameters=tuple(inspect.signature(module.main).parameters),
         exit_code=exit_code,
         result=cast(dict[str, object], json.loads(standard_output.getvalue())),
         stderr=standard_error.getvalue(),
