@@ -72,7 +72,7 @@ Select the numbered evidence gates and the review from the least malleable touch
 
 Each simplification, audit, or review step below requests exactly one native launch with its mapped subagent name and target-only prompt. Use the native tool schema and result-collection capabilities. A failed launch or unusable final result stops that invocation: analyze and report the exact failure without another launch, a substitute subagent or model, an alternative launch mechanism, or an audit in this conversation.
 
-Persist accepted requirements in decisions and specs before dispatch. Start each Verifier without authoring history, following the root guide's isolation mechanics. Never append an author-written context packet, reasoning, summary, or suggested verdict. The invoked skill independently discovers its evidence from the target and configured instructions.
+Persist accepted requirements in decisions and specs before dispatch. Start each Verifier without authoring history. Never append an author-written context packet, reasoning, summary, or suggested verdict. The invoked skill independently discovers its evidence from the target and configured instructions.
 
 Completed structured verdicts follow the existing finding-repair workflow: repair the defect class, verify and checkpoint the changed subject, then make one launch for that new subject. Never use a repair loop to replace a failed launch or unusable result. While the native capability reports work still running, collect that same invocation; an observation timeout never authorizes a new launch.
 
@@ -145,7 +145,7 @@ This map is the code row's language-specific flow. Steps 0–2, 9, and 10 are la
 | 1    | Load methodology        | Use skill `spec-tree:understand`.                                           | same                                 | same                             | same                         |
 | 2    | Load context            | Use skill `spec-tree:contextualize` for `{full-spx-node-path}`.             | same                                 | same                             | same                         |
 | 3    | Architect               | Use skill `typescript:architect-typescript`.                                | Use skill `python:architect-python`. | Use skill `rust:architect-rust`. | Use skill `go:architect-go`. |
-| 4    | Architecture audit      | `spec-tree_adr-auditor` agent                                               | same                                 | same                             | same                         |
+| 4    | Architecture audit      | `spec-tree_adr-auditor` or `spec-tree_pdr-auditor` agent                    | same                                 | same                             | same                         |
 | 5    | Establish evidence      | Use skill `spec-tree:verify`.                                               | same                                 | same                             | same                         |
 | 6    | Evidence audit          | `spec-tree_test-evidence-auditor`, `spec-tree_eval-evidence-auditor` agents | same                                 | same                             | same                         |
 | 7    | Implement               | Use skill `typescript:code-typescript`.                                     | Use skill `python:code-python`.      | Use skill `rust:code-rust`.      | Use skill `go:code-go`.      |
