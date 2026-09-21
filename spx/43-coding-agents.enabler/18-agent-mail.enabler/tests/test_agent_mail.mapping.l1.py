@@ -130,7 +130,6 @@ def test_agent_mail_operation_mappings() -> None:
             items = cast(list[dict[str, object]], payload)
             records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
             assert response == items
-            assert items
             assert [record[module.RECORD_ID_FIELD] for record in records] == [
                 item[module.STORE_ID_FIELD] for item in items
             ]
@@ -270,6 +269,27 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
         unsupported_name: str,
     ) -> None:
         request = module.operation_request(module.Operation.INBOX, agent=agent)
+
+        empty = module.execute(
+            request,
+            diagnosis_seeded_runner(
+                module, project_key, json_command_result(module, [])
+            ),
+        )
+        assert empty[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        assert empty[module.RESPONSE_FIELD] == []
+        assert (
+            cast(dict[str, object], empty[module.DATA_FIELD])[module.RECORDS_FIELD]
+            == []
+        )
+
+        invalid_success = {**empty, module.OPERATION_FIELD: unsupported_name}
+        try:
+            module.validate_operation_result(invalid_success)
+        except module.AgentMailError as error:
+            assert error.status == module.ExecutionStatus.INVALID_SCHEMA
+        else:
+            raise AssertionError("an unsupported successful operation was accepted")
 
         failed = module.execute(
             request,

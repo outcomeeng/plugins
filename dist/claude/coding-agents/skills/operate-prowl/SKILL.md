@@ -1,7 +1,7 @@
 ---
 name: operate-prowl
 description: >-
-  ALWAYS invoke this skill when a workflow needs a public Prowl operation or a correlated delegation handback between Prowl coding agents. NEVER run Prowl command help or construct the public CLI command directly when this capability is available.
+  ALWAYS invoke this skill when operating Prowl or delivering a correlated delegation handback between Prowl coding agents. NEVER run Prowl command help or construct the public CLI command directly when this capability is available.
 argument-hint: "<operation, delegation, or JSON request>"
 allowed-tools: Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py":*), AskUserQuestion
 ---

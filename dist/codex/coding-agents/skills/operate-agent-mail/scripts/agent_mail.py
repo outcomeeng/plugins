@@ -891,9 +891,16 @@ def validate_operation_result(result: object) -> dict[str, object]:
                 ExecutionStatus.INVALID_SCHEMA,
                 "Successful operation result fields do not match the source-owned schema.",
             )
+        try:
+            operation = Operation(operation_value)
+        except ValueError as error:
+            raise AgentMailError(
+                ExecutionStatus.INVALID_SCHEMA,
+                f"Unsupported operation result operation: {operation_value!r}.",
+            ) from error
         return {
             SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-            OPERATION_FIELD: Operation(operation_value),
+            OPERATION_FIELD: operation,
             STATUS_FIELD: status,
             COMMAND_EXIT_CODE_FIELD: _integer(
                 value.get(COMMAND_EXIT_CODE_FIELD),
@@ -904,7 +911,7 @@ def validate_operation_result(result: object) -> dict[str, object]:
             PROJECT_KEY_FIELD: _text(value.get(PROJECT_KEY_FIELD), PROJECT_KEY_FIELD),
             RESPONSE_FIELD: (
                 _array(value.get(RESPONSE_FIELD), RESPONSE_FIELD)
-                if Operation(operation_value) is Operation.INBOX
+                if operation is Operation.INBOX
                 else _object(value.get(RESPONSE_FIELD), RESPONSE_FIELD)
             ),
             DATA_FIELD: _object(value.get(DATA_FIELD), DATA_FIELD),

@@ -315,6 +315,11 @@ def test_absent_server_and_unsupported_operation_map_to_unavailable_results() ->
     module = load_herdr_environment()
     request = module.operation_request(module.Operation.INVENTORY)
 
+    captured_success = captured_success_response(module, module.Operation.INVENTORY, {})
+    assert captured_success is not None
+    successful = module.execute(request, RecordingRunner([captured_success.result]))
+    assert successful[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+
     absent = AbsentExecutableRunner()
     result = module.execute(request, absent)
     assert result[module.STATUS_FIELD] == module.ExecutionStatus.SERVER_NOT_RUNNING
@@ -338,5 +343,13 @@ def test_absent_server_and_unsupported_operation_map_to_unavailable_results() ->
         assert (
             result[module.STATUS_FIELD] == module.ExecutionStatus.OPERATION_UNAVAILABLE
         )
+
+        invalid_success = {**successful, module.OPERATION_FIELD: name}
+        try:
+            module.validate_operation_result(invalid_success)
+        except module.HerdrEnvironmentError as error:
+            assert error.status == module.ExecutionStatus.INVALID_SCHEMA
+        else:
+            raise AssertionError("an unsupported successful operation was accepted")
 
     run_unknown_operation_mapping(assert_unknown)

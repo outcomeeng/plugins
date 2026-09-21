@@ -275,9 +275,7 @@ def store_response_payload(
 
 
 def _inbox_captures_with_bodies(module: ModuleType) -> list[Path]:
-    """Every captured inbox response taken with `--include-bodies`, in path
-    order: the store answered the same command while a receipt was pending and
-    again after it was recorded."""
+    """Every captured inbox listing taken with `--include-bodies`, in path order."""
     base = _response_fixture_path(
         module, module.Operation.INBOX, {module.INCLUDE_BODIES_FIELD: True}
     )

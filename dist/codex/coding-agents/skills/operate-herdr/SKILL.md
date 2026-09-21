@@ -1,7 +1,7 @@
 ---
 name: operate-herdr
 description: >-
-  ALWAYS invoke this skill when a workflow needs a public herdr operation — agent inventory, read, bounded wait, prompt, start, relaunch, stop, keystroke, or worktree open — on agent sessions herdr hosts. NEVER run herdr command help or construct the public CLI command directly when this capability is available.
+  ALWAYS invoke this skill when operating on agent sessions herdr hosts — agent inventory, read, bounded wait, prompt, start, relaunch, stop, keystroke, or worktree open. NEVER run herdr command help or construct the public CLI command directly when this capability is available.
 argument-hint: "<operation or JSON request>"
 allowed-tools: Bash(printf:*), Bash(python3 "${SKILL_DIR}/scripts/herdr_environment.py":*)
 ---

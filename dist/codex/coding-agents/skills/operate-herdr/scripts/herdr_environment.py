@@ -754,9 +754,16 @@ def validate_operation_result(result: object) -> dict[str, object]:
                 ExecutionStatus.INVALID_SCHEMA,
                 "Successful operation result fields do not match the source-owned schema.",
             )
+        try:
+            operation = Operation(operation_value)
+        except ValueError as error:
+            raise HerdrEnvironmentError(
+                ExecutionStatus.INVALID_SCHEMA,
+                f"Unsupported operation result operation: {operation_value!r}.",
+            ) from error
         return {
             SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-            OPERATION_FIELD: Operation(operation_value),
+            OPERATION_FIELD: operation,
             STATUS_FIELD: status,
             COMMAND_EXIT_CODE_FIELD: _integer(
                 value.get(COMMAND_EXIT_CODE_FIELD),

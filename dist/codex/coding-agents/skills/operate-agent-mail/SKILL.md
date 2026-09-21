@@ -1,7 +1,7 @@
 ---
 name: operate-agent-mail
 description: >-
-  ALWAYS invoke this skill when a workflow registers a mail identity, sends a message record, reads an inbox, or records a receipt in the agent-mail store. NEVER construct an `am` command or derive the mail project key from Git state when this capability is available.
+  ALWAYS invoke this skill when registering a mail identity, sending a message record, reading an inbox, or recording a receipt in the agent-mail store. NEVER construct an `am` command or derive the mail project key from Git state when this capability is available.
 argument-hint: "<operation or JSON request>"
 allowed-tools: Bash(printf:*), Bash(python3 "${SKILL_DIR}/scripts/agent_mail.py":*)
 ---
@@ -97,6 +97,17 @@ python3 "${SKILL_DIR}/scripts/agent_mail.py" project-key
 The bundled adapter is covered by tests over generated request, record, and diagnosis domains with controlled `CommandRunner` implementations at the store boundary: every registry operation's argument vector is read against the store CLI's captured usage text under the diagnosed project key; generated records round-trip through the store field mapping; repeated and conflicting terminal handbacks reduce to one result; the CLI run where no executable resolves returns `diagnosis-unavailable` with no fallback; and a captured registration response reaches the result without its token.
 
 </testing>
+
+<failure_modes>
+
+**Inbox reads used an obsolete store command.** Claude kept the inbox operation
+bound to `am robot inbox`, whose object response no longer represented the
+store's public inbox listing. The capability therefore returned no current
+mail even though `am mail inbox` listed records. Bind each operation to captured
+current command usage, preserve the listing's array root, and exercise both
+nonempty and empty listings before release.
+
+</failure_modes>
 
 <success_criteria>
 
