@@ -16,6 +16,14 @@ A shipped environment adapter carries the regex tables and the scanner functions
 
 **Evidence, second reading.** `spec-tree:test-evidence-auditor` finding `f-002` on head `d6d1b5458af190ac9d1f05775c869c08ab206c95`, rule `source-ownership`.
 
+**The detector is also asymmetric, and relocation closes both.** `GIT_PROJECT_KEY_PATTERNS` matches only literal Git constructions: a quoted `git` opening a bracketed sequence, a quoted `.git` path segment, and shell text. Its sibling `RAW_MAIL_COMMAND_PATTERNS` additionally matches the bare constant name. A sibling script that names its Git vector through constants therefore passes a rule the adapter decision states as universal over shipped coding-agents Python scripts — and the agent-mail adapter now demonstrates exactly that spelling, since it assembles `PUBLIC_GIT_COMMON_DIR_COMMAND` from `GIT_COMMAND` and `REV_PARSE_COMMAND` rather than from literals.
+
+Extending the pattern where it stands was attempted and withdrawn: adding an alternative deepens the coupling this entry records, because the constants have no production consumer and the compliance test is their only caller, so the extension enlarges a declaration only the tests read. The asymmetry settles with the relocation, not before it.
+
+**Settlement condition, extended.** The home the condition above names carries a detector whose construction-form coverage is the same for every tool it guards, so a vector spelled through constants is detected wherever a vector spelled literally is.
+
+**Evidence, third reading.** `spec-tree:implementation-auditor` run `2026-09-21_22-51-31-594-7659622868e9` on head `18903ace30be971b041eba9e74606e97bf0182ae`: `source-ownership` at `blocking` on the compliance test and `single-responsibility` at `debt` on the adapter, both naming the pattern extension as enlarging the declaration; and run `2026-09-21_22-18-07-162-b29e7184d5a1` on head `d6d1b5458af190ac9d1f05775c869c08ab206c95`, `adr-compliance-guard-asymmetry` at `debt`, which named the gap.
+
 ## The evidence-repair same-class scan stops at the test file
 
 The apply flow's evidence repair scans for the rejected class inside the linked tests — a restated literal, a copied table — and stops there. The mirror shape is invisible to that scan: a value the tests import from production that no production path consumes. `agent_message.py` carried `FORBIDDEN_TARGET_FIELDS`, `FORBIDDEN_EXECUTABLE_FIELDS`, and `CLEAN_STATUS` as constants only the node's tests and harness read, so a test that iterated them was coupled to an inert declaration, and emptying the constant left the test green.

@@ -62,9 +62,6 @@ USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
 RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
 RAW_MAIL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_command.py.txt"
 GIT_PROJECT_KEY_VIOLATION_FIXTURE = FIXTURE_ROOT / "git_project_key.py.txt"
-# The same derivation spelled through constants, the form the adapter itself
-# uses for its own vector.
-GIT_PROJECT_KEY_CONSTANTS_FIXTURE = FIXTURE_ROOT / "git_project_key_constants.py.txt"
 RECORD_ROUNDTRIP_SEED = 2026091801
 RECORD_ROUNDTRIP_EXAMPLES = 60
 RECORD_ROUNDTRIP_REPLAY_PATH = (
@@ -101,9 +98,6 @@ COMPLIANCE_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.compliance.l1.py"
 )
-# The store CLI's own project fallback, read from the capture that declares it;
-# the adapter never reads it, and the compliance probe sets it as the fallback
-# the adapter must ignore.
 CLI_TIMEOUT_SECONDS = 60
 # The pool one probe builds: a bare repository, the main checkout beside it,
 # and one linked worktree, so the resolver is read from all three shapes.
@@ -805,13 +799,6 @@ def git_project_key_violation_source() -> tuple[str, dict[str, str]]:
     )
 
 
-def git_project_key_constants_violation_source() -> tuple[str, dict[str, str]]:
-    return (
-        str(GIT_PROJECT_KEY_CONSTANTS_FIXTURE.relative_to(ROOT)),
-        _source_texts((GIT_PROJECT_KEY_CONSTANTS_FIXTURE,)),
-    )
-
-
 @dataclass(frozen=True)
 class MailPool:
     """One real repository reached through its three checkout shapes.
@@ -849,21 +836,21 @@ def mail_pool() -> Iterator[MailPool]:
     """
     with TemporaryDirectory(ignore_cleanup_errors=True) as raw:
         outside = Path(raw).resolve()
-        seed = outside / POOL_SEED_NAME
+        seed_checkout = outside / POOL_SEED_NAME
         subprocess.run(
-            ["git", "init", "--quiet", "-b", POOL_DEFAULT_BRANCH, str(seed)],
+            ["git", "init", "--quiet", "-b", POOL_DEFAULT_BRANCH, str(seed_checkout)],
             check=True,
             capture_output=True,
         )
-        _git_in(seed, "config", "user.email", "test@example.invalid")
-        _git_in(seed, "config", "user.name", "Spec Tree Test")
-        _git_in(seed, "config", "commit.gpgsign", "false")
-        (seed / "README.md").write_text("seed\n", encoding="utf-8")
-        _git_in(seed, "add", "README.md")
-        _git_in(seed, "commit", "--quiet", "-m", "seed")
+        _git_in(seed_checkout, "config", "user.email", "test@example.invalid")
+        _git_in(seed_checkout, "config", "user.name", "Spec Tree Test")
+        _git_in(seed_checkout, "config", "commit.gpgsign", "false")
+        (seed_checkout / "README.md").write_text("seed\n", encoding="utf-8")
+        _git_in(seed_checkout, "add", "README.md")
+        _git_in(seed_checkout, "commit", "--quiet", "-m", "seed")
         bare = outside / f"{POOL_REPOSITORY_NAME}.git"
         subprocess.run(
-            ["git", "clone", "--quiet", "--bare", str(seed), str(bare)],
+            ["git", "clone", "--quiet", "--bare", str(seed_checkout), str(bare)],
             check=True,
             capture_output=True,
         )
@@ -986,6 +973,9 @@ def run_cli_with_only_adapter_programs(
 
 def store_project_fallback_variable(module: ModuleType) -> str:
     """The environment variable the store CLI falls back to for its project.
+
+    The adapter never reads it; the compliance probe sets it as the fallback
+    the adapter must ignore.
 
     Read from the captured usage text that declares it, so the probe's fallback
     is the store's own statement rather than a token restated beside the

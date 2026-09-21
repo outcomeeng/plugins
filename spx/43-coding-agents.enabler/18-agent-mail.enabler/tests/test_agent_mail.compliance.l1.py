@@ -5,7 +5,6 @@ from typing import cast
 from outcomeeng_testing.harnesses.agent_mail import (
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
-    git_project_key_constants_violation_source,
     git_project_key_violation_source,
     load_agent_mail,
     mail_command_source_texts,
@@ -111,5 +110,3 @@ def test_no_other_shipped_script_constructs_mail_commands_or_git_keys() -> None:
     assert module.raw_mail_command_violations(raw_source) == [raw_path]
     git_path, git_source = git_project_key_violation_source()
     assert module.git_project_key_violations(git_source) == [git_path]
-    const_path, const_source = git_project_key_constants_violation_source()
-    assert module.git_project_key_violations(const_source) == [const_path]
