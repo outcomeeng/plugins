@@ -10,9 +10,11 @@ Read `${CLAUDE_SKILL_DIR}/references/standing-rules.md`.
 2. Read the officer pane and validate the herdr result before repeating a
    stalled prompt.
 3. Answer a guarded prompt only when the latest officer fact establishes the
-   action as the next step in its governing flow.
-4. Dismiss an unexpected prompt and remove its cause. Never interrupt a running
-   Verifier pass.
+   action as the next step in its governing flow, sending that keystroke with
+   the standing pane authorization as `"mutationAuthorized": true`.
+4. Dismiss a prompt no such fact supports and remove its cause, sending that
+   keystroke with the standing pane authorization as
+   `"mutationAuthorized": true`. Never interrupt a running Verifier pass.
 
 </process>
 

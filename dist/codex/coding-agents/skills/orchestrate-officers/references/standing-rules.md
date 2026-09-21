@@ -1,8 +1,36 @@
 # Orchestrating-session standing rules
 
+## Contents
+
+- [Pane mutation authorization](#pane-mutation-authorization)
+- [Autonomous and held decisions](#autonomous-and-held-decisions)
+- [Verifier launch failures](#verifier-launch-failures)
+- [Durable facts and the filed disposition](#durable-facts-and-the-filed-disposition)
+- [Ledger derivation](#ledger-derivation)
+- [Event reads and lifecycle](#event-reads-and-lifecycle)
+- [Known environment and mail facts](#known-environment-and-mail-facts)
+
 These rules govern the session that supervises officers. Each officer remains
 the Executor of its own Change; the orchestrating session holds none of that
 Change's Refiner, Executor, Author, Fixer, or Verifier roles.
+
+## Pane mutation authorization
+
+The operator's invocation of this skill is the standing authorization for pane
+mutation. It is scoped to exactly the officer panes this skill launched and
+reaches no further: a pane this skill did not launch, the operator's own pane,
+and every pane of another fleet stay outside it. A pane leaves the set when its
+session is stopped and re-enters it only through a relaunch this skill performs.
+
+Each mutating request carries that standing authorization. The mutating herdr
+operations are `key`, `start`, `relaunch`, `stop`, and `open-worktree`; each
+carries `"mutationAuthorized": true` inside `arguments`, the form
+`coding-agents:operate-herdr` requires. Without it that capability runs no
+command and returns `mutation-unauthorized`. The non-mutating operations —
+`inventory`, `read`, `wait`, and `prompt` — carry no authorization field.
+
+Authorization permits the operation; it never selects one. A mutating operation
+still requires the routed workflow's own condition for that pane.
 
 ## Autonomous and held decisions
 
@@ -64,14 +92,10 @@ base delta.
 Every orchestrating-session ledger event is a durable `fact` record addressed
 to the orchestrating mail identity under the Change's correlation before the
 session relies on it across compaction. This includes each autonomous decision,
-read cause, and orchestrating-session failure. After compaction or restart,
-begin with the proven orchestrating and officer identities, read each
-positively identified participant's inbox once, and expand the finite read set
-with positively identified senders and recipients in records carrying the
-exact Change correlation. Stop when no unread identity remains, deduplicate by
-integer store id, and inspect every recorded verification run identity through
-`spec-tree:project-run-journal`. A missing, ambiguous, unavailable, or unsealed
-source refuses reconstruction; a partial ledger is never reported.
+read cause, and orchestrating-session failure. The skill's
+`<ledger_derivation>` states how those records and the sealed journal runs are
+reacquired after a compaction or restart. A missing, ambiguous, unavailable, or
+unsealed source refuses reconstruction; a partial ledger is never reported.
 
 Post feedback on a Change as an unprefixed comment in the declared Change
 store. Mail carries the bell and record pointer, never the feedback body.
@@ -82,24 +106,14 @@ deleting it.
 
 ## Ledger derivation
 
-The per-Change ledger contains passes, full heads, verdicts, autonomous
-decisions with their reasoning, orchestrating-session failures, finding
-provenance, reads with their cause, running spend, and wall time. It is derived
-from agent-mail records and sealed verification-journal runs, never treated as
-an independent source of truth. Rebuild it after compaction or restart with
-`${SKILL_DIR}/scripts/derive_ledger.py` through that script's documented
-`derive` entry point. Spend and wall time are courtesy fields rather than
-gates.
+The per-Change ledger is derived from agent-mail records and sealed
+verification-journal runs, never treated as an independent source of truth, and
+is rebuilt after a compaction or restart. Every derived entry keeps its source
+provenance. Spend and wall time are courtesy fields rather than gates.
 
-For machine-readable ledger facts, place a JSON object under a message record's
-body with a `ledger` object. The ledger object can carry `pass`, `head`,
-`verdict`, `decision`, `failure`, `findingProvenance`, `read`, `spend`, and
-`wallTimeSeconds`. A decision records its autonomous class, choice, and
-reasoning. A failure records either an operator instruction naming an officer
-session or an officer fact reporting an operator interaction. A read records
-one of these causes: `message`, `officer-state-change`, `bound-crossed`, or
-`operator-cadence`. The derivation script also consumes sealed journal run
-objects directly and keeps source provenance with every derived entry.
+The skill's `<ledger_derivation>` states the entry point's invocation contract,
+the ledger's keys, and the mail-body `ledger` event fields. Record a
+machine-readable ledger fact in that form.
 
 An officer reports a successful Change disposal as one `fact` record whose
 body contains this versioned object:

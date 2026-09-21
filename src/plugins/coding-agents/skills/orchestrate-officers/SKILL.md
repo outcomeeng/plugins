@@ -3,13 +3,12 @@ name: orchestrate-officers
 description: >-
   ALWAYS invoke this skill when one operator-facing session supervises officer sessions that each execute one Change through herdr and agent-mail. NEVER supervise those officers by constructing environment or mail commands directly.
 argument-hint: "<operator request or officer event>"
-allowed-tools: Read, "{{! tool('use_skill') !}}", Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/derive_ledger.py":*)
+allowed-tools: Read, {{! tool('use_skill') !}}, Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/derive_ledger.py":*)
 ---
 
 <objective>
 A supervised officer fleet whose Changes advance through bounded, durable,
-event-driven execution while the operator uses one session, one inbox, and one
-pane.
+event-driven execution, every officer pane reached only through this session.
 </objective>
 
 Use skill `coding-agents:operate-herdr`.
@@ -122,12 +121,15 @@ shape:
 
 Each mail record preserves the store's integer `id` and string `body`. A JSON
 body with a `ledger` object contributes its declared fields; other bodies
-remain durable mail facts without entering the derived ledger. A `decision`
-event records its autonomous class, choice, and reasoning. A `failure` event
-records an operator instruction naming an officer session or an officer fact
-reporting an operator interaction. Each journal object preserves its
-`runToken`. Submit the document through one of these forms and preserve the
-complete result.
+remain durable mail facts without entering the derived ledger. That object
+carries any of `pass`, `head`, `verdict`, `decision`, `failure`,
+`findingProvenance`, `read`, `spend`, and `wallTimeSeconds`. A `decision` event
+records its autonomous class, choice, and reasoning. A `failure` event records
+an operator instruction naming an officer session or an officer fact reporting
+an operator interaction. A `read` event records one of the causes `message`,
+`officer-state-change`, `bound-crossed`, and `operator-cadence`. Each journal
+object preserves its `runToken`. Submit the document through one of these forms
+and preserve the complete result.
 
 When the shell accepts multiline input:
 
@@ -165,14 +167,23 @@ never derive or report a partial ledger.
 
 <script_validation>
 
-The ledger entry point is tested with these inputs and results:
+Three reachability cases execute the ledger entry point:
 
-- sample input `{"schemaVersion":1,"change":"owner/changes#123","mailRecords":[],"journalRuns":[]}` exits zero and writes the versioned succeeded result with the complete empty ledger
-- invalid input `{"schemaVersion":2,"change":"owner/changes#123","mailRecords":[],"journalRuns":[]}` exits two and writes `status: "invalid-input"` with the required-version detail
-- malformed JSON exits two and writes the deterministic invalid-input result
-- a mail ledger event carrying `decision` reasoning and an operator-contact
-  `failure` rebuilds both collections with its integer message id as provenance
-- the entry point reads stdin and writes stdout and stderr only; successful and invalid runs create no temporary files, so cleanup leaves no path behind
+- `{"schemaVersion":1,"change":"owner/changes#123","mailRecords":[],"journalRuns":[]}`
+  exits zero with empty stderr and writes a result carrying exactly `ledger`,
+  `schemaVersion`, and `status: "succeeded"`, whose ledger carries exactly the
+  ten keys named in `<ledger_derivation>` with empty collections, an empty
+  running spend, and zero wall time
+- the same document with `schemaVersion` `2` exits two with empty stderr and
+  writes a result carrying exactly `detail`, `schemaVersion`, and
+  `status: "invalid-input"`, whose detail names the schema-version field and
+  the required version
+- the malformed stdin document `{` exits two with empty stderr and writes the
+  same three-field invalid-input result with a non-empty detail
+
+These cases pin the entry point's reachability and result shape. They exercise
+no non-empty mail record and no journal run, so they establish nothing about
+derivation from populated inputs.
 
 </script_validation>
 
@@ -199,6 +210,9 @@ session, message, commit, and verification-run identities.
 - Every returned operation includes the complete capability results it relied
   on; each accepted result satisfies `<essential_principles>`, and any failed
   capability status remains a failed operation.
+- Every mutating herdr operation the result reports carries the standing pane
+  authorization for a pane this skill launched, and no pane outside that set is
+  mutated.
 - After compaction or restart, running the documented ledger derivation over
   the durable mail and sealed journal inputs produces the exact ledger keys in
   `<ledger_derivation>`, including decision reasoning and session failures.

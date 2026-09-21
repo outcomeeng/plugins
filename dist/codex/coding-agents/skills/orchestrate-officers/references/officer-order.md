@@ -58,11 +58,8 @@ Do not paraphrase, extend, or silently narrow this text.
 
 ## Standing rules
 
-Attach the current orchestrating-session standing rules from
-`${SKILL_DIR}/references/standing-rules.md`, including the autonomy
-table, judgment step, `filed` disposition, ledger derivation, event-read rule,
-verdict reuse rule, release lifecycle, and known transport facts. The order
-records that reference as standing authority for the officer's execution.
+- Standing authority: `<the orchestrating-session standing rules in force for
+  this order, recorded as the authority governing the officer's execution>`
 
 When a checked store observation proves records exist after the adapter inbox
 returned zero, every bell line to the officer carries the message id and the
