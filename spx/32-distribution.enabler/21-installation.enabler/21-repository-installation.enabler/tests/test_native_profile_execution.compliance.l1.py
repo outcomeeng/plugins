@@ -3,8 +3,12 @@
 from dataclasses import replace
 
 from outcomeeng_testing.harnesses.discovery_auth_cases import NativeFault
+from outcomeeng_testing.harnesses.native_profile_execution import (
+    every_agent_switch_disabled,
+)
 from outcomeeng_testing.harnesses.native_profile_failures import native_profile_failure
 
+from outcomeeng.distribution.profiles import AGENT_PROFILES
 from outcomeeng.distribution.native_thread_evidence import (
     ChildIdentityField,
     NativeTurnStatus,
@@ -150,3 +154,14 @@ def test_unlisted_thread_cannot_supply_child_evidence() -> None:
         assert len(reader.calls) == 1
 
     exercise_native_evidence(assert_case)
+
+
+def test_profile_execution_rows_are_selected_with_every_switch_set() -> None:
+    with every_agent_switch_disabled() as rows:
+        selected = {(row.target, row.profile) for row in rows}
+
+    assert selected == {
+        (target, profile)
+        for target, profiles in AGENT_PROFILES.items()
+        for profile in profiles
+    }

@@ -1,8 +1,14 @@
 """Network-backed real isolated-state boundary evidence."""
 
-from outcomeeng_testing.harnesses.installation import observe_real_installation
+from outcomeeng_testing.harnesses.installation import (
+    observe_real_installation,
+    runs_real_claude,
+    runs_real_codex,
+)
 
 
+@runs_real_claude
+@runs_real_codex
 def test_isolated_installation_preserves_persistent_agent_state() -> None:
     observation = observe_real_installation()
 

@@ -8,6 +8,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import cast
 
+from outcomeeng.validation.agent_disable import DISABLE_VALUE
 from outcomeeng.distribution.installation import (
     Agent,
     CATALOG_PLUGIN_NAME_FIELD,
@@ -843,3 +844,15 @@ __all__ = [
     "generated_persistent_catalog_selections",
     "generated_valid_catalog_subsets",
 ]
+
+
+def non_disabling_switch_values() -> tuple[str, ...]:
+    """Return the disable value's boundary complement, each member derived from it.
+
+    Every member is constructed from `DISABLE_VALUE` or its flag complement
+    rather than typed independently: the empty value, the disable value with a
+    leading space, the disable value doubled, and the falsy flag complement.
+    Together they separate equality with the disable value from a truthiness
+    read, a substring read, and an inverted read.
+    """
+    return ("", f" {DISABLE_VALUE}", f"{DISABLE_VALUE}{DISABLE_VALUE}", "0")

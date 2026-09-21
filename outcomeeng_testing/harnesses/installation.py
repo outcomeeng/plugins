@@ -20,11 +20,17 @@ from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import cast
 
+import pytest
+
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
     AGENT_SKILL_ENABLED_FIELD,
 )
 from outcomeeng.distribution.build import render_text
+from outcomeeng.validation.agent_disable import (
+    claude_disabled_reason,
+    codex_disabled_reason,
+)
 from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     CLAUDE_DIST_RELATIVE,
@@ -185,6 +191,17 @@ MALFORMED_OWNERSHIP_DIGEST = "z" * 64
 MALFORMED_SETTINGS_CONTENT = "{ not json"
 """A settings document no reader can parse, standing for a foreign checkout's defect."""
 REQUIRED_BINARIES: tuple[str, ...] = (JUST_BINARY, CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
+
+
+def _disable_marker(reason: str | None) -> pytest.MarkDecorator:
+    """Project one predicate reading of the process environment onto a marker."""
+    return pytest.mark.skipif(reason is not None, reason=reason or "")
+
+
+runs_real_codex = _disable_marker(codex_disabled_reason(os.environ))
+"""Marker for a row that starts a real Codex process, from that agent's switch."""
+runs_real_claude = _disable_marker(claude_disabled_reason(os.environ))
+"""Marker for a row that starts a real Claude process, from that agent's switch."""
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 MARKETPLACE = catalog_marketplace_name(
     Path(__file__).resolve().parents[2] / CLAUDE_CATALOG_PATH

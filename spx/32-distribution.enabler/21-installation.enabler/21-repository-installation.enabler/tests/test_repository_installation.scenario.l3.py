@@ -16,6 +16,8 @@ from outcomeeng.distribution.installation import (
 )
 from outcomeeng_testing.harnesses.installation import (
     MARKETPLACE,
+    runs_real_claude,
+    runs_real_codex,
     observe_codex_subagent_discovery,
     observe_real_first_install,
     observe_real_installation,
@@ -30,6 +32,8 @@ def _first_install_warning(agent: Agent) -> str:
     )
 
 
+@runs_real_claude
+@runs_real_codex
 def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
     observation = observe_real_first_install()
 
@@ -59,6 +63,8 @@ def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
     assert observation.codex_plugins.enabled == {SPEC_TREE_PLUGIN}
 
 
+@runs_real_claude
+@runs_real_codex
 def test_real_agent_clis_place_home_agents_and_repeat_full_installation() -> None:
     observation = observe_real_installation()
     assert observation.first_exit_code == 0, observation.first_stderr
@@ -73,6 +79,8 @@ def test_real_agent_clis_place_home_agents_and_repeat_full_installation() -> Non
     assert observation.unowned_second == observation.unowned_initial
 
 
+@runs_real_claude
+@runs_real_codex
 def test_real_persistent_run_moves_a_second_checkout_record_without_entering_it() -> (
     None
 ):
@@ -124,6 +132,8 @@ def test_real_persistent_run_moves_a_second_checkout_record_without_entering_it(
 
 
 @pytest.mark.live_subagent_discovery
+@runs_real_claude
+@runs_real_codex
 def test_fresh_codex_session_discovers_every_placed_canonical_subagent() -> None:
     observation = observe_codex_subagent_discovery()
 

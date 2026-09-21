@@ -6,6 +6,7 @@ import re
 import subprocess
 from string import Formatter
 from typing import cast
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 import pytest
@@ -33,7 +34,17 @@ from outcomeeng.distribution.installation import (
     UNREADABLE_HEAD_RECORD_WARNING,
     CLAUDE_PROJECT_SCOPE,
 )
+from outcomeeng.validation.agent_disable import (
+    DISABLE_CLAUDE_ENV,
+    DISABLE_CODEX_ENV,
+    DISABLE_VALUE,
+    claude_disabled_reason,
+    codex_disabled_reason,
+)
 from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT, JUST_BINARY
+from outcomeeng_testing.generators.installation import (
+    non_disabling_switch_values,
+)
 from outcomeeng_testing.harnesses.discovery_auth import (
     API_LOGIN_FLAG,
     CODEX_LOGIN_SUBCOMMAND,
@@ -1145,3 +1156,38 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
                 ],
             )
             assert set(named) == reached, (case.state, agent)
+
+
+@pytest.mark.parametrize(
+    ("predicate", "switch"),
+    (
+        (codex_disabled_reason, DISABLE_CODEX_ENV),
+        (claude_disabled_reason, DISABLE_CLAUDE_ENV),
+    ),
+)
+def test_disable_switch_declares_its_own_agent_rows_optional(
+    predicate: Callable[[Mapping[str, str]], str | None],
+    switch: str,
+) -> None:
+    assert predicate({}) is None
+    for value in non_disabling_switch_values():
+        assert predicate({switch: value}) is None, value
+
+    reason = predicate({switch: DISABLE_VALUE})
+
+    assert reason is not None
+    assert switch in reason
+
+
+@pytest.mark.parametrize(
+    ("predicate", "other_switch"),
+    (
+        (codex_disabled_reason, DISABLE_CLAUDE_ENV),
+        (claude_disabled_reason, DISABLE_CODEX_ENV),
+    ),
+)
+def test_disable_switch_leaves_the_other_agent_rows_running(
+    predicate: Callable[[Mapping[str, str]], str | None],
+    other_switch: str,
+) -> None:
+    assert predicate({other_switch: DISABLE_VALUE}) is None

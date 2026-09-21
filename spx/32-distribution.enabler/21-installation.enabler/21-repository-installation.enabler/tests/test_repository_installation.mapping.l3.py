@@ -9,9 +9,15 @@ from outcomeeng.distribution.installation import (
 from outcomeeng_testing.generators.installation import (
     catalog_plugin_names_from_bytes,
 )
-from outcomeeng_testing.harnesses.installation import observe_real_installation
+from outcomeeng_testing.harnesses.installation import (
+    observe_real_installation,
+    runs_real_claude,
+    runs_real_codex,
+)
 
 
+@runs_real_claude
+@runs_real_codex
 def test_real_agent_clis_map_full_and_generated_subsets() -> None:
     observation = observe_real_installation()
     claude_plugins = frozenset(
