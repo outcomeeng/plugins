@@ -28,5 +28,6 @@ The module invokes the command in the repository root whose top-level entries pr
 - ALWAYS: separate the base command from generated pathspecs with `--` ([test](tests/test_clean.compliance.l1.py))
 - NEVER: include the active in-repository Python environment in the generated pathspecs ([test](tests/test_clean.compliance.l1.py))
 - NEVER: include `.spx` in the generated pathspecs — the session store is operational state a live session reads ([test](tests/test_clean.compliance.l1.py))
+- NEVER: include `.git` or `.gitignore` in the generated pathspecs — the repository's own metadata is never a cleanup candidate ([test](tests/test_clean.compliance.l1.py))
 - NEVER: fall back to the bare base command when no cleanup candidates exist ([test](tests/test_clean.compliance.l1.py))
 - ALWAYS: the root harness guides `CLAUDE.md` and `AGENTS.md` name `just clean` as the agent's own action when a gitignored artifact blocks a gate, with no operator question and no path-limited substitute ([audit])

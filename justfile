@@ -170,7 +170,7 @@ bump-dry base_ref="origin/main" segment="":
 bump-check base_ref="origin/main":
     uv run python -m outcomeeng.distribution.bump --check {{base_ref}}
 
-# Remove every gitignored file and directory (git clean -fdX semantics)
+# Remove gitignored files and directories, sparing .git, .gitignore, .spx, and the active Python environment
 clean:
     uv run python -m outcomeeng.hygiene.clean
 
