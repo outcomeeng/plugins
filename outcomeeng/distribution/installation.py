@@ -1533,11 +1533,14 @@ def claude_refresh_records(
             rewrites.append(record)
             continue
         warnings.append(InstallationWarning(agent=Agent.CLAUDE, message=message))
-    order = lambda record: (  # noqa: E731
-        catalog.index(record.plugin),
-        str(record.project_path),
-        record.scope,
-    )
+
+    def order(record: ClaudeInstallRecord) -> tuple[int, str, str]:
+        return (
+            catalog.index(record.plugin),
+            str(record.project_path),
+            record.scope,
+        )
+
     native.sort(key=order)
     rewrites.sort(key=order)
     return tuple(native), tuple(rewrites), tuple(warnings)

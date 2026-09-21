@@ -925,7 +925,6 @@ def _listing_from_record_file(record_file: Path) -> str:
 
 def _record_file_from_cases(
     cases: Sequence[tuple[dict[str, str], RecordDisposition]],
-    marketplace: str,
     cache_root: Path,
 ) -> dict[str, object]:
     """Build one install-record document whose entries are the generated cases.
@@ -936,7 +935,6 @@ def _record_file_from_cases(
     here; each entry then receives the case's scope, project path, recorded
     version, the cache directory that version names, and a commit.
     """
-    del marketplace
     captured = cast(
         "dict[str, object]",
         json.loads(install_record_fixture_path().read_text(encoding="utf-8")),
@@ -1219,7 +1217,7 @@ def observe_record_refresh_plan(
             (cache_root / plugin / target_version).mkdir(parents=True)
         record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
         record_file.parent.mkdir(parents=True, exist_ok=True)
-        record_file_before = _record_file_from_cases(cases, marketplace, cache_root)
+        record_file_before = _record_file_from_cases(cases, cache_root)
         record_file.write_text(json.dumps(record_file_before, indent=2) + "\n")
         closing_cases = generated_closing_listing(cases, appearing.resolve())
         runner = RecordingRunner(
@@ -1525,9 +1523,7 @@ def observe_unreadable_source() -> UnreadableSourceObservation:
         record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
         record_file.parent.mkdir(parents=True, exist_ok=True)
         record_file.write_text(
-            json.dumps(
-                _record_file_from_cases(cases, marketplace, cache_root), indent=2
-            )
+            json.dumps(_record_file_from_cases(cases, cache_root), indent=2)
         )
         plan = build_persistent_installation_plan(
             preflight,
@@ -1634,9 +1630,7 @@ def observe_pathless_record_listing() -> PathlessListingObservation:
         record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
         record_file.parent.mkdir(parents=True, exist_ok=True)
         record_file.write_text(
-            json.dumps(
-                _record_file_from_cases(cases, marketplace, cache_root), indent=2
-            )
+            json.dumps(_record_file_from_cases(cases, cache_root), indent=2)
         )
         runner = RecordingRunner(
             record_file=record_file, clone=clone, served_version=target_version
@@ -1988,7 +1982,7 @@ def observe_agent_home_collision() -> AgentHomeCollisionObservation:
         preflight = build_persistent_preflight(mirror, environment)
         destination = preflight.codex_agents[0].destination
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text('name = "foreign-definition"\n', encoding="utf-8")
+        destination.write_bytes(FOREIGN_DEFINITION_CONTENT)
         home_before = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
         runner = RecordingRunner()
         collisions: tuple[AgentHomeCollision, ...] = ()
