@@ -27,6 +27,7 @@ from outcomeeng_testing.generators.source_and_templating import (
 from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
 from outcomeeng_testing.harnesses.source_and_templating import (
     arrange_cache_only_skill_directory,
+    arrange_empty_skill_directory,
     arrange_manifestless_skill_directory,
     bare_conditional_renders_per_target,
     implementation_is_ready,
@@ -72,6 +73,19 @@ def test_cache_only_skill_directory_is_absent(
     tmp_path: Path, case: SourceScenario
 ) -> None:
     arranged = arrange_cache_only_skill_directory(tmp_path, case)
+
+    projection = project_emissions(arranged.src_root)
+
+    assert not [
+        emission
+        for emission in projection.emissions
+        if emission.source.is_relative_to(arranged.skill_root)
+    ]
+
+
+@pytest.mark.parametrize("case", source_scenarios(), ids=lambda c: c.skill)
+def test_empty_skill_directory_is_absent(tmp_path: Path, case: SourceScenario) -> None:
+    arranged = arrange_empty_skill_directory(tmp_path, case)
 
     projection = project_emissions(arranged.src_root)
 

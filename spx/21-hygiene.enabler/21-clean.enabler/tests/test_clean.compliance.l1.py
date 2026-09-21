@@ -1,14 +1,10 @@
 """Level-1 compliance evidence for workspace cleanup.
 
-Covers the compliance assertions in `clean.md`:
-- ALWAYS: invoke the base command, evidenced by the argv the builder returns;
-  the agreement between that command and the spec's declaration of it is audit
-  evidence, per `spx/12-shipped-scripting.adr.md`.
-- ALWAYS: separate the base command from generated pathspecs with `--`.
-- NEVER: include the active in-repository Python environment in the generated
-  pathspecs.
-- NEVER: include `.spx` in the generated pathspecs.
-- NEVER: fall back to bare `git clean -fdX` when no cleanup candidates exist.
+Covers the compliance assertions in `clean.md` whose verdict a command can
+produce: the argv the builder composes, the paths it omits, and the empty argv
+it returns when nothing is left to clean. The declared base command and
+protected set are values the module complies with rather than behavior, so
+their evidence is audit and no case here pins them.
 """
 
 from __future__ import annotations

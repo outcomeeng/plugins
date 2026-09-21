@@ -81,3 +81,25 @@ passing test-evidence audit of this node.
 **Evidence**: `spec-tree:test-evidence-auditor` verdict `REJECTED` on head
 `a65659114b99767b90b4d920550fff5dc0824794` during Change #76; the one finding that changeset caused (`f-018`, a
 restated spec literal in the `require_skill` test) was fixed in the changeset.
+
+## The authored-source predicate admits stray workspace artifacts
+
+`_is_authored_source_file` in `outcomeeng/distribution/build.py` rejects a file only for an ignored directory name or an ignored file suffix, so a stray workspace artifact with neither — a macOS metadata file, a Spotlight index marker — counts as authored source. Two consequences follow. A skill directory a rebase leaves holding only such a file fails validation for a missing manifest, which is the situation the absence rule removes for cache-only directories. The same file is also projected as a copy emission into both generated trees, where the source-to-output parity step then reports it.
+
+The root harness guides name that artifact class together with the Python cache in one cleanup rule, so the build-side declaration is narrower than the class the guides describe.
+
+**Resolution shape**: give the predicate a third input beside its ignored directory names and file suffixes — a set of ignored file names — and restate the absence assertion in terms of the whole class. No file of the class exists under `src/` today, so the generated trees do not change when it lands.
+
+**Why separate**: Change #119's Frame settles the absence rule on the predicate the emission walk already applies, keyed on the declared ignored directory names and file suffixes. Adding a class of ignored artifact widens that predicate beyond the attested Frame, so it is a Change of its own rather than work for the changeset that surfaced it.
+
+**Evidence**: `spec-tree:changes-reviewer` run `2026-09-21_16-03-29-169-c48d77290660`, debt finding on `source-and-templating.md`, raised against head `39f60328b985a254743073f95c6d134cc56e0adc`.
+
+## The custom-delimiter assertion's evidence compares the source to itself
+
+`source-and-templating.md` declares the Jinja2 environment's custom delimiters as literals and links `tests/test_source_and_templating.compliance.l1.py` for them. The linked evidence compares the environment's configured delimiters against the same constants `outcomeeng/distribution/build.py` declares, so mutating those constants leaves the test passing. A value the spec tree declares and a source complies with is audit evidence, because every oracle for that agreement is a second declaration.
+
+**Resolution shape**: split the declared delimiter literals onto an `[audit]` assertion and leave the behavior the delimiters govern — a body carrying standard Jinja syntax passing through unchanged, a custom block rendering per target — on its test links. The clean node's spec carries the same split as its worked example.
+
+**Why separate**: the repair deletes `jinja_environment_uses_custom_delimiters`, one of the boolean-returning harness predicates the entry "Linked tests delegate their predicates to boolean-returning harnesses" records, whose settlement condition assigns this node's evidence-seam rewrite to Change #85. Removing that predicate ahead of the rewrite splits one seam repair across two changesets.
+
+**Evidence**: found by the same-class scan over both governed nodes' specs during Change #119 round 3, prompted by the implementation audit's blocking finding on the clean node's parallel assertion in run `2026-09-21_16-03-52-930-bb909cac6a0a`.
