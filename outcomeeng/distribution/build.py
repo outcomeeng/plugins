@@ -2007,11 +2007,26 @@ def _validate_plugin_tree(plugin_root: Path, src_root: Path) -> None:
         for skill_root in sorted(
             path for path in skills_root.iterdir() if path.is_dir()
         ):
+            if not _holds_authored_source(skill_root, plugin_root.parent):
+                continue
             if not (skill_root / SKILL_FILENAME).is_file():
                 raise SourceFormatError(
                     f"skill directory missing {SKILL_FILENAME}: "
                     f"{skill_root.relative_to(src_root)}"
                 )
+
+
+def _holds_authored_source(directory: Path, plugins_root: Path) -> bool:
+    """Whether any file under ``directory`` survives the emission walk's filter.
+
+    A directory a rebase leaves holding only ignored caches is absent, not a
+    skill missing its manifest.
+    """
+    return any(
+        _is_authored_source_file(path.relative_to(plugins_root))
+        for path in directory.rglob("*")
+        if path.is_file()
+    )
 
 
 if __name__ == "__main__":
