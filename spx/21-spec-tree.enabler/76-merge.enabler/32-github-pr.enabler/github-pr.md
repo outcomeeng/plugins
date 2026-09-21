@@ -16,6 +16,8 @@ CAN take a change through the governed commit, PR, verification, preview, merge,
 
 ### Compliance
 
+- ALWAYS: this product's `spx/local/open-pr.md` directs plugin-distribution changes to receive their bump in the last commit before pull-request opening, after `/sync-base` returns `already_current` or `rebased` for the candidate head: `just bump`, then `just build-skills`, committed together; its opening checks require `just bump-check` to exit zero on the exact head being published and preserve `VERIFICATION_READINESS` for that head ([audit])
+- ALWAYS: this product's `spx/local/open-pr.md` directs the bump step to run again after a later rebase of an open pull request's branch and before its next push; the instruction preserves manifests already ahead of the synchronized base, re-establishes verification when a bump changes the diff, and leaves the merge operation to merge the reviewed head without a version write ([audit])
 - ALWAYS: `/manage-github-pr` ships as a user-invocable `SKILL.md` under `plugins/spec-tree/skills/manage-github-pr/`, with no command wrapper, so it activates on both runtimes per `spx/13-plugin-and-runtime-conventions.adr.md` ([audit])
 - ALWAYS: `/open-pr` ships as an internal `SKILL.md` under `plugins/spec-tree/skills/open-pr/`, with no direct command wrapper ([audit])
 - ALWAYS: `/manage-github-pr` remains user-invocable as the GitHub PR transport entry point ([audit])
