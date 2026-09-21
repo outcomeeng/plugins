@@ -5,12 +5,12 @@ from outcomeeng.distribution.installation import (
     SPEC_TREE_PLUGIN,
 )
 from outcomeeng_testing.generators.installation import (
-    UNCATALOGED_PLUGIN,
     catalog_plugin_names_from_bytes,
     generated_persistent_catalog_selections,
 )
 from outcomeeng_testing.harnesses.installation import (
     observe_persistent_catalog_subset_plans,
+    observe_retired_catalog_plugin_plans,
     observe_repository_plan,
 )
 
@@ -30,8 +30,6 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
             generated_persistent_catalog_selections(observation.catalog)
         )
         for mapping in observation.mappings:
-            assert UNCATALOGED_PLUGIN not in observation.catalog
-            assert UNCATALOGED_PLUGIN not in mapping.planned
             if not mapping.selected:
                 assert mapping.planned == (SPEC_TREE_PLUGIN,)
             else:
@@ -50,3 +48,10 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
                     mapping.planned if observation.agent is Agent.CLAUDE else ()
                 )
                 assert mapping.updates == ()
+
+    retirements = observe_retired_catalog_plugin_plans()
+    assert {observation.agent for observation in retirements} == set(Agent)
+    for observation in retirements:
+        assert observation.retired not in observation.catalog
+        assert observation.retired not in observation.planned
+        assert observation.planned == observation.catalog

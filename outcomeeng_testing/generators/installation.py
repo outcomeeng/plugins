@@ -134,6 +134,30 @@ def generated_persistent_catalog_selections(
     return (frozenset(), *generated_valid_catalog_subsets(catalog))
 
 
+@dataclass(frozen=True)
+class CatalogRetirement:
+    """One catalog member removed from the remaining committed order."""
+
+    active: tuple[str, ...]
+    retired: str
+
+
+def generated_catalog_retirements(
+    catalog: Sequence[str],
+) -> tuple[CatalogRetirement, ...]:
+    """Enumerate every optional catalog member as the retired member."""
+    if SPEC_TREE_PLUGIN not in catalog:
+        raise ValueError("catalog must contain spec-tree")
+    return tuple(
+        CatalogRetirement(
+            active=tuple(candidate for candidate in catalog if candidate != retired),
+            retired=retired,
+        )
+        for retired in catalog
+        if retired != SPEC_TREE_PLUGIN
+    )
+
+
 def generated_claude_listing_entries(
     catalog: Sequence[str],
     checkout: Path,
@@ -170,8 +194,6 @@ def generated_claude_listing_entries(
     return tuple(entries), frozenset(in_scope)
 
 
-UNCATALOGED_PLUGIN = "retired-plugin"
-"""A plugin name no committed catalog carries, used as the catalog bound's rejected member."""
 FOREIGN_MARKETPLACE_NAME = f"{MARKETPLACE_NAME}-other"
 """A marketplace name other than the product's, whose records every reader skips."""
 
@@ -198,6 +220,7 @@ def generated_claude_install_records(
     local_canonical_checkout: Path,
     malformed_checkout: Path,
     denied_checkout: Path,
+    uncataloged_plugins: Sequence[str],
 ) -> tuple[tuple[tuple[dict[str, str], RecordCaseDisposition], ...], ...]:
     """Cycle every catalog plugin through each install-record disposition.
 
@@ -216,8 +239,9 @@ def generated_claude_install_records(
     cannot be parsed, a record in a checkout whose settings directory denies
     reading, and an entry from another marketplace. The two
     conflicting checkouts are the precedence boundary: Claude Code lets the
-    local document override the project document. One uncataloged plugin
-    record is appended so the catalog bound has a rejected member.
+    local document override the project document. Each supplied uncataloged
+    plugin receives one record so a source-derived retired catalog member
+    exercises the catalog bound.
     """
     groups: list[tuple[tuple[dict[str, str], RecordCaseDisposition], ...]] = []
     for plugin in catalog:
@@ -347,19 +371,18 @@ def generated_claude_install_records(
                 ),
             )
         )
-    groups.append(
+    groups.extend(
         (
             (
                 {
-                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                        UNCATALOGED_PLUGIN
-                    ),
+                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin),
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
                 },
                 RecordWarningReason.UNCATALOGED,
             ),
         )
+        for plugin in uncataloged_plugins
     )
     return tuple(groups)
 
@@ -498,13 +521,14 @@ __all__ = [
     "catalog_plugin_names_from_bytes",
     "catalog_plugin_names_from_document",
     "generated_agent_subsets",
+    "CatalogRetirement",
+    "generated_catalog_retirements",
     "generated_catalog_subset",
     "generated_claude_install_records",
     "generated_claude_listing_entries",
     "RecordDisposition",
     "RecordCaseDisposition",
     "FailureClassificationCase",
-    "UNCATALOGED_PLUGIN",
     "generated_codex_listing_entries",
     "generated_failure_classification_cases",
     "generated_command_failure_stderr",

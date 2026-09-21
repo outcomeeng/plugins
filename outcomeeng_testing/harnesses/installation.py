@@ -12,7 +12,7 @@ import sys
 import tomllib
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import cache
 from io import StringIO
 from pathlib import Path
@@ -116,10 +116,11 @@ from outcomeeng.distribution.installation import (
 )
 from outcomeeng_testing.generators.installation import (
     RecordCaseDisposition,
-    UNCATALOGED_PLUGIN,
     captured_unpublished_plugin_stderr,
     catalog_plugin_names_from_document,
     generated_agent_subsets,
+    generated_catalog_retirements,
+    generated_catalog_subset,
     generated_claude_install_records,
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
@@ -218,6 +219,16 @@ class CatalogSubsetPlanObservation:
 
 
 @dataclass(frozen=True)
+class CatalogRetirementPlanObservation:
+    """One source-derived retired plugin and the resulting plan selection."""
+
+    agent: Agent
+    catalog: tuple[str, ...]
+    retired: str
+    planned: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class FailureObservation:
     """Public CLI streams and command prefix from one terminal failure."""
 
@@ -252,14 +263,18 @@ class AgentHomeReconciliationObservation:
 
     desired_first: tuple[tuple[str, bytes], ...]
     desired_second: tuple[tuple[str, bytes], ...]
+    desired_third: tuple[tuple[str, bytes], ...]
     home_initial: tuple[tuple[str, bytes], ...]
     home_first: tuple[tuple[str, bytes], ...]
     home_second: tuple[tuple[str, bytes], ...]
+    home_third: tuple[tuple[str, bytes], ...]
     foreign_initial: bytes
     foreign_first: bytes
     foreign_second: bytes
+    foreign_third: bytes
     first_result: AgentHomeResult
     second_result: AgentHomeResult
+    third_result: AgentHomeResult
     ownership_record_present: bool
 
 
@@ -831,12 +846,11 @@ class RecordRefreshObservation:
     attempted: tuple[InstallationCommand, ...]
 
 
-def observe_record_refresh_plan() -> RecordRefreshObservation:
-    """Plan a persistent run against records spread across scopes and paths."""
+def observe_record_refresh_plans() -> tuple[RecordRefreshObservation, ...]:
+    """Plan full-catalog and source-derived retired-record refresh cases."""
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
-        mirror = temporary_root / "checkout"
         other = temporary_root / "other-checkout"
         other.mkdir()
         absent = temporary_root / "removed-checkout"
@@ -871,61 +885,91 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
         denied = temporary_root / "denied-checkout"
         denied.mkdir()
         _write_project_marketplace(denied, CANONICAL_MARKETPLACE_SOURCE)
-        mirror_installation_inputs(checkout, mirror)
-        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
-        preflight = build_persistent_preflight(mirror, environment)
-        catalog = _catalogs_from_documents(mirror)[Agent.CLAUDE]
-        groups = generated_claude_install_records(
-            catalog,
-            preflight.roots.checkout,
-            other.resolve(),
-            absent.resolve(),
-            regular_file.resolve(),
-            forked.resolve(),
-            forked_local.resolve(),
-            local_forked.resolve(),
-            local_canonical.resolve(),
-            malformed.resolve(),
-            denied.resolve(),
+        full_catalog = catalog_plugin_names_from_document(
+            checkout / CLAUDE_CATALOG_PATH
         )
-        cases = tuple(case for group in groups for case in group)
-        with _blocked_directory(denied / CLAUDE_PROJECT_SETTINGS_PATH.parent):
-            plan = build_persistent_installation_plan(
-                preflight,
-                claude_marketplace_payload=claude_marketplace_listing_payload(
-                    CANONICAL_MARKETPLACE_SOURCE
-                ),
-                claude_plugins_payload=json.dumps([entry for entry, _ in cases]),
-                codex_marketplace_payload=codex_marketplace_listing_payload(
-                    CANONICAL_CODEX_SOURCE
-                ),
-                codex_plugins_payload=_plugin_listing_payload(
-                    Agent.CODEX,
-                    mirror,
-                    frozenset(catalog),
-                ),
+        catalog_selections = (
+            frozenset(full_catalog),
+            generated_catalog_subset(full_catalog, include_spec_tree=True),
+        )
+        observations: list[RecordRefreshObservation] = []
+        for index, selection in enumerate(catalog_selections):
+            mirror = temporary_root / f"checkout-{index}"
+            mirror_installation_inputs(checkout, mirror)
+            _write_catalog_selection(mirror / CLAUDE_CATALOG_PATH, selection)
+            _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+            preflight = build_persistent_preflight(mirror, environment)
+            catalog = _catalogs_from_documents(mirror)[Agent.CLAUDE]
+            uncataloged = tuple(
+                plugin for plugin in full_catalog if plugin not in selection
             )
-        runner = RecordingRunner()
-        report = execute_installation(plan, runner)
-        return RecordRefreshObservation(
-            checkout=preflight.roots.checkout,
-            other_checkout=other.resolve(),
-            absent_path=absent.resolve(),
-            file_path=regular_file.resolve(),
-            forked_checkout=forked.resolve(),
-            forked_local_checkout=forked_local.resolve(),
-            local_forked_checkout=local_forked.resolve(),
-            local_canonical_checkout=local_canonical.resolve(),
-            malformed_checkout=malformed.resolve(),
-            denied_checkout=denied.resolve(),
-            cases=cases,
-            plan=plan,
-            catalog=catalog,
-            report=report,
-            document=report_document(report),
-            attempted=tuple(runner.calls),
-        )
+            groups = generated_claude_install_records(
+                catalog,
+                preflight.roots.checkout,
+                other.resolve(),
+                absent.resolve(),
+                regular_file.resolve(),
+                forked.resolve(),
+                forked_local.resolve(),
+                local_forked.resolve(),
+                local_canonical.resolve(),
+                malformed.resolve(),
+                denied.resolve(),
+                uncataloged,
+            )
+            cases = tuple(case for group in groups for case in group)
+            with _blocked_directory(denied / CLAUDE_PROJECT_SETTINGS_PATH.parent):
+                plan = build_persistent_installation_plan(
+                    preflight,
+                    claude_marketplace_payload=claude_marketplace_listing_payload(
+                        CANONICAL_MARKETPLACE_SOURCE
+                    ),
+                    claude_plugins_payload=json.dumps([entry for entry, _ in cases]),
+                    codex_marketplace_payload=codex_marketplace_listing_payload(
+                        CANONICAL_CODEX_SOURCE
+                    ),
+                    codex_plugins_payload=_plugin_listing_payload(
+                        Agent.CODEX,
+                        mirror,
+                        frozenset(catalog),
+                    ),
+                )
+            runner = RecordingRunner()
+            report = execute_installation(plan, runner)
+            observations.append(
+                RecordRefreshObservation(
+                    checkout=preflight.roots.checkout,
+                    other_checkout=other.resolve(),
+                    absent_path=absent.resolve(),
+                    file_path=regular_file.resolve(),
+                    forked_checkout=forked.resolve(),
+                    forked_local_checkout=forked_local.resolve(),
+                    local_forked_checkout=local_forked.resolve(),
+                    local_canonical_checkout=local_canonical.resolve(),
+                    malformed_checkout=malformed.resolve(),
+                    denied_checkout=denied.resolve(),
+                    cases=cases,
+                    plan=plan,
+                    catalog=catalog,
+                    report=report,
+                    document=report_document(report),
+                    attempted=tuple(runner.calls),
+                )
+            )
+        return tuple(observations)
+
+
+def observe_record_refresh_plan() -> RecordRefreshObservation:
+    """Plan the full-catalog machine-wide Claude record refresh scenario."""
+    source_catalog = catalog_plugin_names_from_document(
+        repository_root() / CLAUDE_CATALOG_PATH
+    )
+    return next(
+        observation
+        for observation in observe_record_refresh_plans()
+        if observation.catalog == source_catalog
+    )
 
 
 @dataclass(frozen=True)
@@ -1177,7 +1221,7 @@ def observe_persistent_catalog_subset_plans() -> tuple[
                     candidate: frozenset({SPEC_TREE_PLUGIN}) for candidate in Agent
                 }
                 installed[agent] = (
-                    selected | {UNCATALOGED_PLUGIN} if selected else selected
+                    selected
                 )
                 plan = build_persistent_installation_plan(
                     preflight,
@@ -1238,8 +1282,78 @@ def observe_persistent_catalog_subset_plans() -> tuple[
     return tuple(observations)
 
 
+def observe_retired_catalog_plugin_plans() -> tuple[
+    CatalogRetirementPlanObservation, ...
+]:
+    """Build one plan for every source-catalog member that can be retired."""
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        preflight = build_persistent_preflight(mirror, environment)
+        catalogs = _catalogs_from_documents(mirror)
+        observations: list[CatalogRetirementPlanObservation] = []
+        for agent in Agent:
+            for retirement in generated_catalog_retirements(catalogs[agent]):
+                active_preflight = replace(
+                    preflight,
+                    claude_plugins=(
+                        retirement.active
+                        if agent is Agent.CLAUDE
+                        else preflight.claude_plugins
+                    ),
+                    codex_plugins=(
+                        retirement.active
+                        if agent is Agent.CODEX
+                        else preflight.codex_plugins
+                    ),
+                )
+                installed = {
+                    candidate: frozenset({SPEC_TREE_PLUGIN}) for candidate in Agent
+                }
+                installed[agent] = frozenset(
+                    (*retirement.active, retirement.retired)
+                )
+                plan = build_persistent_installation_plan(
+                    active_preflight,
+                    claude_marketplace_payload=claude_marketplace_listing_payload(
+                        CANONICAL_MARKETPLACE_SOURCE
+                    ),
+                    claude_plugins_payload=_plugin_listing_payload(
+                        Agent.CLAUDE,
+                        mirror,
+                        installed[Agent.CLAUDE],
+                    ),
+                    codex_marketplace_payload=codex_marketplace_listing_payload(
+                        CANONICAL_CODEX_SOURCE
+                    ),
+                    codex_plugins_payload=_plugin_listing_payload(
+                        Agent.CODEX,
+                        mirror,
+                        installed[Agent.CODEX],
+                    ),
+                )
+                planned = (
+                    plan.claude_plugins
+                    if agent is Agent.CLAUDE
+                    else plan.codex_plugins
+                )
+                observations.append(
+                    CatalogRetirementPlanObservation(
+                        agent=agent,
+                        catalog=retirement.active,
+                        retired=retirement.retired,
+                        planned=planned,
+                    )
+                )
+    return tuple(observations)
+
+
 def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
-    """Install selected-home agents, then remove one from the desired catalog set."""
+    """Reconcile all agents, one removed agent, then retired plugins."""
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
@@ -1255,6 +1369,10 @@ def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
         home_initial = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
 
         first_preflight = build_persistent_preflight(mirror, environment)
+        minimal_selection = generated_catalog_subset(
+            first_preflight.codex_plugins,
+            include_spec_tree=True,
+        )
         desired_first = _shipped_agent_snapshot(mirror)
         first_report = execute_persistent_installation(
             mirror,
@@ -1267,7 +1385,11 @@ def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
         home_first = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
         foreign_first = foreign.read_bytes()
 
-        retired = first_preflight.codex_agents[0]
+        retired = next(
+            agent
+            for agent in first_preflight.codex_agents
+            if agent.plugin not in minimal_selection
+        )
         retired.source.unlink()
         desired_second = _shipped_agent_snapshot(mirror)
         second_report = execute_persistent_installation(
@@ -1280,19 +1402,39 @@ def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
             raise RuntimeError("persistent installation returned no agent-home result")
         home_second = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
         foreign_second = foreign.read_bytes()
+
+        _write_catalog_selection(mirror / CODEX_CATALOG_PATH, minimal_selection)
+        desired_third = _shipped_agent_snapshot(
+            mirror,
+            plugins=minimal_selection,
+        )
+        third_report = execute_persistent_installation(
+            mirror,
+            environment,
+            RecordingRunner(),
+        )
+        third_result = third_report.agent_home
+        if third_result is None:
+            raise RuntimeError("persistent installation returned no agent-home result")
+        home_third = _agent_snapshot(Path(environment[CODEX_HOME_ENV]))
+        foreign_third = foreign.read_bytes()
         ownership_record_present = (agents_root / AGENT_OWNERSHIP_FILENAME).is_file()
 
     return AgentHomeReconciliationObservation(
         desired_first=desired_first,
         desired_second=desired_second,
+        desired_third=desired_third,
         home_initial=home_initial,
         home_first=home_first,
         home_second=home_second,
+        home_third=home_third,
         foreign_initial=foreign_initial,
         foreign_first=foreign_first,
         foreign_second=foreign_second,
+        foreign_third=foreign_third,
         first_result=first_result,
         second_result=second_result,
+        third_result=third_result,
         ownership_record_present=ownership_record_present,
     )
 
@@ -2727,7 +2869,11 @@ def _agent_snapshot(codex_home: Path) -> tuple[tuple[str, bytes], ...]:
     )
 
 
-def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
+def _shipped_agent_snapshot(
+    checkout: Path,
+    *,
+    plugins: frozenset[str] | None = None,
+) -> tuple[tuple[str, bytes], ...]:
     """Read the shipped Codex agent definitions straight from the generated tree.
 
     The snapshot is independent of the production preflight, so a narrowed
@@ -2736,6 +2882,9 @@ def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
     shipped: dict[str, bytes] = {}
     definitions = (checkout / DIST_CODEX_PLUGINS_DIR).glob("*/skills/*/agents/*.toml")
     for definition in sorted(definitions):
+        plugin = definition.relative_to(checkout / DIST_CODEX_PLUGINS_DIR).parts[0]
+        if plugins is not None and plugin not in plugins:
+            continue
         if definition.name in shipped:
             raise RuntimeError(
                 f"duplicate shipped Codex agent definition: {definition.name}"
@@ -2769,6 +2918,7 @@ def _tree_snapshot(root: Path) -> tuple[tuple[str, bytes], ...]:
 __all__ = [
     "CatalogSubsetMapping",
     "CatalogSubsetPlanObservation",
+    "CatalogRetirementPlanObservation",
     "AgentHomeCollisionObservation",
     "InterruptedReconciliationObservation",
     "AgentHomeReconciliationObservation",
@@ -2807,8 +2957,10 @@ __all__ = [
     "observe_missing_codex_home",
     "observe_persistent_execution",
     "observe_persistent_catalog_subset_plans",
+    "observe_retired_catalog_plugin_plans",
     "observe_persistent_plan",
     "observe_record_refresh_plan",
+    "observe_record_refresh_plans",
     "observe_local_record_bootstrap_plan",
     "observe_noncanonical_registry_plan",
     "RecordRefreshObservation",

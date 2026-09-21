@@ -30,7 +30,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_missing_codex_home,
     observe_persistent_execution,
     observe_persistent_plan,
-    observe_record_refresh_plan,
+    observe_record_refresh_plans,
     observe_repository_plan,
 )
 
@@ -113,32 +113,32 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
         if command.agent is Agent.CLAUDE
         and command.operation is Operation.PLUGIN_UPDATE
     )
-    spread = observe_record_refresh_plan()
-    expected_updates = {
-        (
-            marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]),
-            entry[CLAUDE_PLUGIN_SCOPE_FIELD],
-            Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
+    for spread in observe_record_refresh_plans():
+        expected_updates = {
+            (
+                marketplace_plugin_name(entry[CLAUDE_PLUGIN_ID_FIELD]),
+                entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+                Path(entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]),
+            )
+            for entry, disposition in spread.cases
+            if disposition is RecordDisposition.UPDATE
+        }
+        observed_updates = [
+            (command.plugin, command.argv[-1], command.cwd)
+            for command in spread.plan.commands
+            if command.agent is Agent.CLAUDE
+            and command.operation is Operation.PLUGIN_UPDATE
+        ]
+        assert {scope for _, scope, _ in expected_updates} == CLAUDE_REFRESH_SCOPES
+        assert {path for _, _, path in expected_updates} > {spread.checkout}
+        assert set(observed_updates) == expected_updates
+        assert len(observed_updates) == len(expected_updates)
+        assert all(
+            command.argv[-2] == CLAUDE_SCOPE_FLAG
+            for command in spread.plan.commands
+            if command.agent is Agent.CLAUDE
+            and command.operation is Operation.PLUGIN_UPDATE
         )
-        for entry, disposition in spread.cases
-        if disposition is RecordDisposition.UPDATE
-    }
-    observed_updates = [
-        (command.plugin, command.argv[-1], command.cwd)
-        for command in spread.plan.commands
-        if command.agent is Agent.CLAUDE
-        and command.operation is Operation.PLUGIN_UPDATE
-    ]
-    assert {scope for _, scope, _ in expected_updates} == CLAUDE_REFRESH_SCOPES
-    assert {path for _, _, path in expected_updates} > {spread.checkout}
-    assert set(observed_updates) == expected_updates
-    assert len(observed_updates) == len(expected_updates)
-    assert all(
-        command.argv[-2] == CLAUDE_SCOPE_FLAG
-        for command in spread.plan.commands
-        if command.agent is Agent.CLAUDE
-        and command.operation is Operation.PLUGIN_UPDATE
-    )
     assert all(
         CLAUDE_SCOPE_FLAG not in command.argv
         for command in claude_commands

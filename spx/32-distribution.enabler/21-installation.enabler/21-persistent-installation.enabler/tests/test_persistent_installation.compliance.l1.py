@@ -29,15 +29,23 @@ def test_persistent_installation_places_agents_in_the_selected_home() -> None:
 
 def test_catalog_reconciliation_prunes_only_stale_owned_agents() -> None:
     observation = observe_agent_home_reconciliation()
-    retired = set(observation.desired_first) - set(observation.desired_second)
+    retired_agents = set(observation.desired_first) - set(observation.desired_second)
+    retired_plugins = set(observation.desired_second) - set(observation.desired_third)
 
     assert set(observation.home_second) == (
         set(observation.home_initial) | set(observation.desired_second)
     )
     assert {path.name for path in observation.second_result.pruned} == {
-        name for name, _ in retired
+        name for name, _ in retired_agents
     }
     assert observation.foreign_second == observation.foreign_initial
+    assert set(observation.home_third) == (
+        set(observation.home_initial) | set(observation.desired_third)
+    )
+    assert {path.name for path in observation.third_result.pruned} == {
+        name for name, _ in retired_plugins
+    }
+    assert observation.foreign_third == observation.foreign_initial
 
 
 def test_an_interrupted_run_is_adopted_cleanly_on_rerun() -> None:
