@@ -1,8 +1,8 @@
 ---
 name: subagent-standards
 description: >-
-  Configuration, profile, authority, context-isolation, and output-contract standards
-  for configured subagents. Loaded by creator and auditor skills.
+  Configuration, generated-subject, profile, capability, invocation, placement, and
+  evidence standards for configured subagents. Loaded by creator and auditor skills.
 user-invocable: false
 allowed-tools: Read
 ---
@@ -22,7 +22,7 @@ permissions, task boundary, and result are independently inspectable.
 - ALWAYS: define the role, material constraints, workflow, and output expectations in the
   developer instructions. Equivalent semantic tags satisfy the same requirement.
 - ALWAYS: use the voice, constraint-language, and anti-pattern rules from
-  `/agent-prompt-standards`; take the prompt's XML structure from `/create-subagent`.
+  `/agent-prompt-standards`.
 - ALWAYS: declare every field required by the current harness and reject unsupported configuration.
 - ALWAYS: resolve a definition's governing context before judging its execution boundary
   or its evidence: the owning node is the node whose linked test or audit assertion names
