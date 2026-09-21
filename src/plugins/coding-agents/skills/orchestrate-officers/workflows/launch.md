@@ -33,10 +33,10 @@ capability places after its `--` separator as the launched agent's own options,
 so the posture is in force from the officer's first turn.
 
 For a Claude officer, the posture names the structured-question tool in the
-harness's disallowed-tools argument: `--disallowedTools AskUserQuestion`. The
-launch removes the tool rather than the order asking the officer not to reach
-for it — an order that only forbids the tool leaves it callable, and an officer
-called it.
+harness's disallowed-tools argument:
+`--disallowedTools {{! tool('ask_user', 'claude') !}}`. The launch removes the
+tool rather than the order asking the officer not to reach for it — an order
+that only forbids the tool leaves it callable, and an officer called it.
 
 The equivalent Codex mechanism is an OPEN QUESTION. No Codex argument is known
 to withhold that tool from a launched session, so a Codex officer starts without
