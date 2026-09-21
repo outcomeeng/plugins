@@ -191,7 +191,14 @@ Load the full context hierarchy for the specific node — parent chain, sibling 
 
 <step number="3" name="Author">
 
-Invoke every authoring skill selected by `<lane_table>`. For the code row, invoke the architecting skill for the detected language and produce the ADRs required by the work item before audit. Other rows author only the artifacts their selected skill owns.
+Load and run the authoring skill of every row `<lane_table>` selected. For the code row, invoke the architecting skill for the detected language from `<skill_map>` and produce the ADRs the work item requires before audit. Each other selected row loads its own:
+
+- Test evidence: {!% require_skill 'spec-tree:verify' %!} {!% require_skill 'spec-tree:test' %!} {!% require_skill 'spec-tree:test-evidence-standards' %!}
+- Spec or decision: {!% require_skill 'spec-tree:author' %!} {!% require_skill 'spec-tree:verify' %!}
+- Skill: {!% require_skill 'instructions:create-skill' %!} {!% require_skill 'instructions:skill-standards' %!} {!% require_skill 'instructions:agent-prompt-standards' %!}
+- Prose: {!% require_skill 'prose:author-prose' %!} {!% require_skill 'prose:prose-standards' %!}
+
+A row authors only the artifacts its own skill owns.
 
 Before the architecture audit, invoke `/verify` separately for every new or changed ADR/PDR path. This moves each decision rule into its canonical verification subsection and supplies that subsection's tag before the auditor judges the decision. Keep target-node assertion routing in Step 5; this pre-audit decision routing creates no executable evidence link inside the decision record.
 
@@ -245,7 +252,7 @@ Write implementation code, then run every applicable deterministic check selecte
 
 For a code row in Go, Rust, or TypeScript, dispatch the configured simplifier selected in `<skill_map>` after Step 7. Python and changesets without a code row skip this step. Never infer another subagent from a language name.
 
-Before dispatch, require a clean worktree; when it is dirty, {!% require_skill 'spec-tree:commit-changes' %!} Record the full committed head. Pass only `HEAD`, or the explicit three-dot range used for the selected base. The invoked language skill independently selects the changed implementation and its governing evidence. Run one simplifier at a time, with no concurrent writer to its implementation scope.
+Before dispatch, require a clean worktree. When it is dirty: {!% require_skill 'spec-tree:commit-changes' %!} Record the full committed head. Pass only `HEAD`, or the explicit three-dot range used for the selected base. The invoked language skill independently selects the changed implementation and its governing evidence. Run one simplifier at a time, with no concurrent writer to its implementation scope.
 
 Require the skill's JSON result with `status`, `reason`, `target`, `base`, `head`, `scope`, `changed_paths`, `changes`, `evidence`, `verification`, `blockers`, and `recovery`. Check the returned target and full head against the dispatched subject, inspect every retained edit and command result, and apply the result contract:
 
@@ -273,11 +280,7 @@ The implementation-auditor composes the installed `audit-{lang}-{code|tests|arch
 
 <step number="8a" name="Evidence and artifact auditor gates" gate="true">
 
-`<evidence_auditor_gate>` selects both gate families; this step runs each one its selector picked.
-
-Run the numbered evidence gate when it is selected and the stabilized diff creates or modifies a `[test]` assertion, linked test file, imported test-infrastructure artifact, `[eval]` assertion, eval artifact, or producer artifact for eval-backed evidence.
-
-Run the artifact-auditor gate for every selected skill, prose, spec, or decision row: dispatch the exact artifact Auditor named by `<lane_table>` over the whole changeset after that row's deterministic lane passes.
+Run each gate family `<evidence_auditor_gate>` selected. The numbered evidence gate additionally requires that the stabilized diff create or modify a `[test]` assertion, linked test file, imported test-infrastructure artifact, `[eval]` assertion, eval artifact, or eval-backed producer artifact.
 
 </step>
 
