@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import fnmatch
 import importlib.util
+import os
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
@@ -11,6 +12,10 @@ from pathlib import Path
 from typing import Final, Protocol, TextIO, cast
 
 from outcomeeng.validation._engine import run_check, run_recipe
+from outcomeeng.validation.agent_disable import (
+    AgentDisableStates,
+    read_agent_disable_states,
+)
 from outcomeeng.validation._git import GitCommandResult, GitRunner, run_git_command
 from outcomeeng.validation._model import ProcessSpawner, Recipe, Step
 from outcomeeng.validation._steps import (
@@ -267,6 +272,7 @@ class SelectedGatePlan:
     selected_steps: tuple[SelectedGateStep, ...]
     full_gate: bool
     live_discovery: bool = False
+    agent_disable: AgentDisableStates = AgentDisableStates()
 
     @property
     def live_discovery_reason(self) -> str:
@@ -420,6 +426,7 @@ def build_selected_gate_plan(
     *,
     deleted_paths: tuple[str, ...] = (),
     test_infrastructure: InfrastructureIndex | None = None,
+    agent_disable: AgentDisableStates = AgentDisableStates(),
 ) -> SelectedGatePlan:
     """Build the selected local gate plan for changed paths.
 
@@ -430,7 +437,12 @@ def build_selected_gate_plan(
 
     normalized = tuple(sorted(set(changed_paths)))
     if not normalized:
-        return SelectedGatePlan(changed_paths=(), selected_steps=(), full_gate=False)
+        return SelectedGatePlan(
+            changed_paths=(),
+            selected_steps=(),
+            full_gate=False,
+            agent_disable=agent_disable,
+        )
 
     live_from_infrastructure = test_infrastructure is not None and any(
         LIVE_DISCOVERY_TEST_PATH in test_infrastructure.reach(path).tests
@@ -442,6 +454,7 @@ def build_selected_gate_plan(
             normalized,
             reason=FULL_GATE_REASON,
             live_from_infrastructure=live_from_infrastructure,
+            agent_disable=agent_disable,
         )
 
     infrastructure_paths = tuple(
@@ -457,12 +470,14 @@ def build_selected_gate_plan(
                     normalized,
                     reason=SHARED_TEST_INFRASTRUCTURE_REASON,
                     live_from_infrastructure=live_from_infrastructure,
+                    agent_disable=agent_disable,
                 )
             if report.kind is InfrastructureReach.UNTRACEABLE:
                 return _full_surface_plan(
                     normalized,
                     reason=UNTRACEABLE_TEST_INFRASTRUCTURE_REASON,
                     live_from_infrastructure=live_from_infrastructure,
+                    agent_disable=agent_disable,
                 )
             reached_tests.update(report.tests)
 
@@ -553,6 +568,7 @@ def build_selected_gate_plan(
         selected_steps=tuple(selected_steps),
         full_gate=False,
         live_discovery=live_discovery,
+        agent_disable=agent_disable,
     )
 
 
@@ -561,6 +577,7 @@ def _full_surface_plan(
     *,
     reason: str,
     live_from_infrastructure: bool = False,
+    agent_disable: AgentDisableStates = AgentDisableStates(),
 ) -> SelectedGatePlan:
     live_discovery = live_from_infrastructure or _matches_any(
         changed_paths, LIVE_DISCOVERY_PATTERNS
@@ -576,6 +593,7 @@ def _full_surface_plan(
         ),
         full_gate=True,
         live_discovery=live_discovery,
+        agent_disable=agent_disable,
     )
 
 
@@ -613,6 +631,7 @@ def run_selected_check(
     changed_paths = tuple(entry.path for entry in changed_path_entries)
     plan = build_selected_gate_plan(
         changed_paths,
+        agent_disable=read_agent_disable_states(os.environ),
         deleted_paths=deleted_paths_after_status_resolution(
             changed_path_entries,
             repo=repo,
@@ -677,6 +696,8 @@ def _load_changeset_scope() -> ChangesetScopeModule:
 
 def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
     sink.write(f"{SELECTED_CHECK_PLAN_HEADER}\n")
+    for line in plan.agent_disable.explanation_lines:
+        sink.write(f"  {line}\n")
     if not plan.changed_paths:
         sink.write(f"No gate steps selected: {NO_CHANGED_PATHS_REASON}.\n")
         sink.flush()

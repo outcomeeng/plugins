@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import cast
 
+from outcomeeng.validation.agent_disable import (
+    AGENT_SWITCHES,
+    SKIP_REPORT_SWITCH_FIELD,
+    SKIP_REPORT_TEST_FIELD,
+)
 from outcomeeng.validation._engine import (
     PHASE_COMPLETE,
     PHASE_PREFLIGHT,
@@ -20,6 +25,7 @@ from outcomeeng.validation._engine import (
     SUMMARY_KEY_PURPOSE,
     SUMMARY_KEY_RECIPE,
     SUMMARY_KEY_RECIPES,
+    SUMMARY_KEY_SKIPPED,
     SUMMARY_KEY_STATUS,
     SUMMARY_KEY_STEPS,
     SUMMARY_KEY_SUMMARY_PATH,
@@ -52,6 +58,20 @@ SUMMARY_PHASES = (PHASE_COMPLETE, PHASE_PREFLIGHT, PHASE_RECIPE)
 STEP_PHASES = (PHASE_PREFLIGHT, PHASE_RECIPE)
 RUN_STATUSES = (RUN_PASS_STATUS, RUN_FAIL_STATUS)
 
+SKIPPED_ROWS_SCHEMA: JsonSchema = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "required": [SKIP_REPORT_TEST_FIELD, SKIP_REPORT_SWITCH_FIELD],
+        "properties": {
+            SKIP_REPORT_TEST_FIELD: {"type": "string"},
+            SKIP_REPORT_SWITCH_FIELD: {"enum": list(AGENT_SWITCHES)},
+        },
+        "additionalProperties": False,
+    },
+    "minItems": 1,
+}
+
 PASS_STEP_SCHEMA: JsonSchema = {
     "type": "object",
     "required": [
@@ -71,6 +91,7 @@ PASS_STEP_SCHEMA: JsonSchema = {
         SUMMARY_KEY_STATUS: {"const": RUN_PASS_STATUS},
         SUMMARY_KEY_DURATION_SECONDS: {"type": "integer"},
         SUMMARY_KEY_EXIT_CODE: {"type": "integer"},
+        SUMMARY_KEY_SKIPPED: SKIPPED_ROWS_SCHEMA,
     },
     "additionalProperties": False,
 }
@@ -98,6 +119,7 @@ FAIL_STEP_SCHEMA: JsonSchema = {
         SUMMARY_KEY_EXIT_CODE: {"type": "integer"},
         SUMMARY_KEY_LOG_PATH: {"type": "string"},
         SUMMARY_KEY_EXCERPT: {"type": "string"},
+        SUMMARY_KEY_SKIPPED: SKIPPED_ROWS_SCHEMA,
     },
     "additionalProperties": False,
 }

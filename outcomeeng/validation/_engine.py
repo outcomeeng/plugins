@@ -14,6 +14,7 @@ the ADR's bounded-deadline exception.
 from __future__ import annotations
 
 import json
+import os
 import signal
 import tempfile
 import time
@@ -24,6 +25,11 @@ from types import FrameType
 from typing import Final, TextIO
 
 from outcomeeng.validation._model import ProcessHandle, ProcessSpawner, Recipe, Step
+from outcomeeng.validation.agent_disable import (
+    SKIP_REPORT_ENV,
+    SKIP_REPORT_SWITCH_FIELD,
+    SKIP_REPORT_TEST_FIELD,
+)
 from outcomeeng.validation._steps import RECIPE_AD_HOC, RECIPE_CHECK
 
 FORWARDED_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
@@ -61,6 +67,10 @@ SUMMARY_KEY_LABEL: Final = "label"
 SUMMARY_KEY_ARGV: Final = "argv"
 SUMMARY_KEY_LOG_PATH: Final = "log_path"
 SUMMARY_KEY_EXCERPT: Final = "excerpt"
+SUMMARY_KEY_SKIPPED: Final = "skipped"
+STEP_SKIP_STATUS: Final = "SKIP"
+SKIP_REPORT_FILE_PREFIX: Final = "outcomeeng-validation-skips-"
+SKIP_REPORT_FILE_SUFFIX: Final = ".jsonl"
 
 _current_handle_ref: list[ProcessHandle | None] = [None]
 
@@ -164,6 +174,38 @@ def _discard_log(log_path: Path) -> None:
         return
 
 
+def _create_skip_report_path(step_index: int, label: str) -> Path:
+    slug = _safe_log_slug(label)
+    with tempfile.NamedTemporaryFile(
+        prefix=f"{SKIP_REPORT_FILE_PREFIX}{step_index:02d}-{slug}-",
+        suffix=SKIP_REPORT_FILE_SUFFIX,
+        delete=False,
+    ) as output:
+        return Path(output.name)
+
+
+def _read_skip_records(report_path: Path) -> tuple[dict[str, object], ...]:
+    try:
+        payload = report_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return ()
+    records: list[dict[str, object]] = []
+    for line in payload.splitlines():
+        if not line.strip():
+            continue
+        records.append(json.loads(line))
+    return tuple(records)
+
+
+def _write_skip_lines(sink: TextIO, records: Sequence[dict[str, object]]) -> None:
+    for record in records:
+        test = record[SKIP_REPORT_TEST_FIELD]
+        switch = record[SKIP_REPORT_SWITCH_FIELD]
+        sink.write(f"{STEP_SKIP_STATUS}  {test}  {switch}\n")
+    if records:
+        sink.flush()
+
+
 def _read_failure_excerpt(log_path: Path) -> str:
     lines: deque[str] = deque(maxlen=FAILURE_EXCERPT_LINE_LIMIT)
     line_count = 0
@@ -228,6 +270,7 @@ def _step_record(
     exit_code: int,
     log_path: Path | None = None,
     excerpt: str | None = None,
+    skipped: Sequence[dict[str, object]] = (),
 ) -> dict[str, object]:
     record: dict[str, object] = {
         SUMMARY_KEY_RECIPE: recipe.name,
@@ -242,6 +285,8 @@ def _step_record(
         record[SUMMARY_KEY_LOG_PATH] = str(log_path)
     if excerpt is not None:
         record[SUMMARY_KEY_EXCERPT] = excerpt
+    if skipped:
+        record[SUMMARY_KEY_SKIPPED] = list(skipped)
     return record
 
 
@@ -332,6 +377,9 @@ def _execute_recipe(
                 step_start = time.monotonic()
                 log_path = _create_log_path(step_index, step.label)
                 created_log_paths.append(log_path)
+                skip_report_path = _create_skip_report_path(step_index, step.label)
+                previous_skip_report = os.environ.get(SKIP_REPORT_ENV)
+                os.environ[SKIP_REPORT_ENV] = str(skip_report_path)
                 try:
                     handle = _spawn_with_deferred_signal_forwarding(
                         spawner,
@@ -348,6 +396,12 @@ def _execute_recipe(
                     exit_code = SPAWN_FAILURE_EXIT_CODE
                 finally:
                     _current_handle_ref[0] = None
+                    if previous_skip_report is None:
+                        os.environ.pop(SKIP_REPORT_ENV, None)
+                    else:
+                        os.environ[SKIP_REPORT_ENV] = previous_skip_report
+                skipped = _read_skip_records(skip_report_path)
+                _discard_log(skip_report_path)
                 elapsed = round(time.monotonic() - step_start)
                 timings.append((step.label, elapsed))
                 if exit_code != 0:
@@ -366,6 +420,7 @@ def _execute_recipe(
                             exit_code=exit_code,
                             log_path=log_path,
                             excerpt=excerpt,
+                            skipped=skipped,
                         )
                     )
                     _write_failure_details(
@@ -375,6 +430,7 @@ def _execute_recipe(
                         elapsed=elapsed,
                         log_path=log_path,
                     )
+                    _write_skip_lines(sink, skipped)
                     break
                 _discard_log(log_path)
                 step_records.append(
@@ -385,10 +441,12 @@ def _execute_recipe(
                         status=RUN_PASS_STATUS,
                         elapsed=elapsed,
                         exit_code=exit_code,
+                        skipped=skipped,
                     )
                 )
                 sink.write(f"{STEP_PASS_STATUS}  {step.label}  {elapsed}s\n")
                 sink.flush()
+                _write_skip_lines(sink, skipped)
             if failed_step is not None:
                 break
         total = round(time.monotonic() - total_start)
