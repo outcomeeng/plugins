@@ -2,6 +2,7 @@ name = "spec-tree_implementation-auditor"
 description = "ALWAYS invoke for implementation audits over code, tests, and architecture in a changeset scope after implementation changes land or before merging the changeset."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
+sandbox_mode = "danger-full-access"
 web_search = "disabled"
 developer_instructions = """Use skill `spec-tree:audit-implementation`.
 

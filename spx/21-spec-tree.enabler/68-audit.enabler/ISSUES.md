@@ -321,18 +321,32 @@ rounds running.
 ## The implementation-auditor wrapper lacks a successful exact-role invocation
 
 The configured-agent audit of
-`src/plugins/spec-tree/agents/implementation-auditor.md` during Change #76
-approved the wrapper's profile, capability, thin-delegation, and result-contract
-shape, then rejected its execution evidence. The retained Codex composition
-probe ended before a child session started, and later commits changed the
-generated definition, so no successful minimal isolated invocation exists for
-the current emitted role.
+`src/plugins/spec-tree/agents/implementation-auditor.md` has no retained
+successful minimal isolated invocation of the current emitted role. The public
+`just verify-native-profile-execution <artifact-directory>` route accepts only
+an optional `--target` harness selector. Its row source is the complete central
+Standard, Strong, and Fast profile registry, and each row materializes and
+invokes a generated `profile-probe-{harness}-{profile}` definition. It exposes
+no exact-role or single-row selector and never loads or invokes the emitted
+`spec-tree_implementation-auditor` definition, so its retained profile-probe
+artifacts cannot establish execution evidence for that role.
 
-**Settlement condition**: one retained minimal isolated invocation of the
-exact emitted role that starts a child session and returns the terminal
-`spx verification run` result. A loader or authentication failure remains a
-failed invocation rather than approval evidence.
+**Impact:** the current generated definition can be audited structurally and
+loaded by ordinary sessions, while its independently isolated execution and
+result contract remain unproved.
 
-**Evidence**: `instructions:subagent-auditor` finding `f-001` against
-`src/plugins/spec-tree/agents/implementation-auditor.md` on Change #76 head
+**Settlement condition:** a sanctioned disposable-installation route accepts
+one exact emitted role and one profile row, opens a fresh native session, invokes
+that role once with a minimal target, and retains the definition, native load
+result, launch result, and final response. A loader, authentication, launch, or
+result failure remains evidence of its actual boundary rather than approval.
+
+**Evidence:** `outcomeeng_testing/harnesses/native_profile_execution.py` exposes
+only `artifact_directory` and `--target`; `native_profile_rows()` in
+`outcomeeng/distribution/native_profile_execution.py` enumerates the full
+central registry and `_render_definition()` creates profile-probe definitions.
+The earlier retained Codex composition probe ended before a child session
+started, and later commits changed the generated implementation-auditor
+definition. `instructions:subagent-auditor` first recorded the gap as finding
+`f-001` against Change #76 head
 `843ddd709b058970d414ec755cc10121ff6bb5ff`.
