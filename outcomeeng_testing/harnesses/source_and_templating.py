@@ -120,6 +120,13 @@ def arrange_cache_only_skill_directory(
     return arranged
 
 
+def arrange_empty_skill_directory(
+    root: Path, case: SourceScenario
+) -> ExtraSkillDirectory:
+    """Add a skill directory holding no file at all."""
+    return _extra_skill_directory(root, case)
+
+
 def arrange_manifestless_skill_directory(
     root: Path, case: SourceScenario
 ) -> ExtraSkillDirectory:

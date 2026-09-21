@@ -6,6 +6,8 @@ CAN reclaim disk space and reset cache state without remembering ad-hoc `find -d
 
 The `outcomeeng.hygiene.clean` module invokes `git clean -fdX` from the repository root when at least one top-level cleanup candidate remains after protected paths are removed. The protected set is `.git`, `.gitignore`, `.spx`, and the active Python environment. The flag combination is the base contract: `-f` (force, required by git), `-d` (recurse into untracked directories), `-X` (remove only gitignored paths). The module passes top-level pathspecs that omit the session store and, when the Python process running the cleanup lives inside the repository, that active environment. When every top-level path is protected, the module exits successfully without invoking Git.
 
+This paragraph declares the base command and the protected set; the module complies with that declaration. Their agreement is audit evidence, because every oracle for it is a second declaration of the same value. Test evidence therefore covers the behavior around those values — the argv the builder composes, the paths it omits, the exit codes it returns — and never the values themselves. Removing a test that pinned one of these values re-routes its assertion's verification type in the same change, so the two layers cannot drift apart.
+
 ## Assertions
 
 ### Scenarios
@@ -17,9 +19,10 @@ The `outcomeeng.hygiene.clean` module invokes `git clean -fdX` from the reposito
 
 ### Compliance
 
-- ALWAYS: invoke `git clean -fdX` as the base command when cleanup candidates exist — the flag combination gives the desired remove-only-gitignored semantics ([test](tests/test_clean.compliance.l1.py))
-- ALWAYS: separate `git clean -fdX` from generated pathspecs with `--` ([test](tests/test_clean.compliance.l1.py))
+- ALWAYS: begin the generated argv with the declared base command when cleanup candidates exist ([test](tests/test_clean.compliance.l1.py))
+- ALWAYS: the base command the module declares carries the flag combination this node declares above — force, recurse into untracked directories, and gitignored paths only — which gives the desired remove-only-gitignored semantics ([audit])
+- ALWAYS: separate the base command from generated pathspecs with `--` ([test](tests/test_clean.compliance.l1.py))
 - NEVER: include the active in-repository Python environment in the generated pathspecs ([test](tests/test_clean.compliance.l1.py))
 - NEVER: include `.spx` in the generated pathspecs — the session store is operational state a live session reads ([test](tests/test_clean.compliance.l1.py))
-- NEVER: fall back to bare `git clean -fdX` when no cleanup candidates exist ([test](tests/test_clean.compliance.l1.py))
+- NEVER: fall back to the bare base command when no cleanup candidates exist ([test](tests/test_clean.compliance.l1.py))
 - ALWAYS: the root harness guides `CLAUDE.md` and `AGENTS.md` name `just clean` as the agent's own action when a gitignored artifact blocks a gate, with no operator question and no path-limited substitute ([audit])

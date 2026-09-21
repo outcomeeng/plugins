@@ -38,7 +38,7 @@ def test_clean_omits_active_environment_from_pathspecs(tmp_path: Path) -> None:
         active_python_prefix=repo.active_python_prefix,
     )
 
-    assert exit_code == 0
+    assert exit_code == SUCCESS_EXIT_CODE
     assert len(runner.calls) == 1
     assert runner.calls[0][:4] == (*CLEAN_BASE_ARGV, PATHSPEC_SEPARATOR)
     assert IGNORED_CACHE_DIR in runner.calls[0]
