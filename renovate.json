@@ -33,10 +33,10 @@
       "description": "Track CLI tool versions pinned in workflows and distribution build source. Each pin carries an inline `# renovate: datasource=... depName=...` annotation naming its source.",
       "customType": "regex",
       "managerFilePatterns": [
-        "^\\.github/workflows/spec-tree-evals\\.yml$",
-        "^\\.github/workflows/check\\.yml$",
-        "^\\.github/workflows/refresh-instruction-blocks\\.yml$",
-        "^outcomeeng/distribution/build\\.py$"
+        ".github/workflows/spec-tree-evals.yml",
+        ".github/workflows/check.yml",
+        ".github/workflows/refresh-instruction-blocks.yml",
+        "outcomeeng/distribution/build.py"
       ],
       "matchStrings": [
         "\"(?<currentValue>[^\"]+)\"\\s+# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)"
