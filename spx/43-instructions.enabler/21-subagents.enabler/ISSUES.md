@@ -215,90 +215,25 @@ approves the wording. Deferred as a product-design question outside the changese
 amended the rule: the Change that amended it settled where a declaration lives, not how a
 tree-less consumer reads the rule.
 
-## Two placement findings on `/subagent-standards` await one typed audit round
-
-**Evidence:** `instructions:skill-auditor` WARNING findings on
-`src/plugins/instructions/skills/subagent-standards/SKILL.md` at head
-`1d97700cc7b2b2c3276309e52a708d1cf9f68428`, an `APPROVED` verdict with an empty must-fix
-row: `f-008` — the `<evidence>` prohibition on inventing functionality from an absent tag
-sits apart from the equivalent-tags rule in `<configuration>` it complements; `f-009` — the
-execution-boundary inheritance rule is stated in `<configuration>` (the sandbox and
-approval scope note), `<capabilities>` (the admission and citation rules), and
-`<success_criteria>`, which mirrors the three assertions of this node that govern it.
-
-**Impact:** a reader of one block sees part of a rule whose complement lives in another,
-and a later change to the inheritance rule has three sites to keep aligned.
-
-**Settlement condition:** one change co-locates the absent-tag prohibition with the
-equivalent-tags rule and keeps the inheritance judgment in one block with cross-references
-from the others, and one typed skill audit approves. Deferred from the governing-context
-changeset: the split follows the node's three assertions, and collapsing it is a structure
-choice for the standard as a whole, not a repair of the amended rules.
-
-## `/audit-subagent`'s verdict has no field for the declaration it read
-
-**Evidence:** `spec-tree:changes-reviewer` finding `F-001` (debt, consistency) in review
-run `2026-09-21_14-26-01-626-3f2ecbe63c9b` on head
-`ba3b597d14d2659c1a356ef3151797e37f557ccb`, subject
-`src/plugins/instructions/skills/audit-subagent/SKILL.md`. The amended `/subagent-standards`
-requires the verdict to name which governing-context declaration form it read for an
-inheritance judgment and which declaration and acceptance artifact it read for release
-acceptance, and its success criteria say the verdict names each declaration read. The
-`<verdict_format>` of `/audit-subagent` is a fixed JSON payload whose rows carry findings and
-whose metadata carries `configured_agent_type`, `tool_access`, and `model_selection`; the
-`subagent-auditor` wrapper forbids prose outside that JSON, so no field carries the
-declaration or artifact. Steps 3 and 5 of its `<audit_workflow>` neither route through the
-standard's governing-context resolution nor admit a release-acceptance artifact the auditor
-discovers itself. The reviewer's same-class sweep found no parallel site in
-`/create-subagent`.
-
-**Impact:** an auditor can satisfy the naming rule only inside a finding message, and the
-workflow steps do not point at the rules that now govern the boundary and evidence
-judgments.
-
-**Settlement condition:** the `/audit-subagent` verdict contract gains a place for the
-governing-context declarations and acceptance artifact read, its workflow steps 3 and 5
-reference `/subagent-standards` `<configuration>` and `<evidence>` by section without
-restating them, both generated trees are rebuilt, and the typed skill audit approves.
-Deferred from the governing-context changeset: that Change amends the standard and the node
-spec and scopes `/audit-subagent` and the `subagent-auditor` definition as loading the
-standard without a rule change of their own, so the verdict-contract extension is its own
-Change on this node.
-
 ## The marketplace's own definitions carry no inheritance declaration
 
 **Evidence:** `spec-tree:changes-reviewer` finding `F-001` (debt, consistency) in review
-run `2026-09-21_15-38-19-791-ab0ae6d854aa` on head
-`589c5f4886d99579343e9266812c09e7100b4d62`, subject
-`src/plugins/instructions/agents/subagent-auditor.md`. The amended `/subagent-standards`
-admits a definition that inherits the invoking session's execution policy only when its
-governing context declares that inheritance with linked evidence and resolves the owning
-node as the node whose linked test or audit assertion names the definition. The Claude
-rendering of `subagent-auditor` carries `tools` and no `permissionMode`, the shape the
-standard reads as inheriting, and no assertion under `spx/` names `subagent-auditor`,
-`skill-auditor`, or any `src/plugins/spec-tree/agents/*.md` wrapper — the verification
-node names those wrappers only by directory — so no owning node resolves for them.
+run `2026-09-21_15-38-19-791-ab0ae6d854aa`, subject
+`src/plugins/instructions/agents/subagent-auditor.md`. The Claude rendering of
+`subagent-auditor` carries `tools` and no `permissionMode`, the shape that inherits the
+invoking session's execution policy, and no assertion under `spx/` names
+`subagent-auditor`, `skill-auditor`, or any `src/plugins/spec-tree/agents/*.md` wrapper —
+the verification node names those wrappers only by directory — so no owning node resolves
+for them and none declares their inheritance.
 
-**Impact:** each of the marketplace's own definitions stays a finding on its next typed
-subagent audit until a governing declaration exists or the rule is narrowed.
+**Independence:** the gap predates the strengthened admission rule and is not caused by it.
+Those definitions have always inherited the session's execution policy and their owning
+nodes have never named them; the rule made an existing silence legible rather than
+creating it. Closing it means adding an assertion, with linked evidence, to the owning node
+of every shipped definition across the instructions and spec-tree trees — a changeset whose
+coherence is those trees' specs, not this standard.
 
-**Settlement condition:** a Change on the owning nodes adds the assertion, with linked
-evidence, that names each inheriting definition and declares its execution-policy
-inheritance — or a decision on the root path narrows what counts as inheriting for a
-Claude definition with a restricted `tools` grant and no `permissionMode` — and this node's
-spec records which reading applies. Deferred from the governing-context changeset: the
-definitions and their owning nodes lie outside that Change's Frame, which settled where a
-declaration lives and not which shipped definitions declare one.
-
-## `/subagent-standards` spells its subject two ways in the Codex copy
-
-**Evidence:** `instructions:skill-auditor` WARNING `f-009` on
-`src/plugins/instructions/skills/subagent-standards/SKILL.md` at head
-`589c5f4886d99579343e9266812c09e7100b4d62`, an `APPROVED` verdict: the description and the
-`<profiles>` rule spell "configured subagent" literally while the objective uses the build's
-term directive, so the Codex copy reads "custom agents" in one line and "configured
-subagents" in two others.
-
-**Settlement condition:** every occurrence uses the term directive or one literal term, and
-one typed skill audit approves. Deferred from the governing-context changeset because the
-lines are unchanged by it.
+**Settlement condition:** a Change adds, for each inheriting definition, the owning node's
+assertion that names it and declares its execution-policy inheritance with linked evidence,
+and this node's spec records that the declarations exist. Scheduled as a Proposed Change in
+the plugins Change store.

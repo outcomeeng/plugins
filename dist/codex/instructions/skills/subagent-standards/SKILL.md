@@ -2,7 +2,7 @@
 name: subagent-standards
 description: >-
   Configuration, configuration-subject, profile, capability, invocation, placement, and
-  evidence standards for configured subagents. Loaded by creator and auditor skills.
+  evidence standards for custom agents. Loaded by creator and auditor skills.
 user-invocable: false
 allowed-tools: Read
 ---
@@ -20,7 +20,9 @@ permissions, task boundary, and result are independently inspectable.
 - ALWAYS: keep a wrapper thin when its behavior belongs to a skill: name that skill, invoke it,
   and relay its declared result contract without copying its workflow into the wrapper.
 - ALWAYS: define the role, material constraints, workflow, and output expectations in the
-  developer instructions. Equivalent semantic tags satisfy the same requirement.
+  developer instructions. Equivalent semantic tags satisfy the same
+  requirement, so never read an absent tag as missing functionality when equivalent
+  content exists.
 - ALWAYS: use the voice, constraint-language, and anti-pattern rules from
   `/agent-prompt-standards`.
 - ALWAYS: declare every field required by the current harness and reject unsupported configuration.
@@ -73,8 +75,8 @@ Use a native TOML definition with `name`, `description`, and
 - NEVER: author model identifiers or individual reasoning controls independently,
   translate another harness's values, extend the profile set, or substitute after a failure.
 - ALWAYS: let a skill retain its invoking session's configuration, including when a
-  configured subagent invokes it; `/skill-standards` owns the rule that skill frontmatter
-  carries no model or reasoning override.
+  custom agent invokes it; `/skill-standards` owns the rule that skill
+  frontmatter carries no model or reasoning override.
 
 | Profile  | Native configuration                                 |
 | -------- | ---------------------------------------------------- |
@@ -150,7 +152,6 @@ The root harness instruction file is the repository's `AGENTS.md`.
   exact definition and target.
 - ALWAYS: distinguish a load failure, launch failure, unusable result, and valid rejected
   verdict. Each has a different failing boundary; none supplies an approval.
-- NEVER: invent missing functionality from an absent tag when equivalent content exists.
 - NEVER: require examples, logging, caching, or memory machinery that the role does not need.
 
 </evidence>
