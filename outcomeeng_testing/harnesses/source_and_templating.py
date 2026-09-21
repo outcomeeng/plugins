@@ -17,6 +17,8 @@ from outcomeeng.distribution.build import (
     CLAUDE_SKILL_DIR_TOKEN,
     COMMENT_DELIMITER_END,
     COMMENT_DELIMITER_START,
+    IGNORED_SOURCE_DIRECTORY_NAMES,
+    IGNORED_SOURCE_FILE_SUFFIXES,
     IMPLEMENTED,
     JINJA_CONTROL_KEYWORDS,
     SHARED_DIR_NAME,
@@ -97,6 +99,49 @@ class MissingFragmentCase:
     template: str
     shared_root: Path
     src_root: Path
+
+
+@dataclass(frozen=True)
+class ExtraSkillDirectory:
+    """A well-formed source tree plus one extra skill directory under a plugin."""
+
+    src_root: Path
+    skill_root: Path
+
+
+def arrange_cache_only_skill_directory(
+    root: Path, case: SourceScenario
+) -> ExtraSkillDirectory:
+    """Add a skill directory holding only one ignored cache file, no `SKILL.md`."""
+    arranged = _extra_skill_directory(root, case)
+    cache_dir = arranged.skill_root / next(iter(sorted(IGNORED_SOURCE_DIRECTORY_NAMES)))
+    cache_dir.mkdir()
+    (cache_dir / f"{case.skill}{IGNORED_SOURCE_FILE_SUFFIXES[0]}").write_bytes(b"")
+    return arranged
+
+
+def arrange_manifestless_skill_directory(
+    root: Path, case: SourceScenario
+) -> ExtraSkillDirectory:
+    """Add a skill directory holding one authored file and no `SKILL.md`."""
+    arranged = _extra_skill_directory(root, case)
+    (arranged.skill_root / f"{case.outer_topic}{MARKDOWN_FILE_SUFFIX}").write_text(
+        case.fragment_body, encoding="utf-8"
+    )
+    return arranged
+
+
+def _extra_skill_directory(root: Path, case: SourceScenario) -> ExtraSkillDirectory:
+    builder = _source_tree(root, case)
+    skill_root = (
+        builder.src_root
+        / PLUGINS_DIR_NAME
+        / case.plugin
+        / SKILLS_SUBDIR_NAME
+        / case.outer_topic
+    )
+    skill_root.mkdir()
+    return ExtraSkillDirectory(src_root=builder.src_root, skill_root=skill_root)
 
 
 def implementation_is_ready() -> bool:
