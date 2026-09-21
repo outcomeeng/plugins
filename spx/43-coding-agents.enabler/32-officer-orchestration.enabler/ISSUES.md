@@ -38,10 +38,9 @@ assertions.
 
 **Impact**: the protocol fixes the future observation seam, while the officer
 behavior remains Declared. The third-round, pane-prompt, and autonomy-boundary
-conditions cannot be claimed from an ordinary run. The node's two `[audit]`
-assertions — the officer's ownership of its own state and results under a
-lifecycle operation, and the pre-endorsement restatement of the governing rule —
-are settled by an audit verdict and lie outside this protocol's scope.
+conditions cannot be claimed from an ordinary run. The node's `[audit]`-tagged
+assertions, which the node spec enumerates, are settled by an audit verdict and
+lie outside this protocol's scope.
 
 **Settlement condition**: after a release contains `/orchestrate-officers`, a
 fresh orchestrating session executes the protocol, preserves the named run

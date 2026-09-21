@@ -69,16 +69,14 @@ An ordinary run does not force the conditions required to settle these `[probe]`
 assertions, which remain Declared:
 
 - "NEVER: a third round": a second rejected round and attempted third pass
-- "ALWAYS: the operator's invocation": every guarded, unexpected, stalled, and
+- "ALWAYS: mutating a pane requires": every guarded, unexpected, stalled, and
   Verifier-time prompt condition
 - "ALWAYS: the orchestrating session assumes": all three autonomous decisions
   and all four operator-held decisions
 
-Two further assertions of this node carry `[audit]` rather than `[probe]`:
-"ALWAYS: lifecycle operations leave", the officer's ownership of its own state
-and results under a lifecycle operation, and "ALWAYS: before endorsing", the
-pre-endorsement restatement of the governing rule. An audit verdict settles
-each, so neither depends on this protocol and neither is a limitation of it.
+The node's remaining assertions carry `[audit]` rather than `[probe]`. The node
+spec is authoritative for which assertions those are; an audit verdict settles
+each, so none depends on this protocol and none is a limitation of it.
 
 No probe pin exists yet. A future run must retain, at minimum, the mail-thread
 export, inventories before launch and after stop, the pane transcript, sealed
