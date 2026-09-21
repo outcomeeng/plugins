@@ -2,7 +2,15 @@
 {producer_paths}
 -->
 
-Apply the complete Prowl resolution, semantic messaging, and coordination producers below to the supplied authoritative evidence. Resolve every operator-named path through the Prowl producer, construct every message through the messaging producer, and return only the coordinator's structured JSON verdict. Do not invoke external tools or send messages during this evaluation; execute the supplied producers against the public evidence in the request.
+This is an isolated, non-mutating behavioral evaluation. The JSON below is a
+synthetic case fixture, and the complete producer sources are the subject under
+evaluation. Compute the coordination decision those producers specify for the
+fixture. Treat fixture identities and checked-result fields as valid observations
+inside this case only; do not claim they describe a live system. Resolve each
+fixture path according to the Prowl producer and construct each planned message
+according to the messaging producer. Return exactly the coordinator's structured
+JSON decision so the deterministic grader can score it. Invoke no external tool
+and send no message; this evaluation asks only for the planned output.
 
 <pre><code>
 {producer_files}

@@ -41,7 +41,7 @@ printf '%s\n' '{"schemaVersion":1,"path":"<absolute-operator-supplied-path>"}' |
 
 The resolver runs the public `agents` operation once and returns its complete checked result under `inventory`, every complete participant under `participants`, the complete current participant under `caller` selected from `PROWL_PANE_ID` or the exact `PROWL_WORKTREE_PATH` fallback, and path matches excluding that participant under `candidates`. When both identity values exist, both must identify the same participant. Each candidate carries its complete participant metadata and a `sendRequestTemplate` with that pane already selected, `noWait: true`, and `text: null`. Fill `text` with the semantic payload; never repair the JSON through shell substitution or a temporary file.
 
-Use the one candidate directly when `status` is `succeeded`. On `identity-ambiguous` with a complete current participant under `caller`, use `AskUserQuestion` for one single-select question. Number candidates in resolver order; show each candidate's complete pane, worktree, branch, and repository; and map the answer back to that exact captured candidate, including its `sendRequestTemplate`. When the runtime's option cap is below the candidate count, include the complete numbered inventory in the question and accept an exact candidate number through its free-form response; never omit a candidate. On `identity-ambiguous` with `caller: null`, report the exact detail as an unresolved current-participant identity conflict and stop; no candidate choice can resolve it. On `identity-unavailable`, report the supplied path and the returned participant worktrees. The resolver performs no send in every result state.
+Use the one candidate directly when `status` is `succeeded`. On `identity-ambiguous` with a complete current participant under `caller`, use `AskUserQuestion` for one single-select question. Number candidates in resolver order; show each candidate's complete pane, worktree, branch, and repository; and map the answer back to that exact captured candidate, including its `sendRequestTemplate`. When the agent harness's option cap is below the candidate count, include the complete numbered inventory in the question and accept an exact candidate number through its free-form response; never omit a candidate. On `identity-ambiguous` with `caller: null`, report the exact detail as an unresolved current-participant identity conflict and stop; no candidate choice can resolve it. On `identity-unavailable`, report the supplied path and the returned participant worktrees. The resolver performs no send in every result state.
 
 A target that is not a coding-agent pane is outside what `agents` returns, so no path match is available for it. Say that the operator's target is not among the agent panes and name the ones that are, rather than falling back to an inventory that carries no worktree to match.
 
@@ -188,7 +188,10 @@ Recorded exercised payload/results:
 
 - `{"schemaVersion":1,"operation":"agents","arguments":{}}` with a successful public agents response → `status: "succeeded"`, `commandExitCode: 0`, and the response preserved.
 - `resolve-target` with an active worktree path other than the current participant's → one candidate and no send; an unmatched absolute path → `identity-unavailable`, an empty candidate array, and no `open` probe.
+- `read` with no selector → `invalid-schema` before command construction; each accepted read shape carries exactly one source-owned selector.
 - A filled returned send template with `trailing_enter_sent: true` in the public response → one `succeeded` send result; the same submission evidence then supports one delivered message envelope.
+
+No exercised operation creates a temporary file or directory; the cleanup inventory remains empty after successful, invalid, unavailable, and rejected inputs.
 
 </testing>
 

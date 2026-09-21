@@ -96,6 +96,7 @@ KIND_FIELD = "kind"
 PATH_FIELD = "path"
 AGENT_ARGUMENTS_FIELD = "agentArguments"
 MUTATION_AUTHORIZED_FIELD = "mutationAuthorized"
+MUTATION_TARGET_FIELD = "mutationTarget"
 # The verbatim terminal text a read returns; herdr writes it as text, not JSON.
 OUTPUT_FIELD = "output"
 
@@ -114,6 +115,7 @@ FAILURE_RESULT_REQUIRED_FIELDS = frozenset(
 )
 FAILURE_RESULT_OPTIONAL_FIELDS = frozenset({COMMAND_EXIT_CODE_FIELD, ERROR_CODE_FIELD})
 SELECTOR_FIELDS = (AGENT_FIELD, PANE_FIELD)
+MUTATION_TARGET_FIELDS = (AGENT_FIELD, PANE_FIELD, PATH_FIELD)
 
 
 class Operation(StrEnum):
@@ -244,7 +246,14 @@ def _prompt_shapes() -> tuple[RequestShape, ...]:
 
 START_SHAPE = RequestShape(
     frozenset(
-        {NAME_FIELD, KIND_FIELD, PANE_FIELD, TIMEOUT_FIELD, MUTATION_AUTHORIZED_FIELD}
+        {
+            NAME_FIELD,
+            KIND_FIELD,
+            PANE_FIELD,
+            TIMEOUT_FIELD,
+            MUTATION_AUTHORIZED_FIELD,
+            MUTATION_TARGET_FIELD,
+        }
     ),
     frozenset({AGENT_ARGUMENTS_FIELD}),
 )
@@ -258,15 +267,29 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
     ),
     Operation.PROMPT: OperationContract(_prompt_shapes()),
     Operation.KEY: OperationContract(
-        _selector_shapes(frozenset({KEYS_FIELD, MUTATION_AUTHORIZED_FIELD}))
+        _selector_shapes(
+            frozenset({KEYS_FIELD, MUTATION_AUTHORIZED_FIELD, MUTATION_TARGET_FIELD})
+        )
     ),
     Operation.START: OperationContract((START_SHAPE,)),
     Operation.RELAUNCH: OperationContract((START_SHAPE,)),
     Operation.STOP: OperationContract(
-        (RequestShape(frozenset({PANE_FIELD, MUTATION_AUTHORIZED_FIELD})),)
+        (
+            RequestShape(
+                frozenset(
+                    {PANE_FIELD, MUTATION_AUTHORIZED_FIELD, MUTATION_TARGET_FIELD}
+                )
+            ),
+        )
     ),
     Operation.OPEN_WORKTREE: OperationContract(
-        (RequestShape(frozenset({PATH_FIELD, MUTATION_AUTHORIZED_FIELD})),)
+        (
+            RequestShape(
+                frozenset(
+                    {PATH_FIELD, MUTATION_AUTHORIZED_FIELD, MUTATION_TARGET_FIELD}
+                )
+            ),
+        )
     ),
 }
 PUBLIC_HERDR_COMMAND_PREFIXES: Final[Mapping[Operation, tuple[str, ...]]] = {
@@ -314,6 +337,7 @@ ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "path": PATH_FIELD,
     "agent_arguments": AGENT_ARGUMENTS_FIELD,
     "mutation_authorized": MUTATION_AUTHORIZED_FIELD,
+    "mutation_target": MUTATION_TARGET_FIELD,
 }
 RAW_HERDR_COMMAND_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"\bHERDR_COMMAND\b|[\[(]['\"]herdr['\"]"),
@@ -464,6 +488,59 @@ def _describe_shapes(contract: OperationContract) -> str:
     )
 
 
+def mutation_target_for(
+    operation: Operation | str, arguments: Mapping[str, object]
+) -> dict[str, object]:
+    """Build the exact target identity one mutating request authorizes."""
+    operation_value = Operation(operation)
+    if operation_value is Operation.KEY:
+        selected = [field for field in SELECTOR_FIELDS if field in arguments]
+        if len(selected) != 1:
+            raise HerdrEnvironmentError(
+                ExecutionStatus.INVALID_SCHEMA,
+                f"{operation_value.value} requires exactly one selector before authorization.",
+            )
+        target_field = selected[0]
+    elif operation_value in {Operation.START, Operation.RELAUNCH, Operation.STOP}:
+        target_field = PANE_FIELD
+    elif operation_value is Operation.OPEN_WORKTREE:
+        target_field = PATH_FIELD
+    else:
+        raise HerdrEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"{operation_value.value} has no mutation target.",
+        )
+    if target_field not in arguments:
+        raise HerdrEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"{operation_value.value} requires {target_field} before authorization.",
+        )
+    return {target_field: arguments[target_field]}
+
+
+def _validate_mutation_authorization(
+    operation: Operation, arguments: dict[str, object]
+) -> None:
+    if (
+        arguments.get(MUTATION_AUTHORIZED_FIELD) is not True
+        or MUTATION_TARGET_FIELD not in arguments
+    ):
+        raise HerdrEnvironmentError(
+            ExecutionStatus.MUTATION_UNAUTHORIZED,
+            f"{operation.value} requires {MUTATION_AUTHORIZED_FIELD}: true and an exact {MUTATION_TARGET_FIELD} before command construction.",
+        )
+    mutation_target = _object(
+        arguments[MUTATION_TARGET_FIELD],
+        f"request.{ARGUMENTS_FIELD}.{MUTATION_TARGET_FIELD}",
+    )
+    expected_target = mutation_target_for(operation, arguments)
+    if mutation_target != expected_target:
+        raise HerdrEnvironmentError(
+            ExecutionStatus.MUTATION_UNAUTHORIZED,
+            f"{operation.value} authorization target must equal {expected_target!r}.",
+        )
+
+
 def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     value = _object(request, "request")
     unexpected = sorted(set(value) - REQUEST_FIELDS)
@@ -491,40 +568,6 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
         raise HerdrEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
             f"{operation.value} contains unsupported arguments: {', '.join(unexpected_arguments)}.",
-        )
-    if (
-        operation in MUTATING_OPERATIONS
-        and arguments.get(MUTATION_AUTHORIZED_FIELD) is not True
-    ):
-        raise HerdrEnvironmentError(
-            ExecutionStatus.MUTATION_UNAUTHORIZED,
-            f"{operation.value} requires {MUTATION_AUTHORIZED_FIELD}: true before command construction.",
-        )
-    if (
-        operation in WAIT_BEARING_OPERATIONS
-        and arguments.get(WAIT_FIELD, operation is not Operation.PROMPT) is True
-        and TIMEOUT_FIELD not in arguments
-    ):
-        raise HerdrEnvironmentError(
-            ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} waits on the agent and requires an explicit {TIMEOUT_FIELD}.",
-        )
-    if not any(
-        shape.accepts(frozenset(arguments)) for shape in contract.request_shapes
-    ):
-        raise HerdrEnvironmentError(
-            ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} arguments do not match a source-owned request shape; "
-            f"accepted shapes: {_describe_shapes(contract)}.",
-        )
-    selectors = [field for field in SELECTOR_FIELDS if field in arguments]
-    if (
-        operation not in {Operation.INVENTORY, Operation.OPEN_WORKTREE}
-        and len(selectors) != 1
-    ):
-        raise HerdrEnvironmentError(
-            ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} requires exactly one selector: {', '.join(SELECTOR_FIELDS)}.",
         )
     location = f"request.{ARGUMENTS_FIELD}"
     for field_name in TEXT_ARGUMENT_FIELDS:
@@ -560,6 +603,34 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
                 ExecutionStatus.INVALID_SCHEMA,
                 f"Unsupported read source at {location}.{SOURCE_FIELD}.",
             ) from error
+    if operation in MUTATING_OPERATIONS:
+        _validate_mutation_authorization(operation, arguments)
+    if (
+        operation in WAIT_BEARING_OPERATIONS
+        and arguments.get(WAIT_FIELD, operation is not Operation.PROMPT) is True
+        and TIMEOUT_FIELD not in arguments
+    ):
+        raise HerdrEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"{operation.value} waits on the agent and requires an explicit {TIMEOUT_FIELD}.",
+        )
+    if not any(
+        shape.accepts(frozenset(arguments)) for shape in contract.request_shapes
+    ):
+        raise HerdrEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"{operation.value} arguments do not match a source-owned request shape; "
+            f"accepted shapes: {_describe_shapes(contract)}.",
+        )
+    selectors = [field for field in SELECTOR_FIELDS if field in arguments]
+    if (
+        operation not in {Operation.INVENTORY, Operation.OPEN_WORKTREE}
+        and len(selectors) != 1
+    ):
+        raise HerdrEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"{operation.value} requires exactly one selector: {', '.join(SELECTOR_FIELDS)}.",
+        )
     return operation, arguments
 
 

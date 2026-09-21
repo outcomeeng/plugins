@@ -101,11 +101,18 @@ def operation_requests(module: ModuleType) -> list[dict[str, object]]:
                 for optional_subset in combinations(optional_fields, subset_size):
                     ordinal += 1
                     fields = shape.required_fields | frozenset(optional_subset)
-                    arguments = {
-                        argument_names[field_name]: _request_argument_value(
-                            module, field_name, ordinal
-                        )
+                    field_values = {
+                        field_name: _request_argument_value(module, field_name, ordinal)
                         for field_name in fields
+                        if field_name != module.MUTATION_TARGET_FIELD
+                    }
+                    if module.MUTATION_TARGET_FIELD in fields:
+                        field_values[module.MUTATION_TARGET_FIELD] = (
+                            module.mutation_target_for(operation, field_values)
+                        )
+                    arguments = {
+                        argument_names[field_name]: value
+                        for field_name, value in field_values.items()
                     }
                     requests.append(module.operation_request(operation, **arguments))
     return requests

@@ -2,6 +2,7 @@ from typing import cast
 
 from outcomeeng_testing.generators.herdr_environment import operation_requests
 from outcomeeng_testing.harnesses.herdr_environment import (
+    RecordingRunner,
     herdr_command_source_texts,
     herdr_help_violation_source,
     load_herdr_environment,
@@ -22,6 +23,7 @@ def test_mutating_operations_fail_before_execution_without_authorization() -> No
         gated.add(operation)
         arguments = dict(cast(dict[str, object], request[module.ARGUMENTS_FIELD]))
         arguments.pop(module.MUTATION_AUTHORIZED_FIELD, None)
+        arguments.pop(module.MUTATION_TARGET_FIELD, None)
         absent = {**request, module.ARGUMENTS_FIELD: arguments}
         withheld = {
             **request,
@@ -40,6 +42,47 @@ def test_mutating_operations_fail_before_execution_without_authorization() -> No
                 raise AssertionError(
                     f"{operation.value} built a command without authorization"
                 )
+
+    assert gated == set(module.MUTATING_OPERATIONS)
+
+
+def test_mutation_authorization_is_bound_to_the_exact_target() -> None:
+    module = load_herdr_environment()
+    gated = set()
+
+    for request in operation_requests(module):
+        operation = module.Operation(request[module.OPERATION_FIELD])
+        if operation not in module.MUTATING_OPERATIONS:
+            continue
+        gated.add(operation)
+        arguments = dict(cast(dict[str, object], request[module.ARGUMENTS_FIELD]))
+        authorized_target = cast(
+            dict[str, object], arguments[module.MUTATION_TARGET_FIELD]
+        )
+        target_field, target_value = next(iter(authorized_target.items()))
+        mismatched_field = next(
+            field for field in module.MUTATION_TARGET_FIELDS if field != target_field
+        )
+        mismatched_targets = (
+            {mismatched_field: target_value},
+            {target_field: f"{target_value}-different"},
+        )
+        for mismatched_target in mismatched_targets:
+            mismatched = {
+                **request,
+                module.ARGUMENTS_FIELD: {
+                    **arguments,
+                    module.MUTATION_TARGET_FIELD: mismatched_target,
+                },
+            }
+            runner = RecordingRunner([])
+            result = module.execute(mismatched, runner)
+
+            assert (
+                result[module.STATUS_FIELD]
+                == module.ExecutionStatus.MUTATION_UNAUTHORIZED
+            )
+            assert runner.calls == []
 
     assert gated == set(module.MUTATING_OPERATIONS)
 

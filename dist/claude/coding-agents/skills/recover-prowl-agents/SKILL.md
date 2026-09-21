@@ -6,6 +6,8 @@ argument-hint: "<prepare|recover> <absolute-manifest-path>"
 allowed-tools: Read, Write, Skill, Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py":*), AskUserQuestion
 ---
 
+Use skill `coding-agents:operate-prowl`.
+
 <objective>
 A durable pre-restart allowlist or an idempotent post-restart recovery in which every prepared native session has one exact Prowl pane correlation, every verified pane is read before any continuation is planned, every non-controller session receives one separately submitted context-reconciled continuation instruction, and no unprepared agent is running.
 </objective>
@@ -138,6 +140,16 @@ printf '%s\n' '{"prepared":{},"bindings":[],"verification":{},"paneReadResults":
 <testing>
 
 Exercise schema-5 preparation, exact Claude resume locators, applicable Codex homes, lazy activation, checked binding, launch-only native command selection for Claude/Codex/Pi, all-pane context-read barriers, strict launch and reassessment settlement, durable reassessment idempotence, secondary authorization, duplicate rejection, path preservation, external exact correlation evidence, extra-agent rejection, and CLI dispatch through the linked mapping, property, and compliance evidence.
+
+Recorded exercised payload/results:
+
+- `prepare` with one complete primary candidate and matching correlation evidence → `status: "prepared"`, schema version 5, and one preserved candidate; a missing resume locator, duplicate session, or unauthorized secondary → a named non-mutating rejection.
+- `activate` with a prepared path absent from the pane inventory → `activation-required` with one ordered source-owned action; `bind` with an `exact-root` transport for that path → `ready` with the returned pane preserved, while `new-root`, a path mismatch, or a missing pane is rejected.
+- `recover` with exact bindings for Claude, Codex, and Pi → launch-only native commands; `settle` accepts only checked transports carrying trailing-Enter evidence and rejects missing or inconsistent transport fields.
+- `reassess` with one checked stable-screen result for every verified binding → `reassessment-ready`; removing one pane read → zero deliveries, and repeating with every reassessed session recorded → `already-current`.
+- Empty input, malformed JSON, an unsupported mode, and a missing manifest → nonzero CLI exit with a source-owned error result.
+
+The exercised adapter transforms in-memory request and manifest values and creates no filesystem or process resource; success and failure therefore leave no cleanup inventory.
 
 </testing>
 

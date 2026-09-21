@@ -259,7 +259,7 @@ class OperationContract:
         )
 
 
-def _selector_shapes(
+def _required_selector_shapes(
     required_fields: frozenset[str], optional_fields: frozenset[str] = frozenset()
 ) -> tuple[RequestShape, ...]:
     return tuple(
@@ -320,7 +320,7 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
     Operation.LIST: OperationContract((RequestShape(),)),
     Operation.AGENTS: OperationContract((RequestShape(),)),
     Operation.READ: OperationContract(
-        _selector_shapes(
+        _required_selector_shapes(
             frozenset(),
             frozenset(
                 {
@@ -335,31 +335,31 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
     ),
     Operation.SEND: OperationContract(_send_shapes()),
     Operation.KEY: OperationContract(
-        _selector_shapes(
+        _required_selector_shapes(
             frozenset({KEY_FIELD, MUTATION_AUTHORIZED_FIELD}),
             frozenset({REPEAT_FIELD}),
         )
     ),
     Operation.FOCUS: OperationContract(
-        _selector_shapes(frozenset({MUTATION_AUTHORIZED_FIELD}))
+        _required_selector_shapes(frozenset({MUTATION_AUTHORIZED_FIELD}))
     ),
     Operation.TAB_CREATE: OperationContract(
         (
             RequestShape(
                 frozenset({MUTATION_AUTHORIZED_FIELD}), frozenset({PATH_FIELD})
             ),
-            *_selector_shapes(
+            *_required_selector_shapes(
                 frozenset({MUTATION_AUTHORIZED_FIELD}), frozenset({PATH_FIELD})
             ),
         )
     ),
     Operation.TAB_CLOSE: OperationContract(
-        _selector_shapes(
+        _required_selector_shapes(
             frozenset({MUTATION_AUTHORIZED_FIELD}), frozenset({FORCE_FIELD})
         )
     ),
     Operation.PANE_CLOSE: OperationContract(
-        _selector_shapes(
+        _required_selector_shapes(
             frozenset({MUTATION_AUTHORIZED_FIELD}), frozenset({FORCE_FIELD})
         )
     ),

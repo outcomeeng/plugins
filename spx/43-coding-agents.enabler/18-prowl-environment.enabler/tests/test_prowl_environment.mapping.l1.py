@@ -195,6 +195,22 @@ def test_prowl_environment_mappings() -> None:
                 )
 
 
+def test_read_without_a_selector_maps_to_invalid_schema_before_execution() -> None:
+    module = load_prowl_environment()
+    request = {
+        module.SCHEMA_VERSION_FIELD: module.SCHEMA_VERSION,
+        module.OPERATION_FIELD: module.Operation.READ,
+        module.ARGUMENTS_FIELD: {},
+    }
+
+    try:
+        module.command_for(request)
+    except module.ProwlEnvironmentError as error:
+        assert error.status == module.ExecutionStatus.INVALID_SCHEMA
+    else:
+        raise AssertionError("read accepted no target selector")
+
+
 def test_public_agent_evidence_maps_to_complete_identity_results() -> None:
     module = load_prowl_environment()
     public_item = public_agent_item(module, ordinal=1)

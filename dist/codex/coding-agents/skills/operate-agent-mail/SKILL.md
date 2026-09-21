@@ -96,6 +96,15 @@ python3 "${SKILL_DIR}/scripts/agent_mail.py" project-key
 
 The bundled adapter is covered by tests over generated request, record, and diagnosis domains with controlled `CommandRunner` implementations at the store boundary: every registry operation's argument vector is read against the store CLI's captured usage text under the diagnosed project key; generated records round-trip through the store field mapping; repeated and conflicting terminal handbacks reduce to one result; the CLI run where no executable resolves returns `diagnosis-unavailable` with no fallback; and a captured registration response reaches the result without its token.
 
+Recorded exercised payload/results:
+
+- `inbox` with `agent: "AmberGull"` and the captured nonempty listing → `status: "succeeded"` with every record identity preserved; the captured empty listing → `records: []`.
+- `register` with a captured successful response → the registered name and store id with the registration token absent.
+- `send` with a generated valid record → the equal record carrying the store-assigned id; an unsupported record field → `invalid-schema` before the store runner is called.
+- `receipt` with a generated message id → the equal agent and message id; an absent `am` executable → `store-unavailable`, and an absent `spx` executable → `diagnosis-unavailable`.
+
+No exercised operation creates a temporary file or directory; the cleanup inventory remains empty after success, invalid input, and missing-executable cases.
+
 </testing>
 
 <failure_modes>

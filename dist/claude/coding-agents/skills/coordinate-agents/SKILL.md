@@ -5,13 +5,17 @@ description: >-
 allowed-tools: "Skill"
 ---
 
+Use skill `coding-agents:operate-prowl`.
+
+Use skill `coding-agents:message-agents`.
+
 <objective>
 A structured coordination decision that preserves independent workflow ownership.
 </objective>
 
 <evidence_model>
 
-Use only explicit SPX facts, public runtime projections, checked command results, and operator-confirmed external changes as authoritative evidence. Treat prose inference as advisory. A missing authoritative fact is a signal gap, never permission to scan harness transcripts.
+Use only explicit SPX facts, public environment projections, checked command results, and operator-confirmed external changes as authoritative evidence. Treat prose inference as advisory. A missing authoritative fact is a signal gap, never permission to scan harness transcripts.
 
 </evidence_model>
 

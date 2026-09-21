@@ -20,11 +20,11 @@ The source-owned operation names are:
 | `read`          | one selector; optional `source`, `lines`                         | no                     |
 | `wait`          | one selector, `timeout`; optional `until`                        | no                     |
 | `prompt`        | one selector, `text`; optional `wait` with `timeout` and `until` | no                     |
-| `key`           | one selector, `keys`                                             | required               |
-| `start`         | `name`, `kind`, `pane`, `timeout`; optional `agentArguments`     | required               |
-| `relaunch`      | as `start`, for a pane whose earlier agent session ended         | required               |
-| `stop`          | `pane`                                                           | required               |
-| `open-worktree` | `path`                                                           | required               |
+| `key`           | one selector, `keys`                                             | exact target required  |
+| `start`         | `name`, `kind`, `pane`, `timeout`; optional `agentArguments`     | exact target required  |
+| `relaunch`      | as `start`, for a pane whose earlier agent session ended         | exact target required  |
+| `stop`          | `pane`                                                           | exact target required  |
+| `open-worktree` | `path`                                                           | exact target required  |
 
 A selector is exactly one of `agent` (a live agent name) or `pane` (a pane id such as `w1:p1`). `timeout` is milliseconds and is required on every wait: `wait`, `prompt` with `wait: true`, `start`, and `relaunch`; the adapter's subprocess bound always exceeds it. `until` lists the server's states `idle`, `working`, `blocked`, `done`, and `unknown`. `source` is one of `visible`, `recent`, `recent-unwrapped`, and `detection`. The adapter owns every herdr command token and flag.
 
@@ -67,7 +67,7 @@ Every other code stays verbatim under `command-failed`. `server-not-running` als
 }
 ```
 
-3. For `key`, `start`, `relaunch`, `stop`, or `open-worktree`, require the request to carry `"mutationAuthorized": true` inside `arguments` for that exact pane. Never infer or add mutation authorization; when it is absent or false, preserve the adapter's `mutation-unauthorized` result.
+3. For `key`, `start`, `relaunch`, `stop`, or `open-worktree`, require `arguments` to carry `"mutationAuthorized": true` and an exact `mutationTarget` object. A `key` target repeats its selected `agent` or `pane`; `start`, `relaunch`, and `stop` repeat `{"pane":"<complete-pane>"}`; `open-worktree` repeats `{"path":"<complete-path>"}`. The target object must match the operation arguments by both field name and value, so an agent authorization cannot authorize a pane selector carrying the same string. Never infer or add either field; preserve `mutation-unauthorized` when authorization is absent, false, missing its target, or bound to another target.
 4. Submit the request over stdin in one of the forms in `<invocation_forms>`.
 5. Accept only `status: "succeeded"`. Preserve the complete versioned result, `commandExitCode`, and the public `response`. For every operation but `read`, `response` is herdr's own JSON envelope: an inventory's `result` lists `agents`, and a `start`, `relaunch`, `wait`, or `prompt` result carries the one `agent` it acted on, each with `name`, `agent`, `agent_status`, `pane_id`, `tab_id`, `workspace_id`, `cwd`, and `interactive_ready`. For `read`, herdr writes terminal text, and `response` carries it verbatim under `output`.
 6. On any other `status`, act on a named lifecycle status from `<lifecycle_statuses>`, and stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `mutation-unauthorized`, or `operation-unavailable`.
@@ -107,11 +107,20 @@ printf '%s\n' '{"schemaVersion":1,"operation":"inventory","arguments":{}}' | pyt
 
 The bundled adapter is covered by tests over the generated request domain and herdr's captured responses, with controlled `CommandRunner` implementations at the herdr boundary: every registry operation's argument vector is read against herdr's captured usage text and carries a subprocess bound above the request's timeout; every captured response — each command's success envelope, the read's terminal text, and every error envelope herdr emitted — maps to its result without rewriting; the captured start, wait, and prompt responses project the session's identity and state; the captured inventory, and inventories varied from its first item over every server state, project to complete participants while absent or duplicated selectors resolve to their named results; every projected error code maps to its named status and an unprojected code to `command-failed` with the code verbatim; every mutating request fails with authorization absent or `false`, every wait-bearing request fails without a timeout, and a request executed through the adapter against a child that outlives the derived bound returns `command-failed`.
 
+Recorded exercised payload/results:
+
+- `inventory` with the captured successful envelope → `status: "succeeded"` and complete source-preserved participants; an absent executable → `server-not-running`.
+- `read` with one generated selector and the captured terminal text → that text under `response.output`; no selector or two selectors → `invalid-schema` before execution.
+- `key`, `start`, `relaunch`, `stop`, and `open-worktree` with a matching `mutationAuthorized` and `mutationTarget` → one checked command; authorization absent, false, missing its target, or bound to another selector kind or value → `mutation-unauthorized` and zero runner calls.
+- `wait`, waiting `prompt`, `start`, and `relaunch` with generated explicit bounds → a subprocess bound above the request timeout; removing the timeout → `invalid-schema`.
+
+No exercised operation creates a temporary file or directory; the cleanup inventory remains empty after success, invalid input, missing-executable, and timeout cases.
+
 </testing>
 
 <failure_modes>
 
-**Authorization was inferred from surrounding context.** Claude treated external workflow context as permission to add `mutationAuthorized: true`, so the capability was no longer independently invocable and an isolated skill audit rejected the same independence defect twice. Require the request itself to carry mutation authorization and preserve `mutation-unauthorized` when it does not.
+**Authorization was inferred from surrounding context.** Claude treated external workflow context as permission to add `mutationAuthorized: true`, so the capability was no longer independently invocable and an isolated skill audit rejected the same independence defect twice. Require the request itself to carry mutation authorization bound to the exact target and preserve `mutation-unauthorized` when either part is absent or mismatched.
 
 **The objective omitted public failure results.** Claude described the lifecycle alternatives and left `invalid-schema`, `mutation-unauthorized`, `operation-unavailable`, and `command-failed` outside the stated output. The audit could not reconcile the objective with the workflow's complete public result family. Name every source-owned result class in the objective and preserve each returned shape without rewriting.
 
