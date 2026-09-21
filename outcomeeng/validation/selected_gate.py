@@ -696,8 +696,6 @@ def _load_changeset_scope() -> ChangesetScopeModule:
 
 def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
     sink.write(f"{SELECTED_CHECK_PLAN_HEADER}\n")
-    for line in plan.agent_disable.explanation_lines:
-        sink.write(f"  {line}\n")
     if not plan.changed_paths:
         sink.write(f"No gate steps selected: {NO_CHANGED_PATHS_REASON}.\n")
         sink.flush()
@@ -705,6 +703,8 @@ def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
     for item in plan.selected_steps:
         sink.write(f"  {item.step.label}: {item.reason}\n")
     sink.write(f"  {plan.live_discovery_reason}\n")
+    for line in plan.agent_disable.explanation_lines:
+        sink.write(f"  {line}\n")
     sink.flush()
 
 
