@@ -1,0 +1,14 @@
+Fetch inbox messages for an agent
+
+Usage: am mail inbox [OPTIONS] --project <PROJECT_KEY> --agent <AGENT_NAME>
+
+Options:
+  -p, --project <PROJECT_KEY>  Project key
+  -a, --agent <AGENT_NAME>     Agent name
+      --urgent-only            Only high/urgent messages
+      --since <SINCE>          Messages after this ISO-8601 timestamp
+  -l, --limit <LIMIT>          Max results [default: 20]
+      --include-bodies         Include message bodies
+      --format <FORMAT>        Output format: table, json, or toon (default: auto-detect)
+      --json                   Output JSON (shorthand for --format json)
+  -h, --help                   Print help

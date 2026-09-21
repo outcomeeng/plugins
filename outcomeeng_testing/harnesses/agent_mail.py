@@ -119,7 +119,7 @@ class CaptureError(RuntimeError):
 
 @dataclass(frozen=True)
 class CapturedInboxRow:
-    """One row of a captured `am robot inbox` response, with the capture's path."""
+    """One row of a captured `am mail inbox` response, with the capture's path."""
 
     capture: str
     item: dict[str, object]
@@ -131,7 +131,7 @@ class CapturedInboxResponse:
 
     capture: str
     result: CommandResultContract
-    payload: dict[str, object]
+    payload: list[dict[str, object]]
 
 
 @dataclass
@@ -292,7 +292,10 @@ def captured_inbox_responses_with_bodies(
         CapturedInboxResponse(
             str(path.relative_to(ROOT)),
             _result_from_path(module, path),
-            json.loads(path.read_text(encoding="utf-8")),
+            cast(
+                list[dict[str, object]],
+                json.loads(path.read_text(encoding="utf-8")),
+            ),
         )
         for path in _inbox_captures_with_bodies(module)
     ]
@@ -303,7 +306,7 @@ def captured_inbox_rows_with_bodies(module: ModuleType) -> list[CapturedInboxRow
     return [
         CapturedInboxRow(response.capture, cast(dict[str, object], item))
         for response in captured_inbox_responses_with_bodies(module)
-        for item in cast(list[object], response.payload[module.STORE_INBOX_FIELD])
+        for item in response.payload
     ]
 
 
@@ -327,20 +330,20 @@ def inbox_response_without_thread(
     """The captured inbox response with the thread removed from its first row:
     the variant ranges over the thread value alone, and names the capture it
     varies."""
-    items = cast(list[dict[str, object]], response.payload[module.STORE_INBOX_FIELD])
+    items = response.payload
     if not items:
         raise CaptureError(f"{response.capture} lists no inbox row to vary")
     first = CapturedInboxRow(response.capture, items[0])
-    if module.STORE_THREAD_FIELD not in first.item:
+    if module.STORE_THREAD_ID_FIELD not in first.item:
         raise CaptureError(f"{response.capture} carries no thread on its first row")
     varied = {
         key: value
         for key, value in first.item.items()
-        if key != module.STORE_THREAD_FIELD
+        if key != module.STORE_THREAD_ID_FIELD
     }
-    payload = {**response.payload, module.STORE_INBOX_FIELD: [varied, *items[1:]]}
+    payload = [varied, *items[1:]]
     return CapturedInboxResponse(
-        f"{response.capture} (first row without {module.STORE_THREAD_FIELD})",
+        f"{response.capture} (first row without {module.STORE_THREAD_ID_FIELD})",
         cast(CommandResultContract, module.CommandResult(0, json.dumps(payload), "")),
         payload,
     )
@@ -480,29 +483,22 @@ def store_inbox_echo(
     and the store assigned in place of the captured values. The status, the
     body field, and every other key stay the store's own bytes.
     """
-    ack_required = send_fields[module.STORE_ACK_REQUIRED_FIELD] is True
-    rows = [
-        row
-        for row in captured_inbox_rows_with_bodies(module)
-        if (
-            row.item.get(module.STORE_ACK_STATUS_FIELD)
-            in module.STORE_ACK_REQUIRED_STATUSES
-        )
-        is ack_required
-    ]
+    rows = captured_inbox_rows_with_bodies(module)
     if not rows:
-        raise CaptureError(
-            "no captured inbox row with bodies shows a message whose "
-            f"acknowledgement requirement is {ack_required}"
-        )
+        raise CaptureError("no captured inbox row with bodies shows the response shape")
     return _row_variant(
         rows[row_ordinal % len(rows)],
         {
             module.STORE_ID_FIELD: message_id,
             module.STORE_FROM_FIELD: send_fields[module.STORE_FROM_FIELD],
             module.STORE_SUBJECT_FIELD: send_fields[module.STORE_SUBJECT_FIELD],
-            module.STORE_THREAD_FIELD: send_fields[module.STORE_THREAD_ID_FIELD],
+            module.STORE_THREAD_ID_FIELD: send_fields[
+                module.STORE_THREAD_ID_FIELD
+            ],
             module.STORE_BODY_FIELD: send_fields[module.STORE_BODY_FIELD],
+            module.STORE_ACK_REQUIRED_FIELD: send_fields[
+                module.STORE_ACK_REQUIRED_FIELD
+            ],
         },
     )
 

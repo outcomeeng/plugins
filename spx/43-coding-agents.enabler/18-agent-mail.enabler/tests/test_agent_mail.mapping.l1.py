@@ -120,22 +120,22 @@ def test_agent_mail_operation_mappings() -> None:
         ]
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
         assert result[module.PROJECT_KEY_FIELD] == project_key
-        response = cast(dict[str, object], result[module.RESPONSE_FIELD])
+        response = result[module.RESPONSE_FIELD]
         data = cast(dict[str, object], result[module.DATA_FIELD])
         if operation is module.Operation.RECEIPT:
-            assert response[module.OUTPUT_FIELD] == payload
+            assert cast(dict[str, object], response)[module.OUTPUT_FIELD] == payload
             assert data[module.MESSAGE_ID_FIELD] == arguments[module.MESSAGE_ID_FIELD]
             return
-        store = cast(dict[str, object], payload)
         if operation is module.Operation.INBOX:
-            items = cast(list[dict[str, object]], store[module.STORE_INBOX_FIELD])
+            items = cast(list[dict[str, object]], payload)
             records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
-            assert response == store
+            assert response == items
+            assert items
             assert [record[module.RECORD_ID_FIELD] for record in records] == [
                 item[module.STORE_ID_FIELD] for item in items
             ]
             assert [record[module.CORRELATION_FIELD] for record in records] == [
-                item[module.STORE_THREAD_FIELD] for item in items
+                item[module.STORE_THREAD_ID_FIELD] for item in items
             ]
             assert [record[module.SENDER_FIELD] for record in records] == [
                 item[module.STORE_FROM_FIELD] for item in items
@@ -144,15 +144,16 @@ def test_agent_mail_operation_mappings() -> None:
                 item.get(module.STORE_BODY_FIELD, "") for item in items
             ]
             assert [record[module.ACK_REQUIRED_FIELD] for record in records] == [
-                item[module.STORE_ACK_STATUS_FIELD]
-                in module.STORE_ACK_REQUIRED_STATUSES
+                item[module.STORE_ACK_REQUIRED_FIELD] is True
                 for item in items
             ]
         elif operation is module.Operation.SEND:
+            store = cast(dict[str, object], payload)
             assert response == store
             record = cast(dict[str, object], data[module.RECORD_FIELD])
             assert record[module.RECORD_ID_FIELD] == store[module.STORE_ID_FIELD]
         else:
+            store = cast(dict[str, object], payload)
             assert response == {
                 key: value
                 for key, value in store.items()
@@ -180,9 +181,7 @@ def test_inbox_rows_map_totally_onto_records() -> None:
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED, (
             captured.capture
         )
-        items = cast(
-            list[dict[str, object]], captured.payload[module.STORE_INBOX_FIELD]
-        )
+        items = captured.payload
         data = cast(dict[str, object], result[module.DATA_FIELD])
         records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
         assert len(records) == len(items)
@@ -191,10 +190,9 @@ def test_inbox_rows_map_totally_onto_records() -> None:
             assert record[module.SENDER_FIELD] == item[module.STORE_FROM_FIELD]
             assert record[module.BODY_FIELD] == item[module.STORE_BODY_FIELD]
             assert record[module.ACK_REQUIRED_FIELD] is (
-                item[module.STORE_ACK_STATUS_FIELD]
-                in module.STORE_ACK_REQUIRED_STATUSES
+                item[module.STORE_ACK_REQUIRED_FIELD] is True
             )
-            thread = item.get(module.STORE_THREAD_FIELD)
+            thread = item.get(module.STORE_THREAD_ID_FIELD)
             if thread:
                 assert record[module.CORRELATION_FIELD] == thread
             else:
