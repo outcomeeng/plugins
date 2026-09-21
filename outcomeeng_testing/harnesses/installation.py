@@ -21,6 +21,7 @@ from types import ModuleType
 from typing import cast
 
 import pytest
+from hypothesis import given, seed, settings
 
 from outcomeeng.distribution.agents import (
     AGENT_NAME_FIELD,
@@ -31,6 +32,14 @@ from outcomeeng.validation.agent_disable import (
     claude_disabled_reason,
     codex_disabled_reason,
 )
+from outcomeeng_testing.generators.installation import (
+    non_disabling_switch_values,
+)
+from outcomeeng_testing.harnesses.native_thread_evidence import (
+    read_absent_native_child,
+    read_absent_native_thread,
+)
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     CLAUDE_DIST_RELATIVE,
@@ -202,6 +211,40 @@ runs_real_codex = _disable_marker(codex_disabled_reason(os.environ))
 """Marker for a row that starts a real Codex process, from that agent's switch."""
 runs_real_claude = _disable_marker(claude_disabled_reason(os.environ))
 """Marker for a row that starts a real Claude process, from that agent's switch."""
+
+AGENT_SWITCH_PROPERTY_SEED = 20260921
+"""The seed the switch-value property replays from."""
+AGENT_SWITCH_PROPERTY_EXAMPLES = 60
+"""How many non-disabling values the switch property exercises per run."""
+AGENT_SWITCH_PROPERTY_REPLAY_PATH = (
+    "just test spx/32-distribution.enabler/21-installation.enabler/"
+    "21-repository-installation.enabler/tests/"
+    "test_repository_installation.compliance.l1.py"
+)
+"""The command that replays a failing switch-value case."""
+
+
+def agent_switch_value_property(
+    test_func: Callable[[str], None],
+) -> Callable[[], None]:
+    """Run a non-disabling-value property with reproducible failure details."""
+
+    configured = seed(AGENT_SWITCH_PROPERTY_SEED)(
+        settings(max_examples=AGENT_SWITCH_PROPERTY_EXAMPLES, deadline=None)(
+            given(value=non_disabling_switch_values())(test_func)
+        )
+    )
+
+    def wrapper() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=AGENT_SWITCH_PROPERTY_SEED,
+            replay_path=AGENT_SWITCH_PROPERTY_REPLAY_PATH,
+        )
+
+    return wrapper
+
+
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 MARKETPLACE = catalog_marketplace_name(
     Path(__file__).resolve().parents[2] / CLAUDE_CATALOG_PATH
@@ -4491,4 +4534,41 @@ def committed_catalog_plugin_names() -> frozenset[str]:
         name
         for names in _catalogs_from_documents(repository_root()).values()
         for name in names
+    )
+
+
+REAL_PROCESS_ENTRY_POINTS = (
+    observe_real_first_install.__name__,
+    observe_real_installation.__name__,
+    observe_real_record_refresh.__name__,
+    observe_codex_subagent_discovery.__name__,
+    read_absent_native_thread.__name__,
+    read_absent_native_child.__name__,
+)
+"""Every entry point that starts a real agent process, named by the functions."""
+
+SWITCH_PROJECTIONS = ("runs_real_claude", "runs_real_codex")
+"""This home's own projection markers, declared as it declares any public name."""
+
+REAL_PROCESS_LEVELS = ("l2", "l3")
+"""The execution-level cells whose rows reach an acquired agent executable."""
+
+SWITCH_SCAN_ROOTS = (
+    repository_root() / "outcomeeng",
+    repository_root() / "outcomeeng_testing",
+)
+"""The source roots the only-the-declaring-module rule is enforced over."""
+
+
+def real_process_row_files(node_tests: Path) -> tuple[Path, ...]:
+    """Return the node's test files whose cell admits an acquired agent executable.
+
+    A row that starts a real agent CLI sits at `l2` or `l3` by the filename
+    model, so an `l1` row driving the same entry point through a controlled
+    runner is outside the projection rule rather than in violation of it.
+    """
+    return tuple(
+        path
+        for path in sorted(node_tests.glob("test_*.py"))
+        if any(f".{level}." in path.name for level in REAL_PROCESS_LEVELS)
     )

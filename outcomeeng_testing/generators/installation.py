@@ -8,6 +8,9 @@ from enum import StrEnum
 from pathlib import Path
 from typing import cast
 
+from hypothesis import strategies as st
+from hypothesis.strategies import SearchStrategy
+
 from outcomeeng.validation.agent_disable import DISABLE_VALUE
 from outcomeeng.distribution.installation import (
     Agent,
@@ -843,16 +846,14 @@ __all__ = [
     "generated_non_pending_failure_wordings",
     "generated_persistent_catalog_selections",
     "generated_valid_catalog_subsets",
+    "non_disabling_switch_values",
 ]
 
 
-def non_disabling_switch_values() -> tuple[str, ...]:
-    """Return the disable value's boundary complement, each member derived from it.
+def non_disabling_switch_values() -> SearchStrategy[str]:
+    """Return a strategy over every value that does not declare a row optional.
 
-    Every member is constructed from `DISABLE_VALUE` or its flag complement
-    rather than typed independently: the empty value, the disable value with a
-    leading space, the disable value doubled, and the falsy flag complement.
-    Together they separate equality with the disable value from a truthiness
-    read, a substring read, and an inverted read.
+    The domain is open — any text other than the source-owned disable value —
+    so the evidence covers the declared complement rather than chosen points.
     """
-    return ("", f" {DISABLE_VALUE}", f"{DISABLE_VALUE}{DISABLE_VALUE}", "0")
+    return st.text().filter(lambda value: value != DISABLE_VALUE)

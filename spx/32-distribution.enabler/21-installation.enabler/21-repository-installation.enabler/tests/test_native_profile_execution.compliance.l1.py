@@ -3,12 +3,14 @@
 from dataclasses import replace
 
 from outcomeeng_testing.harnesses.discovery_auth_cases import NativeFault
-from outcomeeng_testing.harnesses.native_profile_execution import (
-    every_agent_switch_disabled,
-)
 from outcomeeng_testing.harnesses.native_profile_failures import native_profile_failure
 
+from pathlib import Path
+
+from outcomeeng.distribution import native_profile_execution
+from outcomeeng.distribution.native_profile_execution import native_profile_rows
 from outcomeeng.distribution.profiles import AGENT_PROFILES
+from outcomeeng.validation.agent_switch_enforcement import modules_naming_a_switch
 from outcomeeng.distribution.native_thread_evidence import (
     ChildIdentityField,
     NativeTurnStatus,
@@ -156,9 +158,14 @@ def test_unlisted_thread_cannot_supply_child_evidence() -> None:
     exercise_native_evidence(assert_case)
 
 
-def test_profile_execution_rows_are_selected_with_every_switch_set() -> None:
-    with every_agent_switch_disabled() as rows:
-        selected = {(row.target, row.profile) for row in rows}
+def test_the_profile_execution_recipe_names_no_disable_switch() -> None:
+    assert (
+        modules_naming_a_switch((Path(native_profile_execution.__file__).parent,)) == ()
+    )
+
+
+def test_profile_execution_rows_cover_every_central_profile() -> None:
+    selected = {(row.target, row.profile) for row in native_profile_rows()}
 
     assert selected == {
         (target, profile)

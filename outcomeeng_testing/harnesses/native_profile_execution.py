@@ -13,9 +13,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory, TemporaryFile
 
-from contextlib import contextmanager
-from collections.abc import Iterator
-
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
     CommandResult,
@@ -38,11 +35,6 @@ from outcomeeng.distribution.native_thread_evidence import (
     THREAD_READ_COMMAND,
     THREAD_READ_TIMEOUT_SECONDS,
     read_native_child,
-)
-from outcomeeng.validation.agent_disable import (
-    DISABLE_CLAUDE_ENV,
-    DISABLE_CODEX_ENV,
-    DISABLE_VALUE,
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
     DISCOVERY_TIMEOUT_SECONDS,
@@ -312,26 +304,3 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
-@contextmanager
-def every_agent_switch_disabled() -> Iterator[tuple[NativeProfileRow, ...]]:
-    """Set both disable switches in the process environment and yield the built rows.
-
-    The context manager owns the environment write and its restoration; the
-    linked test owns every predicate over the yielded rows.
-    """
-    previous = {
-        switch: os.environ.get(switch)
-        for switch in (DISABLE_CLAUDE_ENV, DISABLE_CODEX_ENV)
-    }
-    for switch in previous:
-        os.environ[switch] = DISABLE_VALUE
-    try:
-        yield native_profile_rows()
-    finally:
-        for switch, value in previous.items():
-            if value is None:
-                os.environ.pop(switch, None)
-            else:
-                os.environ[switch] = value

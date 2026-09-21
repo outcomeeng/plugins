@@ -35,15 +35,24 @@ from outcomeeng.distribution.installation import (
     CLAUDE_PROJECT_SCOPE,
 )
 from outcomeeng.validation.agent_disable import (
+    AGENT_SWITCHES,
     DISABLE_CLAUDE_ENV,
     DISABLE_CODEX_ENV,
     DISABLE_VALUE,
     claude_disabled_reason,
     codex_disabled_reason,
 )
+from outcomeeng.validation.agent_switch_enforcement import (
+    modules_naming_a_switch,
+    rows_without_their_projection,
+)
 from outcomeeng.validation.ci_gate import CODEX_API_KEY_ENVIRONMENT, JUST_BINARY
-from outcomeeng_testing.generators.installation import (
-    non_disabling_switch_values,
+from outcomeeng_testing.harnesses.installation import (
+    REAL_PROCESS_ENTRY_POINTS,
+    SWITCH_PROJECTIONS,
+    SWITCH_SCAN_ROOTS,
+    agent_switch_value_property,
+    real_process_row_files,
 )
 from outcomeeng_testing.harnesses.discovery_auth import (
     API_LOGIN_FLAG,
@@ -1170,13 +1179,29 @@ def test_disable_switch_declares_its_own_agent_rows_optional(
     switch: str,
 ) -> None:
     assert predicate({}) is None
-    for value in non_disabling_switch_values():
-        assert predicate({switch: value}) is None, value
 
     reason = predicate({switch: DISABLE_VALUE})
 
     assert reason is not None
     assert switch in reason
+
+
+@pytest.mark.parametrize(
+    ("predicate", "switch"),
+    (
+        (codex_disabled_reason, DISABLE_CODEX_ENV),
+        (claude_disabled_reason, DISABLE_CLAUDE_ENV),
+    ),
+)
+def test_any_other_switch_value_runs_the_row(
+    predicate: Callable[[Mapping[str, str]], str | None],
+    switch: str,
+) -> None:
+    @agent_switch_value_property
+    def every_other_value_runs(value: str) -> None:
+        assert predicate({switch: value}) is None
+
+    every_other_value_runs()
 
 
 @pytest.mark.parametrize(
@@ -1191,3 +1216,69 @@ def test_disable_switch_leaves_the_other_agent_rows_running(
     other_switch: str,
 ) -> None:
     assert predicate({other_switch: DISABLE_VALUE}) is None
+
+
+def test_every_real_process_row_projects_its_agent_switch() -> None:
+    in_scope = real_process_row_files(Path(__file__).parent)
+
+    assert in_scope
+    assert (
+        rows_without_their_projection(
+            in_scope,
+            entry_points=REAL_PROCESS_ENTRY_POINTS,
+            projections=SWITCH_PROJECTIONS,
+        )
+        == ()
+    )
+
+
+def test_an_unprojected_real_process_row_is_reported(tmp_path: Path) -> None:
+    violating = tmp_path / "test_violating.compliance.l1.py"
+    violating.write_text(
+        f"def test_row() -> None:\n    {REAL_PROCESS_ENTRY_POINTS[0]}()\n",
+        encoding="utf-8",
+    )
+
+    reported = rows_without_their_projection(
+        (violating,),
+        entry_points=REAL_PROCESS_ENTRY_POINTS,
+        projections=SWITCH_PROJECTIONS,
+    )
+
+    assert reported == (f"{violating}::test_row",)
+
+
+def test_a_projected_real_process_row_is_not_reported(tmp_path: Path) -> None:
+    conforming = tmp_path / "test_conforming.compliance.l1.py"
+    conforming.write_text(
+        f"@{SWITCH_PROJECTIONS[0]}\n"
+        f"def test_row() -> None:\n    {REAL_PROCESS_ENTRY_POINTS[0]}()\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        rows_without_their_projection(
+            (conforming,),
+            entry_points=REAL_PROCESS_ENTRY_POINTS,
+            projections=SWITCH_PROJECTIONS,
+        )
+        == ()
+    )
+
+
+def test_only_the_declaring_module_names_a_switch() -> None:
+    assert modules_naming_a_switch(SWITCH_SCAN_ROOTS) == ()
+
+
+def test_a_second_module_naming_a_switch_is_reported(tmp_path: Path) -> None:
+    offender = tmp_path / "offender.py"
+    offender.write_text(f'VALUE = "{AGENT_SWITCHES[0]}"\n', encoding="utf-8")
+
+    assert modules_naming_a_switch((tmp_path,)) == (offender,)
+
+
+def test_every_declared_projection_resolves_in_its_home() -> None:
+    import outcomeeng_testing.harnesses.installation as home
+
+    for projection in SWITCH_PROJECTIONS:
+        assert hasattr(home, projection), projection
