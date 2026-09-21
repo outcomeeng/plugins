@@ -13,4 +13,4 @@ ALWAYS: New agents are named in actor form and ALWAYS differ from the skill name
 
 ## Version Bumps
 
-ALWAYS: A skill change that requires a plugin version bump writes it only through `just bump`, run before `just build-skills` so the regenerated `dist/` carries the bumped version. NEVER hand-edit a manifest `version` field; `spx/local/commit-changes.md` carries the full bump policy.
+ALWAYS: A skill change that requires a plugin version bump follows `spx/local/open-pr.md`, which owns the full version policy and runs `just bump`, then `just build-skills`, in the final pre-opening protocol after base synchronization. Ordinary skill-authoring commits neither initiate nor request a bump; ordinary source regeneration still runs through `just build-skills`. NEVER hand-edit a manifest `version` field.
