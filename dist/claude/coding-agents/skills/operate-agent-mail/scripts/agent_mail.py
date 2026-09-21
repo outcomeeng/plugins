@@ -24,7 +24,6 @@ REGISTER_COMMAND = "register"
 MAIL_COMMAND = "mail"
 SEND_COMMAND = "send"
 ACK_COMMAND = "ack"
-ROBOT_COMMAND = "robot"
 INBOX_COMMAND = "inbox"
 DIAGNOSE_COMMAND = "diagnose"
 PROJECT_OPTION = "--project"
@@ -39,7 +38,6 @@ SUBJECT_OPTION = "--subject"
 BODY_OPTION = "--body"
 ACK_REQUIRED_OPTION = "--ack-required"
 AGENT_OPTION = "--agent"
-UNREAD_OPTION = "--unread"
 INCLUDE_BODIES_OPTION = "--include-bodies"
 LIMIT_OPTION = "--limit"
 JSON_OPTION = "--json"
@@ -62,17 +60,7 @@ STORE_BODY_FIELD = "body_md"
 STORE_FROM_FIELD = "from"
 STORE_TO_FIELD = "to"
 STORE_THREAD_ID_FIELD = "thread_id"
-STORE_THREAD_FIELD = "thread"
 STORE_ACK_REQUIRED_FIELD = "ack_required"
-STORE_ACK_STATUS_FIELD = "ack_status"
-# The two states of a required acknowledgement on the store's inbox surface;
-# every other status the store reports reads as no acknowledgement required.
-STORE_ACK_STATUS_PENDING = "pending"
-STORE_ACK_STATUS_ACKED = "acked"
-STORE_ACK_REQUIRED_STATUSES = frozenset(
-    {STORE_ACK_STATUS_PENDING, STORE_ACK_STATUS_ACKED}
-)
-STORE_INBOX_FIELD = "inbox"
 # The store reads `--to` as a list joined by this separator, so a recipient
 # that carries it names several agents and no longer maps back to one record.
 STORE_RECIPIENT_SEPARATOR = ","
@@ -98,7 +86,6 @@ TASK_FIELD = "task"
 RECORD_FIELD = "record"
 RECORDS_FIELD = "records"
 MESSAGE_ID_FIELD = "messageId"
-UNREAD_ONLY_FIELD = "unreadOnly"
 INCLUDE_BODIES_FIELD = "includeBodies"
 LIMIT_FIELD = "limit"
 
@@ -244,7 +231,7 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
         (
             RequestShape(
                 frozenset({AGENT_FIELD}),
-                frozenset({UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD, LIMIT_FIELD}),
+                frozenset({INCLUDE_BODIES_FIELD, LIMIT_FIELD}),
             ),
         )
     ),
@@ -255,7 +242,7 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
 PUBLIC_AM_COMMAND_PREFIXES: Final[Mapping[Operation, tuple[str, ...]]] = {
     Operation.REGISTER: (AM_COMMAND, AGENTS_COMMAND, REGISTER_COMMAND),
     Operation.SEND: (AM_COMMAND, MAIL_COMMAND, SEND_COMMAND),
-    Operation.INBOX: (AM_COMMAND, ROBOT_COMMAND, INBOX_COMMAND),
+    Operation.INBOX: (AM_COMMAND, MAIL_COMMAND, INBOX_COMMAND),
     Operation.RECEIPT: (AM_COMMAND, MAIL_COMMAND, ACK_COMMAND),
 }
 # Operations whose public command emits JSON on `--json`; receipt prints text.
@@ -265,7 +252,6 @@ PUBLIC_AM_ARGUMENT_OPTIONS: Final[Mapping[str, str]] = {
     PROGRAM_FIELD: PROGRAM_OPTION,
     MODEL_FIELD: MODEL_OPTION,
     TASK_FIELD: TASK_OPTION,
-    UNREAD_ONLY_FIELD: UNREAD_OPTION,
     INCLUDE_BODIES_FIELD: INCLUDE_BODIES_OPTION,
     LIMIT_FIELD: LIMIT_OPTION,
 }
@@ -287,7 +273,7 @@ INTEGER_BOUNDS: Final[Mapping[str, tuple[int, int]]] = {
     LIMIT_FIELD: (1, 1_000),
     MESSAGE_ID_FIELD: (1, 1_000_000_000),
 }
-BOOLEAN_ARGUMENT_FIELDS = frozenset({UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD})
+BOOLEAN_ARGUMENT_FIELDS = frozenset({INCLUDE_BODIES_FIELD})
 TEXT_ARGUMENT_FIELDS = frozenset({AGENT_FIELD, PROGRAM_FIELD, MODEL_FIELD, TASK_FIELD})
 ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "agent": AGENT_FIELD,
@@ -296,7 +282,6 @@ ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "task": TASK_FIELD,
     "record": RECORD_FIELD,
     "message_id": MESSAGE_ID_FIELD,
-    "unread_only": UNREAD_ONLY_FIELD,
     "include_bodies": INCLUDE_BODIES_FIELD,
     "limit": LIMIT_FIELD,
 }
@@ -612,13 +597,13 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
 
     A row another sender wrote reads back rather than failing the read: a row
     without a thread reads as an unclassified record with no correlation and
-    its subject verbatim, and an acknowledgement status outside the ones that
-    require a receipt reads as not required. A row without the store's id,
-    sender, or subject key is a malformed store response and fails the read.
+    its subject verbatim, and only a literal `ack_required: true` reads as
+    required. A row without the store's id, sender, or subject key is a
+    malformed store response and fails the read.
     """
-    value = _object(item, STORE_INBOX_FIELD)
-    location = f"{STORE_INBOX_FIELD}[]"
-    thread = value.get(STORE_THREAD_FIELD)
+    value = _object(item, f"{INBOX_COMMAND}[]")
+    location = f"{INBOX_COMMAND}[]"
+    thread = value.get(STORE_THREAD_ID_FIELD)
     correlation = thread if isinstance(thread, str) and thread else None
     subject_text = _string(
         value.get(STORE_SUBJECT_FIELD), f"{location}.{STORE_SUBJECT_FIELD}"
@@ -638,9 +623,7 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
             RECIPIENT_FIELD: recipient,
             RECORD_SUBJECT_FIELD: subject,
             BODY_FIELD: body if isinstance(body, str) else "",
-            ACK_REQUIRED_FIELD: (
-                value.get(STORE_ACK_STATUS_FIELD) in STORE_ACK_REQUIRED_STATUSES
-            ),
+            ACK_REQUIRED_FIELD: value.get(STORE_ACK_REQUIRED_FIELD) is True,
         },
         location=location,
         with_id=True,
@@ -854,9 +837,8 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
             )
         )
         if operation is Operation.INBOX:
-            for field_name in (UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD):
-                if arguments.get(field_name) is True:
-                    command.append(PUBLIC_AM_ARGUMENT_OPTIONS[field_name])
+            if arguments.get(INCLUDE_BODIES_FIELD) is True:
+                command.append(PUBLIC_AM_ARGUMENT_OPTIONS[INCLUDE_BODIES_FIELD])
             if LIMIT_FIELD in arguments:
                 command.extend(
                     (
@@ -920,7 +902,11 @@ def validate_operation_result(result: object) -> dict[str, object]:
                 maximum=1_000_000,
             ),
             PROJECT_KEY_FIELD: _text(value.get(PROJECT_KEY_FIELD), PROJECT_KEY_FIELD),
-            RESPONSE_FIELD: _object(value.get(RESPONSE_FIELD), RESPONSE_FIELD),
+            RESPONSE_FIELD: (
+                _array(value.get(RESPONSE_FIELD), RESPONSE_FIELD)
+                if Operation(operation_value) is Operation.INBOX
+                else _object(value.get(RESPONSE_FIELD), RESPONSE_FIELD)
+            ),
             DATA_FIELD: _object(value.get(DATA_FIELD), DATA_FIELD),
         }
     allowed = FAILURE_RESULT_REQUIRED_FIELDS | FAILURE_RESULT_OPTIONAL_FIELDS
@@ -962,7 +948,9 @@ def _failure_result(
     return validate_operation_result(result)
 
 
-def _scrubbed(payload: dict[str, object]) -> dict[str, object]:
+def _scrubbed(payload: object) -> object:
+    if not isinstance(payload, dict):
+        return payload
     return {
         key: value
         for key, value in payload.items()
@@ -973,24 +961,29 @@ def _scrubbed(payload: dict[str, object]) -> dict[str, object]:
 def _data_for(
     operation: Operation,
     arguments: dict[str, object],
-    response: dict[str, object],
+    response: object,
 ) -> dict[str, object]:
     if operation is Operation.REGISTER:
+        response_object = _object(response, RESPONSE_FIELD)
         return {
-            AGENT_FIELD: _text(response.get(STORE_NAME_FIELD), STORE_NAME_FIELD),
-            RECORD_ID_FIELD: response.get(STORE_ID_FIELD),
+            AGENT_FIELD: _text(response_object.get(STORE_NAME_FIELD), STORE_NAME_FIELD),
+            RECORD_ID_FIELD: response_object.get(STORE_ID_FIELD),
         }
     if operation is Operation.SEND:
+        response_object = _object(response, RESPONSE_FIELD)
         record = validate_record(arguments[RECORD_FIELD], with_id=False)
         return {
             RECORD_FIELD: validate_record(
-                {**record, RECORD_ID_FIELD: response.get(STORE_ID_FIELD)},
+                {
+                    **record,
+                    RECORD_ID_FIELD: response_object.get(STORE_ID_FIELD),
+                },
                 with_id=True,
             )
         }
     if operation is Operation.INBOX:
         recipient = str(arguments[AGENT_FIELD])
-        items = _array(response.get(STORE_INBOX_FIELD), STORE_INBOX_FIELD)
+        items = _array(response, RESPONSE_FIELD)
         return {
             RECORDS_FIELD: [
                 record_from_inbox_item(item, recipient=recipient) for item in items
@@ -1036,7 +1029,12 @@ def execute(request: object, runner: CommandRunner) -> dict[str, object]:
         )
     if operation in JSON_OPERATIONS:
         try:
-            response = _object(json.loads(result.stdout), RESPONSE_FIELD)
+            decoded = json.loads(result.stdout)
+            response = (
+                _array(decoded, RESPONSE_FIELD)
+                if operation is Operation.INBOX
+                else _object(decoded, RESPONSE_FIELD)
+            )
         except (json.JSONDecodeError, AgentMailError) as error:
             return _failure_result(
                 operation.value,

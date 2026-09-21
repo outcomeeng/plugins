@@ -14,14 +14,14 @@ A versioned JSON agent-mail operation result — a registered identity, a delive
 
 The source-owned operation names are:
 
-| Operation  | Arguments                                                | Result data                                  |
-| ---------- | -------------------------------------------------------- | -------------------------------------------- |
-| `register` | `agent`, `program`, `model`; optional `task`             | the registered `agent` name and store id     |
-| `send`     | `record`                                                 | the `record` with its store-assigned `id`    |
-| `inbox`    | `agent`; optional `unreadOnly`, `includeBodies`, `limit` | `records` read back for that recipient       |
-| `receipt`  | `agent`, `messageId`                                     | the `agent` and `messageId` the store marked |
+| Operation  | Arguments                                    | Result data                                  |
+| ---------- | -------------------------------------------- | -------------------------------------------- |
+| `register` | `agent`, `program`, `model`; optional `task` | the registered `agent` name and store id     |
+| `send`     | `record`                                     | the `record` with its store-assigned `id`    |
+| `inbox`    | `agent`; optional `includeBodies`, `limit`   | `records` read back for that recipient       |
+| `receipt`  | `agent`, `messageId`                         | the `agent` and `messageId` the store marked |
 
-A `record` carries exactly `schema` (`1`), `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`; the store assigns `id` on delivery. The kinds a sender writes are `order`, `fact`, `question`, `answer`, `delegation-request`, and the four terminal handbacks `delegation-completed`, `delegation-failed`, `delegation-rejected`, and `delegation-unavailable`. A read-back record whose subject carries no kind prefix reports `unclassified`. The adapter maps `correlation` onto the store's thread, `kind` onto a subject prefix, and `ackRequired` onto the store's acknowledgement requirement, and reads each back; a store limit never shapes the record. `recipient` names one agent: a value carrying the store's `,` separator is rejected with `invalid-schema` before any command runs. A row another sender wrote reads back rather than failing the inbox read: without a thread it reads as `unclassified` with `correlation: null` and its subject verbatim, and an acknowledgement status other than `pending` or `acked` reads as `ackRequired: false`; a row without the store's `id`, `from`, or `subject` key is a malformed store response and fails the read as `invalid-schema`.
+A `record` carries exactly `schema` (`1`), `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`; the store assigns `id` on delivery. The kinds a sender writes are `order`, `fact`, `question`, `answer`, `delegation-request`, and the four terminal handbacks `delegation-completed`, `delegation-failed`, `delegation-rejected`, and `delegation-unavailable`. A read-back record whose subject carries no kind prefix reports `unclassified`. The adapter maps `correlation` onto the store's thread, `kind` onto a subject prefix, and `ackRequired` onto the store's acknowledgement requirement, and reads each back; a store limit never shapes the record. `recipient` names one agent: a value carrying the store's `,` separator is rejected with `invalid-schema` before any command runs. A row another sender wrote reads back rather than failing the inbox read: without a thread it reads as `unclassified` with `correlation: null` and its subject verbatim, and only a literal `ack_required: true` reads as `ackRequired: true`; a row without the store's `id`, `from`, or `subject` key is a malformed store response and fails the read as `invalid-schema`.
 
 The project key is the pool's main checkout path from `spx diagnose --format json`'s `worktree-pool` record, so every worktree of one pool resolves one mail project. The adapter runs that diagnosis itself before every operation and reads no Git state, working directory, or environment variable in its place.
 
@@ -62,14 +62,14 @@ When the shell accepts multiline input:
 
 ```bash
 python3 "${SKILL_DIR}/scripts/agent_mail.py" run <<'JSON'
-{"schemaVersion":1,"operation":"inbox","arguments":{"agent":"AmberGull","unreadOnly":true,"includeBodies":true}}
+{"schemaVersion":1,"operation":"inbox","arguments":{"agent":"AmberGull","includeBodies":true}}
 JSON
 ```
 
 When the runner requires one physical command line:
 
 ```bash
-printf '%s\n' '{"schemaVersion":1,"operation":"inbox","arguments":{"agent":"AmberGull","unreadOnly":true,"includeBodies":true}}' | python3 "${SKILL_DIR}/scripts/agent_mail.py" run
+printf '%s\n' '{"schemaVersion":1,"operation":"inbox","arguments":{"agent":"AmberGull","includeBodies":true}}' | python3 "${SKILL_DIR}/scripts/agent_mail.py" run
 ```
 
 To read the project key alone:

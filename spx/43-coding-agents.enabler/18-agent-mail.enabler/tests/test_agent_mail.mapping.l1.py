@@ -144,8 +144,7 @@ def test_agent_mail_operation_mappings() -> None:
                 item.get(module.STORE_BODY_FIELD, "") for item in items
             ]
             assert [record[module.ACK_REQUIRED_FIELD] for record in records] == [
-                item[module.STORE_ACK_REQUIRED_FIELD] is True
-                for item in items
+                item[module.STORE_ACK_REQUIRED_FIELD] is True for item in items
             ]
         elif operation is module.Operation.SEND:
             store = cast(dict[str, object], payload)

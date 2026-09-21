@@ -476,12 +476,10 @@ def store_inbox_echo(
     """Render a sent message the way the store's inbox surface returned one of
     the same acknowledgement class.
 
-    The row is a captured `--include-bodies` inbox row whose acknowledgement
-    status matches the send's requirement — `row_ordinal` selects among the
-    matching rows, so a required acknowledgement is echoed both pending and
-    recorded — with the sender, subject, thread, body, and id the send wrote
-    and the store assigned in place of the captured values. The status, the
-    body field, and every other key stay the store's own bytes.
+    The row is a captured `--include-bodies` inbox row. `row_ordinal` selects
+    one row, and the sender, subject, thread, body, acknowledgement requirement,
+    and id are replaced with the values the send wrote and the store assigned.
+    Every other key stays the store's own bytes.
     """
     rows = captured_inbox_rows_with_bodies(module)
     if not rows:
@@ -492,9 +490,7 @@ def store_inbox_echo(
             module.STORE_ID_FIELD: message_id,
             module.STORE_FROM_FIELD: send_fields[module.STORE_FROM_FIELD],
             module.STORE_SUBJECT_FIELD: send_fields[module.STORE_SUBJECT_FIELD],
-            module.STORE_THREAD_ID_FIELD: send_fields[
-                module.STORE_THREAD_ID_FIELD
-            ],
+            module.STORE_THREAD_ID_FIELD: send_fields[module.STORE_THREAD_ID_FIELD],
             module.STORE_BODY_FIELD: send_fields[module.STORE_BODY_FIELD],
             module.STORE_ACK_REQUIRED_FIELD: send_fields[
                 module.STORE_ACK_REQUIRED_FIELD
