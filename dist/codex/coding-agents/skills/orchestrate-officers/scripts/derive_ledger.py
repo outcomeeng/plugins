@@ -82,9 +82,13 @@ def _mail_source(source_id: object) -> dict[str, object]:
     return _source("mail", source_id)
 
 
-def _journal_source(run_token: object) -> dict[str, object]:
+def _journal_run_token(run_token: object) -> str:
     if not isinstance(run_token, str) or not run_token:
         raise LedgerInputError("journal runToken must be a non-empty string")
+    return run_token
+
+
+def _journal_source(run_token: str) -> dict[str, object]:
     return _source("journal", run_token)
 
 
@@ -227,9 +231,14 @@ def derive_ledger(payload: Mapping[str, object]) -> dict[str, object]:
         wall_time += _wall_time(event.get(WALL_TIME_SECONDS_FIELD))
 
     journal_runs = _sequence(payload.get(JOURNAL_RUNS_FIELD), JOURNAL_RUNS_FIELD)
+    seen_run_tokens: set[str] = set()
     for raw_run in journal_runs:
         run = _mapping(raw_run, "journal run")
-        source = _journal_source(run.get(RUN_TOKEN_FIELD))
+        run_token = _journal_run_token(run.get(RUN_TOKEN_FIELD))
+        if run_token in seen_run_tokens:
+            continue
+        seen_run_tokens.add(run_token)
+        source = _journal_source(run_token)
         _append_entry(passes, run.get(PASS_FIELD), source)
         _append_entry(heads, run.get(HEAD_FIELD), source)
         _append_entry(verdicts, run.get(VERDICT_FIELD), source)

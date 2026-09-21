@@ -102,8 +102,8 @@ def test_entrypoint_preserves_decision_reasoning_and_operator_contact_failures()
     assert ledger[source.FAILURES_FIELD] == [{"value": failure, "source": provenance}]
 
 
-def test_entrypoint_preserves_journal_projection_and_run_token_provenance() -> None:
-    """A non-empty journal run rebuilds every journal-backed ledger field."""
+def test_entrypoint_deduplicates_journal_projection_by_run_token() -> None:
+    """Repeated references to one run contribute once to every ledger field."""
     source = load_ledger_module()
     run_token = "2026-09-20_23-11-09-511-7ba897d4fc70"
     journal_run = {
@@ -127,7 +127,7 @@ def test_entrypoint_preserves_journal_projection_and_run_token_provenance() -> N
             source.SCHEMA_VERSION_FIELD: source.SCHEMA_VERSION,
             source.CHANGE_FIELD: "owner/changes#123",
             source.MAIL_RECORDS_FIELD: [],
-            source.JOURNAL_RUNS_FIELD: [journal_run],
+            source.JOURNAL_RUNS_FIELD: [journal_run, journal_run],
         },
     )
     ledger = cast(dict[str, object], observation.result[source.LEDGER_FIELD])
