@@ -75,3 +75,13 @@ report carries the replay hint.
 
 **Revisit condition**: resolve with the next behavioral change to this node's
 test evidence, alongside the signal-harness seam entry above.
+
+## The level-two scenario file declares a cell heavier than its dependencies
+
+`tests/test_gate.scenario.l2.py` declares `l2`, but every executable its evidence exercises classifies `l1` under the executable discriminator: the interpreter comes from the declared development environment, and the wrapper programs run `outcomeeng.validation` directly from the checkout rather than from an installed or bootstrapped artifact. Real subprocesses and a multi-second grace deadline are execution pain, and level derives from dependency class alone.
+
+**Resolution shape**: rename the file to its `l1` cell and confirm no linked assertion depends on the heavier declaration.
+
+**Why separate**: the rename moves a file whose evidence the changeset does not otherwise touch, and the two scenario assertions linking it would need their links re-pointed in the same pass.
+
+**Evidence**: the gate node's test-evidence audit recorded it as a warning against the execution-level rule.

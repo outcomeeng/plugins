@@ -273,3 +273,13 @@ The `/understand` node model states that a kind opening never carries a path: th
 **Why product-level**: the class spans eight nodes and belongs to none of them, and no single node's note would surface it to the next reader of the rule.
 
 **Evidence**: the spec audit of `spx/15-validation.enabler/65-gate.enabler` rejected that node's own opening for this rule; the remaining nine came from the same-class scan over every spec opening in the tree, which found no other instance inside the nodes the changeset touches.
+
+## Five readers restate the property harness's failure-note forms
+
+`outcomeeng_testing/harnesses/property_evidence.py` now publishes `SEED_NOTE_FORM` and `REPLAY_NOTE_FORM`, the two notes a failing property run carries. Five readers outside the gate and repository-installation nodes still spell those forms themselves: the `bump`, `ci_triggers`, `evals`, and `source_and_templating` harnesses, and `spx/32-distribution.enabler/21-bump.enabler/tests/test_bump.property.l1.py`. A change to either note in the owning harness leaves each of them asserting a string the harness no longer emits.
+
+**Resolution shape**: import both forms from the owning harness at each of the five sites, as the gate and selected-gate nodes' evidence now does.
+
+**Why product-level**: the five sites span four nodes and one shared harness home, and the contract they reproduce belongs to a fifth; no single node's note would surface it.
+
+**Evidence**: the contract-based scan run while closing the same class inside the gate and repository-installation nodes, which found zero remaining reproductions there and these five elsewhere.
