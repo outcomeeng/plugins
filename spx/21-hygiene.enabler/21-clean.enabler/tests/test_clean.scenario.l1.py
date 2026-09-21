@@ -1,21 +1,20 @@
 """Level-1 scenario evidence for workspace cleanup.
 
 Covers the scenario assertions in `clean.md`: the recorded argv omits an
-active in-repository Python environment from generated pathspecs, Git dry-run
-output preserves the session store and that environment while listing another
-ignored cache, the runner's exit code is propagated to the caller, and a
-repository whose every top-level path is protected invokes no runner.
+active in-repository Python environment from generated pathspecs and runs in
+the root those pathspecs came from, a Git dry run over them would remove the
+other ignored cache and nothing else, the runner's exit code is propagated to
+the caller, and a repository whose every top-level path is protected invokes
+no runner.
 """
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
 from outcomeeng.hygiene.clean import (
     CLEAN_BASE_ARGV,
     PATHSPEC_SEPARATOR,
-    SPX_STORE_DIR,
     SUCCESS_EXIT_CODE,
     build_clean_argv,
     clean,
@@ -25,6 +24,7 @@ from outcomeeng_testing.harnesses.clean import (
     IGNORED_PYTHON_ENV_DIR,
     RecordingRunner,
     create_clean_repo,
+    observe_dry_run_removals,
 )
 
 
@@ -55,19 +55,10 @@ def test_git_dry_run_preserves_session_store_and_active_environment(
         repo_root=repo.root,
         active_python_prefix=repo.active_python_prefix,
     )
-    dry_run_argv = ("git", "clean", "-ndX", *argv[len(CLEAN_BASE_ARGV) :])
 
-    result = subprocess.run(
-        dry_run_argv,
-        cwd=repo.root,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    removals = observe_dry_run_removals(repo=repo, argv=argv)
 
-    assert f"Would remove {IGNORED_CACHE_DIR}/" in result.stdout
-    assert f"Would remove {IGNORED_PYTHON_ENV_DIR}/" not in result.stdout
-    assert f"Would remove {SPX_STORE_DIR}/" not in result.stdout
+    assert removals == {IGNORED_CACHE_DIR}
 
 
 def test_clean_propagates_runner_exit_code(tmp_path: Path) -> None:

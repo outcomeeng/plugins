@@ -24,6 +24,7 @@ from outcomeeng.distribution.build import (
     SHARED_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
+    TEMPLATES_DIR_NAME,
     VARIABLE_DELIMITER_END,
     VARIABLE_DELIMITER_START,
     CyclicIncludeError,
@@ -124,6 +125,56 @@ def arrange_cache_only_skill_directory(
     cache_dir.mkdir()
     (cache_dir / f"{case.skill}{IGNORED_SOURCE_FILE_SUFFIXES[0]}").write_bytes(b"")
     return arranged
+
+
+@dataclass(frozen=True)
+class ExtraTemplateDirectory:
+    """A well-formed source tree plus one extra template directory."""
+
+    src_root: Path
+    template_root: Path
+    authored_manifest: Path
+
+
+def arrange_cache_only_template_directory(
+    root: Path, case: SourceScenario
+) -> ExtraTemplateDirectory:
+    """Add a template directory holding only one ignored cache file."""
+    arranged = _extra_template_directory(root, case)
+    cache_dir = arranged.template_root / next(
+        iter(sorted(IGNORED_SOURCE_DIRECTORY_NAMES))
+    )
+    cache_dir.mkdir()
+    (cache_dir / f"{case.skill}{IGNORED_SOURCE_FILE_SUFFIXES[0]}").write_bytes(b"")
+    return arranged
+
+
+def arrange_manifestless_template_directory(
+    root: Path, case: SourceScenario
+) -> ExtraTemplateDirectory:
+    """Add a template directory holding one authored file and no `SKILL.md`."""
+    arranged = _extra_template_directory(root, case)
+    (arranged.template_root / f"{case.outer_topic}{MARKDOWN_FILE_SUFFIX}").write_text(
+        case.fragment_body, encoding="utf-8"
+    )
+    return arranged
+
+
+def _extra_template_directory(
+    root: Path, case: SourceScenario
+) -> ExtraTemplateDirectory:
+    builder = _source_tree(root, case)
+    templates_root = builder.src_root / TEMPLATES_DIR_NAME
+    authored_manifest = templates_root / case.skill / SKILL_FILENAME
+    authored_manifest.parent.mkdir(parents=True)
+    authored_manifest.write_text(_skill_body(case), encoding="utf-8")
+    template_root = templates_root / case.outer_topic
+    template_root.mkdir()
+    return ExtraTemplateDirectory(
+        src_root=builder.src_root,
+        template_root=template_root,
+        authored_manifest=authored_manifest,
+    )
 
 
 def arrange_empty_skill_directory(

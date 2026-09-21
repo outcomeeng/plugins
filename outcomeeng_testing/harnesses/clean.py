@@ -24,6 +24,9 @@ from outcomeeng.hygiene.clean import GIT_IGNORE_FILE, SPX_STORE_DIR, Runner
 IGNORED_CACHE_DIR = ".cache"
 IGNORED_PYTHON_ENV_DIR = ".venv"
 EXTERNAL_PYTHON_ENV_DIR = "external-venv"
+DRY_RUN_FLAG_INDEX = 2
+DRY_RUN_FLAGS = "-ndX"
+REMOVAL_LINE_PREFIX = "Would remove "
 
 
 class EnvironmentPlacement(StrEnum):
@@ -105,6 +108,36 @@ def create_clean_repo(
     )
 
 
+def observe_dry_run_removals(
+    *,
+    repo: CleanRepo,
+    argv: Sequence[str],
+) -> frozenset[str]:
+    """Return the top-level paths Git reports it would remove for `argv`.
+
+    Runs the cleanup argv in dry-run form against the arranged repository and
+    reports each listed path with its trailing separator stripped, so the
+    linked test owns the comparison against the paths it expects.
+    """
+    dry_run_argv = (
+        *argv[:DRY_RUN_FLAG_INDEX],
+        DRY_RUN_FLAGS,
+        *argv[DRY_RUN_FLAG_INDEX + 1 :],
+    )
+    result = subprocess.run(
+        dry_run_argv,
+        cwd=repo.root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return frozenset(
+        line.removeprefix(REMOVAL_LINE_PREFIX).rstrip("/")
+        for line in result.stdout.splitlines()
+        if line.startswith(REMOVAL_LINE_PREFIX)
+    )
+
+
 def _place_environment(
     tmp_path: Path,
     repo_root: Path,
@@ -134,6 +167,7 @@ __all__ = [
     "RecordingRunner",
     "RunnerCall",
     "create_clean_repo",
+    "observe_dry_run_removals",
 ]
 
 
