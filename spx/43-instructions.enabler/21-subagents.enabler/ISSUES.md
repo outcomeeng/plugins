@@ -193,3 +193,24 @@ suite. Author `evals/invocation-scope/` (producer
 `dist/claude/instructions`, cases for one configuration versus several), regenerate the
 eval CI triggers with `just build-eval-triggers`, run it at the default budget, and
 restore the `[eval](evals/invocation-scope/eval.toml)` tag once it passes.
+
+## The governing-context rule speaks spec-tree vocabulary the instructions plugin does not define
+
+**Evidence:** `instructions:skill-auditor` finding `f-008` (WARNING) on
+`src/plugins/instructions/skills/subagent-standards/SKILL.md` at head
+`195826dfdd0480c08f9cfacf48a20999317fea6e`: the rule that resolves a definition's
+governing context — the owning node as the node whose linked test or audit assertion
+names the definition, and a declaration as an assertion in that node's spec or a decision
+on the path from the root that reaches it by index — uses vocabulary the `instructions`
+plugin neither defines nor loads.
+
+**Impact:** a repository that installs `instructions` without a spec tree resolves no
+governing context, so `/audit-subagent` reports every inheriting definition as declaring
+nothing. That is the standard's stated result for an undeclared boundary, so the verdict is
+not spurious, but the rule names no methodology and states no non-applicability.
+
+**Settlement condition:** the standard names the methodology its resolution rule assumes,
+or states how a definition with no governing spec tree is judged, and one typed skill audit
+approves the wording. Deferred as a product-design question outside the changeset that
+amended the rule: the Change that amended it settled where a declaration lives, not how a
+tree-less consumer reads the rule.
