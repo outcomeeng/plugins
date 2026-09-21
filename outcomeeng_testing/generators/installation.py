@@ -409,7 +409,9 @@ def _unpublished_capture_entries() -> tuple[dict[str, object], ...]:
     return tuple(cast("list[dict[str, object]]", document["captures"]))
 
 
-def _unpublished_capture(agent: Agent, operation: Operation) -> dict[str, object] | None:
+def _unpublished_capture(
+    agent: Agent, operation: Operation
+) -> dict[str, object] | None:
     return next(
         (
             entry
@@ -426,7 +428,9 @@ def captured_unpublished_plugin_stderr(
     """Render one exact agent-operation capture for another catalog plugin."""
     entry = _unpublished_capture(agent, operation)
     if entry is None:
-        raise ValueError(f"no unpublished-plugin capture for {agent.value}/{operation.value}")
+        raise ValueError(
+            f"no unpublished-plugin capture for {agent.value}/{operation.value}"
+        )
     root = FIXTURE_ROOT / "unpublished_plugin"
     path = root / cast("str", entry["file"])
     payload = path.read_bytes()
@@ -467,7 +471,9 @@ def generated_failure_classification_cases(
     ordinary_errors = generated_command_failure_stderr()
     cases: list[FailureClassificationCase] = []
     for index, ((mode, agent, operation), source) in enumerate(reached.items()):
-        plugin = plugins[index % len(plugins)] if operation in PLUGIN_OPERATIONS else None
+        plugin = (
+            plugins[index % len(plugins)] if operation in PLUGIN_OPERATIONS else None
+        )
         capture = _unpublished_capture(agent, operation)
         if capture is not None and plugin is not None:
             stderr = captured_unpublished_plugin_stderr(agent, operation, plugin)

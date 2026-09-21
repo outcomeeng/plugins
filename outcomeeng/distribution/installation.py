@@ -1989,9 +1989,13 @@ def _is_pending_publication(
     if plan.mode is not InstallationMode.PERSISTENT or command.plugin is None:
         return False
     signature = UNPUBLISHED_PLUGIN_SIGNATURES.get((command.agent, command.operation))
-    return signature is not None and signature.format(
-        plugin=command.plugin.lower(), marketplace=MARKETPLACE_NAME.lower()
-    ) in result.stderr.lower()
+    return (
+        signature is not None
+        and signature.format(
+            plugin=command.plugin.lower(), marketplace=MARKETPLACE_NAME.lower()
+        )
+        in result.stderr.lower()
+    )
 
 
 def execute_installation(
