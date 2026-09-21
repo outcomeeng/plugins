@@ -52,10 +52,14 @@ def _disabled_reason(environment: Mapping[str, str], switch: str) -> str | None:
 
 @dataclass(frozen=True)
 class AgentDisableStates:
-    """Both switches' readings for one run, resolved once at the command edge."""
+    """Both switches' readings for one run, resolved once at the command edge.
 
-    codex: str | None = None
-    claude: str | None = None
+    Every field is required: a reading of process state has no default, because
+    a default would render as a state the run never observed.
+    """
+
+    codex: str | None
+    claude: str | None
 
     @property
     def explanation_lines(self) -> tuple[str, ...]:

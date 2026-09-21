@@ -427,13 +427,14 @@ def _execute_recipe(
                     if _is_pytest_step(step)
                     else None
                 )
+                spawn_step = step
                 if skip_report_path is not None:
                     created_log_paths.append(skip_report_path)
-                    step = _step_reporting_skips(step, skip_report_path)
+                    spawn_step = _step_reporting_skips(step, skip_report_path)
                 try:
                     handle = _spawn_with_deferred_signal_forwarding(
                         spawner,
-                        step,
+                        spawn_step,
                         log_path,
                     )
                     exit_code = handle.wait()

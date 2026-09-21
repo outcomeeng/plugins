@@ -276,7 +276,8 @@ class SelectedGatePlan:
     selected_steps: tuple[SelectedGateStep, ...]
     full_gate: bool
     live_discovery: bool = False
-    agent_disable: AgentDisableStates = AgentDisableStates()
+    agent_disable: AgentDisableStates | None = None
+    """Both switches' readings, or `None` when the caller observed neither."""
 
     @property
     def live_discovery_reason(self) -> str:
@@ -430,7 +431,7 @@ def build_selected_gate_plan(
     *,
     deleted_paths: tuple[str, ...] = (),
     test_infrastructure: InfrastructureIndex | None = None,
-    agent_disable: AgentDisableStates = AgentDisableStates(),
+    agent_disable: AgentDisableStates | None = None,
 ) -> SelectedGatePlan:
     """Build the selected local gate plan for changed paths.
 
@@ -581,7 +582,7 @@ def _full_surface_plan(
     *,
     reason: str,
     live_from_infrastructure: bool = False,
-    agent_disable: AgentDisableStates = AgentDisableStates(),
+    agent_disable: AgentDisableStates | None = None,
 ) -> SelectedGatePlan:
     live_discovery = live_from_infrastructure or _matches_any(
         changed_paths, LIVE_DISCOVERY_PATTERNS
@@ -714,8 +715,9 @@ def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
             + "\n"
         )
     sink.write(PLAN_LINE_FORM.format(text=plan.live_discovery_reason) + "\n")
-    for line in plan.agent_disable.explanation_lines:
-        sink.write(PLAN_LINE_FORM.format(text=line) + "\n")
+    if plan.agent_disable is not None:
+        for line in plan.agent_disable.explanation_lines:
+            sink.write(PLAN_LINE_FORM.format(text=line) + "\n")
     sink.flush()
 
 
