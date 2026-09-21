@@ -214,3 +214,23 @@ or states how a definition with no governing spec tree is judged, and one typed 
 approves the wording. Deferred as a product-design question outside the changeset that
 amended the rule: the Change that amended it settled where a declaration lives, not how a
 tree-less consumer reads the rule.
+
+## Two placement findings on `/subagent-standards` await one typed audit round
+
+**Evidence:** `instructions:skill-auditor` WARNING findings on
+`src/plugins/instructions/skills/subagent-standards/SKILL.md` at head
+`1d97700cc7b2b2c3276309e52a708d1cf9f68428`, an `APPROVED` verdict with an empty must-fix
+row: `f-008` — the `<evidence>` prohibition on inventing functionality from an absent tag
+sits apart from the equivalent-tags rule in `<configuration>` it complements; `f-009` — the
+execution-boundary inheritance rule is stated in `<configuration>` (the sandbox and
+approval scope note), `<capabilities>` (the admission and citation rules), and
+`<success_criteria>`, which mirrors the three assertions of this node that govern it.
+
+**Impact:** a reader of one block sees part of a rule whose complement lives in another,
+and a later change to the inheritance rule has three sites to keep aligned.
+
+**Settlement condition:** one change co-locates the absent-tag prohibition with the
+equivalent-tags rule and keeps the inheritance judgment in one block with cross-references
+from the others, and one typed skill audit approves. Deferred from the governing-context
+changeset: the split follows the node's three assertions, and collapsing it is a structure
+choice for the standard as a whole, not a repair of the amended rules.
