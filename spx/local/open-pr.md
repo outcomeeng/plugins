@@ -85,27 +85,9 @@ required even when all CI-related verification is green.
 
 ## Open PR updates
 
-After a later rebase or retarget of an open PR's branch, repeat the bump step
-against its newly synchronized base before the next push: `just bump`, then
-`just build-skills`, and one commit through `/commit-changes` when files
-changed. A plugin whose manifests remain ahead of the base is unchanged by
-`just bump`; when the base catches up or advances past them, it computes the
-next version from that base. A content-only review commit does not initiate
-another bump.
-
-Re-establish readiness for the resulting head before pushing and require
-`just bump-check` to exit zero on that head. A bump that changes the branch
-diff invalidates earlier verification; the base-sync preservation proof permits
-reuse only for the unchanged diff and unrelated base movement it proves.
-The current-head CI review and checks still decide merge readiness. The merge
-operation writes no version and merges the reviewed head.
-
-If review changes the required segment, restore only the affected plugin's two
-source manifests to the selected base versions before running `just bump`
-with the corrected positional segment, rebuild, and commit the correction.
-An explicit segment alone does not override the skip for a plugin already
-ahead of the base. A newly affected plugin also passes this version-finalization
-step before its changes are pushed.
+`spx/local/merging.md` declares follow-up version finalization for `/manage-pr`,
+which reads that overlay during open-PR management. The plugin version policy
+above supplies its distribution boundary and segment selection.
 
 ## Other pre-flight additions
 

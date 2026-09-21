@@ -9,7 +9,9 @@ Commits before pull-request opening preserve the unbumped source manifests;
 generated plugin trees still follow the source through `just build-skills`.
 
 `spx/local/open-pr.md` owns the bump policy, its final pre-opening commit,
-the check against the current base, and re-evaluation after a later rebase.
+and the opening check against the current base. `spx/local/merging.md`
+declares follow-up version finalization after a later rebase by reference
+to that policy.
 When that protocol supplies changed manifests and generated output,
 `/commit-changes` commits the supplied files without initiating another bump.
 
