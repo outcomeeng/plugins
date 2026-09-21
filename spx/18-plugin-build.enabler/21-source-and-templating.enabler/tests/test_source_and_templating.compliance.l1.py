@@ -76,10 +76,10 @@ def test_cache_only_skill_directory_is_absent(
 
     projection = project_emissions(arranged.src_root)
 
+    sources = [emission.source for emission in projection.emissions]
+    assert arranged.authored_manifest in sources
     assert not [
-        emission
-        for emission in projection.emissions
-        if emission.source.is_relative_to(arranged.skill_root)
+        source for source in sources if source.is_relative_to(arranged.skill_root)
     ]
 
 
@@ -89,10 +89,10 @@ def test_empty_skill_directory_is_absent(tmp_path: Path, case: SourceScenario) -
 
     projection = project_emissions(arranged.src_root)
 
+    sources = [emission.source for emission in projection.emissions]
+    assert arranged.authored_manifest in sources
     assert not [
-        emission
-        for emission in projection.emissions
-        if emission.source.is_relative_to(arranged.skill_root)
+        source for source in sources if source.is_relative_to(arranged.skill_root)
     ]
 
 

@@ -29,7 +29,7 @@ def test_clean_removes_only_ignored_paths(case: CleanWorkspaceCase) -> None:
         untracked_before = workspace.untracked_bytes()
 
         exit_code = clean(
-            runner=SubprocessRunner(workspace.root),
+            runner=SubprocessRunner(),
             repo_root=workspace.root,
             active_python_prefix=workspace.active_python_prefix,
         )

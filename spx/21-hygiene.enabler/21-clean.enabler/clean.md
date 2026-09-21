@@ -8,11 +8,15 @@ The `outcomeeng.hygiene.clean` module invokes `git clean -fdX` from the reposito
 
 This paragraph declares the base command and the protected set; the module complies with that declaration. Their agreement is audit evidence, because every oracle for it is a second declaration of the same value. Test evidence therefore covers the behavior around those values — the argv the builder composes, the paths it omits, the exit codes it returns — and never the values themselves. Removing a test that pinned one of these values re-routes its assertion's verification type in the same change, so the two layers cannot drift apart.
 
+Evidence for an assertion of this node states the outcome the governed code decides. A predicate that holds whether or not that code runs is not evidence, in either layer: not a test whose expectation the arrangement alone satisfies, and not an assertion whose link no mutation of the governed code can falsify.
+
+The module invokes the command in the repository root whose top-level entries produced the pathspecs. That root reaches the command boundary with the argv, so the declaration holds for every caller rather than only for one whose working directory already matches.
+
 ## Assertions
 
 ### Scenarios
 
-- Given `clean` runs from an active Python environment inside the repository, when the runner records its call, then the recorded argv passes top-level pathspecs that omit that environment ([test](tests/test_clean.scenario.l1.py))
+- Given `clean` runs from an active Python environment inside the repository, when the runner records its call, then the recorded argv passes top-level pathspecs that omit that environment and the recorded call runs in the repository root those pathspecs were computed for ([test](tests/test_clean.scenario.l1.py))
 - Given the generated argv is translated to a `git clean -ndX` dry run in a repository with an ignored `.spx/` directory, an ignored active environment, and another ignored cache, then Git lists only the other cache ([test](tests/test_clean.scenario.l1.py))
 - Given the runner returns a non-zero exit code, when `clean` runs, then the exit code is propagated to the caller ([test](tests/test_clean.scenario.l1.py))
 - Given every top-level path is protected, when `clean` runs, then the runner is not invoked and the exit code is 0 ([test](tests/test_clean.scenario.l1.py))

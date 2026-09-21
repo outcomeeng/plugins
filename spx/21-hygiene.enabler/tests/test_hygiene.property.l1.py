@@ -36,7 +36,7 @@ def test_xml_spacing_is_idempotent(content: str) -> None:
 @given(case=clean_workspace_cases())
 def test_clean_is_idempotent(case: CleanWorkspaceCase) -> None:
     with clean_workspace(case) as workspace:
-        runner = SubprocessRunner(workspace.root)
+        runner = SubprocessRunner()
         first_exit_code = clean(
             runner=runner,
             repo_root=workspace.root,
