@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 import ast
+from pathlib import Path
 import math
 import signal
 
 from outcomeeng.validation._spawner import _restore_child_signal_mask
+from outcomeeng.validation.polling_enforcement import (
+    SLEEP_ATTRIBUTE,
+    WATCH_INVOCATION,
+    unbounded_polling_sites,
+)
 from outcomeeng.validation import (
     CHECK_RECIPES,
     EVAL_LINKS_ARGV,
@@ -15,6 +21,7 @@ from outcomeeng.validation import (
     MYPY_ARGV,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
+    PYRIGHT_ARGV,
     PURPOSE_CORRECTNESS,
     PYTEST_ARGV,
     RECIPE_CHECK,
@@ -52,14 +59,12 @@ from outcomeeng_testing.harnesses.gate import (
     skip_report_observation,
     PASS_EXIT_CODE,
     PYTEST_TARGET_ARG,
-    STATIC_ANALYSIS_ARGVS,
     bounded_shutdown_observation,
     call_keyword_map,
     check_run_observation,
-    while_loops_in_gate_modules,
+    validation_package_modules,
     popen_calls_from,
     recipe_run_observation,
-    validation_package_source_text,
     validation_subprocess_importers,
 )
 
@@ -75,8 +80,8 @@ def test_the_full_gate_carries_every_required_step() -> None:
     assert FMT_CHECK_ARGV in step_argvs
     assert RUFF_FORMAT_ARGV in step_argvs
     assert RUFF_CHECK_ARGV in step_argvs
-    assert set(STATIC_ANALYSIS_ARGVS).issubset(step_argvs)
-    assert "--strict" in MYPY_ARGV
+    assert MYPY_ARGV in step_argvs
+    assert PYRIGHT_ARGV in step_argvs
     assert SPX_MARKDOWN_ARGV in step_argvs
     assert EVAL_LINKS_ARGV in step_argvs
     assert HOOK_SAFETY_ARGV in step_argvs
@@ -163,17 +168,41 @@ def test_subprocess_lives_only_in_the_production_spawner() -> None:
         assert f"signal.{signal_name}" in source
 
 
-def test_no_gate_module_polls_with_while_true_sleep() -> None:
-    for module_name, loop in while_loops_in_gate_modules():
-        is_while_true = isinstance(loop.test, ast.Constant) and loop.test.value is True
-        has_sleep_call = any(
-            isinstance(child, ast.Call)
-            and isinstance(child.func, ast.Attribute)
-            and child.func.attr == "sleep"
-            for child in ast.walk(loop)
-        )
-        assert not (is_while_true and has_sleep_call), module_name
-    assert "gh run watch" not in validation_package_source_text()
+def test_no_gate_module_polls_without_bound() -> None:
+    assert unbounded_polling_sites(validation_package_modules()) == ()
+
+
+def test_a_while_true_sleep_is_reported(tmp_path: Path) -> None:
+    offender = tmp_path / "poller.py"
+    offender.write_text(
+        f"import time\n\n\ndef run() -> None:\n"
+        f"    while True:\n        time.{SLEEP_ATTRIBUTE}(1)\n",
+        encoding="utf-8",
+    )
+
+    reported = unbounded_polling_sites((offender,))
+
+    assert len(reported) == 1
+    assert str(offender) in reported[0]
+
+
+def test_a_watch_invocation_is_reported(tmp_path: Path) -> None:
+    offender = tmp_path / "watcher.py"
+    offender.write_text(f'COMMAND = "{WATCH_INVOCATION}"\n', encoding="utf-8")
+
+    assert unbounded_polling_sites((offender,)) == (f"{offender}::{WATCH_INVOCATION}",)
+
+
+def test_a_bounded_loop_is_not_reported(tmp_path: Path) -> None:
+    conforming = tmp_path / "bounded.py"
+    conforming.write_text(
+        f"import time\n\n\ndef run(deadline: float) -> None:\n"
+        f"    while deadline > 0:\n        time.{SLEEP_ATTRIBUTE}(1)\n"
+        f"        deadline -= 1\n",
+        encoding="utf-8",
+    )
+
+    assert unbounded_polling_sites((conforming,)) == ()
 
 
 def test_signal_shutdown_waits_are_bounded() -> None:
