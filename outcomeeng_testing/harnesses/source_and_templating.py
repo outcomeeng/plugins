@@ -103,10 +103,16 @@ class MissingFragmentCase:
 
 @dataclass(frozen=True)
 class ExtraSkillDirectory:
-    """A well-formed source tree plus one extra skill directory under a plugin."""
+    """A well-formed source tree plus one extra skill directory under a plugin.
+
+    `authored_manifest` is the well-formed skill's own `SKILL.md`. Validation
+    accepts the tree only when the extra directory is absent to it, so that
+    file's emission is what distinguishes an accepted tree from a rejected one.
+    """
 
     src_root: Path
     skill_root: Path
+    authored_manifest: Path
 
 
 def arrange_cache_only_skill_directory(
@@ -140,15 +146,14 @@ def arrange_manifestless_skill_directory(
 
 def _extra_skill_directory(root: Path, case: SourceScenario) -> ExtraSkillDirectory:
     builder = _source_tree(root, case)
-    skill_root = (
-        builder.src_root
-        / PLUGINS_DIR_NAME
-        / case.plugin
-        / SKILLS_SUBDIR_NAME
-        / case.outer_topic
-    )
+    skills_root = builder.src_root / PLUGINS_DIR_NAME / case.plugin / SKILLS_SUBDIR_NAME
+    skill_root = skills_root / case.outer_topic
     skill_root.mkdir()
-    return ExtraSkillDirectory(src_root=builder.src_root, skill_root=skill_root)
+    return ExtraSkillDirectory(
+        src_root=builder.src_root,
+        skill_root=skill_root,
+        authored_manifest=skills_root / case.skill / SKILL_FILENAME,
+    )
 
 
 def implementation_is_ready() -> bool:

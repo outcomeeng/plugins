@@ -17,7 +17,9 @@ The module's contract:
 - `build_clean_argv()` appends generated top-level pathspecs that omit the
   session store and, when needed, the active environment.
 - `Runner` Protocol describes the injected subprocess boundary; `clean()`
-  accepts it as a keyword argument.
+  accepts it as a keyword argument and hands it the repository root the
+  pathspecs were computed for, so the command runs in that tree rather than
+  in whatever directory the calling process happens to sit in.
 - `main()` wires a real `subprocess.run` adapter.
 """
 
@@ -39,9 +41,9 @@ SUCCESS_EXIT_CODE = 0
 
 
 class Runner(Protocol):
-    """Invokes the underlying git command. Returns its exit code."""
+    """Invokes the underlying git command from `cwd`. Returns its exit code."""
 
-    def __call__(self, argv: Sequence[str]) -> int: ...
+    def __call__(self, argv: Sequence[str], *, cwd: Path) -> int: ...
 
 
 def clean(
@@ -51,15 +53,16 @@ def clean(
     active_python_prefix: Path | None = None,
 ) -> int:
     """Run the workspace cleanup. Returns the process exit code."""
+    root = repo_root if repo_root is not None else Path.cwd()
     argv = build_clean_argv(
-        repo_root=repo_root if repo_root is not None else Path.cwd(),
+        repo_root=root,
         active_python_prefix=active_python_prefix
         if active_python_prefix is not None
         else Path(sys.prefix),
     )
     if not argv:
         return SUCCESS_EXIT_CODE
-    return runner(argv)
+    return runner(argv, cwd=root)
 
 
 def build_clean_argv(
@@ -115,8 +118,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     return clean(runner=_real_runner)
 
 
-def _real_runner(argv: Sequence[str]) -> int:
-    return subprocess.run(list(argv), check=False).returncode
+def _real_runner(argv: Sequence[str], *, cwd: Path) -> int:
+    return subprocess.run(list(argv), cwd=cwd, check=False).returncode
 
 
 __all__ = [

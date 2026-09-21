@@ -40,9 +40,10 @@ def test_clean_omits_active_environment_from_pathspecs(tmp_path: Path) -> None:
 
     assert exit_code == SUCCESS_EXIT_CODE
     assert len(runner.calls) == 1
-    assert runner.calls[0][:4] == (*CLEAN_BASE_ARGV, PATHSPEC_SEPARATOR)
-    assert IGNORED_CACHE_DIR in runner.calls[0]
-    assert IGNORED_PYTHON_ENV_DIR not in runner.calls[0]
+    assert runner.calls[0].cwd == repo.root
+    assert runner.calls[0].argv[:4] == (*CLEAN_BASE_ARGV, PATHSPEC_SEPARATOR)
+    assert IGNORED_CACHE_DIR in runner.calls[0].argv
+    assert IGNORED_PYTHON_ENV_DIR not in runner.calls[0].argv
 
 
 def test_git_dry_run_preserves_session_store_and_active_environment(

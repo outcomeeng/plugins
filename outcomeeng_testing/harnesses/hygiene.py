@@ -82,13 +82,11 @@ class XmlSpacingWorkspace:
 class SubprocessRunner:
     """Real subprocess implementation of the cleanup runner protocol."""
 
-    cwd: Path
-
-    def __call__(self, argv: Sequence[str]) -> int:
-        """Run cleanup argv in the arranged worktree."""
+    def __call__(self, argv: Sequence[str], *, cwd: Path) -> int:
+        """Run cleanup argv in the repository root the caller supplies."""
         return subprocess.run(
             tuple(argv),
-            cwd=self.cwd,
+            cwd=cwd,
             check=False,
             capture_output=True,
             timeout=SUBPROCESS_TIMEOUT_SECONDS,

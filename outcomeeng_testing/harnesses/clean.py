@@ -35,15 +35,23 @@ class EnvironmentPlacement(StrEnum):
     OUTSIDE = "outside"
 
 
+@dataclass(frozen=True)
+class RunnerCall:
+    """One recorded invocation: the argv and the directory it ran in."""
+
+    argv: tuple[str, ...]
+    cwd: Path
+
+
 @dataclass
 class RecordingRunner:
     """Runner that returns a scripted exit code and records every call."""
 
     exit_code: int = 0
-    calls: list[tuple[str, ...]] = field(default_factory=list)
+    calls: list[RunnerCall] = field(default_factory=list)
 
-    def __call__(self, argv: Sequence[str]) -> int:
-        self.calls.append(tuple(argv))
+    def __call__(self, argv: Sequence[str], *, cwd: Path) -> int:
+        self.calls.append(RunnerCall(argv=tuple(argv), cwd=cwd))
         return self.exit_code
 
 
@@ -124,6 +132,7 @@ __all__ = [
     "IGNORED_CACHE_DIR",
     "IGNORED_PYTHON_ENV_DIR",
     "RecordingRunner",
+    "RunnerCall",
     "create_clean_repo",
 ]
 
