@@ -33,3 +33,48 @@ The bound that holds is topical: a changeset may record a prior release whose ch
 **Revisit condition**: before the next release-process change touching `outcomeeng/distribution/bump.py` or the `bump-check` gate wiring.
 
 Surfaced on the release-overlay changeset, which backfilled 0.88.3, 0.88.5, and 0.88.6 and had one entry carry fabricated content before a verification pass caught it; all three were withdrawn. It kept the 0.88.4 entry and first justified that by authorship, until a skill audit established that every bump commit in this repository carries the same author identity, so the criterion separated nothing. The entry stands on the checkable relationship instead: 0.88.7 reverses what `dbd7b429cdc3744f7288553d1be8a4e91b76ab40` shipped.
+
+## Path-attribution assertion has unresolved evidence classification
+
+The second assertion under `### Properties` in `spx/32-distribution.enabler/21-bump.enabler/bump.md` states:
+
+> ALWAYS: a change attributes to plugin `{name}` when its path falls under `src/plugins/{name}/**`, `dist/claude/{name}/**`, or `dist/codex/{name}/**`, or when its path falls under the shared authored root and that plugin's authored source includes the changed fragment; a path matching neither triggers no bump.
+
+Its evidence link names `tests/test_bump.property.l1.py`. The spec audit on committed head `5b8289c33d7f6a87b2ceb74b1748849c57287c54` returned these two rows, reproduced verbatim as structured data:
+
+```json
+[
+  {
+    "name": "section-structure",
+    "status": "FAIL",
+    "findings": [
+      {
+        "location": "### Properties, assertion 2",
+        "rule": "heading-mismatch",
+        "evidence": "\"ALWAYS: a change attributes to plugin `{name}` when its path falls under ...\"",
+        "message": "This path-to-plugin attribution rule is a mapping, not a property.",
+        "severity": "REJECT"
+      }
+    ]
+  },
+  {
+    "name": "tag-fitness",
+    "status": "FAIL",
+    "findings": [
+      {
+        "location": "### Properties, assertion 2",
+        "rule": "evidence-type-mismatch",
+        "evidence": "\"ALWAYS: a change attributes to plugin `{name}` ... ([test](tests/test_bump.property.l1.py))\"",
+        "message": "The assertion maps path classes to plugin attribution, so the property test assertion type does not fit the claim.",
+        "severity": "REJECT"
+      }
+    ]
+  }
+]
+```
+
+Both rows concern one classification question. The assertion reads as a universal over an open path domain, which supports property evidence; the auditor reads it as a mapping over a finite set of path classes. The domain and quantifier determine the evidence type, so the two readings require resolution through verification selection.
+
+**Disposition and reason**: filed under `spx/15-merging.pdr.md` by operator instruction. The path-attribution assertion and its linked property evidence are outside the amendment in [Change #113](https://github.com/outcomeeng/changes/issues/113), which changes the ahead-of-base assertion's rationale and the opening sentence. This finding requires no repair or investigation round in that Change and does not block its merge.
+
+**Settlement condition**: on the node's next evidence change, select the quantifier and evidence type through `/verify` and its `/test` routing. If property stands, establish evidence with a generator over the declared path domain. If mapping stands, establish evidence over the complete finite source-owned class set. Align the assertion heading and linked evidence with that selection.
