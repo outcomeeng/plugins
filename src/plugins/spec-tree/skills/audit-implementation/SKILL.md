@@ -460,13 +460,13 @@ exitCode: <exact-integer|timeout-with-bound|signal-with-number|harness-tool-name
 stderr: <captured-stderr|harness-tool-error-text|none>
 ```
 
-Preparation failures use `runToken: not-started`, `payloadSource: none`,
-`payloadKey: none`, `exitCode: none`, and `stderr: none`. Every started-run
-diagnostic names the failed command and carries an integer exit code plus stderr,
-a timeout bound or signal number plus stderr, or a harness-tool name plus its
-error text. Name a blocked unit by its `unitId` in `command`. Never return the
-command alone: the remaining fields locate durable state and identify the failed
-boundary. A stale-base refusal is read from its exit code and stderr.
+A preparation failure where no command started uses `runToken: not-started`,
+`payloadSource: none`, `payloadKey: none`, `exitCode: none`, and `stderr: none`.
+A preparation command that ran and failed keeps `runToken: not-started`, names
+that exact command, and preserves its integer exit code and captured stderr,
+named termination and captured stderr, or harness-tool name and error text. A stale-base resolver refusal preserves its exit code and stderr. Every started-run
+diagnostic carries the same three command-evidence shapes. Name a blocked unit by its `unitId` in `command`; never return the command alone, because the remaining
+fields locate durable state and identify the failed boundary.
 
 Each finding row names every field of the finding payload shape in `<verification_run_contract>`, so a reader sees the producer, unit, rule, severity, location, message, and observed-versus-expected evidence without opening the journal.
 
