@@ -151,6 +151,11 @@ UNREFRESHABLE_RECORD_WARNING = (
     "plugin cache carries no directory for the target version {version}; the "
     "record is left unchanged."
 )
+UNRESOLVED_TARGET_RECORD_WARNING = (
+    "Claude Code records {plugin} at {scope} scope for {project_path}, but the "
+    "registered clone's catalog names no source for {plugin}, so the run resolved "
+    "no target version for it; the record is left unchanged."
+)
 OUT_OF_SCOPE_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}; persistent "
     "installation refreshes only project and local scope, so the record is left "
@@ -446,8 +451,10 @@ class RecordRewrite:
 class PathlessInstallRecord:
     """A Claude Code install record that names no project path.
 
-    Only a scope outside project and local scope reports one — user scope
-    today — so the record is reported and never refreshed.
+    A record at a scope outside project and local scope carries none — user
+    scope today — and a refresh-scope entry that carries none is a listing
+    defect the run reports as a blocking warning. Neither is refreshed,
+    because a rewrite addresses an entry by scope and project path.
     """
 
     plugin: str
@@ -2778,9 +2785,20 @@ def plan_install_record_rewrite(
     warnings: list[InstallationWarning] = []
     for record in records:
         version = target.versions.get(record.plugin)
-        if version is None or version not in cached_versions.get(
-            record.plugin, frozenset()
-        ):
+        if version is None:
+            warnings.append(
+                InstallationWarning(
+                    agent=Agent.CLAUDE,
+                    message=UNRESOLVED_TARGET_RECORD_WARNING.format(
+                        plugin=record.plugin,
+                        scope=record.scope,
+                        project_path=record.project_path,
+                    ),
+                    blocking=True,
+                )
+            )
+            continue
+        if version not in cached_versions.get(record.plugin, frozenset()):
             warnings.append(
                 InstallationWarning(
                     agent=Agent.CLAUDE,
@@ -2966,15 +2984,13 @@ def _command(
     argv: tuple[str, ...],
     roots: InstallationRoots,
     environment: tuple[tuple[str, str], ...],
-    *,
-    cwd: Path | None = None,
 ) -> InstallationCommand:
     return InstallationCommand(
         agent=agent,
         operation=operation,
         plugin=plugin,
         argv=argv,
-        cwd=roots.checkout if cwd is None else cwd,
+        cwd=roots.checkout,
         environment=environment,
     )
 
@@ -3149,6 +3165,7 @@ __all__ = [
     "UNDECLARED_SOURCE_DIAGNOSTIC",
     "UNLOCATED_REGISTRY_DIAGNOSTIC",
     "UNREFRESHABLE_RECORD_WARNING",
+    "UNRESOLVED_TARGET_RECORD_WARNING",
     "cached_plugin_versions",
     "catalog_marketplace_name",
     "claude_marketplace_source",

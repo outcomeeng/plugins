@@ -275,7 +275,7 @@ def test_an_interrupted_run_is_adopted_cleanly_on_rerun() -> None:
 
 
 def test_a_lifecycle_run_adopts_an_identical_unrecorded_destination(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path,
 ) -> None:
     lifecycle = PluginLifecycleHarness.create(tmp_path, plugin_name="fixture")
     module = lifecycle.load_module()

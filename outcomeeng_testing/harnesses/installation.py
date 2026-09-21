@@ -150,6 +150,8 @@ from outcomeeng_testing.generators.installation import (
     catalog_plugin_names_from_document,
     generated_agent_subsets,
     generated_claude_install_records,
+    generated_other_checkout_records,
+    generated_pathless_defect_records,
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
 )
@@ -1079,24 +1081,21 @@ def observe_repository_plan() -> PlanObservation:
 
 def observe_persistent_plan(
     *,
-    claude_repository: str | None = DECLARED_CLAUDE_SOURCE,
     claude_marketplace_listed: bool = True,
-    codex_source: str = DECLARED_CODEX_SOURCE,
     installed: Mapping[Agent, frozenset[str]] | None = None,
 ) -> PersistentPlanObservation:
     """Build a persistent plan in caller-selected temporary homes.
 
-    `claude_repository` is the marketplace source the mirrored checkout's
-    project settings declare; `None` leaves the checkout declaring none, the
-    registration-bootstrap case.
+    The mirrored checkout declares the marketplace source every observer
+    uses; `claude_marketplace_listed` selects whether the agent's registry
+    already carries that source or the run registers it.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        if claude_repository is not None:
-            _write_project_marketplace(mirror, claude_repository)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
         codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
@@ -1117,7 +1116,7 @@ def observe_persistent_plan(
                 inventories[Agent.CLAUDE],
             ),
             codex_marketplace_payload=codex_marketplace_listing_payload(
-                codex_source, MARKETPLACE
+                DECLARED_CODEX_SOURCE, MARKETPLACE
             ),
             codex_plugins_payload=_plugin_listing_payload(
                 Agent.CODEX,
@@ -1501,18 +1500,8 @@ def observe_unreadable_source() -> UnreadableSourceObservation:
             )
         except ValueError as error:
             bootstrap_error = str(error)
-        cases = (
-            (
-                {
-                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                        SPEC_TREE_PLUGIN, marketplace
-                    ),
-                    CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                    CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(other.resolve()),
-                    CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
-                },
-                RecordDisposition.FILE_REWRITE,
-            ),
+        cases = generated_other_checkout_records(
+            marketplace, SPEC_TREE_PLUGIN, other, LISTED_VERSION
         )
         target_version = served_version(len(cases))
         _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
@@ -1598,28 +1587,8 @@ def observe_pathless_record_listing() -> PathlessListingObservation:
         _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
         marketplace = preflight.roots.marketplace
-        cases = (
-            (
-                {
-                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                        SPEC_TREE_PLUGIN, marketplace
-                    ),
-                    CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                    CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
-                },
-                RecordDisposition.PATHLESS_DEFECT,
-            ),
-            (
-                {
-                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                        SPEC_TREE_PLUGIN, marketplace
-                    ),
-                    CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                    CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(other.resolve()),
-                    CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
-                },
-                RecordDisposition.FILE_REWRITE,
-            ),
+        cases = generated_pathless_defect_records(
+            marketplace, SPEC_TREE_PLUGIN, other, LISTED_VERSION
         )
         target_version = served_version(len(cases))
         _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
@@ -1719,9 +1688,7 @@ def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
     )
 
 
-def observe_persistent_execution(
-    installed: Mapping[Agent, frozenset[str]] | None = None,
-) -> PersistentExecutionObservation:
+def observe_persistent_execution() -> PersistentExecutionObservation:
     """Execute the persistent path through a recording command collaborator."""
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -1733,7 +1700,7 @@ def observe_persistent_execution(
         claude_catalog = (mirror / CLAUDE_CATALOG_PATH).read_bytes()
         codex_catalog = (mirror / CODEX_CATALOG_PATH).read_bytes()
         preflight = build_persistent_preflight(mirror, environment)
-        runner = RecordingRunner(installed=installed)
+        runner = RecordingRunner()
         report = execute_persistent_installation(mirror, environment, runner)
     return PersistentExecutionObservation(
         preflight=preflight,
@@ -2642,7 +2609,6 @@ def _seed_older_record_version(
     environment: Mapping[str, str],
     plugin: str,
     checkout: Path,
-    scope: str = CLAUDE_PROJECT_SCOPE,
 ) -> ClaudeInstallRecord:
     """Rewrite one project-scope record's version in the agent's own state.
 
@@ -2672,7 +2638,7 @@ def _seed_older_record_version(
     resolved = checkout.resolve()
     for entry in records[marketplace_plugin_identifier(plugin, MARKETPLACE)]:
         if (
-            entry.get(CLAUDE_PLUGIN_SCOPE_FIELD) == scope
+            entry.get(CLAUDE_PLUGIN_SCOPE_FIELD) == CLAUDE_PROJECT_SCOPE
             and Path(cast("str", entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD])).resolve()
             == resolved
         ):
@@ -2686,12 +2652,13 @@ def _seed_older_record_version(
             document_path.write_text(json.dumps(document, indent=2) + "\n")
             return ClaudeInstallRecord(
                 plugin=plugin,
-                scope=scope,
+                scope=CLAUDE_PROJECT_SCOPE,
                 project_path=resolved,
                 version=SEEDED_OLDER_VERSION,
             )
     raise RuntimeError(
-        f"no {scope}-scope {plugin} record for {resolved} in {document_path}"
+        f"no {CLAUDE_PROJECT_SCOPE}-scope {plugin} record for {resolved} "
+        f"in {document_path}"
     )
 
 

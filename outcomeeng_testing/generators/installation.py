@@ -298,6 +298,67 @@ def generated_closing_listing(
     return tuple(closing)
 
 
+def generated_pathless_defect_records(
+    marketplace: str,
+    plugin: str,
+    other_checkout: Path,
+    version: str,
+) -> tuple[tuple[dict[str, str], RecordDisposition], ...]:
+    """A refresh-scope entry carrying no project path beside a movable record.
+
+    The defect entry fails the run it appears in, so it is generated apart
+    from the whole-domain cycle; the well-formed record beside it is what
+    makes the run's continuation past the defect observable.
+    """
+    identifier = marketplace_plugin_identifier(plugin, marketplace)
+    return (
+        (
+            {
+                CLAUDE_PLUGIN_ID_FIELD: identifier,
+                CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                CLAUDE_PLUGIN_VERSION_FIELD: version,
+            },
+            RecordDisposition.PATHLESS_DEFECT,
+        ),
+        (
+            {
+                CLAUDE_PLUGIN_ID_FIELD: identifier,
+                CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(other_checkout.resolve()),
+                CLAUDE_PLUGIN_VERSION_FIELD: version,
+            },
+            RecordDisposition.FILE_REWRITE,
+        ),
+    )
+
+
+def generated_other_checkout_records(
+    marketplace: str,
+    plugin: str,
+    other_checkout: Path,
+    version: str,
+) -> tuple[tuple[dict[str, str], RecordDisposition], ...]:
+    """One project-scope record outside the invocation checkout, at `version`.
+
+    The rewrite moves this record without a command in its checkout, so it
+    is the minimal listing for any run whose subject is the machine-wide
+    refresh rather than the invocation checkout's own bootstrap.
+    """
+    return (
+        (
+            {
+                CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                    plugin, marketplace
+                ),
+                CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(other_checkout.resolve()),
+                CLAUDE_PLUGIN_VERSION_FIELD: version,
+            },
+            RecordDisposition.FILE_REWRITE,
+        ),
+    )
+
+
 def generated_claude_install_records(
     catalog: Sequence[str],
     marketplace: str,
