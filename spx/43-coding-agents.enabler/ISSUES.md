@@ -12,6 +12,10 @@ A shipped environment adapter carries the regex tables and the scanner functions
 
 **Settlement condition.** The adapter decisions, or the environments decision above them, name one home for raw-command detection outside the shipped adapters; each node's compliance test imports the scanners and patterns from that home; and no shipped adapter under `src/plugins/coding-agents/` defines a scanner over sibling scripts.
 
+**Second reading, same placement.** An isolated test-evidence audit reached the same constants from the other direction: the scanners and their patterns have no production consumer at all. The adapter's CLI exposes only `run` and `project-key`, `main` dispatches only those two, the skill instructs only those two invocations, and the script ships standalone with no entry point or export declaration, so the sole caller in the checkout is the node's compliance test. The enforcement rule the compliance assertion claims therefore lives in a constant only the tests read, which is the consumer check the second entry in this file names. Both readings settle together under the condition above.
+
+**Evidence, second reading.** `spec-tree:test-evidence-auditor` finding `f-002` on head `d6d1b5458af190ac9d1f05775c869c08ab206c95`, rule `source-ownership`.
+
 ## The evidence-repair same-class scan stops at the test file
 
 The apply flow's evidence repair scans for the rejected class inside the linked tests — a restated literal, a copied table — and stops there. The mirror shape is invisible to that scan: a value the tests import from production that no production path consumes. `agent_message.py` carried `FORBIDDEN_TARGET_FIELDS`, `FORBIDDEN_EXECUTABLE_FIELDS`, and `CLEAN_STATUS` as constants only the node's tests and harness read, so a test that iterated them was coupled to an inert declaration, and emptying the constant left the test green.
@@ -21,3 +25,13 @@ The apply flow's evidence repair scans for the rejected class inside the linked 
 **Gap.** `src/plugins/spec-tree/skills/apply/SKILL.md` `<stabilized_diff_rule>` names the same-class sweep over the touched node's governed files but does not name the consumer check: for every source-owned value a test imports, a production path consumes it.
 
 **Settlement condition.** The apply flow's same-class sweep, or the test-evidence standard it applies, states that a source-owned value a test imports has a production consumer, and a compliance test's violating cases come from the linked test or a real production contract, never from a constant only tests read.
+
+## Two adapter skills report an empty request to a named caller
+
+`/skill-standards` requires a skill instruction to read the same whether a workflow or a person invokes it, so an instruction that names its caller breaks caller independence. Two sibling capability skills direct the empty-argument report to "the invoking workflow": `src/plugins/coding-agents/skills/operate-herdr/SKILL.md` at lines 54 and 70, where line 70 additionally routes mutation authorization through "the invoking workflow holds". The same wording in `src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` is repaired in the changeset that found it.
+
+**Impact**: a person invoking `/operate-herdr` by name reads an instruction addressed to a workflow that does not exist, and the mutation-authorization sentence names a holder the direct invocation has no counterpart for.
+
+**Settlement condition**: both lines state the report and the authorization requirement without naming a caller, and the herdr node's skill surface passes the typed skill auditor.
+
+**Evidence**: `instructions:skill-auditor` finding `f-010` against the agent-mail skill on head `d6d1b5458af190ac9d1f05775c869c08ab206c95`, then a same-class sweep across `src/plugins/coding-agents/skills/*/SKILL.md` that found the two herdr instances and no others.

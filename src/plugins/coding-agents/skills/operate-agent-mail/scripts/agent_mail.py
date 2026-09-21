@@ -305,6 +305,10 @@ GIT_PROJECT_KEY_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"[\[(]['\"]git['\"]\s*,"),
     re.compile(r"['\"]\.git['\"/]"),
     re.compile(r"\bgit\s+(?:rev-parse|worktree|-C)\b"),
+    # The constant-named vector form this adapter itself uses; a sibling script
+    # naming its Git command through constants reads the same as one spelling
+    # it literally.
+    re.compile(r"\bGIT_COMMAND\b|\bREV_PARSE_COMMAND\b|\bGIT_COMMON_DIR_OPTION\b"),
 )
 
 

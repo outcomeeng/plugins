@@ -29,7 +29,7 @@ The project key is the repository's own common Git directory, so every worktree 
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report to the invoking workflow that one operation from `<operation_surface>` is required; the adapter has no default operation.
+1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report that one operation from `<operation_surface>` is required; the adapter has no default operation.
 2. Build this source-owned request shape and set only the arguments the operation accepts:
 
 ```json
@@ -52,7 +52,7 @@ The project key is the repository's own common Git directory, so every worktree 
 ```
 
 3. Submit the request over stdin in one of the forms in `<invocation_forms>`.
-4. Accept only `status: "succeeded"`. Preserve the complete versioned result: `commandExitCode`, `projectKey`, the store's `response`, and `data`. A delivered message is the `record` in `data` carrying its store-assigned `id`. Stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `store-unavailable`, `repository-unresolved`, or `operation-unavailable`; none of them admits a fallback command, key, or store.
+4. For a `run` request, accept only `status: "succeeded"`. Preserve the complete versioned result: `commandExitCode`, `projectKey`, the store's `response`, and `data`. A delivered message is the `record` in `data` carrying its store-assigned `id`. Stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `store-unavailable`, `repository-unresolved`, or `operation-unavailable`; none of them admits a fallback command, key, or store. The `project-key` operation answers in its own shape, stated with its form below.
 
 </workflow>
 
@@ -78,6 +78,8 @@ To read the project key alone:
 python3 "${SKILL_DIR}/scripts/agent_mail.py" project-key
 ```
 
+This form answers `{"projectKey": "<absolute path>"}` and exits zero, or `{"status": "repository-unresolved", "detail": "<reason>"}` and exits non-zero. It carries no `schemaVersion`, `status` on success, `commandExitCode`, `response`, or `data`, because it runs no store command.
+
 </invocation_forms>
 
 <constraints>
@@ -86,7 +88,7 @@ python3 "${SKILL_DIR}/scripts/agent_mail.py" project-key
 - ALWAYS preserve store identities verbatim: message ids, thread ids, agent names, and timestamps, because downstream skills index on the literal and the operator compares it against the store.
 - ALWAYS supply arguments under the field names in `<operation_surface>` and leave the mapping to the adapter: it alone turns a field into an `am` option or a store field and reads it back, and it rejects an argument outside the operation's shape as `invalid-schema` rather than dropping it.
 - NEVER invoke raw `am` commands, `am` command help, or read the store's database.
-- NEVER derive the project key yourself; the adapter reads it from the repository, and no working directory, environment variable, or parent path stands in for it.
+- NEVER derive the project key outside the adapter; it reads the key from the repository, and no working directory, environment variable, or parent path stands in for it.
 - NEVER treat a receipt as agreement, ownership, authorization, or the acknowledgement of a proposal; it records only that the recipient read one message.
 - NEVER report or relay the registration token the store returns; the adapter removes it from every result.
 
@@ -100,7 +102,7 @@ The bundled adapter is covered by tests over generated request, record, and repo
 
 <success_criteria>
 
-- A successful operation is established only when the bundled script exits zero and emits `schemaVersion: 1`, `status: "succeeded"`, `commandExitCode: 0`, `projectKey`, `response`, and `data` without exposing `am` command grammar.
+- A successful `run` operation is established only when the bundled script exits zero and emits `schemaVersion: 1`, `status: "succeeded"`, `commandExitCode: 0`, `projectKey`, `response`, and `data` without exposing `am` command grammar; a successful `project-key` operation is established only when it exits zero and emits `projectKey`.
 - Every record sent and read back carries the same `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, plus the store-assigned `id` on read.
 - An absent store or an unresolvable repository yields its named unavailable result and no fallback.
 - No registration result carries the store's registration token.

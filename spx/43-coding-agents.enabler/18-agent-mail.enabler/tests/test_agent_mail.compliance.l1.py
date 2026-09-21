@@ -5,10 +5,12 @@ from typing import cast
 from outcomeeng_testing.harnesses.agent_mail import (
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
+    git_project_key_constants_violation_source,
     git_project_key_violation_source,
     load_agent_mail,
     mail_command_source_texts,
     raw_mail_violation_source,
+    requests_over_every_operation,
     run_cli_with_only_adapter_programs,
     run_cli_without_executables,
     run_generated_identities,
@@ -22,24 +24,30 @@ def test_unavailable_results_admit_no_fallback() -> None:
     def assert_case(
         module: ModuleType, agent: str, program: str, model: str, project_key: str
     ) -> None:
-        request = module.operation_request(module.Operation.INBOX, agent=agent)
+        for request in requests_over_every_operation(module):
+            operation = module.Operation(request[module.OPERATION_FIELD])
 
-        completed = run_cli_without_executables(request, fallback_project=project_key)
-        result = json.loads(completed.stdout)
-        assert completed.returncode != 0
-        assert (
-            result[module.STATUS_FIELD] == module.ExecutionStatus.REPOSITORY_UNRESOLVED
-        )
-        assert module.PROJECT_KEY_FIELD not in result
-        assert project_key not in completed.stdout
+            completed = run_cli_without_executables(
+                request, fallback_project=project_key
+            )
+            result = json.loads(completed.stdout)
+            assert completed.returncode != 0, operation
+            assert (
+                result[module.STATUS_FIELD]
+                == module.ExecutionStatus.REPOSITORY_UNRESOLVED
+            )
+            assert module.PROJECT_KEY_FIELD not in result
+            assert project_key not in completed.stdout
 
-        no_store = common_dir_seeded_absent_store_runner(module, project_key)
-        result = module.execute(request, no_store)
-        assert result[module.STATUS_FIELD] == module.ExecutionStatus.STORE_UNAVAILABLE
-        assert [argv[0] for argv, _ in no_store.calls] == [
-            module.PUBLIC_GIT_COMMON_DIR_COMMAND[0],
-            module.AM_COMMAND,
-        ]
+            no_store = common_dir_seeded_absent_store_runner(module, project_key)
+            result = module.execute(request, no_store)
+            assert (
+                result[module.STATUS_FIELD] == module.ExecutionStatus.STORE_UNAVAILABLE
+            ), operation
+            assert [argv[0] for argv, _ in no_store.calls] == [
+                module.PUBLIC_GIT_COMMON_DIR_COMMAND[0],
+                module.AM_COMMAND,
+            ]
 
     run_generated_identities(assert_case)
 
@@ -76,18 +84,19 @@ def test_operations_reach_no_program_outside_the_adapters_own_commands() -> None
     def assert_case(
         module: ModuleType, agent: str, program: str, model: str, project_key: str
     ) -> None:
-        request = module.operation_request(module.Operation.INBOX, agent=agent)
+        for request in requests_over_every_operation(module):
+            operation = module.Operation(request[module.OPERATION_FIELD])
 
-        completed = run_cli_with_only_adapter_programs(
-            request,
-            project_key=project_key,
-            store_response=store_response_text(module, module.Operation.INBOX),
-        )
-        result = json.loads(completed.stdout)
+            completed = run_cli_with_only_adapter_programs(
+                request,
+                project_key=project_key,
+                store_response=store_response_text(module, operation),
+            )
+            result = json.loads(completed.stdout)
 
-        assert completed.returncode == 0, completed.stderr
-        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
-        assert result[module.PROJECT_KEY_FIELD] == project_key
+            assert completed.returncode == 0, (operation, completed.stderr)
+            assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+            assert result[module.PROJECT_KEY_FIELD] == project_key
 
     run_generated_identities(assert_case)
 
@@ -102,3 +111,5 @@ def test_no_other_shipped_script_constructs_mail_commands_or_git_keys() -> None:
     assert module.raw_mail_command_violations(raw_source) == [raw_path]
     git_path, git_source = git_project_key_violation_source()
     assert module.git_project_key_violations(git_source) == [git_path]
+    const_path, const_source = git_project_key_constants_violation_source()
+    assert module.git_project_key_violations(const_source) == [const_path]

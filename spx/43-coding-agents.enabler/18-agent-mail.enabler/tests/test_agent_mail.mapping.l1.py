@@ -267,15 +267,26 @@ def test_every_checkout_shape_of_one_pool_maps_to_one_project_key() -> None:
     module = load_agent_mail()
 
     with mail_pool() as pool:
-        keys = {
-            shape.name: run_cli_project_key(shape)
-            for shape in (pool.bare, pool.main_checkout, pool.linked_worktree)
-        }
+        shapes = (
+            pool.bare,
+            pool.main_checkout,
+            pool.linked_worktree,
+            pool.symlinked_worktree,
+        )
+        keys = {shape.name: run_cli_project_key(shape) for shape in shapes}
         outside_code, outside_payload = run_cli_project_key(pool.outside)
+        expected_key = str(pool.bare)
+        symlinked_route = str(pool.symlinked_worktree)
+        physical_route = str(pool.linked_worktree)
 
+    assert len(keys) == len(shapes)
     for name, (exit_code, payload) in keys.items():
         assert exit_code == 0, (name, payload)
-        assert payload[module.PROJECT_KEY_FIELD] == str(pool.bare), (name, payload)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (name, payload)
+
+    # The symlinked route is a second spelling of one checkout, so a key that
+    # carried the path a caller typed would differ from its physical route's.
+    assert symlinked_route != physical_route
 
     assert outside_code != 0
     assert module.PROJECT_KEY_FIELD not in outside_payload

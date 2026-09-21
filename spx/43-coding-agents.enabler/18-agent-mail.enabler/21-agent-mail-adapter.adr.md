@@ -9,7 +9,8 @@ One capability keeps store command knowledge and the record mapping testable and
 ## Invariants
 
 - One source-owned operation registry covers register, send, inbox, and receipt.
-- One project-key resolver maps the repository's absolute common Git directory, read for the adapter's own working directory, to the project key — normalized to an absolute path carrying no `.` or `..` segment, no repeated separator, and no trailing separator — or to the repository-unresolved result; it reads no working directory, environment variable, or parent path as a fallback.
+- One project-key resolver maps the repository's absolute common Git directory, read for the adapter's own working directory, to the project key, or to the repository-unresolved result; it reads no working directory, environment variable, or parent path as a fallback.
+- The key is canonical, and the two layers that make it so are separate. The repository lookup resolves the physical directory, because it answers from the process's own resolved working directory, so a checkout reached through a symlinked route and through its physical route report one directory. The resolver then normalizes that answer textually, to an absolute path carrying no `.` or `..` segment, no repeated separator, and no trailing separator. Canonicality rests on the lookup; the resolver never re-resolves a symlink, so a lookup that returned a non-physical path would surface as one repository with two keys rather than being silently repaired.
 - One record mapping is a bijection between a message record and the store fields the adapter writes: `correlation` to the thread id, `kind` to the subject prefix, `sender` to the sender, `recipient` to the recipients, `subject` to the subject remainder, `body` to the body, `ackRequired` to the acknowledgement requirement, and the store-assigned `id` to the record id.
 - Every command execution is bounded, argument-vector based, fully reaped before return, and isolated from the adapter request stream.
 - Store identities — message ids, thread ids, agent names, timestamps — remain byte-for-byte values from the public response.
@@ -23,7 +24,7 @@ One capability keeps store command knowledge and the record mapping testable and
 ### Testing
 
 - ALWAYS: each source-owned operation maps a valid versioned request to the exact `am` argument vector for that operation under the resolved project key ([mapping])
-- ALWAYS: a linked worktree, the pool's bare repository, and the pool's main checkout each map to one project key, that key being the pool's bare repository directory, and a working directory that is no repository maps to the repository-unresolved result ([mapping])
+- ALWAYS: a linked worktree, the pool's bare repository, the pool's main checkout, and a symlinked route to one of them each map to one project key, that key being the pool's bare repository directory, and a working directory that is no repository maps to the repository-unresolved result ([mapping])
 - ALWAYS: public `am` responses map to versioned source-owned results or named command failures without value rewriting ([mapping])
 - ALWAYS: every message record maps onto the store fields and back to an equal record ([property])
 - ALWAYS: a terminal handback record maps to exactly one terminal result carrying the complete initiating coordination reference; a matching repeated handback is idempotent and a conflicting terminal kind for one reference is rejected ([property])
@@ -37,6 +38,7 @@ One capability keeps store command knowledge and the record mapping testable and
 - NEVER: a shipped coding-agents skill outside `/operate-agent-mail` instructs a workflow to construct `am` commands, invoke `am` command help, or read the store's database ([audit])
 - ALWAYS: the store subprocess boundary accepts a dependency-injected `CommandRunner` Protocol and the default runner uses null-device stdin, captured output, and a bounded timeout ([audit])
 - ALWAYS: tests inject controlled runner implementations only under `/test` Stage 5 exception 1 (failure simulation) or exception 2 (interaction protocols) ([audit])
+- ALWAYS: a controlled stand-in placed at the process boundary rather than injected through the runner — an executable on a restricted search path — stands only as exception 2 (interaction protocols) evidence for the boundary itself, naming which programs the adapter may reach; it never stands in for store behavior, which the captured responses own ([audit])
 - ALWAYS: `/operate-agent-mail` owns all bundled-script access; composing skills invoke the capability through the skill surface rather than manufacturing a cross-skill filesystem path ([audit])
 - NEVER: framework mocks or monkeypatching replace store behavior or the command-runner boundary ([audit])
 - NEVER: the adapter owns another workflow's retry, checkpoint, persistence, result interpretation, or continuation decision ([audit])

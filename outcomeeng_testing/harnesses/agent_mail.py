@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import shlex
 import subprocess
 import sys
@@ -61,6 +62,9 @@ USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
 RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
 RAW_MAIL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_command.py.txt"
 GIT_PROJECT_KEY_VIOLATION_FIXTURE = FIXTURE_ROOT / "git_project_key.py.txt"
+# The same derivation spelled through constants, the form the adapter itself
+# uses for its own vector.
+GIT_PROJECT_KEY_CONSTANTS_FIXTURE = FIXTURE_ROOT / "git_project_key_constants.py.txt"
 RECORD_ROUNDTRIP_SEED = 2026091801
 RECORD_ROUNDTRIP_EXAMPLES = 60
 RECORD_ROUNDTRIP_REPLAY_PATH = (
@@ -94,9 +98,9 @@ COMPLIANCE_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.compliance.l1.py"
 )
-# The store CLI's own project fallback; the adapter never reads it, and the
-# compliance probe sets it as the fallback the adapter must ignore.
-STORE_PROJECT_ENV = "AGENT_MAIL_PROJECT"
+# The store CLI's own project fallback, read from the capture that declares it;
+# the adapter never reads it, and the compliance probe sets it as the fallback
+# the adapter must ignore.
 CLI_TIMEOUT_SECONDS = 60
 # The pool one probe builds: a bare repository, the main checkout beside it,
 # and one linked worktree, so the resolver is read from all three shapes.
@@ -104,6 +108,7 @@ POOL_REPOSITORY_NAME = "pool"
 POOL_MAIN_CHECKOUT_NAME = "main"
 POOL_LINKED_WORKTREE_NAME = "linked"
 POOL_SEED_NAME = "seed"
+POOL_SYMLINK_NAME = "linked-by-symlink"
 # One absolute key for probes that need a repository but do not vary it.
 SHARED_PROJECT_KEY = "/repository/pool.git"
 POOL_DEFAULT_BRANCH = "main"
@@ -186,11 +191,6 @@ def _load() -> ModuleType:
 def load_agent_mail() -> ModuleType:
     """Load the shipped adapter so linked tests can inspect its public contract."""
     return _load()
-
-
-def json_command_result(module: ModuleType, payload: object) -> CommandResultContract:
-    """Return one controlled JSON response from a public command boundary."""
-    return cast(CommandResultContract, module.CommandResult(0, json.dumps(payload), ""))
 
 
 def text_command_result(module: ModuleType, text: str) -> CommandResultContract:
@@ -734,6 +734,13 @@ def git_project_key_violation_source() -> tuple[str, dict[str, str]]:
     )
 
 
+def git_project_key_constants_violation_source() -> tuple[str, dict[str, str]]:
+    return (
+        str(GIT_PROJECT_KEY_CONSTANTS_FIXTURE.relative_to(ROOT)),
+        _source_texts((GIT_PROJECT_KEY_CONSTANTS_FIXTURE,)),
+    )
+
+
 @dataclass(frozen=True)
 class MailPool:
     """One real repository reached through its three checkout shapes.
@@ -746,6 +753,7 @@ class MailPool:
     bare: Path
     main_checkout: Path
     linked_worktree: Path
+    symlinked_worktree: Path
     outside: Path
 
 
@@ -764,7 +772,9 @@ def mail_pool() -> Iterator[MailPool]:
     that is no repository.
 
     The main checkout is a worktree of the bare repository, the shape a
-    provisioned pool takes, rather than its own clone.
+    provisioned pool takes, rather than its own clone. A symlink to the linked
+    worktree gives one checkout a second route, so a key that varied with the
+    path a caller typed would differ from the key its physical route returns.
     """
     with TemporaryDirectory(ignore_cleanup_errors=True) as raw:
         outside = Path(raw).resolve()
@@ -792,10 +802,13 @@ def mail_pool() -> Iterator[MailPool]:
         )
         linked_worktree = outside / POOL_LINKED_WORKTREE_NAME
         _git_in(bare, "worktree", "add", "--quiet", "--detach", str(linked_worktree))
+        symlinked_worktree = outside / POOL_SYMLINK_NAME
+        symlinked_worktree.symlink_to(linked_worktree)
         yield MailPool(
             bare=bare,
             main_checkout=main_checkout,
             linked_worktree=linked_worktree,
+            symlinked_worktree=symlinked_worktree,
             outside=outside,
         )
 
@@ -812,6 +825,35 @@ def run_cli_project_key(working_directory: Path) -> tuple[int, dict[str, object]
         check=False,
     )
     return completed.returncode, cast(dict[str, object], json.loads(completed.stdout))
+
+
+def requests_over_every_operation(module: ModuleType) -> list[dict[str, object]]:
+    """One request per source-owned operation, covering the whole enumeration.
+
+    A rule quantified over operations is read against every member, so a
+    program reached only from one operation's path still falsifies it.
+    """
+    requests = [
+        request
+        for request in operation_requests(module)
+        if _minimal_request(module, request)
+    ]
+    covered = {request[module.OPERATION_FIELD] for request in requests}
+    if covered != {operation.value for operation in module.Operation}:
+        raise CaptureError(
+            f"The generated requests cover {sorted(covered)}, not every operation"
+        )
+    return requests
+
+
+def _minimal_request(module: ModuleType, request: dict[str, object]) -> bool:
+    """Whether the request carries only its operation's required fields."""
+    operation = module.Operation(request[module.OPERATION_FIELD])
+    arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+    return any(
+        set(arguments) == set(shape.required_fields)
+        for shape in module.OPERATION_CONTRACTS[operation].request_shapes
+    )
 
 
 def adapter_programs(module: ModuleType) -> frozenset[str]:
@@ -868,6 +910,31 @@ def run_cli_with_only_adapter_programs(
     )
 
 
+def store_project_fallback_variable(module: ModuleType) -> str:
+    """The environment variable the store CLI falls back to for its project.
+
+    Read from the captured usage text that declares it, so the probe's fallback
+    is the store's own statement rather than a token restated beside the
+    adapter, and a capture whose wording drifts fails the read.
+    """
+    capture = USAGE_FIXTURE_ROOT / (
+        f"{_command_fixture_name(module, module.Operation.INBOX)}.txt"
+    )
+    names = {
+        match.group(1)
+        for line in capture.read_text(encoding="utf-8").splitlines()
+        if line.lstrip().startswith(module.PROJECT_OPTION)
+        for match in [re.search(r"\b([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b", line)]
+        if match
+    }
+    if len(names) != 1:
+        raise CaptureError(
+            f"{capture} declares {len(names)} project fallback variables for "
+            f"{module.PROJECT_OPTION}; one is required"
+        )
+    return names.pop()
+
+
 def run_cli_without_executables(
     request: dict[str, object], *, fallback_project: str
 ) -> CommandResultContract:
@@ -877,7 +944,10 @@ def run_cli_without_executables(
         completed = subprocess.run(
             [sys.executable, str(AGENT_MAIL_PATH), module.CliOperation.RUN],
             input=json.dumps(request),
-            env={"PATH": empty_path, STORE_PROJECT_ENV: fallback_project},
+            env={
+                "PATH": empty_path,
+                store_project_fallback_variable(module): fallback_project,
+            },
             cwd=ROOT,
             capture_output=True,
             text=True,
