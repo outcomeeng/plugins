@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from enum import StrEnum
 from pathlib import Path
 import subprocess
 
@@ -22,6 +23,16 @@ from outcomeeng.hygiene.clean import GIT_IGNORE_FILE, SPX_STORE_DIR, Runner
 
 IGNORED_CACHE_DIR = ".cache"
 IGNORED_PYTHON_ENV_DIR = ".venv"
+EXTERNAL_PYTHON_ENV_DIR = "external-venv"
+
+
+class EnvironmentPlacement(StrEnum):
+    """Where the active Python environment sits relative to the repository."""
+
+    INSIDE = "inside"
+    SYMLINKED = "symlinked"
+    SYMLINK_TARGET = "symlink-target"
+    OUTSIDE = "outside"
 
 
 @dataclass
@@ -46,16 +57,28 @@ class CleanRepo:
     session_store: Path
 
 
-def create_clean_repo(tmp_path: Path, *, include_cache: bool = True) -> CleanRepo:
-    """Create a repository with ignored environment, session store, and cache."""
+def create_clean_repo(
+    tmp_path: Path,
+    *,
+    include_cache: bool = True,
+    environment: EnvironmentPlacement = EnvironmentPlacement.INSIDE,
+) -> CleanRepo:
+    """Create a repository with ignored environment, session store, and cache.
+
+    `environment` selects where the active Python environment sits: directly
+    inside the repository, inside it as a symlink to an external directory
+    (addressed by the link or by its target), or wholly outside it. The
+    returned `active_python_prefix` is the prefix that placement hands the
+    cleanup command.
+    """
     repo_root = tmp_path / "repo"
-    active_python_prefix = repo_root / IGNORED_PYTHON_ENV_DIR
     ignored_cache = repo_root / IGNORED_CACHE_DIR
     session_store = repo_root / SPX_STORE_DIR
-    active_python_prefix.mkdir(parents=True)
+    repo_root.mkdir(parents=True)
     session_store.mkdir()
     if include_cache:
         ignored_cache.mkdir()
+    active_python_prefix = _place_environment(tmp_path, repo_root, environment)
     (repo_root / GIT_IGNORE_FILE).write_text(
         f"{IGNORED_PYTHON_ENV_DIR}/\n{IGNORED_CACHE_DIR}/\n{SPX_STORE_DIR}/\n",
         encoding="utf-8",
@@ -74,8 +97,30 @@ def create_clean_repo(tmp_path: Path, *, include_cache: bool = True) -> CleanRep
     )
 
 
+def _place_environment(
+    tmp_path: Path,
+    repo_root: Path,
+    environment: EnvironmentPlacement,
+) -> Path:
+    in_repo_prefix = repo_root / IGNORED_PYTHON_ENV_DIR
+    external_prefix = tmp_path / EXTERNAL_PYTHON_ENV_DIR
+    if environment is EnvironmentPlacement.INSIDE:
+        in_repo_prefix.mkdir()
+        return in_repo_prefix
+    if environment is EnvironmentPlacement.OUTSIDE:
+        external_prefix.mkdir()
+        return external_prefix
+    external_prefix.mkdir()
+    in_repo_prefix.symlink_to(external_prefix, target_is_directory=True)
+    if environment is EnvironmentPlacement.SYMLINKED:
+        return in_repo_prefix
+    return external_prefix
+
+
 __all__ = [
     "CleanRepo",
+    "EXTERNAL_PYTHON_ENV_DIR",
+    "EnvironmentPlacement",
     "IGNORED_CACHE_DIR",
     "IGNORED_PYTHON_ENV_DIR",
     "RecordingRunner",
