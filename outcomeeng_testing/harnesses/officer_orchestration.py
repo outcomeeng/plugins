@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import io
 import json
@@ -51,7 +52,6 @@ class LedgerModule(Protocol):
         *,
         stdin: TextIO | None = None,
         stdout: TextIO | None = None,
-        stderr: TextIO | None = None,
     ) -> int: ...
 
 
@@ -80,17 +80,22 @@ def load_ledger_module() -> LedgerModule:
 def run_ledger(
     arguments: Sequence[str], payload: Mapping[str, object] | str
 ) -> LedgerEntrypointObservation:
-    """Execute the ledger entry point and capture its observations."""
+    """Execute the ledger entry point and capture its observations.
+
+    The error stream is captured by redirecting the process's own `sys.stderr`
+    for the duration of the call, so any write the entry point makes to the real
+    stream reaches the observation.
+    """
     module = load_ledger_module()
     standard_output = io.StringIO()
     standard_error = io.StringIO()
     standard_input = payload if isinstance(payload, str) else json.dumps(payload)
-    exit_code = module.main(
-        arguments,
-        stdin=io.StringIO(standard_input),
-        stdout=standard_output,
-        stderr=standard_error,
-    )
+    with contextlib.redirect_stderr(standard_error):
+        exit_code = module.main(
+            arguments,
+            stdin=io.StringIO(standard_input),
+            stdout=standard_output,
+        )
     return LedgerEntrypointObservation(
         exit_code=exit_code,
         result=cast(dict[str, object], json.loads(standard_output.getvalue())),

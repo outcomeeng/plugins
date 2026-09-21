@@ -1,5 +1,16 @@
 # Officer order template
 
+## Contents
+
+- [Identity and frozen subject](#identity-and-frozen-subject)
+- [Operator words](#operator-words)
+- [Frame and build constraints](#frame-and-build-constraints)
+- [Delegation contract](#delegation-contract)
+- [Round ceiling](#round-ceiling)
+- [Standing rules](#standing-rules)
+- [Change lifecycle](#change-lifecycle)
+- [Reporting cadence](#reporting-cadence)
+
 Copy this template into one durable `order` record. Replace every placeholder.
 An unfilled field refuses the order.
 
@@ -45,8 +56,18 @@ Do not paraphrase, extend, or silently narrow this text.
 - Owned paths and mutations: `<exact paths and external mutations>`
 - Required skills: `<complete list>`
 - Required deterministic commands: `<complete commands and bounds>`
-- Forbidden actions: `<complete prohibitions>`
+- Worktree ownership: `the officer owns the assigned worktree while this order
+  stands and is accountable for what it does there; every file operation inside
+  it, removal included, is open to the officer`
+- Forbidden actions: `<complete prohibitions this Change's Frame or the
+  operator's words impose>`
 - Completion condition: `<exact committed and verification state>`
+
+`Forbidden actions` carries only what this Change's Frame or the operator's
+words prohibit. It never carries a standing prohibition on removing a file: the
+officer owns the assigned worktree, a removal there loses nothing another
+session holds and nothing Git cannot restore, and the worktree-ownership field
+above states that positively so no order can invert it.
 
 ## Delegation contract
 
@@ -56,6 +77,9 @@ Do not paraphrase, extend, or silently narrow this text.
 - Fixer: `<fresh session of the Author definition, launched only after a rejected verdict>`
 - Activity facts: `<each fact names the subagent sessions that performed the work>`
 - Officer authoring boundary: `The officer authors, audits, reviews, and fixes nothing itself.`
+- Concurrent integration: `the Executor may commit the Fixer's work while that
+  Fixer still runs, so a Fixer that observes a commit carrying its own files made
+  no error and never touches history to undo it`
 
 ## Round ceiling
 

@@ -3,6 +3,7 @@
 ## Contents
 
 - [Pane mutation authorization](#pane-mutation-authorization)
+- [Accountability and the delegation boundary](#accountability-and-the-delegation-boundary)
 - [Autonomous and held decisions](#autonomous-and-held-decisions)
 - [Verifier launch failures](#verifier-launch-failures)
 - [Durable facts and the filed disposition](#durable-facts-and-the-filed-disposition)
@@ -16,13 +17,14 @@ Change's Refiner, Executor, Author, Fixer, or Verifier roles.
 
 ## Pane mutation authorization
 
-The operator's invocation of this skill is the standing authorization for pane
-mutation. It is scoped to exactly the officer panes this skill launched and
-reaches no further: a pane this skill did not launch, the operator's own pane,
-and every pane of another fleet stay outside it. A pane leaves the set when its
-session is stopped and re-enters it only through a relaunch this skill performs.
+Mutating a pane requires the explicit standing or same-turn authorization the
+invoking workflow holds for that exact pane. The authorization is scoped to
+exactly the officer panes this skill launched and reaches no further: a pane
+this skill did not launch, the operator's own pane, and every pane of another
+fleet stay outside it. A pane leaves the set when its session is stopped and
+re-enters it only through a relaunch this skill performs.
 
-Each mutating request carries that standing authorization. The mutating herdr
+Each mutating request carries that authorization. The mutating herdr
 operations are `key`, `start`, `relaunch`, `stop`, and `open-worktree`; each
 carries `"mutationAuthorized": true` inside `arguments`, the form
 `coding-agents:operate-herdr` requires. Without it that capability runs no
@@ -31,6 +33,27 @@ command and returns `mutation-unauthorized`. The non-mutating operations —
 
 Authorization permits the operation; it never selects one. A mutating operation
 still requires the routed workflow's own condition for that pane.
+
+## Accountability and the delegation boundary
+
+Accountability to the operator for the agreed outcome stays with this session
+and never transfers. Responsibility for the work transfers to the officer
+holding the Change: what that officer does inside its worktree is its own, under
+the boundary and ceiling its order sets. That is why an order sets a boundary
+and a ceiling and this session then monitors, rather than approving each act.
+
+An officer holding a worktree is accountable for what it does there and owns
+that worktree while it is assigned. Every file operation inside it, removal
+included, is open to the officer, because a removal there loses nothing another
+session holds and nothing Git cannot restore.
+
+The delegation is bounded by isolation and the merge guardrails. Each officer
+works in a worktree of its own, where a local act is contained and recoverable.
+Reaching the default branch is the one consequential act, and it stands behind
+the gates, audits, review, and readiness predicates. Those two bounds are what
+place the escalation boundary where the next section draws it: a decision whose
+blast radius a worktree contains is the officer's, and a decision that changes
+what reaches the default branch, the Frame, or the spend is not.
 
 ## Autonomous and held decisions
 

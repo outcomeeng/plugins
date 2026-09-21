@@ -27,14 +27,14 @@ Read `${CLAUDE_SKILL_DIR}/references/officer-order.md` and
 
 <permission_posture>
 
-Starting the session sets the officer's permission posture. The posture travels
-as `agentArguments` on the same start or relaunch request, which the herdr
+The launch sets the officer's permission posture. The posture travels as
+`agentArguments` on the same start or relaunch request, which the herdr
 capability places after its `--` separator as the launched agent's own options,
 so the posture is in force from the officer's first turn.
 
-For a Claude officer, the posture names the structured-question tool in the
+A Claude officer starts with the structured-question tool withheld through the
 harness's disallowed-tools argument:
-`--disallowedTools AskUserQuestion`. The launch removes the
+`--disallowedTools AskUserQuestion`. The launch withholds the
 tool rather than the order asking the officer not to reach for it — an order
 that only forbids the tool leaves it callable, and an officer called it.
 

@@ -288,7 +288,6 @@ def main(
     *,
     stdin: TextIO | None = None,
     stdout: TextIO | None = None,
-    stderr: TextIO | None = None,
 ) -> int:
     """Run the versioned ledger derivation entry point."""
     arguments = list(sys.argv[1:] if argv is None else argv)

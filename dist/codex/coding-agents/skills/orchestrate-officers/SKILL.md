@@ -19,7 +19,7 @@ Use skill `spec-tree:project-run-journal`.
 
 <essential_principles>
 
-Use only these capabilities:
+Use only these composed capabilities:
 
 - `coding-agents:operate-herdr` for inventory, read, bounded wait, prompt,
   start, relaunch, stop, and other pane operations it owns
@@ -27,6 +27,9 @@ Use only these capabilities:
   reads, and receipts
 - `spec-tree:project-run-journal` for read-only inspection of each sealed
   verification run whose complete identity a durable mail record supplies
+
+Beyond them, the one executable this skill runs is its own bundled ledger entry
+point, governed by `<ledger_derivation>`.
 
 Pass semantic requests to those skills and preserve their complete results.
 Neither infer nor reproduce their underlying command grammar. This skill has no
