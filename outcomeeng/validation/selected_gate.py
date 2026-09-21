@@ -59,6 +59,10 @@ CHANGESET_SCOPE_SCRIPT: Final = (
     / "changeset_scope.py"
 )
 SELECTED_CHECK_PLAN_HEADER: Final = "━━━ Selected check plan ━━━"
+PLAN_LINE_FORM: Final = "  {text}"
+"""One plan line: the indent every explanation and step line carries."""
+PLAN_STEP_LINE_FORM: Final = "{label}: {reason}"
+"""One selected step's line: its label and the reason it is present."""
 NO_CHANGED_PATHS_REASON: Final = "no changed paths"
 GIT_DISCOVERY_FAILURE_EXIT_CODE: Final = 1
 GIT_DISCOVERY_ERROR_PREFIX: Final = "error: selected gate git discovery failed"
@@ -701,10 +705,17 @@ def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
         sink.flush()
         return
     for item in plan.selected_steps:
-        sink.write(f"  {item.step.label}: {item.reason}\n")
-    sink.write(f"  {plan.live_discovery_reason}\n")
+        sink.write(
+            PLAN_LINE_FORM.format(
+                text=PLAN_STEP_LINE_FORM.format(
+                    label=item.step.label, reason=item.reason
+                )
+            )
+            + "\n"
+        )
+    sink.write(PLAN_LINE_FORM.format(text=plan.live_discovery_reason) + "\n")
     for line in plan.agent_disable.explanation_lines:
-        sink.write(f"  {line}\n")
+        sink.write(PLAN_LINE_FORM.format(text=line) + "\n")
     sink.flush()
 
 

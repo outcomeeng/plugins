@@ -14,23 +14,23 @@ the ADR's bounded-deadline exception.
 from __future__ import annotations
 
 import json
-import os
 import signal
 import tempfile
 import time
 from collections import deque
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 from pathlib import Path
 from types import FrameType
 from typing import Final, TextIO
 
 from outcomeeng.validation._model import ProcessHandle, ProcessSpawner, Recipe, Step
 from outcomeeng.validation.agent_disable import (
-    SKIP_REPORT_ENV,
+    SKIP_REPORT_OPTION,
     SKIP_REPORT_SWITCH_FIELD,
     SKIP_REPORT_TEST_FIELD,
 )
-from outcomeeng.validation._steps import RECIPE_AD_HOC, RECIPE_CHECK
+from outcomeeng.validation._steps import PYTEST_ARGV, RECIPE_AD_HOC, RECIPE_CHECK
 
 FORWARDED_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
 SIGNAL_GRACE_SECONDS: Final = 2.0
@@ -49,6 +49,20 @@ SPAWN_FAILURE_EXIT_CODE: Final = 1
 PHASE_PREFLIGHT: Final = "preflight"
 PHASE_RECIPE: Final = "recipe"
 PHASE_COMPLETE: Final = "complete"
+RECIPE_HEADER_FORM: Final = "━━━ Recipe {name} ━━━"
+"""The banner announcing one recipe in the live output."""
+STEP_HEADER_FORM: Final = "━━━ {label} ━━━"
+"""The banner announcing one step in the live output."""
+TIMING_SUMMARY_BANNER: Final = "━━━ Timing Summary ━━━"
+"""The banner opening the timing block."""
+TIMING_ROW_FORM: Final = "  {label:<20} {value:>3}"
+"""One timing row: a padded label and a right-aligned value."""
+TIMING_DIVIDER: Final = "  ────────────────────────"
+"""The rule separating the timing rows from the total."""
+TIMING_TOTAL_LABEL: Final = "TOTAL"
+"""The label of the timing block's total row."""
+TIMING_FAILED_LABEL: Final = "FAILED"
+"""The label of the timing block's failed row."""
 FULL_LOG_LABEL: Final = "Full log:"
 SUMMARY_PATH_LABEL: Final = "Summary:"
 FAILURE_EXCERPT_LINE_LIMIT: Final = 80
@@ -129,14 +143,19 @@ def _write_timing_summary(
     total: int | None = None,
     failed_label: str | None = None,
 ) -> None:
-    sink.write("\n━━━ Timing Summary ━━━\n")
+    sink.write(f"\n{TIMING_SUMMARY_BANNER}\n")
     for label, elapsed in timings:
-        sink.write(f"  {label:<20} {elapsed:>3}s\n")
-    sink.write("  ────────────────────────\n")
+        sink.write(f"{TIMING_ROW_FORM.format(label=label, value=elapsed)}s\n")
+    sink.write(f"{TIMING_DIVIDER}\n")
     if total is not None:
-        sink.write(f"  {'TOTAL':<20} {total:>3}s\n")
+        sink.write(
+            f"{TIMING_ROW_FORM.format(label=TIMING_TOTAL_LABEL, value=total)}s\n"
+        )
     if failed_label is not None:
-        sink.write(f"  {'FAILED':<20} {failed_label}\n")
+        sink.write(
+            f"{TIMING_ROW_FORM.format(label=TIMING_FAILED_LABEL, value='')}"
+            f"{failed_label}\n"
+        )
     sink.flush()
 
 
@@ -184,16 +203,42 @@ def _create_skip_report_path(step_index: int, label: str) -> Path:
         return Path(output.name)
 
 
-def _read_skip_records(report_path: Path) -> tuple[dict[str, object], ...]:
+def _is_pytest_step(step: Step) -> bool:
+    return step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+
+
+def _step_reporting_skips(step: Step, report_path: Path) -> Step:
+    return replace(step, argv=(*step.argv, f"{SKIP_REPORT_OPTION}={report_path}"))
+
+
+def _read_skip_records(report_path: Path | None) -> tuple[dict[str, object], ...]:
+    """Read the records the child left, ignoring any line it did not shape.
+
+    The producer is a separate process, so a truncated or malformed line is a
+    child-side condition rather than an orchestrator failure: it is skipped and
+    the well-formed records still reach the step's summary.
+    """
+    if report_path is None:
+        return ()
     try:
         payload = report_path.read_text(encoding="utf-8")
-    except FileNotFoundError:
+    except OSError:
         return ()
     records: list[dict[str, object]] = []
     for line in payload.splitlines():
         if not line.strip():
             continue
-        records.append(json.loads(line))
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        test = entry.get(SKIP_REPORT_TEST_FIELD)
+        switch = entry.get(SKIP_REPORT_SWITCH_FIELD)
+        if not isinstance(test, str) or not isinstance(switch, str):
+            continue
+        records.append({SKIP_REPORT_TEST_FIELD: test, SKIP_REPORT_SWITCH_FIELD: switch})
     return tuple(records)
 
 
@@ -363,7 +408,7 @@ def _execute_recipe(
     failed_status = 0
     total_start = time.monotonic()
     step_index = 0
-    sink.write(f"━━━ Recipe {recipe.name} ━━━\n")
+    sink.write(f"{RECIPE_HEADER_FORM.format(name=recipe.name)}\n")
     sink.flush()
     try:
         for phase, steps in (
@@ -372,14 +417,19 @@ def _execute_recipe(
         ):
             for step in steps:
                 step_index += 1
-                sink.write(f"━━━ {step.label} ━━━\n")
+                sink.write(f"{STEP_HEADER_FORM.format(label=step.label)}\n")
                 sink.flush()
                 step_start = time.monotonic()
                 log_path = _create_log_path(step_index, step.label)
                 created_log_paths.append(log_path)
-                skip_report_path = _create_skip_report_path(step_index, step.label)
-                previous_skip_report = os.environ.get(SKIP_REPORT_ENV)
-                os.environ[SKIP_REPORT_ENV] = str(skip_report_path)
+                skip_report_path = (
+                    _create_skip_report_path(step_index, step.label)
+                    if _is_pytest_step(step)
+                    else None
+                )
+                if skip_report_path is not None:
+                    created_log_paths.append(skip_report_path)
+                    step = _step_reporting_skips(step, skip_report_path)
                 try:
                     handle = _spawn_with_deferred_signal_forwarding(
                         spawner,
@@ -396,12 +446,7 @@ def _execute_recipe(
                     exit_code = SPAWN_FAILURE_EXIT_CODE
                 finally:
                     _current_handle_ref[0] = None
-                    if previous_skip_report is None:
-                        os.environ.pop(SKIP_REPORT_ENV, None)
-                    else:
-                        os.environ[SKIP_REPORT_ENV] = previous_skip_report
                 skipped = _read_skip_records(skip_report_path)
-                _discard_log(skip_report_path)
                 elapsed = round(time.monotonic() - step_start)
                 timings.append((step.label, elapsed))
                 if exit_code != 0:
