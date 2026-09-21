@@ -235,5 +235,5 @@ coherence is those trees' specs, not this standard.
 
 **Settlement condition:** a Change adds, for each inheriting definition, the owning node's
 assertion that names it and declares its execution-policy inheritance with linked evidence,
-and this node's spec records that the declarations exist. Scheduled as a Proposed Change in
-the plugins Change store.
+and this node's spec records that the declarations exist. Scheduled as
+<https://github.com/outcomeeng/changes/issues/128>.
