@@ -24,7 +24,6 @@ from outcomeeng_testing.generators.prowl_environment import (
 )
 from outcomeeng_testing.harnesses.agent_mail import (
     AbsentExecutableRunner,
-    CommandResultContract,
     common_dir_reply,
     failed_command_result,
     load_agent_mail,
