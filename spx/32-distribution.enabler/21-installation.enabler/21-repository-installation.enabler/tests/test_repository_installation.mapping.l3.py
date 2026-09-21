@@ -15,6 +15,9 @@ from outcomeeng_testing.harnesses.installation import observe_real_installation
 
 def test_real_agent_clis_map_full_and_generated_subsets() -> None:
     observation = observe_real_installation()
+    assert observation.persistent_exit_code == 0, observation.persistent_stderr
+    assert observation.subset_exit_code == 0, observation.subset_stderr
+
     claude_plugins = frozenset(
         catalog_plugin_names_from_bytes(observation.claude_catalog)
     )
@@ -34,7 +37,6 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
         catalog_plugin_names_from_bytes(observation.subset_codex_catalog)
     )
 
-    assert observation.persistent_exit_code == 0, observation.persistent_stderr
     assert (
         persistent_report[ReportField.COMPLETED_OPERATIONS]
         == observation.persistent_planned_operations
@@ -70,7 +72,6 @@ def test_real_agent_clis_map_full_and_generated_subsets() -> None:
         observation.invocation_checkout
     )
     assert observation.codex_registration_target == str(observation.invocation_checkout)
-    assert observation.subset_exit_code == 0, observation.subset_stderr
     assert observation.subset_claude_plugins.installed == subset_claude_plugins
     assert observation.subset_claude_plugins.enabled == subset_claude_plugins
     assert observation.subset_codex_plugins.installed == subset_codex_plugins
