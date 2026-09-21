@@ -263,3 +263,13 @@ finding no edit satisfies; and `The skill auditor returns opposite verdicts on u
 in `spx/43-instructions.enabler/21-skills.enabler/ISSUES.md` records one Verifier definition
 contradicting itself on unchanged input. This entry is the remaining shape: two Verifier types whose
 verdicts diverge because one executed the subject and the other did not.
+
+## Nine spec openings carry a decision or overlay path
+
+The `/understand` node model states that a kind opening never carries a path: the three clauses name what the node provides, for whom, and what they can then do, and a citation belongs in body prose or an assertion. Nine openings outside the gate node carry one — `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`, `spx/15-validation.enabler/32-hook-safety.enabler/hook-safety.md`, `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/agents.md`, `spx/21-spec-tree.enabler/13-agent-environment.enabler/agent-environment.md`, `spx/21-spec-tree.enabler/19-worktree-occupancy.enabler/worktree-occupancy.md`, `spx/21-spec-tree.enabler/76-merge.enabler/32-direct-push.enabler/direct-push.md`, `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/32-opening-pr.enabler/opening-pr.md`, `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/54-managing-pr.enabler/managing-pr.md`, and `spx/21-spec-tree.enabler/76-merge.enabler/merge.md` — in a `CAN` or `SO THAT` clause.
+
+**Resolution shape**: for each, end the clause before the citation and carry the citation in a body sentence or in the assertion it governs, as the gate node's spec now does. The change is per-spec and independent, so it lands as one sweep or one commit per owning node.
+
+**Why product-level**: the class spans eight nodes and belongs to none of them, and no single node's note would surface it to the next reader of the rule.
+
+**Evidence**: the spec audit of `spx/15-validation.enabler/65-gate.enabler` rejected that node's own opening for this rule; the remaining nine came from the same-class scan over every spec opening in the tree, which found no other instance inside the nodes the changeset touches.

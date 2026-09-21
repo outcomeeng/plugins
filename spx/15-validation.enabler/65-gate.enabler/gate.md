@@ -2,7 +2,9 @@
 
 PROVIDES a signal-safe recipe orchestrator with two primitive deterministic verification recipes, `validation` and `test`, plus a selected local `check` wrapper and explicit full `check-full` wrapper
 SO THAT the `just validation`, `just test`, `just check`, and `just check-full` recipes, contributor workstations, CI, and coding agents
-CAN run conformance and correctness verification with bounded live output, retained failure diagnostics, structured summaries, and verification vocabulary aligned to `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`
+CAN run conformance and correctness verification with bounded live output, retained failure diagnostics, and structured summaries
+
+The recipes' verification vocabulary follows `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`.
 
 ## Assertions
 
