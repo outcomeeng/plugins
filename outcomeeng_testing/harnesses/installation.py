@@ -4572,3 +4572,17 @@ def real_process_row_files(node_tests: Path) -> tuple[Path, ...]:
         for path in sorted(node_tests.glob("test_*.py"))
         if any(f".{level}." in path.name for level in REAL_PROCESS_LEVELS)
     )
+
+
+NATIVE_PROFILE_RECIPE = "verify-native-profile-execution"
+"""The recipe whose only caller is release acceptance."""
+
+
+def native_profile_execution_recipe_line() -> str:
+    """Return the recipe's own lines from the repository's justfile."""
+    text = (repository_root() / "justfile").read_text(encoding="utf-8")
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if line.startswith(f"{NATIVE_PROFILE_RECIPE} "):
+            return "\n".join(lines[index : index + 2])
+    raise RuntimeError(f"recipe {NATIVE_PROFILE_RECIPE} is absent from the justfile")

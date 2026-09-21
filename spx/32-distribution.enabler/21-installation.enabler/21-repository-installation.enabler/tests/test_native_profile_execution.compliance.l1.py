@@ -3,14 +3,24 @@
 from dataclasses import replace
 
 from outcomeeng_testing.harnesses.discovery_auth_cases import NativeFault
+from outcomeeng_testing.harnesses import (
+    native_profile_execution as profile_execution_harness,
+)
+from outcomeeng_testing.harnesses.installation import (
+    native_profile_execution_recipe_line as recipe_line_source,
+)
 from outcomeeng_testing.harnesses.native_profile_failures import native_profile_failure
 
 from pathlib import Path
 
-from outcomeeng.distribution import native_profile_execution
 from outcomeeng.distribution.native_profile_execution import native_profile_rows
 from outcomeeng.distribution.profiles import AGENT_PROFILES
-from outcomeeng.validation.agent_switch_enforcement import modules_naming_a_switch
+from outcomeeng.validation.agent_disable import AGENT_SWITCHES
+from outcomeeng.validation.agent_switch_enforcement import (
+    DECLARING_MODULE_NAME,
+    modules_naming_a_switch,
+    modules_reading_the_switch_predicate,
+)
 from outcomeeng.distribution.native_thread_evidence import (
     ChildIdentityField,
     NativeTurnStatus,
@@ -158,10 +168,31 @@ def test_unlisted_thread_cannot_supply_child_evidence() -> None:
     exercise_native_evidence(assert_case)
 
 
-def test_the_profile_execution_recipe_names_no_disable_switch() -> None:
-    assert (
-        modules_naming_a_switch((Path(native_profile_execution.__file__).parent,)) == ()
+def test_the_profile_execution_recipe_reads_no_disable_switch() -> None:
+    entrypoint = Path(profile_execution_harness.__file__)
+
+    assert modules_naming_a_switch((entrypoint,)) == ()
+    assert modules_reading_the_switch_predicate((entrypoint,)) == ()
+    assert not any(switch in recipe_line_source() for switch in AGENT_SWITCHES), (
+        recipe_line_source()
     )
+
+
+def test_a_module_importing_the_predicate_is_reported(tmp_path: Path) -> None:
+    reader = tmp_path / "reader.py"
+    reader.write_text(
+        f"from {DECLARING_MODULE_NAME} import codex_disabled_reason\n",
+        encoding="utf-8",
+    )
+
+    assert modules_reading_the_switch_predicate((reader,)) == (reader,)
+
+
+def test_a_module_reading_no_predicate_is_not_reported(tmp_path: Path) -> None:
+    quiet = tmp_path / "quiet.py"
+    quiet.write_text("VALUE = 1\n", encoding="utf-8")
+
+    assert modules_reading_the_switch_predicate((quiet,)) == ()
 
 
 def test_profile_execution_rows_cover_every_central_profile() -> None:
