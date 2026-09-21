@@ -433,7 +433,7 @@ When the node's language has no installed test skill, scaffold from `<naming_and
 
 In decision-rule mode, update each `### Testing` rule with exactly one selected assertion-type tag and create no test scaffold. Continue directly to the report step.
 
-**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node to `spx/EXCLUDE` as one entry per line, each the canonical node path with its leading `spx/` stripped; blank lines and `#` comment lines carry no entry. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the exact line when implementation begins.
+**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. The node is Specified: its verification artifacts exist while its implementation is absent. Keep the node outside the deterministic gate's passing scope by whatever means the toolchain declares, and return it to scope when implementation begins.
 
 </step>
 

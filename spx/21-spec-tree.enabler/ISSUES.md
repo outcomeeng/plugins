@@ -1,6 +1,6 @@
 # Issues: Spec Tree Enabler
 
-Issues discovered during contradiction analysis of `spx/EXCLUDE`, sync-exclude, and the quality gate mechanism. Source: `methodology/skills/skill-structure.md` stale content + cross-file contradiction audit.
+Known imperfections in the spec-tree enabler and the methodology it ships.
 
 ## 8. Multi-language test discovery missing from methodology (PARTIAL)
 
@@ -18,7 +18,7 @@ Plugin uses `PROVIDES ... SO THAT ... CAN ...` and `WE BELIEVE THAT ... WILL ...
 
 ## 11. Upstream methodology still references `spx-lock.yaml`
 
-`outcomeeng/methodology/reference/spec-tree-reference.md` lines 86-108 describe a lock-file model (`spx-lock.yaml`, blob hashes, "Needs work / Stale / Valid" states) that the plugin replaced with the EXCLUDE + derived-state model. The upstream needs to be rewritten to match.
+`outcomeeng/methodology/reference/spec-tree-reference.md` lines 86-108 describe a lock-file model (`spx-lock.yaml`, blob hashes, "Needs work / Stale / Valid" states) that the plugin replaced with the status-claim and derived-state model. The upstream needs to be rewritten to match.
 
 ## 15. `commit-changes` example uses uppercase `L1` instead of canonical `l1`
 
@@ -146,16 +146,6 @@ The `/understand` `<files_in_a_node>` eval-lane bullet (authored in `src/plugins
 **Resolution shape**: either add an eval-directory-exclusion check to producer-path resolution in `outcomeeng_evals/producer_prompt.py` so the code matches the stated invariant, or soften the bullet (and the mirrored spec assertion and changelog entry) to state the boundary as convention across every current usage. The choice spans the eval-harness node's code, so it is not a wording-only edit.
 
 **Why tracked**: surfaced by the CI changeset review on PR #517 (DEBT, head `42d0a9c865ea338a5e0cd259ba9387544b4a094a`); dispositioned as tracked debt by operator direction on that PR's round-six findings under a recorded expense concern.
-
-## 25. The `spx/EXCLUDE` mechanism is still shipped while this repository carries no such file
-
-This repository has no `spx/EXCLUDE` and no root `conftest.py`: no node is in specified state, every declared `[test]` and `[eval]` link resolves, and the `eval-links` validation step fails the gate on a dangling link. The `apply`, `test`, `manage-github-pr`, and `test-typescript` skills still describe exclusion as the specified-state mechanism — the `/understand` foundation states the status-claim model and names the list only as a passing-scope list a toolchain without the claim still reads — and `spx test passing` reads it. The specs `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` and `spx/15-validation.enabler/32-reference-portability.enabler/reference-portability.md` name the file as a mechanism.
-
-The target model replaces the file with committed per-node `spx.status.json` claims: `spx spec status --update` folds available local evidence into the claims and never runs verification; a claim rests as `passed`, `failed`, or `not-run`; CI reproduces every passing claim and refutes what it cannot reproduce; state derives from the claim (no references → `declared`, not-run → `specified`, passed → `passing`, failed or refuted → `failing`). "No passing claim ⇒ not run" is the automatic exclusion, so the file has no remaining content.
-
-**Gate.** The `spx` CLI ships the claim-and-reproduction model (filed in the `outcomeeng/spx` session queue as `2026-07-05_19-20-16`); an `@outcomeeng/spx` release carrying it is published; `REQUIRED_SPX_VERSION` in `outcomeeng/validation/spx_version.py` and `SPX_VERSION` in `.github/workflows/check.yml` advance to it. The installed CLI 0.6.26 already exposes `spx spec status --update` ("refresh each node's `spx.status.json`") while the floor is 0.6.15; whether that release satisfies the first gate is unverified. Committed `spx.status.json` files are not adopted here until the gate holds.
-
-**Resolution shape.** The `/understand` foundation already carries the status-claim model — `references/status-claims.md` replaces `excluded-nodes.md`, and `<malleability_and_state>` and `<decision_to_spec_alignment>` state it. Once the gate holds: sweep the six skills above (each plugin takes the `skill-auditor` gate and a bump) and the `/apply` fallback sentence in `docs/tutorial.md` that describes the mechanism to consumers; re-point the two specs above from the file to the `specified` state; drop `EXCLUDE` from `PORTABLE_SPX_FILES` in `outcomeeng/validation/reference_portability.py` once no shipped text names it. Per-mechanism evidence readers for eval and audit, and a cost-reward CI reproduction policy, are not required for the retirement.
 
 ## 26. Inline-foundation preservation refs are unreconciled
 
