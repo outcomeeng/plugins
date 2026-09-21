@@ -58,6 +58,8 @@ CAN refresh exactly the selected plugins in every Claude Code checkout on the ma
 
 ### Compliance
 
+- ALWAYS: a row that starts a real Codex or Claude process reads its agent's disable switch through the source-owned predicate the test-infrastructure home exports — unset or any value other than 1 runs the row, and 1 skips it with a reason naming the switch — so the same predicate decides every row and no row reads the environment itself ([test](tests/test_repository_installation.compliance.l1.py))
+- NEVER: the native profile-execution recipe reads a disable switch — release acceptance runs every row ([test](tests/test_native_profile_execution.compliance.l1.py))
 - ALWAYS: discovery selects subscription by default locally, requires an explicit authentication mode in CI, and requires the selected mode's credential without falling back to another mode. ([test](tests/test_repository_installation.compliance.l1.py))
 - ALWAYS: subscription discovery checks native file-store write-through compatibility before linking only the selected saved-login file into disposable state, then serializes participating uses and reports detected file, link, or account replacement without restoring an older copy. ([test](tests/test_repository_installation.compliance.l1.py))
 - NEVER: subscription discovery reads a saved login from an unset `CODEX_HOME`, from a `CODEX_HOME` that is `HOME` or `HOME/.codex` by filesystem identity, or from a saved login that is the personal one; it fails before any native command runs, so the personal Codex login never reaches a test run. ([test](tests/test_repository_installation.compliance.l1.py))
@@ -69,6 +71,10 @@ CAN refresh exactly the selected plugins in every Claude Code checkout on the ma
   credential, and invokes its native-child command exactly once; a failed row
   records its terminal condition without a retry, credential fallback, profile
   substitution, or alternate launch. ([test](tests/test_native_profile_execution.compliance.l1.py))
+- ALWAYS: the native app-server thread read and parent-filtered child listing
+  reach the installed Codex CLI without launching a turn — an absent thread
+  reports the read failure, and a parent with no spawned child reports an empty
+  child set whose every page retains its result. ([test](tests/test_native_profile_execution.compliance.l2.py))
 - ALWAYS: release acceptance is established independently for each supported
   harness and retains configuration, native loading, and one minimal isolated
   execution result for every profile of that harness declared in
