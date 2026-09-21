@@ -13,6 +13,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     run_cli_with_only_adapter_programs,
     run_cli_without_executables,
     run_generated_identities,
+    store_program_names,
     store_response_payload,
     store_response_result,
     store_response_text,
@@ -80,6 +81,13 @@ def test_registration_result_carries_no_token() -> None:
 
 
 def test_operations_reach_no_program_outside_the_adapters_own_commands() -> None:
+    module = load_agent_mail()
+
+    # The store's own captures name the program the adapter must reach, so a
+    # constant renamed to another program fails here rather than passing a
+    # probe that stubs whatever the source declares.
+    assert module.AM_COMMAND in store_program_names(module)
+
     def assert_case(
         module: ModuleType, agent: str, program: str, model: str, project_key: str
     ) -> None:

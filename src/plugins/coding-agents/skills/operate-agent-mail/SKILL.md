@@ -1,7 +1,7 @@
 ---
 name: operate-agent-mail
 description: >-
-  ALWAYS invoke this skill when a workflow registers a mail identity, sends a message record, reads an inbox, or records a receipt in the agent-mail store. NEVER construct an `am` command or resolve the mail project key when this capability is available.
+  ALWAYS invoke this skill when a workflow registers a mail identity, sends a message record, reads an inbox, or records a receipt in the agent-mail store. NEVER construct an `am` command or derive the mail project key outside the adapter when this capability is available.
 argument-hint: "<operation or JSON request>"
 allowed-tools: Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/agent_mail.py":*)
 ---
@@ -12,15 +12,16 @@ A versioned JSON agent-mail operation result — a registered identity, a delive
 
 <operation_surface>
 
-The source-owned operation names are:
+The source-owned request operations, each submitted as a JSON request to `run`:
 
-| Operation     | Arguments                                                | Result data                                  |
-| ------------- | -------------------------------------------------------- | -------------------------------------------- |
-| `register`    | `agent`, `program`, `model`; optional `task`             | the registered `agent` name and store id     |
-| `send`        | `record`                                                 | the `record` with its store-assigned `id`    |
-| `inbox`       | `agent`; optional `unreadOnly`, `includeBodies`, `limit` | `records` read back for that recipient       |
-| `receipt`     | `agent`, `messageId`                                     | the `agent` and `messageId` the store marked |
-| `project-key` | none                                                     | the `projectKey` the repository names        |
+| Operation  | Arguments                                                | Result data                                  |
+| ---------- | -------------------------------------------------------- | -------------------------------------------- |
+| `register` | `agent`, `program`, `model`; optional `task`             | the registered `agent` name and store id     |
+| `send`     | `record`                                                 | the `record` with its store-assigned `id`    |
+| `inbox`    | `agent`; optional `unreadOnly`, `includeBodies`, `limit` | `records` read back for that recipient       |
+| `receipt`  | `agent`, `messageId`                                     | the `agent` and `messageId` the store marked |
+
+One further form answers outside the request shape: `project-key` is a CLI form, not a request operation, so a `run` request naming it is rejected as `operation-unavailable`. Its invocation and its result shape are in `<invocation_forms>`.
 
 The record and its delivery rules:
 
@@ -36,7 +37,7 @@ The project key is the repository's own common Git directory, so every worktree 
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report that one operation from `<operation_surface>` is required; the adapter has no default operation.
+1. Interpret `$ARGUMENTS` as one request operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report that one operation from `<operation_surface>` is required; the adapter has no default operation. When it names `project-key`, take the CLI form in `<invocation_forms>` and stop; steps 2 to 4 govern request operations only.
 2. Build this source-owned request shape and set only the arguments the operation accepts:
 
    ```json
@@ -103,7 +104,7 @@ This form answers `{"projectKey": "<absolute path>"}` and exits zero, or `{"stat
 
 <testing>
 
-The bundled adapter is covered over generated request, record, and repository-lookup domains, with controlled `CommandRunner` implementations at the command boundary:
+The bundled adapter is covered by the tests under `spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/`, over generated request, record, and repository-lookup domains, with controlled `CommandRunner` implementations at the command boundary:
 
 - every registry operation's argument vector is read against the store CLI's captured usage text under the resolved project key;
 - a real pool's linked worktree, bare repository, main checkout, and a symlinked route to one of them each resolve one key, while the pool's parent directory resolves none;

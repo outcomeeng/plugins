@@ -98,6 +98,8 @@ COMPLIANCE_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.compliance.l1.py"
 )
+# The token a captured usage line opens with, before the program name.
+USAGE_LINE_PREFIX = "Usage:"
 CLI_TIMEOUT_SECONDS = 60
 # The pool one probe builds: a bare repository, the main checkout beside it,
 # and one linked worktree, so the resolver is read from all three shapes.
@@ -969,6 +971,30 @@ def run_cli_with_only_adapter_programs(
         CommandResultContract,
         module.CommandResult(completed.returncode, completed.stdout, completed.stderr),
     )
+
+
+def store_program_names(module: ModuleType) -> frozenset[str]:
+    """The program name every captured usage line opens with.
+
+    The store declares its own program in the first token of each usage line,
+    which the usage-contract reader discards. Reading it here gives the
+    adapter's store constant an oracle outside the source it is checked
+    against, so renaming that constant to another program fails the read.
+    """
+    names: set[str] = set()
+    for operation in module.Operation:
+        capture = USAGE_FIXTURE_ROOT / f"{_command_fixture_name(module, operation)}.txt"
+        for line in capture.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped.startswith(USAGE_LINE_PREFIX):
+                tokens = stripped[len(USAGE_LINE_PREFIX) :].split()
+                if not tokens:
+                    raise CaptureError(f"{capture} usage line names no program")
+                names.add(tokens[0])
+                break
+        else:
+            raise CaptureError(f"{capture} carries no usage line")
+    return frozenset(names)
 
 
 def store_project_fallback_variable(module: ModuleType) -> str:
