@@ -322,9 +322,9 @@ shape by naming the paths the run left unaccounted.
 
 **Languages were discovered by invoking skills that did not exist**
 
-What happened: A run on a TypeScript changeset loaded the complete TypeScript
-trio, then invoked `python:audit-python-code` and `rust:audit-rust-code` "to
-probe whether the python and rust concern trios are loadable", received
+What happened: A run discovered one implementation-language concern trio in
+the installed inventory, then invoked concern skills for two other language
+candidates "to probe whether their concern trios are loadable", received
 `Unknown skill` for both, and read the two errors as evidence that no other
 language was installed.
 
