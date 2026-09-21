@@ -1,4 +1,4 @@
-"""Level-1 compliance evidence for `spx/21-hygiene.enabler/21-clean.enabler/`.
+"""Level-1 compliance evidence for workspace cleanup.
 
 Covers the compliance assertions in `clean.md`:
 - ALWAYS: invoke `git clean -fdX` as the base command.
@@ -17,7 +17,9 @@ from outcomeeng.hygiene.clean import (
     GIT_IGNORE_FILE,
     GIT_METADATA_DIR,
     PATHSPEC_SEPARATOR,
+    SPX_STORE_DIR,
     build_clean_argv,
+    build_clean_pathspecs,
 )
 from outcomeeng_testing.harnesses.clean import (
     IGNORED_CACHE_DIR,
@@ -76,6 +78,18 @@ def test_inside_repo_active_environment_is_omitted_from_pathspecs(
     assert IGNORED_PYTHON_ENV_DIR not in argv
     assert GIT_METADATA_DIR not in argv
     assert GIT_IGNORE_FILE not in argv
+
+
+def test_session_store_is_omitted_while_cache_remains(tmp_path: Path) -> None:
+    repo = create_clean_repo(tmp_path)
+
+    pathspecs = build_clean_pathspecs(
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
+    )
+
+    assert SPX_STORE_DIR not in pathspecs
+    assert IGNORED_CACHE_DIR in pathspecs
 
 
 def test_inside_repo_symlinked_active_environment_is_omitted_from_pathspecs(
