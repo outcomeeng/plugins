@@ -302,7 +302,7 @@ def captured_inbox_responses_with_bodies(
 def captured_inbox_rows_with_bodies(module: ModuleType) -> list[CapturedInboxRow]:
     """Every row across the captured `--include-bodies` inbox responses."""
     return [
-        CapturedInboxRow(response.capture, cast(dict[str, object], item))
+        CapturedInboxRow(response.capture, item)
         for response in captured_inbox_responses_with_bodies(module)
         for item in response.payload
     ]
