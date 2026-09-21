@@ -23,6 +23,8 @@ permissions, task boundary, and result are independently inspectable.
   {{! term('configured_agent_prompt') !}}. Equivalent semantic tags satisfy the same requirement.
 - ALWAYS: use the XML structure and voice rules from `/agent-prompt-standards`.
 - ALWAYS: declare every field required by the current harness and reject unsupported configuration.
+- ALWAYS: judge native sandbox and approval fields against the governing context's
+  execution-boundary declaration before applying the harness contract.
 - NEVER: preserve a retired schema, compatibility alias, or fallback configuration.
 
 {!% if target == 'codex' %!}
@@ -86,6 +88,16 @@ and its system prompt in the body. Keep operational settings such as `tools`,
 - ALWAYS: connect each tool grant to a required workflow step and verify that every
   step can run with the declared capabilities. An inherited tool set requires a concrete justification.
 - NEVER: treat a prompt-level restriction as an enforced permission boundary.
+- ALWAYS: admit a definition that inherits the invoking session's execution policy when its
+  governing context declares that inheritance with linked evidence — an assertion in the
+  owning node's spec, or a decision on the path from the root that reaches that node by
+  index. Resolve the owning node through the tree as the node whose linked test or audit
+  assertion names the definition, read the declaration there or in a decision above it,
+  name in the verdict which form was read, and judge the declaration's presence; an absent
+  native sandbox field does not invalidate declared inheritance.
+- NEVER: accept a citation inside a definition's frontmatter or body as the inheritance
+  declaration, or admit undeclared inheritance on a judgment that the definition needs the
+  invoking policy — a definition whose governing context declares nothing stays a finding.
 - ALWAYS: make a verifier's observation capabilities sufficient to inspect its target;
   do not grant mutation solely to run an audit or review.
 - ALWAYS: keep user decisions in the invoking conversation. A configured role reports a
@@ -125,8 +137,14 @@ and its system prompt in the body. Keep operational settings such as `tools`,
 
 <evidence>
 
-- ALWAYS: retain the native configuration and actual result of a minimal isolated
-  invocation after a configuration change, using the owning workflow's exact role and target.
+- ALWAYS: accept a retained per-harness, per-profile release acceptance — native loading
+  and one minimal isolated execution for every declared profile — as the invocation
+  evidence of a definition whose governing context declares that acceptance in the owning
+  node's spec or in a decision on the path from the root that reaches it by index; name
+  the declaration and the acceptance artifact read.
+- ALWAYS: for every other definition, retain the native configuration and actual result of
+  a minimal isolated invocation after a configuration change, using the owning workflow's
+  exact definition and target.
 - ALWAYS: distinguish a load failure, launch failure, unusable result, and valid rejected
   verdict. Each has a different failing boundary; none supplies an approval.
 - NEVER: invent missing functionality from an absent tag when equivalent content exists.
@@ -140,5 +158,7 @@ and its system prompt in the body. Keep operational settings such as `tools`,
 - Tool capabilities cover the workflow's steps and material restrictions are enforceable.
 - The role loads, starts through an explicit skill instruction, and returns its declared contract.
 - Verification evidence comes from an isolated session with independently discovered requirements.
+- Execution-boundary and invocation evidence are judged against the governing context's
+  declarations, and the verdict names each declaration read.
 
 </success_criteria>
