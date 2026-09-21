@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import subprocess
 
-from outcomeeng.hygiene.clean import Runner
+from outcomeeng.hygiene.clean import GIT_IGNORE_FILE, SPX_STORE_DIR, Runner
 
 IGNORED_CACHE_DIR = ".cache"
 IGNORED_PYTHON_ENV_DIR = ".venv"
@@ -43,18 +43,21 @@ class CleanRepo:
     root: Path
     active_python_prefix: Path
     ignored_cache: Path
+    session_store: Path
 
 
 def create_clean_repo(tmp_path: Path, *, include_cache: bool = True) -> CleanRepo:
-    """Create a git repository with ignored active-env and cache directories."""
+    """Create a repository with ignored environment, session store, and cache."""
     repo_root = tmp_path / "repo"
     active_python_prefix = repo_root / IGNORED_PYTHON_ENV_DIR
     ignored_cache = repo_root / IGNORED_CACHE_DIR
+    session_store = repo_root / SPX_STORE_DIR
     active_python_prefix.mkdir(parents=True)
+    session_store.mkdir()
     if include_cache:
         ignored_cache.mkdir()
-    (repo_root / ".gitignore").write_text(
-        f"{IGNORED_PYTHON_ENV_DIR}/\n{IGNORED_CACHE_DIR}/\n",
+    (repo_root / GIT_IGNORE_FILE).write_text(
+        f"{IGNORED_PYTHON_ENV_DIR}/\n{IGNORED_CACHE_DIR}/\n{SPX_STORE_DIR}/\n",
         encoding="utf-8",
     )
     subprocess.run(
@@ -67,6 +70,7 @@ def create_clean_repo(tmp_path: Path, *, include_cache: bool = True) -> CleanRep
         root=repo_root,
         active_python_prefix=active_python_prefix,
         ignored_cache=ignored_cache,
+        session_store=session_store,
     )
 
 

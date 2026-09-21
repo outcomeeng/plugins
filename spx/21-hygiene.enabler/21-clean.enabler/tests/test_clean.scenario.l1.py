@@ -1,4 +1,4 @@
-"""Level-1 scenario evidence for `spx/21-hygiene.enabler/21-clean.enabler/`.
+"""Level-1 scenario evidence for workspace cleanup.
 
 Covers the scenario assertions in `clean.md`: the recorded argv omits an
 active in-repository Python environment from generated pathspecs, Git dry-run
@@ -14,6 +14,7 @@ from pathlib import Path
 from outcomeeng.hygiene.clean import (
     CLEAN_BASE_ARGV,
     PATHSPEC_SEPARATOR,
+    SPX_STORE_DIR,
     SUCCESS_EXIT_CODE,
     build_clean_argv,
     clean,
@@ -43,7 +44,9 @@ def test_clean_omits_active_environment_from_pathspecs(tmp_path: Path) -> None:
     assert IGNORED_PYTHON_ENV_DIR not in runner.calls[0]
 
 
-def test_git_dry_run_preserves_active_environment(tmp_path: Path) -> None:
+def test_git_dry_run_preserves_session_store_and_active_environment(
+    tmp_path: Path,
+) -> None:
     repo = create_clean_repo(tmp_path)
 
     argv = build_clean_argv(
@@ -62,6 +65,7 @@ def test_git_dry_run_preserves_active_environment(tmp_path: Path) -> None:
 
     assert f"Would remove {IGNORED_CACHE_DIR}/" in result.stdout
     assert f"Would remove {IGNORED_PYTHON_ENV_DIR}/" not in result.stdout
+    assert f"Would remove {SPX_STORE_DIR}/" not in result.stdout
 
 
 def test_clean_propagates_runner_exit_code(tmp_path: Path) -> None:

@@ -34,6 +34,7 @@ CLEAN_BASE_ARGV: tuple[str, ...] = ("git", "clean", "-fdX")
 PATHSPEC_SEPARATOR = "--"
 GIT_METADATA_DIR = ".git"
 GIT_IGNORE_FILE = ".gitignore"
+SPX_STORE_DIR = ".spx"
 SUCCESS_EXIT_CODE = 0
 
 
@@ -122,6 +123,7 @@ __all__ = [
     "CLEAN_BASE_ARGV",
     "GIT_IGNORE_FILE",
     "GIT_METADATA_DIR",
+    "SPX_STORE_DIR",
     "PATHSPEC_SEPARATOR",
     "Runner",
     "SUCCESS_EXIT_CODE",
