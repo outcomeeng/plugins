@@ -26,13 +26,35 @@ The reconciliation assertion states that a pending plugin's prior owned definiti
 
 **Evidence**: test-evidence audit finding `f-005` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`, `f-004` against `548f8cc7b598a30969b0e68c243acb17d387f1ef`, `f-006` against `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, `f-008` against `be286e7e32cdfbb0cc782f6175ed0f274e428e8d`, `f-006` against `b9ee9c2ca56d3341f03ea81abb1ec2f4cd8df57b`, `f-004` against `ef8b057ab649bc3da5c642cc4a18fc6745023718`, and `f-009` against `841e864a9759eae04c8988c2931aa44b1ca21c74`; the round against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a` did not raise it. The recording runner's `unpublished` set now makes a pending plugin cheap to drive through the reconciliation observer, which lowers the cost of the harness scenario the resolution shape names.
 
+## A dead-parameter sweep matched a spelling rather than the class
+
+A repair round swept for parameters a function body discards with an explicit
+delete statement and reported the class closed. The class is every parameter of
+a non-Protocol function that no call site supplies and no interface obliges,
+however the body treats it, so a parameter read inside a branch no caller can
+reach never matched the spelling. The next audit round raised one such parameter
+as blocking: a private command helper carried a working-directory keyword whose
+only reachable effect was forbidden by the governing decision.
+
+**Resolution shape**: a dead-parameter scan cross-references every function the
+changeset adds or changes against its call sites and exempts only Protocol
+methods, constructors reached through the class name, methods reached through an
+instance, and framework-supplied test parameters. Matching text finds the
+instance; matching the call graph finds the class.
+
+**Evidence**: implementation audit finding against
+`a47f88e39d2a5fe9318eb24e6140623ca774dcfa`, under the same rule as a finding
+repaired one round earlier against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`.
+The widened scan over that changeset examined 310 functions, found five members
+of the class where the narrow sweep had found one, and changed all five.
+
 ## The no-lock clause of the listing-read rule has no deterministic oracle
 
 The compliance assertion that a persistent run reads the install-record listing once before and once after execution also states that it issues no lock, wait, or retry against the agent's record store. `test_a_persistent_run_reads_the_listing_once_before_and_once_after_execution` falsifies the read-count and retry clauses through the recorded commands; a lock is not a command, so adding an advisory lock around the listing read in production leaves both listing counts at one and the test passing.
 
 **Resolution shape**: route the no-lock clause to audit evidence in the governing decision, where the absence of a lock is a structural judgment, or add a record-store observation the harness owns — a runner that reports every open on the record file — so the clause reaches a predicate.
 
-**Evidence**: test-evidence audit finding `f-010` (WARNING) against `841e864a9759eae04c8988c2931aa44b1ca21c74` and `f-007` (WARNING) against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`.
+**Evidence**: test-evidence audit finding `f-010` (WARNING) against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-007` (WARNING) against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, and `f-008` (WARNING) with the implementation audit's matching debt finding against `a47f88e39d2a5fe9318eb24e6140623ca774dcfa`, which names the same absent oracle from the recorded-command seam.
 
 ## Claude Code renderings ship the Codex-only placement script and paraphrase its output
 
