@@ -36,15 +36,17 @@ An `APPROVED` or `REJECTED` verdict on one subagent configuration file against `
    unreadable, or multi-file target produces `REJECTED` with a critical issue naming
    the input failure.
 3. Apply `/subagent-standards` `<configuration_subject>` to classify the target and
-   independently discover any declared source-to-output mapping. Read the whole target,
-   its governing decisions, selected profile, owning skill, and result contract.
+   independently discover any declared source-to-output mapping, and `<configuration>`
+   to resolve the target's governing context. Read the whole target, its governing
+   decisions, selected profile, owning skill, and result contract.
    Read the exact emitted definitions when the target is a generation input, applying
    the appropriate harness standards to each. Preserve the supplied path as the target.
 4. Apply every relevant rule from the loaded standards. Read the complete referenced
    skill when the configuration delegates its behavior; distinguish wrapper obligations
    from behavior the invoked skill already owns.
-5. Inspect retained native-loading and invocation evidence when supplied by the owning
-   workflow. Missing required evidence remains a finding; do not launch the target
+5. Admit invocation evidence as `/subagent-standards` `<evidence>` requires, reading the
+   declared acceptance artifact or the retained native-loading and invocation evidence
+   for the target. Missing required evidence remains a finding; do not launch the target
    during this read-only audit.
 6. Check the whole target for equivalent functionality before declaring an omission.
    Record only findings backed by an exact standard, location, evidence, and consequence.
@@ -86,7 +88,9 @@ The skill's `overall` is `APPROVED` iff the `critical-issues` row has no finding
   "metadata": {
     "configured_agent_type": "simple | complex | delegation",
     "tool_access": "appropriate | over-permissioned | under-specified",
-    "model_selection": "appropriate | reconsider"
+    "model_selection": "appropriate | reconsider",
+    "governing_context_declaration": "<the declaration form read — the owning node's spec assertion or the decision that reaches it — or null when none declares one>",
+    "invocation_evidence": "<the acceptance artifact or invocation evidence read, or null when none is retained>"
   }
 }
 ```

@@ -193,3 +193,47 @@ suite. Author `evals/invocation-scope/` (producer
 `dist/claude/instructions`, cases for one configuration versus several), regenerate the
 eval CI triggers with `just build-eval-triggers`, run it at the default budget, and
 restore the `[eval](evals/invocation-scope/eval.toml)` tag once it passes.
+
+## The governing-context rule speaks spec-tree vocabulary the instructions plugin does not define
+
+**Evidence:** `instructions:skill-auditor` finding `f-008` (WARNING) on
+`src/plugins/instructions/skills/subagent-standards/SKILL.md` at head
+`195826dfdd0480c08f9cfacf48a20999317fea6e`: the rule that resolves a definition's
+governing context — the owning node as the node whose linked test or audit assertion
+names the definition, and a declaration as an assertion in that node's spec or a decision
+on the path from the root that reaches it by index — uses vocabulary the `instructions`
+plugin neither defines nor loads.
+
+**Impact:** a repository that installs `instructions` without a spec tree resolves no
+governing context, so `/audit-subagent` reports every inheriting definition as declaring
+nothing. That is the standard's stated result for an undeclared boundary, so the verdict is
+not spurious, but the rule names no methodology and states no non-applicability.
+
+**Settlement condition:** the standard names the methodology its resolution rule assumes,
+or states how a definition with no governing spec tree is judged, and one typed skill audit
+approves the wording. Deferred as a product-design question outside the changeset that
+amended the rule: the Change that amended it settled where a declaration lives, not how a
+tree-less consumer reads the rule.
+
+## The marketplace's own definitions carry no inheritance declaration
+
+**Evidence:** `spec-tree:changes-reviewer` finding `F-001` (debt, consistency) in review
+run `2026-09-21_15-38-19-791-ab0ae6d854aa`, subject
+`src/plugins/instructions/agents/subagent-auditor.md`. The Claude rendering of
+`subagent-auditor` carries `tools` and no `permissionMode`, the shape that inherits the
+invoking session's execution policy, and no assertion under `spx/` names
+`subagent-auditor`, `skill-auditor`, or any `src/plugins/spec-tree/agents/*.md` wrapper —
+the verification node names those wrappers only by directory — so no owning node resolves
+for them and none declares their inheritance.
+
+**Independence:** the gap predates the strengthened admission rule and is not caused by it.
+Those definitions have always inherited the session's execution policy and their owning
+nodes have never named them; the rule made an existing silence legible rather than
+creating it. Closing it means adding an assertion, with linked evidence, to the owning node
+of every shipped definition across the instructions and spec-tree trees — a changeset whose
+coherence is those trees' specs, not this standard.
+
+**Settlement condition:** a Change adds, for each inheriting definition, the owning node's
+assertion that names it and declares its execution-policy inheritance with linked evidence,
+and this node's spec records that the declarations exist. Scheduled as
+<https://github.com/outcomeeng/changes/issues/128>.
