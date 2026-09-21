@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os.path
 import re
 import subprocess
 import sys
@@ -16,9 +17,10 @@ SCHEMA_VERSION = 1
 RECORD_SCHEMA_VERSION = 1
 COMMAND_TIMEOUT_SECONDS = 30
 
-# Public command grammar of the store and of the diagnosis that names its project.
+# Public command grammar of the store and of the repository lookup that names
+# its project.
 AM_COMMAND = "am"
-SPX_COMMAND = "spx"
+GIT_COMMAND = "git"
 AGENTS_COMMAND = "agents"
 REGISTER_COMMAND = "register"
 MAIL_COMMAND = "mail"
@@ -26,7 +28,7 @@ SEND_COMMAND = "send"
 ACK_COMMAND = "ack"
 ROBOT_COMMAND = "robot"
 INBOX_COMMAND = "inbox"
-DIAGNOSE_COMMAND = "diagnose"
+REV_PARSE_COMMAND = "rev-parse"
 PROJECT_OPTION = "--project"
 PROGRAM_OPTION = "--program"
 MODEL_OPTION = "--model"
@@ -43,15 +45,11 @@ UNREAD_OPTION = "--unread"
 INCLUDE_BODIES_OPTION = "--include-bodies"
 LIMIT_OPTION = "--limit"
 JSON_OPTION = "--json"
-FORMAT_OPTION = "--format"
-JSON_FORMAT = "json"
+PATH_FORMAT_ABSOLUTE_OPTION = "--path-format=absolute"
+GIT_COMMON_DIR_OPTION = "--git-common-dir"
 
-# Fields of the diagnosis payload the project key is read from.
-CHECKS_FIELD = "checks"
-NAME_FIELD = "name"
-WORKTREE_POOL_CHECK = "worktree-pool"
-READINGS_FIELD = "readings"
-MAIN_CHECKOUT_PATH_FIELD = "mainCheckoutPath"
+# The separator the project key's absolute path is written with.
+PATH_SEPARATOR = "/"
 
 # Fields of the store's public responses.
 STORE_ID_FIELD = "id"
@@ -195,7 +193,7 @@ class ExecutionStatus(StrEnum):
     COMMAND_FAILED = "command-failed"
     INVALID_SCHEMA = "invalid-schema"
     STORE_UNAVAILABLE = "store-unavailable"
-    DIAGNOSIS_UNAVAILABLE = "diagnosis-unavailable"
+    REPOSITORY_UNRESOLVED = "repository-unresolved"
     OPERATION_UNAVAILABLE = "operation-unavailable"
 
 
@@ -277,11 +275,11 @@ PUBLIC_AM_RECORD_OPTIONS: Final[Mapping[str, str]] = {
     BODY_FIELD: BODY_OPTION,
     ACK_REQUIRED_FIELD: ACK_REQUIRED_OPTION,
 }
-PUBLIC_SPX_DIAGNOSE_COMMAND: Final[tuple[str, ...]] = (
-    SPX_COMMAND,
-    DIAGNOSE_COMMAND,
-    FORMAT_OPTION,
-    JSON_FORMAT,
+PUBLIC_GIT_COMMON_DIR_COMMAND: Final[tuple[str, ...]] = (
+    GIT_COMMAND,
+    REV_PARSE_COMMAND,
+    PATH_FORMAT_ABSOLUTE_OPTION,
+    GIT_COMMON_DIR_OPTION,
 )
 INTEGER_BOUNDS: Final[Mapping[str, tuple[int, int]]] = {
     LIMIT_FIELD: (1, 1_000),
@@ -648,71 +646,48 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
     )
 
 
-def project_key_from_diagnosis(payload: object) -> str:
-    """Return the pool's main checkout path from the worktree-pool record.
+def project_key_from_common_dir(text: object) -> str:
+    """Return the project key the repository's common Git directory names.
 
-    A payload that is not an object, carries no check list, or carries one
-    that is not an array holds no worktree-pool record, so it is the
-    diagnosis-unavailable result like any diagnosis without that record.
+    The directory is the identity every checkout of one repository shares, so a
+    linked worktree, the pool's bare repository, and the pool's main checkout
+    resolve one key and no checkout's deletion removes it. The key is the
+    normalized absolute path: no `.` or `..` segment, no repeated separator, and
+    no trailing separator. Text naming no absolute directory resolves no
+    repository.
     """
-    checks_value = payload.get(CHECKS_FIELD) if isinstance(payload, dict) else None
-    if not isinstance(checks_value, list):
+    candidate = text.strip() if isinstance(text, str) else ""
+    if not candidate.startswith(PATH_SEPARATOR):
         raise AgentMailError(
-            ExecutionStatus.DIAGNOSIS_UNAVAILABLE,
-            f"The diagnosis carries no {CHECKS_FIELD} array, so no "
-            f"{WORKTREE_POOL_CHECK} record can be read.",
+            ExecutionStatus.REPOSITORY_UNRESOLVED,
+            "The repository reports no absolute common Git directory.",
         )
-    checks = cast(list[object], checks_value)
-    records = [
-        record
-        for record in checks
-        if isinstance(record, dict) and record.get(NAME_FIELD) == WORKTREE_POOL_CHECK
-    ]
-    if len(records) != 1:
-        raise AgentMailError(
-            ExecutionStatus.DIAGNOSIS_UNAVAILABLE,
-            f"The diagnosis carries {len(records)} {WORKTREE_POOL_CHECK} records; one is required.",
-        )
-    readings = cast(dict[str, object], records[0]).get(READINGS_FIELD)
-    path = (
-        readings.get(MAIN_CHECKOUT_PATH_FIELD) if isinstance(readings, dict) else None
-    )
-    if not isinstance(path, str) or not path.startswith("/"):
-        raise AgentMailError(
-            ExecutionStatus.DIAGNOSIS_UNAVAILABLE,
-            f"The {WORKTREE_POOL_CHECK} record reports no absolute {MAIN_CHECKOUT_PATH_FIELD}.",
-        )
-    return path
+    normalized = os.path.normpath(candidate)
+    return PATH_SEPARATOR + normalized.lstrip(PATH_SEPARATOR)
 
 
 def resolve_project_key(runner: CommandRunner) -> str:
-    """Run the diagnosis and return the project key, or raise the unavailable result."""
+    """Return the invoking working directory's repository key, or raise."""
     try:
-        result = runner.run(PUBLIC_SPX_DIAGNOSE_COMMAND)
+        result = runner.run(PUBLIC_GIT_COMMON_DIR_COMMAND)
     except FileNotFoundError as error:
         raise AgentMailError(
-            ExecutionStatus.DIAGNOSIS_UNAVAILABLE,
-            f"{SPX_COMMAND} is unavailable on this machine.",
+            ExecutionStatus.REPOSITORY_UNRESOLVED,
+            f"{GIT_COMMAND} is unavailable on this machine.",
         ) from error
     except subprocess.TimeoutExpired as error:
         raise AgentMailError(
-            ExecutionStatus.DIAGNOSIS_UNAVAILABLE,
-            f"{SPX_COMMAND} exceeded its bound: {' '.join(PUBLIC_SPX_DIAGNOSE_COMMAND)}",
+            ExecutionStatus.REPOSITORY_UNRESOLVED,
+            f"{GIT_COMMAND} exceeded its bound: "
+            f"{' '.join(PUBLIC_GIT_COMMON_DIR_COMMAND)}",
         ) from error
-    if result.returncode != 0 and not result.stdout.strip():
+    if result.returncode != 0:
         detail = result.stderr.strip() or "no command detail"
         raise AgentMailError(
-            ExecutionStatus.DIAGNOSIS_UNAVAILABLE,
-            f"{SPX_COMMAND} diagnose failed with exit {result.returncode}: {detail}",
+            ExecutionStatus.REPOSITORY_UNRESOLVED,
+            f"The working directory resolves to no repository: {detail}",
         )
-    try:
-        payload = json.loads(result.stdout)
-    except json.JSONDecodeError as error:
-        raise AgentMailError(
-            ExecutionStatus.DIAGNOSIS_UNAVAILABLE,
-            f"{SPX_COMMAND} diagnose returned invalid JSON: {error.msg}",
-        ) from error
-    return project_key_from_diagnosis(payload)
+    return project_key_from_common_dir(result.stdout)
 
 
 def _describe_shapes(contract: OperationContract) -> str:

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shlex
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -16,17 +18,10 @@ from typing import Protocol, cast
 from hypothesis import given, seed, settings
 
 from outcomeeng_testing.generators.agent_mail import (
-    DIAGNOSIS_CHECKS_NOT_ARRAY,
-    DIAGNOSIS_EMPTY_READINGS,
-    DIAGNOSIS_NO_CHECKS,
-    DIAGNOSIS_NO_RECORD,
-    DIAGNOSIS_NOT_OBJECT,
-    DIAGNOSIS_OTHER_RECORD,
-    DIAGNOSIS_RELATIVE_PATH,
-    DIAGNOSIS_SHAPES,
-    DIAGNOSIS_TWO_RECORDS,
-    DIAGNOSIS_WITH_PATH,
+    COMMON_DIR_EXACT,
+    COMMON_DIR_SHAPES,
     agent_names,
+    common_dir_output,
     capture_row_ordinals,
     coordination_references,
     expected_project_key,
@@ -60,12 +55,10 @@ OPERATE_AGENT_MAIL_RELATIVE = Path("skills/operate-agent-mail")
 FIXTURE_ROOT = ROOT / "outcomeeng_testing/fixtures/agent_mail"
 # Captured `am <command> --help` texts: the store CLI's own grammar declaration.
 USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
-# Captured `am` responses for each operation's public command, and the
-# captured `spx diagnose --format json` response the adapter reads the project
-# key from (taken with `@outcomeeng/spx` 0.7.1; the `worktree-pool` record
-# introduced in 0.7.0 carries the same readings).
+# Captured `am` responses for each operation's public command. The project key
+# has no captured oracle: the checkout shapes a real repository takes are what
+# the resolver is read against.
 RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
-DIAGNOSIS_FIXTURE = RESPONSE_FIXTURE_ROOT / "spx-diagnose.json"
 RAW_MAIL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_command.py.txt"
 GIT_PROJECT_KEY_VIOLATION_FIXTURE = FIXTURE_ROOT / "git_project_key.py.txt"
 RECORD_ROUNDTRIP_SEED = 2026091801
@@ -105,6 +98,15 @@ COMPLIANCE_REPLAY_PATH = (
 # compliance probe sets it as the fallback the adapter must ignore.
 STORE_PROJECT_ENV = "AGENT_MAIL_PROJECT"
 CLI_TIMEOUT_SECONDS = 60
+# The pool one probe builds: a bare repository, the main checkout beside it,
+# and one linked worktree, so the resolver is read from all three shapes.
+POOL_REPOSITORY_NAME = "pool"
+POOL_MAIN_CHECKOUT_NAME = "main"
+POOL_LINKED_WORKTREE_NAME = "linked"
+POOL_SEED_NAME = "seed"
+# One absolute key for probes that need a repository but do not vary it.
+SHARED_PROJECT_KEY = "/repository/pool.git"
+POOL_DEFAULT_BRANCH = "main"
 
 
 class CommandResultContract(Protocol):
@@ -274,6 +276,15 @@ def store_response_payload(
     return result.stdout.strip()
 
 
+def store_response_text(
+    module: ModuleType,
+    operation: object,
+    arguments: dict[str, object] | None = None,
+) -> str:
+    """The captured response exactly as the store printed it."""
+    return store_response_result(module, operation, arguments).stdout
+
+
 def _inbox_captures_with_bodies(module: ModuleType) -> list[Path]:
     """Every captured inbox response taken with `--include-bodies`, in path
     order: the store answered the same command while a receipt was pending and
@@ -346,121 +357,36 @@ def inbox_response_without_thread(
     )
 
 
-def captured_diagnosis(module: ModuleType) -> dict[str, object]:
-    """The captured `spx diagnose --format json` response, decoded."""
-    payload = json.loads(DIAGNOSIS_FIXTURE.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise CaptureError(f"{DIAGNOSIS_FIXTURE} is not a JSON object")
-    return cast(dict[str, object], payload)
+def common_dir_reply(module: ModuleType) -> CommandResultContract:
+    """The repository lookup's reply naming one generated project key."""
+    return text_command_result(
+        module, common_dir_output(COMMON_DIR_EXACT, SHARED_PROJECT_KEY)
+    )
 
 
-def _captured_pool_record(
-    module: ModuleType, payload: dict[str, object]
-) -> tuple[list[dict[str, object]], dict[str, object]]:
-    """The captured check list and its one worktree-pool record. A capture
-    without the keys the adapter reads is a capture gap, never a passing case."""
-    checks = payload.get(module.CHECKS_FIELD)
-    if not isinstance(checks, list):
-        raise CaptureError(
-            f"{DIAGNOSIS_FIXTURE} carries no {module.CHECKS_FIELD} array"
-        )
-    records = [
-        cast(dict[str, object], record)
-        for record in cast(list[object], checks)
-        if isinstance(record, dict)
-        and record.get(module.NAME_FIELD) == module.WORKTREE_POOL_CHECK
-    ]
-    if len(records) != 1:
-        raise CaptureError(
-            f"{DIAGNOSIS_FIXTURE} carries {len(records)} {module.WORKTREE_POOL_CHECK} "
-            "records"
-        )
-    readings = records[0].get(module.READINGS_FIELD)
-    if not isinstance(readings, dict) or module.MAIN_CHECKOUT_PATH_FIELD not in cast(
-        dict[str, object], readings
-    ):
-        raise CaptureError(
-            f"{DIAGNOSIS_FIXTURE} {module.WORKTREE_POOL_CHECK} record carries no "
-            f"{module.READINGS_FIELD}.{module.MAIN_CHECKOUT_PATH_FIELD}"
-        )
-    return [cast(dict[str, object], check) for check in checks], records[0]
-
-
-def diagnosis_variant(module: ModuleType, shape: str, path: str) -> object:
-    """One diagnosis payload of the named shape: the captured response with the
-    generated path in place of the machine's, varied only in what the shape
-    names. Every key comes from the capture."""
-    payload = captured_diagnosis(module)
-    checks, record = _captured_pool_record(module, payload)
-    readings = cast(dict[str, object], record[module.READINGS_FIELD])
-    with_path = {
-        **record,
-        module.READINGS_FIELD: {**readings, module.MAIN_CHECKOUT_PATH_FIELD: path},
-    }
-    others = [check for check in checks if check is not record]
-    if shape == DIAGNOSIS_WITH_PATH:
-        return {**payload, module.CHECKS_FIELD: [*others, with_path]}
-    if shape == DIAGNOSIS_NO_RECORD:
-        return {**payload, module.CHECKS_FIELD: others}
-    if shape == DIAGNOSIS_OTHER_RECORD:
-        renamed = {**with_path, module.NAME_FIELD: f"other-{path.strip('/')}"}
-        return {**payload, module.CHECKS_FIELD: [*others, renamed]}
-    if shape == DIAGNOSIS_TWO_RECORDS:
-        return {**payload, module.CHECKS_FIELD: [*others, with_path, with_path]}
-    if shape == DIAGNOSIS_EMPTY_READINGS:
-        emptied = {**record, module.READINGS_FIELD: {}}
-        return {**payload, module.CHECKS_FIELD: [*others, emptied]}
-    if shape == DIAGNOSIS_RELATIVE_PATH:
-        relative = {
-            **record,
-            module.READINGS_FIELD: {
-                **readings,
-                module.MAIN_CHECKOUT_PATH_FIELD: path.lstrip("/"),
-            },
-        }
-        return {**payload, module.CHECKS_FIELD: [*others, relative]}
-    if shape == DIAGNOSIS_NOT_OBJECT:
-        return [*others, with_path]
-    if shape == DIAGNOSIS_NO_CHECKS:
-        return {
-            key: value for key, value in payload.items() if key != module.CHECKS_FIELD
-        }
-    if shape == DIAGNOSIS_CHECKS_NOT_ARRAY:
-        return {**payload, module.CHECKS_FIELD: with_path}
-    raise CaptureError(f"No diagnosis shape named {shape!r}")
-
-
-def diagnosis_with_main_checkout(module: ModuleType, main_checkout_path: str) -> object:
-    return diagnosis_variant(module, DIAGNOSIS_WITH_PATH, main_checkout_path)
-
-
-def diagnosis_seeded_runner(
+def common_dir_seeded_runner(
     module: ModuleType, project_key: str, *results: CommandResultContract
 ) -> RecordingRunner:
-    """A recording runner whose first reply is the diagnosis resolving
+    """A recording runner whose first reply is the repository lookup printing
     `project_key`, followed by the store replies in order."""
     return RecordingRunner(
         [
-            json_command_result(
-                module, diagnosis_with_main_checkout(module, project_key)
+            text_command_result(
+                module, common_dir_output(COMMON_DIR_EXACT, project_key)
             ),
             *results,
         ]
     )
 
 
-def diagnosis_seeded_absent_store_runner(
+def common_dir_seeded_absent_store_runner(
     module: ModuleType, project_key: str
 ) -> AbsentExecutableRunner:
-    """A runner that resolves `project_key` from the diagnosis and then finds
+    """A runner that resolves `project_key` from the repository and then finds
     no store executable."""
     return AbsentExecutableRunner(
         module.AM_COMMAND,
-        [
-            json_command_result(
-                module, diagnosis_with_main_checkout(module, project_key)
-            )
-        ],
+        [text_command_result(module, common_dir_output(COMMON_DIR_EXACT, project_key))],
     )
 
 
@@ -576,8 +502,8 @@ def run_terminal_property(
 def run_project_key_mapping(
     assert_key: Callable[[ModuleType, str, object, str | None, str], None],
 ) -> None:
-    """Drive every diagnosis shape as a variant of the captured response, with
-    generated paths inside each."""
+    """Drive every shape the repository lookup's output takes, each built
+    around a generated absolute path."""
     module = _load()
 
     def drive(shape: str) -> Callable[[], None]:
@@ -587,12 +513,12 @@ def run_project_key_mapping(
         )
         @given(path=project_key_paths(), agent=agent_names())
         def generated_key_mapping(path: str, agent: str) -> None:
-            payload = diagnosis_variant(module, shape, path)
-            assert_key(module, shape, payload, expected_project_key(shape, path), agent)
+            output = common_dir_output(shape, path)
+            assert_key(module, shape, output, expected_project_key(shape, path), agent)
 
         return generated_key_mapping
 
-    for shape in DIAGNOSIS_SHAPES:
+    for shape in COMMON_DIR_SHAPES:
         run_replayable_property(
             drive(shape),
             seed_value=PROJECT_KEY_MAPPING_SEED,
@@ -794,11 +720,6 @@ def mail_command_source_texts() -> dict[str, str]:
     return _source_texts(script_paths)
 
 
-def agent_mail_source_texts() -> dict[str, str]:
-    """Return the authoritative adapter source observation."""
-    return _source_texts((AGENT_MAIL_PATH,))
-
-
 def raw_mail_violation_source() -> tuple[str, dict[str, str]]:
     return (
         str(RAW_MAIL_VIOLATION_FIXTURE.relative_to(ROOT)),
@@ -810,6 +731,140 @@ def git_project_key_violation_source() -> tuple[str, dict[str, str]]:
     return (
         str(GIT_PROJECT_KEY_VIOLATION_FIXTURE.relative_to(ROOT)),
         _source_texts((GIT_PROJECT_KEY_VIOLATION_FIXTURE,)),
+    )
+
+
+@dataclass(frozen=True)
+class MailPool:
+    """One real repository reached through its three checkout shapes.
+
+    ``bare`` is the repository every shape shares, so it is the key the
+    resolver must return from each of them. ``outside`` is the pool's parent
+    directory, which is no repository.
+    """
+
+    bare: Path
+    main_checkout: Path
+    linked_worktree: Path
+    outside: Path
+
+
+def _git_in(directory: Path, *arguments: str) -> None:
+    subprocess.run(
+        ["git", "-C", str(directory), *arguments],
+        check=True,
+        capture_output=True,
+    )
+
+
+@contextmanager
+def mail_pool() -> Iterator[MailPool]:
+    """Yield a throwaway pool: a bare repository and two worktrees attached to
+    it — the main checkout and one linked worktree — under a parent directory
+    that is no repository.
+
+    The main checkout is a worktree of the bare repository, the shape a
+    provisioned pool takes, rather than its own clone.
+    """
+    with TemporaryDirectory(ignore_cleanup_errors=True) as raw:
+        outside = Path(raw).resolve()
+        seed = outside / POOL_SEED_NAME
+        subprocess.run(
+            ["git", "init", "--quiet", "-b", POOL_DEFAULT_BRANCH, str(seed)],
+            check=True,
+            capture_output=True,
+        )
+        _git_in(seed, "config", "user.email", "test@example.invalid")
+        _git_in(seed, "config", "user.name", "Spec Tree Test")
+        _git_in(seed, "config", "commit.gpgsign", "false")
+        (seed / "README.md").write_text("seed\n", encoding="utf-8")
+        _git_in(seed, "add", "README.md")
+        _git_in(seed, "commit", "--quiet", "-m", "seed")
+        bare = outside / f"{POOL_REPOSITORY_NAME}.git"
+        subprocess.run(
+            ["git", "clone", "--quiet", "--bare", str(seed), str(bare)],
+            check=True,
+            capture_output=True,
+        )
+        main_checkout = outside / POOL_MAIN_CHECKOUT_NAME
+        _git_in(
+            bare, "worktree", "add", "--quiet", str(main_checkout), POOL_DEFAULT_BRANCH
+        )
+        linked_worktree = outside / POOL_LINKED_WORKTREE_NAME
+        _git_in(bare, "worktree", "add", "--quiet", "--detach", str(linked_worktree))
+        yield MailPool(
+            bare=bare,
+            main_checkout=main_checkout,
+            linked_worktree=linked_worktree,
+            outside=outside,
+        )
+
+
+def run_cli_project_key(working_directory: Path) -> tuple[int, dict[str, object]]:
+    """Run the shipped CLI's project-key operation in ``working_directory``."""
+    module = _load()
+    completed = subprocess.run(
+        [sys.executable, str(AGENT_MAIL_PATH), module.CliOperation.PROJECT_KEY],
+        cwd=working_directory,
+        capture_output=True,
+        text=True,
+        timeout=CLI_TIMEOUT_SECONDS,
+        check=False,
+    )
+    return completed.returncode, cast(dict[str, object], json.loads(completed.stdout))
+
+
+def adapter_programs(module: ModuleType) -> frozenset[str]:
+    """The external programs the adapter's own command vectors name."""
+    return frozenset(
+        {prefix[0] for prefix in module.PUBLIC_AM_COMMAND_PREFIXES.values()}
+        | {module.PUBLIC_GIT_COMMON_DIR_COMMAND[0]}
+    )
+
+
+def run_cli_with_only_adapter_programs(
+    request: dict[str, object], *, project_key: str, store_response: str
+) -> CommandResultContract:
+    """Run the shipped CLI where only the adapter's own programs resolve.
+
+    Every program the adapter names gets a stub on an otherwise empty ``PATH``:
+    the repository lookup prints ``project_key`` and the store prints
+    ``store_response``. An operation that reached any other program would find
+    it absent and could not succeed.
+    """
+    module = _load()
+    programs = adapter_programs(module)
+    replies = {
+        module.PUBLIC_GIT_COMMON_DIR_COMMAND[0]: project_key,
+        module.AM_COMMAND: store_response,
+    }
+    missing = sorted(programs - set(replies))
+    if missing:
+        raise CaptureError(
+            f"The adapter names programs this probe stubs no reply for: {missing}"
+        )
+    with TemporaryDirectory() as raw:
+        stub_path = Path(raw)
+        for program in sorted(programs):
+            stub = stub_path / program
+            stub.write_text(
+                f"#!/bin/sh\nprintf '%s' {shlex.quote(replies[program])}\n",
+                encoding="utf-8",
+            )
+            stub.chmod(0o755)
+        completed = subprocess.run(
+            [sys.executable, str(AGENT_MAIL_PATH), module.CliOperation.RUN],
+            input=json.dumps(request),
+            env={"PATH": str(stub_path)},
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=CLI_TIMEOUT_SECONDS,
+            check=False,
+        )
+    return cast(
+        CommandResultContract,
+        module.CommandResult(completed.returncode, completed.stdout, completed.stderr),
     )
 
 

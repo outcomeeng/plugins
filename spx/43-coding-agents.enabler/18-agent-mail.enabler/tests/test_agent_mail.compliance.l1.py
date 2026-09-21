@@ -3,17 +3,18 @@ from types import ModuleType
 from typing import cast
 
 from outcomeeng_testing.harnesses.agent_mail import (
-    agent_mail_source_texts,
-    diagnosis_seeded_absent_store_runner,
-    diagnosis_seeded_runner,
+    common_dir_seeded_absent_store_runner,
+    common_dir_seeded_runner,
     git_project_key_violation_source,
     load_agent_mail,
     mail_command_source_texts,
     raw_mail_violation_source,
+    run_cli_with_only_adapter_programs,
     run_cli_without_executables,
     run_generated_identities,
     store_response_payload,
     store_response_result,
+    store_response_text,
 )
 
 
@@ -27,16 +28,16 @@ def test_unavailable_results_admit_no_fallback() -> None:
         result = json.loads(completed.stdout)
         assert completed.returncode != 0
         assert (
-            result[module.STATUS_FIELD] == module.ExecutionStatus.DIAGNOSIS_UNAVAILABLE
+            result[module.STATUS_FIELD] == module.ExecutionStatus.REPOSITORY_UNRESOLVED
         )
         assert module.PROJECT_KEY_FIELD not in result
         assert project_key not in completed.stdout
 
-        no_store = diagnosis_seeded_absent_store_runner(module, project_key)
+        no_store = common_dir_seeded_absent_store_runner(module, project_key)
         result = module.execute(request, no_store)
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.STORE_UNAVAILABLE
         assert [argv[0] for argv, _ in no_store.calls] == [
-            module.SPX_COMMAND,
+            module.PUBLIC_GIT_COMMON_DIR_COMMAND[0],
             module.AM_COMMAND,
         ]
 
@@ -54,7 +55,7 @@ def test_registration_result_carries_no_token() -> None:
             dict[str, object], store_response_payload(module, module.Operation.REGISTER)
         )
         token = cast(str, captured[module.STORE_REGISTRATION_TOKEN_FIELD])
-        runner = diagnosis_seeded_runner(
+        runner = common_dir_seeded_runner(
             module,
             project_key,
             store_response_result(module, module.Operation.REGISTER),
@@ -71,12 +72,31 @@ def test_registration_result_carries_no_token() -> None:
     run_generated_identities(assert_case)
 
 
+def test_operations_reach_no_program_outside_the_adapters_own_commands() -> None:
+    def assert_case(
+        module: ModuleType, agent: str, program: str, model: str, project_key: str
+    ) -> None:
+        request = module.operation_request(module.Operation.INBOX, agent=agent)
+
+        completed = run_cli_with_only_adapter_programs(
+            request,
+            project_key=project_key,
+            store_response=store_response_text(module, module.Operation.INBOX),
+        )
+        result = json.loads(completed.stdout)
+
+        assert completed.returncode == 0, completed.stderr
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        assert result[module.PROJECT_KEY_FIELD] == project_key
+
+    run_generated_identities(assert_case)
+
+
 def test_no_other_shipped_script_constructs_mail_commands_or_git_keys() -> None:
     module = load_agent_mail()
 
     assert module.raw_mail_command_violations(mail_command_source_texts()) == []
     assert module.git_project_key_violations(mail_command_source_texts()) == []
-    assert module.git_project_key_violations(agent_mail_source_texts()) == []
 
     raw_path, raw_source = raw_mail_violation_source()
     assert module.raw_mail_command_violations(raw_source) == [raw_path]

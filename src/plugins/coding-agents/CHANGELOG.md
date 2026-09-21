@@ -6,6 +6,17 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## Unreleased
+
+### Breaking
+
+- **The agent-mail project key is the repository, not a checkout.** `/operate-agent-mail` derives the key from the repository's own common Git directory, resolved for the adapter's working directory and normalized, so a linked worktree, the pool's bare repository, and the pool's main checkout all resolve one mail project and deleting any checkout removes none of it. The previous key was the pool's main checkout path, so a store keyed under the old derivation holds its registrations and message records under a different key; re-register, or adopt the old project into the new key, before the first operation on an existing store.
+- **`diagnosis-unavailable` is replaced by `repository-unresolved`.** A working directory that is no repository, an absent Git executable, and a repository lookup that reports no absolute common directory each yield `repository-unresolved`. Neither that result nor `store-unavailable` admits a fallback command, key, or store.
+
+### Removed
+
+- **The SPX dependency of every mail operation.** No mail operation invokes an SPX command, so the capability no longer depends on `spx diagnose --format json` — an argument vector the next `@outcomeeng/spx` release retires — and an operation completes where only the store CLI and Git resolve.
+
 ## 0.7.1
 
 ### Added
