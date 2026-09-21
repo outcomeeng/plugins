@@ -123,6 +123,7 @@ from outcomeeng_testing.generators.installation import (
     generated_claude_install_records,
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
+    generated_valid_catalog_subsets,
 )
 from outcomeeng.validation.ci_gate import JUST_BINARY
 from outcomeeng_testing.harnesses.discovery_auth import (
@@ -1530,37 +1531,46 @@ def observe_invalid_isolated_selection() -> SelectionRejectionObservation:
 
 @dataclass(frozen=True)
 class IsolatedSubsetPlanObservation:
-    """Catalog and plan observations for one explicit isolated subset."""
+    """One agent's catalog and plan for one explicit isolated subset."""
 
-    plan: InstallationPlan
-    subsets: Mapping[Agent, frozenset[str]]
-    claude_catalog: bytes
-    codex_catalog: bytes
+    agent: Agent
+    catalog: tuple[str, ...]
+    selected: frozenset[str]
+    planned: tuple[str, ...]
 
 
-def observe_isolated_subset_plan() -> IsolatedSubsetPlanObservation:
-    """Build an isolated plan from one generated valid explicit subset."""
+def observe_isolated_subset_plans() -> tuple[IsolatedSubsetPlanObservation, ...]:
+    """Build isolated plans for every valid subset of each agent catalog."""
     checkout = repository_root()
-    subsets = generated_agent_subsets(checkout, include_spec_tree=True)
-    claude_catalog = (checkout / CLAUDE_CATALOG_PATH).read_bytes()
-    codex_catalog = (checkout / CODEX_CATALOG_PATH).read_bytes()
+    catalogs = _catalogs_from_documents(checkout)
+    observations: list[IsolatedSubsetPlanObservation] = []
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         mirror = temporary_root / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        plan = build_isolated_installation_plan(
-            mirror,
-            temporary_root / "state",
-            os.environ,
-            claude_plugins=tuple(subsets[Agent.CLAUDE]),
-            codex_plugins=tuple(subsets[Agent.CODEX]),
-        )
-    return IsolatedSubsetPlanObservation(
-        plan=plan,
-        subsets=subsets,
-        claude_catalog=claude_catalog,
-        codex_catalog=codex_catalog,
-    )
+        for agent in Agent:
+            for selected in generated_valid_catalog_subsets(catalogs[agent]):
+                selections = dict(catalogs)
+                selections[agent] = tuple(selected)
+                plan = build_isolated_installation_plan(
+                    mirror,
+                    temporary_root / "state",
+                    os.environ,
+                    claude_plugins=selections[Agent.CLAUDE],
+                    codex_plugins=selections[Agent.CODEX],
+                )
+                planned = (
+                    plan.claude_plugins if agent is Agent.CLAUDE else plan.codex_plugins
+                )
+                observations.append(
+                    IsolatedSubsetPlanObservation(
+                        agent=agent,
+                        catalog=catalogs[agent],
+                        selected=selected,
+                        planned=planned,
+                    )
+                )
+    return tuple(observations)
 
 
 def observe_missing_codex_home() -> str | None:
@@ -2739,9 +2749,7 @@ def _blocked_directory(path: Path) -> Iterator[Callable[[], int]]:
 
 
 def _seed_persistent_state(root: Path) -> None:
-    shutil.copytree(
-        installation_fixture("persistent_state"), root, dirs_exist_ok=True
-    )
+    shutil.copytree(installation_fixture("persistent_state"), root, dirs_exist_ok=True)
 
 
 def _tree_snapshot(root: Path) -> tuple[tuple[str, bytes], ...]:
