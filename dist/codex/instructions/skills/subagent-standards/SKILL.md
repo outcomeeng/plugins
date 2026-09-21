@@ -1,7 +1,7 @@
 ---
 name: subagent-standards
 description: >-
-  Configuration, generated-subject, profile, capability, invocation, placement, and
+  Configuration, configuration-subject, profile, capability, invocation, placement, and
   evidence standards for configured subagents. Loaded by creator and auditor skills.
 user-invocable: false
 allowed-tools: Read
@@ -26,8 +26,9 @@ permissions, task boundary, and result are independently inspectable.
 - ALWAYS: declare every field required by the current harness and reject unsupported configuration.
 - ALWAYS: resolve a definition's governing context before judging its execution boundary
   or its evidence: the owning node is the node whose linked test or audit assertion names
-  the definition, and a governing declaration is an assertion in that node's spec or a
-  decision on the path from the root that reaches the node by index.
+  the definition — several matching nodes resolve to their lowest common ancestor — and a
+  governing declaration is an assertion in that node's spec or a decision on the path from
+  the root that reaches the node by index.
 - ALWAYS: judge native sandbox and approval fields against the governing context's
   execution-boundary declaration before applying the harness contract.
 - NEVER: preserve a retired schema, compatibility alias, or fallback configuration.
@@ -71,8 +72,9 @@ Use a native TOML definition with `name`, `description`, and
   including the intentional absence of unsupported controls.
 - NEVER: author model identifiers or individual reasoning controls independently,
   translate another harness's values, extend the profile set, or substitute after a failure.
-- ALWAYS: leave model and reasoning overrides absent from skill frontmatter. A skill
-  retains its invoking session's configuration, including when invoked by a configured subagent.
+- ALWAYS: a skill retains its invoking session's configuration, including when a
+  configured subagent invokes it; `/skill-standards` owns the rule that skill frontmatter
+  carries no model or reasoning override.
 
 | Profile  | Native configuration                                 |
 | -------- | ---------------------------------------------------- |
@@ -107,8 +109,10 @@ Use a native TOML definition with `name`, `description`, and
 <invocation>
 
 - ALWAYS: apply the standing authorization and invocation mechanics the repository's root
-  harness instruction file declares.
-  The calling skill owns when to launch, the exact configured role, and the target-only prompt.
+  `AGENTS.md` declares; when it declares none, a launch waits for the operator's request.
+
+- ALWAYS: the calling skill owns when to launch, the exact configured role, and the
+  target-only prompt.
 - NEVER: turn a description, task pattern, available role, or apparent usefulness into a launch request.
 - ALWAYS: let the invoked skill independently discover context from the supplied target.
 - ALWAYS: start every audit and review without authoring conversation, reasoning,

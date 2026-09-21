@@ -24,7 +24,8 @@ The subagents-about-subagents cluster is three peers with distinct roles:
   with linked evidence: an assertion in the owning node's spec, or a decision on
   the path from the root that reaches the node by index. The auditor resolves the
   owning node through the tree as the node whose linked test or audit assertion
-  names the definition, names which declaration it read, and judges its presence;
+  names the definition, several matching nodes resolving to their lowest common
+  ancestor, names which declaration it read, and judges its presence;
   an absent native sandbox field does not invalidate declared inheritance ([audit]).
 - NEVER: `/subagent-standards` accepts a citation inside a definition's frontmatter
   or body as the inheritance declaration, or admits undeclared inheritance on the
