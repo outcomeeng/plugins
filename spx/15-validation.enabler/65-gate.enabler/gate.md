@@ -20,7 +20,7 @@ CAN run conformance and correctness verification with bounded live output, retai
 
 ### Conformance
 
-- Every structured run summary conforms to the gate summary schema: top-level recipe, phase, status, exit code, summary path, primitive recipe summaries, and step records with recipe, phase, label, command argv, status, duration, exit code, optional retained log path, and optional excerpt ([test](tests/test_gate.conformance.l1.py))
+- Every structured run summary conforms to the gate summary schema: top-level recipe, phase, status, exit code, summary path, primitive recipe summaries, and step records with recipe, phase, label, command argv, status, duration, exit code, optional retained log path, optional excerpt, and an optional list of rows skipped by declaration, each naming the row and the switch that declared its skip ([test](tests/test_gate.conformance.l1.py))
 
 ### Properties
 
@@ -29,6 +29,7 @@ CAN run conformance and correctness verification with bounded live output, retai
 
 ### Compliance
 
+- ALWAYS: a pytest step whose rows were skipped by a declared switch records each skipped row and its switch in the run summary under the distinct status skipped and prints them after the step's status line — a summary carrying skipped rows never reads as all-green without naming them ([test](tests/test_gate.compliance.l1.py))
 - ALWAYS: the full gate step list includes a `fmt-check` (`dprint check`) step, a `ruff format --check` step, a `ruff check` step, a `mypy --strict` package step, a `pyright` package step, a `spx validation markdown` step, an evidence-link integrity step, and a hook-safety step — so repository formatting, Python formatting, lint, package type checking, Markdown link integrity, spec-tree `[test]` and `[eval]` link resolution, and shipped-hook safety are each enforced on every `just check-full` ([test](tests/test_gate.compliance.l1.py))
 - ALWAYS: the `validation` primitive recipe reports `verification_type: validation` and `purpose: conformance`, and the `test` primitive recipe reports `verification_type: testing` and `purpose: correctness`, matching `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` and the `/understanding` verification taxonomy ([test](tests/test_gate.compliance.l1.py))
 - NEVER: the full wrapper introduces a third verification type — it reports aggregate primitive results only ([test](tests/test_gate.compliance.l1.py))
