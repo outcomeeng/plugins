@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import pytest
 
+from outcomeeng.validation._engine import (
+    STEP_HEADER_FORM,
+    TIMING_SUMMARY_BANNER,
+    TIMING_TOTAL_LABEL,
+)
 from outcomeeng.validation import (
     FAILURE_EXCERPT_LINE_LIMIT,
     FORWARDED_SIGNALS,
@@ -41,6 +46,7 @@ from outcomeeng.validation import (
     VERIFICATION_TYPE_VALIDATION,
 )
 from outcomeeng_testing.harnesses.gate import (
+    skip_report_arguments,
     FAIL_EXIT_CODE,
     FAILING_CHILD_OUTPUT_PREFIX,
     PASS_EXIT_CODE,
@@ -87,10 +93,13 @@ def test_the_test_recipe_runs_pytest_after_preflight() -> None:
         * (len(TEST_RECIPE.preflight_steps) + len(TEST_RECIPE.steps)),
     )
 
+    report_arguments = skip_report_arguments(run.spawn_calls)
+
     assert run.exit_code == PASS_EXIT_CODE
+    assert len(report_arguments) == 1
     assert run.spawn_calls == (
         TEST_RECIPE.preflight_steps[0].argv,
-        TEST_RECIPE.steps[0].argv,
+        (*TEST_RECIPE.steps[0].argv, *report_arguments),
     )
     assert run.summary[SUMMARY_KEY_RECIPE] == RECIPE_TEST
     assert run.summary[SUMMARY_KEY_VERIFICATION_TYPE] == VERIFICATION_TYPE_TESTING
@@ -112,12 +121,14 @@ def test_a_passing_pipeline_prints_headers_in_order_and_removes_logs() -> None:
     )
 
     assert run.exit_code == PASS_EXIT_CODE
-    assert "━━━ Timing Summary ━━━" in run.output
-    summary = run.output[run.output.index("━━━ Timing Summary ━━━") :]
-    assert "TOTAL" in summary
+    assert TIMING_SUMMARY_BANNER in run.output
+    summary = run.output[run.output.index(TIMING_SUMMARY_BANNER) :]
+    assert TIMING_TOTAL_LABEL in summary
     assert PASSING_CHILD_OUTPUT not in run.output
     assert run.written_outputs == (PASSING_CHILD_OUTPUT,) * len(steps)
-    header_positions = [run.output.index(f"━━━ {step.label} ━━━") for step in steps]
+    header_positions = [
+        run.output.index(STEP_HEADER_FORM.format(label=step.label)) for step in steps
+    ]
     assert header_positions == sorted(header_positions)
     for step in steps:
         assert step.label in summary
@@ -138,7 +149,7 @@ def test_a_failing_step_stops_the_pipeline_and_retains_its_log() -> None:
         outputs=[PASSING_CHILD_OUTPUT, failing_output, PASSING_CHILD_OUTPUT],
     )
 
-    summary = run.output[run.output.index("━━━ Timing Summary ━━━") :]
+    summary = run.output[run.output.index(TIMING_SUMMARY_BANNER) :]
     assert run.exit_code == FAIL_EXIT_CODE
     assert len(run.spawn_calls) == 2
     assert steps[0].label in summary

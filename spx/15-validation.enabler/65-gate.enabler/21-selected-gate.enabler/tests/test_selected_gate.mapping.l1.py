@@ -75,6 +75,7 @@ from outcomeeng_testing.harnesses.gate import (
     run_check_observation,
     selected_gate_branch_discovery_argv,
     selected_gate_changed_path_domain,
+    skip_report_arguments,
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
     conftest_reach_layout,
@@ -483,8 +484,14 @@ def test_a_deleted_then_modified_test_still_runs_when_present() -> None:
         create_repo_file=SELECTED_GATE_PYTHON_TEST_PATH,
     )
 
+    report_arguments = skip_report_arguments(run.spawn_calls)
+
     assert run.exit_code == 0
-    assert run.spawn_calls[-1] == (*PYTEST_ARGV, SELECTED_GATE_PYTHON_TEST_PATH)
+    assert run.spawn_calls[-1] == (
+        *PYTEST_ARGV,
+        SELECTED_GATE_PYTHON_TEST_PATH,
+        *report_arguments,
+    )
 
 
 def test_a_copy_collects_both_sides() -> None:
@@ -506,8 +513,14 @@ def test_a_copied_test_selects_pytest_for_the_surviving_source() -> None:
         branch_status="C100",
     )
 
+    report_arguments = skip_report_arguments(run.spawn_calls)
+
     assert run.exit_code == 0
-    assert (*PYTEST_ARGV, SELECTED_GATE_PYTHON_TEST_PATH) in run.spawn_calls
+    assert (
+        *PYTEST_ARGV,
+        SELECTED_GATE_PYTHON_TEST_PATH,
+        *report_arguments,
+    ) in run.spawn_calls
 
 
 @pytest.mark.parametrize("kind", list(InfrastructureReach), ids=str)

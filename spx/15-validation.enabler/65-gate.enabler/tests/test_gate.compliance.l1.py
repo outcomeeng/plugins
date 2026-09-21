@@ -6,6 +6,7 @@ import ast
 import math
 import signal
 
+from outcomeeng.validation._spawner import _restore_child_signal_mask
 from outcomeeng.validation import (
     CHECK_RECIPES,
     EVAL_LINKS_ARGV,
@@ -156,8 +157,8 @@ def test_subprocess_lives_only_in_the_production_spawner() -> None:
         assert "preexec_fn" in kwargs, "Popen call must pass preexec_fn"
         preexec_fn = kwargs["preexec_fn"]
         assert isinstance(preexec_fn, ast.Name)
-        assert preexec_fn.id == "_restore_child_signal_mask"
-    assert "signal.pthread_sigmask(signal.SIG_UNBLOCK" in source
+        assert preexec_fn.id == _restore_child_signal_mask.__name__
+    assert f"signal.{signal.pthread_sigmask.__name__}(signal.SIG_UNBLOCK" in source
     for signal_name in ("SIGTERM", "SIGINT", "SIGHUP"):
         assert f"signal.{signal_name}" in source
 
@@ -197,9 +198,11 @@ def test_declared_skips_are_named_in_the_summary_and_after_the_status_line() -> 
     recorded = [step for step in steps if SUMMARY_KEY_SKIPPED in step]
 
     assert observation.written_records
+    assert observation.recording_steps == 1
+    assert len(recorded) == observation.recording_steps
     assert [step[SUMMARY_KEY_SKIPPED] for step in recorded] == [
         list(observation.written_records)
-    ] * len(recorded)
+    ] * observation.recording_steps
     assert all(step[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS for step in recorded)
     for record in observation.written_records:
         line = (

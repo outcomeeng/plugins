@@ -28,11 +28,14 @@ from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation import (
+    SUMMARY_KEY_RECIPES,
+    SUMMARY_KEY_STEPS,
     CHECK_RECIPES,
     MYPY_ARGV,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
     PREFLIGHT_STEPS,
+    PYTEST_ARGV,
     PYRIGHT_ARGV,
     RUFF_CHECK_ARGV,
     SIGNAL_GRACE_SECONDS,
@@ -52,11 +55,13 @@ from outcomeeng.validation import (
 )
 from outcomeeng.validation._git import GitCommandResult
 from outcomeeng.validation.agent_disable import (
-    SKIP_REPORT_ENV,
+    SKIP_REPORT_OPTION,
     SKIP_REPORT_SWITCH_FIELD,
     SKIP_REPORT_TEST_FIELD,
 )
 from outcomeeng.validation.selected_gate import (
+    PLAN_LINE_FORM,
+    PLAN_STEP_LINE_FORM,
     DEFAULT_BASE_REF,
     GIT_DISCOVERY_FAILURE_EXIT_CODE,
     GIT_DIFF_BRANCH_ARGV_PREFIX,
@@ -102,7 +107,15 @@ SELECTED_GATE_WHITESPACE_PATH = " docs/selected gate edge spaces.py "
 def selected_check_plan_block(*, labels: Sequence[str], reason: str) -> str:
     """Expected selected-check plan block for tests that inspect CLI output."""
 
-    lines = [SELECTED_CHECK_PLAN_HEADER, *(f"  {label}: {reason}" for label in labels)]
+    lines = [
+        SELECTED_CHECK_PLAN_HEADER,
+        *(
+            PLAN_LINE_FORM.format(
+                text=PLAN_STEP_LINE_FORM.format(label=label, reason=reason)
+            )
+            for label in labels
+        ),
+    ]
     return "\n".join(lines) + "\n"
 
 
@@ -139,7 +152,7 @@ def read_summary(path: Path) -> dict[str, object]:
 def summary_steps(summary: dict[str, object]) -> list[dict[str, object]]:
     """Return typed step summaries."""
 
-    steps = summary["steps"]
+    steps = summary[SUMMARY_KEY_STEPS]
     assert isinstance(steps, list)
     for step in steps:
         assert isinstance(step, dict)
@@ -149,7 +162,7 @@ def summary_steps(summary: dict[str, object]) -> list[dict[str, object]]:
 def summary_recipes(summary: dict[str, object]) -> list[dict[str, object]]:
     """Return typed recipe summaries."""
 
-    recipes = summary["recipes"]
+    recipes = summary[SUMMARY_KEY_RECIPES]
     assert isinstance(recipes, list)
     for recipe in recipes:
         assert isinstance(recipe, dict)
@@ -290,14 +303,33 @@ def selected_gate_property(
     return wrapper
 
 
-def expected_full_check_spawn_calls() -> tuple[tuple[str, ...], ...]:
-    """Expected argv calls when selected-check escalates to the full wrapper."""
+def skip_report_arguments(calls: Sequence[Sequence[str]]) -> tuple[str, ...]:
+    """Return every skip-report argument the orchestrator appended, in call order."""
 
+    prefix = f"{SKIP_REPORT_OPTION}="
     return tuple(
-        step.argv
-        for recipe in CHECK_RECIPES
-        for step in (*PREFLIGHT_STEPS, *recipe.steps)
+        argument for call in calls for argument in call if argument.startswith(prefix)
     )
+
+
+def expected_full_check_spawn_calls(
+    report_arguments: Sequence[str] = (),
+) -> tuple[tuple[str, ...], ...]:
+    """Expected argv calls when selected-check escalates to the full wrapper.
+
+    ``report_arguments`` carries the skip-report arguments observed on the run,
+    in call order; each pytest step consumes the next one.
+    """
+
+    remaining = list(report_arguments)
+    calls: list[tuple[str, ...]] = []
+    for recipe in CHECK_RECIPES:
+        for step in (*PREFLIGHT_STEPS, *recipe.steps):
+            if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV and remaining:
+                calls.append((*step.argv, remaining.pop(0)))
+            else:
+                calls.append(step.argv)
+    return tuple(calls)
 
 
 def validation_package_modules() -> list[Path]:
@@ -958,6 +990,15 @@ SKIPPED_ROW_PATH = "spx/example.enabler/tests/test_example.compliance.l3.py"
 """The row path the recording child reports; an incidental harness handle value."""
 
 
+def _skip_report_destination(argv: Sequence[str]) -> Path | None:
+    """Read the destination the orchestrator named in this call's own argv."""
+    prefix = f"{SKIP_REPORT_OPTION}="
+    for argument in argv:
+        if argument.startswith(prefix):
+            return Path(argument[len(prefix) :])
+    return None
+
+
 @dataclass
 class SkipReportingSpawner(RecordingSpawner):
     """A recording spawner that also writes the child's declared-skip records.
@@ -972,9 +1013,9 @@ class SkipReportingSpawner(RecordingSpawner):
 
     def spawn(self, argv: Sequence[str], output_path: Path) -> ProcessHandle:
         handle = super().spawn(argv, output_path)
-        destination = os.environ.get(SKIP_REPORT_ENV)
+        destination = _skip_report_destination(argv)
         if destination is not None and self.skip_records:
-            with Path(destination).open("a", encoding="utf-8") as report:
+            with destination.open("a", encoding="utf-8") as report:
                 for record in self.skip_records:
                     report.write(f"{json.dumps(dict(record), sort_keys=True)}\n")
         return handle
@@ -988,6 +1029,8 @@ class SkipReportObservation:
     output: str
     summary: dict[str, object]
     written_records: tuple[dict[str, str], ...]
+    recording_steps: int
+    """How many steps the child wrote records for, counted from its own calls."""
 
 
 def skip_report_observation(
@@ -1017,4 +1060,7 @@ def skip_report_observation(
         output=run.output,
         summary=run.summary,
         written_records=records,
+        recording_steps=sum(
+            1 for call in spawner.spawn_calls if _skip_report_destination(call)
+        ),
     )

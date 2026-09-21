@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from outcomeeng.validation._engine import RECIPE_HEADER_FORM, SUMMARY_PATH_LABEL
 from outcomeeng.validation import (
     CHECK_RECIPES,
     PYTEST_ARGV,
@@ -47,12 +48,16 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_PYTHON_TEST_PATH,
     path_from_pattern,
 )
+from outcomeeng_testing.harnesses.changeset_scope import (
+    ORIGIN_HEAD_SYMBOLIC_REF,
+)
 from outcomeeng_testing.harnesses.gate import (
     GIT_DISCOVERY_FAILURE_STDERR,
     GIT_DISCOVERY_FAILURE_STDOUT,
     HIGH_VOLUME_CHILD_OUTPUT,
     collect_selected_gate_paths,
     expected_full_check_spawn_calls,
+    skip_report_arguments,
     failing_discovery_runner,
     missing_origin_observation,
     run_check_observation,
@@ -83,8 +88,10 @@ def test_the_plan_prints_before_the_recipes_run() -> None:
     )
     assert run.exit_code == 0
     assert run.output.startswith(selected_block)
-    assert run.output.index(selected_block) < run.output.index(f"Recipe {RECIPE_CHECK}")
-    assert "Summary: " in run.output
+    assert run.output.index(selected_block) < run.output.index(
+        RECIPE_HEADER_FORM.format(name=RECIPE_CHECK)
+    )
+    assert SUMMARY_PATH_LABEL in run.output
 
 
 def test_child_output_never_streams_to_the_live_sink() -> None:
@@ -101,11 +108,14 @@ def test_child_output_never_streams_to_the_live_sink() -> None:
 def test_a_full_gate_path_runs_the_complete_wrapper() -> None:
     run = run_check_observation(branch_path=SELECTED_GATE_FULL_GATE_PATH)
 
+    report_arguments = skip_report_arguments(run.spawn_calls)
+
     assert run.exit_code == 0
-    assert run.spawn_calls == expected_full_check_spawn_calls()
+    assert len(report_arguments) == 1
+    assert run.spawn_calls == expected_full_check_spawn_calls(report_arguments)
     assert FULL_GATE_REASON in run.output
-    assert f"Recipe {RECIPE_VALIDATION}" in run.output
-    assert f"Recipe {RECIPE_TEST}" in run.output
+    assert RECIPE_HEADER_FORM.format(name=RECIPE_VALIDATION) in run.output
+    assert RECIPE_HEADER_FORM.format(name=RECIPE_TEST) in run.output
 
 
 def test_a_deleted_test_path_selects_no_pytest_run() -> None:
@@ -142,7 +152,7 @@ def test_a_repo_without_origin_reports_the_unset_head() -> None:
     assert run.exit_code == GIT_DISCOVERY_FAILURE_EXIT_CODE
     assert run.spawn_calls == ()
     assert GIT_DISCOVERY_ERROR_PREFIX in run.output
-    assert "refs/remotes/origin/HEAD unset" in run.output
+    assert ORIGIN_HEAD_SYMBOLIC_REF in run.output
 
 
 def test_collection_propagates_git_failure_as_a_typed_error() -> None:
@@ -199,7 +209,7 @@ def test_discovery_inclusion_is_printed_before_execution() -> None:
 
     assert run.exit_code == 0
     assert run.output.index(LIVE_DISCOVERY_INCLUDED_REASON) < run.output.index(
-        f"Recipe {RECIPE_CHECK}"
+        RECIPE_HEADER_FORM.format(name=RECIPE_CHECK)
     )
 
 
@@ -230,13 +240,16 @@ def test_unrelated_full_gate_execution_honors_its_exclusion() -> None:
     run = run_check_observation(branch_path=unrelated_validation_source_path())
 
     assert run.exit_code == 0
+    report_arguments = skip_report_arguments(run.spawn_calls)
+
+    assert len(report_arguments) == 1
     assert any(
         call[: len(PYTEST_ARGV)] == PYTEST_ARGV
-        and call[-len(LIVE_DISCOVERY_EXCLUSION) :] == LIVE_DISCOVERY_EXCLUSION
+        and call[len(PYTEST_ARGV) :] == (*LIVE_DISCOVERY_EXCLUSION, *report_arguments)
         for call in run.spawn_calls
     )
     assert run.output.index(LIVE_DISCOVERY_EXCLUDED_REASON) < run.output.index(
-        f"Recipe {RECIPE_VALIDATION}"
+        RECIPE_HEADER_FORM.format(name=RECIPE_VALIDATION)
     )
 
 
@@ -269,7 +282,7 @@ def test_the_plan_explanation_names_each_switch_state(value: str | None) -> None
 
 def test_each_switch_state_is_printed_before_the_selected_steps_run() -> None:
     run = run_check_observation(branch_path=SELECTED_GATE_PYTHON_SOURCE_PATH)
-    header = run.output.index(f"Recipe {RECIPE_CHECK}")
+    header = run.output.index(RECIPE_HEADER_FORM.format(name=RECIPE_CHECK))
 
     assert run.exit_code == 0
     for switch in AGENT_SWITCHES:

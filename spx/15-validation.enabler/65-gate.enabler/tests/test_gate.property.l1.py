@@ -24,16 +24,16 @@ from outcomeeng.validation import (
     run,
 )
 from outcomeeng_testing.generators.gate import step_lists
-from outcomeeng_testing.harnesses.gate import RecordingSpawner
+from outcomeeng.validation._engine import TIMING_DIVIDER, TIMING_SUMMARY_BANNER
+from outcomeeng_testing.harnesses.gate import PASS_EXIT_CODE, RecordingSpawner
 
 MAX_EXAMPLES: Final = 50
-PASS: Final = 0
 TIMING_ROW_PATTERN: Final = re.compile(r"\s+([0-9]+)s$")
 
 
 def _timing_summary_elapsed_values(output: str) -> list[int]:
-    summary_text = output.split("━━━ Timing Summary ━━━\n", maxsplit=1)[1]
-    rows_text = summary_text.split("  ────────────────────────\n", maxsplit=1)[0]
+    summary_text = output.split(f"{TIMING_SUMMARY_BANNER}\n", maxsplit=1)[1]
+    rows_text = summary_text.split(f"{TIMING_DIVIDER}\n", maxsplit=1)[0]
     elapsed_values: list[int] = []
     for line in rows_text.splitlines():
         match = TIMING_ROW_PATTERN.search(line)
@@ -46,7 +46,7 @@ def _timing_summary_elapsed_values(output: str) -> list[int]:
 @settings(max_examples=MAX_EXAMPLES, deadline=None)
 def test_spawn_order_matches_step_list_order(steps: tuple[Step, ...]) -> None:
     """The order in which subprocesses are started equals the step-list order."""
-    spawner = RecordingSpawner(exit_codes=[PASS] * len(steps))
+    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE] * len(steps))
     sink = io.StringIO()
 
     run(spawner=spawner, sink=sink, steps=steps)
@@ -62,7 +62,7 @@ def test_elapsed_time_is_non_negative_for_completed_steps(
     steps: tuple[Step, ...],
 ) -> None:
     """Every per-step summary record carries a non-negative elapsed value."""
-    spawner = RecordingSpawner(exit_codes=[PASS] * len(steps))
+    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE] * len(steps))
     sink = io.StringIO()
 
     run(spawner=spawner, sink=sink, steps=steps)
