@@ -96,10 +96,10 @@ and its system prompt in the body. Keep operational settings such as `tools`,
   step can run with the declared capabilities. An inherited tool set requires a concrete justification.
 - NEVER: treat a prompt-level restriction as an enforced permission boundary.
 - ALWAYS: admit a definition that inherits the invoking session's execution policy when its
-  governing context declares that inheritance with linked evidence. Read the declaration in
-  the owning node's spec or in a decision above it, name in the verdict which form was read,
-  and judge the declaration's presence; an absent native sandbox field does not invalidate
-  declared inheritance.
+  governing context declares that inheritance with linked evidence. Read the declaration
+  where `<configuration>` locates the governing context, name in the verdict which form was
+  read, and judge the declaration's presence; an absent native sandbox field does not
+  invalidate declared inheritance.
 - NEVER: accept a citation inside a definition's frontmatter or body as the inheritance
   declaration, or admit undeclared inheritance on a judgment that the definition needs the
   invoking policy — a definition whose governing context declares nothing stays a finding.
