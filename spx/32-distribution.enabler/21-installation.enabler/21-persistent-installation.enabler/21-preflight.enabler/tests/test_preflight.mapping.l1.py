@@ -2,6 +2,7 @@
 
 from outcomeeng.distribution.installation import (
     Agent,
+    CANONICAL_MARKETPLACE_SOURCE,
     CLAUDE_CATALOG_PATH,
     CODEX_CATALOG_PATH,
     CODEX_PLUGIN_ENTRIES_FIELD,
@@ -12,8 +13,22 @@ from outcomeeng_testing.generators.installation import (
     generated_claude_listing_entries,
     generated_codex_listing_entries,
 )
-from outcomeeng_testing.harnesses.installation import repository_root
+from outcomeeng_testing.harnesses.installation import (
+    NONCANONICAL_MARKETPLACE_SOURCE,
+    observe_noncanonical_source,
+    repository_root,
+)
 import json
+import pytest
+
+
+@pytest.mark.parametrize("agent", tuple(Agent), ids=str)
+def test_every_noncanonical_agent_source_stops_before_any_plan(agent: Agent) -> None:
+    error = observe_noncanonical_source(agent)
+
+    assert error is not None
+    assert NONCANONICAL_MARKETPLACE_SOURCE in error
+    assert CANONICAL_MARKETPLACE_SOURCE in error
 
 
 def test_claude_inventory_maps_only_the_invocation_checkout_refresh_scopes() -> None:

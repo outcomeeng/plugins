@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-09-21",
+  "purpose": "Complete inert persistent-state payloads used to prove isolated installation preserves external state.",
+  "artifacts": [
+    {
+      "path": "persistent_state/home/.claude/settings.json",
+      "origin": "Claude Code 2.1.267 disposable-home settings schema with volatile paths removed"
+    },
+    {
+      "path": "persistent_state/claude/plugins/installed_plugins.json",
+      "origin": "Claude Code 2.1.267 disposable-home installation-record schema with volatile paths removed"
+    },
+    {
+      "path": "persistent_state/codex/config.toml",
+      "origin": "Codex CLI 0.155.1 disposable-home configuration schema with volatile paths removed"
+    },
+    {
+      "path": "persistent_state/codex-sqlite/state.db",
+      "origin": "Real SQLite container generated with Python sqlite3 for opaque-state preservation"
+    },
+    {
+      "path": "persistent_state/checkout/.codex/agents/developer.toml",
+      "origin": "Complete inert checkout-owned native-agent definition"
+    }
+  ]
+}

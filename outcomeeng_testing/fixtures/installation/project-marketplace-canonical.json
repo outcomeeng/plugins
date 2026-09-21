@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "outcomeeng": {
+      "source": {
+        "source": "github",
+        "repo": "outcomeeng/plugins"
+      }
+    }
+  }
+}

@@ -2,8 +2,10 @@
 
 import json
 import errno
+import hashlib
 import os
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from enum import StrEnum
 from itertools import combinations
 from pathlib import Path
@@ -27,9 +29,13 @@ from outcomeeng.distribution.installation import (
     InstallationMode,
     MARKETPLACE_NAME,
     Operation,
+    PLUGIN_OPERATIONS,
+    RecordWarningReason,
     SPEC_TREE_PLUGIN,
     marketplace_plugin_identifier,
 )
+
+FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "installation"
 
 
 def catalog_plugin_names_from_bytes(payload: bytes) -> tuple[str, ...]:
@@ -169,13 +175,10 @@ class RecordDisposition(StrEnum):
     """What one generated Claude Code install record should map to."""
 
     UPDATE = "update"
-    NO_DIRECTORY_PATH = "no-directory-path"
-    OUT_OF_SCOPE = "out-of-scope"
-    PATHLESS_OUT_OF_SCOPE = "pathless-out-of-scope"
-    UNCATALOGED = "uncataloged"
-    NONCANONICAL_SOURCE = "noncanonical-source"
-    UNREADABLE_SETTINGS = "unreadable-settings"
     EXCLUDED = "excluded"
+
+
+RecordCaseDisposition = RecordDisposition | RecordWarningReason
 
 
 def generated_claude_install_records(
@@ -190,7 +193,7 @@ def generated_claude_install_records(
     local_canonical_checkout: Path,
     malformed_checkout: Path,
     denied_checkout: Path,
-) -> tuple[tuple[tuple[dict[str, str], RecordDisposition], ...], ...]:
+) -> tuple[tuple[tuple[dict[str, str], RecordCaseDisposition], ...], ...]:
     """Cycle every catalog plugin through each install-record disposition.
 
     Each plugin yields one record per disposition: an update at project scope
@@ -211,7 +214,7 @@ def generated_claude_install_records(
     local document override the project document. One uncataloged plugin
     record is appended so the catalog bound has a rejected member.
     """
-    groups: list[tuple[tuple[dict[str, str], RecordDisposition], ...]] = []
+    groups: list[tuple[tuple[dict[str, str], RecordCaseDisposition], ...]] = []
     for plugin in catalog:
         identifier = marketplace_plugin_identifier(plugin)
         groups.append(
@@ -246,7 +249,7 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(absent_path),
                     },
-                    RecordDisposition.NO_DIRECTORY_PATH,
+                    RecordWarningReason.NO_DIRECTORY_PATH,
                 ),
                 (
                     {
@@ -254,14 +257,14 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(file_path),
                     },
-                    RecordDisposition.NO_DIRECTORY_PATH,
+                    RecordWarningReason.NO_DIRECTORY_PATH,
                 ),
                 (
                     {
                         CLAUDE_PLUGIN_ID_FIELD: identifier,
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_USER_SCOPE,
                     },
-                    RecordDisposition.PATHLESS_OUT_OF_SCOPE,
+                    RecordWarningReason.PATHLESS_OUT_OF_SCOPE,
                 ),
                 (
                     {
@@ -269,7 +272,7 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_MANAGED_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
                     },
-                    RecordDisposition.OUT_OF_SCOPE,
+                    RecordWarningReason.OUT_OF_SCOPE,
                 ),
                 (
                     {
@@ -277,7 +280,7 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_MANAGED_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(other_checkout),
                     },
-                    RecordDisposition.OUT_OF_SCOPE,
+                    RecordWarningReason.OUT_OF_SCOPE,
                 ),
                 (
                     {
@@ -285,7 +288,7 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(malformed_checkout),
                     },
-                    RecordDisposition.UNREADABLE_SETTINGS,
+                    RecordWarningReason.UNREADABLE_SETTINGS,
                 ),
                 (
                     {
@@ -293,7 +296,7 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(denied_checkout),
                     },
-                    RecordDisposition.UNREADABLE_SETTINGS,
+                    RecordWarningReason.UNREADABLE_SETTINGS,
                 ),
                 (
                     {
@@ -301,7 +304,7 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(forked_checkout),
                     },
-                    RecordDisposition.NONCANONICAL_SOURCE,
+                    RecordWarningReason.NONCANONICAL_SOURCE,
                 ),
                 (
                     {
@@ -309,7 +312,7 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_LOCAL_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(forked_local_checkout),
                     },
-                    RecordDisposition.NONCANONICAL_SOURCE,
+                    RecordWarningReason.NONCANONICAL_SOURCE,
                 ),
                 (
                     {
@@ -317,7 +320,7 @@ def generated_claude_install_records(
                         CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                         CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(local_forked_checkout),
                     },
-                    RecordDisposition.NONCANONICAL_SOURCE,
+                    RecordWarningReason.NONCANONICAL_SOURCE,
                 ),
                 (
                     {
@@ -349,7 +352,7 @@ def generated_claude_install_records(
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout),
                 },
-                RecordDisposition.UNCATALOGED,
+                RecordWarningReason.UNCATALOGED,
             ),
         )
     )
@@ -381,24 +384,103 @@ def generated_command_failure_stderr() -> tuple[str, ...]:
     return tuple(dict.fromkeys(os.strerror(code) for code in errno.errorcode))
 
 
+@dataclass(frozen=True)
+class FailureClassificationCase:
+    """One reachable command failure with an independently owned expectation."""
+
+    mode: InstallationMode
+    source: str | None
+    agent: Agent
+    operation: Operation
+    plugin: str | None
+    stderr: str
+    pending_publication: bool
+
+
+def _unpublished_capture_entries() -> tuple[dict[str, object], ...]:
+    document = cast(
+        "dict[str, object]",
+        json.loads(
+            (FIXTURE_ROOT / "unpublished_plugin" / "provenance.json").read_text(
+                encoding="utf-8"
+            )
+        ),
+    )
+    return tuple(cast("list[dict[str, object]]", document["captures"]))
+
+
+def _unpublished_capture(agent: Agent, operation: Operation) -> dict[str, object] | None:
+    return next(
+        (
+            entry
+            for entry in _unpublished_capture_entries()
+            if entry["agent"] == agent.value and entry["operation"] == operation.value
+        ),
+        None,
+    )
+
+
+def captured_unpublished_plugin_stderr(
+    agent: Agent, operation: Operation, plugin: str
+) -> str:
+    """Render one exact agent-operation capture for another catalog plugin."""
+    entry = _unpublished_capture(agent, operation)
+    if entry is None:
+        raise ValueError(f"no unpublished-plugin capture for {agent.value}/{operation.value}")
+    root = FIXTURE_ROOT / "unpublished_plugin"
+    path = root / cast("str", entry["file"])
+    payload = path.read_bytes()
+    if hashlib.sha256(payload).hexdigest() != entry["sha256"]:
+        raise ValueError(f"capture digest mismatch: {path}")
+    document = cast(
+        "dict[str, object]",
+        json.loads((root / "provenance.json").read_text(encoding="utf-8")),
+    )
+    return (
+        payload.decode("utf-8")
+        .replace(cast("str", document["plugin"]), plugin)
+        .replace(cast("str", document["marketplace"]), MARKETPLACE_NAME)
+        .rstrip("\n")
+    )
+
+
 def generated_failure_classification_cases(
     operation_domains: Sequence[
-        tuple[InstallationMode, str | None, Sequence[Operation]]
+        tuple[InstallationMode, str | None, Sequence[tuple[Agent, Operation]]]
     ],
-) -> tuple[tuple[InstallationMode, str | None, Operation], ...]:
-    """Compose each reachable mode-operation pair with a plan source.
+    catalog: Sequence[str],
+) -> tuple[FailureClassificationCase, ...]:
+    """Compose every reachable mode-agent-operation with an independent failure.
 
-    Several source configurations can reach the same operation.  Keep the
-    first source that reaches each mode-operation pair so every finite mapping
-    case appears exactly once.
+    Several source configurations can reach the same command. Keep the first
+    source for each complete key. Exact agent-operation captures supply
+    publication-absence cases; the independent operating-system error domain
+    supplies every other terminal failure.
     """
-    reached: dict[tuple[InstallationMode, Operation], str | None] = {}
-    for mode, source, operations in operation_domains:
-        for operation in operations:
-            reached.setdefault((mode, operation), source)
-    return tuple(
-        (mode, source, operation) for (mode, operation), source in reached.items()
-    )
+    reached: dict[tuple[InstallationMode, Agent, Operation], str | None] = {}
+    for mode, source, commands in operation_domains:
+        for agent, operation in commands:
+            reached.setdefault((mode, agent, operation), source)
+    plugins = tuple(sorted(catalog))
+    if not plugins:
+        raise ValueError("failure cases require a nonempty catalog")
+    ordinary_errors = generated_command_failure_stderr()
+    cases: list[FailureClassificationCase] = []
+    for index, ((mode, agent, operation), source) in enumerate(reached.items()):
+        plugin = plugins[index % len(plugins)] if operation in PLUGIN_OPERATIONS else None
+        capture = _unpublished_capture(agent, operation)
+        if capture is not None and plugin is not None:
+            stderr = captured_unpublished_plugin_stderr(agent, operation, plugin)
+            pending = mode is InstallationMode.PERSISTENT
+        else:
+            stderr = ordinary_errors[index % len(ordinary_errors)]
+            pending = False
+        cases.append(
+            FailureClassificationCase(
+                mode, source, agent, operation, plugin, stderr, pending
+            )
+        )
+    return tuple(cases)
 
 
 __all__ = [
@@ -409,10 +491,13 @@ __all__ = [
     "generated_claude_install_records",
     "generated_claude_listing_entries",
     "RecordDisposition",
+    "RecordCaseDisposition",
+    "FailureClassificationCase",
     "UNCATALOGED_PLUGIN",
     "generated_codex_listing_entries",
     "generated_failure_classification_cases",
     "generated_command_failure_stderr",
+    "captured_unpublished_plugin_stderr",
     "generated_invalid_catalog_subsets",
     "generated_persistent_catalog_selections",
     "generated_valid_catalog_subsets",

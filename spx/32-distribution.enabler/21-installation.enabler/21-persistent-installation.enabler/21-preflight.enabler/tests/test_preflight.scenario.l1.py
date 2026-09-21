@@ -1,31 +1,25 @@
 """Installation evidence grouped by its governing contract."""
 
-import pytest
-from outcomeeng.distribution.installation import (
-    CODEX_SOURCE_DIAGNOSTIC,
-    PROJECT_SOURCE_DIAGNOSTIC,
-)
 import json
 from outcomeeng.distribution.installation import (
     Agent,
+    CANONICAL_MARKETPLACE_SOURCE,
     Operation,
     ReportField,
     SPEC_TREE_PLUGIN,
     USER_SCOPE_COLLISION_DIAGNOSTIC,
-    CANONICAL_MARKETPLACE_SOURCE,
     PATHLESS_LISTING_ENTRY_DIAGNOSTIC,
     CLAUDE_PROJECT_SCOPE,
     REGISTRY_SOURCE_DIAGNOSTIC,
     UNREADABLE_SETTINGS_DIAGNOSTIC,
 )
 from outcomeeng_testing.harnesses.installation import (
+    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_claude_user_collision,
     observe_inspection_failure,
     observe_invalid_persistent_selection,
     observe_persistent_plan,
-    NONCANONICAL_MARKETPLACE_SOURCE,
     observe_noncanonical_registry_plan,
-    observe_noncanonical_source,
     observe_pathless_record_listing,
     observe_unreadable_source,
 )
@@ -84,25 +78,6 @@ def test_fresh_home_plan_adds_the_declared_marketplace() -> None:
         }
     ]
     assert source_operations == [Operation.MARKETPLACE_ADD]
-
-
-@pytest.mark.parametrize(
-    ("agent", "diagnostic"),
-    [
-        (Agent.CLAUDE, PROJECT_SOURCE_DIAGNOSTIC),
-        (Agent.CODEX, CODEX_SOURCE_DIAGNOSTIC),
-    ],
-    ids=str,
-)
-def test_a_noncanonical_source_stops_either_agent_before_any_plan(
-    agent: Agent, diagnostic: str
-) -> None:
-    error = observe_noncanonical_source(agent)
-
-    assert error is not None
-    assert error.startswith(diagnostic)
-    assert NONCANONICAL_MARKETPLACE_SOURCE in error
-    assert CANONICAL_MARKETPLACE_SOURCE in error
 
 
 def test_a_pathless_refresh_scope_entry_stops_before_any_plan() -> None:

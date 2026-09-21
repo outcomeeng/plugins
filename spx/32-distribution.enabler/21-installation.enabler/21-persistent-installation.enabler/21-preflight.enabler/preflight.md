@@ -8,8 +8,6 @@ CAN inspect a persistent installation plan before any state-changing operation
 
 - ALWAYS: persistent selection is the catalog-bounded Claude Code inventory recorded for the invocation checkout at project or local scope or the catalog-bounded plugin keys in the selected Codex home's raw configuration, including disabled plugins and plugins with missing caches; product overrides never change that home-wide set.
 
-- Given an existing noncanonical marketplace source for either agent, when persistent preflight runs, then it reports the observed and canonical sources and the need for explicit repair, and no agent performs a state-changing operation.
-
 ### Scenarios
 
 - Given a nonempty selected subset that omits `spec-tree`, when persistent installation starts, then it reports the invalid selection and performs no state-changing operation. ([test](tests/test_preflight.scenario.l1.py))
@@ -27,5 +25,7 @@ CAN inspect a persistent installation plan before any state-changing operation
 - Given Claude Code's marketplace registry carrying `outcomeeng` from a noncanonical source, when persistent installation plans, then it reports the observed and canonical sources and the need for explicit repair and issues no state-changing command. ([test](tests/test_preflight.scenario.l1.py))
 
 ### Mappings
+
+- Every supported agent with an existing noncanonical marketplace source maps to a preflight rejection that reports the observed and canonical sources and the need for explicit repair, before any state-changing operation. ([test](tests/test_preflight.mapping.l1.py))
 
 - Native plugin-listing entries map to marketplace membership through their declared marketplace identifiers; Claude Code entries additionally map through the invocation checkout's project or local scope. Listing membership alone never determines Codex persistent selection. ([test](tests/test_preflight.mapping.l1.py))

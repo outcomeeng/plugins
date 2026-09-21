@@ -1,0 +1,3 @@
+[marketplaces.outcomeeng]
+source_type = "git"
+source = "https://github.com/outcomeeng/plugins"

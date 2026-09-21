@@ -1,0 +1,1 @@
+✘ Failed to install plugin "frontend@outcomeeng": Plugin "frontend" not found in marketplace "outcomeeng". Your local copy may be out of date — try `claude plugin marketplace update outcomeeng`.

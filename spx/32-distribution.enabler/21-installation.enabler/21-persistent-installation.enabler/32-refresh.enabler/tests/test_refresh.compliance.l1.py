@@ -96,6 +96,7 @@ def test_a_recorded_plugin_is_refreshed_by_the_native_update_never_a_reinstall()
 def test_native_update_failure_stops_before_later_operations(stderr: str) -> None:
     failure = observe_designated_failure(
         isolated=False,
+        agent=Agent.CLAUDE,
         operation=Operation.PLUGIN_UPDATE,
         stderr=stderr,
     )

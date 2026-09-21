@@ -105,7 +105,6 @@ from outcomeeng.distribution.installation import (
     build_persistent_preflight,
     claude_install_records,
     claude_marketplace_listing_payload,
-    claude_marketplace_settings,
     codex_marketplace_listing_payload,
     codex_source_action,
     execute_installation,
@@ -116,8 +115,9 @@ from outcomeeng.distribution.installation import (
     marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import (
-    RecordDisposition,
+    RecordCaseDisposition,
     UNCATALOGED_PLUGIN,
+    captured_unpublished_plugin_stderr,
     catalog_plugin_names_from_document,
     generated_agent_subsets,
     generated_claude_install_records,
@@ -135,27 +135,9 @@ from outcomeeng_testing.harnesses.discovery_auth import (
     select_authentication,
 )
 
-UNOWNED_AGENT_FILENAME = "developer-owned.toml"
-UNOWNED_AGENT_CONTENT = 'name = "developer-owned"\n'
-FOREIGN_DEFINITION_CONTENT = b'name = "foreign-definition"\n'
-"""A definition some other party wrote at a destination a plugin wants."""
-EXTERNAL_DEFINITION_CONTENT = b'name = "external"\n'
-"""A definition outside the agent home that a home symlink points at."""
-CONCURRENT_EDIT_CONTENT = b"edited while the run was planning\n"
-"""Bytes a concurrent writer leaves at a destination between preflight and mutation."""
-MALFORMED_OWNERSHIP_DIGEST = "z" * 64
-"""A 64-character digest the ownership record must reject as non-hex."""
-MALFORMED_SETTINGS_CONTENT = "{ not json"
-"""A settings document no reader can parse, standing for a foreign checkout's defect."""
 REQUIRED_BINARIES: tuple[str, ...] = (JUST_BINARY, CLAUDE_EXECUTABLE, CODEX_EXECUTABLE)
 _RECORDED_JUST_INVOCATION_ENV = "OUTCOMEENG_RECORDED_JUST_INVOCATION"
 NONCANONICAL_MARKETPLACE_SOURCE = "outcomeeng/plugins-fork"
-CODEX_CONFIG_PLUGINS_TABLE = "plugins"
-"""The trusted-product `config.toml` table carrying plugin activation overrides."""
-CODEX_CONFIG_PLUGIN_ENABLED_KEY = "enabled"
-"""The activation key inside that table, read by the Codex CLI and never by production."""
-PLUGIN_DISABLING_CODEX_CONFIG = f"[{CODEX_CONFIG_PLUGINS_TABLE}]\n{CODEX_CONFIG_PLUGIN_ENABLED_KEY} = false\n".encode()
-
 SUBAGENT_DISCOVERY_NAMES_FIELD = "subagent_names"
 SUBAGENT_DISCOVERY_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
@@ -836,7 +818,7 @@ class RecordRefreshObservation:
     local_canonical_checkout: Path
     malformed_checkout: Path
     denied_checkout: Path
-    cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
+    cases: tuple[tuple[dict[str, str], RecordCaseDisposition], ...]
     plan: InstallationPlan
     catalog: tuple[str, ...]
     report: InstallationReport
@@ -878,7 +860,9 @@ def observe_record_refresh_plan() -> RecordRefreshObservation:
         malformed = temporary_root / "malformed-checkout"
         malformed_settings = malformed / CLAUDE_PROJECT_SETTINGS_PATH
         malformed_settings.parent.mkdir(parents=True)
-        malformed_settings.write_text(MALFORMED_SETTINGS_CONTENT, encoding="utf-8")
+        shutil.copyfile(
+            installation_fixture("malformed-settings.txt"), malformed_settings
+        )
         denied = temporary_root / "denied-checkout"
         denied.mkdir()
         _write_project_marketplace(denied, CANONICAL_MARKETPLACE_SOURCE)
@@ -961,7 +945,7 @@ def observe_unreadable_source() -> UnreadableSourceObservation:
         mirror_installation_inputs(checkout, mirror)
         settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         settings.parent.mkdir(parents=True, exist_ok=True)
-        settings.write_text(MALFORMED_SETTINGS_CONTENT, encoding="utf-8")
+        shutil.copyfile(installation_fixture("malformed-settings.txt"), settings)
         environment = _persistent_environment(temporary_root)
         try:
             build_persistent_preflight(mirror, environment)
@@ -1063,17 +1047,9 @@ def observe_pathless_record_listing() -> str | None:
         _write_project_marketplace(mirror, CANONICAL_MARKETPLACE_SOURCE)
         environment = _persistent_environment(temporary_root)
         preflight = build_persistent_preflight(mirror, environment)
-        listing = json.dumps(
-            [
-                {
-                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                        SPEC_TREE_PLUGIN
-                    ),
-                    CLAUDE_PLUGIN_ENABLED_FIELD: True,
-                    CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                }
-            ]
-        )
+        listing = installation_fixture(
+            "claude-plugin-list-pathless-project.json"
+        ).read_text(encoding="utf-8")
         try:
             build_persistent_installation_plan(
                 preflight,
@@ -1458,9 +1434,8 @@ def observe_claude_user_collision() -> CollisionObservation:
         environment = _persistent_environment(temporary_root)
         settings_path = temporary_root / "claude" / "settings.json"
         settings_path.parent.mkdir(parents=True, exist_ok=True)
-        settings_path.write_text(
-            json.dumps(claude_marketplace_settings(CANONICAL_MARKETPLACE_SOURCE)),
-            encoding="utf-8",
+        shutil.copyfile(
+            installation_fixture("project-marketplace-canonical.json"), settings_path
         )
         runner = RecordingRunner()
         rejection: str | None = None
@@ -1632,19 +1607,23 @@ def _installation_plans(temporary_root: Path) -> tuple[InstallationPlan, ...]:
     return tuple(plans)
 
 
-def observe_planned_operations() -> tuple[Operation, ...]:
-    """Expose every operation a repository-installation plan performs.
+def observe_planned_operations() -> tuple[tuple[Agent, Operation], ...]:
+    """Expose every agent-operation pair repository installation performs.
 
     An isolated plan registers fresh sources, so it never carries the
     marketplace refresh operation a persistent plan performs against an
     already-registered source. The union across every plan is the
-    domain of operations a plan itself performs; the persistent preflight's
+    domain of commands a plan itself performs; the persistent preflight's
     marketplace inspection fails outside any plan and is exposed separately.
     """
     with TemporaryDirectory() as temporary_directory:
         plans = _installation_plans(Path(temporary_directory))
     return tuple(
-        dict.fromkeys(command.operation for plan in plans for command in plan.commands)
+        dict.fromkeys(
+            (command.agent, command.operation)
+            for plan in plans
+            for command in plan.commands
+        )
     )
 
 
@@ -1743,7 +1722,8 @@ def observe_codex_config_independence() -> ConfigObservation:
         ).plan
         config = mirror / CODEX_CONFIG_PATH
         config.parent.mkdir(parents=True, exist_ok=True)
-        config.write_bytes(PLUGIN_DISABLING_CODEX_CONFIG)
+        fixture = installation_fixture("plugin-disabled-config.toml")
+        shutil.copyfile(fixture, config)
         after = build_isolated_installation_plan(mirror, state, os.environ)
         persistent_after = execute_persistent_installation(
             mirror, environment, RecordingRunner()
@@ -1754,7 +1734,7 @@ def observe_codex_config_independence() -> ConfigObservation:
         after=after,
         persistent_before=persistent_before,
         persistent_after=persistent_after,
-        config_written=PLUGIN_DISABLING_CODEX_CONFIG,
+        config_written=fixture.read_bytes(),
         config_observed=config_observed,
     )
 
@@ -2439,14 +2419,20 @@ def _declared_selection(settings: Path) -> frozenset[str]:
 def _write_project_marketplace(
     checkout: Path, repository: str, *, local: bool = False
 ) -> None:
-    """Declare the marketplace source in a checkout's project or local settings."""
+    """Copy one complete captured marketplace declaration into a checkout."""
     settings = checkout / (
         CLAUDE_LOCAL_SETTINGS_PATH if local else CLAUDE_PROJECT_SETTINGS_PATH
     )
     settings.parent.mkdir(parents=True, exist_ok=True)
-    settings.write_text(
-        json.dumps(claude_marketplace_settings(repository)),
-        encoding="utf-8",
+    fixture_name = {
+        CANONICAL_MARKETPLACE_SOURCE: "project-marketplace-canonical.json",
+        NONCANONICAL_MARKETPLACE_SOURCE: "project-marketplace-noncanonical.json",
+    }.get(repository)
+    if fixture_name is None:
+        raise ValueError(f"no marketplace settings fixture for {repository}")
+    shutil.copyfile(
+        installation_fixture(fixture_name),
+        settings,
     )
 
 
@@ -2742,28 +2728,6 @@ def _shipped_agent_snapshot(checkout: Path) -> tuple[tuple[str, bytes], ...]:
     return tuple(sorted(shipped.items()))
 
 
-# Transcribed verbatim from each real agent CLI's install failure against a
-# canonical marketplace that had not published the named plugin; independent of
-# the production fragment constant so a drifted constant fails the linked tests.
-_CAPTURED_UNPUBLISHED_PLUGIN_STDERR: Mapping[Agent, str] = {
-    Agent.CLAUDE: (
-        'Failed to install plugin "{plugin}@{marketplace}": '
-        'Plugin "{plugin}" not found in marketplace "{marketplace}".'
-    ),
-    Agent.CODEX: (
-        "Error: plugin `{plugin}` was not found in marketplace `{marketplace}`"
-    ),
-}
-
-
-def captured_unpublished_plugin_stderr(agent: Agent, plugin: str) -> str:
-    """One agent CLI's observed unpublished-plugin install failure wording."""
-    return _CAPTURED_UNPUBLISHED_PLUGIN_STDERR[agent].format(
-        plugin=plugin,
-        marketplace=MARKETPLACE_NAME,
-    )
-
-
 @contextmanager
 def _blocked_directory(path: Path) -> Iterator[Callable[[], int]]:
     original_mode = stat.S_IMODE(path.stat().st_mode)
@@ -2775,16 +2739,9 @@ def _blocked_directory(path: Path) -> Iterator[Callable[[], int]]:
 
 
 def _seed_persistent_state(root: Path) -> None:
-    for relative_path in (
-        Path("home/.claude/settings.json"),
-        Path("claude/plugins/installed.json"),
-        Path("codex/plugins/installed.json"),
-        Path("codex-sqlite/state.db"),
-        Path("checkout/.codex/agents/developer.toml"),
-    ):
-        path = root / relative_path
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(str(relative_path), encoding="utf-8")
+    shutil.copytree(
+        installation_fixture("persistent_state"), root, dirs_exist_ok=True
+    )
 
 
 def _tree_snapshot(root: Path) -> tuple[tuple[str, bytes], ...]:
@@ -2848,10 +2805,6 @@ __all__ = [
     "installation_fixture",
     "observe_scope_split",
     "racing_digest_reader",
-    "FOREIGN_DEFINITION_CONTENT",
-    "EXTERNAL_DEFINITION_CONTENT",
-    "CONCURRENT_EDIT_CONTENT",
-    "MALFORMED_OWNERSHIP_DIGEST",
     "absent_from_every_agent",
     "observe_unpublished_plugin",
     "observe_verification_recipe",
@@ -2882,6 +2835,7 @@ class UnpublishedPluginRunner:
                 stdout="",
                 stderr=captured_unpublished_plugin_stderr(
                     command.agent,
+                    command.operation,
                     command.plugin,
                 ),
             )
@@ -2911,19 +2865,22 @@ class DesignatedFailureRunner:
     the wording its agent CLI emitted, and a real CLI produces neither on
     demand for an arbitrary operation.
 
-    The stderr is supplied by the caller so the executed test owns which
-    wording each case carries; this runner selects nothing.
+    The stderr is supplied by the generated case source; this runner selects
+    only the exact agent-operation command and returns observations.
     """
 
     operation: Operation
     stderr: str
+    agent: Agent
     plugin: str | None = None
     calls: list[InstallationCommand] = field(default_factory=list)
 
     def __call__(self, command: InstallationCommand) -> CommandResult:
         self.calls.append(command)
-        designated = command.operation is self.operation and (
-            self.plugin is None or command.plugin == self.plugin
+        designated = (
+            command.agent is self.agent
+            and command.operation is self.operation
+            and (self.plugin is None or command.plugin == self.plugin)
         )
         if designated:
             return CommandResult(
@@ -2962,7 +2919,7 @@ def _build_run_plan(
 
 
 def observe_failure_operation_domains() -> tuple[
-    tuple[InstallationMode, str | None, tuple[Operation, ...]], ...
+    tuple[InstallationMode, str | None, tuple[tuple[Agent, Operation], ...]], ...
 ]:
     """Expose reachable operations for every mode and source plan variant.
 
@@ -2981,7 +2938,9 @@ def observe_failure_operation_domains() -> tuple[
                     source=source,
                 )
                 operations = tuple(
-                    dict.fromkeys(command.operation for command in plan.commands)
+                    dict.fromkeys(
+                        (command.agent, command.operation) for command in plan.commands
+                    )
                 )
                 domains.append((mode, source, operations))
     return tuple(domains)
@@ -3035,6 +2994,7 @@ def observe_unpublished_plugin(
 def observe_designated_failure(
     *,
     isolated: bool,
+    agent: Agent,
     operation: Operation,
     stderr: str,
     plugin: str | None = None,
@@ -3042,7 +3002,12 @@ def observe_designated_failure(
 ) -> UnpublishedPluginObservation:
     """Run one installation in which the designated command fails with `stderr`."""
     return _observe_installation_run(
-        DesignatedFailureRunner(operation=operation, stderr=stderr, plugin=plugin),
+        DesignatedFailureRunner(
+            operation=operation,
+            stderr=stderr,
+            agent=agent,
+            plugin=plugin,
+        ),
         isolated=isolated,
         source=source,
     )

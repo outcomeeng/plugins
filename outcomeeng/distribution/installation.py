@@ -85,7 +85,6 @@ CLAUDE_MARKETPLACE_LIST_COMMAND = (
     "--json",
 )
 CLAUDE_ALREADY_INSTALLED_FRAGMENT = "already installed"
-UNPUBLISHED_PLUGIN_FRAGMENT = "not found in marketplace"
 CLAUDE_ALREADY_ENABLED_FRAGMENT = "already enabled"
 EXTRA_MARKETPLACES_FIELD = "extraKnownMarketplaces"
 CLAUDE_SOURCE_FIELD = "source"
@@ -245,6 +244,17 @@ PLUGIN_OPERATIONS: frozenset[Operation] = frozenset(
     {Operation.PLUGIN_INSTALL, Operation.PLUGIN_ENABLE, Operation.PLUGIN_UPDATE}
 )
 """Operations that name one plugin, as opposed to a marketplace or the checkout."""
+
+UNPUBLISHED_PLUGIN_SIGNATURES: Mapping[tuple[Agent, Operation], str] = {
+    (Agent.CLAUDE, Operation.PLUGIN_INSTALL): (
+        'plugin "{plugin}" not found in marketplace "{marketplace}"'
+    ),
+    (Agent.CLAUDE, Operation.PLUGIN_UPDATE): 'plugin "{plugin}" not found',
+    (Agent.CODEX, Operation.PLUGIN_INSTALL): (
+        "plugin `{plugin}` was not found in marketplace `{marketplace}`"
+    ),
+}
+"""Agent- and operation-specific publication-absence diagnostics."""
 
 CLAUDE_SCOPE_BEARING_OPERATIONS: frozenset[Operation] = frozenset(
     {
@@ -476,12 +486,24 @@ class PersistentPreflight:
     inspections: tuple[InstallationCommand, ...]
 
 
+class RecordWarningReason(StrEnum):
+    """Why one Claude Code install record cannot receive a native update."""
+
+    NO_DIRECTORY_PATH = "no-directory-path"
+    OUT_OF_SCOPE = "out-of-scope"
+    PATHLESS_OUT_OF_SCOPE = "pathless-out-of-scope"
+    UNCATALOGED = "uncataloged"
+    NONCANONICAL_SOURCE = "noncanonical-source"
+    UNREADABLE_SETTINGS = "unreadable-settings"
+
+
 @dataclass(frozen=True, order=True)
 class InstallationWarning:
     """One non-terminal warning produced while selecting plugins."""
 
     agent: Agent
     message: str
+    reason: RecordWarningReason | None = None
 
 
 @dataclass(frozen=True)
@@ -1214,22 +1236,26 @@ def claude_refresh_records(
     warnings: list[InstallationWarning] = []
     for record in records:
         if isinstance(record, PathlessInstallRecord):
+            reason = RecordWarningReason.PATHLESS_OUT_OF_SCOPE
             message = PATHLESS_OUT_OF_SCOPE_RECORD_WARNING.format(
                 plugin=record.plugin, scope=record.scope
             )
         elif record.scope not in CLAUDE_REFRESH_SCOPES:
+            reason = RecordWarningReason.OUT_OF_SCOPE
             message = OUT_OF_SCOPE_RECORD_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
                 project_path=record.project_path,
             )
         elif not record.project_path.is_dir():
+            reason = RecordWarningReason.NO_DIRECTORY_PATH
             message = NO_DIRECTORY_PATH_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
                 project_path=record.project_path,
             )
         elif record.plugin not in catalog:
+            reason = RecordWarningReason.UNCATALOGED
             message = UNCATALOGED_RECORD_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
@@ -1238,6 +1264,11 @@ def claude_refresh_records(
         elif (
             source := _foreign_source_action(record.project_path)
         ) is None or source is SourceAction.MISMATCH:
+            reason = (
+                RecordWarningReason.UNREADABLE_SETTINGS
+                if source is None
+                else RecordWarningReason.NONCANONICAL_SOURCE
+            )
             template = (
                 UNREADABLE_SETTINGS_WARNING
                 if source is None
@@ -1251,7 +1282,9 @@ def claude_refresh_records(
         else:
             targets.append(record)
             continue
-        warnings.append(InstallationWarning(agent=Agent.CLAUDE, message=message))
+        warnings.append(
+            InstallationWarning(agent=Agent.CLAUDE, message=message, reason=reason)
+        )
     targets.sort(
         key=lambda record: (
             catalog.index(record.plugin),
@@ -1953,12 +1986,12 @@ def _is_pending_publication(
     message there means the catalog and the built tree disagree, which is a defect
     and stays terminal.
     """
-    return (
-        plan.mode is InstallationMode.PERSISTENT
-        and command.operation in PLUGIN_OPERATIONS
-        and command.plugin is not None
-        and UNPUBLISHED_PLUGIN_FRAGMENT in result.stderr.lower()
-    )
+    if plan.mode is not InstallationMode.PERSISTENT or command.plugin is None:
+        return False
+    signature = UNPUBLISHED_PLUGIN_SIGNATURES.get((command.agent, command.operation))
+    return signature is not None and signature.format(
+        plugin=command.plugin.lower(), marketplace=MARKETPLACE_NAME.lower()
+    ) in result.stderr.lower()
 
 
 def execute_installation(
@@ -2513,7 +2546,7 @@ __all__ = [
     "CANONICAL_CODEX_SOURCE",
     "CANONICAL_MARKETPLACE_SOURCE",
     "PLUGIN_OPERATIONS",
-    "UNPUBLISHED_PLUGIN_FRAGMENT",
+    "UNPUBLISHED_PLUGIN_SIGNATURES",
     "CATALOG_PLUGIN_NAME_FIELD",
     "CATALOG_PLUGINS_FIELD",
     "CLAUDE_CATALOG_PATH",
@@ -2570,6 +2603,7 @@ __all__ = [
     "InstallationReport",
     "InstallationRoots",
     "InstallationWarning",
+    "RecordWarningReason",
     "FIRST_INSTALL_WARNING",
     "NO_DIRECTORY_PATH_WARNING",
     "OUT_OF_SCOPE_RECORD_WARNING",

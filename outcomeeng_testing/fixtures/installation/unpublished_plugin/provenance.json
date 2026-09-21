@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-09-21",
+  "plugin": "frontend",
+  "marketplace": "outcomeeng",
+  "capture_procedure": [
+    "Create disposable Claude Code and Codex homes.",
+    "Register a local outcomeeng marketplace that contains frontend and install frontend for the update case.",
+    "Replace the registered marketplace checkout with one whose catalog omits frontend.",
+    "Run each recorded argv exactly and capture stdout, stderr, and exit status without rewriting them."
+  ],
+  "captures": [
+    {
+      "agent": "claude",
+      "operation": "plugin-install",
+      "file": "claude-install.stderr",
+      "sha256": "0925b1d753fa816ca377dc1fa9386ac7ee2eba4cc767441afd98ce23d944a88c",
+      "cli_version": "2.1.267",
+      "argv": ["claude", "plugin", "install", "frontend@outcomeeng", "--scope", "user"],
+      "exit_code": 1,
+      "stdout": "Installing plugin \"frontend@outcomeeng\"...\n"
+    },
+    {
+      "agent": "claude",
+      "operation": "plugin-update",
+      "file": "claude-update.stderr",
+      "sha256": "26c20fa801514ef9ca68ee6d6bb492afdf2c96a1952d0740a0a8e2e45e1bde02",
+      "cli_version": "2.1.267",
+      "argv": ["claude", "plugin", "update", "frontend@outcomeeng", "--scope", "user"],
+      "exit_code": 1,
+      "stdout": "Checking for updates for plugin \"frontend@outcomeeng\" at user scope…\n"
+    },
+    {
+      "agent": "codex",
+      "operation": "plugin-install",
+      "file": "codex-install.stderr",
+      "sha256": "031cc7c61519a5ca581d1d0fea8ea6ae25d2ceb5aa03ae39814bde53e8c6d20f",
+      "cli_version": "0.155.1",
+      "argv": ["codex", "plugin", "add", "frontend@outcomeeng", "--json"],
+      "exit_code": 1,
+      "stdout": ""
+    }
+  ]
+}
