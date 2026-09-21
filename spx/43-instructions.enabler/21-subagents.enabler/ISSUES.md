@@ -234,3 +234,33 @@ equivalent-tags rule and keeps the inheritance judgment in one block with cross-
 from the others, and one typed skill audit approves. Deferred from the governing-context
 changeset: the split follows the node's three assertions, and collapsing it is a structure
 choice for the standard as a whole, not a repair of the amended rules.
+
+## `/audit-subagent`'s verdict has no field for the declaration it read
+
+**Evidence:** `spec-tree:changes-reviewer` finding `F-001` (debt, consistency) in review
+run `2026-09-21_14-26-01-626-3f2ecbe63c9b` on head
+`ba3b597d14d2659c1a356ef3151797e37f557ccb`, subject
+`src/plugins/instructions/skills/audit-subagent/SKILL.md`. The amended `/subagent-standards`
+requires the verdict to name which governing-context declaration form it read for an
+inheritance judgment and which declaration and acceptance artifact it read for release
+acceptance, and its success criteria say the verdict names each declaration read. The
+`<verdict_format>` of `/audit-subagent` is a fixed JSON payload whose rows carry findings and
+whose metadata carries `configured_agent_type`, `tool_access`, and `model_selection`; the
+`subagent-auditor` wrapper forbids prose outside that JSON, so no field carries the
+declaration or artifact. Steps 3 and 5 of its `<audit_workflow>` neither route through the
+standard's governing-context resolution nor admit a release-acceptance artifact the auditor
+discovers itself. The reviewer's same-class sweep found no parallel site in
+`/create-subagent`.
+
+**Impact:** an auditor can satisfy the naming rule only inside a finding message, and the
+workflow steps do not point at the rules that now govern the boundary and evidence
+judgments.
+
+**Settlement condition:** the `/audit-subagent` verdict contract gains a place for the
+governing-context declarations and acceptance artifact read, its workflow steps 3 and 5
+reference `/subagent-standards` `<configuration>` and `<evidence>` by section without
+restating them, both generated trees are rebuilt, and the typed skill audit approves.
+Deferred from the governing-context changeset: that Change amends the standard and the node
+spec and scopes `/audit-subagent` and the `subagent-auditor` definition as loading the
+standard without a rule change of their own, so the verdict-contract extension is its own
+Change on this node.
