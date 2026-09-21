@@ -29,7 +29,7 @@ The project key is the pool's main checkout path from `spx diagnose --format jso
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report to the invoking workflow that one operation from `<operation_surface>` is required; the adapter has no default operation.
+1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report that one operation from `<operation_surface>` is required; the adapter has no default operation.
 2. Build this source-owned request shape and set only the arguments the operation accepts:
 
 ```json

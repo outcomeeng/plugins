@@ -491,7 +491,7 @@ def message_record(
     body: str,
     ack_required: bool = False,
 ) -> dict[str, object]:
-    """Build one record a caller sends; the store assigns its id on delivery."""
+    """Build one record a sender supplies; the store assigns its id on delivery."""
     return validate_record(
         {
             RECORD_SCHEMA_FIELD: RECORD_SCHEMA_VERSION,

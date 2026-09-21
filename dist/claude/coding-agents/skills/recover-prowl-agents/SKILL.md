@@ -78,7 +78,7 @@ Stop preparation when an active session cannot safely reach its native status su
 4. Reconcile by worktree. Require exactly one primary; every distinct secondary requires `secondaryAuthorized: true` after explicit operator authorization. Reject duplicate native sessions globally.
 5. Build the script input with checked public `items`, `agents`, exact `candidates`, and exact `correlationEvidence`. Each candidate uses `paneId`, `worktreePath`, `sessionId`, `resumeLocator`, `nativeHome`, `agentType`, `evidence`, `role`, and `secondaryAuthorized`; each evidence item uses `paneId`, `worktreePath`, `sessionId`, `agentType`, and `source`.
 6. Run `prepare`, repeating `--pane` for every selected pre-restart pane UUID. Accept only `status: prepared` and schema version 5.
-7. Write the complete prepared result to the absolute manifest path. Preserve the checked list and agent responses beside it when the caller requests a snapshot directory; never replace the script's candidate result with a hand-authored summary.
+7. Write the complete prepared result to the absolute manifest path; never replace the script's candidate result with a hand-authored summary.
 8. Report the full manifest path and candidate count. Prowl may restart only after every intended live session appears exactly once and unresolved identity count is zero.
 
 </prepare_workflow>
@@ -175,7 +175,7 @@ Exercise schema-5 preparation, exact Claude resume locators, applicable Codex ho
 
 - Preparation persists one schema-5 candidate per intended exact native session, including exact launch context, with zero unresolved, duplicate, or unauthorized identity; Prowl status never filters the set.
 - Recovery binds every original pane to one distinct post-restart pane in the same worktree and launches only prepared exact native sessions through launch-only sends.
-- Settlement proves every planned launch and reassessment transport once without caller-supplied delivery claims or retries.
+- Settlement proves every planned launch and reassessment transport once without request-supplied delivery claims or retries.
 - Verification reports `verified`, the prepared target count, and empty missing, duplicate, and unexpected agent arrays before reassessment begins.
 - Every verified pane has one checked stable-screen context read before any reassessment delivery is planned or sent; one failed read produces zero continuation sends.
 - Every non-controller session receives one separately settled reassessment instruction that reconciles explicit plans against delivered scope, restores unsatisfied operator work or its pending interaction, and prevents duplicate delivery through the updated manifest.

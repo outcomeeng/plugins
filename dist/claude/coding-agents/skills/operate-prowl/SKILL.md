@@ -39,13 +39,13 @@ An operator names a target by where the work lives — an absolute worktree path
 printf '%s\n' '{"schemaVersion":1,"path":"<absolute-operator-supplied-path>"}' | python3 "${CLAUDE_SKILL_DIR}/scripts/prowl_environment.py" resolve-target
 ```
 
-The resolver runs the public `agents` operation once and returns its complete checked result under `inventory`, every complete participant under `participants`, the complete caller selected from `PROWL_PANE_ID` or the exact `PROWL_WORKTREE_PATH` fallback, and non-caller path matches under `candidates`. When both caller values exist, both must identify the same participant. Each candidate carries its complete participant metadata and a `sendRequestTemplate` with that pane already selected, `noWait: true`, and `text: null`. Fill `text` with the semantic payload; never repair the JSON through shell substitution or a temporary file.
+The resolver runs the public `agents` operation once and returns its complete checked result under `inventory`, every complete participant under `participants`, the complete current participant under `caller` selected from `PROWL_PANE_ID` or the exact `PROWL_WORKTREE_PATH` fallback, and path matches excluding that participant under `candidates`. When both identity values exist, both must identify the same participant. Each candidate carries its complete participant metadata and a `sendRequestTemplate` with that pane already selected, `noWait: true`, and `text: null`. Fill `text` with the semantic payload; never repair the JSON through shell substitution or a temporary file.
 
-Use the one candidate directly when `status` is `succeeded`. On `identity-ambiguous` with a complete caller, use `AskUserQuestion` for one single-select question. Number candidates in resolver order; show each candidate's complete pane, worktree, branch, and repository; and map the answer back to that exact captured candidate, including its `sendRequestTemplate`. When the runtime's option cap is below the candidate count, include the complete numbered inventory in the question and accept an exact candidate number through its free-form response; never omit a candidate. On `identity-ambiguous` with `caller: null`, report the exact detail as an unresolved caller-identity conflict and stop; no candidate choice can resolve it. On `identity-unavailable`, report the supplied path and the returned participant worktrees. The resolver performs no send in every result state.
+Use the one candidate directly when `status` is `succeeded`. On `identity-ambiguous` with a complete current participant under `caller`, use `AskUserQuestion` for one single-select question. Number candidates in resolver order; show each candidate's complete pane, worktree, branch, and repository; and map the answer back to that exact captured candidate, including its `sendRequestTemplate`. When the runtime's option cap is below the candidate count, include the complete numbered inventory in the question and accept an exact candidate number through its free-form response; never omit a candidate. On `identity-ambiguous` with `caller: null`, report the exact detail as an unresolved current-participant identity conflict and stop; no candidate choice can resolve it. On `identity-unavailable`, report the supplied path and the returned participant worktrees. The resolver performs no send in every result state.
 
 A target that is not a coding-agent pane is outside what `agents` returns, so no path match is available for it. Say that the operator's target is not among the agent panes and name the ones that are, rather than falling back to an inventory that carries no worktree to match.
 
-`resolve-target` resolves active pane targets from `agents`. When the supplied path matches no non-caller participant, return `identity-unavailable` with the complete pane inventory. A sidebar worktree that has never been entered has no pane UUID and cannot receive a message yet; an explicitly authorized `open` request can activate an operator-known path, after which `resolve-target` can run again. The resolver never probes with `open` or claims whether an unmatched path is known to Prowl.
+`resolve-target` resolves active pane targets from `agents`. When the supplied path matches no participant other than the current participant, return `identity-unavailable` with the complete pane inventory. A sidebar worktree that has never been entered has no pane UUID and cannot receive a message yet; an explicitly authorized `open` request can activate an operator-known path, after which `resolve-target` can run again. The resolver never probes with `open` or claims whether an unmatched path is known to Prowl.
 
 Report the target back to the operator as the supplied path while using the selected template's pane internally. Never ask the operator for a pane UUID or guess by focus, position, or title.
 
@@ -111,7 +111,7 @@ printf '%s\n' '{"schemaVersion":1,"operation":"agents","arguments":{}}' | python
 }
 ```
 
-The adapter maps `completionText` and the two identities to a versioned `handback` block. The block contains `completionText`, the absolute `adapterPath`, an exact one-line `command` ending at `run`, checked `successCriteria`, `retryPolicy: "never-after-trailing-enter"`, `socket: "default"`, and `expectedPanes` in sender-recipient order. A caller never supplies `handback`, `command`, `handbackCommand`, `returnPane`, or `adapterPath`.
+The adapter maps `completionText` and the two identities to a versioned `handback` block. The block contains `completionText`, the absolute `adapterPath`, an exact one-line `command` ending at `run`, checked `successCriteria`, `retryPolicy: "never-after-trailing-enter"`, `socket: "default"`, and `expectedPanes` in sender-recipient order. A request never supplies `handback`, `command`, `handbackCommand`, `returnPane`, or `adapterPath`.
 
 The result carries the complete source-owned schema-version-2 `delegation` envelope and generated handback block. Preserve it for the terminal handback; transport success is not acceptance or completion.
 
@@ -140,7 +140,7 @@ A complete inline result uses `inlineResult`. A durable result uses a scheme-bea
 
 The direct stdin payload uses `{"delegation":<complete-returned-delegation>,"kind":"delegation-completed","inlineResult":"<complete-result>"}`. Replace the angle-bracket value with the returned delegation object itself, never a quoted summary or reconstructed envelope.
 
-8. Return the complete terminal result to the delegating workflow. Do not poll the recipient, add acceptance or progress phases, or infer completion from pane output.
+8. Return the complete terminal result. Do not poll the recipient, add acceptance or progress phases, or infer completion from pane output.
 
 </workflow>
 
@@ -152,7 +152,7 @@ Completion travels by push, never by pull. The sender's environment blocks polli
 
 **The recipient delivers the handback by sending one line into the return address's pane**, using the `send` operation with normal trailing-Enter behavior. That send lands as a turn in the sender's session, which is what makes it a signal rather than a message the sender must go looking for. A `noEnter` send prefills the sender's editor and signals nothing.
 
-**The adapter generates the handback at delegation time.** The caller supplies only semantic completion text. The generated block binds that text to `sender.pane`, the bundled adapter path, checked submission criteria, the default socket, both expected panes, and the no-retry policy. This separation prevents a caller from changing CLI grammar while describing the requested work.
+**The adapter generates the handback at delegation time.** The request supplies only semantic completion text. The generated block binds that text to `sender.pane`, the bundled adapter path, checked submission criteria, the default socket, both expected panes, and the no-retry policy. This separation prevents request data from changing CLI grammar while describing the requested work.
 
 </handback_delivery>
 
@@ -171,7 +171,7 @@ Two environment conditions silently break a handback. The generated block names 
 - ALWAYS preserve complete source-supplied agent, pane, worktree, branch, repository, run, coordination, status, conclusion, exit-code, and result-reference values.
 - ALWAYS execute the bundled script through `${CLAUDE_SKILL_DIR}`; never import it from another filesystem location or manufacture a path outside this skill directory.
 - ALWAYS generate executable handback data from semantic completion text through `delegate` or `plan-handback`.
-- NEVER accept caller-authored `handback`, `command`, `handbackCommand`, `returnPane`, or `adapterPath` fields.
+- NEVER accept request-supplied `handback`, `command`, `handbackCommand`, `returnPane`, or `adapterPath` fields.
 - NEVER invoke raw Prowl commands, Prowl command help, or an external environment-control skill.
 - NEVER mutate focus, keys, tabs, panes, or open-path selection without explicit authorization for the exact operation and target in the same turn.
 - NEVER equate `list` with the sidebar worktree inventory or enumerate filesystem worktrees to compensate for an uninstantiated pane.
@@ -182,12 +182,12 @@ Two environment conditions silently break a handback. The generated block names 
 
 <testing>
 
-Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Run the documented `run` form with an `agents` payload and require `status: "succeeded"`, `commandExitCode: 0`, and a public response; run `resolve-target` with pane-only, worktree-only, and combined caller evidence and require one inventory call, caller exclusion, and zero sends; fill one returned send template and require `response.data.input.trailing_enter_sent: true`; run `plan-handback`, `delegate`, and `handback` with the documented shapes and require the command to end exactly at `run`, the initiating coordination reference to survive, and every caller-authored executable handback field to fail. Cover every operation mapping, public JSON failure, mutation rejection before command construction, URI-bearing delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch.
+Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Run the documented `run` form with an `agents` payload and require `status: "succeeded"`, `commandExitCode: 0`, and a public response; run `resolve-target` with pane-only, worktree-only, and combined current-participant evidence and require one inventory call, current-participant exclusion, and zero sends; fill one returned send template and require `response.data.input.trailing_enter_sent: true`; run `plan-handback`, `delegate`, and `handback` with the documented shapes and require the command to end exactly at `run`, the initiating coordination reference to survive, and every request-supplied executable handback field to fail. Cover every operation mapping, public JSON failure, mutation rejection before command construction, URI-bearing delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch.
 
 Recorded exercised payload/results:
 
 - `{"schemaVersion":1,"operation":"agents","arguments":{}}` with a successful public agents response → `status: "succeeded"`, `commandExitCode: 0`, and the response preserved.
-- `resolve-target` with an active non-caller worktree path → one candidate and no send; an unmatched absolute path → `identity-unavailable`, an empty candidate array, and no `open` probe.
+- `resolve-target` with an active worktree path other than the current participant's → one candidate and no send; an unmatched absolute path → `identity-unavailable`, an empty candidate array, and no `open` probe.
 - A filled returned send template with `trailing_enter_sent: true` in the public response → one `succeeded` send result; the same submission evidence then supports one delivered message envelope.
 
 </testing>
@@ -202,7 +202,7 @@ Recorded exercised payload/results:
 
 **A delegation had no return path, so the operator became the message bus.** Claude asked a recipient to write a file, then had no signal that it had. Polling loops are blocked in the environment, so Claude read the pane once, saw nothing, and moved on while a complete result sat on disk. Generate the structured handback from the sender, recipient, and completion text, then require the recipient to send one line on completion per `<handback_delivery>`.
 
-**A caller added a trailing argument to the return command.** Claude copied a hand-written `run .` command into a delegation. `argparse` rejected the extra positional argument before any send occurred. Generate the command from `completionText`; the adapter renders the final token as `run` and rejects caller-authored executable fields.
+**A request added a trailing argument to the return command.** Claude copied a hand-written `run .` command into a delegation. `argparse` rejected the extra positional argument before any send occurred. Generate the command from `completionText`; the adapter renders the final token as `run` and rejects request-supplied executable fields.
 
 **A single read was mistaken for a terminal answer.** Claude treated one empty pane read as evidence the recipient had produced nothing, when it proved only that nothing was on screen at that instant. A read establishes the pane's state at the moment it ran and never establishes that a delegation is incomplete. Completion arrives as the recipient's handback; its absence is an open delegation, not a negative result.
 
@@ -219,7 +219,7 @@ Recorded exercised payload/results:
 - Every delegation preserves its initiating coordination reference through exactly one completed, failed, rejected, or unavailable terminal handback.
 - Every delegation carries one source-generated handback block whose command ends exactly at `run` and whose conditions identify checked submission, no retry after submission, the default socket, and both expected panes.
 - A durable handback writes its file before sending, and the notification reaches the sender's pane as a submitted turn rather than editor prefill.
-- One `resolve-target` invocation returns the checked inventory, complete caller and participants, non-caller path matches, and candidate-specific immediate-return send templates without sending.
+- One `resolve-target` invocation returns the checked inventory, complete current participant under `caller`, all participants, path matches excluding the current participant, and candidate-specific immediate-return send templates without sending.
 - An operator-named target is reported as the supplied worktree or directory, never as a pane UUID the operator must verify.
 - Terminal results carry complete inline content or an exact durable reference with a bounded projection.
 - Unauthorized focus, key, creation, closure, and open requests fail before Prowl runs.

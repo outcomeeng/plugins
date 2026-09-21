@@ -7,7 +7,7 @@ allowed-tools: Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/herdr_e
 ---
 
 <objective>
-A versioned JSON herdr operation result with complete hosted-session identities, the server's own agent states, and checked command status preserved verbatim, or one named lifecycle status for a session that is not running, not found, not ready, blocked, stalled, or timed out.
+A versioned JSON herdr operation result preserving complete hosted-session identities, the server's own states, checked command status, and every success, lifecycle, schema, authorization, availability, or command-failure outcome in its source-owned shape.
 </objective>
 
 <operation_surface>
@@ -51,7 +51,7 @@ Every other code stays verbatim under `command-failed`. `server-not-running` als
 
 <workflow>
 
-1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report to the invoking workflow that one operation from `<operation_surface>` is required; the adapter has no default operation.
+1. Interpret `$ARGUMENTS` as one operation with its arguments, or as a complete JSON request. When it is empty, run nothing and report that one operation from `<operation_surface>` is required; the adapter has no default operation.
 2. Build this source-owned request shape and set only the arguments the operation accepts:
 
 ```json
@@ -67,7 +67,7 @@ Every other code stays verbatim under `command-failed`. `server-not-running` als
 }
 ```
 
-3. For `key`, `start`, `relaunch`, `stop`, or `open-worktree`, require the explicit standing or same-turn authorization the invoking workflow holds for that exact pane, then add `"mutationAuthorized": true` inside `arguments`. When it is absent, do not run the adapter.
+3. For `key`, `start`, `relaunch`, `stop`, or `open-worktree`, require the request to carry `"mutationAuthorized": true` inside `arguments` for that exact pane. Never infer or add mutation authorization; when it is absent or false, preserve the adapter's `mutation-unauthorized` result.
 4. Submit the request over stdin in one of the forms in `<invocation_forms>`.
 5. Accept only `status: "succeeded"`. Preserve the complete versioned result, `commandExitCode`, and the public `response`. For every operation but `read`, `response` is herdr's own JSON envelope: an inventory's `result` lists `agents`, and a `start`, `relaunch`, `wait`, or `prompt` result carries the one `agent` it acted on, each with `name`, `agent`, `agent_status`, `pane_id`, `tab_id`, `workspace_id`, `cwd`, and `interactive_ready`. For `read`, herdr writes terminal text, and `response` carries it verbatim under `output`.
 6. On any other `status`, act on a named lifecycle status from `<lifecycle_statuses>`, and stop with the exact `status` and `detail` on `command-failed`, `invalid-schema`, `mutation-unauthorized`, or `operation-unavailable`.
@@ -109,11 +109,19 @@ The bundled adapter is covered by tests over the generated request domain and he
 
 </testing>
 
+<failure_modes>
+
+**Authorization was inferred from surrounding context.** Claude treated external workflow context as permission to add `mutationAuthorized: true`, so the capability was no longer independently invocable and an isolated skill audit rejected the same independence defect twice. Require the request itself to carry mutation authorization and preserve `mutation-unauthorized` when it does not.
+
+**The objective omitted public failure results.** Claude described the lifecycle alternatives and left `invalid-schema`, `mutation-unauthorized`, `operation-unavailable`, and `command-failed` outside the stated output. The audit could not reconcile the objective with the workflow's complete public result family. Name every source-owned result class in the objective and preserve each returned shape without rewriting.
+
+</failure_modes>
+
 <success_criteria>
 
 - A successful operation is established only when the bundled script exits zero and emits `schemaVersion: 1`, `status: "succeeded"`, `commandExitCode: 0`, and the public `response` without exposing herdr command grammar.
 - Every hosted session in an inventory result keeps its complete public identity and the server's own state.
-- Every projected herdr error code reaches the caller as its named status with the code and message verbatim.
+- Every projected herdr error code reaches the result as its named status with the code and message verbatim.
 - No mutating operation and no unbounded wait reaches herdr.
 
 </success_criteria>

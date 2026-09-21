@@ -97,9 +97,9 @@ against `src/plugins/spec-tree/agents/instruction-block-updater.md` on Change
 
 ## Generated root instruction files exceed the declared byte budget
 
-The `regenerate-instruction-blocks` pre-commit hook reports
-`CLAUDE.md 58417/32768 breach (25649 over)` and
-`AGENTS.md 61159/32768 breach (28391 over)`. The render-model decision keeps a
+The current root guides measure
+`CLAUDE.md 58211/32768 breach (25443 over)` and
+`AGENTS.md 60953/32768 breach (28185 over)`. The render-model decision keeps a
 standing breach report-only until the surface fits, then fails regressions, so
 the hook succeeds while the harness can truncate both files.
 
@@ -108,8 +108,10 @@ into the skills that consume it until both generated files fit the 32768-byte
 combined project-document ceiling, then preserve the passing boundary in the
 gate.
 
-**Evidence**: repeated `regenerate-instruction-blocks` hook output while
-committing Change #76, including commit
+**Evidence**: `wc -c CLAUDE.md AGENTS.md` on Change #114 head
+`d3b865d4714dc2f7da48e80a3157e29ea4e91d3c` measured 58211 and 60953 bytes;
+the same class was previously reported by the `regenerate-instruction-blocks`
+hook while committing Change #76, including commit
 `7ddd752f1cf44e22a51fe7beed45225c99e6a393`.
 
 ## Pinned router prose is coupled to structural test evidence
