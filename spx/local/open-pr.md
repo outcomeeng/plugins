@@ -6,12 +6,13 @@ protocol's verification, review, branch-safety, and publication gates.
 ## Plugin version policy
 
 A changeset warrants a plugin bump when it changes authored content under
-`src/plugins/<name>/`, generated content under `dist/<target>/<name>/`, a
-`src/_shared/` fragment that the plugin includes, or marketplace catalog fields
-that change the plugin's discovery.
+`src/plugins/<name>/`, generated content under `dist/claude/<name>/` or
+`dist/codex/<name>/`, or a `src/_shared/` fragment attributed to the plugin
+through its authored include directives.
 
-Changes confined to `spx/`, coordination notes, root `AGENTS.md` or `CLAUDE.md`,
-local overlays, tests, validation configuration, or generated repository docs
+Changes confined to marketplace catalogs, `spx/`, coordination notes, root
+`AGENTS.md` or `CLAUDE.md`, local overlays, tests, validation configuration,
+or generated repository docs
 warrant no plugin bump. The marketplace sync wrapper uses the same distribution
 boundary: those changes alone do not refresh plugin caches.
 
