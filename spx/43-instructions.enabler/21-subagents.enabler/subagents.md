@@ -16,7 +16,26 @@ The subagents-about-subagents cluster is three peers with distinct roles:
 
 - ALWAYS: subagent configuration guidance specifies a target path or scope as the
   complete task prompt and delegates context discovery to the owning skill while
-  preserving its output contract, per `spx/15-subagent-execution.pdr.md` ([audit]).
+  preserving its output contract, per `spx/15-subagent-execution.pdr.md`; guidance
+  judges native sandbox and approval fields against the governing context's
+  execution-boundary declaration before applying the harness contract ([audit]).
+- ALWAYS: `/subagent-standards` admits a definition that inherits the invoking
+  session's execution policy when its governing context declares that inheritance
+  with linked evidence: an assertion in the owning node's spec, or a decision on
+  the path from the root that reaches the node by index. The auditor resolves the
+  owning node through the tree as the node whose linked test or audit assertion
+  names the definition, names which declaration it read, and judges its presence;
+  an absent native sandbox field does not invalidate declared inheritance ([audit]).
+- NEVER: `/subagent-standards` accepts a citation inside a definition's frontmatter
+  or body as the inheritance declaration, or admits undeclared inheritance on the
+  auditor's judgment that the definition needs the invoking policy ([audit]).
+- ALWAYS: `/subagent-standards` accepts retained per-harness, per-profile release
+  acceptance as invocation evidence when the owning node's spec or a decision on
+  the path from the root that reaches it by index declares that acceptance:
+  native loading and one minimal isolated execution for every declared profile,
+  as `spx/15-subagent-execution.pdr.md` requires. Every other definition retains
+  its exact-definition minimal isolated invocation. The auditor names the
+  declaration and acceptance artifact it read ([audit]).
 - ALWAYS: subagent invocation guidance requires plugin authorization and an active
   skill's explicit call request, uses the native tool schema, and requires analysis
   and reporting of a failed launch or unusable result without retry or substitution ([audit]).
