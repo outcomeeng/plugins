@@ -264,3 +264,41 @@ Deferred from the governing-context changeset: that Change amends the standard a
 spec and scopes `/audit-subagent` and the `subagent-auditor` definition as loading the
 standard without a rule change of their own, so the verdict-contract extension is its own
 Change on this node.
+
+## The marketplace's own definitions carry no inheritance declaration
+
+**Evidence:** `spec-tree:changes-reviewer` finding `F-001` (debt, consistency) in review
+run `2026-09-21_15-38-19-791-ab0ae6d854aa` on head
+`589c5f4886d99579343e9266812c09e7100b4d62`, subject
+`src/plugins/instructions/agents/subagent-auditor.md`. The amended `/subagent-standards`
+admits a definition that inherits the invoking session's execution policy only when its
+governing context declares that inheritance with linked evidence and resolves the owning
+node as the node whose linked test or audit assertion names the definition. The Claude
+rendering of `subagent-auditor` carries `tools` and no `permissionMode`, the shape the
+standard reads as inheriting, and no assertion under `spx/` names `subagent-auditor`,
+`skill-auditor`, or any `src/plugins/spec-tree/agents/*.md` wrapper — the verification
+node names those wrappers only by directory — so no owning node resolves for them.
+
+**Impact:** each of the marketplace's own definitions stays a finding on its next typed
+subagent audit until a governing declaration exists or the rule is narrowed.
+
+**Settlement condition:** a Change on the owning nodes adds the assertion, with linked
+evidence, that names each inheriting definition and declares its execution-policy
+inheritance — or a decision on the root path narrows what counts as inheriting for a
+Claude definition with a restricted `tools` grant and no `permissionMode` — and this node's
+spec records which reading applies. Deferred from the governing-context changeset: the
+definitions and their owning nodes lie outside that Change's Frame, which settled where a
+declaration lives and not which shipped definitions declare one.
+
+## `/subagent-standards` spells its subject two ways in the Codex copy
+
+**Evidence:** `instructions:skill-auditor` WARNING `f-009` on
+`src/plugins/instructions/skills/subagent-standards/SKILL.md` at head
+`589c5f4886d99579343e9266812c09e7100b4d62`, an `APPROVED` verdict: the description and the
+`<profiles>` rule spell "configured subagent" literally while the objective uses the build's
+term directive, so the Codex copy reads "custom agents" in one line and "configured
+subagents" in two others.
+
+**Settlement condition:** every occurrence uses the term directive or one literal term, and
+one typed skill audit approves. Deferred from the governing-context changeset because the
+lines are unchanged by it.
