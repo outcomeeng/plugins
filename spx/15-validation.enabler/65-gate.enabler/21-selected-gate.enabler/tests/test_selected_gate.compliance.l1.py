@@ -11,6 +11,14 @@ from outcomeeng.validation import (
     RECIPE_TEST,
     RECIPE_VALIDATION,
 )
+from outcomeeng.validation.agent_disable import (
+    AGENT_SWITCHES,
+    DISABLE_VALUE,
+    SWITCH_SET,
+    SWITCH_STATE_LINE,
+    SWITCH_UNSET,
+    read_agent_disable_states,
+)
 from outcomeeng.validation.infrastructure_index import (
     InfrastructureReach,
     index_test_infrastructure,
@@ -240,3 +248,29 @@ def test_relevant_full_gate_keeps_live_discovery_enabled() -> None:
     assert plan.steps == tuple(
         step for recipe in CHECK_RECIPES for step in recipe.steps
     )
+
+
+@pytest.mark.parametrize("value", (None, DISABLE_VALUE))
+def test_the_plan_explanation_names_each_switch_state(value: str | None) -> None:
+    environment = {} if value is None else {switch: value for switch in AGENT_SWITCHES}
+    plan = build_selected_gate_plan(
+        (SELECTED_GATE_PYTHON_SOURCE_PATH,),
+        agent_disable=read_agent_disable_states(environment),
+    )
+
+    assert plan.agent_disable.explanation_lines == tuple(
+        SWITCH_STATE_LINE.format(
+            switch=switch,
+            state=SWITCH_UNSET if value is None else SWITCH_SET,
+        )
+        for switch in AGENT_SWITCHES
+    )
+
+
+def test_each_switch_state_is_printed_before_the_selected_steps_run() -> None:
+    run = run_check_observation(branch_path=SELECTED_GATE_PYTHON_SOURCE_PATH)
+    header = run.output.index(f"Recipe {RECIPE_CHECK}")
+
+    assert run.exit_code == 0
+    for switch in AGENT_SWITCHES:
+        assert run.output.index(switch) < header

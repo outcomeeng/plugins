@@ -51,6 +51,11 @@ from outcomeeng.validation import (
     terminate_process_group,
 )
 from outcomeeng.validation._git import GitCommandResult
+from outcomeeng.validation.agent_disable import (
+    SKIP_REPORT_ENV,
+    SKIP_REPORT_SWITCH_FIELD,
+    SKIP_REPORT_TEST_FIELD,
+)
 from outcomeeng.validation.selected_gate import (
     DEFAULT_BASE_REF,
     GIT_DISCOVERY_FAILURE_EXIT_CODE,
@@ -945,3 +950,71 @@ _2: type[ProcessHandle] = RecordingHandle
 _3: type[ProcessHandle] = HangingHandle
 _4: type[ProcessSpawner] = SignalRaisingSpawner
 _5: type[ProcessSpawner] = SpawnFailingSpawner
+
+
+SKIPPED_ROW_ID_SHAPE = "{path}::{name}"
+"""The nodeid shape a pytest child reports for a row a switch declared optional."""
+SKIPPED_ROW_PATH = "spx/example.enabler/tests/test_example.compliance.l3.py"
+"""The row path the recording child reports; an incidental harness handle value."""
+
+
+@dataclass
+class SkipReportingSpawner(RecordingSpawner):
+    """A recording spawner that also writes the child's declared-skip records.
+
+    Stands in for a pytest child under the `/test` Stage 5 interaction-protocols
+    exception: it performs the same side effect the real child performs — writing
+    one record per declared skip to the file the orchestrator names — and owns no
+    predicate over what the orchestrator then does with those records.
+    """
+
+    skip_records: Sequence[Mapping[str, str]] = ()
+
+    def spawn(self, argv: Sequence[str], output_path: Path) -> ProcessHandle:
+        handle = super().spawn(argv, output_path)
+        destination = os.environ.get(SKIP_REPORT_ENV)
+        if destination is not None and self.skip_records:
+            with Path(destination).open("a", encoding="utf-8") as report:
+                for record in self.skip_records:
+                    report.write(f"{json.dumps(dict(record), sort_keys=True)}\n")
+        return handle
+
+
+@dataclass(frozen=True)
+class SkipReportObservation:
+    """One recipe run whose child recorded declared skips."""
+
+    exit_code: int
+    output: str
+    summary: dict[str, object]
+    written_records: tuple[dict[str, str], ...]
+
+
+def skip_report_observation(
+    *,
+    recipe: Recipe,
+    exit_codes: Sequence[int],
+    switches: Sequence[str],
+) -> SkipReportObservation:
+    """Run one recipe whose child records one declared skip per supplied switch."""
+
+    records = tuple(
+        {
+            SKIP_REPORT_TEST_FIELD: SKIPPED_ROW_ID_SHAPE.format(
+                path=SKIPPED_ROW_PATH, name=f"test_row_{index}"
+            ),
+            SKIP_REPORT_SWITCH_FIELD: switch,
+        }
+        for index, switch in enumerate(switches)
+    )
+    spawner = SkipReportingSpawner(
+        exit_codes=list(exit_codes),
+        skip_records=records,
+    )
+    run = _observe_recipe_run(recipe=recipe, spawner=spawner)
+    return SkipReportObservation(
+        exit_code=run.exit_code,
+        output=run.output,
+        summary=run.summary,
+        written_records=records,
+    )

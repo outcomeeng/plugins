@@ -18,6 +18,8 @@ from outcomeeng.validation import (
     PURPOSE_CONFORMANCE,
     RECIPE_AD_HOC,
     RECIPE_VALIDATION,
+    SUMMARY_KEY_SKIPPED,
+    SUMMARY_KEY_STEPS,
     SUMMARY_KEY_SUMMARY_PATH,
     SUMMARY_PATH_LABEL,
     VERIFICATION_TYPE_VALIDATION,
@@ -28,7 +30,11 @@ from outcomeeng.validation import (
     run_check,
     run_recipe,
 )
-from outcomeeng_testing.harnesses.gate import RecordingSpawner
+from outcomeeng.validation.agent_disable import AGENT_SWITCHES
+from outcomeeng_testing.harnesses.gate import (
+    RecordingSpawner,
+    skip_report_observation,
+)
 
 PASS = 0
 FAIL = 2
@@ -176,3 +182,17 @@ def test_failed_preflight_wrapper_summary_conforms_to_schema(
     assert_json_schema(summary, CHECK_SUMMARY_SCHEMA)
     assert summary["phase"] == PHASE_PREFLIGHT
     assert exit_code == FAIL
+
+
+def test_summary_with_declared_skips_conforms_to_schema() -> None:
+    observation = skip_report_observation(
+        recipe=_recipe(),
+        exit_codes=[PASS, PASS],
+        switches=AGENT_SWITCHES,
+    )
+    steps = observation.summary[SUMMARY_KEY_STEPS]
+    assert isinstance(steps, list)
+
+    assert_json_schema(observation.summary, PRIMITIVE_SUMMARY_SCHEMA)
+    assert any(SUMMARY_KEY_SKIPPED in step for step in steps)
+    assert observation.exit_code == PASS

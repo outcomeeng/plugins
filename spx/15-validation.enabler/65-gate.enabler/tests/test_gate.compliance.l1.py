@@ -21,11 +21,16 @@ from outcomeeng.validation import (
     RECIPE_VALIDATION,
     RUFF_CHECK_ARGV,
     RUFF_FORMAT_ARGV,
+    RUN_PASS_STATUS,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
     SPX_MARKDOWN_ARGV,
+    STEP_SKIP_STATUS,
     SUMMARY_KEY_PURPOSE,
     SUMMARY_KEY_RECIPE,
+    SUMMARY_KEY_SKIPPED,
+    SUMMARY_KEY_STATUS,
+    SUMMARY_KEY_STEPS,
     SUMMARY_KEY_VERIFICATION_TYPE,
     Step,
     TEST_RECIPE,
@@ -36,8 +41,14 @@ from outcomeeng.validation import (
     VERIFICATION_TYPE_VALIDATION,
     test_recipe as build_test_recipe,
 )
+from outcomeeng.validation.agent_disable import (
+    AGENT_SWITCHES,
+    SKIP_REPORT_SWITCH_FIELD,
+    SKIP_REPORT_TEST_FIELD,
+)
 from outcomeeng_testing.harnesses.gate import (
     HIGH_VOLUME_CHILD_OUTPUT,
+    skip_report_observation,
     PASS_EXIT_CODE,
     PYTEST_TARGET_ARG,
     STATIC_ANALYSIS_ARGVS,
@@ -173,3 +184,38 @@ def test_signal_shutdown_waits_are_bounded() -> None:
     assert shutdown.sleep_call_count == shutdown.sleep_budget
     assert shutdown.monotonic_calls == grace_sleep_calls + 2
     assert shutdown.poll_calls == grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
+
+
+def test_declared_skips_are_named_in_the_summary_and_after_the_status_line() -> None:
+    observation = skip_report_observation(
+        recipe=TEST_RECIPE,
+        exit_codes=[PASS_EXIT_CODE] * (len(TEST_RECIPE.preflight_steps) + 1),
+        switches=AGENT_SWITCHES,
+    )
+    steps = observation.summary[SUMMARY_KEY_STEPS]
+    assert isinstance(steps, list)
+    recorded = [step for step in steps if SUMMARY_KEY_SKIPPED in step]
+
+    assert observation.written_records
+    assert [step[SUMMARY_KEY_SKIPPED] for step in recorded] == [
+        list(observation.written_records)
+    ] * len(recorded)
+    assert all(step[SUMMARY_KEY_STATUS] == RUN_PASS_STATUS for step in recorded)
+    for record in observation.written_records:
+        line = (
+            f"{STEP_SKIP_STATUS}  {record[SKIP_REPORT_TEST_FIELD]}  "
+            f"{record[SKIP_REPORT_SWITCH_FIELD]}"
+        )
+        assert line in observation.output
+
+
+def test_a_run_without_declared_skips_carries_no_skipped_entry() -> None:
+    observation = recipe_run_observation(
+        recipe=TEST_RECIPE,
+        exit_codes=[PASS_EXIT_CODE] * (len(TEST_RECIPE.preflight_steps) + 1),
+    )
+    steps = observation.summary[SUMMARY_KEY_STEPS]
+    assert isinstance(steps, list)
+
+    assert all(SUMMARY_KEY_SKIPPED not in step for step in steps)
+    assert STEP_SKIP_STATUS not in observation.output
