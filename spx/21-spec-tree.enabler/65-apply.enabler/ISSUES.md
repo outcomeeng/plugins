@@ -10,12 +10,14 @@
 
 **Why separate**: the dedup carries different evidence from the gate-taxonomy change that surfaced it, and repairing it inside that changeset would prejudge the split its Frame requires.
 
-## The apply skill's eager payload exceeds the progressive-disclosure ceiling
+## The apply skill loads its whole surface eagerly
 
-`src/plugins/spec-tree/skills/apply/SKILL.md` renders to 47,850 code points under `dist/claude/` and a comparable size under `dist/codex/`, entirely eager, with no `references/` directory in the bundle. `/skill-standards` `<progressive_disclosure>` sets a 40,000-code-point ceiling for a skill invoking the eager-foundation exception; the 500-line limit is met only because the lines are long. A directive-description skill that activates on every implementation-shaped prompt pays that payload on every load, false activations included.
+`src/plugins/spec-tree/skills/apply/SKILL.md` renders to 47,802 code points under `dist/claude/` and a comparable size under `dist/codex/`, entirely eager, with no `references/` directory. Every activation pays the full gate-selection machinery — the lane table, scope detection, the verification checkpoint, result carryover, the evidence-auditor gate, and the terminal full gate — including an activation the directive description matched by mistake.
 
-**Evidence.** Finding f-007 of the skill audit of `src/plugins/spec-tree/skills/apply/SKILL.md`. The same render measures 41,147 code points at `origin/main` commit `e27435f7f3a97aecd5bc366c893551f11e796e64`, so the breach precedes this branch.
+This is not a standards breach. `/skill-standards` `<progressive_disclosure>` caps a SKILL.md at 500 lines, and the 40,000-code-point ceiling belongs to `<eager_foundation_exception>`, which governs only a skill invoking that exception to exceed the line limit. This skill is 369 lines and invokes no exception, so neither limit binds it.
 
-**Settlement condition**: the rendered skill measures at or below 40,000 code points, with the conditional operational detail no invocation needs at trigger time — the verification-checkpoint record contract, the launch-contract repair rules, the result-carryover projection, and Step 7a's result branches — loaded from cited `references/` files at the step that consumes each.
+**Evidence.** Raised as a warning by two independent skill audits of `src/plugins/spec-tree/skills/apply/SKILL.md`; the second states the non-violation explicitly. An earlier audit asserted a ceiling breach, and the standard's own text does not support that reading.
 
-**Why separate**: moving four sections into a new `references/` directory restructures the skill's information architecture rather than amending the lines that carry a rule, and the restructured surface needs its own skill audit.
+**Settlement condition**: the conditional detail only some selections consume — the cross-node widening rules, the checkpoint record fields, and the result-carryover projection — loads from cited one-level `references/` files at the step consuming each, leaving the selector tables and the numbered workflow in SKILL.md.
+
+**Why separate**: introducing a `references/` directory restructures the skill's information architecture rather than amending the lines that carry a rule, and the restructured surface needs its own skill audit.
