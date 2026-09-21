@@ -148,7 +148,10 @@ printf '%s\n' '{"schemaVersion":1,"change":"owner/changes#123","mailRecords":[],
 Accept only `schemaVersion: 1` with `status: "succeeded"`. The ledger carries
 exactly `change`, `passes`, `heads`, `verdicts`, `decisions`, `failures`,
 `findingProvenance`, `reads`, `runningSpend`, and `wallTimeSeconds`, with source
-provenance on every event.
+provenance on every event. Every rejection — a malformed document, a refused
+schema version, or a wrong argument vector — exits two and writes one
+`status: "invalid-input"` result carrying `schemaVersion`, `status`, and
+`detail` on stdout, leaving stderr empty, so one parse reads every outcome.
 
 After compaction or restart, acquire the inputs before invoking the entry
 point. Begin with the orchestrating and officer mail identities proven by the
@@ -183,7 +186,8 @@ Three reachability cases execute the ledger entry point:
 
 These cases pin the entry point's reachability and result shape. They exercise
 no non-empty mail record and no journal run, so they establish nothing about
-derivation from populated inputs.
+derivation from populated inputs, and no executed case covers the wrong-argument
+rejection `<ledger_derivation>` describes.
 
 </script_validation>
 

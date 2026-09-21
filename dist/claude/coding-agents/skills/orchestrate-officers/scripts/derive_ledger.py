@@ -271,6 +271,18 @@ def derive_ledger(payload: Mapping[str, object]) -> dict[str, object]:
     }
 
 
+def _reject(output_stream: TextIO, detail: str) -> int:
+    """Write the versioned invalid-input result and report its exit code."""
+    result = {
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        STATUS_FIELD: INVALID_INPUT_STATUS,
+        DETAIL_FIELD: detail,
+    }
+    json.dump(result, output_stream, sort_keys=True)
+    output_stream.write("\n")
+    return INVALID_INPUT_EXIT_CODE
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -282,24 +294,21 @@ def main(
     arguments = list(sys.argv[1:] if argv is None else argv)
     input_stream = sys.stdin if stdin is None else stdin
     output_stream = sys.stdout if stdout is None else stdout
-    error_stream = sys.stderr if stderr is None else stderr
 
     if arguments != list(DERIVE_ARGUMENTS):
-        print(f"usage: derive_ledger.py {DERIVE_OPERATION}", file=error_stream)
-        return INVALID_INPUT_EXIT_CODE
+        # Every rejection writes the same versioned result on stdout, so a
+        # caller parsing the documented contract survives an argument mistake.
+        return _reject(
+            output_stream,
+            f"arguments must be exactly {' '.join(DERIVE_ARGUMENTS)!r}; "
+            f"received {' '.join(arguments)!r}.",
+        )
 
     try:
         raw_payload = json.load(input_stream)
         result = derive_ledger(_mapping(raw_payload, "input"))
     except (json.JSONDecodeError, LedgerInputError) as error:
-        result = {
-            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-            STATUS_FIELD: INVALID_INPUT_STATUS,
-            DETAIL_FIELD: str(error),
-        }
-        json.dump(result, output_stream, sort_keys=True)
-        output_stream.write("\n")
-        return INVALID_INPUT_EXIT_CODE
+        return _reject(output_stream, str(error))
 
     json.dump(result, output_stream, sort_keys=True)
     output_stream.write("\n")

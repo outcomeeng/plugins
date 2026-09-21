@@ -177,7 +177,8 @@ same agent kind in the same pane before the next order.
   surrounding delivery workflow reads the peer pane for the bell line and
   rings again only when the line is absent. This skill does not operate that
   transport.
-- Every worktree pool has a distinct agent-mail project. Register an identity
-  separately in every pool.
+- The repository has one agent-mail project, identified by that repository. An
+  identity registered in it is valid for every checkout of that repository, so
+  it is registered once rather than per checkout.
 - The store can reject descriptive agent names. Use the accepted word-list name
   and preserve it verbatim in orders, records, and reports.

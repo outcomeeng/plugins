@@ -8,7 +8,10 @@ An unfilled field refuses the order.
 - Change: `<repository#number and complete Change title>`
 - Activity: `<exact Activity identifier and text>`
 - Officer mail identity: `<registered store-assigned word-list name>`
-- Exact inbox instruction: `<verbatim instruction supplied by the orchestrating session for this pool>`
+- Officer permission posture: `<the disallowed-tools argument the launch carried
+  on this officer's session, or the recorded absence of that mechanism for this
+  officer's agent>`
+- Exact inbox instruction: `<verbatim instruction supplied by the orchestrating session for this repository's mail project>`
 - Mail correlation: `<stable per-Change correlation>`
 - Absolute worktree: `<absolute path>`
 - Worktree proof: `<checked free-pool or occupancy result>`
@@ -19,10 +22,16 @@ An unfilled field refuses the order.
 `<base>` is the active flow's resolved changeset base. For a pull request, use
 its checked `baseRefName`; otherwise use the base the governing flow resolved.
 
-Each worktree pool has its own mail project. Registration in another pool does
-not establish an identity here. Descriptive agent names can be rejected by the
-store; use its accepted word-list name and require the officer to report that
-effective name before sending this order.
+The permission posture is recorded here, never requested here: starting the
+session set it, as the launch workflow's `<permission_posture>` states. An order
+that asks an officer not to reach for a tool the session still carries does not
+hold.
+
+The repository has one mail project, identified by that repository, so an
+identity registered in it is valid for every checkout of that repository and is
+registered once rather than per checkout. Descriptive agent names can be
+rejected by the store; use its accepted word-list name and require the officer
+to report that effective name before sending this order.
 
 ## Operator words
 
@@ -50,11 +59,15 @@ Do not paraphrase, extend, or silently narrow this text.
 
 ## Round ceiling
 
-- Round definition: `one Author or Fixer pass plus every Verifier pass it triggers`
-- Autonomous ceiling: `two rounds`
-- Third-round rule: `wait for the operator's word`
-- Second-rejection procedure: `report the repeated finding class, read the pushed changeset, read the sealed verification-journal runs, and propose split, track, or stop`
+- Round ceiling: `the round definition, autonomous ceiling, second-rejection
+  procedure, and third-round rule stated in the skill's <round_control>`
 - Repeated-class hard stop: `a new finding of a class already repaired twice on the same subject stops the officer and releases the Change with a Handoff`
+
+The skill's `<round_control>` states the round definition, the autonomous
+ceiling, the second-rejection procedure, and the third-round rule. Fill the
+first field by citing it, never by restating its values, so one authored
+statement governs all four. The repeated-class hard stop is this template's own
+and is stated here in full.
 
 ## Standing rules
 
