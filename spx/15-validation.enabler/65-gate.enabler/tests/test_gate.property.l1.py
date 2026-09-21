@@ -11,7 +11,6 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
-import re
 from typing import Final
 
 from hypothesis import given, settings
@@ -24,22 +23,24 @@ from outcomeeng.validation import (
     run,
 )
 from outcomeeng_testing.generators.gate import step_lists
-from outcomeeng.validation._engine import TIMING_DIVIDER, TIMING_SUMMARY_BANNER
+from outcomeeng.validation._engine import (
+    TIMING_DIVIDER,
+    TIMING_SUMMARY_BANNER,
+    timing_row_value,
+)
 from outcomeeng_testing.harnesses.gate import PASS_EXIT_CODE, RecordingSpawner
 
 MAX_EXAMPLES: Final = 50
-TIMING_ROW_PATTERN: Final = re.compile(r"\s+([0-9]+)s$")
 
 
 def _timing_summary_elapsed_values(output: str) -> list[int]:
     summary_text = output.split(f"{TIMING_SUMMARY_BANNER}\n", maxsplit=1)[1]
     rows_text = summary_text.split(f"{TIMING_DIVIDER}\n", maxsplit=1)[0]
-    elapsed_values: list[int] = []
-    for line in rows_text.splitlines():
-        match = TIMING_ROW_PATTERN.search(line)
-        if match is not None:
-            elapsed_values.append(int(match.group(1)))
-    return elapsed_values
+    return [
+        value
+        for value in (timing_row_value(line) for line in rows_text.splitlines())
+        if value is not None
+    ]
 
 
 @given(steps=step_lists())

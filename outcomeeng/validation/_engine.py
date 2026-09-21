@@ -14,6 +14,7 @@ the ADR's bounded-deadline exception.
 from __future__ import annotations
 
 import json
+import re
 import signal
 import tempfile
 import time
@@ -63,6 +64,8 @@ TIMING_TOTAL_LABEL: Final = "TOTAL"
 """The label of the timing block's total row."""
 TIMING_FAILED_LABEL: Final = "FAILED"
 """The label of the timing block's failed row."""
+_TIMING_ROW_VALUE: Final = re.compile(r"\s+(\d+)s$")
+"""The engine's one reading of its own timing-row value."""
 FULL_LOG_LABEL: Final = "Full log:"
 SUMMARY_PATH_LABEL: Final = "Summary:"
 FAILURE_EXCERPT_LINE_LIMIT: Final = 80
@@ -157,6 +160,16 @@ def _write_timing_summary(
             f"{failed_label}\n"
         )
     sink.flush()
+
+
+def timing_row_value(line: str) -> int | None:
+    """Return the elapsed seconds a timing row carries, or `None` for other lines.
+
+    Published beside `TIMING_ROW_FORM` so a reader that needs to parse a row
+    has one, and no reader has cause to spell a second reading of the form.
+    """
+    match = _TIMING_ROW_VALUE.search(line)
+    return int(match.group(1)) if match is not None else None
 
 
 def _create_summary_path(recipe_name: str) -> Path:
