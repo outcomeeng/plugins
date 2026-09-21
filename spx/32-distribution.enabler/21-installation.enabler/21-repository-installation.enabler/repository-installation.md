@@ -58,7 +58,7 @@ CAN refresh exactly the selected plugins in every Claude Code checkout on the ma
 
 ### Compliance
 
-- ALWAYS: a row that starts a real Codex or Claude process reads its agent's disable switch through the source-owned predicate the test-infrastructure home exports — unset or any value other than 1 runs the row, and 1 skips it with a reason naming the switch — so the same predicate decides every row and no row reads the environment itself ([test](tests/test_repository_installation.compliance.l1.py))
+- ALWAYS: a row that starts a real Codex or Claude process reads its agent's disable switch through the source-owned predicate `spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler` declares — unset or any value other than 1 runs the row, and 1 skips it with a reason naming the switch — so the same predicate decides every row and no row reads the environment itself ([test](tests/test_repository_installation.compliance.l1.py))
 - NEVER: the native profile-execution recipe reads a disable switch — release acceptance runs every row ([test](tests/test_native_profile_execution.compliance.l1.py))
 - ALWAYS: discovery selects subscription by default locally, requires an explicit authentication mode in CI, and requires the selected mode's credential without falling back to another mode. ([test](tests/test_repository_installation.compliance.l1.py))
 - ALWAYS: subscription discovery checks native file-store write-through compatibility before linking only the selected saved-login file into disposable state, then serializes participating uses and reports detected file, link, or account replacement without restoring an older copy. ([test](tests/test_repository_installation.compliance.l1.py))
