@@ -37,6 +37,7 @@ from outcomeeng_testing.harnesses.gate import (
     read_summary,
     single_step_recipe,
     skip_report_observation,
+    summary_steps,
 )
 
 
@@ -179,4 +180,23 @@ def test_summary_with_declared_skips_conforms_to_schema() -> None:
 
     assert_json_schema(observation.summary, PRIMITIVE_SUMMARY_SCHEMA)
     assert any(SUMMARY_KEY_SKIPPED in step for step in steps)
+    assert observation.exit_code == SUCCESS_EXIT_CODE
+
+
+def test_a_step_carrying_the_skip_key_and_no_row_fails_the_schema() -> None:
+    observation = skip_report_observation(
+        recipe=TEST_RECIPE,
+        exit_codes=[SUCCESS_EXIT_CODE]
+        * (len(TEST_RECIPE.preflight_steps) + len(TEST_RECIPE.steps)),
+        switches=AGENT_SWITCHES,
+    )
+    emptied = 0
+    for step in summary_steps(observation.summary):
+        if SUMMARY_KEY_SKIPPED in step:
+            step[SUMMARY_KEY_SKIPPED] = []
+            emptied += 1
+
+    with pytest.raises(AssertionError, match=SUMMARY_KEY_SKIPPED):
+        assert_json_schema(observation.summary, PRIMITIVE_SUMMARY_SCHEMA)
+    assert emptied > 0
     assert observation.exit_code == SUCCESS_EXIT_CODE

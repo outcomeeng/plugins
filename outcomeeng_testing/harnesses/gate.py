@@ -67,6 +67,8 @@ from outcomeeng.validation.agent_disable import (
     SKIP_REPORT_OPTION,
     SKIP_REPORT_SWITCH_FIELD,
     SKIP_REPORT_TEST_FIELD,
+    AgentDisableStates,
+    read_agent_disable_states,
 )
 from outcomeeng.validation.selected_gate import (
     COPIED_GIT_STATUS_PREFIX,
@@ -188,6 +190,18 @@ def summary_recipes(summary: dict[str, object]) -> list[dict[str, object]]:
     for recipe in recipes:
         assert isinstance(recipe, dict)
     return cast("list[dict[str, object]]", recipes)
+
+
+def switches_declaring_nothing() -> AgentDisableStates:
+    """Read both disable switches from an environment that declares neither.
+
+    Every plan carries the reading its explanation names, so a case whose
+    subject is path selection still supplies one. The reading comes from the
+    declaring module's own reader over the environment this harness hands it,
+    so the case chooses no state and restates none.
+    """
+
+    return read_agent_disable_states({})
 
 
 def selected_gate_runner_for_paths(
@@ -1010,6 +1024,13 @@ class SleepBudgetExhausted(RuntimeError):
 @dataclass
 class BoundedAdvancingClock:
     """A clock that advances on sleep and refuses one past its budget.
+
+    Stands in for the real monotonic clock and sleep under the `/test` Stage 5
+    time-and-concurrency exception, so the shutdown's grace-period deadline and
+    its post-kill reap checks are observable without spending their real
+    seconds, and a wait the orchestrator leaves unbounded is reached in one run
+    rather than never. It advances only on the sleeps the orchestrator asks for
+    and owns no predicate over how many it asked for.
 
     The refusal is this clock's own execution limit, not a verdict: it reports
     the budget it was given and the sleeps it had already served, and the linked

@@ -71,6 +71,13 @@ SKIPPED_ROWS_SCHEMA: JsonSchema = {
     },
     "minItems": 1,
 }
+"""The rows one step's declared skips occupy in its summary record.
+
+The engine writes this key only for a step that had skips, so its presence
+names at least one row. A present-but-empty list is therefore a shape the
+engine never writes and a reader would misread: the skip channel is there
+while nothing in it is named. `minItems` is what refuses that shape.
+"""
 
 PASS_STEP_SCHEMA: JsonSchema = {
     "type": "object",
@@ -242,8 +249,18 @@ def _schema_mapping(schema: JsonSchema, key: str) -> dict[str, JsonSchema]:
     return cast("dict[str, JsonSchema]", schema[key])
 
 
+def _schema_int(schema: JsonSchema, key: str) -> int:
+    return cast("int", schema[key])
+
+
 def assert_json_schema(instance: object, schema: JsonSchema, path: str = "$") -> None:
-    """Assert that a JSON-loaded value conforms to the supported schema subset."""
+    """Assert that a JSON-loaded value conforms to the supported schema subset.
+
+    The subset is exactly the keywords evaluated below — `anyOf`, `const`,
+    `enum`, `type` over object, array, string and integer, `required`,
+    `properties`, `additionalProperties`, `items`, and `minItems`. A schema in
+    this module declares only those, so every constraint it states can fail.
+    """
 
     if "anyOf" in schema:
         errors: list[str] = []
@@ -281,6 +298,11 @@ def assert_json_schema(instance: object, schema: JsonSchema, path: str = "$") ->
 
     if schema_type == "array":
         assert isinstance(instance, list), f"{path}: expected array"
+        if "minItems" in schema:
+            minimum = _schema_int(schema, "minItems")
+            assert len(instance) >= minimum, (
+                f"{path}: expected at least {minimum} items, got {len(instance)}"
+            )
         item_schema = cast("JsonSchema", schema["items"])
         for index, item in enumerate(instance):
             assert_json_schema(item, item_schema, f"{path}[{index}]")

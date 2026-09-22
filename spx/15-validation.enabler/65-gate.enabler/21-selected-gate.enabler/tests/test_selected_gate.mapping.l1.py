@@ -80,6 +80,7 @@ from outcomeeng_testing.harnesses.gate import (
     selected_gate_branch_discovery_argv,
     selected_gate_changed_path_domain,
     skip_report_arguments,
+    switches_declaring_nothing,
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
     conftest_reach_layout,
@@ -130,6 +131,7 @@ def test_every_declared_path_category_selects_its_validation_lane(
             plan = build_selected_gate_plan(
                 (path_from_pattern(pattern),),
                 test_infrastructure=index_test_infrastructure(repo.root),
+                agent_disable=switches_declaring_nothing(),
             )
 
         selected_argvs = _argvs(plan)
@@ -147,7 +149,11 @@ def test_every_assertion_path_category_maps_presence_to_targeted_execution(
     pattern: str, deleted: bool
 ) -> None:
     path = path_from_pattern(pattern)
-    plan = build_selected_gate_plan((path,), deleted_paths=(path,) if deleted else ())
+    plan = build_selected_gate_plan(
+        (path,),
+        deleted_paths=(path,) if deleted else (),
+        agent_disable=switches_declaring_nothing(),
+    )
 
     targets = {
         argument
@@ -163,15 +169,22 @@ def test_every_evidence_link_path_category_selects_link_validation(
     pattern: str,
 ) -> None:
     path = path_from_pattern(pattern)
-    inside = build_selected_gate_plan((path,))
-    outside = build_selected_gate_plan((path.removeprefix(f"{SPEC_TREE_ROOT}/"),))
+    inside = build_selected_gate_plan(
+        (path,), agent_disable=switches_declaring_nothing()
+    )
+    outside = build_selected_gate_plan(
+        (path.removeprefix(f"{SPEC_TREE_ROOT}/"),),
+        agent_disable=switches_declaring_nothing(),
+    )
 
     assert EVAL_LINKS_ARGV in _argvs(inside)
     assert EVAL_LINKS_ARGV not in _argvs(outside)
 
 
 def test_a_python_source_path_selects_lint_and_type_steps() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
+    plan = build_selected_gate_plan(
+        (SELECTED_GATE_PYTHON_SOURCE_PATH,), agent_disable=switches_declaring_nothing()
+    )
 
     assert plan.full_gate is False
     assert _argvs(plan) == (RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
@@ -179,7 +192,9 @@ def test_a_python_source_path_selects_lint_and_type_steps() -> None:
 
 
 def test_a_workflow_path_selects_the_workflow_linters() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_WORKFLOW_PATH,))
+    plan = build_selected_gate_plan(
+        (SELECTED_GATE_WORKFLOW_PATH,), agent_disable=switches_declaring_nothing()
+    )
 
     assert plan.full_gate is False
     assert _argvs(plan) == (ACTIONLINT_ARGV, SHELLCHECK_ARGV)
@@ -190,7 +205,9 @@ def test_the_eval_workflow_selects_the_trigger_currency_check() -> None:
     # The eval workflow carries the generated trigger blocks, so editing it
     # selects the trigger currency check alongside the workflow linters. It
     # carries no producer, so the prompt check stays unselected.
-    plan = build_selected_gate_plan((SELECTED_GATE_EVAL_WORKFLOW_PATH,))
+    plan = build_selected_gate_plan(
+        (SELECTED_GATE_EVAL_WORKFLOW_PATH,), agent_disable=switches_declaring_nothing()
+    )
 
     assert plan.full_gate is False
     assert _argvs(plan) == (ACTIONLINT_ARGV, SHELLCHECK_ARGV, EVAL_TRIGGERS_ARGV)
@@ -201,7 +218,10 @@ def test_an_eval_definition_selects_both_currency_checks() -> None:
     # An eval definition generates both the CI trigger list and, for a
     # producer-coupled suite, the materialized prompt — so it selects both
     # currency checks, alongside the markdown lane its `spx/**` path matches.
-    plan = build_selected_gate_plan((SELECTED_GATE_EVAL_DEFINITION_PATH,))
+    plan = build_selected_gate_plan(
+        (SELECTED_GATE_EVAL_DEFINITION_PATH,),
+        agent_disable=switches_declaring_nothing(),
+    )
 
     assert plan.full_gate is False
     assert _argvs(plan) == (
@@ -226,7 +246,8 @@ def test_combined_paths_merge_lanes_in_validation_step_order() -> None:
             SELECTED_GATE_PYTHON_SOURCE_PATH,
             SELECTED_GATE_MARKDOWN_PATH,
             SELECTED_GATE_WORKFLOW_PATH,
-        )
+        ),
+        agent_disable=switches_declaring_nothing(),
     )
 
     assert plan.full_gate is False
@@ -259,7 +280,11 @@ def test_combined_paths_merge_lanes_in_validation_step_order() -> None:
 def test_deleted_assertion_tests_never_select_pytest() -> None:
     test_path = SELECTED_GATE_PYTHON_TEST_PATH
 
-    plan = build_selected_gate_plan((test_path,), deleted_paths=(test_path,))
+    plan = build_selected_gate_plan(
+        (test_path,),
+        deleted_paths=(test_path,),
+        agent_disable=switches_declaring_nothing(),
+    )
     assert all(item.reason != TEST_REASON for item in plan.selected_steps)
 
     deleted_paths = deleted_paths_after_status_resolution(
@@ -268,12 +293,17 @@ def test_deleted_assertion_tests_never_select_pytest() -> None:
             ChangedPath(path=test_path, status=DELETED_GIT_STATUS_PREFIX),
         )
     )
-    plan = build_selected_gate_plan((test_path,), deleted_paths=deleted_paths)
+    plan = build_selected_gate_plan(
+        (test_path,),
+        deleted_paths=deleted_paths,
+        agent_disable=switches_declaring_nothing(),
+    )
     assert all(item.reason != TEST_REASON for item in plan.selected_steps)
 
     plan = build_selected_gate_plan(
         (test_path, PYTEST_TARGET_ARG),
         deleted_paths=(test_path,),
+        agent_disable=switches_declaring_nothing(),
     )
     assert plan.selected_steps[-1].reason == TEST_REASON
     assert plan.selected_steps[-1].step.argv == (*PYTEST_ARGV, PYTEST_TARGET_ARG)
@@ -284,7 +314,9 @@ def test_deleted_assertion_tests_never_select_pytest() -> None:
     selection_source.FULL_GATE_PATTERNS,
 )
 def test_full_gate_paths_select_the_complete_recipe_set(path: str) -> None:
-    plan = build_selected_gate_plan((path_from_pattern(path),))
+    plan = build_selected_gate_plan(
+        (path_from_pattern(path),), agent_disable=switches_declaring_nothing()
+    )
 
     assert plan.full_gate is True
     assert tuple(
@@ -300,7 +332,7 @@ def test_full_gate_paths_select_the_complete_recipe_set(path: str) -> None:
     "path", (SELECTED_GATE_README_PATH, SELECTED_GATE_SPX_CONFIG_PATH)
 )
 def test_markdown_only_paths_select_the_markdown_lane(path: str) -> None:
-    plan = build_selected_gate_plan((path,))
+    plan = build_selected_gate_plan((path,), agent_disable=switches_declaring_nothing())
 
     assert plan.full_gate is False
     assert _argvs(plan) == (FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV)
@@ -316,7 +348,7 @@ def test_markdown_only_paths_select_the_markdown_lane(path: str) -> None:
     ),
 )
 def test_spec_tree_paths_select_the_evidence_link_step(path: str) -> None:
-    plan = build_selected_gate_plan((path,))
+    plan = build_selected_gate_plan((path,), agent_disable=switches_declaring_nothing())
 
     assert plan.full_gate is False
     reason_by_argv = {item.step.argv: item.reason for item in plan.selected_steps}
@@ -336,7 +368,7 @@ def test_spec_tree_paths_select_the_evidence_link_step(path: str) -> None:
 def test_paths_outside_the_spec_tree_never_select_the_evidence_link_step(
     path: str,
 ) -> None:
-    plan = build_selected_gate_plan((path,))
+    plan = build_selected_gate_plan((path,), agent_disable=switches_declaring_nothing())
 
     assert EVAL_LINKS_ARGV not in _argvs(plan)
 
@@ -344,7 +376,9 @@ def test_paths_outside_the_spec_tree_never_select_the_evidence_link_step(
 def test_a_skill_path_selects_skill_steps_with_the_prompt_check() -> None:
     # An authored plugin file may be a producer for a producer-coupled eval
     # prompt, so the prompt currency check joins the skill and markdown steps.
-    plan = build_selected_gate_plan((SELECTED_GATE_SKILL_PATH,))
+    plan = build_selected_gate_plan(
+        (SELECTED_GATE_SKILL_PATH,), agent_disable=switches_declaring_nothing()
+    )
 
     expected = tuple(
         step
@@ -364,7 +398,9 @@ def test_a_skill_path_selects_skill_steps_with_the_prompt_check() -> None:
 
 
 def test_a_plugin_script_selects_skill_and_python_lint_steps() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_PLUGIN_SCRIPT_PATH,))
+    plan = build_selected_gate_plan(
+        (SELECTED_GATE_PLUGIN_SCRIPT_PATH,), agent_disable=switches_declaring_nothing()
+    )
 
     expected = tuple(
         step
@@ -387,7 +423,9 @@ def test_a_shared_fragment_selects_skill_and_markdown_steps() -> None:
     # A shared fragment is inlined by the build; an eval names its producer by
     # an authored `src/plugins/` path, so no shared-fragment edit stales a
     # materialized prompt and the prompt check stays unselected here.
-    plan = build_selected_gate_plan((SELECTED_GATE_SHARED_SOURCE_PATH,))
+    plan = build_selected_gate_plan(
+        (SELECTED_GATE_SHARED_SOURCE_PATH,), agent_disable=switches_declaring_nothing()
+    )
 
     expected = tuple(
         step
@@ -405,7 +443,10 @@ def test_a_shared_fragment_selects_skill_and_markdown_steps() -> None:
 
 
 def test_the_instruction_block_source_selects_the_currency_check() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,))
+    plan = build_selected_gate_plan(
+        (SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,),
+        agent_disable=switches_declaring_nothing(),
+    )
 
     assert INSTRUCTION_BLOCK_ARGV in _argvs(plan)
     assert (
@@ -535,7 +576,9 @@ def test_test_infrastructure_reach_maps_to_gate_steps(
         layout = reach_layout(kind, repo)
 
     plan = build_selected_gate_plan(
-        (layout.changed_path,), test_infrastructure=layout.index
+        (layout.changed_path,),
+        test_infrastructure=layout.index,
+        agent_disable=switches_declaring_nothing(),
     )
     pytest_steps = [
         item
@@ -574,7 +617,9 @@ def test_module_reached_by_conftest_selects_the_full_surface() -> None:
         layout = conftest_reach_layout(repo)
 
     plan = build_selected_gate_plan(
-        (layout.changed_path,), test_infrastructure=layout.index
+        (layout.changed_path,),
+        test_infrastructure=layout.index,
+        agent_disable=switches_declaring_nothing(),
     )
 
     assert layout.index.reach(layout.changed_path).kind is InfrastructureReach.SHARED
@@ -589,6 +634,7 @@ def test_step_fed_by_changed_and_reached_tests_names_both_reasons() -> None:
     plan = build_selected_gate_plan(
         (layout.changed_path, layout.changed_test),
         test_infrastructure=layout.index,
+        agent_disable=switches_declaring_nothing(),
     )
     pytest_steps = [
         item
@@ -612,7 +658,9 @@ def test_the_gate_harness_shared_with_the_parent_node_selects_the_full_surface()
     observation = repository_reach(gate_harness.__file__)
 
     plan = build_selected_gate_plan(
-        (observation.path,), test_infrastructure=observation.index
+        (observation.path,),
+        test_infrastructure=observation.index,
+        agent_disable=switches_declaring_nothing(),
     )
 
     assert observation.index.reach(observation.path).kind is InfrastructureReach.SHARED
@@ -627,7 +675,10 @@ def test_template_script_maps_to_skill_and_lint_steps() -> None:
     # that carry it into every plugin's generated tree. An eval names its
     # producer by an authored `src/plugins/` path, so a template edit stales no
     # materialized prompt and the prompt check stays unselected.
-    plan = build_selected_gate_plan((SELECTED_GATE_TEMPLATE_SCRIPT_PATH,))
+    plan = build_selected_gate_plan(
+        (SELECTED_GATE_TEMPLATE_SCRIPT_PATH,),
+        agent_disable=switches_declaring_nothing(),
+    )
 
     expected = tuple(
         step

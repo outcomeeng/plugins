@@ -25,6 +25,7 @@ from outcomeeng.validation.infrastructure_index import (
     index_test_infrastructure,
 )
 from outcomeeng.validation.selected_gate import (
+    AgentDisableStatesRequired,
     DELETED_GIT_STATUS_PREFIX,
     FULL_GATE_REASON,
     GIT_DISCOVERY_ERROR_PREFIX,
@@ -64,6 +65,7 @@ from outcomeeng_testing.harnesses.gate import (
     run_check_observation,
     selected_check_plan_block,
     selected_gate_branch_discovery_argv,
+    switches_declaring_nothing,
     unrelated_validation_source_path,
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
@@ -73,7 +75,7 @@ from outcomeeng_testing.harnesses.infrastructure_index import (
 
 
 def test_an_empty_changeset_selects_no_steps() -> None:
-    plan = build_selected_gate_plan(())
+    plan = build_selected_gate_plan((), agent_disable=switches_declaring_nothing())
 
     assert plan.steps == ()
     assert plan.full_gate is False
@@ -82,7 +84,9 @@ def test_an_empty_changeset_selects_no_steps() -> None:
 def test_the_plan_prints_before_the_recipes_run() -> None:
     run = run_check_observation(branch_path=SELECTED_GATE_PYTHON_SOURCE_PATH)
 
-    expected_plan = build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
+    expected_plan = build_selected_gate_plan(
+        (SELECTED_GATE_PYTHON_SOURCE_PATH,), agent_disable=switches_declaring_nothing()
+    )
     selected_block = selected_check_plan_block(
         labels=tuple(item.step.label for item in expected_plan.selected_steps),
         reason=PYTHON_REASON,
@@ -173,14 +177,18 @@ def test_infrastructure_path_without_an_index_is_rejected_by_name() -> None:
         layout = reach_layout(InfrastructureReach.NODE_LOCAL, repo)
 
     with pytest.raises(InfrastructureIndexRequired) as caught:
-        build_selected_gate_plan((layout.changed_path,))
+        build_selected_gate_plan(
+            (layout.changed_path,), agent_disable=switches_declaring_nothing()
+        )
 
     assert caught.value.paths == (layout.changed_path,)
     assert layout.changed_path in str(caught.value)
 
 
 def test_definition_guidance_changes_require_the_live_check() -> None:
-    plan = build_selected_gate_plan((INSTRUCTION_BLOCK_SOURCE_PATH,))
+    plan = build_selected_gate_plan(
+        (INSTRUCTION_BLOCK_SOURCE_PATH,), agent_disable=switches_declaring_nothing()
+    )
 
     assert plan.live_discovery
     assert any(LIVE_DISCOVERY_TEST in step.argv for step in plan.steps)
@@ -193,6 +201,7 @@ def test_each_declared_discovery_surface_requires_the_live_check(pattern: str) -
         plan = build_selected_gate_plan(
             (path_from_pattern(pattern),),
             test_infrastructure=index_test_infrastructure(repo.root),
+            agent_disable=switches_declaring_nothing(),
         )
 
     assert plan.live_discovery
@@ -220,6 +229,7 @@ def test_unrelated_automatic_full_gate_excludes_only_the_live_check() -> None:
         plan = build_selected_gate_plan(
             (layout.changed_path,),
             test_infrastructure=index_test_infrastructure(repo.root),
+            agent_disable=switches_declaring_nothing(),
         )
 
     assert plan.full_gate
@@ -255,7 +265,9 @@ def test_unrelated_full_gate_execution_honors_its_exclusion() -> None:
 
 
 def test_relevant_full_gate_keeps_live_discovery_enabled() -> None:
-    plan = build_selected_gate_plan((SELECTED_GATE_FULL_GATE_PATH,))
+    plan = build_selected_gate_plan(
+        (SELECTED_GATE_FULL_GATE_PATH,), agent_disable=switches_declaring_nothing()
+    )
 
     assert plan.full_gate
     assert plan.live_discovery
@@ -279,6 +291,18 @@ def test_the_plan_explanation_names_each_switch_state(value: str | None) -> None
         )
         for switch in AGENT_SWITCHES
     )
+
+
+def test_a_plan_without_the_switch_reading_is_refused_by_name() -> None:
+    with pytest.raises(AgentDisableStatesRequired) as caught:
+        build_selected_gate_plan(
+            (SELECTED_GATE_PYTHON_SOURCE_PATH,),
+            agent_disable=None,
+        )
+
+    assert caught.value.switches == AGENT_SWITCHES
+    for switch in AGENT_SWITCHES:
+        assert switch in str(caught.value)
 
 
 def test_each_switch_state_is_printed_before_the_selected_steps_run() -> None:

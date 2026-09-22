@@ -12,13 +12,18 @@ from outcomeeng_testing.harnesses.gate import (
     SELECTED_GATE_PROPERTY_SEED,
     captured_property_failure_notes,
     selected_gate_property,
+    switches_declaring_nothing,
 )
 
 
 @selected_gate_property
 def _selection_is_order_and_duplication_insensitive(paths: list[str]) -> None:
-    forward = build_selected_gate_plan(tuple(paths))
-    reverse = build_selected_gate_plan(tuple(reversed(paths * 2)))
+    forward = build_selected_gate_plan(
+        tuple(paths), agent_disable=switches_declaring_nothing()
+    )
+    reverse = build_selected_gate_plan(
+        tuple(reversed(paths * 2)), agent_disable=switches_declaring_nothing()
+    )
 
     assert forward.changed_paths == reverse.changed_paths
     assert forward.full_gate == reverse.full_gate

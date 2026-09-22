@@ -13,6 +13,7 @@ from typing import Final, Protocol, TextIO, cast
 
 from outcomeeng.validation._engine import run_check, run_recipe
 from outcomeeng.validation.agent_disable import (
+    AGENT_SWITCHES,
     AgentDisableStates,
     read_agent_disable_states,
 )
@@ -282,9 +283,9 @@ class SelectedGatePlan:
     changed_paths: tuple[str, ...]
     selected_steps: tuple[SelectedGateStep, ...]
     full_gate: bool
+    agent_disable: AgentDisableStates
+    """Both switches' readings, which every plan explanation names."""
     live_discovery: bool = False
-    agent_disable: AgentDisableStates | None = None
-    """Both switches' readings, or `None` when the caller observed neither."""
 
     @property
     def live_discovery_reason(self) -> str:
@@ -350,6 +351,23 @@ class InfrastructureIndexRequired(ValueError):
         self.paths: tuple[str, ...] = tuple(paths)
         super().__init__(
             "test-infrastructure paths need a reach index: " + ", ".join(self.paths)
+        )
+
+
+class AgentDisableStatesRequired(ValueError):
+    """A plan was requested without the switch readings its explanation names.
+
+    The plan explanation names each switch's state before the selected steps
+    run, so a plan built without that reading would omit a declared line. The
+    reading has no default: a caller supplies what it observed, and a caller
+    that observed nothing is refused here rather than served that plan.
+    """
+
+    def __init__(self) -> None:
+        self.switches: tuple[str, ...] = AGENT_SWITCHES
+        super().__init__(
+            "a plan needs each agent's disable-switch reading: "
+            + ", ".join(self.switches)
         )
 
 
@@ -436,17 +454,23 @@ def collect_changed_path_entries(
 def build_selected_gate_plan(
     changed_paths: tuple[str, ...],
     *,
+    agent_disable: AgentDisableStates | None,
     deleted_paths: tuple[str, ...] = (),
     test_infrastructure: InfrastructureIndex | None = None,
-    agent_disable: AgentDisableStates | None = None,
 ) -> SelectedGatePlan:
     """Build the selected local gate plan for changed paths.
+
+    ``agent_disable`` is required of every caller: the plan explanation names
+    each switch's state, so a plan carries the reading its caller observed and
+    a caller supplying none raises `AgentDisableStatesRequired`.
 
     ``test_infrastructure`` is required whenever a changed path lies under
     the test-infrastructure package; its reach decides between the tests that
     import the changed module and the full surface.
     """
 
+    if agent_disable is None:
+        raise AgentDisableStatesRequired
     normalized = tuple(sorted(set(changed_paths)))
     if not normalized:
         return SelectedGatePlan(
@@ -588,8 +612,8 @@ def _full_surface_plan(
     changed_paths: tuple[str, ...],
     *,
     reason: str,
+    agent_disable: AgentDisableStates,
     live_from_infrastructure: bool = False,
-    agent_disable: AgentDisableStates | None = None,
 ) -> SelectedGatePlan:
     live_discovery = live_from_infrastructure or _matches_any(
         changed_paths, LIVE_DISCOVERY_PATTERNS
@@ -722,9 +746,8 @@ def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
             + "\n"
         )
     sink.write(PLAN_LINE_FORM.format(text=plan.live_discovery_reason) + "\n")
-    if plan.agent_disable is not None:
-        for line in plan.agent_disable.explanation_lines:
-            sink.write(PLAN_LINE_FORM.format(text=line) + "\n")
+    for line in plan.agent_disable.explanation_lines:
+        sink.write(PLAN_LINE_FORM.format(text=line) + "\n")
     sink.flush()
 
 
