@@ -94,6 +94,8 @@ Readings 1 and 3 ask for visibility; reading 2 objects to placement among reques
 
 **Evidence**: the three findings above, with the heads each was produced on. The `instructions:skill-auditor` verdicts carry no run token; the reviewer reading carries the run token named in item 2.
 
+**Fifth recurrence, fourth rule name.** The same collision reached a fifth run under a fourth identifier: `abstract_testing_record`, then `script_testing_record_not_rerunnable`, then `script_testing_record`, now `unlocated_testing_record` on head `83de2bf1fc526231a3ab797afa7a60b4316196cf`. The conflict is stable and its name is not, so the settlement must state the rule for shipped content rather than name a finding identifier — an entry keyed to any one of those four will be missed by the next run.
+
 ## The probe confirms three of the four variables the lookup removes
 
 `GIT_LOCATION_VARIABLES` in `src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py` removes four names. The mapping test's domain is the set Git's own behaviour confirms moves a lookup's answer off the invoking working directory, and on the pools that test builds Git confirms three of them: `GIT_DIR` and `GIT_COMMON_DIR` by answering with another repository, `GIT_CEILING_DIRECTORIES` by giving the answer it gives where no repository exists. `GIT_WORK_TREE` is removed and not confirmed.
@@ -131,3 +133,23 @@ Re-adding `GIT_DISCOVERY_ACROSS_FILESYSTEM` to `GIT_LOCATION_VARIABLES` leaves e
 **Settlement condition**: the harness can build a repository whose ownership differs from the invoking user and whose resolution depends on a `safe.directory` entry, a case confirms that a config-selection variable makes the lookup refuse where it otherwise resolves, and the name enters the set from that case — or the precondition is established as unreachable in this product's test environment and the exclusion is recorded as resting on that.
 
 **Evidence**: `spec-tree:changes-reviewer` warning on `spx/43-coding-agents.enabler/18-agent-mail.enabler/21-agent-mail-adapter.adr.md` line 7, which read the decision's two-mechanism wording as an exhaustive partition and named these variables as a constructed member outside it. The partition wording is repaired by stating the class by its effect; this entry records the classification question that wording concealed.
+
+## Restating the record mapping in the skill body keeps dropping conditions
+
+`src/plugins/coding-agents/skills/operate-agent-mail/SKILL.md` describes how a read-back record's kind is decided, a predicate `_split_kind` and `record_from_inbox_item` own in the adapter. Three successive rewrites each lost a different condition of it: a paragraph split separated the threadless case from the prefix case so the first read as a complete rule; the consolidated single sentence dropped the empty-remainder conjunct while its lead qualifier still covered it; the enumeration that replaced the sentence dropped the space in `KIND_PREFIX_CLOSE`, so a subject like `[fact]hello` satisfied none of its listed clauses while the adapter still reports `unclassified`.
+
+**Impact**: each form was more careful than the one before and each was wrong in a new place, so a consumer reading the shipped body could predict a kind the adapter does not report. The loss is invisible on inspection and appears only when a worked example is run against the predicate.
+
+**Settlement condition**: the shipped body states the outcome a caller must handle rather than the predicate the adapter owns, or any enumeration it carries is checked against worked examples covering each condition, and a rule governs which of the two a shipped skill uses when a decision already owns the predicate.
+
+**Evidence**: `instructions:skill-auditor` `f-010` on head `1d7a14a2998039feec89d7ff19de82baaa4a30a8` (the split), `f-008` on `be342cd8a9ce62bd3dc8508492928190f7d96cbe` (the sentence), and `spec-tree:changes-reviewer` run `2026-09-22_08-47-52-583-e8b09f841f52` on `83de2bf1fc526231a3ab797afa7a60b4316196cf` (the enumeration, with the `[fact]hello` example).
+
+## Two skill-surface presentation warnings left unrepaired
+
+Both are valid and bounded, and both are recorded rather than repaired because every recent presentation rewrite of this surface introduced a correctness defect, so another one trades demonstrated risk for no correctness gain.
+
+The workflow's first step admits two input forms — one request operation with its arguments, or a complete JSON request — while every worked example shows only the JSON form, so the operation-plus-arguments form has no shown mapping onto the argument names. The project-key paragraph carries four separable rules in one block: the key is the common Git directory, the pool-wide equivalence that follows, the variable-dropping policy with its non-exhaustive qualifier, and the `repository-unresolved` outcome.
+
+**Settlement condition**: both are taken with the settlement above, so the surface is revised once under whatever rule governs restating an adapter-owned predicate, rather than in separate passes that each risk a new dropped condition.
+
+**Evidence**: `instructions:skill-auditor` findings `f-008` (`argument_form_unexemplified`) and `f-010` (`dense_single_paragraph`) on head `83de2bf1fc526231a3ab797afa7a60b4316196cf`.
