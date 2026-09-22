@@ -23,8 +23,8 @@ def test_every_declared_read_cause_records_one_read() -> None:
             source.SOURCE_ID_FIELD: identifier,
         }
 
-        assert set(observations) == set(source.READ_CAUSES)
-        for cause, observation in observations.items():
+        for cause in sorted(source.READ_CAUSES):
+            observation = observations[cause]
             ledger = cast(dict[str, object], observation.result[source.LEDGER_FIELD])
 
             assert observation.exit_code == source.SUCCESS_EXIT_CODE

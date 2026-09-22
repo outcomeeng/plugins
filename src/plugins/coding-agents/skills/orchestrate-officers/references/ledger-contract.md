@@ -91,7 +91,9 @@ A document the parser reads whole refuses when:
 - a mail record is not an object, or its `id` is not an integer
 - a mail record's `body` is not a string — a record repeating an `id` an earlier
   record already carried is passed over before its body is read
-- a journal run is not an object, or its `runToken` is not a non-empty string
+- a journal run is not an object, or its `runToken` is not a non-empty string —
+  a run repeating a `runToken` an earlier run carried is passed over before its
+  event fields are read
 - `findingProvenance` is not an array, or one of its entries is not an object
 - `read` is neither an object nor an array of objects, or a read's `cause` lies
   outside the declared set, whose detail names the admitted causes
@@ -103,16 +105,19 @@ A document the parser reads whole refuses when:
 Every event field is optional: a record omitting one contributes nothing to that
 collection and refuses nothing. The scalar event fields — `pass`, `head`,
 `verdict`, `decision`, and `failure` — carry no gate of their own: whatever
-value a record places under one of them becomes that collection's entry.
+value an admitted record places under one of them becomes that collection's
+entry.
 
-A value refusal turns on the value rather than on its shape: a `wallTimeSeconds`
-of `-1` is well-formed text and still refuses the whole document, so one
-record's out-of-range value costs every entry the derivation would have
-produced.
+A value refusal turns on the value rather than on its shape: in a record or run
+the derivation admits, a `wallTimeSeconds` of `-1` is well-formed text and still
+refuses the whole document, so one admitted record's out-of-range value costs
+every entry the derivation would have produced. A record or run passed over for
+a repeated identity is never admitted, so the gates above reach none of its
+event fields, and an out-of-range value it carries costs nothing.
 
 A mail body the parser cannot read is not a refused document. That body carries
 no `ledger` object, so its record stays a durable mail fact and contributes
 nothing, exactly as a body whose JSON carries no such object does. A body whose
 `ledger` value is read whole and is not an object stays a durable mail fact for
 the same reason: the `ledger` key's shape decides membership, never admission.
-Once a record is admitted as a ledger event, the gates above apply to it.
+Once a record or run is admitted as a ledger event, the gates above apply to it.

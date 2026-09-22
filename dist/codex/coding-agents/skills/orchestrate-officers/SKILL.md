@@ -99,16 +99,16 @@ accepted operation names.
 
 All operation workflows live under `${SKILL_DIR}/workflows/`:
 
-| Workflow       | Output                                                               |
-| -------------- | -------------------------------------------------------------------- |
-| `launch.md`    | One officer started in a proven pane and bounded registration result |
-| `order.md`     | One complete durable order record and ledger identity                |
-| `read.md`      | One event-caused state read and rebuilt ledger when required         |
-| `correct.md`   | One authorized prompt correction or dismissal                        |
-| `answer.md`    | One evidence-backed answer record or held decision                   |
-| `escalate.md`  | One bounded escalation with its decision disposition                 |
-| `housekeep.md` | One compaction, relaunch, or fleet-status action                     |
-| `close.md`     | One Change disposal and fresh-session transition                     |
+| Workflow       | Output                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------- |
+| `launch.md`    | One officer started in a proven pane and bounded registration result                              |
+| `order.md`     | One complete durable order record and ledger identity                                             |
+| `read.md`      | One event-caused state read and rebuilt ledger when required                                      |
+| `correct.md`   | One authorized prompt correction or dismissal                                                     |
+| `answer.md`    | One evidence-backed answer record or held decision                                                |
+| `escalate.md`  | One bounded escalation with its decision disposition                                              |
+| `housekeep.md` | One compaction, relaunch, or fleet-status action                                                  |
+| `close.md`     | One half of a Change disposal: its order, or its lifecycle fact with the fresh-session transition |
 
 </workflows_index>
 
