@@ -2438,7 +2438,20 @@ def _agent_ownership_content(
 
 
 def _atomic_write(path: Path, content: bytes) -> None:
+    """Replace one document atomically, preserving what the destination already is.
+
+    The replace is what keeps a reader from observing a truncated document, and
+    it carries the replacement's own identity onto the destination: the
+    temporary `mkstemp` creates is mode 0600, and a symlink at the destination
+    would be replaced by a regular file. Neither is this run's to decide for a
+    document it does not own, so an existing destination's mode is applied to
+    the temporary before the replace, and a symlinked destination is written
+    through to its target rather than replaced.
+    """
+    if path.is_symlink():
+        path = Path(os.path.realpath(path))
     path.parent.mkdir(parents=True, exist_ok=True)
+    mode = path.stat().st_mode & 0o7777 if path.exists() else None
     descriptor, temporary_name = tempfile.mkstemp(
         dir=path.parent,
         prefix=f".{path.name}.",
@@ -2447,6 +2460,8 @@ def _atomic_write(path: Path, content: bytes) -> None:
     try:
         with os.fdopen(descriptor, "wb") as handle:
             handle.write(content)
+        if mode is not None:
+            os.chmod(temporary, mode)
         os.replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
