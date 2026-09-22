@@ -96,7 +96,7 @@ from outcomeeng.distribution.installation import (
     InstallationReport,
     JSON_OUTPUT_OPTION,
     Operation,
-    PathlessInstallRecord,
+    ListedInstallRecord,
     PersistentPreflight,
     PLUGIN_OPERATIONS,
     ScopeSplitClassification,
@@ -132,6 +132,7 @@ from outcomeeng.distribution.installation import (
     PLUGIN_MANIFEST_RELATIVE,
     PLUGIN_MANIFEST_VERSION_FIELD,
     execute_installation,
+    installation_exit_code,
     report_document,
     execute_persistent_installation,
     main,
@@ -151,7 +152,8 @@ from outcomeeng_testing.generators.installation import (
     generated_agent_subsets,
     generated_claude_install_records,
     generated_other_checkout_records,
-    generated_pathless_defect_records,
+    generated_bootstrap_records,
+    generated_listing_defect_records,
     generated_invalid_catalog_subsets,
     generated_persistent_catalog_selections,
 )
@@ -927,10 +929,13 @@ def _listing_from_record_file(record_file: Path) -> str:
                 CLAUDE_PLUGIN_ID_FIELD: identifier,
                 CLAUDE_PLUGIN_ENABLED_FIELD: True,
                 CLAUDE_PLUGIN_SCOPE_FIELD: item[CLAUDE_PLUGIN_SCOPE_FIELD],
-                CLAUDE_PLUGIN_VERSION_FIELD: item[
-                    CLAUDE_INSTALLED_RECORD_VERSION_FIELD
-                ],
             }
+            # A document entry carrying no version renders a listing entry
+            # carrying none, which is the listing defect under observation.
+            if CLAUDE_INSTALLED_RECORD_VERSION_FIELD in item:
+                entry[CLAUDE_PLUGIN_VERSION_FIELD] = item[
+                    CLAUDE_INSTALLED_RECORD_VERSION_FIELD
+                ]
             if CLAUDE_PLUGIN_PROJECT_PATH_FIELD in item:
                 entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] = item[
                     CLAUDE_PLUGIN_PROJECT_PATH_FIELD
@@ -949,7 +954,9 @@ def _record_file_from_cases(
     writes beside the ones production names — is taken from the captured
     real document, so no key outside production's vocabulary is declared
     here; each entry then receives the case's scope, project path, recorded
-    version, the cache directory that version names, and a commit.
+    version, the cache directory that version names, and a commit. A case the
+    listing reports without a version leaves the version and install-path
+    fields unset, so the document carries exactly what the listing carries.
     """
     captured = cast(
         "dict[str, object]",
@@ -964,12 +971,17 @@ def _record_file_from_cases(
         item = dict(template)
         item.pop(CLAUDE_PLUGIN_PROJECT_PATH_FIELD, None)
         item[CLAUDE_PLUGIN_SCOPE_FIELD] = entry[CLAUDE_PLUGIN_SCOPE_FIELD]
-        item[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(
-            cache_root
-            / entry[CLAUDE_PLUGIN_ID_FIELD].split(MARKETPLACE_IDENTIFIER_JOINER)[0]
-            / entry[CLAUDE_PLUGIN_VERSION_FIELD]
-        )
-        item[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = entry[CLAUDE_PLUGIN_VERSION_FIELD]
+        version = entry.get(CLAUDE_PLUGIN_VERSION_FIELD)
+        if version is None:
+            item.pop(CLAUDE_INSTALLED_RECORD_PATH_FIELD, None)
+            item.pop(CLAUDE_INSTALLED_RECORD_VERSION_FIELD, None)
+        else:
+            item[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(
+                cache_root
+                / entry[CLAUDE_PLUGIN_ID_FIELD].split(MARKETPLACE_IDENTIFIER_JOINER)[0]
+                / version
+            )
+            item[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = version
         item[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] = "1" * 40
         if CLAUDE_PLUGIN_PROJECT_PATH_FIELD in entry:
             item[CLAUDE_PLUGIN_PROJECT_PATH_FIELD] = entry[
@@ -1152,8 +1164,10 @@ class RecordRefreshObservation:
 
     Each generated record is paired with the disposition its construction
     implies; the plan's commands, the report, the install-record document
-    before and after, and the closing listing are the observations the
-    linked test judges against those dispositions.
+    before and after, the closing listing, and the exit code are the
+    observations the linked test judges against those dispositions. One
+    execution produces every one of them, so each observation describes the
+    same run over the same unconverged records.
     """
 
     checkout: Path
@@ -1190,7 +1204,10 @@ def observe_record_refresh_plan(
     generated closing listing — with its stale and appearing records — is
     returned instead of the listing the rewritten document renders (Stage 5
     Time and concurrency); otherwise the run's effect is observed through
-    the document as the real CLI would list it.
+    the document as the real CLI would list it. The pipeline executes once:
+    a second execution would face records the first already brought to the
+    target, so the exit code it reported would answer for converged records
+    rather than the generated ones.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -1260,17 +1277,6 @@ def observe_record_refresh_plan(
             ),
         )
         report = execute_installation(plan, runner)
-        exit_code = main(
-            [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
-            base_environment=environment,
-            runner=RecordingRunner(
-                unpublished=unpublished,
-                record_file=record_file,
-                clone=clone,
-                served_version=target_version,
-                closing_listing=runner.closing_listing,
-            ),
-        )
         record_file_after = cast(
             "dict[str, object]", json.loads(record_file.read_text())
         )
@@ -1291,7 +1297,7 @@ def observe_record_refresh_plan(
             attempted=tuple(runner.calls),
             record_file_before=record_file_before,
             record_file_after=record_file_after,
-            exit_code=exit_code,
+            exit_code=installation_exit_code(report),
         )
 
 
@@ -1603,25 +1609,28 @@ def _unreadable_source_case(
 
 
 @dataclass(frozen=True)
-class PathlessListingObservation:
-    """A persistent run whose Claude listing carries a project-scope entry with no path."""
+class DefectiveListingObservation:
+    """A persistent run whose Claude listing carries each refresh-scope defect."""
 
     plan: InstallationPlan
     exit_code: int
     warnings: tuple[str, ...]
     other_checkout: Path
+    defect_checkout: Path
+    """The project path the versionless entry names."""
     attempted: tuple[InstallationCommand, ...]
     """Every command the run issued, closing listing included."""
     record_file_after: dict[str, object]
     target_version: str
 
 
-def observe_pathless_record_listing() -> PathlessListingObservation:
-    """Run a persistent refresh whose listing names one pathless project-scope entry.
+def observe_defective_record_listing() -> DefectiveListingObservation:
+    """Run a persistent refresh whose listing names each refresh-scope defect.
 
-    A second, well-formed record in another checkout is listed beside it, so
-    the run's continuation past the defect is observable; the plan, the
-    warnings, every command the run issues, the install-record document
+    One project-scope entry names no project path and one reports no
+    version; a well-formed record in another checkout is listed beside them,
+    so the run's continuation past either defect is observable. The plan,
+    the warnings, every command the run issues, the install-record document
     after the run, and the exit code are the observations.
     """
     checkout = repository_root()
@@ -1630,6 +1639,8 @@ def observe_pathless_record_listing() -> PathlessListingObservation:
         mirror = temporary_root / "checkout"
         other = temporary_root / "other-checkout"
         other.mkdir()
+        defective = temporary_root / "defective-checkout"
+        defective.mkdir()
         mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         clone = temporary_root / "clone"
@@ -1638,8 +1649,8 @@ def observe_pathless_record_listing() -> PathlessListingObservation:
         _prepare_agent_state(environment)
         preflight = build_persistent_preflight(mirror, environment)
         marketplace = preflight.roots.marketplace
-        cases = generated_pathless_defect_records(
-            marketplace, SPEC_TREE_PLUGIN, other, LISTED_VERSION
+        cases = generated_listing_defect_records(
+            marketplace, SPEC_TREE_PLUGIN, other, defective, LISTED_VERSION
         )
         target_version = served_version(len(cases))
         _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
@@ -1676,14 +1687,93 @@ def observe_pathless_record_listing() -> PathlessListingObservation:
         record_file_after = cast(
             "dict[str, object]", json.loads(record_file.read_text())
         )
-    return PathlessListingObservation(
+    return DefectiveListingObservation(
         plan=plan,
         exit_code=exit_code,
         warnings=tuple(warning.message for warning in plan.warnings),
         other_checkout=other.resolve(),
+        defect_checkout=defective.resolve(),
         attempted=tuple(runner.calls),
         record_file_after=record_file_after,
         target_version=target_version,
+    )
+
+
+@dataclass(frozen=True)
+class BootstrapDriftObservation:
+    """A persistent run that registers the marketplace itself, with its report."""
+
+    checkout: Path
+    other_checkout: Path
+    listed_version: str
+    target_version: str
+    document: dict[str, object]
+    """The run's JSON report, parsed from the one execution's own output."""
+    exit_code: int
+
+
+def observe_bootstrap_record_drift() -> BootstrapDriftObservation:
+    """Run a persistent refresh whose Claude registry carries no marketplace entry.
+
+    The listing names one record of the invocation checkout and one of
+    another checkout, so the run has both a record its native update moves
+    and a record it cannot move without a registered clone. The report and
+    the exit code come from that one execution.
+    """
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        mirror = temporary_root / "checkout"
+        other = temporary_root / "other-checkout"
+        other.mkdir()
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        clone = temporary_root / "clone"
+        mirror_installation_inputs(checkout, clone)
+        environment = _persistent_environment(temporary_root)
+        _prepare_agent_state(environment)
+        preflight = build_persistent_preflight(mirror, environment)
+        marketplace = preflight.roots.marketplace
+        cases = generated_bootstrap_records(
+            marketplace,
+            SPEC_TREE_PLUGIN,
+            preflight.roots.checkout,
+            other,
+            LISTED_VERSION,
+        )
+        target_version = served_version(len(cases))
+        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+        cache_root = (
+            preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
+        )
+        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+        record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+        record_file.parent.mkdir(parents=True, exist_ok=True)
+        record_file.write_text(
+            json.dumps(_record_file_from_cases(cases, cache_root), indent=2)
+        )
+        runner = RecordingRunner(
+            record_file=record_file,
+            clone=clone,
+            served_version=target_version,
+            registered=False,
+        )
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(
+                [CHECKOUT_OPTION, str(mirror), JSON_OUTPUT_OPTION],
+                base_environment=environment,
+                runner=runner,
+            )
+        document = cast("dict[str, object]", json.loads(stdout.getvalue()))
+    return BootstrapDriftObservation(
+        checkout=preflight.roots.checkout,
+        other_checkout=other.resolve(),
+        listed_version=LISTED_VERSION,
+        target_version=target_version,
+        document=document,
+        exit_code=exit_code,
     )
 
 
@@ -2563,8 +2653,8 @@ class RealRecordRefreshObservation:
     stderr: str
     invocation_checkout: Path
     other_checkout: Path
-    records_before: tuple[ClaudeInstallRecord | PathlessInstallRecord, ...]
-    records_after: tuple[ClaudeInstallRecord | PathlessInstallRecord, ...]
+    records_before: tuple[ListedInstallRecord, ...]
+    records_after: tuple[ListedInstallRecord, ...]
     invocation_activation_before: object
     invocation_activation_after: object
     other_activation_before: object
@@ -2578,7 +2668,7 @@ class RealRecordRefreshObservation:
     second_exit_code: int
     second_stdout: str
     second_stderr: str
-    records_after_second: tuple[ClaudeInstallRecord | PathlessInstallRecord, ...]
+    records_after_second: tuple[ListedInstallRecord, ...]
 
 
 def observe_real_record_refresh() -> RealRecordRefreshObservation:
@@ -3662,7 +3752,10 @@ __all__ = [
     "observe_registry_shape_plan",
     "observe_install_record_rewrite",
     "install_record_fixture_path",
-    "PathlessListingObservation",
+    "DefectiveListingObservation",
+    "observe_defective_record_listing",
+    "BootstrapDriftObservation",
+    "observe_bootstrap_record_drift",
     "RegistryState",
     "UnreadableSourceCase",
     "UnreadableSourceObservation",

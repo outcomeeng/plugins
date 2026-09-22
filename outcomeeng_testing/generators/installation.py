@@ -207,6 +207,8 @@ class RecordDisposition(StrEnum):
     PATHLESS_OUT_OF_SCOPE = "pathless-out-of-scope"
     PATHLESS_DEFECT = "pathless-defect"
     """A refresh-scope entry naming no project path: a listing defect, reported."""
+    VERSIONLESS_DEFECT = "versionless-defect"
+    """A refresh-scope entry reporting no version: a listing defect, reported."""
     UNCATALOGED = "uncataloged"
     EXCLUDED = "excluded"
 
@@ -298,17 +300,20 @@ def generated_closing_listing(
     return tuple(closing)
 
 
-def generated_pathless_defect_records(
+def generated_listing_defect_records(
     marketplace: str,
     plugin: str,
     other_checkout: Path,
+    defect_checkout: Path,
     version: str,
 ) -> tuple[tuple[dict[str, str], RecordDisposition], ...]:
-    """A refresh-scope entry carrying no project path beside a movable record.
+    """Each refresh-scope listing defect beside one movable record.
 
-    The defect entry fails the run it appears in, so it is generated apart
-    from the whole-domain cycle; the well-formed record beside it is what
-    makes the run's continuation past the defect observable.
+    An entry naming no project path and an entry reporting no version are
+    the two ways a refresh-scope entry carries too little for the run to
+    address it. Each fails the run it appears in, so both are generated
+    apart from the whole-domain cycle; the well-formed record beside them
+    is what makes the run's continuation past either defect observable.
     """
     identifier = marketplace_plugin_identifier(plugin, marketplace)
     return (
@@ -319,6 +324,14 @@ def generated_pathless_defect_records(
                 CLAUDE_PLUGIN_VERSION_FIELD: version,
             },
             RecordDisposition.PATHLESS_DEFECT,
+        ),
+        (
+            {
+                CLAUDE_PLUGIN_ID_FIELD: identifier,
+                CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(defect_checkout.resolve()),
+            },
+            RecordDisposition.VERSIONLESS_DEFECT,
         ),
         (
             {
@@ -356,6 +369,38 @@ def generated_other_checkout_records(
             },
             RecordDisposition.FILE_REWRITE,
         ),
+    )
+
+
+def generated_bootstrap_records(
+    marketplace: str,
+    plugin: str,
+    checkout: Path,
+    other_checkout: Path,
+    version: str,
+) -> tuple[tuple[dict[str, str], RecordDisposition], ...]:
+    """One record of the invocation checkout beside one of another checkout.
+
+    A run that registers the marketplace itself reaches no target, so this
+    pair is the minimal listing carrying both dispositions such a run still
+    reports: the record its native update moves, and the record it leaves
+    unmoved.
+    """
+    identifier = marketplace_plugin_identifier(plugin, marketplace)
+    return tuple(
+        (
+            {
+                CLAUDE_PLUGIN_ID_FIELD: identifier,
+                CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(path.resolve()),
+                CLAUDE_PLUGIN_VERSION_FIELD: version,
+            },
+            disposition,
+        )
+        for path, disposition in (
+            (checkout, RecordDisposition.INVOCATION_NATIVE),
+            (other_checkout, RecordDisposition.FILE_REWRITE),
+        )
     )
 
 

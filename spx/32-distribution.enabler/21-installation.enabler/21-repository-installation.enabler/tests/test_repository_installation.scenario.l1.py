@@ -18,6 +18,7 @@ from outcomeeng.distribution.installation import (
     FIRST_INSTALL_WARNING,
     Operation,
     PATHLESS_LISTING_ENTRY_WARNING,
+    VERSIONLESS_LISTING_ENTRY_WARNING,
     ReportField,
     SPEC_TREE_PLUGIN,
     UNREADABLE_SETTINGS_WARNING,
@@ -43,7 +44,8 @@ from outcomeeng_testing.harnesses.installation import (
     observe_invalid_isolated_selection,
     observe_invalid_persistent_selection,
     observe_persistent_plan,
-    observe_pathless_record_listing,
+    observe_bootstrap_record_drift,
+    observe_defective_record_listing,
     observe_unreadable_source,
     observe_record_refresh_plan,
     observe_unpublished_plugin,
@@ -359,12 +361,20 @@ def test_a_record_whose_directory_is_gone_is_rewritten_and_never_named_by_a_comm
     )
 
 
-def test_a_pathless_refresh_scope_entry_is_reported_and_the_run_continues() -> None:
-    observation = observe_pathless_record_listing()
+def test_a_defective_refresh_scope_entry_is_reported_and_the_run_continues() -> None:
+    observation = observe_defective_record_listing()
 
     assert (
         PATHLESS_LISTING_ENTRY_WARNING.format(
             plugin=SPEC_TREE_PLUGIN, scope=CLAUDE_PROJECT_SCOPE
+        )
+        in observation.warnings
+    )
+    assert (
+        VERSIONLESS_LISTING_ENTRY_WARNING.format(
+            plugin=SPEC_TREE_PLUGIN,
+            scope=CLAUDE_PROJECT_SCOPE,
+            project_path=observation.defect_checkout,
         )
         in observation.warnings
     )
@@ -393,6 +403,49 @@ def test_a_pathless_refresh_scope_entry_is_reported_and_the_run_continues() -> N
         )
         == observation.target_version
     )
+    assert observation.exit_code != 0
+
+
+def test_a_bootstrap_run_reports_the_records_it_moved_and_the_records_it_did_not() -> (
+    None
+):
+    observation = observe_bootstrap_record_drift()
+    moved = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): (record[ReportField.VERSION_BEFORE], record[ReportField.VERSION_AFTER])
+        for record in cast(
+            "list[dict[str, str]]",
+            observation.document[ReportField.CLAUDE_RECORDS],
+        )
+    }
+    unrefreshed = {
+        (
+            record[ReportField.PLUGIN],
+            record[ReportField.SCOPE],
+            record[ReportField.PROJECT_PATH],
+        ): record[ReportField.VERSION]
+        for record in cast(
+            "list[dict[str, str]]",
+            observation.document[ReportField.UNREFRESHED_RECORDS],
+        )
+    }
+
+    assert observation.document[ReportField.TARGET] is None
+    assert moved == {
+        (SPEC_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, str(observation.checkout)): (
+            observation.listed_version,
+            observation.target_version,
+        )
+    }
+    assert unrefreshed == {
+        (SPEC_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, str(observation.other_checkout)): (
+            observation.listed_version
+        )
+    }
+    assert observation.document[ReportField.OFF_TARGET_RECORDS] == []
     assert observation.exit_code != 0
 
 
@@ -461,7 +514,6 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
     assert _agent_operations(by_state[codex_unregistered], Agent.CODEX) == (
         Operation.MARKETPLACE_INSPECT,
         Operation.PLUGIN_INSPECT,
-        Operation.PLUGIN_LIST,
     )
     assert _agent_operations(by_state[claude_unregistered], Agent.CLAUDE) == (
         Operation.MARKETPLACE_INSPECT,

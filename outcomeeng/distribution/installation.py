@@ -158,8 +158,9 @@ UNWRITTEN_RECORD_WARNING = (
 )
 UNRESOLVED_TARGET_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}, but the "
-    "registered clone's catalog names no source for {plugin}, so the run resolved "
-    "no target version for it; the record is left unchanged."
+    "registered clone resolves no target version for {plugin} — its catalog "
+    "names no source, or the manifest that source names carries no readable "
+    "version; the record is left unchanged."
 )
 OUT_OF_SCOPE_RECORD_WARNING = (
     "Claude Code records {plugin} at {scope} scope for {project_path}; persistent "
@@ -183,6 +184,10 @@ UNREGISTERED_TARGET_WARNING = (
 PATHLESS_LISTING_ENTRY_WARNING = (
     "Claude Code lists {plugin} at {scope} scope with no project path; the entry "
     "is a listing defect and is left unchanged."
+)
+VERSIONLESS_LISTING_ENTRY_WARNING = (
+    "Claude Code lists {plugin} at {scope} scope for {project_path} with no "
+    "version; the entry is a listing defect and is left unchanged."
 )
 UNREADABLE_SETTINGS_DIAGNOSTIC = "invalid Claude Code settings"
 UNREADABLE_SETTINGS_WARNING = (
@@ -470,6 +475,28 @@ class PathlessInstallRecord:
 
     plugin: str
     scope: str
+
+
+@dataclass(frozen=True, order=True)
+class VersionlessInstallRecord:
+    """A Claude Code install record whose listing entry reports no version.
+
+    The entry names a scope and a project path, so a rewrite could address
+    it, but the listing is the only source for what a record holds, so an
+    entry reporting no version is a listing defect the run reports as a
+    blocking warning and leaves unchanged — the same disposition a
+    refresh-scope entry with no project path receives.
+    """
+
+    plugin: str
+    scope: str
+    project_path: Path
+
+
+type ListedInstallRecord = (
+    ClaudeInstallRecord | PathlessInstallRecord | VersionlessInstallRecord
+)
+"""One entry of Claude Code's install-record listing, defects included."""
 
 
 @dataclass(frozen=True)
@@ -777,8 +804,11 @@ class AgentAdapter(Protocol):
 
     def closing(
         self,
+        mode: InstallationMode,
+        source_action: SourceAction,
         roots: InstallationRoots,
         environment: tuple[tuple[str, str], ...],
+        bootstrap_source: str | None = None,
     ) -> tuple[InstallationCommand, ...]: ...
 
     def normalize_result(
@@ -894,9 +924,16 @@ class ClaudeInstallationAdapter:
 
     def closing(
         self,
+        mode: InstallationMode,
+        source_action: SourceAction,
         roots: InstallationRoots,
         environment: tuple[tuple[str, str], ...],
+        bootstrap_source: str | None = None,
     ) -> tuple[InstallationCommand, ...]:
+        # The install-record listing is the machine-wide refresh's
+        # postcondition read over records this run never registered, so a
+        # withheld registration never withholds it.
+        del mode, source_action, bootstrap_source
         return (
             _command(
                 self.agent,
@@ -948,10 +985,7 @@ class CodexInstallationAdapter:
         # signature's Claude records, clone, and bootstrap switch carry
         # nothing for this adapter.
         del records, recorded, clone, bootstrap
-        registering = (
-            mode is InstallationMode.PERSISTENT and source_action is SourceAction.ADD
-        )
-        source = bootstrap_source if registering else str(roots.checkout)
+        source = self._source(mode, source_action, roots, bootstrap_source)
         if source is None:
             # The registration this run would perform has no source, and every
             # Codex plugin operation installs from that registration, so the
@@ -981,9 +1015,17 @@ class CodexInstallationAdapter:
 
     def closing(
         self,
+        mode: InstallationMode,
+        source_action: SourceAction,
         roots: InstallationRoots,
         environment: tuple[tuple[str, str], ...],
+        bootstrap_source: str | None = None,
     ) -> tuple[InstallationCommand, ...]:
+        if self._source(mode, source_action, roots, bootstrap_source) is None:
+            # The listing names the marketplace this run withheld, so it fails
+            # the same way every withheld operation would; the withheld plan's
+            # blocking warning is what the run reports instead.
+            return ()
         return (
             _command(
                 self.agent,
@@ -994,6 +1036,27 @@ class CodexInstallationAdapter:
                 environment,
             ),
         )
+
+    @staticmethod
+    def _source(
+        mode: InstallationMode,
+        source_action: SourceAction,
+        roots: InstallationRoots,
+        bootstrap_source: str | None,
+    ) -> str | None:
+        """The source this run's Codex operations resolve against, or None.
+
+        A persistent run that registers the marketplace installs from the
+        source the invocation checkout declares; every other run installs
+        from the checkout itself. A registering run with no declared source
+        resolves nothing, and every Codex operation — the plan's and the
+        closing listing's alike — names a marketplace that run never
+        registered.
+        """
+        registering = (
+            mode is InstallationMode.PERSISTENT and source_action is SourceAction.ADD
+        )
+        return bootstrap_source if registering else str(roots.checkout)
 
     def normalize_result(
         self,
@@ -1417,7 +1480,13 @@ def _build_plan(
     closing = tuple(
         command
         for adapter in AGENT_ADAPTERS
-        for command in adapter.closing(roots, environment)
+        for command in adapter.closing(
+            mode,
+            actions[adapter.agent],
+            roots,
+            environment,
+            bootstrap_sources[adapter.agent],
+        )
     )
     agent_home = build_agent_home_plan(
         roots.codex_home,
@@ -1444,12 +1513,12 @@ def _build_plan(
 
 def claude_install_records(
     payload: str, marketplace: str
-) -> tuple[ClaudeInstallRecord | PathlessInstallRecord, ...]:
+) -> tuple[ListedInstallRecord, ...]:
     """Parse every install record of the marketplace one Claude Code listing reports.
 
-    A project- or local-scope entry that names no project path is a listing
-    defect; it is kept as a pathless record so the run reports it and
-    continues with every other record.
+    A project- or local-scope entry that names no project path, and an entry
+    that reports no version, are listing defects; each is kept as its own
+    record kind so the run reports it and continues with every other record.
     """
     try:
         document = cast(object, json.loads(payload))
@@ -1457,7 +1526,7 @@ def claude_install_records(
         raise ValueError(f"invalid claude plugin listing: {error}") from error
     if not isinstance(document, list):
         raise ValueError("claude plugin listing must contain an array")
-    records: list[ClaudeInstallRecord | PathlessInstallRecord] = []
+    records: list[ListedInstallRecord] = []
     for index, entry in enumerate(document):
         record = _claude_install_record(index, entry, marketplace)
         if record is not None:
@@ -1467,8 +1536,14 @@ def claude_install_records(
 
 def _claude_install_record(
     index: int, entry: object, marketplace: str
-) -> ClaudeInstallRecord | PathlessInstallRecord | None:
-    """Parse one listing entry; None for an entry from another marketplace."""
+) -> ListedInstallRecord | None:
+    """Parse one listing entry; None for an entry from another marketplace.
+
+    A defect the run can report and continue past — an entry with no project
+    path, or one with no version — becomes the record kind that carries that
+    defect; only an entry whose plugin identity, scope, or project-path type
+    the listing contract itself breaks stops the parse.
+    """
     if not isinstance(entry, dict):
         raise ValueError(f"claude plugin listing entry {index} must be an object")
     identifier = entry.get(CLAUDE_PLUGIN_ID_FIELD)
@@ -1487,21 +1562,24 @@ def _claude_install_record(
         raise ValueError(
             f"claude plugin listing entry {index} has an untyped project path"
         )
+    resolved_path = Path(project_path).expanduser().resolve()
     version = entry.get(CLAUDE_PLUGIN_VERSION_FIELD)
     if not isinstance(version, str):
-        raise ValueError(f"claude plugin listing entry {index} has no typed version")
+        return VersionlessInstallRecord(
+            plugin=plugin, scope=scope, project_path=resolved_path
+        )
     return ClaudeInstallRecord(
         plugin=plugin,
         scope=scope,
-        project_path=Path(project_path).expanduser().resolve(),
+        project_path=resolved_path,
         version=version,
     )
 
 
 def compare_install_listings(
     refreshed: Sequence[ClaudeInstallRecord],
-    after: Sequence[ClaudeInstallRecord | PathlessInstallRecord],
-    target: MarketplaceTarget,
+    after: Sequence[ListedInstallRecord],
+    target: MarketplaceTarget | None,
 ) -> RecordDrift:
     """Pair every refreshed record with its closing version and judge the rest.
 
@@ -1513,7 +1591,10 @@ def compare_install_listings(
     warned about, one whose plugin turned out pending publication, or one
     another agent session wrote between the two reads; and every project- or
     local-scope record of a plugin the target names whose closing version is
-    not the target's is off target, whatever the plan did with it. The
+    not the target's is off target, whatever the plan did with it. A run that
+    registers the marketplace itself has no target, so nothing is off one:
+    every record it left unmoved is still reported as unrefreshed, and the
+    blocking warning that run raises is what makes its exit nonzero. The
     comparison reads nothing but its arguments.
     """
     closing = {
@@ -1533,12 +1614,16 @@ def compare_install_listings(
         for record in closing
         if record.scope in CLAUDE_REFRESH_SCOPES and record not in refreshed_identities
     )
-    off_target = tuple(
-        record
-        for record in closing
-        if record.scope in CLAUDE_REFRESH_SCOPES
-        and record.plugin in target.versions
-        and record.version != target.versions[record.plugin]
+    off_target = (
+        ()
+        if target is None
+        else tuple(
+            record
+            for record in closing
+            if record.scope in CLAUDE_REFRESH_SCOPES
+            and record.plugin in target.versions
+            and record.version != target.versions[record.plugin]
+        )
     )
     return RecordDrift(
         refreshed=refreshes, unrefreshed=unrefreshed, off_target=off_target
@@ -1546,7 +1631,7 @@ def compare_install_listings(
 
 
 def claude_refresh_records(
-    records: Sequence[ClaudeInstallRecord | PathlessInstallRecord],
+    records: Sequence[ListedInstallRecord],
     catalog: Sequence[str],
     checkout: Path,
 ) -> tuple[
@@ -1563,15 +1648,41 @@ def claude_refresh_records(
     or not its project directory still exists, so no command runs in another
     checkout. A record outside the catalog, or outside project and local
     scope, is reported and left unchanged; a refresh-scope entry with no
-    project path is a listing defect, reported the same way. Both moved sets
-    follow catalog order, then project path, then scope, so the plan is
-    stable across listings.
+    project path, and an entry the listing reports with no version, are
+    listing defects reported the same way. Both moved sets follow catalog
+    order, then project path, then scope, so the plan is stable across
+    listings.
     """
     resolved_checkout = checkout.resolve()
     native: list[ClaudeInstallRecord] = []
     rewrites: list[ClaudeInstallRecord] = []
     warnings: list[InstallationWarning] = []
     for record in records:
+        if isinstance(record, VersionlessInstallRecord):
+            if record.scope in CLAUDE_REFRESH_SCOPES:
+                warnings.append(
+                    InstallationWarning(
+                        agent=Agent.CLAUDE,
+                        message=VERSIONLESS_LISTING_ENTRY_WARNING.format(
+                            plugin=record.plugin,
+                            scope=record.scope,
+                            project_path=record.project_path,
+                        ),
+                        blocking=True,
+                    )
+                )
+                continue
+            warnings.append(
+                InstallationWarning(
+                    agent=Agent.CLAUDE,
+                    message=OUT_OF_SCOPE_RECORD_WARNING.format(
+                        plugin=record.plugin,
+                        scope=record.scope,
+                        project_path=record.project_path,
+                    ),
+                )
+            )
+            continue
         if isinstance(record, PathlessInstallRecord):
             if record.scope in CLAUDE_REFRESH_SCOPES:
                 warnings.append(
@@ -2381,8 +2492,9 @@ def _rewrite_records(
     The target is read from the registered clone at the head the run just
     read; the rewrite is planned as a pure function and written once at this
     edge. A plan with no clone — the bootstrap case, where nothing was
-    registered before this run — carries no target and no rewrite record;
-    the plan reported each such record as unrefreshed when it was built.
+    registered before this run — carries no target and no rewrite record, so
+    the drift comparison reports every record that run left unmoved as
+    unrefreshed and the plan's blocking warning names each of them.
     """
     if plan.claude_clone is None or head is None:
         return None, (), ()
@@ -2425,8 +2537,12 @@ def _record_drift(
     commands. A planned native record whose plugin is pending publication
     received no refresh, and a rewrite record the run could not rewrite is
     unrefreshed; both are judged against the target like every other record.
+    A run that registers the marketplace itself reaches no target, and it
+    reports its drift too: every record it left unmoved is unrefreshed, and
+    each record it did move carries the version it held and the version the
+    closing listing carries.
     """
-    if plan.mode is not InstallationMode.PERSISTENT or target is None:
+    if plan.mode is not InstallationMode.PERSISTENT:
         return None
     unpublished = frozenset(
         entry.plugin for entry in pending if entry.agent is Agent.CLAUDE
@@ -2445,6 +2561,22 @@ def _record_drift(
                 target,
             )
     return None
+
+
+def installation_exit_code(report: InstallationReport) -> int:
+    """The exit code one completed run reports, as a pure function of its report.
+
+    Two sources between them cover every condition the run reports: the drift
+    comparison names each record left off the target, and the blocking
+    warnings the plan and the rewrite raise name every condition no record
+    carries. Either one makes the run's exit nonzero.
+    """
+    off_target = report.record_drift.off_target if report.record_drift else ()
+    blocking = any(
+        warning.blocking
+        for warning in (*report.plan.warnings, *report.rewrite_warnings)
+    )
+    return 1 if off_target or blocking else 0
 
 
 def main(
@@ -2503,11 +2635,7 @@ def main(
             f"for {record.project_path} lists {record.version}",
             file=sys.stderr,
         )
-    blocking = any(
-        warning.blocking
-        for warning in (*report.plan.warnings, *report.rewrite_warnings)
-    )
-    return 1 if off_target or blocking else 0
+    return installation_exit_code(report)
 
 
 def _claude_argv(operation: Operation, *words: str, scope: str) -> tuple[str, ...]:
@@ -2817,7 +2945,13 @@ def marketplace_target(
     """Read the target every record moves to from the registered clone at `commit`.
 
     Each cataloged plugin's version is the one its manifest carries in the
-    clone, found through the clone's own catalog entry for that plugin.
+    clone, found through the clone's own catalog entry for that plugin. A
+    plugin the clone's catalog names no source for, or whose manifest the
+    clone cannot supply or does not version, resolves to no target version
+    and is left out; each of its records is reported as unresolved and the
+    run continues, because one plugin's supply defect settles nothing about
+    the rest of the machine's records. A clone catalog the run cannot read at
+    all resolves no plugin, so it stops the run.
     """
     catalog_path = clone / CLAUDE_CATALOG_PATH
     try:
@@ -2850,17 +2984,15 @@ def marketplace_target(
             manifest = cast(
                 object, json.loads(manifest_path.read_text(encoding="utf-8"))
             )
-        except (OSError, json.JSONDecodeError) as error:
-            raise ValueError(
-                f"invalid plugin manifest {manifest_path}: {error}"
-            ) from error
+        except (OSError, json.JSONDecodeError):
+            continue
         version = (
             manifest.get(PLUGIN_MANIFEST_VERSION_FIELD)
             if isinstance(manifest, dict)
             else None
         )
         if not isinstance(version, str):
-            raise ValueError(f"plugin manifest {manifest_path} names no version")
+            continue
         versions[plugin] = version
     return MarketplaceTarget(commit=commit, versions=versions)
 
@@ -3285,6 +3417,7 @@ __all__ = [
     "MarketplaceTarget",
     "OFF_TARGET_DIAGNOSTIC",
     "PATHLESS_LISTING_ENTRY_WARNING",
+    "VERSIONLESS_LISTING_ENTRY_WARNING",
     "PLUGIN_MANIFEST_RELATIVE",
     "PLUGIN_MANIFEST_VERSION_FIELD",
     "RecordRewrite",
@@ -3393,10 +3526,13 @@ __all__ = [
     "CLAUDE_INSTALLED_RECORD_VERSION_FIELD",
     "CLAUDE_PLUGIN_VERSION_FIELD",
     "ClaudeInstallRecord",
+    "ListedInstallRecord",
     "PathlessInstallRecord",
+    "VersionlessInstallRecord",
     "RecordDrift",
     "RecordRefresh",
     "compare_install_listings",
+    "installation_exit_code",
     "claude_install_records",
     "claude_refresh_records",
     "MARKETPLACE_IDENTIFIER_JOINER",
