@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import decimal
 import json
+import sys
 from typing import Protocol
 
 from hypothesis import strategies as st
@@ -11,14 +13,20 @@ from hypothesis import strategies as st
 # prefix is a non-JSON document by construction rather than by filtering.
 NON_JSON_PREFIX = "~"
 DIGITS = "0123456789"
-MAX_INTEGER_DIGITS = 7
-MAX_FRACTION_DIGITS = 18
+# The significant-digit limit the default decimal context rounds a total to.
+# The generated decimal widths straddle it so the domain reaches the precision
+# where an exact accumulation and a default-context one disagree.
+DEFAULT_DECIMAL_PRECISION = decimal.DefaultContext.prec
+MAX_INTEGER_DIGITS = 12
+MAX_FRACTION_DIGITS = DEFAULT_DECIMAL_PRECISION + 8
 
 
 class LedgerVocabulary(Protocol):
     """The source-owned names these domains are constructed against."""
 
     LEDGER_FIELD: str
+    SCHEMA_VERSION: int
+    SCHEMA_VERSION_FIELD: str
     DERIVE_OPERATION: str
     READ_CAUSES: frozenset[str]
     SCALAR_EVENT_COLLECTIONS: tuple[tuple[str, str], ...]
@@ -57,14 +65,24 @@ def currencies() -> st.SearchStrategy[str]:
 def _decimal_literals(signs: st.SearchStrategy[str]) -> st.SearchStrategy[str]:
     """Plain decimal literals whose fractional precision varies per value.
 
-    The fractional part ranges from absent to `MAX_FRACTION_DIGITS` digits, so
-    the domain spans amounts an IEEE-754 double carries exactly and amounts no
-    double represents at all. Literals are composed as text rather than through
-    a float or a fixed-`places` decimal, so the generated value is exactly the
-    digits the derivation receives. The integer and fraction widths bound every
-    exact total below the default decimal context's significant-digit limit,
-    which keeps the total a consumer computes free of context rounding.
+    The domain straddles the precision at which a decimal context starts
+    rounding a running total. The narrow branch ranges from an absent fraction
+    through widths an IEEE-754 double carries exactly and widths no double
+    represents at all. The wide branch carries a coefficient longer than
+    `DEFAULT_DECIMAL_PRECISION`, so a total accumulated in the default context
+    loses digits the literal carried while an exact accumulation keeps them —
+    the precision at which the two accumulations disagree, and the reason the
+    domain reaches it rather than stopping below it. Literals are composed as
+    text rather than through a float or a fixed-`places` decimal, so the
+    generated value is exactly the digits the derivation receives.
     """
+    # A leading non-zero digit makes the coefficient as long as the fraction,
+    # so the width past the default precision is significant digits rather than
+    # leading zeros no context would round away.
+    wide_fractions = st.from_regex(
+        rf"[1-9][0-9]{{{DEFAULT_DECIMAL_PRECISION},{MAX_FRACTION_DIGITS - 1}}}",
+        fullmatch=True,
+    )
     return st.builds(
         lambda sign, integer, fraction: (
             f"{sign}{integer}.{fraction}" if fraction else f"{sign}{integer}"
@@ -73,7 +91,10 @@ def _decimal_literals(signs: st.SearchStrategy[str]) -> st.SearchStrategy[str]:
         integer=st.from_regex(
             rf"0|[1-9][0-9]{{0,{MAX_INTEGER_DIGITS - 1}}}", fullmatch=True
         ),
-        fraction=st.text(alphabet=DIGITS, min_size=0, max_size=MAX_FRACTION_DIGITS),
+        fraction=st.one_of(
+            st.text(alphabet=DIGITS, min_size=0, max_size=MAX_FRACTION_DIGITS),
+            wide_fractions,
+        ),
     )
 
 
@@ -100,6 +121,43 @@ def spend_series() -> st.SearchStrategy[dict[str, list[str]]]:
 def duration_series() -> st.SearchStrategy[list[str]]:
     """Durations spread across the events of one derivation."""
     return st.lists(durations(), min_size=1, max_size=8)
+
+
+def _oversized_integer_literals() -> st.SearchStrategy[str]:
+    """Integer literals wider than the interpreter converts from a digit string.
+
+    The JSON scanner reads an integer literal by converting its digit string,
+    so a literal past `sys.get_int_max_str_digits()` refuses the whole document
+    — a refusal no leading character announces and no syntax error names. The
+    width is read from the running interpreter rather than copied here, and a
+    limit of zero means the interpreter converts any width, so the domain then
+    holds no member at all.
+    """
+    limit = sys.get_int_max_str_digits()
+    if not limit:
+        return st.nothing()
+    return st.integers(min_value=limit + 1, max_value=limit + 64).map(
+        lambda width: "1" * width
+    )
+
+
+def parser_refused_documents(module: LedgerVocabulary) -> st.SearchStrategy[str]:
+    """Source documents the JSON parser refuses to read at all.
+
+    Two shapes the document's own text controls: text no JSON production can
+    open, and an integer literal past the interpreter's conversion limit — the
+    second carried both alone and inside an otherwise well-formed envelope, so
+    the domain reaches a refusal the document's opening character does not
+    announce.
+    """
+    oversized = _oversized_integer_literals()
+    return st.one_of(
+        st.text(max_size=32).map(lambda text: NON_JSON_PREFIX + text),
+        oversized,
+        oversized.map(
+            lambda literal: f'{{"{module.SCHEMA_VERSION_FIELD}": {literal}}}'
+        ),
+    )
 
 
 def non_ledger_bodies(module: LedgerVocabulary) -> st.SearchStrategy[str]:
@@ -129,7 +187,20 @@ def non_ledger_bodies(module: LedgerVocabulary) -> st.SearchStrategy[str]:
         min_size=1,
     ).map(json.dumps)
     unparseable = st.text(max_size=32).map(lambda text: NON_JSON_PREFIX + text)
-    return st.one_of(unparseable, scalars, arrays, objects, unwrapped_events)
+    # A body the parser refuses part-way through rather than at its first
+    # character: the ledger key is present, and the literal under it is wider
+    # than the interpreter converts, so the body never becomes a ledger object.
+    unreadable_ledger = _oversized_integer_literals().map(
+        lambda literal: f'{{"{module.LEDGER_FIELD}": {literal}}}'
+    )
+    return st.one_of(
+        unparseable,
+        unreadable_ledger,
+        scalars,
+        arrays,
+        objects,
+        unwrapped_events,
+    )
 
 
 def read_details() -> st.SearchStrategy[dict[str, str]]:
@@ -158,6 +229,26 @@ def foreign_argument_vectors(module: LedgerVocabulary) -> st.SearchStrategy[list
         st.from_regex(r"[a-z][a-z-]{0,11}", fullmatch=True),
         max_size=3,
     ).filter(lambda vector: vector != declared)
+
+
+def foreign_schema_versions(module: LedgerVocabulary) -> st.SearchStrategy[object]:
+    """Schema versions other than the integer the entry point declares.
+
+    Each branch is constructed rather than filtered out of a wider domain, so
+    it names the way its members differ. A boolean and a float can carry the
+    declared version's value without being that integer — the distinction a
+    gate comparing values alone does not draw — while the remaining branches
+    differ in value, in type, or in both.
+    """
+    declared = module.SCHEMA_VERSION
+    return st.one_of(
+        st.booleans(),
+        st.just(float(declared)),
+        st.floats(allow_nan=False, allow_infinity=False),
+        st.integers().filter(lambda version: version != declared),
+        st.text(max_size=8),
+        st.none(),
+    )
 
 
 def mail_carriers() -> st.SearchStrategy[list[tuple[int, str]]]:

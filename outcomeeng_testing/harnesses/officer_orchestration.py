@@ -24,10 +24,12 @@ from outcomeeng_testing.generators.officer_orchestration import (
     finding_entries,
     foreign_argument_vectors,
     foreign_read_causes,
+    foreign_schema_versions,
     journal_carriers,
     leading_record_counts,
     mail_carriers,
     non_ledger_bodies,
+    parser_refused_documents,
     pass_labels,
     read_details,
     repeat_counts,
@@ -62,6 +64,10 @@ REPEATED_VALUE_PROPERTY_SEED = 2026092209
 REPEATED_VALUE_PROPERTY_EXAMPLES = 40
 EXACT_TEXT_PROPERTY_SEED = 2026092210
 EXACT_TEXT_PROPERTY_EXAMPLES = 40
+PARSER_REFUSAL_PROPERTY_SEED = 2026092211
+PARSER_REFUSAL_PROPERTY_EXAMPLES = 40
+SCHEMA_VERSION_PROPERTY_SEED = 2026092212
+SCHEMA_VERSION_PROPERTY_EXAMPLES = 40
 PROVENANCE_PROPERTY_SEED = 2026092204
 PROVENANCE_PROPERTY_EXAMPLES = 40
 INERT_BODY_PROPERTY_SEED = 2026092205
@@ -488,6 +494,57 @@ def run_exact_text_property(
     run_replayable_property(
         generated_exact_text,
         seed_value=EXACT_TEXT_PROPERTY_SEED,
+        replay_path=PROPERTY_REPLAY_PATH,
+    )
+
+
+def run_foreign_schema_version_property(
+    assert_refusal: Callable[[LedgerModule, LedgerEntrypointObservation], None],
+) -> None:
+    """Drive versions other than the declared one; the test owns the refusal."""
+    module = load_ledger_module()
+
+    @seed(SCHEMA_VERSION_PROPERTY_SEED)
+    @settings(
+        max_examples=SCHEMA_VERSION_PROPERTY_EXAMPLES, deadline=None, print_blob=True
+    )
+    @given(
+        version=foreign_schema_versions(load_ledger_module()),
+        change=change_identifiers(),
+    )
+    def generated_versions(version: object, change: str) -> None:
+        document = derivation_document(module, change, (), (), schema_version=version)
+        assert_refusal(module, run_ledger([module.DERIVE_OPERATION], document))
+
+    run_replayable_property(
+        generated_versions,
+        seed_value=SCHEMA_VERSION_PROPERTY_SEED,
+        replay_path=PROPERTY_REPLAY_PATH,
+    )
+
+
+def run_parser_refusal_property(
+    assert_refusal: Callable[[LedgerModule, LedgerEntrypointObservation], None],
+) -> None:
+    """Drive documents the JSON parser refuses; the test owns the refusal law.
+
+    Each generated document reaches the entry point as raw stdin text, so the
+    parser meets exactly the bytes the domain produced rather than a document
+    this harness re-encoded.
+    """
+    module = load_ledger_module()
+
+    @seed(PARSER_REFUSAL_PROPERTY_SEED)
+    @settings(
+        max_examples=PARSER_REFUSAL_PROPERTY_EXAMPLES, deadline=None, print_blob=True
+    )
+    @given(document=parser_refused_documents(load_ledger_module()))
+    def generated_refusal(document: str) -> None:
+        assert_refusal(module, run_ledger([module.DERIVE_OPERATION], document))
+
+    run_replayable_property(
+        generated_refusal,
+        seed_value=PARSER_REFUSAL_PROPERTY_SEED,
         replay_path=PROPERTY_REPLAY_PATH,
     )
 

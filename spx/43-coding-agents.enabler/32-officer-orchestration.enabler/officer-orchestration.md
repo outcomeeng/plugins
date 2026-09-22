@@ -34,7 +34,9 @@ The orchestrating session is an agent session that holds none of the five Roles 
 - A collection records every value its source carried, including a repeat of a value already recorded: a finding provenance or read a record lists twice enters that collection twice [test](tests/test_ledger_derivation.property.l1.py)
 - Every derived entry carries the provenance of the record it came from — the mail record's integer store identity, or the journal run's token [test](tests/test_ledger_derivation.property.l1.py)
 - A read whose cause lies outside the declared set refuses the document, naming the admitted causes and the position of the record that carried it [test](tests/test_ledger_derivation.property.l1.py)
+- A source document the JSON parser refuses — malformed syntax, or a literal past a limit the interpreter itself imposes — refuses the document as the versioned invalid-input result on stdout with exit two and empty stderr, so no source shape reaches the caller as a traceback [test](tests/test_ledger_derivation.property.l1.py)
 - An argument vector other than the declared derive operation refuses the document, naming the required operation and every token received [test](tests/test_ledger_derivation.property.l1.py)
+- A schema version other than the declared integer refuses the document, naming the required version, so a value that merely compares equal to it — a boolean or a float among them — never reaches the derivation [test](tests/test_ledger_derivation.property.l1.py)
 
 ### Compliance
 

@@ -1,7 +1,7 @@
 """Property evidence for the officer ledger's derivation invariants."""
 
 from collections.abc import Callable, Sequence
-from decimal import Decimal
+from decimal import MAX_EMAX, MAX_PREC, MIN_EMIN, Decimal, localcontext
 from typing import cast
 
 from outcomeeng_testing.harnesses.officer_orchestration import (
@@ -11,7 +11,9 @@ from outcomeeng_testing.harnesses.officer_orchestration import (
     run_exact_text_property,
     run_foreign_argument_property,
     run_foreign_read_cause_property,
+    run_foreign_schema_version_property,
     run_inert_body_property,
+    run_parser_refusal_property,
     run_provenance_property,
     run_repeated_value_property,
     run_spend_property,
@@ -40,6 +42,9 @@ def test_running_spend_totals_each_currency_independently() -> None:
     The emitted total is compared as text against the exactly summed amounts,
     so a total that carries the right value at a coarser precision than the
     amounts it came from fails here rather than comparing numerically equal.
+    The oracle sums under a context that rounds nothing: summed under the
+    default context it would shorten the expectation by the same digits a
+    derivation losing its exact context shortens, and witness neither.
     """
 
     def assert_spend(
@@ -53,15 +58,20 @@ def test_running_spend_totals_each_currency_independently() -> None:
         assert observation.exit_code == source.SUCCESS_EXIT_CODE
         assert set(totals) == set(series)
         for currency, amounts in series.items():
-            assert totals[currency] == str(
-                sum((Decimal(amount) for amount in amounts), Decimal())
-            )
+            with localcontext(prec=MAX_PREC, Emax=MAX_EMAX, Emin=MIN_EMIN):
+                unrounded = str(sum((Decimal(amount) for amount in amounts), Decimal()))
+            assert totals[currency] == unrounded
 
     run_spend_property(assert_spend)
 
 
 def test_wall_time_totals_every_event_duration() -> None:
-    """Wall time is the sum of every duration across both derivation sources."""
+    """Wall time is the sum of every duration across both derivation sources.
+
+    The oracle sums under a context that rounds nothing, so a total the
+    derivation shortened is not compared against an expectation shortened the
+    same way.
+    """
 
     def assert_wall_time(
         source: LedgerModule,
@@ -70,10 +80,11 @@ def test_wall_time_totals_every_event_duration() -> None:
     ) -> None:
         ledger = cast(dict[str, object], observation.result[source.LEDGER_FIELD])
 
+        with localcontext(prec=MAX_PREC, Emax=MAX_EMAX, Emin=MIN_EMIN):
+            unrounded = str(sum((Decimal(duration) for duration in series), Decimal()))
+
         assert observation.exit_code == source.SUCCESS_EXIT_CODE
-        assert ledger[source.WALL_TIME_SECONDS_FIELD] == str(
-            sum((Decimal(duration) for duration in series), Decimal())
-        )
+        assert ledger[source.WALL_TIME_SECONDS_FIELD] == unrounded
 
     run_wall_time_property(assert_wall_time)
 
@@ -83,7 +94,10 @@ def test_every_total_is_emitted_as_exact_decimal_text() -> None:
 
     A JSON number literal is read into a double by conformant parsers, so the
     emitted form is checked to be text and to carry every digit of the amount
-    and duration the record supplied.
+    and duration the record supplied. The generated amounts and durations reach
+    precisions the default decimal context rounds, and the oracle accumulates
+    under a context that rounds nothing, so a derivation that accumulated in
+    the default context emits fewer digits than this comparison expects.
     """
 
     def assert_exact_text(
@@ -96,13 +110,42 @@ def test_every_total_is_emitted_as_exact_decimal_text() -> None:
         spend = totals[payload["currency"]]
         duration = ledger[source.WALL_TIME_SECONDS_FIELD]
 
+        with localcontext(prec=MAX_PREC, Emax=MAX_EMAX, Emin=MIN_EMIN):
+            unrounded_spend = str(Decimal() + Decimal(payload["amount"]))
+            unrounded_duration = str(Decimal() + Decimal(payload["duration"]))
+
         assert observation.exit_code == source.SUCCESS_EXIT_CODE
         assert isinstance(spend, str)
         assert isinstance(duration, str)
-        assert spend == str(Decimal() + Decimal(payload["amount"]))
-        assert duration == str(Decimal() + Decimal(payload["duration"]))
+        assert spend == unrounded_spend
+        assert duration == unrounded_duration
 
     run_exact_text_property(assert_exact_text)
+
+
+def test_a_document_the_parser_refuses_becomes_the_invalid_input_result() -> None:
+    """A source the JSON parser cannot read reaches the caller as a result.
+
+    The parser refuses more than malformed syntax: an integer literal wider
+    than the interpreter converts refuses a document whose every other byte is
+    well formed. Each such refusal is the versioned result on stdout with an
+    empty error stream, so one parse reads every outcome and no source shape
+    reaches the caller as a traceback.
+    """
+
+    def assert_refusal(
+        source: LedgerModule,
+        observation: LedgerEntrypointObservation,
+    ) -> None:
+        detail = cast(str, observation.result[source.DETAIL_FIELD])
+
+        assert observation.exit_code == source.INVALID_INPUT_EXIT_CODE
+        assert observation.stderr == ""
+        assert observation.result[source.STATUS_FIELD] == source.INVALID_INPUT_STATUS
+        assert observation.result[source.SCHEMA_VERSION_FIELD] == source.SCHEMA_VERSION
+        assert detail != ""
+
+    run_parser_refusal_property(assert_refusal)
 
 
 def test_repeated_source_identities_contribute_once() -> None:
@@ -239,6 +282,30 @@ def test_a_read_cause_outside_the_declared_set_is_refused() -> None:
             assert cause in detail
 
     run_foreign_read_cause_property(assert_refusal)
+
+
+def test_a_schema_version_other_than_the_declared_one_is_refused() -> None:
+    """Only the declared integer admits a document as a supported version.
+
+    `True` equals `1` and so does `1.0`, so a gate comparing values alone
+    admits a boolean and a float as the declared version and stamps the result
+    with a version the document never carried. The refusal names the version
+    the entry point requires.
+    """
+
+    def assert_refusal(
+        source: LedgerModule,
+        observation: LedgerEntrypointObservation,
+    ) -> None:
+        detail = cast(str, observation.result[source.DETAIL_FIELD])
+
+        assert observation.exit_code == source.INVALID_INPUT_EXIT_CODE
+        assert observation.stderr == ""
+        assert observation.result[source.STATUS_FIELD] == source.INVALID_INPUT_STATUS
+        assert source.SCHEMA_VERSION_FIELD in detail
+        assert str(source.SCHEMA_VERSION) in detail
+
+    run_foreign_schema_version_property(assert_refusal)
 
 
 def test_an_argument_vector_other_than_derive_is_refused() -> None:
