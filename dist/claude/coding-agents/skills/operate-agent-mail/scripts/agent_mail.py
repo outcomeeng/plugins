@@ -53,8 +53,9 @@ GIT_COMMON_DIR_OPTION = "--git-common-dir"
 # and into the commands it runs itself, so an inherited value would name a
 # repository the adapter's working directory does not belong to; a caller
 # carrying a ceiling above that directory instead hides the repository it does
-# belong to. Naming one and hiding one are the two ways the answer stops coming
-# from the working directory, so the lookup runs without either.
+# belong to. Those are two known mechanisms, not an exhaustive pair: membership
+# is decided by the effect — the answer stops coming from the working directory
+# — so a variable producing it some other way belongs here too.
 #
 # A variable that only widens the search toward the repository genuinely there
 # is outside the class and stays: removing it could not prevent a wrong answer,

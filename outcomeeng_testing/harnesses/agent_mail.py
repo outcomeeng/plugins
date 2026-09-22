@@ -984,7 +984,7 @@ GIT_COMMON_DIR_QUESTION = (
 GIT_LOCAL_ENV_VARS_QUESTION = ("git", "rev-parse", "--local-env-vars")
 # Candidate names beyond that report: the discovery-bounding variables, which
 # move the answer off the working directory by hiding the repository it belongs
-# to rather than by naming another. A variable that only widens the search
+# to. A variable that only widens the search
 # toward the repository genuinely there is not a candidate, because it cannot
 # move the answer off the working directory at all. This list only widens the
 # search — a candidate joins the confirmed domain solely where Git's behaviour
