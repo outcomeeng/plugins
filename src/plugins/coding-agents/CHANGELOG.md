@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Breaking
 
-- **The agent-mail project key is the repository, not a checkout.** `/operate-agent-mail` derives the key from the repository's own common Git directory, resolved for the adapter's working directory and normalized, so a linked worktree, the pool's bare repository, and the pool's main checkout all resolve one mail project and deleting any checkout removes none of it. The previous key was the pool's main checkout path, so a store keyed under the old derivation holds its registrations and message records under a different key; re-register, or adopt the old project into the new key, before the first operation on an existing store.
+- **The agent-mail project key is the repository, not a checkout.** `/operate-agent-mail` derives the key from the repository's own common Git directory, resolved for the adapter's working directory with `GIT_DIR`, `GIT_COMMON_DIR`, and `GIT_WORK_TREE` removed from the lookup's environment, and normalized, so a linked worktree, the pool's bare repository, and the pool's main checkout all resolve one mail project and deleting any checkout removes none of it. The previous key was the pool's main checkout path, so a store keyed under the old derivation holds its registrations and message records under a different key; re-register, or adopt the old project into the new key, before the first operation on an existing store.
 - **`diagnosis-unavailable` is replaced by `repository-unresolved`.** A working directory that is no repository, an absent Git executable, and a repository lookup that reports no absolute common directory each yield `repository-unresolved`. Neither that result nor `store-unavailable` admits a fallback command, key, or store.
 
 ### Removed
@@ -19,7 +19,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Requires
 
-- **`git` on `PATH`, accepting `rev-parse --path-format=absolute --git-common-dir`.** Every mail operation resolves the project key through that vector before it reaches the store, so the capability depends on Git where it previously depended on the SPX diagnosis. The option arrived in Git 2.31; below it the vector exits nonzero and every operation returns `repository-unresolved`, with the command's own message carried in `detail` — an unknown-option message there distinguishes an old Git from a working directory that is no repository.
+- **`git` on `PATH`, accepting `rev-parse --path-format=absolute --git-common-dir`.** Every mail operation resolves the project key through that vector before it reaches the store, so the capability depends on Git where it previously depended on the SPX diagnosis. The option arrived in Git 2.31; below it the vector reports no absolute common Git directory, so every operation returns `repository-unresolved`.
 
 ## 0.7.1
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os.path
+import os
 import re
 import subprocess
 import sys
@@ -47,6 +47,16 @@ LIMIT_OPTION = "--limit"
 JSON_OPTION = "--json"
 PATH_FORMAT_ABSOLUTE_OPTION = "--path-format=absolute"
 GIT_COMMON_DIR_OPTION = "--git-common-dir"
+
+# The variables Git answers a location question from when the caller carries
+# one. Git exports the first into every hook and into the commands it runs
+# itself, so an inherited value would name a repository the adapter's working
+# directory does not belong to.
+GIT_LOCATION_VARIABLES: Final[tuple[str, ...]] = (
+    "GIT_DIR",
+    "GIT_COMMON_DIR",
+    "GIT_WORK_TREE",
+)
 
 # The separator the project key's absolute path is written with.
 PATH_SEPARATOR = "/"
@@ -316,7 +326,12 @@ class CommandResult:
 
 
 class CommandRunner(Protocol):
-    def run(self, argv: tuple[str, ...], stdin: str | None = None) -> CommandResult: ...
+    def run(
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        env: Mapping[str, str] | None = None,
+    ) -> CommandResult: ...
 
 
 class AgentMailError(RuntimeError):
@@ -331,7 +346,12 @@ class SubprocessRunner:
 
     timeout_seconds: int = COMMAND_TIMEOUT_SECONDS
 
-    def run(self, argv: tuple[str, ...], stdin: str | None = None) -> CommandResult:
+    def run(
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        env: Mapping[str, str] | None = None,
+    ) -> CommandResult:
         completed = subprocess.run(
             argv,
             input=stdin,
@@ -340,6 +360,7 @@ class SubprocessRunner:
             text=True,
             timeout=self.timeout_seconds,
             check=False,
+            env=None if env is None else dict(env),
         )
         return CommandResult(completed.returncode, completed.stdout, completed.stderr)
 
@@ -666,10 +687,31 @@ def project_key_from_common_dir(text: object) -> str:
     return PATH_SEPARATOR + normalized.lstrip(PATH_SEPARATOR)
 
 
+def repository_lookup_environment(
+    source: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    """Return the environment the repository lookup runs in.
+
+    Every variable in `GIT_LOCATION_VARIABLES` is removed, so the lookup
+    answers from its own working directory and an inherited value naming
+    another repository reaches no answer. Without that removal the key would
+    follow whatever the caller carried, and a mail operation invoked from a
+    hook would key the store to the repository that ran the hook.
+    """
+    inherited = os.environ if source is None else source
+    return {
+        name: value
+        for name, value in inherited.items()
+        if name not in GIT_LOCATION_VARIABLES
+    }
+
+
 def resolve_project_key(runner: CommandRunner) -> str:
     """Return the invoking working directory's repository key, or raise."""
     try:
-        result = runner.run(PUBLIC_GIT_COMMON_DIR_COMMAND)
+        result = runner.run(
+            PUBLIC_GIT_COMMON_DIR_COMMAND, env=repository_lookup_environment()
+        )
     except FileNotFoundError as error:
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,

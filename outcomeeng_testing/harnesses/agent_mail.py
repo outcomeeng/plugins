@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
 import shlex
 import subprocess
 import sys
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -108,6 +109,10 @@ POOL_MAIN_CHECKOUT_NAME = "main"
 POOL_LINKED_WORKTREE_NAME = "linked"
 POOL_SEED_NAME = "seed"
 POOL_SYMLINK_NAME = "linked-by-symlink"
+# A second repository beside the pool, no checkout of it. A caller carrying
+# one of Git's location variables can name it, so the pool can be read from
+# an environment that points away from the working directory.
+FOREIGN_REPOSITORY_NAME = "foreign"
 # One absolute key for probes that need a repository but do not vary it.
 SHARED_PROJECT_KEY = "/repository/pool.git"
 POOL_DEFAULT_BRANCH = "main"
@@ -142,13 +147,22 @@ class CapturedInboxResponse:
 
 @dataclass
 class RecordingRunner:
-    """Interaction-protocol collaborator: records every argv, replays results."""
+    """Interaction-protocol collaborator: records every argv, replays results.
+
+    ``env`` is accepted because the runner boundary carries it and dropped
+    because a replayed result depends on no environment; what the repository
+    lookup removes from it is read end to end, through the shipped CLI in a
+    real repository, not from a recorded call.
+    """
 
     results: list[CommandResultContract]
     calls: list[tuple[tuple[str, ...], str | None]] = field(default_factory=list)
 
     def run(
-        self, argv: tuple[str, ...], stdin: str | None = None
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> CommandResultContract:
         self.calls.append((argv, stdin))
         if not self.results:
@@ -165,7 +179,10 @@ class AbsentExecutableRunner:
     calls: list[tuple[tuple[str, ...], str | None]] = field(default_factory=list)
 
     def run(
-        self, argv: tuple[str, ...], stdin: str | None = None
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> CommandResultContract:
         self.calls.append((argv, stdin))
         if argv[0] == self.absent_executable:
@@ -807,7 +824,9 @@ class MailPool:
 
     ``bare`` is the repository every shape shares, so it is the key the
     resolver must return from each of them. ``outside`` is the pool's parent
-    directory, which is no repository.
+    directory, which is no repository. ``foreign`` is a second repository no
+    shape belongs to, so a key that followed a caller's environment rather than
+    its working directory would return it.
     """
 
     bare: Path
@@ -815,6 +834,7 @@ class MailPool:
     linked_worktree: Path
     symlinked_worktree: Path
     outside: Path
+    foreign: Path
 
 
 def _git_in(directory: Path, *arguments: str) -> None:
@@ -864,17 +884,32 @@ def mail_pool() -> Iterator[MailPool]:
         _git_in(bare, "worktree", "add", "--quiet", "--detach", str(linked_worktree))
         symlinked_worktree = outside / POOL_SYMLINK_NAME
         symlinked_worktree.symlink_to(linked_worktree)
+        foreign = outside / f"{FOREIGN_REPOSITORY_NAME}.git"
+        subprocess.run(
+            ["git", "init", "--quiet", "--bare", str(foreign)],
+            check=True,
+            capture_output=True,
+        )
         yield MailPool(
             bare=bare,
             main_checkout=main_checkout,
             linked_worktree=linked_worktree,
             symlinked_worktree=symlinked_worktree,
             outside=outside,
+            foreign=foreign,
         )
 
 
-def run_cli_project_key(working_directory: Path) -> tuple[int, dict[str, object]]:
-    """Run the shipped CLI's project-key operation in ``working_directory``."""
+def run_cli_project_key(
+    working_directory: Path,
+    environment: Mapping[str, str] | None = None,
+) -> tuple[int, dict[str, object]]:
+    """Run the shipped CLI's project-key operation in ``working_directory``.
+
+    ``environment`` names variables to add to the inherited environment for
+    this run, so a caller's Git location variables can be carried into the
+    process the way a hook carries them.
+    """
     module = _load()
     completed = subprocess.run(
         [sys.executable, str(AGENT_MAIL_PATH), module.CliOperation.PROJECT_KEY],
@@ -883,6 +918,7 @@ def run_cli_project_key(working_directory: Path) -> tuple[int, dict[str, object]
         text=True,
         timeout=CLI_TIMEOUT_SECONDS,
         check=False,
+        env=None if environment is None else {**os.environ, **environment},
     )
     return completed.returncode, cast(dict[str, object], json.loads(completed.stdout))
 

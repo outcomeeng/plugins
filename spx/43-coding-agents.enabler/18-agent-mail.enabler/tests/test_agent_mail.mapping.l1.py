@@ -296,6 +296,58 @@ def test_every_checkout_shape_of_one_pool_maps_to_one_project_key() -> None:
     )
 
 
+def test_git_location_variables_leave_the_project_key_on_its_own_repository() -> None:
+    # Git answers a location question from GIT_DIR, GIT_COMMON_DIR, or
+    # GIT_WORK_TREE whenever the caller carries one, and exports GIT_DIR into
+    # every hook and into the commands it runs itself. The domain is the
+    # adapter's own set of those variables: each one alone, then all together.
+    module = load_agent_mail()
+    combined = "every-location-variable"
+
+    with mail_pool() as pool:
+        foreign_repository = str(pool.foreign)
+        environments: dict[str, dict[str, str]] = {
+            variable: {variable: foreign_repository}
+            for variable in module.GIT_LOCATION_VARIABLES
+        }
+        environments[combined] = {
+            variable: foreign_repository for variable in module.GIT_LOCATION_VARIABLES
+        }
+        shapes = {
+            "bare": pool.bare,
+            "main-checkout": pool.main_checkout,
+            "linked-worktree": pool.linked_worktree,
+            "symlinked-worktree": pool.symlinked_worktree,
+        }
+        inside = {
+            (case, shape): run_cli_project_key(directory, environment)
+            for case, environment in environments.items()
+            for shape, directory in shapes.items()
+        }
+        outside = {
+            case: run_cli_project_key(pool.outside, environment)
+            for case, environment in environments.items()
+        }
+        expected_key = str(pool.bare)
+
+    assert combined not in module.GIT_LOCATION_VARIABLES
+    assert len(environments) == len(module.GIT_LOCATION_VARIABLES) + 1
+    # The value every row carries names a repository no shape belongs to, so a
+    # key that followed the environment would return it from each of them.
+    assert foreign_repository != expected_key
+
+    for case, (exit_code, payload) in inside.items():
+        assert exit_code == 0, (case, payload)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
+
+    for case, (exit_code, payload) in outside.items():
+        assert exit_code != 0, (case, payload)
+        assert module.PROJECT_KEY_FIELD not in payload, (case, payload)
+        assert (
+            payload[module.STATUS_FIELD] == module.ExecutionStatus.REPOSITORY_UNRESOLVED
+        ), (case, payload)
+
+
 def test_store_responses_map_to_results_without_rewriting() -> None:
     def assert_case(
         module: ModuleType,

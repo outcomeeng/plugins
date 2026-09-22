@@ -104,10 +104,11 @@ This form answers `{"projectKey": "<absolute path>"}` and exits zero, or `{"stat
 
 <testing>
 
-The bundled adapter is covered by the tests under `spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/`, over generated request, record, and repository-lookup domains, with controlled `CommandRunner` implementations at the command boundary:
+The bundled adapter is covered over generated request, record, and repository-lookup domains, with controlled `CommandRunner` implementations at the command boundary and real repositories behind the repository lookup:
 
 - every registry operation's argument vector is read against the store CLI's captured usage text under the resolved project key;
 - a real pool's linked worktree, bare repository, main checkout, and a symlinked route to one of them each resolve one key, while the pool's parent directory resolves none;
+- each of those routes resolves that same key while `GIT_DIR`, `GIT_COMMON_DIR`, and `GIT_WORK_TREE` name another repository, and the parent directory still resolves none;
 - generated records round-trip through the store field mapping;
 - an `order`, its `delegation-request`, and its one correlated terminal handback are delivered through this capability's own send path;
 - repeated and conflicting terminal handbacks reduce to one result;
