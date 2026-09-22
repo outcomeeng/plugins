@@ -219,3 +219,29 @@ fixtures, which rewrites evidence the switch work does not touch.
 `test_subprocess_lives_only_in_the_production_spawner`, which are the conforming spawner source
 alone; and the same file's no-polling cases as the violating-source shape the compliance cell
 requires.
+
+## The summary-schema interpreter tolerates a keyword it does not evaluate
+
+`assert_json_schema` in `outcomeeng/validation/_summary_schema.py` evaluates a fixed keyword
+subset — `anyOf`, `const`, `enum`, `type` over object, array, string and integer, `required`,
+`properties`, `additionalProperties`, `items`, and `minItems` — and its docstring now names that
+subset. Nothing refuses a schema that declares another keyword, or one of these where the reader
+does not look for it: a schema carrying `maxItems`, `pattern`, or `minimum`, or `minItems` on a
+schema whose type is not `array`, would pass every instance the keyword was written to reject,
+exactly as `minItems` did before it was interpreted. The oracle the node's conformance assertion links is
+therefore only as strong as a reader's memory of which keywords it reads.
+
+**Resolution shape**: refuse a schema declaring a keyword outside the evaluated set, so a
+constraint that cannot fail is rejected where it is declared rather than shipped silent. The
+refusal is a new observable behavior of the oracle, so it needs an assertion of its own in
+`spx/15-validation.enabler/65-gate.enabler/gate.md` and a violating-schema case beside it; the
+interpreter is reached only from this module's own constants and this node's conformance
+evidence, so the change is bounded to the two.
+
+**Why separate**: the repair that surfaced it interprets the one declared keyword that did
+nothing, inside the conformance assertion that already governs the schema. Refusing an
+unevaluated keyword declares a new property of the oracle, which is an authoring pass over the
+node's assertions rather than a repair of this Change's implementation.
+
+**Evidence**: the schema's `minItems: 1`, declared by this Change and evaluated by no branch of
+`assert_json_schema` until it was interpreted; an empty list passed the schema it constrained.
