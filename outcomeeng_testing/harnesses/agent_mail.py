@@ -514,13 +514,16 @@ def run_delegation_chain_property(
         project_key: str,
     ) -> None:
         def record(kind: object, from_agent: str, to_agent: str) -> dict[str, object]:
-            return module.message_record(
-                kind=kind,
-                correlation=reference,
-                sender=from_agent,
-                recipient=to_agent,
-                subject=subject,
-                body=body,
+            return cast(
+                dict[str, object],
+                module.message_record(
+                    kind=kind,
+                    correlation=reference,
+                    sender=from_agent,
+                    recipient=to_agent,
+                    subject=subject,
+                    body=body,
+                ),
             )
 
         chain = [
