@@ -301,9 +301,23 @@ def non_ledger_bodies(module: LedgerVocabulary) -> st.SearchStrategy[str]:
     unreadable_ledger = _oversized_integer_literals().map(
         lambda literal: f'{{"{module.LEDGER_FIELD}": {literal}}}'
     )
+    # A body whose ledger key is present and whose value the parser reads
+    # whole, but which is not an object: a string, an array, null, a number,
+    # or a boolean. The refusal branch above never reaches this shape, because
+    # the parser rejects its literal before any value is typed, so only these
+    # bodies carry a readable non-object ledger into the derivation.
+    readable_non_object_ledger = st.one_of(
+        st.text(max_size=24),
+        st.lists(st.integers(), max_size=4),
+        st.none(),
+        st.integers(),
+        st.floats(allow_nan=False, allow_infinity=False),
+        st.booleans(),
+    ).map(lambda value: json.dumps({module.LEDGER_FIELD: value}))
     return st.one_of(
         unparseable,
         unreadable_ledger,
+        readable_non_object_ledger,
         scalars,
         arrays,
         objects,

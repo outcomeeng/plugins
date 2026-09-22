@@ -248,7 +248,16 @@ def _event_from_record(
         return None
     if not isinstance(payload, Mapping) or LEDGER_FIELD not in payload:
         return None
-    return _mapping(payload[LEDGER_FIELD], f"{where} ledger event")
+    event = payload[LEDGER_FIELD]
+    if not isinstance(event, Mapping):
+        # The `ledger` key's own shape decides membership, never admission: a
+        # body whose `ledger` value is a scalar, an array, or null carries no
+        # ledger object, so it stays a durable mail fact exactly as a body with
+        # no such key does. A structural field inside an admitted event keeps
+        # refusing the document, because a record carrying a ledger object has
+        # already declared itself a ledger event.
+        return None
+    return _mapping(event, f"{where} ledger event")
 
 
 def _absorb(
